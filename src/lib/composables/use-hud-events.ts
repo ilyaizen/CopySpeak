@@ -3,6 +3,7 @@ import { hudStore } from "$lib/stores/hud-store.svelte.js";
 import type {
     HudStartPayload,
     HudSynthesizingPayload,
+    HudPlaybackStartPayload,
     SynthesisProgressPayload,
     PaginationPayload,
     ClipboardCopiedPayload,
@@ -43,10 +44,10 @@ export function useHudEvents() {
                 }
             );
 
-            unlisteners.playbackStart = await eventApi.listen<HudSynthesizingPayload>(
+            unlisteners.playbackStart = await eventApi.listen<HudPlaybackStartPayload>(
                 "hud:playback_start",
                 (event) => {
-                    hudStore.handlePlaybackStart(event.payload);
+                    hudStore.handlePlaybackStart(event.payload, event.payload.audio_duration_ms ?? 0);
                 }
             );
 

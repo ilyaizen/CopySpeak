@@ -1,4 +1,11 @@
+export interface AmplitudeEnvelope {
+    values: number[];
+    duration_ms: number;
+    sample_rate: number;
+}
+
 export interface HudStartPayload {
+    envelope: AmplitudeEnvelope;
     text: string | null;
     provider?: string | null;
     voice?: string | null;
@@ -8,6 +15,14 @@ export interface HudSynthesizingPayload {
     text: string | null;
     provider?: string | null;
     voice?: string | null;
+    duration_ms?: number;
+}
+
+export interface HudPlaybackStartPayload {
+    text: string | null;
+    provider?: string | null;
+    voice?: string | null;
+    audio_duration_ms?: number;
 }
 
 export interface SynthesisProgressPayload {

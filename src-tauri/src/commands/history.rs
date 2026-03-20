@@ -691,11 +691,14 @@ pub async fn play_history_batch(
     // Get the combined text from all fragments for HUD display
     let combined_text: String = entries.iter().map(|e|e.text.as_str()).collect::<Vec<_>>().join(" ");
 
+    // Calculate total duration from all entries
+    let total_duration_ms: u64 = entries.iter().map(|e| e.duration_ms).sum();
+
     // Track missing fragments for user notification
     let mut missing_fragments: Vec<(usize, String)> = Vec::new();
 
-    // Show HUD for playback
-    crate::hud::show_hud_playback(&app, Some(combined_text));
+    // Show HUD for playback with total duration
+    crate::hud::show_hud_playback(&app, Some(combined_text), Some(total_duration_ms));
 
     // Emit pagination started event
     let _ = app.emit(

@@ -72,7 +72,10 @@
     try {
       // Show HUD if enabled (will be ignored if HUD is disabled in config)
       const inv = await getInvoke();
-      await inv?.("show_hud_for_playback", { text: entry.text });
+      await inv?.("show_hud_for_playback", {
+        text: entry.text,
+        audioDurationMs: entry.duration_ms ?? null
+      });
       await inv?.("play_history_entry", { entryId: entry.id });
     } catch (e) {
       console.error("Failed to play entry:", e);

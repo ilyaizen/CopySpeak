@@ -26,6 +26,7 @@ pub struct HudSynthesizingPayload {
     pub text: Option<String>,
     pub provider: Option<String>,
     pub voice: Option<String>,
+    pub duration_ms: Option<u64>,
 }
 
 fn get_provider_voice(cfg: &AppConfig) -> (Option<String>, Option<String>) {
@@ -102,6 +103,14 @@ pub struct MonitorInfo {
     pub position_x: i32,
     pub position_y: i32,
     pub is_primary: bool,
+}
+
+#[derive(Clone, Serialize)]
+pub struct HudPlaybackStartPayload {
+    pub text: Option<String>,
+    pub provider: Option<String>,
+    pub voice: Option<String>,
+    pub audio_duration_ms: Option<u64>,
 }
 
 pub fn get_available_monitors(window: &WebviewWindow) -> Vec<MonitorInfo> {
@@ -269,6 +278,7 @@ pub fn show_hud_synthesizing(app: &AppHandle, text: Option<String>) {
                 text,
                 provider,
                 voice,
+                duration_ms: None,
             },
         ) {
             log::error!("Failed to emit hud:synthesizing event: {}", e);
@@ -280,7 +290,7 @@ pub fn show_hud_synthesizing(app: &AppHandle, text: Option<String>) {
 
 /// Show HUD for playback of existing audio file.
 /// Emits hud:playback_start event - frontend will stream amplitude data.
-pub fn show_hud_playback(app: &AppHandle, text: Option<String>) {
+pub fn show_hud_playback(app: &AppHandle, text: Option<String>, audio_duration_ms: Option<u64>) {
     let (config, provider, voice) = {
         let state = app.state::<std::sync::Mutex<AppConfig>>();
         let cfg = state.lock().unwrap();
@@ -311,10 +321,11 @@ pub fn show_hud_playback(app: &AppHandle, text: Option<String>) {
         log::info!("Emitting hud:playback_start event (global)");
         if let Err(e) = app_clone.emit(
             "hud:playback_start",
-            HudSynthesizingPayload {
+            HudPlaybackStartPayload {
                 text,
                 provider,
                 voice,
+                audio_duration_ms,
             },
         ) {
             log::error!("Failed to emit hud:playback_start event: {}", e);

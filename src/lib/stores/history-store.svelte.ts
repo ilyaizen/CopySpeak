@@ -290,7 +290,10 @@ function createHistoryStore() {
     try {
       const item = state.items.find((i) => i.id === id);
       if (item) {
-        await invoke("show_hud_for_playback", { text: item.text }).catch(() => {});
+        await invoke("show_hud_for_playback", { 
+          text: item.text, 
+          audioDurationMs: item.duration_ms ?? null 
+        }).catch(() => {});
       }
       await invoke("play_history_entry", { entryId: id });
     } catch (e) {

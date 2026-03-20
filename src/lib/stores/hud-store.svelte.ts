@@ -1,6 +1,7 @@
 import type {
     HudStartPayload,
     HudSynthesizingPayload,
+    HudPlaybackStartPayload,
     SynthesisProgressPayload,
     PaginationPayload,
     ClipboardCopiedPayload,
@@ -27,6 +28,9 @@ let processedChars = $state<number>(0);
 let progressConfidence = $state<number>(0);
 let estimatedDurationMs = $state<number | null>(null);
 let elapsedMs = $state<number>(0);
+
+// Playback state
+let audioDurationMs = $state<number>(0);
 
 // Clipboard state
 let isClipboardCopied = $state(false);
@@ -55,25 +59,24 @@ const DEFAULT_ESTIMATE_MS = 3000;
       (() => {
           const charProgress = totalChars > 0 ? (processedChars / totalChars) * 100 : 0;
 
-          // Use actual estimate if available
-          if (estimatedDurationMs !== null && estimatedDurationMs > 0) {
-              const timeProgress = (elapsedMs / estimatedDurationMs) * 100;
-              const confidenceWeight = Math.min(1, progressConfidence * 2);
-              const weightedCharProgress = charProgress * (1 - confidenceWeight * 0.3);
-              return Math.min(99, Math.max(weightedCharProgress, timeProgress));
+          // Prefer character progress when available - it's more accurate than time-based estimates
+          if (totalChars > 0 && processedChars > 0) {
+              return Math.min(99, charProgress);
           }
 
-          // No estimate yet - use elapsed time with a default assumption
-          // Progress ramps up quickly then slows, capping at MAX_PROGRESS_WITHOUT_ESTIMATE
+          // Fallback to time-based progress if we have an estimate
+          if (estimatedDurationMs !== null && estimatedDurationMs > 0) {
+              return Math.min(99, (elapsedMs / estimatedDurationMs) * 100);
+          }
+
+          // No data - show subtle animation based on elapsed time
           const effectiveMs = elapsedMs > 0 ? elapsedMs : 100;
           const defaultTimeProgress = (effectiveMs / DEFAULT_ESTIMATE_MS) * 100;
-          const cappedProgress = Math.min(MAX_PROGRESS_WITHOUT_ESTIMATE, defaultTimeProgress);
-
-          return Math.max(charProgress, cappedProgress);
+          return Math.min(MAX_PROGRESS_WITHOUT_ESTIMATE, defaultTimeProgress);
       })()
   );
 
-  let hasEstimate = $derived(estimatedDurationMs !== null || progressConfidence > 0.05 || totalChars > 0);
+  let hasEstimate = $derived(estimatedDurationMs !== null || totalChars > 0);
 
 let dotPulsing = $derived(isSynthesizing || (!isPaused && !isSynthesizing));
 
@@ -146,6 +149,9 @@ export const hudStore = {
     get dotPulsing() {
         return dotPulsing;
     },
+    get audioDurationMs() {
+        return audioDurationMs;
+    },
 
     // Setters
     setBarValues(values: number[]) {
@@ -199,6 +205,9 @@ export const hudStore = {
     setClipboardDurationMs(ms: number) {
         clipboardDurationMs = ms;
     },
+    setAudioDurationMs(ms: number) {
+        audioDurationMs = ms;
+    },
 
     // Compound actions
     handleStart(payload: HudStartPayload) {
@@ -210,6 +219,8 @@ export const hudStore = {
         isVisible = true;
         estimatedDurationMs = null;
         elapsedMs = 0;
+        // Extract audio duration from envelope for progress bar
+        audioDurationMs = payload.envelope?.duration_ms ?? 0;
     },
 
     handleSynthesizing(payload: HudSynthesizingPayload) {
@@ -223,7 +234,7 @@ export const hudStore = {
         elapsedMs = 0;
     },
 
-    handlePlaybackStart(payload: HudSynthesizingPayload) {
+    handlePlaybackStart(payload: HudPlaybackStartPayload, durationMs: number = 0) {
         spokenText = payload.text || null;
         provider = payload.provider ?? null;
         voice = payload.voice ?? null;
@@ -231,6 +242,16 @@ export const hudStore = {
         isPaused = false;
         barValues = [];
         isVisible = true;
+        
+        // Use provided duration or estimate from text length (~4 chars/sec for speech)
+        if (durationMs > 0) {
+            audioDurationMs = durationMs;
+        } else if (payload.text) {
+            // Rough estimate: ~250 chars per minute = ~4 chars/sec
+            audioDurationMs = Math.ceil(payload.text.length * 250);
+        } else {
+            audioDurationMs = 0;
+        }
     },
 
     handleStop() {
@@ -246,6 +267,7 @@ export const hudStore = {
         totalChars = 0;
         processedChars = 0;
         progressConfidence = 0;
+        audioDurationMs = 0;
     },
 
     handleSynthesisProgress(payload: SynthesisProgressPayload) {

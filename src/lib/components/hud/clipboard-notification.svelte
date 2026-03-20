@@ -3,7 +3,8 @@
 </script>
 
 <div class="clipboard-notification">
-  <div class="clipboard-pill" style:--dur="{durationMs}ms">
+  <div class="clipboard-pill" style="--dur: {durationMs}ms;">
+    <div class="progress-fill"></div>
     <span class="clipboard-title">Clipboard Copied</span>
   </div>
 </div>
@@ -17,12 +18,6 @@
     animation: notification-in 0.4s cubic-bezier(0, 0.7, 0.1, 1) forwards;
   }
 
-  @property --progress {
-    syntax: "<percentage>";
-    initial-value: 0%;
-    inherits: true;
-  }
-
   .clipboard-pill {
     position: relative;
     display: flex;
@@ -31,32 +26,30 @@
     padding: 12px 24px;
     background: oklch(0.18 0.01 264.8/ 0.85);
     border-radius: 100px;
-    --progress: 0%;
-    animation: progress-fill var(--dur, 1500ms) cubic-bezier(0, 0.7, 0.1, 1) forwards;
+    overflow: hidden;
   }
 
-  .clipboard-pill::before {
-    content: "";
+  .progress-fill {
     position: absolute;
-    inset: -4px;
-    border-radius: 100px;
-    padding: 4px;
-    background: conic-gradient(
-      from 180deg,
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background: linear-gradient(
+      90deg,
       oklch(62.3% 0.214 259.815) 0%,
-      oklch(62.3% 0.214 259.815) var(--progress),
-      oklch(62.3% 0.214 259.815/ 0.3) var(--progress),
-      oklch(62.3% 0.214 259.815/ 0.3) 100%
+      oklch(54.3% 0.2 259.815) 100%
     );
-    mask:
-      linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    mask-composite: exclude;
+    transform-origin: left;
+    animation: fill-progress var(--dur, 1500ms) cubic-bezier(0, 0.7, 0.1, 1) forwards;
   }
 
-  @keyframes progress-fill {
+  @keyframes fill-progress {
+    from {
+      transform: scaleX(0);
+    }
     to {
-      --progress: 100%;
+      transform: scaleX(1);
     }
   }
 
@@ -72,6 +65,7 @@
   }
 
   .clipboard-title {
+    position: relative;
     font-size: 15px;
     font-weight: 600;
     color: oklch(0.96 0.01 264.8);

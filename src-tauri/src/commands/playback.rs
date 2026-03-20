@@ -217,12 +217,16 @@ pub fn play_history_entry(
 /// Show the HUD window for playback of existing audio.
 /// Called when playing history entries to display the HUD overlay.
 #[tauri::command]
-pub fn show_hud_for_playback(app: tauri::AppHandle, text: Option<String>) -> Result<(), String> {
+pub fn show_hud_for_playback(
+    app: tauri::AppHandle,
+    text: Option<String>,
+    audio_duration_ms: Option<u64>,
+) -> Result<(), String> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] show_hud_for_playback called");
     }
 
-    hud::show_hud_playback(&app, text);
+    hud::show_hud_playback(&app, text, audio_duration_ms);
     Ok(())
 }
 

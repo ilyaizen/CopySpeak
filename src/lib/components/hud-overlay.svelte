@@ -4,12 +4,8 @@
   import { hudStore } from "$lib/stores/hud-store.svelte.js";
   import { useHudEvents } from "$lib/composables/use-hud-events.js";
   import { createTimer, clearTimer, createTimeout, clearTimeoutState } from "$lib/utils/timer.js";
-  import {
-    ClipboardNotification,
-    HudStatus,
-    HudSynthesisProgress,
-    HudPlaybackContent
-  } from "./hud/index.js";
+  import { ClipboardNotification, HudSynthesisProgress, HudPlaybackContent } from "./hud/index.js";
+  import { playbackStore } from "$lib/stores/playback-store.svelte.js";
 
   // Timer state
   let elapsedTimerState = $state<{
@@ -94,6 +90,7 @@
       hudStore.setProvider("ElevenLabs");
       hudStore.setVoice("Rachel");
       hudStore.setIsVisible(true);
+      hudStore.setAudioDurationMs(8000); // 8 seconds for marquee demo
     }
   });
 
@@ -125,25 +122,18 @@
     <ClipboardNotification durationMs={hudStore.clipboardDurationMs} />
   {:else if hudStore.isVisible}
     <div class="hud-content">
-      <HudStatus
-        isSynthesizing={hudStore.isSynthesizing}
-        isPaused={hudStore.isPaused}
-        statusLabel={hudStore.statusLabel}
-        providerVoiceLabel={hudStore.providerVoiceLabel}
-        isPaginated={hudStore.isPaginated}
-        currentFragment={hudStore.currentFragment}
-        totalFragments={hudStore.totalFragments}
-      />
-
       {#if hudStore.isSynthesizing}
         <HudSynthesisProgress
-          hasEstimate={hudStore.hasEstimate}
-          progressPercent={hudStore.progressPercent}
-          estimatedTotalMs={hudStore.estimatedDurationMs}
+          estimatedDurationMs={hudStore.estimatedDurationMs}
           elapsedMs={hudStore.elapsedMs}
         />
       {:else}
-        <HudPlaybackContent barValues={hudStore.barValues} spokenText={hudStore.spokenText} />
+        <HudPlaybackContent
+          barValues={hudStore.barValues}
+          spokenText={hudStore.spokenText}
+          durationMs={hudStore.audioDurationMs}
+          speed={playbackStore.speed}
+        />
       {/if}
     </div>
   {/if}
@@ -168,7 +158,7 @@
   }
 
   .hud-overlay.has-content {
-    background: rgba(0, 0, 0, 0.75);
+    background: transparent;
   }
 
   .hud-content {

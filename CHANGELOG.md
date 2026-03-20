@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-03-21
+
+### Added
+
+- **HUD playback enhancements**
+  - Progress bar animation synced to audio duration
+  - Marquee scrolling text for long speech content
+  - `duration_ms` field in `HudSynthesizingPayload` for synthesis duration tracking
+
+### Fixed
+
+- Removed duplicate `$effect` in hud-playback-content component
+- Removed debug `console.log` statement from production code
+
 ## [0.0.1] - 2026-03-20
 
 ### Added
@@ -49,5 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/copyspeak/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/ilyaizen/copyspeak/compare/v0.0.2...HEAD
+[0.0.2]: https://github.com/ilyaizen/copyspeak/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/ilyaizen/copyspeak/releases/tag/v0.0.1
