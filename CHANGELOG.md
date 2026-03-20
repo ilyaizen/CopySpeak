@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Manual trigger: paste/play from UI
 
 - **Multiple TTS engines**
-  - **KittenTTS** (default): Ultra-lightweight CPU-optimized ONNX inference, 8 built-in voices
+  - **Kitten TTS** (default): Ultra-lightweight CPU-optimized ONNX inference, 8 built-in voices
   - **Piper TTS**: Local CLI engine with 20+ EN US voices
   - **Kokoro TTS**: Local CLI engine with multiple voices
   - **OpenAI TTS**: Cloud API with 9 voices (alloy, ash, coral, echo, fable, onyx, nova, shimmer, verse)

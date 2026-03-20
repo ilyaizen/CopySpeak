@@ -145,7 +145,7 @@
     "selectEngine": "Seleccionar motor TTS",
     "testing": "Probando...",
     "kitten": {
-      "title": "KittenTTS",
+      "title": "Kitten TTS",
       "description": "Local: TTS ultra-ligero (25-80MB) con 8 voces naturales. Inferencia ONNX optimizada para CPU, no requiere GPU."
     },
     "piper": {
@@ -184,7 +184,7 @@
     },
     "localEngine": {
       "voice": "Voz",
-      "kittenInstall": "Ejecuta ./install-kittentts.ps1 desde la raíz del proyecto para instalar KittenTTS. Los modelos se descargan automáticamente en el primer uso (~25-80MB según la variante).",
+      "kittenInstall": "Ejecuta ./install-kittentts.ps1 desde la raíz del proyecto para instalar Kitten TTS. Los modelos se descargan automáticamente en el primer uso (~25-80MB según la variante).",
       "piperModels": "Los archivos de modelo (.onnx + .onnx.json) deben colocarse en {dataDir}. Descarga desde",
       "commandPreview": "Vista previa del comando",
       "tempDirectory": "se resuelve a tu directorio temporal del sistema en tiempo de ejecución.",
@@ -299,7 +299,7 @@
       "configSaved": "¡Configuración guardada! Empecemos.",
       "hudTest": "Prueba de HUD iniciada",
       "historyCleanup": "Limpieza de historial completada",
-      "installerLaunched": "Instalador de KittenTTS iniciado en una nueva ventana",
+      "installerLaunched": "Instalador de Kitten TTS iniciado en una nueva ventana",
       "settingsCopied": "Configuración copiada al portapapeles",
       "settingsDownloaded": "Configuración descargada",
       "settingsImported": "Configuración importada exitosamente",
@@ -386,10 +386,10 @@
     "engineConfig": "Configuración del motor",
     "engineDescription": "Configura tu motor TTS. Puedes cambiar esto más tarde en la pestaña Motor.",
     "recommendation": {
-      "title": "Recomendamos KittenTTS para comenzar",
-      "description": "KittenTTS es un nuevo motor TTS ultra-ligero (25-80MB) que funciona en CPU sin requerir GPU. Haz clic en el botón de abajo para instalarlo automáticamente — no se necesita configuración manual."
+      "title": "Recomendamos Kitten TTS para comenzar",
+      "description": "Kitten TTS es un nuevo motor TTS ultra-ligero (25-80MB) que funciona en CPU sin requerir GPU. Haz clic en el botón de abajo para instalarlo automáticamente — no se necesita configuración manual."
     },
-    "install": "Instalar KittenTTS",
+    "install": "Instalar Kitten TTS",
     "installing": "Instalando...",
     "skip": "Omitir por ahora",
     "complete": "Comenzar",

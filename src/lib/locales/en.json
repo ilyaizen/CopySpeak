@@ -145,7 +145,7 @@
     "selectEngine": "Select TTS Engine",
     "testing": "Testing...",
     "kitten": {
-      "title": "KittenTTS",
+      "title": "Kitten TTS",
       "description": "Local: Ultra-lightweight TTS (25-80MB) with 8 natural voices. CPU-optimized ONNX inference, no GPU required."
     },
     "piper": {
@@ -201,7 +201,7 @@
     },
     "localEngine": {
       "voice": "Voice",
-      "kittenInstall": "Run ./install-kittentts.ps1 from the project root to install KittenTTS. Models are downloaded automatically on first use (~25-80MB depending on variant).",
+      "kittenInstall": "Run ./install-kittentts.ps1 from the project root to install Kitten TTS. Models are downloaded automatically on first use (~25-80MB depending on variant).",
       "piperModels": "Model files (.onnx + .onnx.json) must be placed in {dataDir}. Download from",
       "commandPreview": "Command Preview",
       "tempDirectory": "resolves to your system temp directory at runtime.",
@@ -331,7 +331,7 @@
       "configSaved": "Configuration saved! Let's get started.",
       "hudTest": "HUD test triggered",
       "historyCleanup": "History cleanup completed",
-      "installerLaunched": "KittenTTS installer launched in a new window",
+      "installerLaunched": "Kitten TTS installer launched in a new window",
       "settingsCopied": "Settings copied to clipboard",
       "settingsDownloaded": "Settings downloaded",
       "settingsImported": "Settings imported successfully",
@@ -386,10 +386,10 @@
     "engineConfig": "Engine Configuration",
     "engineDescription": "Set up your TTS engine. You can change this later in the Engine tab.",
     "recommendation": {
-      "title": "We recommend KittenTTS to get started",
-      "description": "KittenTTS is a new ultra-lightweight TTS engine (25-80MB) that runs on CPU without requiring a GPU. Click the button below to install it automatically — no manual setup needed."
+      "title": "We recommend Kitten TTS to get started",
+      "description": "Kitten TTS is a new ultra-lightweight TTS engine (25-80MB) that runs on CPU without requiring a GPU. Click the button below to install it automatically — no manual setup needed."
     },
-    "install": "Install KittenTTS",
+    "install": "Install Kitten TTS",
     "installing": "Installing...",
     "skip": "Skip for now",
     "complete": "Get Started",

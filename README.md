@@ -17,7 +17,7 @@ bun run tauri dev
 
 - **Multiple trigger modes**: Double-copy (1.5s window), hotkey, or manual paste/play
 - **5 TTS engines**:
-  - **KittenTTS** (default) — Ultra-lightweight CPU-optimized ONNX inference, 8 built-in voices
+  - **Kitten TTS** (default) — Ultra-lightweight CPU-optimized ONNX inference, 8 built-in voices
   - **Piper TTS** — Local CLI engine with 20+ EN US voices
   - **Kokoro TTS** — Local CLI engine with multiple voices
   - **OpenAI TTS** — Cloud API with 9 voices
@@ -84,7 +84,7 @@ cd src-tauri && cargo test  # Rust tests
 Initial release with core TTS functionality:
 
 - Double-copy, hotkey, and manual triggers
-- 5 TTS engines (KittenTTS, Piper, Kokoro, OpenAI, ElevenLabs)
+- 5 TTS engines (Kitten TTS, Piper, Kokoro, OpenAI, ElevenLabs)
 - HUD overlay with waveform visualization
 - History management with batch operations
 - Full i18n support (EN/ES)

@@ -53,7 +53,7 @@
     isInstalling = true;
     try {
       await invoke("run_kittentts_installer");
-      toast.success("KittenTTS installer launched in a new window");
+      toast.success("Kitten TTS installer launched in a new window");
       installComplete = true;
     } catch (e) {
       console.error("Failed to run installer:", e);
@@ -131,7 +131,7 @@
             </p>
           </div>
 
-          <!-- KittenTTS recommendation callout -->
+          <!-- Kitten TTS recommendation callout -->
           <div
             class="flex gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/8 px-4 py-3"
           >
