@@ -98,6 +98,10 @@ Initial release with core TTS functionality:
 
 See [CHANGELOG.md](./CHANGELOG.md) for details.
 
+## Contributing
+
+We welcome contributions! Please see our [Contributing Guide](./docs/CONTRIBUTING.md) for details on how to get started, code style guidelines, and how to submit pull requests.
+
 ## License
 
 MIT

@@ -1,0 +1,294 @@
+# Contributing to CopySpeak
+
+Thank you for your interest in contributing to CopySpeak! This guide will help you get started with contributing to this open source text-to-speech application.
+
+## 📖 Philosophy
+
+CopySpeak aims to make AI text-to-speech accessible to everyone. The goal is to create both a useful tool and a foundation for others to build upon—a well-patterned, simple codebase that serves the community. We prioritize:
+
+- **Simplicity**: Clear, maintainable code over clever solutions
+- **Extensibility**: Make it easy for others to fork and customize
+- **Privacy**: Keep everything local when possible, with optional cloud TTS engines
+- **Accessibility**: Free tooling that belongs in everyone's hands
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- [Rust](https://rustup.rs/) (latest stable)
+- [Bun](https://bun.sh/) package manager
+
+### Setting Up Your Development Environment
+
+1. **Fork the repository** on GitHub
+
+2. **Clone your fork**:
+
+   ```bash
+   git clone https://github.com/ilyaizen/CopySpeak.git
+   cd CopySpeak
+   ```
+
+3. **Add upstream remote**:
+
+   ```bash
+   git remote add upstream git@github.com:ilyaizen/CopySpeak.git
+   ```
+
+4. **Install dependencies**:
+
+   ```bash
+   bun install
+   ```
+
+5. **Run in development mode**:
+   ```bash
+   bun run tauri dev
+   ```
+
+### Understanding the Codebase
+
+CopySpeak follows a clean architecture pattern:
+
+**Backend (Rust - `src-tauri/src/`):**
+
+- `main.rs` - Main application entry point with Tauri setup
+- `config/` - Configuration persistence modules
+- `commands/` - Tauri command handlers for frontend communication
+- `clipboard.rs` - Double-copy detection trigger
+- `audio.rs` - Audio playback using rodio
+- `tts/` - TTS backend abstraction (Kitten, Piper, Kokoro, OpenAI, ElevenLabs)
+- `sanitize/` - Text normalization modules
+
+**Frontend (Svelte 5/TypeScript - `src/`):**
+
+- `lib/components/` - Svelte UI components
+- `lib/components/engine/` - TTS engine configuration UI
+- `lib/components/settings/` - Settings page components
+- `lib/components/hud/` - HUD overlay components
+- `lib/types.ts` - Shared TypeScript types
+
+## 🐛 Reporting Bugs
+
+### Before Submitting a Bug Report
+
+1. **Search existing issues** at [github.com/ilyaizen/CopySpeak/issues](https://github.com/ilyaizen/CopySpeak/issues)
+2. **Check discussions** at [github.com/ilyaizen/CopySpeak/discussions](https://github.com/ilyaizen/CopySpeak/discussions)
+3. **Try the latest release** to see if the issue has been fixed
+
+### Submitting a Bug Report
+
+When creating a bug report, please include:
+
+**System Information:**
+
+- App version (found in settings or about section)
+- Operating System (e.g., Windows 11, macOS 14.1, Ubuntu 22.04)
+- TTS Engine being used
+- CPU (e.g., Apple M2, Intel i7-12700K, AMD Ryzen 7 5800X)
+- GPU (e.g., Apple M2 GPU, NVIDIA RTX 4080, Intel UHD Graphics)
+
+**Bug Details:**
+
+- Clear description of the bug
+- Steps to reproduce
+- Expected behavior
+- Actual behavior
+- Logs or screenshots if applicable
+
+## 💡 Suggesting Features
+
+We use GitHub Discussions for feature requests rather than issues. This keeps issues focused on bugs and actionable tasks while allowing more open-ended conversations about features.
+
+### Submitting a Feature Request
+
+1. Go to [Discussions](https://github.com/ilyaizen/CopySpeak/discussions)
+2. Click "New discussion"
+3. Choose the appropriate category (Ideas, Feature Requests, etc.)
+4. Describe your feature idea including:
+   - The problem you're trying to solve
+   - Your proposed solution
+   - Any alternatives you've considered
+   - How it fits with CopySpeak's philosophy
+
+## 🔧 Making Code Contributions
+
+### Before You Start
+
+**This is critical:** Before writing any code, please do the following:
+
+1. **Search existing issues and PRs** - Check both open AND closed issues and pull requests. Someone may have already addressed this, or there may be a reason it was closed.
+   - [Open issues](https://github.com/ilyaizen/CopySpeak/issues)
+   - [Closed issues](https://github.com/ilyaizen/CopySpeak/issues?q=is%3Aissue+is%3Aclosed)
+   - [Open PRs](https://github.com/ilyaizen/CopySpeak/pulls)
+   - [Closed PRs](https://github.com/ilyaizen/CopySpeak/pulls?q=is%3Apr+is%3Aclosed)
+
+2. **If something was previously closed** - If you want to revisit a closed issue or PR, you need to:
+   - Provide a strong argument for why it should be reconsidered
+   - Gather community feedback first via [Discussions](https://github.com/ilyaizen/CopySpeak/discussions)
+   - Link to that discussion in your PR
+
+3. **Get community feedback for features** - PRs with demonstrated community interest are **much more likely to be merged**. Start a discussion, get feedback, and link to it in your PR. This helps ensure CopySpeak stays focused and useful for the most people without becoming bloated.
+
+Community feedback is essential to keeping CopySpeak the best it can be for everyone. It helps prioritize what matters most and prevents feature creep.
+
+### Development Workflow
+
+1. **Create a feature branch**:
+
+   ```bash
+   git checkout -b feature/your-feature-name
+   # or
+   git checkout -b fix/your-bug-fix
+   ```
+
+2. **Make your changes**:
+   - Write clean, maintainable code
+   - Follow existing code style and patterns
+   - Add comments for complex logic
+   - Keep commits focused and atomic
+
+3. **Test thoroughly**:
+   - Test on your target platform(s)
+   - Verify existing functionality still works
+   - Test edge cases and error conditions
+
+4. **Commit your changes**:
+
+   ```bash
+   git add .
+   git commit -m "feat: add your feature description"
+   # or
+   git commit -m "fix: describe the bug fix"
+   ```
+
+   Use conventional commit messages:
+   - `feat:` for new features
+   - `fix:` for bug fixes
+   - `docs:` for documentation changes
+   - `refactor:` for code refactoring
+   - `test:` for test additions/changes
+   - `chore:` for maintenance tasks
+
+5. **Keep your fork updated**:
+
+   ```bash
+   git fetch upstream
+   git rebase upstream/main
+   ```
+
+6. **Push to your fork**:
+
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+7. **Create a Pull Request**:
+   - Go to the [CopySpeak repository](https://github.com/ilyaizen/CopySpeak)
+   - Click "New Pull Request"
+   - Select your fork and branch
+   - Fill out the PR template completely, including:
+     - Clear description of changes
+     - Links to related issues or discussions
+     - **Community feedback** (especially important for features)
+     - How you tested the changes
+     - Screenshots/videos if applicable
+     - Breaking changes (if any)
+
+   **Remember:** PRs with community support are prioritized. If you haven't already, start a [discussion](https://github.com/ilyaizen/CopySpeak/discussions) to gather feedback before or alongside your PR. It is not explicitly required to gather feedback, but it certainly helps your PR get merged faster.
+
+### AI Assistance Disclosure
+
+**AI-assisted PRs are welcome!** Use whatever tools help you contribute, just be upfront about it.
+
+In your PR description, please include:
+
+- Whether AI was used (yes/no)
+- Which tools were used (e.g., "Claude Code", "GitHub Copilot", "ChatGPT")
+- How extensively it was used (e.g., "generated boilerplate", "helped debug", "wrote most of the code")
+
+### Code Style Guidelines
+
+**Rust:**
+
+- Follow standard Rust formatting (`cargo fmt`)
+- Run `cargo clippy` and address warnings
+- Use descriptive variable and function names
+- Add doc comments for public APIs
+- Handle errors explicitly (avoid unwrap in production code)
+
+**TypeScript/Svelte:**
+
+- Use TypeScript strictly, avoid `any` types
+- Follow Svelte 5 best practices (use `$state`, `$derived`, `$props`, `$effect`)
+- Use functional components
+- Keep components small and focused
+- Use Tailwind CSS for styling with shadcn-svelte components
+
+**General:**
+
+- Write self-documenting code
+- Add comments for non-obvious logic
+- Keep functions small and single-purpose
+- Prioritize readability over cleverness
+
+### Testing Your Changes
+
+**Manual Testing:**
+
+- Run the app in development mode: `bun run tauri dev`
+- Test your changes with various TTS engines
+- Verify on multiple platforms if possible
+
+**Automated Testing:**
+
+```bash
+# Frontend tests
+bun run test
+
+# Rust tests
+cd src-tauri && cargo test
+```
+
+**Building for Production:**
+
+```bash
+bun run tauri build
+```
+
+Test the production build to ensure it works as expected.
+
+## 📝 Documentation Contributions
+
+Documentation improvements are highly valued! You can contribute by:
+
+- Improving README.md or this CONTRIBUTING.md
+- Adding code comments and doc comments
+- Improving error messages
+
+## 🤝 Community Guidelines
+
+- **Be respectful and inclusive** - We welcome contributors of all skill levels
+- **Be patient** - This is maintained by a small team, responses may take time
+- **Be constructive** - Focus on solutions and improvements
+- **Be collaborative** - Help others and share knowledge
+- **Search first** - Check existing issues/discussions before creating new ones
+
+## 🎯 Good First Issues
+
+Look for issues labeled `good first issue` or `help wanted` if you're new to the project. These are typically:
+
+- Well-defined and scoped
+- Good for learning the codebase
+- Mentor support available
+
+## 📞 Getting Help
+
+- **Discussions**: Ask questions in [GitHub Discussions](https://github.com/ilyaizen/CopySpeak/discussions)
+- **Issues**: Report bugs via [GitHub Issues](https://github.com/ilyaizen/CopySpeak/issues)
+
+---
+
+**Thank you for contributing to CopySpeak!** Your efforts help make text-to-speech technology more accessible and extensible for everyone.

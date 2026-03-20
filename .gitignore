@@ -27,6 +27,6 @@ src-tauri/Cargo.lock
 AGENTS.md
 CLAUDE.md
 GEMINI.md
-# /docs_internal
-# /plans
+/docs_internal
+/plans
 file-structure.txt
