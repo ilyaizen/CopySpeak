@@ -86,9 +86,7 @@
         // This error can occur in both dev and production
         // Common causes: no release exists, latest.json missing, network issues
         console.error(`[UpdateChecker v${VERSION}] Possible causes:`);
-        console.error(
-          `  - No release exists at https://github.com/ilyaizen/CopySpeak-TTS/releases`
-        );
+        console.error(`  - No release exists at https://github.com/ilyaizen/CopySpeak/releases`);
         console.error(`  - latest.json file missing from release`);
         console.error(`  - Network connectivity issues`);
         showError("Cannot reach update server");

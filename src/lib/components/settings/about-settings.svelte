@@ -27,7 +27,7 @@
     <Button
       variant="outline"
       size="sm"
-      onclick={() => openExternal("https://github.com/ilyaizen/CopySpeak-TTS")}
+      onclick={() => openExternal("https://github.com/ilyaizen/CopySpeak")}
     >
       <Github class="mr-2 h-4 w-4" />
       {$_("settings.about.github")}
