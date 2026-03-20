@@ -4,7 +4,7 @@ A lightweight Windows desktop app that reads clipboard text aloud using AI Text-
 
 ### [Download Latest](https://github.com/ilyaizen/CopySpeak/releases) 
 
-**Current Version:** 0.0.1
+**Current Version:** 0.0.2
 
 ## Screenshots
 
@@ -85,18 +85,10 @@ bun run test             # Frontend tests (vitest)
 cd src-tauri && cargo test  # Rust tests
 ```
 
-## Changelog (v0.0.1)
+## Changelog
 
-Initial release with core TTS functionality:
 
-- Double-copy, hotkey, and manual triggers
-- 5 TTS engines (Kitten TTS, Piper, Kokoro, OpenAI, ElevenLabs)
-- HUD overlay with waveform visualization
-- History management with batch operations
-- Full i18n support (EN/ES)
-- Auto-updater integration
-
-See [CHANGELOG.md](./CHANGELOG.md) for details.
+See [CHANGELOG.md](./CHANGELOG.md) for recent changes.
 
 ## Contributing
 
