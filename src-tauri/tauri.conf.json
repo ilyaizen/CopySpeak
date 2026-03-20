@@ -1,0 +1,83 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "copyspeak",
+  "version": "0.0.1",
+  "identifier": "com.copyspeak",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "bun run dev",
+    "beforeBuildCommand": "bun run build"
+  },
+  "bundle": {
+    "active": true,
+    "createUpdaterArtifacts": true,
+    "targets": "all",
+    "resources": ["../install-kittentts.ps1", "../kittentts-cli.py"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "publisher": "CopySpeak",
+    "shortDescription": "Clipboard text-to-speech tool",
+    "longDescription": "A lightweight tool for quick AI text-to-speech generation.",
+    "category": "Productivity",
+    "windows": {
+      "certificateThumbprint": null,
+      "digestAlgorithm": "sha256",
+      "timestampUrl": ""
+    }
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "security": {
+      "devCsp": null
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "CopySpeak",
+        "width": 675,
+        "height": 540,
+        "resizable": false,
+        "center": true,
+        "visible": true
+      },
+      {
+        "label": "hud",
+        "title": "",
+        "url": "/hud",
+        "width": 300,
+        "height": 140,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "backgroundColor": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "alwaysOnTop": true,
+        "resizable": false,
+        "skipTaskbar": true,
+        "visible": false,
+        "focus": false
+      }
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/ilyaizen/CopySpeak-TTS/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU5NEU5MjFEMEZBOUQ5MApSV1NRbmZyUUllbVVEbkwrajB5ZjNXbml2U2tuTTZXVmhhektTS2RxM1dYaks5TC9SY0I2alVwRQo=",
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

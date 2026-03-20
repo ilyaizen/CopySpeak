@@ -1,0 +1,109 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (auto-detected from package.json if empty)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-upload:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [windows-latest]
+        include:
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Get version from package.json
+        id: version
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          echo "version=$version" >> $env:GITHUB_OUTPUT
+          echo "Detected version: $version"
+        shell: pwsh
+
+      - name: Set release tag
+        id: tag
+        run: |
+          if ("${{ github.event.inputs.tag }}" -ne "") {
+            echo "tag=${{ github.event.inputs.tag }}" >> $env:GITHUB_OUTPUT
+            echo "Using custom tag: ${{ github.event.inputs.tag }}"
+          } else {
+            $version = "${{ steps.version.outputs.version }}"
+            $tag = "v$version"
+            echo "tag=$tag" >> $env:GITHUB_OUTPUT
+            echo "Using auto-detected tag: $tag"
+          }
+        shell: pwsh
+
+      - name: Extract changelog for current version
+        id: changelog
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $changelog = Get-Content CHANGELOG.md -Raw
+
+          # Extract the section for this version (between ## [version] and the next ## [version])
+          $pattern = "(?s)## \[$version\].*?(?=\n## \[|\z)"
+          if ($changelog -match $pattern) {
+            $notes = $Matches[0].Trim()
+            # Remove the version header line
+            $notes = $notes -replace "^## \[$version\][^\n]*\n", ""
+            $notes = $notes.Trim()
+          } else {
+            $notes = "See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details."
+          }
+
+          # Write to GITHUB_OUTPUT with multiline delimiter
+          $delimiter = "EOF_$((Get-Random))"
+          echo "notes<<$delimiter" >> $env:GITHUB_OUTPUT
+          echo "$notes" >> $env:GITHUB_OUTPUT
+          echo "$delimiter" >> $env:GITHUB_OUTPUT
+          echo "Extracted release notes for version $version"
+        shell: pwsh
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install frontend dependencies
+        run: bun install
+
+      - name: Build frontend
+        run: bun run build
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        with:
+          tagName: ${{ steps.tag.outputs.tag }}
+          releaseName: "CopySpeak ${{ steps.tag.outputs.tag }}"
+          releaseBody: ${{ steps.changelog.outputs.notes }}
+          releaseDraft: true
+          prerelease: false
+          args: "--target ${{ matrix.target }}"

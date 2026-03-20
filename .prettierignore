@@ -1,0 +1,17 @@
+# Ignore specific directories and file types
+node_modules/
+.svelte-kit/
+build/
+dist/
+dist-clean/
+src-tauri/target/
+coverage/
+.git/
+.obsidian/
+
+# Ignore non-Svelte files (but allow Svelte files to be formatted)
+*.js
+*.ts
+*.json
+*.html
+!*.svelte
