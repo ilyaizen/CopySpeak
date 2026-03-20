@@ -2,6 +2,8 @@
 
 A lightweight Windows desktop app that reads clipboard text aloud using AI Text-to-Speech engines. Trigger speech by copying the same text twice in quick succession.
 
+### [Download Latest](https://github.com/ilyaizen/CopySpeak/releases) 
+
 **Current Version:** 0.0.1
 
 ## Quick Start
