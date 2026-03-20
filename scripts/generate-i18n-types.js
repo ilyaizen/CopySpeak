@@ -19,11 +19,11 @@ const OUTPUT_PATH = path.join(__dirname, "..", "src", "lib", "i18n", "types.ts")
  */
 function flattenKeys(obj, prefix = "") {
   let keys = [];
-  
+
   for (const key in obj) {
     if (obj.hasOwnProperty(key)) {
       const newKey = prefix ? `${prefix}.${key}` : key;
-      
+
       if (typeof obj[key] === "object" && obj[key] !== null) {
         keys = keys.concat(flattenKeys(obj[key], newKey));
       } else {
@@ -31,7 +31,7 @@ function flattenKeys(obj, prefix = "") {
       }
     }
   }
-  
+
   return keys;
 }
 
@@ -39,9 +39,10 @@ function flattenKeys(obj, prefix = "") {
  * Generate TypeScript union type from keys
  */
 function generateTypes(keys) {
-  const keyStrings = keys.map(key => `  | "${key}"`).join("\n");
-  
-  return `// Auto-generated from en.json by scripts/generate-i18n-types.js
+  const keyStrings = keys.map((key) => `  | "${key}"`).join("\n");
+
+  return (
+    `// Auto-generated from en.json by scripts/generate-i18n-types.js
 // Do not edit manually - run the script to regenerate
 
 /**
@@ -74,28 +75,31 @@ ${keyStrings};
  * \`\`\`
  */
 export type NestedKeyOf<T extends string, Prefix extends string> = 
-  T extends ` + "`${Prefix}.${infer _Rest}`" + ` ? T : never;
-`;
+  T extends ` +
+    "`${Prefix}.${infer _Rest}`" +
+    ` ? T : never;
+`
+  );
 }
 
 function main() {
   console.log("Generating i18n types from en.json...");
-  
+
   try {
     // Read en.json
     const enJsonContent = fs.readFileSync(EN_JSON_PATH, "utf-8");
     const enJson = JSON.parse(enJsonContent);
-    
+
     // Flatten keys
     const keys = flattenKeys(enJson);
     console.log(`Found ${keys.length} translation keys`);
-    
+
     // Generate TypeScript
     const typesContent = generateTypes(keys);
-    
+
     // Write output
     fs.writeFileSync(OUTPUT_PATH, typesContent, "utf-8");
-    
+
     console.log(`✓ Generated types at ${OUTPUT_PATH}`);
     console.log(`  Total keys: ${keys.length}`);
   } catch (error) {

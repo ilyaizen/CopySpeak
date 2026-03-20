@@ -2,7 +2,7 @@ import { writable } from "svelte/store";
 import { isTauri } from "$lib/services/tauri.js";
 
 export const synthesisStore = writable({
-  isSynthesizing: false,
+  isSynthesizing: false
 });
 
 export async function setupSynthesisListener() {
@@ -10,12 +10,17 @@ export async function setupSynthesisListener() {
 
   try {
     const { listen } = await import("@tauri-apps/api/event");
-    return await listen<boolean>("synthesis-state-change", (event) => {
-      synthesisStore.update((state) => ({
-        ...state,
-        isSynthesizing: event.payload,
-      }));
-    });
+    return (
+      (await listen) <
+      boolean >
+      ("synthesis-state-change",
+      (event) => {
+        synthesisStore.update((state) => ({
+          ...state,
+          isSynthesizing: event.payload
+        }));
+      })
+    );
   } catch (error) {
     console.error("Failed to setup synthesis state listener", error);
     return null;

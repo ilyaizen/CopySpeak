@@ -9,7 +9,7 @@ export default {
       assets: "dist",
       fallback: "index.html",
       precompress: false,
-      strict: false,
-    }),
-  },
+      strict: false
+    })
+  }
 };

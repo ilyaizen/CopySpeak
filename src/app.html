@@ -7,7 +7,10 @@
     <title>CopySpeak</title>
     <script>
       console.log("[app.html] Inline script running");
-      console.log("[app.html] Window label:", window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label);
+      console.log(
+        "[app.html] Window label:",
+        window.__TAURI_INTERNALS__?.metadata?.currentWindow?.label
+      );
     </script>
     %sveltekit.head%
   </head>

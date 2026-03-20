@@ -55,12 +55,7 @@
         "decorations": false,
         "transparent": true,
         "shadow": false,
-        "backgroundColor": [
-          0,
-          0,
-          0,
-          0
-        ],
+        "backgroundColor": [0, 0, 0, 0],
         "alwaysOnTop": true,
         "resizable": false,
         "skipTaskbar": true,
@@ -71,9 +66,7 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": [
-        "https://github.com/ilyaizen/CopySpeak/releases/latest/download/latest.json"
-      ],
+      "endpoints": ["https://github.com/ilyaizen/CopySpeak/releases/latest/download/latest.json"],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU5NEU5MjFEMEZBOUQ5MApSV1NRbmZyUUllbVVEbkwrajB5ZjNXbml2U2tuTTZXVmhhektTS2RxM1dYaks5TC9SY0I2alVwRQo=",
       "windows": {
         "installMode": "passive"
