@@ -11,27 +11,22 @@ vite.config.ts.timestamp-*
 bun.lock
 /dist
 /.obsidian
-# AGENTS.md
-# CLAUDE.md
 skills-lock.json
 package-lock.json
-# commit.log
 /.agents
 /.claude
 /.opencode
 /.kilocode
 src-tauri/Cargo.lock
-# GEMINI.md
 /.gemini
 /archive
 /.agent
 /Handy
-.tauri/signing.key
-/openspec
 /.tauri
+/openspec
 AGENTS.md
 CLAUDE.md
-/docs_internal
 GEMINI.md
-/plans
+# /docs_internal
+# /plans
 file-structure.txt
