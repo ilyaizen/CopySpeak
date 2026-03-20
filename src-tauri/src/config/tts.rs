@@ -134,7 +134,7 @@ impl Default for TtsConfig {
                 "--output".into(),
                 "{output}".into(),
             ],
-            voice: "Jasper".into(),
+            voice: "Rosie".into(),
             openai: OpenAIConfig::default(),
             elevenlabs: ElevenLabsConfig::default(),
         }

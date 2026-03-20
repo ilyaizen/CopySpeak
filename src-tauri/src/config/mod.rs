@@ -194,8 +194,8 @@ impl Default for AppConfig {
             playback: PlaybackConfig {
                 on_retrigger: RetriggerMode::Queue,
                 volume: 100,
-                playback_speed: 1.4,
-                pitch: 0.9,
+                playback_speed: 1.35,
+                pitch: 1.15,
             },
             hud: HudConfig {
                 enabled: true,
