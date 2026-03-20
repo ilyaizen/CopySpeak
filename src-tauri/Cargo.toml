@@ -1,5 +1,5 @@
 [package]
-name = "copyspeak"
+name = "CopySpeak"
 version = "0.0.1"
 edition = "2021"
 description = "Simple and configurable TTS orchestrator for Windows"
