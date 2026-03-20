@@ -6,6 +6,10 @@ A lightweight Windows desktop app that reads clipboard text aloud using AI Text-
 
 **Current Version:** 0.0.1
 
+## Screenshots
+
+![CopySpeak v0.0.1](static/screen-v0.0.1.png)
+
 ## Quick Start
 
 ```bash
