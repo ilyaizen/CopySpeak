@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Web deployment support** — Vercel configuration for src-web standalone SvelteKit site
   - `.vercelignore` to exclude Tauri/Rust build artifacts from deployment uploads
   - `.vercel` added to `.gitignore`
+  - Language switcher component for English/Spanish in footer
+  - Locale persistence in localStorage for web version
+
+### Fixed
+
+- svelte-i18n initialization error on static site build - wait for locale loading before render
 
 ## [0.0.2] - 2026-03-21
 

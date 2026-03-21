@@ -1,6 +1,7 @@
 <script lang="ts">
   import { _ } from "svelte-i18n";
   import { Github } from "@lucide/svelte";
+  import LanguageSwitcher from "./language-switcher.svelte";
 
   const GITHUB_URL = "https://github.com/ilyaizen/CopySpeak";
 </script>
@@ -14,6 +15,8 @@
       </div>
 
       <div class="flex items-center gap-6">
+        <LanguageSwitcher />
+
         <a
           href={GITHUB_URL}
           class="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm transition-colors"

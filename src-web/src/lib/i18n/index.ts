@@ -2,38 +2,50 @@ import { init, register, locale as localeStore, isLoading } from "svelte-i18n";
 import { get } from "svelte/store";
 import type { SupportedLocale } from "$lib/types";
 
-// Register translation dictionaries
+const STORAGE_KEY = "copyspeak-locale";
+
+function getBrowserLocale(): SupportedLocale {
+  if (typeof window === "undefined") return "en";
+  const navLang = navigator.language.split("-")[0];
+  if (navLang === "es") return "es";
+  return "en";
+}
+
+function getStoredLocale(): SupportedLocale | null {
+  if (typeof window === "undefined") return null;
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored === "en" || stored === "es" || stored === "ar") return stored;
+  return null;
+}
+
 register("en", () => import("$lib/locales/en.json"));
 register("es", () => import("$lib/locales/es.json"));
 
-// Initialize with default locale
-// Actual locale will be set from AppConfig after load
+const initialLocale = getStoredLocale() ?? getBrowserLocale();
+
 const initPromise = init({
   fallbackLocale: "en",
-  initialLocale: "en"
+  initialLocale
 });
 
-// Export the locale store for use in components
 export { localeStore as locale };
 
-// Helper function to set locale programmatically
 export function setLocale(newLocale: SupportedLocale): void {
   localeStore.set(newLocale);
+  if (typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_KEY, newLocale);
+  }
 }
 
-// Helper function to get current locale value
 export function getCurrentLocale(): SupportedLocale {
   return get(localeStore) as SupportedLocale;
 }
 
-// Wait for i18n to be ready (locale set and messages loaded)
 export async function waitForI18nReady(): Promise<void> {
   await initPromise;
-  // Wait for loading to complete using polling
   while (get(isLoading)) {
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
 }
 
-// Re-export _ formatter for convenience
 export { _ } from "svelte-i18n";
