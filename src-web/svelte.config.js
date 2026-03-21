@@ -10,6 +10,12 @@ export default {
       fallback: "index.html",
       precompress: false,
       strict: false
-    })
+    }),
+    files: {
+      routes: "src/routes",
+      lib: "src/lib",
+      assets: "static",
+      appTemplate: "src/app.html"
+    }
   }
 };
