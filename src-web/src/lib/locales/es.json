@@ -1,0 +1,464 @@
+{
+  "app": {
+    "title": "CopySpeak",
+    "tagline": "Doble copia → voz instantánea"
+  },
+  "nav": {
+    "play": "Reproducir",
+    "engine": "Motor",
+    "settings": "Configuración"
+  },
+  "common": {
+    "loading": "Cargando...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "reset": "Restablecer valores predeterminados",
+    "test": "Probar",
+    "close": "Cerrar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "done": "Hecho",
+    "yes": "Sí",
+    "no": "No",
+    "ok": "OK",
+    "error": "Error",
+    "success": "Éxito",
+    "warning": "Advertencia",
+    "info": "Información"
+  },
+  "settings": {
+    "title": "Configuración",
+    "categories": {
+      "general": "General",
+      "playback": "Reproducción",
+      "triggers": "Disparadores",
+      "sanitization": "Saneamiento",
+      "history": "Historial",
+      "hud": "Superposición HUD",
+      "about": "Acerca de"
+    },
+    "descriptions": {
+      "general": "Comportamiento de inicio y controles de ventana",
+      "playback": "Configuración de volumen y exportación de audio",
+      "triggers": "Detección de copia y límites de texto",
+      "sanitization": "Limpieza y normalización de texto",
+      "history": "Historial de generación y almacenamiento",
+      "hud": "Visualización de forma de onda y posicionamiento",
+      "about": "Información de versión y agradecimientos"
+    },
+    "actions": {
+      "save": "Guardar cambios",
+      "cancel": "Cancelar",
+      "reset": "Restablecer valores predeterminados",
+      "test": "Probar",
+      "tryAgain": "Intentar de nuevo"
+    },
+    "general": {
+      "language": "Idioma",
+      "languageDescription": "Selecciona tu idioma preferido",
+      "startWithWindows": "Iniciar con Windows",
+      "startMinimized": "Iniciar minimizado en la bandeja",
+      "showNotifications": "Mostrar notificaciones",
+      "closeBehavior": "Comportamiento del botón cerrar",
+      "appearance": "Apariencia",
+      "debugMode": "Modo de depuración",
+      "updateChecks": "Buscar actualizaciones automáticamente"
+    },
+    "playback": {
+      "title": "Configuración de reproducción",
+      "onRetrigger": "Comportamiento al reactivar",
+      "onRetriggerDescription": "Qué sucede cuando se activa TTS mientras ya está hablando",
+      "volume": "Volumen",
+      "volumeDescription": "Volumen de reproducción de audio (0-100%)",
+      "playbackSpeed": "Velocidad",
+      "playbackSpeedDescription": "Velocidad de reproducción (0.5x - 2x)",
+      "pitch": "Tono",
+      "pitchDescription": "Cambio de tono (0.5x - 2x)",
+      "stopAndRestart": "Detener y reiniciar",
+      "queueAfterCurrent": "Encolar después del actual",
+      "ignoreNewTrigger": "Ignorar nuevo disparador"
+    },
+    "triggers": {
+      "title": "Configuración de disparadores",
+      "doubleCopyWindow": "Ventana de detección de doble copia (ms)",
+      "doubleCopyWindowDescription": "Ventana de tiempo en la que una segunda copia activa TTS (100-5000ms)",
+      "maxTextLength": "Longitud máxima de texto",
+      "maxTextLengthDescription": "Máximo de caracteres para hablar (el texto más largo se truncará con una advertencia)",
+      "paginationTitle": "Configuración de paginación",
+      "paginationEnabled": "Habilitar paginación",
+      "paginationDescription": "Dividir textos largos en fragmentos para reproducción TTS progresiva",
+      "fragmentSize": "Tamaño de fragmento (caracteres)",
+      "fragmentSizeDescription": "Máximo de caracteres por fragmento de texto (100-10000)"
+    },
+    "hud": {
+      "enabled": "Habilitar HUD",
+      "enabledDescription": "Mostrar superposición de forma de onda durante la reproducción",
+      "position": "Posición",
+      "testHud": "Probar pantalla HUD",
+      "topLeft": "Arriba a la izquierda",
+      "topCenter": "Arriba al centro",
+      "topRight": "Arriba a la derecha",
+      "bottomLeft": "Abajo a la izquierda",
+      "bottomCenter": "Abajo al centro",
+      "bottomRight": "Abajo a la derecha"
+    },
+    "history": {
+      "title": "Configuración del historial",
+      "enabled": "Activar historial",
+      "enabledDescription": "Mantener un registro de todas las operaciones TTS",
+      "storageMode": "Modo de almacenamiento",
+      "persistent": "Persistente",
+      "temporary": "Temporal",
+      "generationsFolder": "Carpeta de generaciones",
+      "generationsFolderDescription": "Directorio para guardar generaciones TTS. Déjalo en blanco para usar el predeterminado.",
+      "generationsFolderPlaceholder": "Predeterminado: Documentos/CopySpeak",
+      "autoDeleteTitle": "Eliminación automática",
+      "autoDeleteKeepLatest": "Mantener últimos",
+      "autoDeleteNever": "Nunca",
+      "autoDeleteAfterDays": "Después de",
+      "days": "días",
+      "manualCleanupTitle": "Limpieza manual",
+      "manualCleanupDescription": "Ejecutar limpieza ahora para eliminar entradas antiguas y archivos huérfanos",
+      "runCleanup": "Ejecutar limpieza ahora",
+      "cleanupDialog": {
+        "title": "¿Ejecutar limpieza del historial?",
+        "description": "Esto aplicará las reglas actuales de eliminación automática",
+        "orphanedFiles": "Eliminar archivos de audio huérfanos no referenciados en el historial",
+        "cannotUndo": "Esta acción no se puede deshacer.",
+        "cancel": "Cancelar",
+        "confirm": "Ejecutar limpieza"
+      },
+      "cleanupOrphaned": "Limpiar archivos huérfanos"
+    },
+    "sanitization": {
+      "title": "Configuración de saneamiento",
+      "enabled": "Habilitar saneamiento",
+      "enabledDescription": "Eliminar formato no deseado del texto del portapapeles antes de TTS",
+      "markdown": "Eliminar sintaxis Markdown",
+      "markdownDescription": "Eliminar todo el formato markdown (encabezados, negrita, cursiva, bloques de código, enlaces, listas, citas)",
+      "ttsNormalization": "Expandir abreviaturas visuales",
+      "ttsNormalizationDescription": "Resolver URLs, barras, abreviaturas, unidades métricas y símbolos en texto amigable para hablar"
+    }
+  },
+  "engine": {
+    "title": "Motor",
+    "selectEngine": "Seleccionar motor TTS",
+    "testing": "Probando...",
+    "kitten": {
+      "title": "Kitten TTS",
+      "description": "Local: TTS ultra-ligero (25-80MB) con 8 voces naturales. Inferencia ONNX optimizada para CPU, no requiere GPU."
+    },
+    "piper": {
+      "title": "Piper TTS",
+      "description": "Local: TTS neuronal rápido y ligero con 20+ voces en inglés. Funciona completamente offline — no requiere cuenta ni internet."
+    },
+    "kokoro": {
+      "title": "Kokoro TTS",
+      "description": "Local: TTS offline de alta calidad con voces naturales y amplia cobertura de acentos. Requiere CLI de kokoro-tts."
+    },
+    "pocket": {
+      "title": "Pocket TTS",
+      "description": "Local: Motor TTS offline compacto con selección directa de voces vía CLI."
+    },
+    "elevenlabs": {
+      "title": "ElevenLabs",
+      "description": "Nube: Síntesis de voz IA premium con rango emocional, 1000+ voces y soporte multilingüe.",
+      "apiKey": "Clave API",
+      "apiKeyDescription": "Tu clave API se almacena localmente y nunca se comparte.",
+      "check": "Verificar",
+      "testEngine": "Probar motor"
+    },
+    "openai": {
+      "title": "OpenAI",
+      "description": "Nube: Voces naturales de alta calidad vía API de OpenAI. Requiere una clave API y conexión a internet.",
+      "apiKey": "Clave API",
+      "apiKeyDescription": "Tu clave API se almacena localmente y nunca se comparte.",
+      "check": "Verificar",
+      "testEngine": "Probar motor"
+    },
+    "openaiEngine": {
+      "model": "Modelo",
+      "modelTooltip": "Modelo TTS de OpenAI para usar en la síntesis de voz",
+      "voice": "Voz",
+      "voiceTooltip": "Estilo de voz para la síntesis de voz"
+    },
+    "localEngine": {
+      "voice": "Voz",
+      "kittenInstall": "Ejecuta ./install-kittentts.ps1 desde la raíz del proyecto para instalar Kitten TTS. Los modelos se descargan automáticamente en el primer uso (~25-80MB según la variante).",
+      "piperModels": "Los archivos de modelo (.onnx + .onnx.json) deben colocarse en {dataDir}. Descarga desde",
+      "commandPreview": "Vista previa del comando",
+      "tempDirectory": "se resuelve a tu directorio temporal del sistema en tiempo de ejecución.",
+      "testEngine": "Probar motor",
+      "testing": "Probando...",
+      "engineWorking": "El motor está funcionando",
+      "engineFailed": "La prueba del motor falló"
+    },
+    "elevenlabsEngine": {
+      "manualVoiceId": "ID de voz manual",
+      "manualVoiceIdTooltip": "Alternar para ingresar el ID de voz manualmente en lugar de seleccionar de la lista",
+      "voiceId": "ID de voz",
+      "voiceIdPlaceholder": "ej., 21m00Tcm4TlvDq8ikWAM",
+      "verify": "Verificar",
+      "verified": "Verificado",
+      "cached": "En caché",
+      "findVoices": "Encuentra IDs de voz en",
+      "voice": "Voz",
+      "voiceTooltip": "Seleccionar de tu biblioteca de voces de ElevenLabs",
+      "load": "Cargar",
+      "setupApiKeyFirst": "Configura tu clave API primero",
+      "clickLoadToFetch": "Haz clic en \"Cargar\" para obtener las voces disponibles",
+      "setupApiKeyInSettings": "Configura tu clave API en Configuración primero",
+      "model": "Modelo",
+      "modelTooltip": "Modelo IA para síntesis de voz",
+      "format": "Formato",
+      "formatTooltip": "Formato de salida de audio",
+      "voiceSettings": "Configuración de voz",
+      "stability": "Estabilidad",
+      "stabilityTooltip": "Valores más altos hacen la voz más consistente, valores más bajos más variable",
+      "similarity": "Similitud",
+      "similarityTooltip": "Valores más altos hacen la voz más similar al hablante original",
+      "style": "Estilo",
+      "styleTooltip": "Valores más altos hacen la voz más expresiva (0 para desactivar)",
+      "speakerBoost": "Potenciador de hablante",
+      "speakerBoostTooltip": "Mejora la claridad y calidad de la salida de voz"
+    },
+    "badges": {
+      "active": "Activo",
+      "default": "Predeterminado",
+      "offline": "Offline",
+      "free": "Gratis",
+      "cloud": "Nube",
+      "paid": "De pago",
+      "freemium": "Freemium"
+    },
+    "info": {
+      "engineInformation": "Información del motor"
+    },
+    "loading": "Cargando configuración del motor...",
+    "saveBar": {
+      "saving": "Guardando...",
+      "cancel": "Cancelar",
+      "saveChanges": "Guardar cambios"
+    },
+    "testVoice": {
+      "title": "Probar voz",
+      "playing": "Reproduciendo...",
+      "description": "Reproduce una frase corta con el motor actual"
+    },
+    "apiSetup": {
+      "title": "Configuración API de {engine}",
+      "description": "Ingresa tu clave API para habilitar texto a voz de {engine}.",
+      "apiKey": "Clave API",
+      "placeholderOpenai": "sk-...",
+      "placeholderElevenlabs": "xi-...",
+      "checkButton": "Verificar",
+      "testButton": "Probar",
+      "valid": "Clave API válida",
+      "invalid": "Verificación de clave API fallida",
+      "testPassed": "Prueba de motor exitosa",
+      "testFailed": "Prueba de motor fallida",
+      "cancel": "Cancelar",
+      "save": "Guardar"
+    },
+    "error": {
+      "loadFailed": "Error al cargar la configuración del motor",
+      "loadDescription": "Ocurrió un error al cargar la configuración de tu motor."
+    }
+  },
+  "play": {
+    "title": "Reproducir",
+    "placeholder": "Escribe o pega texto para generar.",
+    "clear": "Limpiar",
+    "play": "Reproducir",
+    "pause": "Pausa",
+    "resume": "Reanudar",
+    "stop": "Detener",
+    "replay": "Repetir",
+    "abort": "Cancelar",
+    "listening": "Escuchando",
+    "paused": "Pausado",
+    "processing": "Procesando...",
+    "history": "Historial reciente",
+    "noHistory": "Aún no hay historial",
+    "truncated": "Texto truncado",
+    "truncatedDescription": "Texto truncado de {original} a {truncated} caracteres (máx: {max})",
+    "characters": "{count} caracteres",
+    "replayTooltip": "Repetir último audio",
+    "playLatestTooltip": "Reproducir último del historial",
+    "playTooltip": "Reproducir",
+    "pauseTooltip": "Pausa",
+    "resumeTooltip": "Reanudar",
+    "stopTooltip": "Detener",
+    "abortTooltip": "Cancelar síntesis o reproducción"
+  },
+  "toast": {
+    "success": {
+      "engineSaved": "Motor guardado exitosamente",
+      "settingsSaved": "Configuración guardada",
+      "welcome": "¡Bienvenido a CopySpeak!",
+      "configSaved": "¡Configuración guardada! Empecemos.",
+      "hudTest": "Prueba de HUD iniciada",
+      "historyCleanup": "Limpieza de historial completada",
+      "installerLaunched": "Instalador de Kitten TTS iniciado en una nueva ventana",
+      "settingsCopied": "Configuración copiada al portapapeles",
+      "settingsDownloaded": "Configuración descargada",
+      "settingsImported": "Configuración importada exitosamente",
+      "settingsReset": "Configuración restablecida — comenzando configuración nueva",
+      "synthesisAborted": "Síntesis abortada"
+    },
+    "error": {
+      "loadSettings": "Error al cargar la configuración",
+      "saveSettings": "Error al guardar la configuración",
+      "loadConfig": "Error al cargar la configuración",
+      "saveConfig": "Error al guardar la configuración",
+      "voiceTest": "Error en la prueba de voz",
+      "hudTest": "Error en la prueba de HUD",
+      "cleanup": "Error en la limpieza",
+      "installer": "Error al ejecutar el instalador",
+      "switchEngine": "Error al cambiar de motor"
+    },
+    "info": {
+      "httpEngineRemoved": "El motor HTTP ha sido eliminado. Cambiado a motor Local."
+    },
+    "about": {
+      "title": "Configuración de acerca de",
+      "version": "Versión",
+      "versionDescription": "Versión actual de CopySpeak",
+      "sourceCode": "Código fuente",
+      "sourceCodeDescription": "Ver CopySpeak en GitHub",
+      "github": "GitHub",
+      "acknowledgments": "Agradecimientos",
+      "openai": {
+        "title": "OpenAI TTS",
+        "description": "Texto a voz neuronal de alta calidad"
+      },
+      "elevenlabs": {
+        "title": "ElevenLabs",
+        "description": "Síntesis de voz IA avanzada"
+      },
+      "kokoro": {
+        "title": "Kokoro TTS",
+        "description": "TTS local de código abierto"
+      },
+      "piper": {
+        "title": "Piper",
+        "description": "TTS neuronal rápido"
+      }
+    }
+  },
+  "history": {
+    "title": "Historial",
+    "loading": "Cargando...",
+    "empty": "Aún no hay elementos en el historial",
+    "fragments": "{count} fragmentos",
+    "playSaved": "Reproducir audio guardado",
+    "reSynthesize": "Re-sintetizar y reproducir",
+    "reSynthesizeTooltip": "Re-sintetizar con configuración actual",
+    "delete": "Eliminar del historial",
+    "deleteAllFragments": "Eliminar todos los fragmentos",
+    "playAll": "Reproducir todo",
+    "playAllTooltip": "Reproducir todos los fragmentos en orden",
+    "playThisFragment": "Reproducir este fragmento",
+    "noAudioFile": "Sin archivo de audio",
+    "deleteEntry": "¿Eliminar entrada?",
+    "deleteBatch": "¿Eliminar todos los fragmentos?",
+    "deleteBatchDescription": "Esto eliminará permanentemente todos los fragmentos de este lote y sus archivos de audio. Esta acción no se puede deshacer.",
+    "deleteEntryWithFile": "Esto eliminará permanentemente la entrada del historial y su archivo de audio. Esta acción no se puede deshacer.",
+    "deleteEntryOnly": "Esto eliminará permanentemente la entrada del historial. Esta acción no se puede deshacer.",
+    "cancel": "Cancelar",
+    "confirmDelete": "Eliminar",
+    "toast": {
+      "playing": "Reproduciendo audio del historial",
+      "playingFragments": "Reproduciendo todos los fragmentos",
+      "reSynthesizing": "Re-sintetizando y reproduciendo",
+      "deleted": "Eliminado del historial",
+      "deletedBatch": "Lote eliminado del historial",
+      "failedToPlay": "Error al reproducir",
+      "failedToReSpeak": "Error al re-hablar",
+      "failedToDelete": "Error al eliminar"
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Bienvenido a CopySpeak",
+      "subtitle": "Configura tu motor de texto a voz para comenzar, o omite y configúralo más tarde."
+    },
+    "engineConfig": "Configuración del motor",
+    "engineDescription": "Configura tu motor TTS. Puedes cambiar esto más tarde en la pestaña Motor.",
+    "recommendation": {
+      "title": "Recomendamos Kitten TTS para comenzar",
+      "description": "Kitten TTS es un nuevo motor TTS ultra-ligero (25-80MB) que funciona en CPU sin requerir GPU. Haz clic en el botón de abajo para instalarlo automáticamente — no se necesita configuración manual."
+    },
+    "install": "Instalar Kitten TTS",
+    "installing": "Instalando...",
+    "skip": "Omitir por ahora",
+    "complete": "Comenzar",
+    "loading": "Cargando configuración...",
+    "installed": "¡Instalado!",
+    "openTerminal": "Abrir terminal de PowerShell",
+    "checkingEngine": "Verificando motor...",
+    "helpText": "Siempre puedes configurar tu motor más tarde desde la pestaña Motor."
+  },
+  "header": {
+    "play": "Reproducir",
+    "engine": "Motor",
+    "settings": "Configuración",
+    "tagline": "Lee el portapapeles en voz alta al instante"
+  },
+  "footer": {
+    "listening": "Escuchando",
+    "paused": "Pausado",
+    "switchEngine": "Cambiar motor TTS. Motor actual: {engine}",
+    "available": "Disponible",
+    "unavailable": "No disponible - verifica la configuración",
+    "error": "Error al verificar disponibilidad",
+    "notChecked": "No verificado - haz clic para cambiar"
+  },
+  "landing": {
+    "hero": {
+      "title": "CopySpeak",
+      "subtitle": "Doble copia → voz instantánea",
+      "description": "Una aplicación ligera para Windows que lee el texto del portapapeles en voz alta usando motores de IA de texto a voz.",
+      "download": "Descargar para Windows",
+      "github": "Ver en GitHub",
+      "version": "v{version}"
+    },
+    "features": {
+      "title": "Características",
+      "doubleCopy": {
+        "title": "Disparador de Doble Copia",
+        "description": "Copia el texto dos veces en 1.5 segundos para activar la voz al instante. Sin atajos de teclado."
+      },
+      "engines": {
+        "title": "5 Motores TTS",
+        "description": "Elige entre Kitten TTS, Piper, Kokoro, OpenAI o ElevenLabs. Opciones locales y en la nube."
+      },
+      "hud": {
+        "title": "Superposición HUD",
+        "description": "Pantalla flotante con visualización de forma de onda en tiempo real durante la reproducción."
+      },
+      "history": {
+        "title": "Historial",
+        "description": "Historial persistente de generaciones TTS con reproducción, gestión por lotes y exportación de audio."
+      },
+      "sanitization": {
+        "title": "Saneamiento de Texto",
+        "description": "Eliminación automática de markdown, expansión de URLs y normalización de texto para voz más clara."
+      },
+      "configurable": {
+        "title": "Altamente Configurable",
+        "description": "Velocidad de reproducción, volumen, tono, disparadores, apariencia y más. Temas oscuro y claro."
+      }
+    },
+    "screenshots": {
+      "title": "Capturas de Pantalla",
+      "subtitle": "Ve CopySpeak en acción",
+      "caption": "CopySpeak v0.0.1 — Interfaz principal con pestaña Reproducir"
+    },
+    "footer": {
+      "github": "GitHub",
+      "license": "Licencia MIT",
+      "madeWith": "Hecho con Rust, Svelte e IA."
+    }
+  }
+}

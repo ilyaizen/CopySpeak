@@ -1,0 +1,464 @@
+{
+  "app": {
+    "title": "CopySpeak",
+    "tagline": "Double-copy → instant speech"
+  },
+  "nav": {
+    "play": "Play",
+    "engine": "Engine",
+    "settings": "Settings"
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "reset": "Reset to Defaults",
+    "test": "Test",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Info"
+  },
+  "settings": {
+    "title": "Settings",
+    "categories": {
+      "general": "General",
+      "playback": "Playback",
+      "triggers": "Triggers",
+      "sanitization": "Sanitization",
+      "history": "History",
+      "hud": "HUD Overlay",
+      "about": "About"
+    },
+    "descriptions": {
+      "general": "Startup behavior and window controls",
+      "playback": "Volume and audio export settings",
+      "triggers": "Copy detection and text limits",
+      "sanitization": "Text cleanup and normalization",
+      "history": "Generation history and storage",
+      "hud": "Waveform visualization and positioning",
+      "about": "Version information and acknowledgments"
+    },
+    "actions": {
+      "save": "Save Changes",
+      "cancel": "Cancel",
+      "reset": "Reset to Defaults",
+      "test": "Test",
+      "tryAgain": "Try Again"
+    },
+    "general": {
+      "language": "Language",
+      "languageDescription": "Select your preferred language",
+      "startWithWindows": "Start with Windows",
+      "startMinimized": "Start minimized to tray",
+      "showNotifications": "Show notifications",
+      "closeBehavior": "Close button behavior",
+      "appearance": "Appearance",
+      "debugMode": "Debug mode",
+      "updateChecks": "Check for updates automatically"
+    },
+    "playback": {
+      "title": "Playback Settings",
+      "onRetrigger": "On Retrigger Behavior",
+      "onRetriggerDescription": "What happens when TTS is triggered while already speaking",
+      "volume": "Volume",
+      "volumeDescription": "Audio playback volume (0-100%)",
+      "playbackSpeed": "Speed",
+      "playbackSpeedDescription": "Playback speed (0.5x - 2x)",
+      "pitch": "Pitch",
+      "pitchDescription": "Pitch shift (0.5x - 2x)",
+      "stopAndRestart": "Stop and restart",
+      "queueAfterCurrent": "Queue after current",
+      "ignoreNewTrigger": "Ignore new trigger"
+    },
+    "triggers": {
+      "title": "Trigger Settings",
+      "doubleCopyWindow": "Double-Copy Detection Window (ms)",
+      "doubleCopyWindowDescription": "Time window in which a second copy triggers TTS (100-5000ms)",
+      "maxTextLength": "Max Text Length",
+      "maxTextLengthDescription": "Maximum characters to speak (longer text will be truncated with a warning)",
+      "paginationTitle": "Pagination Settings",
+      "paginationEnabled": "Enable Pagination",
+      "paginationDescription": "Split long texts into fragments for progressive TTS playback",
+      "fragmentSize": "Fragment Size (characters)",
+      "fragmentSizeDescription": "Maximum characters per text fragment (100-10000)"
+    },
+    "hud": {
+      "enabled": "Enable HUD",
+      "enabledDescription": "Show waveform overlay during playback",
+      "position": "Position",
+      "testHud": "Test HUD Display",
+      "topLeft": "Top Left",
+      "topCenter": "Top Center",
+      "topRight": "Top Right",
+      "bottomLeft": "Bottom Left",
+      "bottomCenter": "Bottom Center",
+      "bottomRight": "Bottom Right"
+    },
+    "history": {
+      "title": "History Settings",
+      "enabled": "Enable History",
+      "enabledDescription": "Keep a log of all TTS operations",
+      "storageMode": "Storage mode",
+      "persistent": "Persistent",
+      "temporary": "Temporary",
+      "generationsFolder": "Generations Folder",
+      "generationsFolderDescription": "Directory to save TTS generations. Leave blank for default.",
+      "generationsFolderPlaceholder": "Default: Documents/CopySpeak",
+      "autoDeleteTitle": "Auto-Delete Generations",
+      "autoDeleteKeepLatest": "Keep latest",
+      "autoDeleteNever": "Never",
+      "autoDeleteAfterDays": "After",
+      "days": "days",
+      "manualCleanupTitle": "Manual Cleanup",
+      "manualCleanupDescription": "Run cleanup now to remove old entries and orphaned files",
+      "runCleanup": "Run Cleanup Now",
+      "cleanupDialog": {
+        "title": "Run History Cleanup?",
+        "description": "This will enforce current Auto-Delete rules",
+        "orphanedFiles": "Remove orphaned audio files not referenced in history",
+        "cannotUndo": "This action cannot be undone.",
+        "cancel": "Cancel",
+        "confirm": "Run Cleanup"
+      },
+      "cleanupOrphaned": "Clean up orphaned files"
+    },
+    "sanitization": {
+      "title": "Sanitization Settings",
+      "enabled": "Enable Sanitization",
+      "enabledDescription": "Remove unwanted formatting from clipboard text before TTS",
+      "markdown": "Strip Markdown Syntax",
+      "markdownDescription": "Remove all markdown formatting (headers, bold, italic, code blocks, links, lists, blockquotes)",
+      "ttsNormalization": "Expand Visual Shorthand",
+      "ttsNormalizationDescription": "Resolve URLs, slashes, abbreviations, metric units, and symbols into spoken-friendly text"
+    }
+  },
+  "engine": {
+    "title": "Engine",
+    "selectEngine": "Select TTS Engine",
+    "testing": "Testing...",
+    "kitten": {
+      "title": "Kitten TTS",
+      "description": "Local: Ultra-lightweight TTS (25-80MB) with 8 natural voices. CPU-optimized ONNX inference, no GPU required."
+    },
+    "piper": {
+      "title": "Piper TTS",
+      "description": "Local: Fast, lightweight neural TTS with 20+ English voices. Works fully offline — no account or internet required."
+    },
+    "kokoro": {
+      "title": "Kokoro TTS",
+      "description": "Local: High-quality offline TTS with natural-sounding voices and broad accent coverage. Requires kokoro-tts CLI."
+    },
+    "pocket": {
+      "title": "Pocket TTS",
+      "description": "Local: Compact offline TTS engine with straightforward voice selection via CLI."
+    },
+    "elevenlabs": {
+      "title": "ElevenLabs",
+      "description": "Cloud: Premium AI voice synthesis with emotional range, 1000+ voices, and multilingual support.",
+      "apiKey": "API Key",
+      "apiKeyDescription": "Your API key is stored locally and never shared.",
+      "check": "Check",
+      "testEngine": "Test Engine"
+    },
+    "openai": {
+      "title": "OpenAI",
+      "description": "Cloud: High-quality natural voices via the OpenAI API. Requires an API key and internet connection.",
+      "apiKey": "API Key",
+      "apiKeyDescription": "Your API key is stored locally and never shared.",
+      "check": "Check",
+      "testEngine": "Test Engine"
+    },
+    "badges": {
+      "active": "Active",
+      "default": "Default",
+      "offline": "Offline",
+      "free": "Free",
+      "cloud": "Cloud",
+      "paid": "Paid",
+      "freemium": "Freemium"
+    },
+    "info": {
+      "engineInformation": "Engine Information"
+    },
+    "loading": "Loading engine settings...",
+    "saveBar": {
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "saveChanges": "Save Changes"
+    },
+    "testVoice": {
+      "title": "Test Voice",
+      "playing": "Playing...",
+      "description": "Plays a short phrase with the current engine"
+    },
+    "localEngine": {
+      "voice": "Voice",
+      "kittenInstall": "Run ./install-kittentts.ps1 from the project root to install Kitten TTS. Models are downloaded automatically on first use (~25-80MB depending on variant).",
+      "piperModels": "Model files (.onnx + .onnx.json) must be placed in {dataDir}. Download from",
+      "commandPreview": "Command Preview",
+      "tempDirectory": "resolves to your system temp directory at runtime.",
+      "testEngine": "Test Engine",
+      "testing": "Testing...",
+      "engineWorking": "Engine is working",
+      "engineFailed": "Engine test failed"
+    },
+    "openaiEngine": {
+      "model": "Model",
+      "modelTooltip": "OpenAI TTS model to use for speech synthesis",
+      "voice": "Voice",
+      "voiceTooltip": "Voice style for speech synthesis"
+    },
+    "elevenlabsEngine": {
+      "manualVoiceId": "Manual Voice ID",
+      "manualVoiceIdTooltip": "Toggle to enter voice ID manually instead of selecting from list",
+      "voiceId": "Voice ID",
+      "voiceIdPlaceholder": "e.g., 21m00Tcm4TlvDq8ikWAM",
+      "verify": "Verify",
+      "verified": "Verified",
+      "cached": "Cached",
+      "findVoices": "Find voice IDs at",
+      "voice": "Voice",
+      "voiceTooltip": "Select from your ElevenLabs voice library",
+      "load": "Load",
+      "setupApiKeyFirst": "Set up your API key first",
+      "clickLoadToFetch": "Click \"Load\" to fetch available voices",
+      "setupApiKeyInSettings": "Set up your API key in Settings first",
+      "model": "Model",
+      "modelTooltip": "AI model for speech synthesis",
+      "format": "Format",
+      "formatTooltip": "Audio output format",
+      "voiceSettings": "Voice Settings",
+      "stability": "Stability",
+      "stabilityTooltip": "Higher values make voice more consistent, lower values more variable",
+      "similarity": "Similarity",
+      "similarityTooltip": "Higher values make voice more similar to original speaker",
+      "style": "Style",
+      "styleTooltip": "Higher values make voice more expressive (0 to disable)",
+      "speakerBoost": "Speaker Boost",
+      "speakerBoostTooltip": "Improves clarity and quality of voice output"
+    },
+    "apiSetup": {
+      "title": "{engine} API Setup",
+      "description": "Enter your API key to enable {engine} text-to-speech.",
+      "apiKey": "API Key",
+      "placeholderOpenai": "sk-...",
+      "placeholderElevenlabs": "xi-...",
+      "checkButton": "Check",
+      "testButton": "Test",
+      "valid": "API Key Valid",
+      "invalid": "API Key Check Failed",
+      "testPassed": "Engine Test Passed",
+      "testFailed": "Engine Test Failed",
+      "cancel": "Cancel",
+      "save": "Save"
+    },
+    "error": {
+      "loadFailed": "Failed to Load Engine Settings",
+      "loadDescription": "An error occurred while loading your engine configuration."
+    }
+  },
+  "play": {
+    "title": "Play",
+    "placeholder": "Type or paste text to generate.",
+    "clear": "Clear",
+    "play": "Play",
+    "pause": "Pause",
+    "resume": "Resume",
+    "stop": "Stop",
+    "replay": "Replay",
+    "abort": "Abort",
+    "listening": "Listening",
+    "paused": "Paused",
+    "processing": "Processing...",
+    "history": "Recent History",
+    "noHistory": "No history yet",
+    "truncated": "Text truncated",
+    "truncatedDescription": "Text truncated from {original} to {truncated} characters (max: {max})",
+    "characters": "{count} chars",
+    "replayTooltip": "Replay last audio",
+    "playLatestTooltip": "Play latest from history",
+    "playTooltip": "Play",
+    "pauseTooltip": "Pause",
+    "resumeTooltip": "Resume",
+    "stopTooltip": "Stop",
+    "abortTooltip": "Abort synthesis or playback"
+  },
+  "history": {
+    "title": "History",
+    "loading": "Loading...",
+    "empty": "No history items yet",
+    "fragments": "{count} fragments",
+    "playSaved": "Play saved audio",
+    "reSynthesize": "Re-synthesize and play",
+    "reSynthesizeTooltip": "Re-synthesize with current settings",
+    "delete": "Delete from history",
+    "deleteAllFragments": "Delete all fragments",
+    "playAll": "Play All",
+    "playAllTooltip": "Play all fragments in order",
+    "playThisFragment": "Play this fragment",
+    "noAudioFile": "No audio file",
+    "deleteEntry": "Delete entry?",
+    "deleteBatch": "Delete all fragments?",
+    "deleteBatchDescription": "This will permanently delete all fragments in this batch and their audio files. This action cannot be undone.",
+    "deleteEntryWithFile": "This will permanently delete the history entry and its audio file. This action cannot be undone.",
+    "deleteEntryOnly": "This will permanently delete the history entry. This action cannot be undone.",
+    "cancel": "Cancel",
+    "confirmDelete": "Delete",
+    "toast": {
+      "playing": "Playing audio from history",
+      "playingFragments": "Playing all fragments",
+      "reSynthesizing": "Re-synthesizing and playing",
+      "deleted": "Deleted from history",
+      "deletedBatch": "Deleted batch from history",
+      "failedToPlay": "Failed to play",
+      "failedToReSpeak": "Failed to re-speak",
+      "failedToDelete": "Failed to delete"
+    }
+  },
+  "toast": {
+    "success": {
+      "engineSaved": "Engine saved successfully",
+      "settingsSaved": "Settings saved",
+      "welcome": "Welcome to CopySpeak!",
+      "configSaved": "Configuration saved! Let's get started.",
+      "hudTest": "HUD test triggered",
+      "historyCleanup": "History cleanup completed",
+      "installerLaunched": "Kitten TTS installer launched in a new window",
+      "settingsCopied": "Settings copied to clipboard",
+      "settingsDownloaded": "Settings downloaded",
+      "settingsImported": "Settings imported successfully",
+      "settingsReset": "Settings reset — starting fresh setup",
+      "synthesisAborted": "Synthesis aborted"
+    },
+    "error": {
+      "loadSettings": "Failed to load settings",
+      "saveSettings": "Failed to save settings",
+      "loadConfig": "Failed to load configuration",
+      "saveConfig": "Failed to save settings",
+      "voiceTest": "Voice test failed",
+      "hudTest": "HUD test failed",
+      "cleanup": "Cleanup failed",
+      "installer": "Failed to run installer",
+      "switchEngine": "Failed to switch engine"
+    },
+    "info": {
+      "httpEngineRemoved": "HTTP engine has been removed. Switched to Local engine."
+    },
+    "about": {
+      "title": "About Settings",
+      "version": "Version",
+      "versionDescription": "Current CopySpeak version",
+      "sourceCode": "Source Code",
+      "sourceCodeDescription": "View CopySpeak on GitHub",
+      "github": "GitHub",
+      "acknowledgments": "Acknowledgments",
+      "openai": {
+        "title": "OpenAI TTS",
+        "description": "High-quality neural text-to-speech"
+      },
+      "elevenlabs": {
+        "title": "ElevenLabs",
+        "description": "Advanced AI voice synthesis"
+      },
+      "kokoro": {
+        "title": "Kokoro TTS",
+        "description": "Open-source local TTS"
+      },
+      "piper": {
+        "title": "Piper",
+        "description": "Fast neural TTS"
+      }
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Welcome to CopySpeak",
+      "subtitle": "Configure your text-to-speech engine to get started, or skip and set it up later."
+    },
+    "engineConfig": "Engine Configuration",
+    "engineDescription": "Set up your TTS engine. You can change this later in the Engine tab.",
+    "recommendation": {
+      "title": "We recommend Kitten TTS to get started",
+      "description": "Kitten TTS is a new ultra-lightweight TTS engine (25-80MB) that runs on CPU without requiring a GPU. Click the button below to install it automatically — no manual setup needed."
+    },
+    "install": "Install Kitten TTS",
+    "installing": "Installing...",
+    "skip": "Skip for now",
+    "complete": "Get Started",
+    "loading": "Loading configuration...",
+    "installed": "Installed!",
+    "openTerminal": "Open PowerShell terminal",
+    "checkingEngine": "Checking engine...",
+    "helpText": "You can always configure your engine later from the Engine tab."
+  },
+  "header": {
+    "play": "Play",
+    "engine": "Model",
+    "settings": "Settings",
+    "tagline": "Read clipboard aloud instantly"
+  },
+  "footer": {
+    "listening": "Listening",
+    "paused": "Paused",
+    "switchEngine": "Switch TTS engine. Current engine: {engine}",
+    "available": "Available",
+    "unavailable": "Unavailable - check configuration",
+    "error": "Error checking availability",
+    "notChecked": "Not checked - click to switch"
+  },
+  "landing": {
+    "hero": {
+      "title": "CopySpeak",
+      "subtitle": "Double-copy → instant speech",
+      "description": "A lightweight Windows desktop app that reads clipboard text aloud using AI Text-to-Speech engines.",
+      "download": "Download for Windows",
+      "github": "View on GitHub",
+      "version": "v{version}"
+    },
+    "features": {
+      "title": "Features",
+      "doubleCopy": {
+        "title": "Double-Copy Trigger",
+        "description": "Copy text twice within 1.5 seconds to instantly trigger speech. No hotkeys needed."
+      },
+      "engines": {
+        "title": "5 TTS Engines",
+        "description": "Choose from Kitten TTS, Piper, Kokoro, OpenAI, or ElevenLabs. Local and cloud options."
+      },
+      "hud": {
+        "title": "HUD Overlay",
+        "description": "Floating heads-up display with real-time waveform visualization during playback."
+      },
+      "history": {
+        "title": "History",
+        "description": "Persistent TTS generation history with playback, batch management, and audio export."
+      },
+      "sanitization": {
+        "title": "Text Sanitization",
+        "description": "Automatic markdown stripping, URL expansion, and text normalization for cleaner speech."
+      },
+      "configurable": {
+        "title": "Highly Configurable",
+        "description": "Playback speed, volume, pitch, triggers, appearance, and more. Dark and light themes."
+      }
+    },
+    "screenshots": {
+      "title": "Screenshots",
+      "subtitle": "See CopySpeak in action",
+      "caption": "CopySpeak v0.0.1 — Main interface with Play tab"
+    },
+    "footer": {
+      "github": "GitHub",
+      "license": "MIT License",
+      "madeWith": "Made with Rust, Svelte, and AI."
+    }
+  }
+}

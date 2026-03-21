@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Web deployment support** — Vercel configuration for src-web standalone SvelteKit site
+  - `.vercelignore` to exclude Tauri/Rust build artifacts from deployment uploads
+  - `.vercel` added to `.gitignore`
+
 ## [0.0.2] - 2026-03-21
 
 ### Added
