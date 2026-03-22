@@ -419,57 +419,106 @@ function Show-Success {
 function Update-Config {
     Write-Step "Updating CopySpeak configuration..."
     
-    $configPath = Join-Path $env:APPDATA "CopySpeak\config.json"
+    $configDir = Join-Path $env:APPDATA "CopySpeak"
+    $configPath = Join-Path $configDir "config.json"
+    
+    $pythonCommand = if ($UseLauncher) { "py" } else { $PythonCmd }
+    $versionArg = if ($DetectedPythonVersion) { $DetectedPythonVersion } else { "" }
+    $cliPath = "{home_dir}/kittentts/kittentts-cli.py"
+    
+    if ($versionArg) {
+        $argsTemplate = @(
+            $versionArg
+            $cliPath
+            "--text"
+            "{raw_text}"
+            "--voice"
+            "{voice}"
+            "--output"
+            "{output}"
+        )
+    } else {
+        $argsTemplate = @(
+            $cliPath
+            "--text"
+            "{raw_text}"
+            "--voice"
+            "{voice}"
+            "--output"
+            "{output}"
+        )
+    }
     
     if (Test-Path $configPath) {
         try {
             $config = Get-Content $configPath -Raw | ConvertFrom-Json
             
-            $pythonCommand = if ($UseLauncher) { "py" } else { $PythonCmd }
-            $versionArg = if ($DetectedPythonVersion) { $DetectedPythonVersion } else { "" }
-            
-            if ($config.tts -and $config.tts.active_backend -eq "Local") {
+            if ($config.tts) {
                 $config.tts.command = $pythonCommand
-                
-                # Update args_template based on detected Python
-                $cliPath = "{home_dir}/kittentts/kittentts-cli.py"
-                if ($versionArg) {
-                    $config.tts.args_template = @(
-                        $versionArg
-                        $cliPath
-                        "--text"
-                        "{raw_text}"
-                        "--voice"
-                        "{voice}"
-                        "--output"
-                        "{output}"
-                    )
-                } else {
-                    $config.tts.args_template = @(
-                        $cliPath
-                        "--text"
-                        "{raw_text}"
-                        "--voice"
-                        "{voice}"
-                        "--output"
-                        "{output}"
-                    )
-                }
+                $config.tts.args_template = $argsTemplate
                 
                 $config | ConvertTo-Json -Depth 10 | Set-Content $configPath -Encoding UTF8
-                Write-Host "  Updated TTS command to: $pythonCommand" -ForegroundColor Gray
-                if ($versionArg) {
-                    Write-Host "  Python version: $versionArg" -ForegroundColor Gray
-                }
+                Write-Host "  Updated TTS command to: $pythonCommand $versionArg" -ForegroundColor Gray
             } else {
-                Write-Host "  CopySpeak config not found or TTS backend not set to Local." -ForegroundColor Yellow
+                Write-Host "  Warning: Config exists but has no TTS section" -ForegroundColor Yellow
             }
         }
         catch {
             Write-Host "  Warning: Could not update CopySpeak config: $_" -ForegroundColor Yellow
         }
     } else {
-        Write-Host "  CopySpeak config not found. The app will use default settings." -ForegroundColor Yellow
+        try {
+            if (-not (Test-Path $configDir)) {
+                New-Item -ItemType Directory -Path $configDir -Force | Out-Null
+            }
+            
+            $defaultConfig = @{
+                version = "1.0"
+                general = @{
+                    language = "en"
+                    start_minimized = $false
+                    auto_start = $false
+                    check_updates = $true
+                }
+                tts = @{
+                    active_backend = "Local"
+                    preset = "kitten-tts"
+                    command = $pythonCommand
+                    args_template = $argsTemplate
+                    voice = "Rosie"
+                    openai = @{
+                        api_key = ""
+                        model = "tts-1"
+                        voice = "alloy"
+                        speed = 1.0
+                    }
+                    elevenlabs = @{
+                        api_key = ""
+                        voice_id = ""
+                        model = "eleven_multilingual_v2"
+                        voice_style = 0
+                        use_speaker_boost = $false
+                    }
+                }
+                audio = @{
+                    volume = 1.0
+                    speed = 1.0
+                    retrigger_mode = "Queue"
+                }
+                history = @{
+                    enabled = $true
+                    max_items = 100
+                    auto_delete_days = 0
+                }
+            }
+            
+            $defaultConfig | ConvertTo-Json -Depth 10 | Set-Content $configPath -Encoding UTF8
+            Write-Host "  Created config with TTS command: $pythonCommand $versionArg" -ForegroundColor Gray
+        }
+        catch {
+            Write-Host "  Warning: Could not create CopySpeak config: $_" -ForegroundColor Yellow
+            Write-Host "  You may need to manually configure the TTS engine in CopySpeak." -ForegroundColor Yellow
+        }
     }
 }
 
