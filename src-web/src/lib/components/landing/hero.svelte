@@ -38,7 +38,7 @@
     </div>
 
     <p class="text-muted-foreground mt-6 text-sm">
-      {$_("landing.hero.version", { values: { version: "0.0.2" } })}
+      {$_("landing.hero.version", { values: { version: "0.0.3" } })}
     </p>
   </div>
 </section>
