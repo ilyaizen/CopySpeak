@@ -4,7 +4,7 @@ A lightweight Windows desktop app that reads clipboard text aloud using AI Text-
 
 ### [Download Latest](https://github.com/ilyaizen/CopySpeak/releases)
 
-**Current Version:** 0.0.3
+**Current Version:** 0.0.4
 
 ## Screenshots
 

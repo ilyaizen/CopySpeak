@@ -18,7 +18,13 @@ const filesToUpdate = {
   "src-tauri/src/config/mod.rs": (content, version) =>
     content.replace(/(const CONFIG_VERSION: &str = ")[^"]+(")/, `$1${version}$2`),
   [versionFile]: (content, version) =>
-    content.replace(/export const VERSION = "[^"]+";/, `export const VERSION = "${version}";`)
+    content.replace(/export const VERSION = "[^"]+";/, `export const VERSION = "${version}";`),
+  "README.md": (content, version) =>
+    content.replace(/(\*\*Current Version:\*\*\s*)[\d.]+/, `$1${version}`),
+  "src-web/package.json": (content, version) =>
+    content.replace(/("version":\s*)"[^"]+"/, `$1"${version}"`),
+  "src-web/src/lib/components/landing/hero.svelte": (content, version) =>
+    content.replace(/(version:\s*)"[^"]+"/, `$1"${version}"`)
 };
 
 // --- Script ---
