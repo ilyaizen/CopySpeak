@@ -442,6 +442,29 @@ impl TtsBackend for CliTtsBackend {
                 )));
             }
 
+            if stderr.contains("ModuleNotFoundError") || stderr.contains("ImportError") {
+                log::error!("[CLI TTS] Health check failed - missing Python module");
+                return Err(TtsError::Unavailable(
+                    "KittenTTS is not installed in the configured Python environment. Run the KittenTTS installer from CopySpeak settings.".to_string()
+                ));
+            }
+
+            if !result.status.success() {
+                let error_msg = if stderr.is_empty() {
+                    format!("Command exited with code {:?}", result.status.code())
+                } else {
+                    stderr.trim().to_string()
+                };
+                log::error!(
+                    "[CLI TTS] Health check failed - command error: {}",
+                    error_msg
+                );
+                return Err(TtsError::Unavailable(format!(
+                    "TTS command failed: {}",
+                    error_msg
+                )));
+            }
+
             // If command succeeded or script ran (even with other errors), consider it available
             if crate::logging::is_debug_mode() {
                 log::debug!("[CLI TTS] Health check passed for Python command");

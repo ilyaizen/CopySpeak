@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Embeds installer scripts in binary and extracts to temp directory at runtime
   - Auto-detects any Python 3.x version, offers winget installation if not found
   - PowerShell window now visible with success/failure feedback before pause
-  - Default config changed from `py -3.12` to `python` (no version pinning)
+  - Default config now uses `py -3.12` to ensure kittentts runs on same Python version used by installer
+  - Health check detects `ModuleNotFoundError` with actionable error message
 
 ## [0.0.2] - 2026-03-21
 
