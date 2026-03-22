@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - PowerShell window now visible with success/failure feedback before pause
   - Default config now uses `py -3.12` to ensure kittentts runs on same Python version used by installer
   - Health check detects `ModuleNotFoundError` with actionable error message
+  - Fixed health check using invalid voice "test" instead of "Rosie"
 
 ## [0.0.2] - 2026-03-21
 

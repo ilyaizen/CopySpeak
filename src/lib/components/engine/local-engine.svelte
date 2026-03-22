@@ -12,10 +12,10 @@
 
   let { localConfig = $bindable() }: { localConfig: AppConfig } = $props();
 
-  // Kitten TTS voices - 8 built-in voices
+  // KittenTTS 0.8.1 voices
   const KITTEN_VOICES = [
-    { value: "Jasper", label: "Jasper" },
     { value: "Bella", label: "Bella" },
+    { value: "Jasper", label: "Jasper" },
     { value: "Luna", label: "Luna" },
     { value: "Bruno", label: "Bruno" },
     { value: "Rosie", label: "Rosie (default)" },

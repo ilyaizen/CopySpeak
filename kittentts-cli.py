@@ -40,8 +40,8 @@ Examples:
     parser.add_argument("--text", required=True, help="Text to synthesize")
     parser.add_argument(
         "--voice",
-        default="Jasper",
-        help="Voice name (default: Jasper). Options: Bella, Jasper, Luna, Bruno, Rosie, Hugo, Kiki, Leo",
+        default="Rosie",
+        help="Voice name (default: Rosie). Options: Bella, Jasper, Luna, Bruno, Rosie, Hugo, Kiki, Leo",
     )
     parser.add_argument("--output", required=True, help="Output WAV file path")
     parser.add_argument(

@@ -129,7 +129,7 @@
   ];
 
   const DEFAULT_VOICES: Record<string, string> = {
-    kitten: "Jasper",
+    kitten: "Rosie",
     piper: "en_US-joe-medium",
     kokoro: "af_heart",
     pocket: "alba",

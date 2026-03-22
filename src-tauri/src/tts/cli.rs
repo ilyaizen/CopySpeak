@@ -394,7 +394,7 @@ impl TtsBackend for CliTtsBackend {
             // Build args similar to synthesize, but use a test text
             let test_text = "test";
             let test_output = Self::output_path();
-            let args = self.build_args(&Self::input_path(), &test_output, "test", test_text);
+            let args = self.build_args(&Self::input_path(), &test_output, "Rosie", test_text);
 
             if crate::logging::is_debug_mode() {
                 log::debug!("[CLI TTS] Health check args: {:?}", args);

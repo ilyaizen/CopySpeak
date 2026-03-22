@@ -277,7 +277,7 @@ from pathlib import Path
 def main():
     parser = argparse.ArgumentParser(description="KittenTTS CLI wrapper for CopySpeak")
     parser.add_argument("--text", required=True, help="Text to synthesize")
-    parser.add_argument("--voice", default="Jasper", help="Voice name (default: Jasper)")
+    parser.add_argument("--voice", default="Rosie", help="Voice name (default: Rosie)")
     parser.add_argument("--output", required=True, help="Output WAV file path")
     parser.add_argument("--model", default="KittenML/kitten-tts-nano-0.8", help="Model name")
     args = parser.parse_args()
@@ -328,7 +328,7 @@ function Test-Installation {
     if ($UseLauncher) {
         $cmdArgs += $DetectedPythonVersion
     }
-    $cmdArgs += @($cliPath, "--text", $testText, "--voice", "Jasper", "--output", $testOutput, "--model", $modelName)
+    $cmdArgs += @($cliPath, "--text", $testText, "--voice", "Rosie", "--output", $testOutput, "--model", $modelName)
     
     if ($Verbose) {
         $argStr = $cmdArgs -join '" "'
@@ -524,7 +524,7 @@ function Update-Config {
 
 function Show-Usage {
     Write-Host ""
-    Write-Host "  Usage: kittentts-cli.py --text `"Hello world`" --voice Jasper --output output.wav" -ForegroundColor Gray
+    Write-Host "  Usage: kittentts-cli.py --text `"Hello world`" --voice Rosie --output output.wav" -ForegroundColor Gray
     Write-Host ""
 }
 
