@@ -51,6 +51,7 @@ $InstallDir = Join-Path $env:USERPROFILE "kittentts"
 $CliScript = Join-Path $PSScriptRoot "kittentts-cli.py"
 $UseLauncher = $false
 $PythonCmd = ""
+$DetectedPythonVersion = ""
 
 function Invoke-Python {
     param([string[]]$Arguments)
@@ -62,6 +63,79 @@ function Invoke-Python {
     }
 }
 
+function Get-AvailablePython {
+    param([string]$DefaultVersion = "3.12")
+    
+    # Try Python Launcher first (py.exe)
+    $versions = @("3.12", "3.11", "3.10", "3.9", "3.8")
+    
+    $launcher = Get-Command py -ErrorAction SilentlyContinue
+    if ($launcher) {
+        foreach ($v in $versions) {
+            $prevEAP = $ErrorActionPreference
+            $ErrorActionPreference = "SilentlyContinue"
+            $result = & py "-$v" --version 2>&1
+            $ErrorActionPreference = $prevEAP
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "  Found Python via launcher: $v" -ForegroundColor Green
+                return "py", "-$v"
+            }
+        }
+    }
+    
+    # Fallback to default python command
+    $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+    if ($pythonCmd) {
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        $result = & python --version 2>&1
+        $ErrorActionPreference = $prevEAP
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "  Found Python: $($result.Trim())" -ForegroundColor Green
+            return "python", ""
+        }
+    }
+    
+    return $null, $null
+}
+
+function Install-PythonViaWinget {
+    Write-Host ""
+    Write-Host "  Python not found on your system." -ForegroundColor Yellow
+    Write-Host "  KittenTTS requires Python 3.8 or higher." -ForegroundColor Yellow
+    Write-Host ""
+    $response = Read-Host "  Install Python 3.12 via winget? (Y/n)"
+    
+    if ($response -eq "" -or $response -eq "Y" -or $response -eq "y") {
+        Write-Host "  Installing Python 3.12 via winget..." -ForegroundColor Gray
+        
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = "Continue"
+        winget install Python.Python.3.12 --accept-package-agreements --accept-source-agreements --silent 2>&1 | Out-Null
+        $wingetExitCode = $LASTEXITCODE
+        $ErrorActionPreference = $prevEAP
+        
+        if ($wingetExitCode -eq 0 -or $wingetExitCode -eq -1978335189) {
+            Write-Host "  Python 3.12 installed successfully!" -ForegroundColor Green
+            Write-Host "  You may need to restart your terminal for PATH changes to take effect." -ForegroundColor Yellow
+            return $true
+        } else {
+            Write-Host "  Failed to install Python via winget." -ForegroundColor Red
+            Write-Host "  Error code: $wingetExitCode" -ForegroundColor Red
+        }
+    }
+    
+    Write-Host ""
+    Write-Host "  Please install Python manually from:" -ForegroundColor Yellow
+    Write-Host "  https://www.python.org/downloads/" -ForegroundColor Cyan
+    Write-Host ""
+    Write-Host "  Make sure to check 'Add Python to PATH' during installation." -ForegroundColor Yellow
+    Write-Host ""
+    return $false
+}
+
 function Write-Step {
     param([string]$Message)
     Write-Host ""
@@ -71,38 +145,28 @@ function Write-Step {
 
 function Test-Python {
     try {
-        $launcher = Get-Command py -ErrorAction SilentlyContinue
+        $cmd, $versionArg = Get-AvailablePython
         
-        if ($launcher) {
-            $version = & py "-$PythonVersion" --version 2>&1
-            if ($LASTEXITCODE -ne 0) {
-                Write-Host "ERROR: Python $PythonVersion not found via Python Launcher." -ForegroundColor Red
-                Write-Host "Available versions can be listed with: py --list" -ForegroundColor Yellow
+        if ($null -eq $cmd) {
+            Write-Host "ERROR: Python not found on your system." -ForegroundColor Red
+            Write-Host ""
+            $installed = Install-PythonViaWinget
+            if (-not $installed) {
                 exit 1
             }
-            $script:UseLauncher = $true
-            $script:PythonCmd = "py"
-        }
-        else {
-            $versionedCmd = "python$PythonVersion"
-            if (Get-Command $versionedCmd -ErrorAction SilentlyContinue) {
-                $script:PythonCmd = $versionedCmd
-                $version = & $versionedCmd --version 2>&1
-            }
-            elseif (Get-Command python -ErrorAction SilentlyContinue) {
-                $script:PythonCmd = "python"
-                $version = & python --version 2>&1
-                Write-Host "WARNING: Python Launcher not found, using default Python." -ForegroundColor Yellow
-                Write-Host "Install Python $PythonVersion or use py.exe for version selection." -ForegroundColor Yellow
-            }
-            else {
-                Write-Host "ERROR: Python not found in PATH." -ForegroundColor Red
-                Write-Host "Please install Python 3.8+ from https://www.python.org/downloads/" -ForegroundColor Yellow
+            
+            # Try again after winget installation
+            $cmd, $versionArg = Get-AvailablePython
+            if ($null -eq $cmd) {
+                Write-Host "ERROR: Python still not found after installation." -ForegroundColor Red
+                Write-Host "Please restart your terminal and run the installer again." -ForegroundColor Yellow
                 exit 1
             }
         }
         
-        Write-Host "Found: $version" -ForegroundColor Green
+        $script:PythonCmd = $cmd
+        $script:UseLauncher = ($cmd -eq "py")
+        $script:DetectedPythonVersion = $versionArg
     }
     catch {
         Write-Host "ERROR: Failed to detect Python: $_" -ForegroundColor Red
@@ -125,7 +189,7 @@ function Install-KittenTTS {
         $prevEAP = $ErrorActionPreference
         $ErrorActionPreference = "Continue"
         if ($UseLauncher) {
-            & py "-$PythonVersion" -m pip install $wheelFile --quiet 2>&1 | Out-Null
+            & $PythonCmd $DetectedPythonVersion -m pip install $wheelFile --quiet 2>&1 | Out-Null
         }
         else {
             & $PythonCmd -m pip install $wheelFile --quiet 2>&1 | Out-Null
@@ -222,7 +286,7 @@ function Test-Installation {
     $prevEAP = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     if ($UseLauncher) {
-        & py "-$PythonVersion" $cliPath --text $testText --voice Jasper --output $testOutput --model $modelName 2>&1 | Out-Null
+        & $PythonCmd $DetectedPythonVersion $cliPath --text $testText --voice Jasper --output $testOutput --model $modelName 2>&1 | Out-Null
     }
     else {
         & $PythonCmd $cliPath --text $testText --voice Jasper --output $testOutput --model $modelName 2>&1 | Out-Null
@@ -249,6 +313,7 @@ function Show-Success {
     Write-Host ""
     Write-Host "  Model: $Model ($(@{nano="15M, 25MB";micro="40M, 41MB";mini="80M, 80MB"}[$Model]))" -ForegroundColor Cyan
     Write-Host "  CLI: $InstallDir\kittentts-cli.py" -ForegroundColor Cyan
+    Write-Host "  Python: $PythonCmd $DetectedPythonVersion" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "  Available voices: Bella, Jasper, Luna, Bruno, Rosie, Hugo, Kiki, Leo" -ForegroundColor Gray
     Write-Host ""
@@ -258,6 +323,63 @@ function Show-Success {
     Write-Host "  3. Select 'KittenTTS' tab" -ForegroundColor Gray
     Write-Host "  4. Click 'Test Engine' to verify" -ForegroundColor Gray
     Write-Host ""
+}
+
+function Update-Config {
+    Write-Step "Updating CopySpeak configuration..."
+    
+    $configPath = Join-Path $env:APPDATA "CopySpeak\config.json"
+    
+    if (Test-Path $configPath) {
+        try {
+            $config = Get-Content $configPath -Raw | ConvertFrom-Json
+            
+            $pythonCommand = if ($UseLauncher) { "py" } else { $PythonCmd }
+            $versionArg = if ($DetectedPythonVersion) { $DetectedPythonVersion } else { "" }
+            
+            if ($config.tts -and $config.tts.active_backend -eq "Local") {
+                $config.tts.command = $pythonCommand
+                
+                # Update args_template based on detected Python
+                $cliPath = "{home_dir}/kittentts/kittentts-cli.py"
+                if ($versionArg) {
+                    $config.tts.args_template = @(
+                        $versionArg
+                        $cliPath
+                        "--text"
+                        "{raw_text}"
+                        "--voice"
+                        "{voice}"
+                        "--output"
+                        "{output}"
+                    )
+                } else {
+                    $config.tts.args_template = @(
+                        $cliPath
+                        "--text"
+                        "{raw_text}"
+                        "--voice"
+                        "{voice}"
+                        "--output"
+                        "{output}"
+                    )
+                }
+                
+                $config | ConvertTo-Json -Depth 10 | Set-Content $configPath -Encoding UTF8
+                Write-Host "  Updated TTS command to: $pythonCommand" -ForegroundColor Gray
+                if ($versionArg) {
+                    Write-Host "  Python version: $versionArg" -ForegroundColor Gray
+                }
+            } else {
+                Write-Host "  CopySpeak config not found or TTS backend not set to Local." -ForegroundColor Yellow
+            }
+        }
+        catch {
+            Write-Host "  Warning: Could not update CopySpeak config: $_" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "  CopySpeak config not found. The app will use default settings." -ForegroundColor Yellow
+    }
 }
 
 function Show-Usage {
@@ -281,7 +403,6 @@ if (-not $Force) {
             Write-Host ""
             Write-Host "  KittenTTS is already installed. Use -Force to reinstall." -ForegroundColor Yellow
             Show-Usage
-            exit 0
         }
     }
     catch {}
@@ -291,6 +412,7 @@ Install-KittenTTS
 Install-CliWrapper
 
 if (Test-Installation) {
+    Update-Config
     Show-Success
 }
 else {

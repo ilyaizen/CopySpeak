@@ -2,7 +2,7 @@
 // Auto-saved on every change from the frontend via set_config command.
 
 /// Current config schema version. Bumped when making breaking changes to config structure.
-const CONFIG_VERSION: &str = "0.0.2";
+const CONFIG_VERSION: &str = "0.0.3";
 
 mod general;
 mod hud;

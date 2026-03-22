@@ -385,19 +385,86 @@ impl TtsBackend for CliTtsBackend {
             );
         }
 
-        // Check if command exists
-        #[allow(unused_mut)]
-        let mut cmd = Command::new(&self.command);
-        cmd.arg("--help");
-        #[cfg(windows)]
-        cmd.creation_flags(CREATE_NO_WINDOW);
-        cmd.output().map_err(|e| {
-            log::error!(
-                "[CLI TTS] Health check failed - command not found: {}",
-                self.command
-            );
-            TtsError::Unavailable(format!("{} not found: {e}", self.command))
-        })?;
+        // Check if command exists with version args (e.g., py -3.12)
+        let is_python =
+            self.command == "py" || self.command == "python" || self.command.starts_with("python");
+
+        if is_python {
+            // For Python, we need to validate the full command with the script
+            // Build args similar to synthesize, but use a test text
+            let test_text = "test";
+            let test_output = Self::output_path();
+            let args = self.build_args(&Self::input_path(), &test_output, "test", test_text);
+
+            if crate::logging::is_debug_mode() {
+                log::debug!("[CLI TTS] Health check args: {:?}", args);
+            }
+
+            // Clean up any existing test files
+            let _ = std::fs::remove_file(&Self::input_path());
+            let _ = std::fs::remove_file(&test_output);
+
+            // Write a minimal input file
+            let _ = std::fs::write(&Self::input_path(), test_text);
+
+            #[allow(unused_mut)]
+            let mut cmd = Command::new(&self.command);
+            cmd.args(&args)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
+            #[cfg(windows)]
+            cmd.creation_flags(CREATE_NO_WINDOW);
+
+            let result = cmd.output().map_err(|e| {
+                log::error!(
+                    "[CLI TTS] Health check failed - command not found: {}",
+                    self.command
+                );
+                TtsError::Unavailable(format!("{} not found: {e}", self.command))
+            })?;
+
+            // Check for Python version errors in stderr
+            let stderr = String::from_utf8_lossy(&result.stderr);
+            let _stdout = String::from_utf8_lossy(&result.stdout);
+
+            if stderr.contains("No runtime installed") {
+                log::error!("[CLI TTS] Health check failed - Python runtime not installed");
+                return Err(TtsError::Unavailable(
+                    "Python runtime is not installed or not found. Please install Python 3.8+ from https://www.python.org/downloads/".to_string()
+                ));
+            }
+
+            if stderr.contains("is not recognized") || stderr.contains("not found") {
+                log::error!("[CLI TTS] Health check failed - command not recognized");
+                return Err(TtsError::Unavailable(format!(
+                    "Command '{}' not found. Please ensure the TTS engine is installed and in PATH.",
+                    self.command
+                )));
+            }
+
+            // If command succeeded or script ran (even with other errors), consider it available
+            if crate::logging::is_debug_mode() {
+                log::debug!("[CLI TTS] Health check passed for Python command");
+            }
+
+            // Clean up test files
+            let _ = std::fs::remove_file(&Self::input_path());
+            let _ = std::fs::remove_file(&test_output);
+        } else {
+            // For non-Python commands, use simple --help check
+            #[allow(unused_mut)]
+            let mut cmd = Command::new(&self.command);
+            cmd.arg("--help");
+            #[cfg(windows)]
+            cmd.creation_flags(CREATE_NO_WINDOW);
+            cmd.output().map_err(|e| {
+                log::error!(
+                    "[CLI TTS] Health check failed - command not found: {}",
+                    self.command
+                );
+                TtsError::Unavailable(format!("{} not found: {e}", self.command))
+            })?;
+        }
 
         // For Piper, check if voice files exist
         if self.is_piper() {

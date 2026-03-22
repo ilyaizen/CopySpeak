@@ -123,9 +123,8 @@ impl Default for TtsConfig {
         Self {
             active_backend: TtsEngine::Local,
             preset: "kitten-tts".into(),
-            command: "py".into(),
+            command: "python".into(),
             args_template: vec![
-                "-3.12".into(),
                 "{home_dir}/kittentts/kittentts-cli.py".into(),
                 "--text".into(),
                 "{raw_text}".into(),
