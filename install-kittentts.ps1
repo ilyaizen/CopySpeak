@@ -40,7 +40,9 @@ param(
     
     [string]$PythonVersion = "3.12",
     
-    [switch]$Force
+    [switch]$Force,
+    
+    [switch]$Verbose
 )
 
 $ErrorActionPreference = "Stop"
@@ -64,14 +66,11 @@ function Invoke-Python {
 }
 
 function Get-AvailablePython {
-    param([string]$DefaultVersion = "3.12")
-    
-    # Try Python Launcher first (py.exe)
-    $versions = @("3.12", "3.11", "3.10", "3.9", "3.8")
+    $supportedVersions = @("3.12", "3.11", "3.10", "3.9", "3.8")
     
     $launcher = Get-Command py -ErrorAction SilentlyContinue
     if ($launcher) {
-        foreach ($v in $versions) {
+        foreach ($v in $supportedVersions) {
             $prevEAP = $ErrorActionPreference
             $ErrorActionPreference = "SilentlyContinue"
             $result = & py "-$v" --version 2>&1
@@ -79,12 +78,26 @@ function Get-AvailablePython {
             
             if ($LASTEXITCODE -eq 0) {
                 Write-Host "  Found Python via launcher: $v" -ForegroundColor Green
-                return "py", "-$v"
+                return "py", "-$v", $v
+            }
+        }
+        
+        $prevEAP = $ErrorActionPreference
+        $ErrorActionPreference = "SilentlyContinue"
+        $unsupportedResult = & py --version 2>&1
+        $ErrorActionPreference = $prevEAP
+        
+        if ($LASTEXITCODE -eq 0 -and $unsupportedResult -match "Python (\d+)\.(\d+)") {
+            $major = [int]$Matches[1]
+            $minor = [int]$Matches[2]
+            $fullVersion = "$major.$minor"
+            
+            if ($major -gt 3 -or ($major -eq 3 -and $minor -gt 12)) {
+                return "py", "", $fullVersion, $true
             }
         }
     }
     
-    # Fallback to default python command
     $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
     if ($pythonCmd) {
         $prevEAP = $ErrorActionPreference
@@ -92,13 +105,23 @@ function Get-AvailablePython {
         $result = & python --version 2>&1
         $ErrorActionPreference = $prevEAP
         
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "  Found Python: $($result.Trim())" -ForegroundColor Green
-            return "python", ""
+        if ($LASTEXITCODE -eq 0 -and $result -match "Python (\d+)\.(\d+)") {
+            $major = [int]$Matches[1]
+            $minor = [int]$Matches[2]
+            $fullVersion = "$major.$minor"
+            
+            if ($major -gt 3 -or ($major -eq 3 -and $minor -gt 12)) {
+                return "python", "", $fullVersion, $true
+            }
+            
+            if ($major -eq 3 -and $minor -ge 8 -and $minor -le 12) {
+                Write-Host "  Found Python: $($result.Trim())" -ForegroundColor Green
+                return "python", "", $fullVersion, $false
+            }
         }
     }
     
-    return $null, $null
+    return $null, $null, "", $false
 }
 
 function Install-PythonViaWinget {
@@ -145,7 +168,7 @@ function Write-Step {
 
 function Test-Python {
     try {
-        $cmd, $versionArg = Get-AvailablePython
+        $cmd, $versionArg, $detectedVersion, $isUnsupported = Get-AvailablePython
         
         if ($null -eq $cmd) {
             Write-Host "ERROR: Python not found on your system." -ForegroundColor Red
@@ -155,13 +178,31 @@ function Test-Python {
                 exit 1
             }
             
-            # Try again after winget installation
-            $cmd, $versionArg = Get-AvailablePython
+            $cmd, $versionArg, $detectedVersion, $isUnsupported = Get-AvailablePython
             if ($null -eq $cmd) {
                 Write-Host "ERROR: Python still not found after installation." -ForegroundColor Red
                 Write-Host "Please restart your terminal and run the installer again." -ForegroundColor Yellow
                 exit 1
             }
+        }
+        
+        if ($isUnsupported) {
+            Write-Host ""
+            Write-Host "  ========================================" -ForegroundColor Red
+            Write-Host "  ERROR: Unsupported Python version" -ForegroundColor Red
+            Write-Host "  ========================================" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "  Detected: Python $detectedVersion" -ForegroundColor Yellow
+            Write-Host "  Required: Python 3.8, 3.9, 3.10, 3.11, or 3.12" -ForegroundColor Yellow
+            Write-Host ""
+            Write-Host "  Python 3.13+ has compatibility issues with KittenTTS dependencies." -ForegroundColor Gray
+            Write-Host ""
+            Write-Host "  To fix this:" -ForegroundColor Cyan
+            Write-Host "  1. Install Python 3.12 from: https://www.python.org/downloads/release/python-3120/" -ForegroundColor Gray
+            Write-Host "  2. Or run: winget install Python.Python.3.12" -ForegroundColor Gray
+            Write-Host "  3. Re-run this installer" -ForegroundColor Gray
+            Write-Host ""
+            exit 1
         }
         
         $script:PythonCmd = $cmd
@@ -283,26 +324,76 @@ function Test-Installation {
     Write-Host "  Model: $modelName" -ForegroundColor Gray
     Write-Host "  First run will download model (~25-80MB)..." -ForegroundColor Yellow
     
+    $cmdArgs = @()
+    if ($UseLauncher) {
+        $cmdArgs += $DetectedPythonVersion
+    }
+    $cmdArgs += @($cliPath, "--text", $testText, "--voice", "Jasper", "--output", $testOutput, "--model", $modelName)
+    
+    if ($Verbose) {
+        $argStr = $cmdArgs -join '" "'
+        Write-Host "  Command: $PythonCmd `"$argStr`"" -ForegroundColor DarkGray
+    }
+    
     $prevEAP = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
-    if ($UseLauncher) {
-        & $PythonCmd $DetectedPythonVersion $cliPath --text $testText --voice Jasper --output $testOutput --model $modelName 2>&1 | Out-Null
-    }
-    else {
-        & $PythonCmd $cliPath --text $testText --voice Jasper --output $testOutput --model $modelName 2>&1 | Out-Null
-    }
+    $output = & $PythonCmd @cmdArgs 2>&1
+    $exitCode = $LASTEXITCODE
     $ErrorActionPreference = $prevEAP
     
-    if (Test-Path $testOutput) {
-        $fileSize = (Get-Item $testOutput).Length
-        Write-Host "Test synthesis successful: $fileSize bytes" -ForegroundColor Green
-        Remove-Item $testOutput -Force -ErrorAction SilentlyContinue
-        return $true
-    }
-    else {
-        Write-Host "ERROR: Output file not created" -ForegroundColor Red
+    if ($exitCode -ne 0) {
+        Write-Host ""
+        Write-Host "  ========================================" -ForegroundColor Red
+        Write-Host "  ERROR: CLI failed with exit code $exitCode" -ForegroundColor Red
+        Write-Host "  ========================================" -ForegroundColor Red
+        Write-Host ""
+        if ($output) {
+            Write-Host "  CLI Output:" -ForegroundColor Yellow
+            Write-Host "  $('-' * 50)" -ForegroundColor DarkGray
+            $output | ForEach-Object { 
+                $line = $_.ToString()
+                if ($line -match "ERROR|error|Error|Exception|Traceback|failed|Failed|ModuleNotFoundError|ImportError") {
+                    Write-Host "  $line" -ForegroundColor Red
+                } else {
+                    Write-Host "  $line" -ForegroundColor Gray
+                }
+            }
+            Write-Host "  $('-' * 50)" -ForegroundColor DarkGray
+        }
+        Write-Host ""
+        Write-Host "  Possible causes:" -ForegroundColor Cyan
+        Write-Host "  - Missing dependency (soundfile, numpy)" -ForegroundColor Gray
+        Write-Host "  - Network error during model download" -ForegroundColor Gray
+        Write-Host "  - Insufficient disk space" -ForegroundColor Gray
+        Write-Host "  - Antivirus blocking Python" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "  Try running with -Verbose for more details" -ForegroundColor Yellow
         return $false
     }
+    
+    if (-not (Test-Path $testOutput)) {
+        Write-Host ""
+        Write-Host "  ========================================" -ForegroundColor Red
+        Write-Host "  ERROR: Output file was not created" -ForegroundColor Red
+        Write-Host "  ========================================" -ForegroundColor Red
+        Write-Host ""
+        Write-Host "  Expected: $testOutput" -ForegroundColor Yellow
+        if ($output) {
+            Write-Host ""
+            Write-Host "  CLI Output:" -ForegroundColor Yellow
+            Write-Host "  $('-' * 50)" -ForegroundColor DarkGray
+            $output | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+            Write-Host "  $('-' * 50)" -ForegroundColor DarkGray
+        }
+        Write-Host ""
+        Write-Host "  This usually indicates a model loading or audio generation failure." -ForegroundColor Yellow
+        return $false
+    }
+    
+    $fileSize = (Get-Item $testOutput).Length
+    Write-Host "  Test synthesis successful: $fileSize bytes" -ForegroundColor Green
+    Remove-Item $testOutput -Force -ErrorAction SilentlyContinue
+    return $true
 }
 
 function Show-Success {

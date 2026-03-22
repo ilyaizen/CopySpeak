@@ -36,14 +36,13 @@ pub fn run_kittentts_installer() -> Result<(), String> {
     {
         let mut cmd = Command::new("pwsh.exe");
         let script_wrapper = format!(
-            r#"& '{}'; if ($LASTEXITCODE -eq 0) {{ Write-Host ""; Write-Host "Press any key to exit..." -ForegroundColor Cyan; $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") }} else {{ Write-Host ""; Write-Host "Installation failed with exit code: $LASTEXITCODE" -ForegroundColor Red; Write-Host ""; Write-Host "Press any key to exit..." -ForegroundColor Cyan; $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown") }}"#,
-            script_path_str
+            r#"$ErrorActionPreference = 'Continue'; & '{script}'; $exitCode = $LASTEXITCODE; Write-Host ''; if ($exitCode -eq 0) {{ Write-Host 'Installation successful!' -ForegroundColor Green }} else {{ Write-Host 'Installation failed with exit code:' $exitCode -ForegroundColor Red }}; Write-Host ''; Write-Host 'Press any key to close...' -ForegroundColor Cyan; $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); exit $exitCode"#,
+            script = script_path_str
         );
 
         cmd.args([
             "-ExecutionPolicy",
             "Bypass",
-            "-NoExit",
             "-WindowStyle",
             "Normal",
             "-Command",
@@ -60,7 +59,6 @@ pub fn run_kittentts_installer() -> Result<(), String> {
                 cmd_fallback.args([
                     "-ExecutionPolicy",
                     "Bypass",
-                    "-NoExit",
                     "-WindowStyle",
                     "Normal",
                     "-Command",

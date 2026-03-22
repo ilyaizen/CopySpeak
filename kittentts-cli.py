@@ -52,6 +52,9 @@ Examples:
     parser.add_argument(
         "--list-voices", action="store_true", help="List available voices and exit"
     )
+    parser.add_argument(
+        "--verbose", "-v", action="store_true", help="Print detailed progress"
+    )
 
     args = parser.parse_args()
 
@@ -59,9 +62,22 @@ Examples:
         print("Available voices: Bella, Jasper, Luna, Bruno, Rosie, Hugo, Kiki, Leo")
         return 0
 
+    def log(msg: str):
+        if args.verbose:
+            print(f"[VERBOSE] {msg}", file=sys.stderr)
+
+    log(f"Python: {sys.version}")
+    log(f"Model: {args.model}")
+    log(f"Text: {args.text}")
+    log(f"Voice: {args.voice}")
+    log(f"Output: {args.output}")
+
     try:
+        log("Importing dependencies...")
         from kittentts import KittenTTS
         import soundfile as sf
+
+        log("Dependencies imported successfully")
     except ImportError as e:
         print(f"ERROR: Missing dependency: {e}", file=sys.stderr)
         print("", file=sys.stderr)
@@ -76,10 +92,19 @@ Examples:
     try:
         output_path = Path(args.output)
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        log(f"Output directory ensured: {output_path.parent}")
 
+        log("Loading TTS model...")
         tts = KittenTTS(args.model)
+        log("Model loaded successfully")
+
+        log("Generating audio...")
         audio = tts.generate(text=args.text, voice=args.voice, clean_text=True)
+        log(f"Generated {len(audio)} samples at 24000Hz")
+
+        log("Writing WAV file...")
         sf.write(str(output_path), audio, 24000)
+        log(f"WAV file written: {output_path}")
 
         print(f"OK: {len(audio)} samples -> {output_path}", file=sys.stderr)
         return 0

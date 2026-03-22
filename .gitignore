@@ -31,3 +31,4 @@ GEMINI.md
 /plans
 file-structure.txt
 .vercel
+/__pycache__
