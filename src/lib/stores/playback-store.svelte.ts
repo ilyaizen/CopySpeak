@@ -142,6 +142,11 @@ class PlaybackStore {
       this._audioCtx = new AudioContext();
     }
 
+    // Resume AudioContext if suspended (required on clean Windows 11 / strict autoplay policies)
+    if (this._audioCtx.state === "suspended") {
+      await this._audioCtx.resume();
+    }
+
     // Wire AnalyserNode once per audio element (guard prevents double-wiring)
     if (this._audioEl && this._audioCtx && !this._analyser.getAnalyser()) {
       this._analyser.setup(this._audioEl, this._audioCtx, {

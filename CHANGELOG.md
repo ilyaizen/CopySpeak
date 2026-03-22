@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Audio playback on clean Windows 11** — AudioContext now resumes if suspended
+  - Web Audio API requires user gesture to activate AudioContext on fresh profiles
+  - Added `audioCtx.resume()` call when state is "suspended" in playback-store
+
 ## [0.0.3] - 2026-03-22
 
 ### Fixed
