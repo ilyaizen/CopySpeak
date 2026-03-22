@@ -46,7 +46,7 @@ function backendToHistoryItem(entry: BackendHistoryEntry): HistoryItem {
     error_message: entry.error_message,
     attempts: entry.attempts,
     tags: entry.tags,
-    metadata: entry.metadata,
+    metadata: entry.metadata
   };
 }
 
@@ -60,7 +60,7 @@ import {
   createEmptyHistoryState,
   filterHistoryItems,
   sortHistoryItems,
-  calculateHistoryStatistics,
+  calculateHistoryStatistics
 } from "$lib/models/history";
 
 /**
@@ -74,7 +74,7 @@ function createHistoryStore() {
   let filters = $state<HistoryFilters>({});
   let sortOptions = $state<HistorySortOptions>({
     sort_by: "timestamp",
-    order: "descending",
+    order: "descending"
   });
 
   // Tauri invoke function (lazy loaded)
@@ -290,9 +290,9 @@ function createHistoryStore() {
     try {
       const item = state.items.find((i) => i.id === id);
       if (item) {
-        await invoke("show_hud_for_playback", { 
-          text: item.text, 
-          audioDurationMs: item.duration_ms ?? null 
+        await invoke("show_hud_for_playback", {
+          text: item.text,
+          audioDurationMs: item.duration_ms ?? null
         }).catch(() => {});
       }
       await invoke("play_history_entry", { entryId: id });
@@ -436,7 +436,7 @@ function createHistoryStore() {
     copyEntryText,
     getBatch,
     playBatch,
-    deleteBatch,
+    deleteBatch
   };
 }
 

@@ -13,7 +13,7 @@ import type {
   HistoryStatistics,
   HistoryState,
   AudioFormat,
-  TtsEngine,
+  TtsEngine
 } from "$lib/types";
 
 /**
@@ -39,7 +39,7 @@ export function createHistoryItem(
     speed,
     success: false,
     attempts: 0,
-    ...overrides,
+    ...overrides
   };
 }
 
@@ -60,7 +60,7 @@ export function createHistoryEvent(
     event_type: eventType as any,
     text,
     success: false,
-    ...overrides,
+    ...overrides
   };
 }
 
@@ -101,10 +101,7 @@ export function getHourFromTimestamp(timestamp: number): number {
 /**
  * Filters history items based on filter criteria
  */
-export function filterHistoryItems(
-  items: HistoryItem[],
-  filters: HistoryFilters
-): HistoryItem[] {
+export function filterHistoryItems(items: HistoryItem[], filters: HistoryFilters): HistoryItem[] {
   return items.filter((item) => {
     // Text search filter
     if (filters.search_text) {
@@ -185,9 +182,7 @@ export function sortHistoryItems(
         break;
     }
 
-    return sortOptions.order === "ascending"
-      ? compareValue
-      : -compareValue;
+    return sortOptions.order === "ascending" ? compareValue : -compareValue;
   });
 
   return sorted;
@@ -234,7 +229,7 @@ export function queryHistoryItems(
       items: paginatedItems,
       total_count: totalCount,
       limit: pagination.limit,
-      offset: pagination.offset,
+      offset: pagination.offset
     };
   }
 
@@ -242,16 +237,14 @@ export function queryHistoryItems(
     items: result,
     total_count: totalCount,
     limit: result.length,
-    offset: 0,
+    offset: 0
   };
 }
 
 /**
  * Calculates statistics from history items
  */
-export function calculateHistoryStatistics(
-  items: HistoryItem[]
-): HistoryStatistics {
+export function calculateHistoryStatistics(items: HistoryItem[]): HistoryStatistics {
   if (items.length === 0) {
     return {
       total_items: 0,
@@ -265,7 +258,7 @@ export function calculateHistoryStatistics(
       by_day: {},
       most_used_voice: null,
       average_text_length: 0,
-      average_duration_ms: 0,
+      average_duration_ms: 0
     };
   }
 
@@ -281,7 +274,7 @@ export function calculateHistoryStatistics(
     by_day: {},
     most_used_voice: null,
     average_text_length: 0,
-    average_duration_ms: 0,
+    average_duration_ms: 0
   };
 
   const voiceCounts: Record<string, number> = {};
@@ -344,8 +337,7 @@ export function calculateHistoryStatistics(
   }
 
   // Calculate success rate
-  stats.success_rate =
-    items.length > 0 ? stats.successful_items / items.length : 0;
+  stats.success_rate = items.length > 0 ? stats.successful_items / items.length : 0;
 
   // Find most used voice
   let maxCount = 0;
@@ -372,18 +364,14 @@ export function getHistoryItemsFromToday(items: HistoryItem[]): HistoryItem[] {
   const tomorrowTimestamp = tomorrow.getTime();
 
   return items.filter(
-    (item) =>
-      item.timestamp >= todayTimestamp && item.timestamp < tomorrowTimestamp
+    (item) => item.timestamp >= todayTimestamp && item.timestamp < tomorrowTimestamp
   );
 }
 
 /**
  * Gets items from the last N days
  */
-export function getHistoryItemsFromLastDays(
-  items: HistoryItem[],
-  days: number
-): HistoryItem[] {
+export function getHistoryItemsFromLastDays(items: HistoryItem[], days: number): HistoryItem[] {
   const now = Date.now();
   const daysInMs = days * 24 * 60 * 60 * 1000;
   const cutoffTime = now - daysInMs;
@@ -394,9 +382,7 @@ export function getHistoryItemsFromLastDays(
 /**
  * Removes duplicate items (keeping the most recent)
  */
-export function removeDuplicateHistoryItems(
-  items: HistoryItem[]
-): HistoryItem[] {
+export function removeDuplicateHistoryItems(items: HistoryItem[]): HistoryItem[] {
   const seen = new Map<string, HistoryItem>();
 
   // Process in reverse order to keep the most recent
@@ -425,20 +411,18 @@ export function createEmptyHistoryState(): HistoryState {
       storage_mode: "temp",
       persistent_dir: null,
       auto_delete: { keep_latest: 50 },
-      cleanup_orphaned_files: true,
+      cleanup_orphaned_files: true
     },
     is_loading: false,
     error: null,
-    last_updated: 0,
+    last_updated: 0
   };
 }
 
 /**
  * Merges history states (e.g., from different sources)
  */
-export function mergeHistoryStates(
-  ...states: HistoryState[]
-): HistoryState {
+export function mergeHistoryStates(...states: HistoryState[]): HistoryState {
   if (states.length === 0) {
     return createEmptyHistoryState();
   }
@@ -470,7 +454,7 @@ export function mergeHistoryStates(
     config: states[states.length - 1].config,
     is_loading: false,
     error: null,
-    last_updated: Date.now(),
+    last_updated: Date.now()
   };
 }
 
@@ -488,5 +472,5 @@ export {
   generateTimelineHtml,
   generateTimelineItemHtml,
   escapeHtml,
-  type HtmlExportOptions,
+  type HtmlExportOptions
 } from "./html-export";

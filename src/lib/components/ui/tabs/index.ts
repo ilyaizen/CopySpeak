@@ -4,17 +4,17 @@ import Trigger, { type TabsTriggerProps } from "./tabs-trigger.svelte";
 import Content, { type TabsContentProps } from "./tabs-content.svelte";
 
 export {
-	Root,
-	List,
-	Trigger,
-	Content,
-	//
-	Root as Tabs,
-	List as TabsList,
-	Trigger as TabsTrigger,
-	Content as TabsContent,
-	type TabsProps,
-	type TabsListProps,
-	type TabsTriggerProps,
-	type TabsContentProps,
+  Root,
+  List,
+  Trigger,
+  Content,
+  //
+  Root as Tabs,
+  List as TabsList,
+  Trigger as TabsTrigger,
+  Content as TabsContent,
+  type TabsProps,
+  type TabsListProps,
+  type TabsTriggerProps,
+  type TabsContentProps
 };

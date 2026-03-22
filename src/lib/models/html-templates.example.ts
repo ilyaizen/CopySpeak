@@ -10,28 +10,25 @@ import {
   renderHtmlTemplate,
   LIGHT_THEME,
   type TemplateContext,
-  type ThemeColors,
+  type ThemeColors
 } from "./html-templates";
 import type { HistoryItem, HistoryStatistics } from "$lib/types";
 
 // Example 1: Basic HTML Export
 export function basicHtmlExport(items: HistoryItem[]): string {
   const context = createTemplateContext(items, {
-    title: "My History Export",
+    title: "My History Export"
   });
 
   return renderHtmlTemplate(context);
 }
 
 // Example 2: Export with Statistics
-export function exportWithStatistics(
-  items: HistoryItem[],
-  statistics: HistoryStatistics
-): string {
+export function exportWithStatistics(items: HistoryItem[], statistics: HistoryStatistics): string {
   const context = createTemplateContext(items, {
     title: "History Report with Statistics",
     statistics,
-    includeStatistics: true,
+    includeStatistics: true
   });
 
   return renderHtmlTemplate(context);
@@ -41,7 +38,7 @@ export function exportWithStatistics(
 export function darkThemeExport(items: HistoryItem[]): string {
   const context = createTemplateContext(items, {
     title: "Dark Theme Export",
-    theme: "dark",
+    theme: "dark"
   });
 
   return renderHtmlTemplate(context);
@@ -54,11 +51,11 @@ export function customThemeExport(items: HistoryItem[]): string {
     ...LIGHT_THEME,
     accent: "#ff6b6b", // Custom red accent
     background: "#fffef9", // Warm white background
-    cardBg: "#fff9f0", // Warm card background
+    cardBg: "#fff9f0" // Warm card background
   };
 
   const context = createTemplateContext(items, {
-    title: "Custom Theme Export",
+    title: "Custom Theme Export"
   });
 
   // Override the theme
@@ -68,17 +65,13 @@ export function customThemeExport(items: HistoryItem[]): string {
 }
 
 // Example 5: Date Range Export
-export function dateRangeExport(
-  items: HistoryItem[],
-  fromDate: Date,
-  toDate: Date
-): string {
+export function dateRangeExport(items: HistoryItem[], fromDate: Date, toDate: Date): string {
   const context = createTemplateContext(items, {
     title: "Date Range Report",
     dateRange: {
       from: fromDate.getTime(),
-      to: toDate.getTime(),
-    },
+      to: toDate.getTime()
+    }
   });
 
   return renderHtmlTemplate(context);
@@ -88,7 +81,7 @@ export function dateRangeExport(
 export function compactExport(items: HistoryItem[]): string {
   const context = createTemplateContext(items, {
     title: "Compact Report",
-    includeToc: false,
+    includeToc: false
   });
 
   return renderHtmlTemplate(context);
@@ -98,17 +91,14 @@ export function compactExport(items: HistoryItem[]): string {
 export function dataOnlyExport(items: HistoryItem[]): string {
   const context = createTemplateContext(items, {
     title: "Data Only Export",
-    includeStatistics: false,
+    includeStatistics: false
   });
 
   return renderHtmlTemplate(context);
 }
 
 // Example 8: Weekly Report
-export function weeklyReport(
-  items: HistoryItem[],
-  statistics: HistoryStatistics
-): string {
+export function weeklyReport(items: HistoryItem[], statistics: HistoryStatistics): string {
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
@@ -120,8 +110,8 @@ export function weeklyReport(
     theme: "light",
     dateRange: {
       from: weekAgo.getTime(),
-      to: now.getTime(),
-    },
+      to: now.getTime()
+    }
   });
 
   return renderHtmlTemplate(context);
@@ -149,7 +139,7 @@ export function monthlySummary(
     "September",
     "October",
     "November",
-    "December",
+    "December"
   ];
 
   const context = createTemplateContext(items, {
@@ -160,8 +150,8 @@ export function monthlySummary(
     theme: "light",
     dateRange: {
       from: startDate.getTime(),
-      to: endDate.getTime(),
-    },
+      to: endDate.getTime()
+    }
   });
 
   return renderHtmlTemplate(context);
@@ -170,7 +160,7 @@ export function monthlySummary(
 // Example 10: Custom HTML Export with Additional Content
 export function customBrandedExport(items: HistoryItem[]): string {
   const context = createTemplateContext(items, {
-    title: "Custom Branded Export",
+    title: "Custom Branded Export"
   });
 
   const baseHtml = renderHtmlTemplate(context);
@@ -190,8 +180,8 @@ export function customBrandedExport(items: HistoryItem[]): string {
 
   // Insert branding after header and watermark before footer
   return baseHtml
-    .replace('</header>', `</header>${customBranding}`)
-    .replace('</footer>', `${watermark}</footer>`);
+    .replace("</header>", `</header>${customBranding}`)
+    .replace("</footer>", `${watermark}</footer>`);
 }
 
 // Example 11: Using Custom HTML Export
@@ -200,10 +190,7 @@ export function customRendererExport(items: HistoryItem[]): string {
 }
 
 // Example 12: Batch Export (Multiple Files)
-export function batchExport(
-  allItems: HistoryItem[],
-  itemsPerFile: number = 100
-): string[] {
+export function batchExport(allItems: HistoryItem[], itemsPerFile: number = 100): string[] {
   const htmlFiles: string[] = [];
   const totalFiles = Math.ceil(allItems.length / itemsPerFile);
 
@@ -215,7 +202,7 @@ export function batchExport(
     const context = createTemplateContext(batch, {
       title: `History Export - Part ${i + 1} of ${totalFiles}`,
       includeToc: false,
-      includeStatistics: false,
+      includeStatistics: false
     });
 
     htmlFiles.push(renderHtmlTemplate(context));
@@ -225,26 +212,20 @@ export function batchExport(
 }
 
 // Example 13: Export for Printing
-export function printOptimizedExport(
-  items: HistoryItem[],
-  statistics: HistoryStatistics
-): string {
+export function printOptimizedExport(items: HistoryItem[], statistics: HistoryStatistics): string {
   const context = createTemplateContext(items, {
     title: "Print Report",
     statistics,
     includeStatistics: true,
     includeToc: true,
-    theme: "light", // Light theme is better for printing
+    theme: "light" // Light theme is better for printing
   });
 
   return renderHtmlTemplate(context);
 }
 
 // Example 14: Email-Ready HTML
-export function emailReadyExport(
-  items: HistoryItem[],
-  statistics: HistoryStatistics
-): string {
+export function emailReadyExport(items: HistoryItem[], statistics: HistoryStatistics): string {
   // For emails, keep it simple - no TOC, compact layout
   const context = createTemplateContext(items.slice(0, 20), {
     // Limit to 20 items
@@ -252,7 +233,7 @@ export function emailReadyExport(
     statistics,
     includeStatistics: true,
     includeToc: false,
-    theme: "light",
+    theme: "light"
   });
 
   return renderHtmlTemplate(context);
@@ -296,7 +277,7 @@ export function reuseTemplateContext(
   // Create a new context based on existing one
   const newContext: TemplateContext = {
     ...baseContext,
-    ...modifications,
+    ...modifications
   };
 
   return renderHtmlTemplate(newContext);
@@ -311,7 +292,7 @@ export function filterAndExport(
   const filteredItems = items.filter(filter);
 
   const context = createTemplateContext(filteredItems, {
-    title,
+    title
   });
 
   return renderHtmlTemplate(context);

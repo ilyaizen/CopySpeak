@@ -7,16 +7,13 @@
  * separation of concerns and better maintainability.
  */
 
-import type {
-  HistoryItem,
-  HistoryStatistics,
-} from "$lib/types";
+import type { HistoryItem, HistoryStatistics } from "$lib/types";
 import { formatHistoryDate, formatHistoryDateISO } from "./history";
 import {
   createTemplateContext,
   renderHtmlTemplate,
   LIGHT_THEME as LIGHT_THEME_COLORS,
-  DARK_THEME as DARK_THEME_COLORS,
+  DARK_THEME as DARK_THEME_COLORS
 } from "./html-templates";
 
 /**
@@ -32,7 +29,7 @@ export function generateHistoryHtmlPage(
     includeStatistics = true,
     includeToc = items.length > 10,
     cssTheme = "light",
-    dateRange,
+    dateRange
   } = options;
 
   // Create template context
@@ -42,7 +39,7 @@ export function generateHistoryHtmlPage(
     includeStatistics,
     includeToc,
     theme: cssTheme,
-    dateRange,
+    dateRange
   });
 
   // Render using template backend
@@ -96,13 +93,9 @@ export function generateTableOfContents(items: HistoryItem[]): string {
 /**
  * Generates statistics section with charts and summary
  */
-export function generateStatisticsSection(
-  statistics: HistoryStatistics
-): string {
+export function generateStatisticsSection(statistics: HistoryStatistics): string {
   const successPercentage = (statistics.success_rate * 100).toFixed(1);
-  const totalDurationMinutes = (statistics.total_duration_ms / 1000 / 60).toFixed(
-    1
-  );
+  const totalDurationMinutes = (statistics.total_duration_ms / 1000 / 60).toFixed(1);
 
   return `
     <section id="statistics" class="statistics-section">
@@ -146,8 +139,7 @@ export function generateStatisticsSection(
             <tbody>
               ${Object.entries(statistics.by_engine)
                 .map(
-                  ([engine, count]) =>
-                    `<tr><td>${escapeHtml(engine)}</td><td>${count}</td></tr>`
+                  ([engine, count]) => `<tr><td>${escapeHtml(engine)}</td><td>${count}</td></tr>`
                 )
                 .join("")}
             </tbody>
@@ -166,8 +158,7 @@ export function generateStatisticsSection(
             <tbody>
               ${Object.entries(statistics.by_format)
                 .map(
-                  ([format, count]) =>
-                    `<tr><td>${escapeHtml(format)}</td><td>${count}</td></tr>`
+                  ([format, count]) => `<tr><td>${escapeHtml(format)}</td><td>${count}</td></tr>`
                 )
                 .join("")}
             </tbody>
@@ -237,10 +228,13 @@ export function generateHistoryRowHtml(item: HistoryItem): string {
   const status = item.success
     ? '<span class="status-success">✓ Success</span>'
     : '<span class="status-error">✗ Failed</span>';
-  const tags = item.tags ? item.tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join(" ") : "—";
-  const textPreview = item.text.length > 100
-    ? escapeHtml(item.text.substring(0, 100)) + "..."
-    : escapeHtml(item.text);
+  const tags = item.tags
+    ? item.tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join(" ")
+    : "—";
+  const textPreview =
+    item.text.length > 100
+      ? escapeHtml(item.text.substring(0, 100)) + "..."
+      : escapeHtml(item.text);
 
   return `
     <tr class="history-row ${item.success ? "success" : "error"}">
@@ -652,9 +646,7 @@ export function generateCompactHtmlReport(
   itemCount: number
 ): string {
   const successPercentage = (statistics.success_rate * 100).toFixed(1);
-  const totalDurationMinutes = (statistics.total_duration_ms / 1000 / 60).toFixed(
-    1
-  );
+  const totalDurationMinutes = (statistics.total_duration_ms / 1000 / 60).toFixed(1);
 
   return `
     <div class="compact-report">
@@ -710,9 +702,7 @@ export function generateTimelineHtml(items: HistoryItem[]): string {
         <div class="timeline-day">
           <h3 class="timeline-date">${escapeHtml(date)}</h3>
           <ul class="timeline-items">
-            ${dateItems
-              .map((item) => generateTimelineItemHtml(item))
-              .join("")}
+            ${dateItems.map((item) => generateTimelineItemHtml(item)).join("")}
           </ul>
         </div>`;
         })
@@ -727,9 +717,8 @@ export function generateTimelineItemHtml(item: HistoryItem): string {
   const time = new Date(item.timestamp).toLocaleTimeString();
   const statusIcon = item.success ? "✓" : "✗";
   const statusClass = item.success ? "success" : "error";
-  const textPreview = item.text.length > 80
-    ? escapeHtml(item.text.substring(0, 80)) + "..."
-    : escapeHtml(item.text);
+  const textPreview =
+    item.text.length > 80 ? escapeHtml(item.text.substring(0, 80)) + "..." : escapeHtml(item.text);
 
   return `
     <li class="timeline-item ${statusClass}">
@@ -772,4 +761,9 @@ export interface HtmlExportOptions {
 
 // Re-export template-related types and functions for convenience
 export type { TemplateContext, ThemeColors } from "./html-templates";
-export { LIGHT_THEME, DARK_THEME, createTemplateContext, renderHtmlTemplate } from "./html-templates";
+export {
+  LIGHT_THEME,
+  DARK_THEME,
+  createTemplateContext,
+  renderHtmlTemplate
+} from "./html-templates";

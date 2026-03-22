@@ -56,7 +56,7 @@ export const LIGHT_THEME: ThemeColors = {
   headerText: "#111827",
   hoverBg: "#f3f4f6",
   tagBg: "#dbeafe",
-  tagText: "#1e40af",
+  tagText: "#1e40af"
 };
 
 /**
@@ -74,7 +74,7 @@ export const DARK_THEME: ThemeColors = {
   headerText: "#f9fafb",
   hoverBg: "#374151",
   tagBg: "#1e3a8a",
-  tagText: "#93c5fd",
+  tagText: "#93c5fd"
 };
 
 /**
@@ -91,7 +91,7 @@ export class HtmlTemplateRenderer {
       this.renderBodyStart(),
       this.renderContainer(context),
       this.renderBodyEnd(),
-      this.renderDocumentEnd(),
+      this.renderDocumentEnd()
     ];
 
     return parts.join("\n");
@@ -144,10 +144,7 @@ export class HtmlTemplateRenderer {
    * Renders the main container with all content
    */
   private renderContainer(context: TemplateContext): string {
-    const parts = [
-      '<div class="container">',
-      this.renderPageHeader(context),
-    ];
+    const parts = ['<div class="container">', this.renderPageHeader(context)];
 
     if (context.includeToc) {
       parts.push(this.renderTableOfContents(context));
@@ -227,33 +224,29 @@ export class HtmlTemplateRenderer {
    */
   private renderStatCards(statistics: HistoryStatistics): string {
     const successPercentage = (statistics.success_rate * 100).toFixed(1);
-    const totalDurationMinutes = (
-      statistics.total_duration_ms /
-      1000 /
-      60
-    ).toFixed(1);
+    const totalDurationMinutes = (statistics.total_duration_ms / 1000 / 60).toFixed(1);
 
     const cards = [
       {
         title: "Total Items",
         value: statistics.total_items.toString(),
-        detail: "",
+        detail: ""
       },
       {
         title: "Success Rate",
         value: `${successPercentage}%`,
-        detail: `${statistics.successful_items} successful, ${statistics.failed_items} failed`,
+        detail: `${statistics.successful_items} successful, ${statistics.failed_items} failed`
       },
       {
         title: "Total Duration",
         value: `${totalDurationMinutes} min`,
-        detail: `Avg: ${(statistics.average_duration_ms / 1000).toFixed(1)}s per item`,
+        detail: `Avg: ${(statistics.average_duration_ms / 1000).toFixed(1)}s per item`
       },
       {
         title: "Average Text Length",
         value: statistics.average_text_length.toFixed(0),
-        detail: "characters",
-      },
+        detail: "characters"
+      }
     ];
 
     return cards
@@ -299,15 +292,9 @@ export class HtmlTemplateRenderer {
   /**
    * Renders a breakdown table
    */
-  private renderBreakdownTable(
-    title: string,
-    data: Record<string, number>
-  ): string {
+  private renderBreakdownTable(title: string, data: Record<string, number>): string {
     const rows = Object.entries(data)
-      .map(
-        ([key, count]) =>
-          `<tr><td>${this.escape(key)}</td><td>${count}</td></tr>`
-      )
+      .map(([key, count]) => `<tr><td>${this.escape(key)}</td><td>${count}</td></tr>`)
       .join("");
 
     return `
@@ -373,18 +360,14 @@ export class HtmlTemplateRenderer {
    */
   private renderHistoryRow(item: HistoryItem): string {
     const dateTime = formatHistoryDate(item.timestamp);
-    const duration = item.duration_ms
-      ? `${(item.duration_ms / 1000).toFixed(1)}s`
-      : "—";
+    const duration = item.duration_ms ? `${(item.duration_ms / 1000).toFixed(1)}s` : "—";
     const format = item.output_format || "—";
     const status = item.success
       ? '<span class="status-success">✓ Success</span>'
       : '<span class="status-error">✗ Failed</span>';
 
     const tags = item.tags
-      ? item.tags
-          .map((tag) => `<span class="tag">${this.escape(tag)}</span>`)
-          .join(" ")
+      ? item.tags.map((tag) => `<span class="tag">${this.escape(tag)}</span>`).join(" ")
       : "—";
 
     const textPreview =
@@ -824,7 +807,7 @@ export function createTemplateContext(
     includeStatistics = true,
     includeToc = items.length > 10,
     theme = "light",
-    dateRange,
+    dateRange
   } = options;
 
   const themeColors = theme === "light" ? LIGHT_THEME : DARK_THEME;
@@ -835,7 +818,7 @@ export function createTemplateContext(
   if (dateRange) {
     dateRangeFormatted = {
       from: formatHistoryDateISO(dateRange.from),
-      to: formatHistoryDateISO(dateRange.to),
+      to: formatHistoryDateISO(dateRange.to)
     };
   }
 
@@ -847,7 +830,7 @@ export function createTemplateContext(
     items,
     theme: themeColors,
     includeStatistics,
-    includeToc,
+    includeToc
   };
 }
 

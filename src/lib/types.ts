@@ -1,27 +1,27 @@
 export type ValidationError =
   | {
-    type: "OpacityOutOfRange";
-    value: number;
-    min: number;
-    max: number;
-  }
+      type: "OpacityOutOfRange";
+      value: number;
+      min: number;
+      max: number;
+    }
   | {
-    type: "CommandEmpty";
-  }
+      type: "CommandEmpty";
+    }
   | {
-    type: "ArgsTemplateMissingPlaceholder";
-    placeholder: string;
-  }
+      type: "ArgsTemplateMissingPlaceholder";
+      placeholder: string;
+    }
   | {
-    type: "DoubleCopyWindowTooSmall";
-    value: number;
-    min: number;
-  }
+      type: "DoubleCopyWindowTooSmall";
+      value: number;
+      min: number;
+    }
   | {
-    type: "MaxTextLengthTooSmall";
-    value: number;
-    min: number;
-  };
+      type: "MaxTextLengthTooSmall";
+      value: number;
+      min: number;
+    };
 
 export type ValidationResult = ValidationError[];
 
@@ -172,12 +172,9 @@ export interface PaginationConfig {
   fragment_size: number;
 }
 
-export type StorageMode = 'temp' | 'persistent';
+export type StorageMode = "temp" | "persistent";
 
-export type AutoDeleteMode =
-  | { keep_latest: number }
-  | 'never'
-  | { after_days: number };
+export type AutoDeleteMode = { keep_latest: number } | "never" | { after_days: number };
 
 export interface HistoryConfig {
   enabled: boolean;
@@ -200,13 +197,7 @@ export interface AppConfig {
 }
 
 // History types for tracking text-to-speech operations
-export type HistoryEventType =
-  | "speak"
-  | "stop"
-  | "pause"
-  | "resume"
-  | "speed_change"
-  | "error";
+export type HistoryEventType = "speak" | "stop" | "pause" | "resume" | "speed_change" | "error";
 
 export interface HistoryEventMetadata {
   [key: string]: string | number | boolean | null;

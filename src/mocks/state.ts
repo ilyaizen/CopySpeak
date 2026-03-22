@@ -1,5 +1,5 @@
 // Virtual mock for $app/state used in vitest
-let mockPathname = '/';
+let mockPathname = "/";
 
 export const page = {
   get url() {
@@ -7,7 +7,7 @@ export const page = {
   },
   setPathname(pathname: string) {
     mockPathname = pathname;
-  },
+  }
 };
 
 // Allow tests to set pathname

@@ -50,7 +50,7 @@
   const ENGINES: EngineMeta[] = [
     {
       id: "kitten",
-      name: "KittenTTS",
+      name: "Kitten TTS",
       type: "local",
       tier: "free",
       preset: "kitten-tts",
@@ -65,20 +65,6 @@
         "--output",
         "{output}"
       ]
-    },
-    {
-      id: "elevenlabs",
-      name: "ElevenLabs",
-      type: "cloud",
-      tier: "freemium",
-      checkCmd: "check_elevenlabs_credentials"
-    },
-    {
-      id: "openai",
-      name: "OpenAI",
-      type: "cloud",
-      tier: "paid",
-      checkCmd: "check_openai_credentials"
     },
     {
       id: "piper",
@@ -125,6 +111,20 @@
         "--output-path",
         "{output}"
       ]
+    },
+    {
+      id: "elevenlabs",
+      name: "ElevenLabs",
+      type: "cloud",
+      tier: "freemium",
+      checkCmd: "check_elevenlabs_credentials"
+    },
+    {
+      id: "openai",
+      name: "OpenAI",
+      type: "cloud",
+      tier: "paid",
+      checkCmd: "check_openai_credentials"
     }
   ];
 
@@ -176,10 +176,10 @@
     const backend = config.tts.active_backend as TtsEngine;
     if (backend === "local") {
       const preset = config.tts.preset;
-      if (preset === "kitten-tts") return "KittenTTS";
-      if (preset === "piper") return "Piper";
-      if (preset === "kokoro-tts") return "Kokoro";
-      if (preset === "pocket-tts") return "Pocket";
+      if (preset === "kitten-tts") return "Kitten TTS";
+      if (preset === "piper") return "Piper TTS";
+      if (preset === "kokoro-tts") return "Kokoro TTS";
+      if (preset === "pocket-tts") return "Pocket TTS";
       return capitalizeEngine(preset ?? "local");
     }
     return capitalizeEngine(backend);

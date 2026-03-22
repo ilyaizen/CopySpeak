@@ -8,7 +8,7 @@ import {
   createTemplateContext,
   renderHtmlTemplate,
   LIGHT_THEME,
-  DARK_THEME,
+  DARK_THEME
 } from "./html-templates";
 import type { HistoryItem, HistoryStatistics } from "$lib/types";
 
@@ -22,7 +22,7 @@ describe("HTML Template Backend", () => {
     voice: "default",
     speed: 1.0,
     success: true,
-    attempts: 1,
+    attempts: 1
   };
 
   const mockStatistics: HistoryStatistics = {
@@ -37,13 +37,13 @@ describe("HTML Template Backend", () => {
     by_day: { "2024-01-01": 1 },
     most_used_voice: "default",
     average_text_length: 13,
-    average_duration_ms: 1000,
+    average_duration_ms: 1000
   };
 
   it("should create a valid template context", () => {
     const context = createTemplateContext([mockHistoryItem], {
       title: "Test Export",
-      theme: "light",
+      theme: "light"
     });
 
     expect(context.title).toBe("Test Export");
@@ -56,7 +56,7 @@ describe("HTML Template Backend", () => {
     const html = renderHtmlTemplate(context);
 
     expect(html).toContain("<!DOCTYPE html>");
-    expect(html).toContain("<html lang=\"en\">");
+    expect(html).toContain('<html lang="en">');
     expect(html).toContain("</html>");
     expect(html).toContain("Hello, world!");
   });
@@ -64,7 +64,7 @@ describe("HTML Template Backend", () => {
   it("should include statistics when provided", () => {
     const context = createTemplateContext([mockHistoryItem], {
       statistics: mockStatistics,
-      includeStatistics: true,
+      includeStatistics: true
     });
 
     const html = renderHtmlTemplate(context);
@@ -76,7 +76,7 @@ describe("HTML Template Backend", () => {
 
   it("should apply dark theme", () => {
     const context = createTemplateContext([mockHistoryItem], {
-      theme: "dark",
+      theme: "dark"
     });
 
     const html = renderHtmlTemplate(context);
@@ -89,7 +89,7 @@ describe("HTML Template Backend", () => {
   it("should escape HTML in user content", () => {
     const xssItem: HistoryItem = {
       ...mockHistoryItem,
-      text: "<script>alert('xss')</script>",
+      text: "<script>alert('xss')</script>"
     };
 
     const context = createTemplateContext([xssItem]);
@@ -104,7 +104,7 @@ describe("HTML Template Backend", () => {
   it("should include table of contents for many items", () => {
     const manyItems = Array.from({ length: 15 }, (_, i) => ({
       ...mockHistoryItem,
-      id: `test-${i}`,
+      id: `test-${i}`
     }));
 
     const context = createTemplateContext(manyItems);
@@ -115,7 +115,7 @@ describe("HTML Template Backend", () => {
 
   it("should NOT include table of contents for few items", () => {
     const context = createTemplateContext([mockHistoryItem], {
-      includeToc: false,
+      includeToc: false
     });
 
     const html = renderHtmlTemplate(context);
@@ -134,8 +134,8 @@ describe("HTML Template Backend", () => {
     const context = createTemplateContext([mockHistoryItem], {
       dateRange: {
         from: Date.now() - 7 * 24 * 60 * 60 * 1000,
-        to: Date.now(),
-      },
+        to: Date.now()
+      }
     });
 
     const html = renderHtmlTemplate(context);

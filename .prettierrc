@@ -18,9 +18,8 @@
     {
       "files": ["*.ts", "*.tsx", "*.js", "*.jsx"],
       "options": {
-        "parser": "babel"
-      },
-      "excludeFiles": "true"
+        "parser": "typescript"
+      }
     }
   ]
 }

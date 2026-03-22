@@ -9,12 +9,9 @@ const RTL_LOCALES: readonly SupportedLocale[] = ["ar"]; // Arabic only for now
 export const locale = svelteLocale;
 
 // Derived store for RTL detection
-export const isRtl = derived<typeof svelteLocale, boolean>(
-  svelteLocale,
-  ($locale) => {
-    return RTL_LOCALES.includes($locale as SupportedLocale);
-  }
-);
+export const isRtl = derived<typeof svelteLocale, boolean>(svelteLocale, ($locale) => {
+  return RTL_LOCALES.includes($locale as SupportedLocale);
+});
 
 // Load locale from config
 export async function loadLocaleFromConfig(savedLocale: SupportedLocale): Promise<void> {

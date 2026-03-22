@@ -37,7 +37,8 @@ class PlaybackStore {
   private _cachedPitchUrl: { ratio: number; url: string } | null = null;
   private _unlistenFns: Array<() => void> = [];
   private _emit: ((name: string, payload: unknown) => Promise<void>) | null = null;
-  private _emitTo: ((target: string, name: string, payload: unknown) => Promise<void>) | null = null;
+  private _emitTo: ((target: string, name: string, payload: unknown) => Promise<void>) | null =
+    null;
   private _stopping = false;
 
   // Modular components
@@ -48,7 +49,12 @@ class PlaybackStore {
     // Initialize fragment queue with handlers
     this._fragmentQueue = new FragmentQueue({
       onFragmentPlay: async (fragment: QueuedFragment) => {
-        console.log("[PlaybackStore] onFragmentPlay: index", fragment.index, "total", fragment.total);
+        console.log(
+          "[PlaybackStore] onFragmentPlay: index",
+          fragment.index,
+          "total",
+          fragment.total
+        );
         this.currentFragmentIndex = fragment.index;
         this.totalFragments = fragment.total;
         await this.handleAudioReady(fragment.audioBase64);
@@ -61,7 +67,7 @@ class PlaybackStore {
         this.currentFragmentIndex = null;
         this.totalFragments = null;
         void this._emit?.("hud:stop", null);
-      },
+      }
     });
   }
 
@@ -96,14 +102,11 @@ class PlaybackStore {
       const mimeType = detectAudioMimeType(this._originalBytes);
       blob = new Blob([this._originalBytes], { type: mimeType });
     } else if (this._decodedBuffer && this._audioCtx) {
-      const outputLen = Math.max(
-        1,
-        Math.round(this._decodedBuffer.length / pitchRatio),
-      );
+      const outputLen = Math.max(1, Math.round(this._decodedBuffer.length / pitchRatio));
       const offline = new OfflineAudioContext(
         this._decodedBuffer.numberOfChannels,
         outputLen,
-        this._decodedBuffer.sampleRate,
+        this._decodedBuffer.sampleRate
       );
       const src = offline.createBufferSource();
       src.buffer = this._decodedBuffer;
@@ -142,14 +145,12 @@ class PlaybackStore {
     // Wire AnalyserNode once per audio element (guard prevents double-wiring)
     if (this._audioEl && this._audioCtx && !this._analyser.getAnalyser()) {
       this._analyser.setup(this._audioEl, this._audioCtx, {
-        emitTo: this._emitTo,
+        emitTo: this._emitTo
       });
     }
 
     try {
-      this._decodedBuffer = await this._audioCtx.decodeAudioData(
-        arrayBuffer.slice(0),
-      );
+      this._decodedBuffer = await this._audioCtx.decodeAudioData(arrayBuffer.slice(0));
       const url = await this.buildPlaybackUrl(this.pitch);
       if (this._audioEl && url) {
         this._audioEl.src = url;
@@ -173,15 +174,27 @@ class PlaybackStore {
     is_final: boolean;
     text: string;
   }): Promise<void> {
-    console.log("[PlaybackStore] handleFragmentReady: index", payload.fragment_index, "total", payload.fragment_total, "is_final", payload.is_final);
+    console.log(
+      "[PlaybackStore] handleFragmentReady: index",
+      payload.fragment_index,
+      "total",
+      payload.fragment_total,
+      "is_final",
+      payload.is_final
+    );
     // Add to queue
     this._fragmentQueue.enqueue({
       audioBase64: payload.audio_base64,
       index: payload.fragment_index,
       total: payload.fragment_total,
-      text: payload.text,
+      text: payload.text
     });
-    console.log("[PlaybackStore] Queue length:", this._fragmentQueue.getQueueLength(), "isProcessing:", this._fragmentQueue.isProcessing());// Start processing if not already
+    console.log(
+      "[PlaybackStore] Queue length:",
+      this._fragmentQueue.getQueueLength(),
+      "isProcessing:",
+      this._fragmentQueue.isProcessing()
+    ); // Start processing if not already
     if (!this._fragmentQueue.isProcessing()) {
       await this._fragmentQueue.startProcessing();
     }
@@ -194,7 +207,14 @@ class PlaybackStore {
     }
     this._audioEl.volume = this.volume / 100;
     this._audioEl.playbackRate = this.speed;
-    console.log("[PlaybackStore] playAudio: volume", this.volume, "speed", this.speed, "src", this._audioEl.src?.substring(0, 50));
+    console.log(
+      "[PlaybackStore] playAudio: volume",
+      this.volume,
+      "speed",
+      this.speed,
+      "src",
+      this._audioEl.src?.substring(0, 50)
+    );
     this._audioEl.play().catch((err) => {
       console.error("[PlaybackStore] play() failed:", err);
     });
@@ -226,13 +246,15 @@ class PlaybackStore {
     this.isPlaying = false;
     this.isPaused = false;
     void this._emit?.("hud:stop", null);
-    setTimeout(() => { this._stopping = false; }, 0);
+    setTimeout(() => {
+      this._stopping = false;
+    }, 0);
   }
 
   handleTogglePause() {
     if (!this._audioEl) return;
     if (this._audioEl.paused) {
-      this._audioEl.play().catch(() => { });
+      this._audioEl.play().catch(() => {});
       this.isPaused = false;
     } else {
       this._audioEl.pause();
@@ -277,7 +299,12 @@ class PlaybackStore {
         is_final: boolean;
         text: string;
       }>("audio-fragment-ready", async (e) => {
-        console.log("[PlaybackStore] audio-fragment-ready received, index:", e.payload.fragment_index, "total:", e.payload.fragment_total);
+        console.log(
+          "[PlaybackStore] audio-fragment-ready received, index:",
+          e.payload.fragment_index,
+          "total:",
+          e.payload.fragment_total
+        );
         await this.handleFragmentReady(e.payload);
       });
 
@@ -291,12 +318,9 @@ class PlaybackStore {
         this.handleTogglePause();
       });
 
-      const unSynthesis = await listen<boolean>(
-        "synthesis-state-change",
-        (e) => {
-          this.isSynthesizing = e.payload;
-        },
-      );
+      const unSynthesis = await listen<boolean>("synthesis-state-change", (e) => {
+        this.isSynthesizing = e.payload;
+      });
 
       const unAbort = await listen("synthesis-aborted", () => {
         // Handle abort event from backend - clear queue and stop
@@ -309,7 +333,7 @@ class PlaybackStore {
         unPlaybackStop,
         unTogglePause,
         unSynthesis,
-        unAbort,
+        unAbort
       ];
     } catch (e) {
       console.error("Failed to setup playback listeners:", e);

@@ -35,13 +35,11 @@ export class TauriService {
       }
     } else {
       console.warn(
-        `[TauriService] Tauri API not available (browser mode). Mocking response for: ${cmd}`,
+        `[TauriService] Tauri API not available (browser mode). Mocking response for: ${cmd}`
       );
       // In a real app, you might want to return mock data here or throw a specific error
       // For now, we'll throw to mimic the behavior of a failed call, or return null if safe
-      throw new Error(
-        `Tauri API not available. Cannot invoke command: ${cmd}`,
-      );
+      throw new Error(`Tauri API not available. Cannot invoke command: ${cmd}`);
     }
   }
 }

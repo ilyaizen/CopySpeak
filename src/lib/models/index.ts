@@ -43,16 +43,11 @@ export {
   generateCompactHtmlReport,
   generateTimelineHtml,
   generateTimelineItemHtml,
-  escapeHtml,
+  escapeHtml
 } from "./history";
 
 // Type exports
 export type { HtmlExportOptions, TemplateContext, ThemeColors } from "./html-export";
 
 // Template backend exports
-export {
-  LIGHT_THEME,
-  DARK_THEME,
-  createTemplateContext,
-  renderHtmlTemplate,
-} from "./html-export";
+export { LIGHT_THEME, DARK_THEME, createTemplateContext, renderHtmlTemplate } from "./html-export";

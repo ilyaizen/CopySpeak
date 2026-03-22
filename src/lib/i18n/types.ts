@@ -4,16 +4,16 @@
 /**
  * All available translation keys
  * Use with $_() from svelte-i18n for type-safe translations
- * 
+ *
  * Example:
  * ```svelte
  * <script>
  *   import { _ } from 'svelte-i18n';
  *   import type { TranslationKeys } from '$lib/i18n/types';
- *   
+ *
  *   const key: TranslationKeys = 'settings.categories.general';
  * </script>
- * 
+ *
  * <h1>{$_(key)}</h1>
  * ```
  */
@@ -343,12 +343,14 @@ export type TranslationKeys =
 /**
  * Helper type for nested key paths
  * Use to restrict keys to a specific namespace
- * 
+ *
  * Example:
  * ```typescript
  * type SettingsKeys = NestedKeyOf<TranslationKeys, 'settings'>;
  * // Results in: 'settings.categories.general' | 'settings.categories.playback' | ...
  * ```
  */
-export type NestedKeyOf<T extends string, Prefix extends string> = 
-  T extends `${Prefix}.${infer _Rest}` ? T : never;
+export type NestedKeyOf<
+  T extends string,
+  Prefix extends string
+> = T extends `${Prefix}.${infer _Rest}` ? T : never;
