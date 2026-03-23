@@ -8,6 +8,8 @@
   import { playbackStore } from "$lib/stores/playback-store.svelte.js";
 
   // Timer state
+  // Tracks the interval that measures elapsed synthesis time (updates every 100ms)
+  // Used to show progress during TTS generation
   let elapsedTimerState = $state<{
     timer: ReturnType<typeof setInterval> | null;
     startTime: number | null;
@@ -15,16 +17,21 @@
     timer: null,
     startTime: null
   });
+  // Tracks the timeout that auto-dismisses clipboard notifications
+  // Ensures notifications disappear after the configured duration
   let clipboardDismissTimerState = $state<{ timer: ReturnType<typeof setTimeout> | null }>({
     timer: null
   });
 
-  // Dev mode animation
-  let devAnimationId: number | null = null;
-
   // Event listeners
+  // Setup and cleanup functions for Tauri IPC event handlers
   const { setupEventListeners, cleanupEventListeners } = useHudEvents();
 
+  /**
+   * Starts tracking synthesis elapsed time.
+   * Creates an interval that updates hudStore.elapsedMs every 100ms during TTS generation.
+   * Clears any existing timer first to prevent duplicate intervals.
+   */
   function startElapsedTimer() {
     clearTimer(elapsedTimerState);
     elapsedTimerState = createTimer((elapsed) => {
@@ -33,10 +40,12 @@
   }
 
   function stopElapsedTimer() {
+    // Stops the elapsed timer when synthesis completes or is cancelled
     clearTimer(elapsedTimerState);
   }
 
-  // Watch for synthesis state changes to manage timer
+  // Automatically manage timer based on synthesis state
+  // Starts timer when TTS begins, stops when complete - ensures accurate timing throughout synthesis lifecycle
   $effect(() => {
     if (hudStore.isSynthesizing && elapsedTimerState.timer === null) {
       startElapsedTimer();
@@ -46,10 +55,17 @@
   });
 
   function clearClipboardCopied() {
+    // Clears any pending dismiss timer and resets the clipboard copied state
     clearTimeoutState(clipboardDismissTimerState);
     hudStore.clearClipboardCopied();
   }
 
+  /**
+   * Handles clipboard copy detection for HUD notification.
+   * Shows toast when user copies text while HUD is hidden and not currently synthesizing.
+   * Automatically dismisses after triggerWindowMs + 200ms buffer.
+   * @param triggerWindowMs - Duration to show the notification before auto-dismissal
+   */
   function handleClipboardCopied(triggerWindowMs: number) {
     if (hudStore.isVisible || hudStore.isSynthesizing) return;
 
@@ -63,48 +79,23 @@
     }, triggerWindowMs + 200);
   }
 
-  function animateDevBars() {
-    const bars: number[] = [0, 0];
-    for (let i = 0; i < 10; i++) {
-      const t = i / 10;
-      const wave1 = Math.sin(t * Math.PI * 3 + Date.now() / 200) * 0.3;
-      const wave2 = Math.sin(t * Math.PI * 5 + Date.now() / 150) * 0.2;
-      const wave3 = Math.sin(t * Math.PI * 7 + Date.now() / 100) * 0.1;
-      const value = 0.4 + wave1 + wave2 + wave3;
-      bars.push(Math.max(0.1, Math.min(1, value)));
-    }
-    bars.push(0, 0, 0, 0);
-    hudStore.setBarValues(bars);
-    devAnimationId = requestAnimationFrame(animateDevBars);
-  }
-
   onMount(async () => {
     if (isTauri) {
+      // Production: Setup real Tauri event listeners for clipboard monitoring
       await setupEventListeners();
-    } else {
-      // Dev mode: setup mock data and animation
-      animateDevBars();
-      hudStore.setSpokenText(
-        "The quick brown fox jumps over the lazy dog. Once upon a time there was a fox who lived in the forest and had many adventures with friends."
-      );
-      hudStore.setProvider("ElevenLabs");
-      hudStore.setVoice("Rachel");
-      hudStore.setIsVisible(true);
-      hudStore.setAudioDurationMs(8000); // 8 seconds for marquee demo
     }
   });
 
   onDestroy(() => {
+    // Cleanup timers and event listeners to prevent memory leaks and stale callbacks
+    // Critical because this component may persist across route changes
     stopElapsedTimer();
     clearTimeoutState(clipboardDismissTimerState);
     cleanupEventListeners();
-    if (devAnimationId !== null) {
-      cancelAnimationFrame(devAnimationId);
-      devAnimationId = null;
-    }
   });
 
-  // Watch for clipboard copied events from store
+  // Reactive effect that triggers clipboard notifications when store state changes
+  // Monitors hudStore.isClipboardCopied to show notifications when double-copy is detected
   $effect(() => {
     if (hudStore.isClipboardCopied && clipboardDismissTimerState.timer === null) {
       handleClipboardCopied(hudStore.clipboardDurationMs);

@@ -32,3 +32,4 @@ GEMINI.md
 file-structure.txt
 .vercel
 /__pycache__
+/.ruff_cache

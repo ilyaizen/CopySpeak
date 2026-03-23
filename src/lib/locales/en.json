@@ -138,6 +138,34 @@
       "markdownDescription": "Remove all markdown formatting (headers, bold, italic, code blocks, links, lists, blockquotes)",
       "ttsNormalization": "Expand Visual Shorthand",
       "ttsNormalizationDescription": "Resolve URLs, slashes, abbreviations, metric units, and symbols into spoken-friendly text"
+    },
+    "about": {
+      "version": "Version",
+      "versionDescription": "Current CopySpeak version",
+      "sourceCode": "Source Code",
+      "sourceCodeDescription": "View CopySpeak on GitHub",
+      "github": "GitHub",
+      "acknowledgments": "Acknowledgments",
+      "openai": {
+        "title": "OpenAI TTS",
+        "description": "High-quality neural text-to-speech",
+        "detail": "CopySpeak uses OpenAI's text-to-speech API for high-quality voice synthesis."
+      },
+      "elevenlabs": {
+        "title": "ElevenLabs",
+        "description": "Advanced AI voice synthesis",
+        "detail": "Premium TTS engine with realistic voice cloning capabilities."
+      },
+      "kokoro": {
+        "title": "Kokoro TTS",
+        "description": "Open-source local TTS",
+        "detail": "Lightweight, open-source text-to-speech engine for local processing."
+      },
+      "piper": {
+        "title": "Piper",
+        "description": "Fast neural TTS",
+        "detail": "Fast, local neural text-to-speech system with low latency."
+      }
     }
   },
   "engine": {
@@ -351,31 +379,6 @@
     },
     "info": {
       "httpEngineRemoved": "HTTP engine has been removed. Switched to Local engine."
-    },
-    "about": {
-      "title": "About Settings",
-      "version": "Version",
-      "versionDescription": "Current CopySpeak version",
-      "sourceCode": "Source Code",
-      "sourceCodeDescription": "View CopySpeak on GitHub",
-      "github": "GitHub",
-      "acknowledgments": "Acknowledgments",
-      "openai": {
-        "title": "OpenAI TTS",
-        "description": "High-quality neural text-to-speech"
-      },
-      "elevenlabs": {
-        "title": "ElevenLabs",
-        "description": "Advanced AI voice synthesis"
-      },
-      "kokoro": {
-        "title": "Kokoro TTS",
-        "description": "Open-source local TTS"
-      },
-      "piper": {
-        "title": "Piper",
-        "description": "Fast neural TTS"
-      }
     }
   },
   "onboarding": {

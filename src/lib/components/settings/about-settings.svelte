@@ -45,7 +45,7 @@
           <InfoTooltip text={$_("settings.about.openai.description")} />
         </div>
         <p class="text-muted-foreground mt-1 text-xs">
-          CopySpeak uses OpenAI's text-to-speech API for high-quality voice synthesis.
+          {$_("settings.about.openai.detail")}
         </p>
       </div>
 
@@ -56,7 +56,7 @@
           <InfoTooltip text={$_("settings.about.elevenlabs.description")} />
         </div>
         <p class="text-muted-foreground mt-1 text-xs">
-          Premium TTS engine with realistic voice cloning capabilities.
+          {$_("settings.about.elevenlabs.detail")}
         </p>
       </div>
 
@@ -67,7 +67,7 @@
           <InfoTooltip text={$_("settings.about.kokoro.description")} />
         </div>
         <p class="text-muted-foreground mt-1 text-xs">
-          Lightweight, open-source text-to-speech engine for local processing.
+          {$_("settings.about.kokoro.detail")}
         </p>
       </div>
 
@@ -78,7 +78,7 @@
           <InfoTooltip text={$_("settings.about.piper.description")} />
         </div>
         <p class="text-muted-foreground mt-1 text-xs">
-          Fast, local neural text-to-speech system with low latency.
+          {$_("settings.about.piper.detail")}
         </p>
       </div>
     </div>

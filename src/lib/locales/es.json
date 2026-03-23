@@ -138,6 +138,34 @@
       "markdownDescription": "Eliminar todo el formato markdown (encabezados, negrita, cursiva, bloques de código, enlaces, listas, citas)",
       "ttsNormalization": "Expandir abreviaturas visuales",
       "ttsNormalizationDescription": "Resolver URLs, barras, abreviaturas, unidades métricas y símbolos en texto amigable para hablar"
+    },
+    "about": {
+      "version": "Versión",
+      "versionDescription": "Versión actual de CopySpeak",
+      "sourceCode": "Código fuente",
+      "sourceCodeDescription": "Ver CopySpeak en GitHub",
+      "github": "GitHub",
+      "acknowledgments": "Agradecimientos",
+      "openai": {
+        "title": "OpenAI TTS",
+        "description": "Texto a voz neuronal de alta calidad",
+        "detail": "CopySpeak utiliza la API de texto a voz de OpenAI para síntesis de voz de alta calidad."
+      },
+      "elevenlabs": {
+        "title": "ElevenLabs",
+        "description": "Síntesis de voz IA avanzada",
+        "detail": "Motor TTS premium con capacidades realistas de clonación de voz."
+      },
+      "kokoro": {
+        "title": "Kokoro TTS",
+        "description": "TTS local de código abierto",
+        "detail": "Motor de texto a voz ligero y de código abierto para procesamiento local."
+      },
+      "piper": {
+        "title": "Piper",
+        "description": "TTS neuronal rápido",
+        "detail": "Sistema de texto a voz neuronal rápido y local con baja latencia."
+      }
     }
   },
   "engine": {
@@ -319,31 +347,6 @@
     },
     "info": {
       "httpEngineRemoved": "El motor HTTP ha sido eliminado. Cambiado a motor Local."
-    },
-    "about": {
-      "title": "Configuración de acerca de",
-      "version": "Versión",
-      "versionDescription": "Versión actual de CopySpeak",
-      "sourceCode": "Código fuente",
-      "sourceCodeDescription": "Ver CopySpeak en GitHub",
-      "github": "GitHub",
-      "acknowledgments": "Agradecimientos",
-      "openai": {
-        "title": "OpenAI TTS",
-        "description": "Texto a voz neuronal de alta calidad"
-      },
-      "elevenlabs": {
-        "title": "ElevenLabs",
-        "description": "Síntesis de voz IA avanzada"
-      },
-      "kokoro": {
-        "title": "Kokoro TTS",
-        "description": "TTS local de código abierto"
-      },
-      "piper": {
-        "title": "Piper",
-        "description": "TTS neuronal rápido"
-      }
     }
   },
   "history": {
