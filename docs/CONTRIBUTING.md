@@ -277,11 +277,13 @@ Documentation improvements are highly valued! You can contribute by:
 This directory contains non-English translations (Arabic, Spanish, Hebrew) that are managed externally. During pre-production, translation keys change frequently as the app evolves.
 
 **Why this matters:**
+
 - Translation keys are unstable during development
 - External translators handle these files
 - Any manual edits will be overwritten
 
 **If you need to add new translatable strings:**
+
 - Add new keys only to the English locale file (`en.json`)
 - Do NOT manually update non-English files in DO_NOT_TOUCH
 

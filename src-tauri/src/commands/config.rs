@@ -82,7 +82,7 @@ pub fn set_config(
         return Err(format!("Validation failed: {}", error_messages.join("; ")));
     }
 
-    let (old_mode, old_volume, old_autostart, old_debug_mode, old_listen_enabled) = {
+    let (old_mode, old_volume, old_autostart, old_debug_mode, old_listen_enabled, old_hotkey) = {
         let cfg = config.lock().unwrap();
         (
             cfg.playback.on_retrigger.clone(),
@@ -90,6 +90,7 @@ pub fn set_config(
             cfg.general.start_with_windows,
             cfg.general.debug_mode,
             cfg.trigger.listen_enabled,
+            cfg.hotkey.clone(),
         )
     };
     let mode_changed = old_mode != new_config.playback.on_retrigger;
@@ -97,15 +98,17 @@ pub fn set_config(
     let autostart_changed = old_autostart != new_config.general.start_with_windows;
     let debug_mode_changed = old_debug_mode != new_config.general.debug_mode;
     let listen_enabled_changed = old_listen_enabled != new_config.trigger.listen_enabled;
+    let hotkey_changed = old_hotkey != new_config.hotkey;
 
     if crate::logging::is_debug_mode() {
         log::debug!(
-            "[IPC] Config changes - mode: {}, volume: {}, autostart: {}, debug_mode: {}, listen_enabled: {}",
+            "[IPC] Config changes - mode: {}, volume: {}, autostart: {}, debug_mode: {}, listen_enabled: {}, hotkey: {}",
             mode_changed,
             volume_changed,
             autostart_changed,
             debug_mode_changed,
-            listen_enabled_changed
+            listen_enabled_changed,
+            hotkey_changed
         );
     }
 
@@ -149,6 +152,16 @@ pub fn set_config(
             "Listening state synced from config: {}",
             listen_enabled_value
         );
+    }
+
+    if hotkey_changed {
+        let new_hotkey = {
+            let cfg = config.lock().unwrap();
+            cfg.hotkey.clone()
+        };
+        if let Err(e) = crate::register_hotkey(&app, &new_hotkey) {
+            log::error!("Failed to re-register hotkey after config change: {}", e);
+        }
     }
 
     // Emit config-changed event so frontend can react

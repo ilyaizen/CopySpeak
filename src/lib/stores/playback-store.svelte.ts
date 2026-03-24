@@ -13,6 +13,7 @@ import { isTauri } from "$lib/services/tauri.js";
 import { audioBufferToWavBlob, detectAudioMimeType } from "./playback/audio-utils.js";
 import { AudioAnalyser } from "./playback/analyser.js";
 import { FragmentQueue, type QueuedFragment } from "./playback/fragment-queue.js";
+import { hudStore } from "./hud-store.svelte.js";
 
 class PlaybackStore {
   isPlaying = $state(false);
@@ -156,6 +157,12 @@ class PlaybackStore {
 
     try {
       this._decodedBuffer = await this._audioCtx.decodeAudioData(arrayBuffer.slice(0));
+      if (this._decodedBuffer) {
+        const accurateDurationMs = Math.round(this._decodedBuffer.duration * 1000);
+        hudStore.setAccurateDurationMs(accurateDurationMs);
+        // Emit to HUD window for cross-window state sync
+        this._emit?.("hud:audio-duration", accurateDurationMs);
+      }
       const url = await this.buildPlaybackUrl(this.pitch);
       if (this._audioEl && url) {
         this._audioEl.src = url;
@@ -276,6 +283,9 @@ class PlaybackStore {
       this._audioEl.volume = volume / 100;
       this._audioEl.playbackRate = speed;
     }
+    // Sync pitch and speed to HUD store for progress bar timing
+    hudStore.setPitch(pitch);
+    hudStore.setSpeed(speed);
   }
 
   async setupListeners(): Promise<void> {

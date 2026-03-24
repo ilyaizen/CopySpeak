@@ -5,7 +5,6 @@
   import { useHudEvents } from "$lib/composables/use-hud-events.js";
   import { createTimer, clearTimer, createTimeout, clearTimeoutState } from "$lib/utils/timer.js";
   import { ClipboardNotification, HudSynthesisProgress, HudPlaybackContent } from "./hud/index.js";
-  import { playbackStore } from "$lib/stores/playback-store.svelte.js";
 
   // Timer state
   // Tracks the interval that measures elapsed synthesis time (updates every 100ms)
@@ -149,12 +148,7 @@
           elapsedMs={hudStore.elapsedMs}
         />
       {:else}
-        <HudPlaybackContent
-          barValues={hudStore.barValues}
-          spokenText={hudStore.spokenText}
-          durationMs={hudStore.audioDurationMs}
-          speed={playbackStore.speed}
-        />
+        <HudPlaybackContent barValues={hudStore.barValues} spokenText={hudStore.spokenText} />
       {/if}
     </div>
   {/if}

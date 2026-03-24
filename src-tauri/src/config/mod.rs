@@ -2,9 +2,10 @@
 // Auto-saved on every change from the frontend via set_config command.
 
 /// Current config schema version. Bumped when making breaking changes to config structure.
-const CONFIG_VERSION: &str = "0.0.4";
+const CONFIG_VERSION: &str = "0.0.5";
 
 mod general;
+mod hotkey;
 mod hud;
 mod output;
 mod playback;
@@ -22,6 +23,7 @@ use std::sync::{Mutex, OnceLock};
 
 // Re-export all public types so external code can use `crate::config::*` unchanged.
 pub use general::*;
+pub use hotkey::*;
 pub use hud::*;
 pub use output::*;
 pub use playback::*;
@@ -65,6 +67,7 @@ pub enum ValidationError {
     OpacityOutOfRange { value: f32, min: f32, max: f32 },
     HudWidthTooSmall { value: u32, min: u32 },
     HudHeightTooSmall { value: u32, min: u32 },
+    HotkeyInvalid { message: String },
 }
 
 impl std::fmt::Display for ValidationError {
@@ -143,6 +146,9 @@ impl std::fmt::Display for ValidationError {
             ValidationError::HudHeightTooSmall { value, min } => {
                 write!(f, "HUD height {} is too small (minimum: {})", value, min)
             }
+            ValidationError::HotkeyInvalid { message } => {
+                write!(f, "Hotkey configuration invalid: {}", message)
+            }
         }
     }
 }
@@ -166,6 +172,8 @@ pub struct AppConfig {
     pub pagination: PaginationConfig,
     #[serde(default)]
     pub history: HistoryConfig,
+    #[serde(default)]
+    pub hotkey: HotkeyConfig,
 }
 
 fn default_config_version() -> String {
@@ -209,6 +217,7 @@ impl Default for AppConfig {
             sanitization: SanitizationConfig::default(),
             pagination: PaginationConfig::default(),
             history: HistoryConfig::default(),
+            hotkey: HotkeyConfig::default(),
         }
     }
 }
@@ -221,6 +230,10 @@ impl AppConfig {
         errors.extend(self.tts.validate());
         errors.extend(self.hud.validate());
         errors.extend(self.history.validate());
+
+        if let Err(e) = self.hotkey.validate() {
+            errors.push(ValidationError::HotkeyInvalid { message: e });
+        }
 
         if errors.is_empty() {
             Ok(())

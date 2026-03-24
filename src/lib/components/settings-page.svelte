@@ -3,6 +3,8 @@
   import AppearanceSettings from "$lib/components/settings/appearance-settings.svelte";
   import PlaybackSettings from "$lib/components/settings/playback-settings.svelte";
   import TriggerSettings from "$lib/components/settings/trigger-settings.svelte";
+  import PaginationSettings from "$lib/components/settings/pagination-settings.svelte";
+  import HotkeySettings from "$lib/components/settings/hotkey-settings.svelte";
   import SanitizationSettings from "$lib/components/settings/sanitization-settings.svelte";
   import HistorySettings from "$lib/components/settings/history-settings.svelte";
   import ImportExportSettings from "$lib/components/settings/import-export-settings.svelte";
@@ -60,6 +62,7 @@
     { id: "app", categoryKey: "general" },
     { id: "playback", categoryKey: "playback" },
     { id: "triggers", categoryKey: "triggers" },
+    { id: "pagination", categoryKey: "pagination" },
     { id: "sanitization", categoryKey: "sanitization" },
     { id: "history", categoryKey: "history" },
     { id: "hud", categoryKey: "hud" },
@@ -288,6 +291,30 @@
             <div class="p-4">
               {#if mountedCount > 4}
                 <TriggerSettings bind:localConfig {errors} />
+                <div class="border-border mt-4 border-t pt-4">
+                  <HotkeySettings bind:localConfig {errors} />
+                </div>
+              {:else}
+                <div class="flex h-24 items-center justify-center">
+                  <div
+                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                  ></div>
+                </div>
+              {/if}
+            </div>
+          </div>
+        </section>
+
+        <!-- Pagination -->
+        <section id="section-pagination" class="scroll-mt-32">
+          <div class="border-border overflow-hidden rounded-lg border">
+            <div class="bg-muted/50 border-border border-b p-4">
+              <h2 class="text-lg font-semibold">{$_("settings.categories.pagination")}</h2>
+              <p class="text-muted-foreground text-sm">{$_("settings.descriptions.pagination")}</p>
+            </div>
+            <div class="p-4">
+              {#if mountedCount > 5}
+                <PaginationSettings bind:localConfig {errors} />
               {:else}
                 <div class="flex h-24 items-center justify-center">
                   <div
@@ -309,7 +336,7 @@
               </p>
             </div>
             <div class="p-4">
-              {#if mountedCount > 5}
+              {#if mountedCount > 6}
                 <SanitizationSettings bind:localConfig />
               {:else}
                 <div class="flex h-24 items-center justify-center">
@@ -330,7 +357,7 @@
               <p class="text-muted-foreground text-sm">{$_("settings.descriptions.history")}</p>
             </div>
             <div class="p-4">
-              {#if mountedCount > 5}
+              {#if mountedCount > 7}
                 <HistorySettings bind:localConfig onRunCleanup={handleRunCleanup} />
               {:else}
                 <div class="flex h-24 items-center justify-center">
@@ -351,7 +378,7 @@
               <p class="text-muted-foreground text-sm">{$_("settings.descriptions.hud")}</p>
             </div>
             <div class="p-4">
-              {#if mountedCount > 6}
+              {#if mountedCount > 8}
                 <HudSettings {localConfig} {hudPositionOptions} {handlePositionChange} />
                 <div class="border-border mt-4 border-t pt-4">
                   <Button onclick={handleTestHud} variant="outline" size="sm">
@@ -377,7 +404,7 @@
               <p class="text-muted-foreground text-sm">{$_("settings.descriptions.about")}</p>
             </div>
             <div class="p-4">
-              {#if mountedCount > 7}
+              {#if mountedCount > 9}
                 <AboutSettings />
               {:else}
                 <div class="flex h-24 items-center justify-center">

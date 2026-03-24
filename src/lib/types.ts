@@ -185,6 +185,11 @@ export interface HistoryConfig {
   cleanup_orphaned_files: boolean;
 }
 
+export interface HotkeyConfig {
+  enabled: boolean;
+  shortcut: string;
+}
+
 export interface AppConfig {
   trigger: TriggerConfig;
   tts: TtsConfig;
@@ -195,6 +200,7 @@ export interface AppConfig {
   sanitization: SanitizationConfig;
   pagination: PaginationConfig;
   history: HistoryConfig;
+  hotkey: HotkeyConfig;
 }
 
 // History types for tracking text-to-speech operations

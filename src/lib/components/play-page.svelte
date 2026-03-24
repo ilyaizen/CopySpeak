@@ -109,6 +109,10 @@
       persistent_dir: null,
       auto_delete: { keep_latest: 50 },
       cleanup_orphaned_files: true
+    },
+    hotkey: {
+      enabled: false,
+      shortcut: "Super+Shift+A"
     }
   };
 

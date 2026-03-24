@@ -32,6 +32,9 @@ let elapsedMs = $state<number>(0);
 // Playback state
 let audioDurationMs = $state<number>(0);
 let playbackElapsedMs = $state<number>(0);
+let accurateDurationMs = $state<number | null>(null);
+let pitch = $state<number>(1.0);
+let speed = $state<number>(1.0);
 
 // Clipboard state
 let isClipboardCopied = $state(false);
@@ -80,8 +83,12 @@ let hasEstimate = $derived(estimatedDurationMs !== null || totalChars > 0);
 let dotPulsing = $derived(isSynthesizing || (!isPaused && !isSynthesizing));
 
 let playbackProgressPercent = $derived(
-  audioDurationMs > 0 ? Math.min(100, (playbackElapsedMs / audioDurationMs) * 100) : 0
+  accurateDurationMs !== null && accurateDurationMs > 0 && pitch > 0 && speed > 0
+    ? Math.min(100, (playbackElapsedMs / (accurateDurationMs / (pitch * speed))) * 100)
+    : 0
 );
+
+let isPlaybackReady = $derived(accurateDurationMs !== null && accurateDurationMs > 0);
 
 // Actions
 export const hudStore = {
@@ -161,6 +168,23 @@ export const hudStore = {
   get playbackProgressPercent() {
     return playbackProgressPercent;
   },
+  get accurateDurationMs() {
+    return accurateDurationMs;
+  },
+  get pitch() {
+    return pitch;
+  },
+  get speed() {
+    return speed;
+  },
+  get adjustedDurationMs() {
+    if (accurateDurationMs === null || accurateDurationMs <= 0) return 0;
+    if (pitch <= 0 || speed <= 0) return 0;
+    return accurateDurationMs / (pitch * speed);
+  },
+  get isPlaybackReady() {
+    return isPlaybackReady;
+  },
 
   // Setters
   setBarValues(values: number[]) {
@@ -219,6 +243,15 @@ export const hudStore = {
   },
   setPlaybackElapsedMs(ms: number) {
     playbackElapsedMs = ms;
+  },
+  setAccurateDurationMs(ms: number | null) {
+    accurateDurationMs = ms;
+  },
+  setPitch(p: number) {
+    pitch = p;
+  },
+  setSpeed(s: number) {
+    speed = s;
   },
 
   // Compound actions
@@ -281,6 +314,9 @@ export const hudStore = {
     progressConfidence = 0;
     audioDurationMs = 0;
     playbackElapsedMs = 0;
+    accurateDurationMs = null;
+    pitch = 1.0;
+    speed = 1.0;
   },
 
   handleSynthesisProgress(payload: SynthesisProgressPayload) {

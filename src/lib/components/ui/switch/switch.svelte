@@ -65,13 +65,13 @@
   <span
     class={cn(
       "bg-background pointer-events-none block h-4 w-4 rounded-none shadow-lg ring-0 transition-opacity",
-      checked ? "opacity-100" : "opacity-0"
+      checked ? "opacity-0" : "opacity-100"
     )}
   ></span>
   <span
     class={cn(
       "bg-background pointer-events-none block h-4 w-4 rounded-none shadow-lg ring-0 transition-opacity",
-      checked ? "opacity-0" : "opacity-100"
+      checked ? "opacity-100" : "opacity-0"
     )}
   ></span>
 </button>
