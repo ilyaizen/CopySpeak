@@ -57,22 +57,6 @@
     white-space: nowrap;
   }
 
-  .progress-bar {
-    width: 100%;
-    height: 6px;
-    border-radius: 3px;
-    background: oklch(0.25 0.02 264.8 / 0.5);
-  }
-
-  .progress-bar :global([data-slot="progress-indicator"]) {
-    background: linear-gradient(
-      90deg,
-      oklch(62.3% 0.214 259.815) 0%,
-      oklch(54.3% 0.2 259.815) 100%
-    );
-    border-radius: 3px;
-  }
-
   .provider-info {
     font-size: 14px;
     font-weight: 500;

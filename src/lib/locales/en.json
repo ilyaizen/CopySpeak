@@ -32,6 +32,7 @@
       "general": "General",
       "playback": "Playback",
       "triggers": "Triggers",
+      "pagination": "Pagination",
       "sanitization": "Sanitization",
       "history": "History",
       "hud": "HUD Overlay",
@@ -41,6 +42,7 @@
       "general": "Startup behavior and window controls",
       "playback": "Volume and audio export settings",
       "triggers": "Copy detection and text limits",
+      "pagination": "Split long texts into fragments for progressive TTS playback",
       "sanitization": "Text cleanup and normalization",
       "history": "Generation history and storage",
       "hud": "Waveform visualization and positioning",
@@ -85,10 +87,12 @@
       "doubleCopyWindow": "Double-Copy Detection Window (ms)",
       "doubleCopyWindowDescription": "Time window in which a second copy triggers TTS (100-5000ms)",
       "maxTextLength": "Max Text Length",
-      "maxTextLengthDescription": "Maximum characters to speak (longer text will be truncated with a warning)",
-      "paginationTitle": "Pagination Settings",
-      "paginationEnabled": "Enable Pagination",
-      "paginationDescription": "Split long texts into fragments for progressive TTS playback",
+      "maxTextLengthDescription": "Maximum characters to speak (longer text will be truncated with a warning)"
+    },
+    "pagination": {
+      "title": "Pagination Settings",
+      "enabled": "Enable Pagination",
+      "description": "Split long texts into fragments for progressive TTS playback",
       "fragmentSize": "Fragment Size (characters)",
       "fragmentSizeDescription": "Maximum characters per text fragment (100-10000)"
     },

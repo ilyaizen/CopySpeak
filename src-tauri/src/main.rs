@@ -77,6 +77,119 @@ pub fn kill_process_tree(pid: u32) {
         .output();
 }
 
+/// Parse a hotkey string like "Ctrl+Shift+A" into a Shortcut object.
+fn parse_hotkey(hotkey: &str) -> Result<Shortcut, String> {
+    let parts: Vec<&str> = hotkey.split('+').map(|s| s.trim()).collect();
+
+    if parts.is_empty() {
+        return Err("Empty hotkey string".into());
+    }
+
+    let mut modifiers = Modifiers::empty();
+    let mut key_code: Option<Code> = None;
+
+    for part in parts {
+        match part.to_lowercase().as_str() {
+            "ctrl" | "control" => modifiers |= Modifiers::CONTROL,
+            "shift" => modifiers |= Modifiers::SHIFT,
+            "alt" => modifiers |= Modifiers::ALT,
+            "super" | "meta" | "win" | "cmd" => modifiers |= Modifiers::SUPER,
+            key => {
+                if key.len() == 1 {
+                    let ch = key.chars().next().unwrap().to_ascii_uppercase();
+                    key_code = Some(match ch {
+                        'A' => Code::KeyA,
+                        'B' => Code::KeyB,
+                        'C' => Code::KeyC,
+                        'D' => Code::KeyD,
+                        'E' => Code::KeyE,
+                        'F' => Code::KeyF,
+                        'G' => Code::KeyG,
+                        'H' => Code::KeyH,
+                        'I' => Code::KeyI,
+                        'J' => Code::KeyJ,
+                        'K' => Code::KeyK,
+                        'L' => Code::KeyL,
+                        'M' => Code::KeyM,
+                        'N' => Code::KeyN,
+                        'O' => Code::KeyO,
+                        'P' => Code::KeyP,
+                        'Q' => Code::KeyQ,
+                        'R' => Code::KeyR,
+                        'S' => Code::KeyS,
+                        'T' => Code::KeyT,
+                        'U' => Code::KeyU,
+                        'V' => Code::KeyV,
+                        'W' => Code::KeyW,
+                        'X' => Code::KeyX,
+                        'Y' => Code::KeyY,
+                        'Z' => Code::KeyZ,
+                        '0' => Code::Digit0,
+                        '1' => Code::Digit1,
+                        '2' => Code::Digit2,
+                        '3' => Code::Digit3,
+                        '4' => Code::Digit4,
+                        '5' => Code::Digit5,
+                        '6' => Code::Digit6,
+                        '7' => Code::Digit7,
+                        '8' => Code::Digit8,
+                        '9' => Code::Digit9,
+                        _ => return Err(format!("Unsupported key: {}", key)),
+                    });
+                } else {
+                    key_code = Some(match key {
+                        "space" => Code::Space,
+                        "enter" | "return" => Code::Enter,
+                        "tab" => Code::Tab,
+                        "escape" | "esc" => Code::Escape,
+                        "backspace" => Code::Backspace,
+                        "delete" | "del" => Code::Delete,
+                        "up" | "arrowup" => Code::ArrowUp,
+                        "down" | "arrowdown" => Code::ArrowDown,
+                        "left" | "arrowleft" => Code::ArrowLeft,
+                        "right" | "arrowright" => Code::ArrowRight,
+                        "f1" => Code::F1,
+                        "f2" => Code::F2,
+                        "f3" => Code::F3,
+                        "f4" => Code::F4,
+                        "f5" => Code::F5,
+                        "f6" => Code::F6,
+                        "f7" => Code::F7,
+                        "f8" => Code::F8,
+                        "f9" => Code::F9,
+                        "f10" => Code::F10,
+                        "f11" => Code::F11,
+                        "f12" => Code::F12,
+                        _ => return Err(format!("Unsupported key: {}", key)),
+                    });
+                }
+            }
+        }
+    }
+
+    key_code
+        .map(|code| Shortcut::new(if modifiers.is_empty() { None } else { Some(modifiers) }, code))
+        .ok_or_else(|| "No key code found in hotkey string".into())
+}
+
+/// Register the global hotkey for speak-from-clipboard.
+pub fn register_hotkey(app: &tauri::AppHandle, hotkey_config: &config::HotkeyConfig) -> Result<(), String> {
+    app.global_shortcut().unregister_all()
+        .map_err(|e| format!("Failed to unregister shortcuts: {}", e))?;
+
+    if !hotkey_config.enabled {
+        log::info!("Hotkey disabled, skipping registration");
+        return Ok(());
+    }
+
+    let shortcut = parse_hotkey(&hotkey_config.shortcut)?;
+    app.global_shortcut().register(shortcut)
+        .map_err(|e| format!("Failed to register shortcut '{}': {}", hotkey_config.shortcut, e))?;
+
+    log::info!("Registered global hotkey: {}", hotkey_config.shortcut);
+    Ok(())
+}
+
 /// Abort any in-progress synthesis and stop playback.
 /// Called from the abort_synthesis command and tray icon click handler.
 pub fn do_abort_synthesis(app: &tauri::AppHandle) {
@@ -121,6 +234,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager, State,
 };
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 fn main() {
     if let Err(e) = logging::init_logging() {
@@ -330,6 +444,17 @@ fn main() {
                 clipboard::run_clipboard_listener(app_handle, is_listening_clone);
             });
 
+            // --- Register global hotkey ---
+            let hotkey_config = {
+                let cfg = app.state::<std::sync::Mutex<config::AppConfig>>();
+                let cfg = cfg.lock().unwrap();
+                cfg.hotkey.clone()
+            };
+            
+            if let Err(e) = register_hotkey(app.handle(), &hotkey_config) {
+                log::warn!("Failed to register initial hotkey: {}", e);
+            }
+
             // --- Start playback monitor thread (auto-hide HUD when audio finishes) ---
             let app_handle_for_monitor = app.handle().clone();
             std::thread::spawn(move || {
@@ -363,6 +488,25 @@ fn main() {
                 let _ = window.set_focus();
             }
         }))
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(move |app, _shortcut, event| {
+                    if event.state() == ShortcutState::Pressed {
+                        log::info!("Global hotkey triggered: speak from clipboard");
+                        let app_handle = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            let config: State<std::sync::Mutex<config::AppConfig>> = app_handle.state();
+                            let player: State<std::sync::Mutex<audio::AudioPlayer>> = app_handle.state();
+                            let history: State<std::sync::Mutex<history::HistoryLog>> = app_handle.state();
+                            let telemetry_state: State<std::sync::Mutex<telemetry::TelemetryLog>> = app_handle.state();
+                            if let Err(e) = commands::speak_now(app_handle.clone(), config, player, history, telemetry_state, None).await {
+                                log::error!("Failed to speak from hotkey: {}", e);
+                            }
+                        });
+                    }
+                })
+                .build(),
+        )
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
             commands::set_config,

@@ -5,14 +5,10 @@
 
   let {
     barValues,
-    spokenText,
-    durationMs = 0,
-    speed = 1.0
+    spokenText
   }: {
     barValues: number[];
     spokenText: string | null;
-    durationMs?: number;
-    speed?: number;
   } = $props();
 
   let textEl: HTMLSpanElement | undefined = $state();
@@ -20,15 +16,13 @@
   let textWidth = $state(0);
   let marqueeWidth = $state(0);
 
-  let adjustedDurationMs = $derived(durationMs > 0 && speed > 0 ? durationMs / speed : 0);
-
-  let shouldScroll = $derived(
-    adjustedDurationMs > 0 && textWidth > marqueeWidth && marqueeWidth > 0
-  );
-
-  let scrollDistance = $derived(shouldScroll ? -(textWidth + marqueeWidth * 0.5) : 0);
-
+  let isPlaybackReady = $derived(hudStore.isPlaybackReady);
+  let adjustedDurationMs = $derived(hudStore.adjustedDurationMs);
   let progressPercent = $derived(hudStore.playbackProgressPercent);
+
+  let canAnimate = $derived(isPlaybackReady && textWidth > marqueeWidth && marqueeWidth > 0);
+
+  let scrollDistance = $derived(canAnimate ? -(textWidth + marqueeWidth * 0.5) : 0);
 
   $effect(() => {
     if (textEl) {
@@ -44,7 +38,7 @@
 </script>
 
 <div class="hud-playback-container">
-  <Progress value={progressPercent} max={100} class="progress-bar" />
+  <Progress value={isPlaybackReady ? progressPercent : 0} max={100} class="progress-bar" />
 
   <div class="content-layer">
     <div class="waveform-layer">
@@ -61,14 +55,14 @@
     </div>
 
     {#if spokenText}
-      <div class="marquee-wrapper" bind:this={marqueeWrapperEl} class:centered={!shouldScroll}>
+      <div class="marquee-wrapper" bind:this={marqueeWrapperEl} class:centered={!canAnimate}>
         <div
           class="marquee-track"
-          class:animating={shouldScroll}
+          class:animating={canAnimate}
           style="animation-duration: {adjustedDurationMs}ms; --end-pos: {scrollDistance}px;"
         >
           <span bind:this={textEl} class="marquee-text">{spokenText}</span>
-          {#if shouldScroll}
+          {#if canAnimate}
             <span class="marquee-spacer"></span>
           {/if}
         </div>
@@ -86,23 +80,6 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-  }
-
-  .progress-bar {
-    width: 100%;
-    height: 6px;
-    border-radius: 3px;
-    background: oklch(0.25 0.02 264.8 / 0.5);
-    flex-shrink: 0;
-  }
-
-  .progress-bar :global([data-slot="progress-indicator"]) {
-    background: linear-gradient(
-      90deg,
-      oklch(62.3% 0.214 259.815) 0%,
-      oklch(54.3% 0.2 259.815) 100%
-    );
-    border-radius: 3px;
   }
 
   .content-layer {

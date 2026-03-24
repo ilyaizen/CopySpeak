@@ -7,7 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-03-24
+
 ### Added
+
+- **Global hotkey configuration** — Configurable keyboard shortcut to trigger TTS
+  - `hotkey` config field with modifier + key format (e.g., `"Ctrl+Space"`)
+  - Hotkey capture component in settings UI
+  - Backend IPC: `register_hotkey` with global-shortcut plugin
+  - Hotkey re-registration on config change
 
 - **Listening toggle** — Enable/disable clipboard monitoring via `listen_enabled` config
   - Toggle in quick-settings dropdown and app-footer
@@ -15,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Persisted to config, synced via `config-changed` event
 
 ### Fixed
+
+- **HUD progress bar and marquee timing** — Accurate playback duration via cross-window event
+  - HUD window and main window have separate JS contexts with separate `hudStore` instances
+  - `playbackStore` in main window decodes audio via Web Audio API to get accurate duration
+  - Emits `hud:audio-duration` event which HUD window receives and updates its `hudStore`
+  - Progress now shows accurate percentage based on `AudioBuffer.duration`
+  - Marquee animation timing now matches actual playback duration
+  - ElevenLabs MP3 duration now accurately determined via Web Audio decode (not server estimate)
 
 - **Audio playback on clean Windows 11** — AudioContext now resumes if suspended
   - Web Audio API requires user gesture to activate AudioContext on fresh profiles
@@ -88,7 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/copyspeak/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/ilyaizen/copyspeak/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/ilyaizen/copyspeak/compare/v0.0.3...v0.0.5
 [0.0.3]: https://github.com/ilyaizen/copyspeak/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/ilyaizen/copyspeak/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/ilyaizen/copyspeak/releases/tag/v0.0.1

@@ -22,6 +22,7 @@ interface Unlisteners {
   togglePause?: () => void;
   clipboardCopied?: () => void;
   synthesisProgress?: () => void;
+  audioDuration?: () => void;
 }
 
 export function useHudEvents() {
@@ -97,6 +98,10 @@ export function useHudEvents() {
           hudStore.handleSynthesisProgress(event.payload);
         }
       );
+
+      unlisteners.audioDuration = await eventApi.listen<number>("hud:audio-duration", (event) => {
+        hudStore.setAccurateDurationMs(event.payload);
+      });
     } catch (e) {
       console.error("[HUD] Failed to set up Tauri event listeners:", e);
     }
