@@ -11,7 +11,8 @@
     DropdownMenuItem,
     DropdownMenuTrigger
   } from "$lib/components/ui/dropdown-menu";
-  import { Check, Loader2 } from "@lucide/svelte";
+  import { Check } from "@lucide/svelte";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { toast } from "svelte-sonner";
   import UpdateChecker from "../update-checker.svelte";
   import { _ } from "svelte-i18n";
@@ -416,7 +417,7 @@
                   <div class="flex items-center gap-2">
                     <!-- Status indicator -->
                     {#if status === "checking"}
-                      <Loader2 class="text-muted-foreground h-3 w-3 animate-spin" />
+                      <Spinner class="text-muted-foreground h-3 w-3" />
                     {:else if status === "available"}
                       <div
                         class="h-2.5 w-2.5 shrink-0 rounded-full bg-green-500"

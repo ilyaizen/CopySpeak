@@ -21,6 +21,9 @@ src-tauri/Cargo.lock
 /archive
 /.agent
 /Handy
+.vercel
+/__pycache__
+/.ruff_cache
 /.tauri
 /.opencode
 /openspec
@@ -30,6 +33,3 @@ GEMINI.md
 /docs_internal
 /plans
 file-structure.txt
-.vercel
-/__pycache__
-/.ruff_cache

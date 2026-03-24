@@ -5,7 +5,8 @@
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
   import { cn } from "$lib/utils.js";
-  import { Loader2, Download, RefreshCw } from "@lucide/svelte";
+  import { Download } from "@lucide/svelte";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import type { AppConfig } from "$lib/types";
   import { VERSION } from "$lib/version";
 
@@ -199,11 +200,11 @@
     )}
   >
     {#if isChecking || isInstalling}
-      <Loader2 class="mr-1 inline h-3 w-3 animate-spin" />
+      <Spinner class="mr-1 inline h-3 w-3" />
     {:else if updateAvailable}
       <Download class="mr-1 inline h-3 w-3" />
     {:else}
-      <RefreshCw class="mr-1 inline h-3 w-3" />
+      <!-- No icon when no update available and not checking -->
     {/if}
     {getStatusText()}
   </button>

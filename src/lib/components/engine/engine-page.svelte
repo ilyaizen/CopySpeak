@@ -4,7 +4,8 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { invoke } from "@tauri-apps/api/core";
   import { toast } from "svelte-sonner";
-  import { ExternalLink, Key, CheckCircle, XCircle, Loader2 } from "@lucide/svelte";
+  import { ExternalLink, Key, CheckCircle, XCircle } from "@lucide/svelte";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import LocalEngine from "./local-engine.svelte";
   import OpenAiEngine from "./openai-engine.svelte";
   import ElevenLabsEngine from "./elevenlabs-engine.svelte";
@@ -854,7 +855,7 @@
             disabled={isCheckingCreds || isTestingEngine || !tempApiKey}
           >
             {#if isCheckingCreds}
-              <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+              <Spinner class="mr-2 h-4 w-4" />
             {/if}
             {$_("engine.apiSetup.checkButton")}
           </Button>
@@ -865,7 +866,7 @@
             disabled={isCheckingCreds || isTestingEngine || !tempApiKey}
           >
             {#if isTestingEngine}
-              <Loader2 class="mr-2 h-4 w-4 animate-spin" />
+              <Spinner class="mr-2 h-4 w-4" />
             {/if}
             {$_("engine.apiSetup.testButton")}
           </Button>
