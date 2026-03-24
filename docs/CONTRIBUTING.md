@@ -268,6 +268,25 @@ Documentation improvements are highly valued! You can contribute by:
 - Adding code comments and doc comments
 - Improving error messages
 
+## 🌍 Internationalization (i18n)
+
+### DO NOT TOUCH Directory
+
+**⚠️ CRITICAL: Do NOT modify or touch files in `src-web/src/lib/locales/DO_NOT_TOUCH/`**
+
+This directory contains non-English translations (Arabic, Spanish, Hebrew) that are managed externally. During pre-production, translation keys change frequently as the app evolves.
+
+**Why this matters:**
+- Translation keys are unstable during development
+- External translators handle these files
+- Any manual edits will be overwritten
+
+**If you need to add new translatable strings:**
+- Add new keys only to the English locale file (`en.json`)
+- Do NOT manually update non-English files in DO_NOT_TOUCH
+
+The system will automatically sync translations once keys stabilize for release.
+
 ## 🤝 Community Guidelines
 
 - **Be respectful and inclusive** - We welcome contributors of all skill levels
