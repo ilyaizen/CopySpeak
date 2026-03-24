@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { _ } from "svelte-i18n";
+  // TODO: Re-enable i18n when ready for multi-language support
+  // import { _ } from "svelte-i18n";
   import { Github } from "@lucide/svelte";
-  import LanguageSwitcher from "./language-switcher.svelte";
+  // TODO: Re-enable LanguageSwitcher when i18n is re-enabled
+  // import LanguageSwitcher from "./language-switcher.svelte";
 
   const GITHUB_URL = "https://github.com/ilyaizen/CopySpeak";
 </script>
@@ -15,27 +17,29 @@
       </div>
 
       <div class="flex items-center gap-6">
-        <LanguageSwitcher />
+        <!-- TODO: Re-enable LanguageSwitcher when i18n is re-enabled -->
+        <!-- <LanguageSwitcher /> -->
+        <span class="text-muted-foreground text-sm">English</span>
 
         <a
           href={GITHUB_URL}
           class="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm transition-colors"
         >
           <Github class="h-4 w-4" />
-          {$_("landing.footer.github")}
+          GitHub
         </a>
 
         <a
           href="https://github.com/ilyaizen/CopySpeak/blob/main/LICENCE.txt"
           class="text-muted-foreground hover:text-foreground text-sm transition-colors"
         >
-          {$_("landing.footer.license")}
+          MIT License
         </a>
       </div>
     </div>
 
     <div class="text-muted-foreground mt-6 text-center text-xs sm:text-left">
-      {$_("landing.footer.madeWith")}
+      Made with Rust, Svelte, and AI.
     </div>
   </div>
 </footer>
