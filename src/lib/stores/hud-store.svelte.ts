@@ -31,6 +31,7 @@ let elapsedMs = $state<number>(0);
 
 // Playback state
 let audioDurationMs = $state<number>(0);
+let playbackElapsedMs = $state<number>(0);
 
 // Clipboard state
 let isClipboardCopied = $state(false);
@@ -77,6 +78,10 @@ let progressPercent = $derived(
 let hasEstimate = $derived(estimatedDurationMs !== null || totalChars > 0);
 
 let dotPulsing = $derived(isSynthesizing || (!isPaused && !isSynthesizing));
+
+let playbackProgressPercent = $derived(
+  audioDurationMs > 0 ? Math.min(100, (playbackElapsedMs / audioDurationMs) * 100) : 0
+);
 
 // Actions
 export const hudStore = {
@@ -150,6 +155,12 @@ export const hudStore = {
   get audioDurationMs() {
     return audioDurationMs;
   },
+  get playbackElapsedMs() {
+    return playbackElapsedMs;
+  },
+  get playbackProgressPercent() {
+    return playbackProgressPercent;
+  },
 
   // Setters
   setBarValues(values: number[]) {
@@ -205,6 +216,9 @@ export const hudStore = {
   },
   setAudioDurationMs(ms: number) {
     audioDurationMs = ms;
+  },
+  setPlaybackElapsedMs(ms: number) {
+    playbackElapsedMs = ms;
   },
 
   // Compound actions
@@ -266,6 +280,7 @@ export const hudStore = {
     processedChars = 0;
     progressConfidence = 0;
     audioDurationMs = 0;
+    playbackElapsedMs = 0;
   },
 
   handleSynthesisProgress(payload: SynthesisProgressPayload) {

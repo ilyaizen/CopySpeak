@@ -1,5 +1,7 @@
 <script lang="ts">
   import Waveform from "../waveform.svelte";
+  import Progress from "$lib/components/ui/progress/progress.svelte";
+  import { hudStore } from "$lib/stores/hud-store.svelte.js";
 
   let {
     barValues,
@@ -18,16 +20,15 @@
   let textWidth = $state(0);
   let marqueeWidth = $state(0);
 
-  // Adjust duration based on playback speed (faster = shorter duration)
   let adjustedDurationMs = $derived(durationMs > 0 && speed > 0 ? durationMs / speed : 0);
 
-  // Determine if text needs to scroll (is wider than container)
   let shouldScroll = $derived(
     adjustedDurationMs > 0 && textWidth > marqueeWidth && marqueeWidth > 0
   );
 
-  // Calculate the exact pixel distance to scroll
   let scrollDistance = $derived(shouldScroll ? -(textWidth + marqueeWidth * 0.5) : 0);
+
+  let progressPercent = $derived(hudStore.playbackProgressPercent);
 
   $effect(() => {
     if (textEl) {
@@ -43,40 +44,37 @@
 </script>
 
 <div class="hud-playback-container">
-  <!-- Progress fill background layer - animates across full duration -->
-  {#if adjustedDurationMs > 0}
-    <div class="progress-fill-bg" style="animation-duration: {adjustedDurationMs}ms;"></div>
-  {/if}
+  <Progress value={progressPercent} max={100} class="progress-bar" />
 
-  <!-- Waveform visualization layer -->
-  <div class="waveform-layer">
-    <Waveform
-      {barValues}
-      barColor="rgba(255, 255, 255, 0.3)"
-      activeBarColor="rgba(96, 165, 250, 1)"
-      barGap={3}
-      barRadius={2}
-      minBarHeight={0.15}
-      attackRate={0.8}
-      decayRate={0.5}
-    />
-  </div>
-
-  <!-- Text marquee layer - overlayed on top -->
-  {#if spokenText}
-    <div class="marquee-wrapper" bind:this={marqueeWrapperEl} class:centered={!shouldScroll}>
-      <div
-        class="marquee-track"
-        class:animating={shouldScroll}
-        style="animation-duration: {adjustedDurationMs}ms; --end-pos: {scrollDistance}px;"
-      >
-        <span bind:this={textEl} class="marquee-text">{spokenText}</span>
-        {#if shouldScroll}
-          <span class="marquee-spacer"></span>
-        {/if}
-      </div>
+  <div class="content-layer">
+    <div class="waveform-layer">
+      <Waveform
+        {barValues}
+        barColor="rgba(255, 255, 255, 0.3)"
+        activeBarColor="rgba(96, 165, 250, 1)"
+        barGap={3}
+        barRadius={2}
+        minBarHeight={0.15}
+        attackRate={0.8}
+        decayRate={0.5}
+      />
     </div>
-  {/if}
+
+    {#if spokenText}
+      <div class="marquee-wrapper" bind:this={marqueeWrapperEl} class:centered={!shouldScroll}>
+        <div
+          class="marquee-track"
+          class:animating={shouldScroll}
+          style="animation-duration: {adjustedDurationMs}ms; --end-pos: {scrollDistance}px;"
+        >
+          <span bind:this={textEl} class="marquee-text">{spokenText}</span>
+          {#if shouldScroll}
+            <span class="marquee-spacer"></span>
+          {/if}
+        </div>
+      </div>
+    {/if}
+  </div>
 </div>
 
 <style>
@@ -85,52 +83,45 @@
     flex: 1;
     min-height: 52px;
     overflow: hidden;
-    border-radius: 100px;
-    background: oklch(0.18 0.01 264.8 / 0.85);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
-  /* Background progress fill - animates from left to right */
-  .progress-fill-bg {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
+  .progress-bar {
     width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: oklch(0.25 0.02 264.8 / 0.5);
+    flex-shrink: 0;
+  }
+
+  .progress-bar :global([data-slot="progress-indicator"]) {
     background: linear-gradient(
       90deg,
       oklch(62.3% 0.214 259.815) 0%,
       oklch(54.3% 0.2 259.815) 100%
     );
-    transform-origin: left;
-    transform: scaleX(0);
-    animation-name: progress-fill;
-    animation-timing-function: linear;
-    animation-fill-mode: forwards;
-    z-index: 0;
+    border-radius: 3px;
   }
 
-  @keyframes progress-fill {
-    from {
-      transform: scaleX(0);
-    }
-    to {
-      transform: scaleX(1);
-    }
+  .content-layer {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 
-  /* Waveform layer - centered vertically */
   .waveform-layer {
-    position: absolute;
+    position: relative;
     left: 20px;
     right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
     height: 32px;
     pointer-events: none;
-    z-index: 1;
   }
 
-  /* Marquee wrapper - full size overlay */
   .marquee-wrapper {
     position: absolute;
     left: 0;
@@ -140,7 +131,6 @@
     display: flex;
     align-items: center;
     overflow: hidden;
-    z-index: 2;
     pointer-events: none;
   }
 
@@ -148,7 +138,6 @@
     justify-content: center;
   }
 
-  /* The actual scrolling track */
   .marquee-track {
     display: flex;
     align-items: center;
@@ -162,7 +151,7 @@
   }
 
   .marquee-text {
-    font-size: 1.25rem;
+    font-size: 18px;
     font-weight: 600;
     color: oklch(0.96 0.01 264.8);
     letter-spacing: 0.02em;
@@ -178,7 +167,6 @@
     width: 100px;
   }
 
-  /* Marquee animation using CSS custom property for dynamic end position */
   @keyframes marquee-scroll {
     0% {
       transform: translateX(0);

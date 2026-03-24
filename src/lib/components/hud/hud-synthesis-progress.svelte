@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Progress from "$lib/components/ui/progress/progress.svelte";
+  import { hudStore } from "$lib/stores/hud-store.svelte.js";
+
   let {
     estimatedDurationMs,
     elapsedMs
@@ -7,65 +10,35 @@
     elapsedMs: number;
   } = $props();
 
-  // Calculate remaining time for animation
-  let remainingMs = $derived(
-    estimatedDurationMs !== null && estimatedDurationMs > elapsedMs
-      ? estimatedDurationMs - elapsedMs
+  let progressPercent = $derived(
+    estimatedDurationMs !== null && estimatedDurationMs > 0
+      ? Math.min(100, (elapsedMs / estimatedDurationMs) * 100)
       : 0
   );
 
-  // Only animate if we have a valid estimate
-  let shouldAnimate = $derived(estimatedDurationMs !== null && estimatedDurationMs > 0);
+  let providerLabel = $derived(hudStore.providerVoiceLabel);
 </script>
 
 <div class="synthesis-progress-container">
-  <div class="progress-pill" class:animate={shouldAnimate} style="--dur: {remainingMs}ms;">
-    {#if shouldAnimate}
-      <div class="progress-fill"></div>
-    {/if}
-  </div>
+  <span class="status-text">Processing...</span>
+  <Progress value={progressPercent} max={100} class="progress-bar" />
+  {#if providerLabel}
+    <span class="provider-info">{providerLabel}</span>
+  {/if}
 </div>
 
 <style>
   .synthesis-progress-container {
     flex: 1;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 12px;
+    animation: container-in 0.4s cubic-bezier(0, 0.7, 0.1, 1) forwards;
   }
 
-  .progress-pill {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 12px 24px;
-    background: oklch(0.18 0.01 264.8 / 0.85);
-    border-radius: 100px;
-    overflow: hidden;
-    min-width: 120px;
-  }
-
-  .progress-pill.animate {
-    animation: pill-in 0.4s cubic-bezier(0, 0.7, 0.1, 1) forwards;
-  }
-
-  .progress-fill {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 100%;
-    background: linear-gradient(
-      90deg,
-      oklch(62.3% 0.214 259.815) 0%,
-      oklch(54.3% 0.2 259.815) 100%
-    );
-    transform-origin: left;
-    animation: fill-progress var(--dur, 3000ms) linear forwards;
-  }
-
-  @keyframes pill-in {
+  @keyframes container-in {
     from {
       opacity: 0;
       transform: scale(0.4);
@@ -76,12 +49,35 @@
     }
   }
 
-  @keyframes fill-progress {
-    from {
-      transform: scaleX(0);
-    }
-    to {
-      transform: scaleX(1);
-    }
+  .status-text {
+    font-size: 18px;
+    font-weight: 600;
+    color: oklch(0.96 0.01 264.8);
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: oklch(0.25 0.02 264.8 / 0.5);
+  }
+
+  .progress-bar :global([data-slot="progress-indicator"]) {
+    background: linear-gradient(
+      90deg,
+      oklch(62.3% 0.214 259.815) 0%,
+      oklch(54.3% 0.2 259.815) 100%
+    );
+    border-radius: 3px;
+  }
+
+  .provider-info {
+    font-size: 14px;
+    font-weight: 500;
+    color: oklch(0.7 0.02 264.8);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
   }
 </style>
