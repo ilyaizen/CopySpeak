@@ -40,6 +40,7 @@ export type HudPosition = HudPresetPosition;
 export type RetriggerMode = "interrupt" | "queue";
 
 export interface TriggerConfig {
+  listen_enabled: boolean;
   double_copy_window_ms: number;
   max_text_length: number;
 }

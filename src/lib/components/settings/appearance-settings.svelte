@@ -1,6 +1,5 @@
 <script lang="ts">
   import { Sun, Moon, Monitor } from "@lucide/svelte";
-  import { setMode } from "mode-watcher";
 
   let {
     appearance = "system",
@@ -15,21 +14,6 @@
     { value: "light", label: "Light", icon: Sun },
     { value: "dark", label: "Dark", icon: Moon }
   ];
-
-  // Watch for appearance changes and sync with mode-watcher
-  // Guard: only call setMode when value actually changes to prevent WebKit reactivity loops
-  let prevAppearance: string | undefined;
-  $effect(() => {
-    if (appearance === prevAppearance) return;
-    prevAppearance = appearance;
-    if (appearance === "system") {
-      setMode("system");
-    } else if (appearance === "light") {
-      setMode("light");
-    } else if (appearance === "dark") {
-      setMode("dark");
-    }
-  });
 </script>
 
 <div class="border-border my-4 space-y-3 border-t pt-4">

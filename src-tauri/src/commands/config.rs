@@ -70,6 +70,7 @@ pub fn set_config(
     app: AppHandle,
     config: State<'_, Mutex<AppConfig>>,
     player: State<'_, Mutex<AudioPlayer>>,
+    is_listening: State<'_, Arc<AtomicBool>>,
     new_config: AppConfig,
 ) -> Result<(), String> {
     if crate::logging::is_debug_mode() {
@@ -81,29 +82,34 @@ pub fn set_config(
         return Err(format!("Validation failed: {}", error_messages.join("; ")));
     }
 
-    let (old_mode, old_volume, old_autostart, old_debug_mode) = {
+    let (old_mode, old_volume, old_autostart, old_debug_mode, old_listen_enabled) = {
         let cfg = config.lock().unwrap();
         (
             cfg.playback.on_retrigger.clone(),
             cfg.playback.volume,
             cfg.general.start_with_windows,
             cfg.general.debug_mode,
+            cfg.trigger.listen_enabled,
         )
     };
     let mode_changed = old_mode != new_config.playback.on_retrigger;
     let volume_changed = old_volume != new_config.playback.volume;
     let autostart_changed = old_autostart != new_config.general.start_with_windows;
     let debug_mode_changed = old_debug_mode != new_config.general.debug_mode;
+    let listen_enabled_changed = old_listen_enabled != new_config.trigger.listen_enabled;
 
     if crate::logging::is_debug_mode() {
         log::debug!(
-            "[IPC] Config changes - mode: {}, volume: {}, autostart: {}, debug_mode: {}",
+            "[IPC] Config changes - mode: {}, volume: {}, autostart: {}, debug_mode: {}, listen_enabled: {}",
             mode_changed,
             volume_changed,
             autostart_changed,
-            debug_mode_changed
+            debug_mode_changed,
+            listen_enabled_changed
         );
     }
+
+    let listen_enabled_value = new_config.trigger.listen_enabled;
 
     let mut cfg = config.lock().unwrap();
     *cfg = new_config;
@@ -135,6 +141,14 @@ pub fn set_config(
         if let Err(e) = crate::autostart::sync_autostart_with_config(enabled) {
             log::error!("Failed to sync autostart: {}", e);
         }
+    }
+
+    if listen_enabled_changed {
+        is_listening.store(listen_enabled_value, Ordering::Relaxed);
+        log::info!(
+            "Listening state synced from config: {}",
+            listen_enabled_value
+        );
     }
 
     // Emit config-changed event so frontend can react

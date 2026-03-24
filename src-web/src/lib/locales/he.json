@@ -80,6 +80,8 @@
     },
     "triggers": {
       "title": "הגדרות גורמים מפעילים",
+      "listen": "האזנה",
+      "listenDescription": "ניטור לוח העתקה לאירועי העתקה כפולה",
       "doubleCopyWindow": "חלון זיהוי העתקה כפולה (מילישניות)",
       "doubleCopyWindowDescription": "מסגרת זמן שבה העתקה שנייה מפעילה TTS (100-5000 מילישניות)",
       "maxTextLength": "אורך טקסט מקסימלי",

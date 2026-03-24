@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Listening toggle** — Enable/disable clipboard monitoring via `listen_enabled` config
+  - Toggle in quick-settings dropdown and app-footer
+  - Backend IPC: `set_listening`, `get_listening` commands
+  - Persisted to config, synced via `config-changed` event
+
 ### Fixed
 
 - **Audio playback on clean Windows 11** — AudioContext now resumes if suspended

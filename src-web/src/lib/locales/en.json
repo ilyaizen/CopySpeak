@@ -80,6 +80,8 @@
     },
     "triggers": {
       "title": "Trigger Settings",
+      "listen": "Listen",
+      "listenDescription": "Monitor clipboard for double-copy events",
       "doubleCopyWindow": "Double-Copy Detection Window (ms)",
       "doubleCopyWindowDescription": "Time window in which a second copy triggers TTS (100-5000ms)",
       "maxTextLength": "Max Text Length",

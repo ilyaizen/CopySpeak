@@ -7,7 +7,6 @@
   import { invoke } from "@tauri-apps/api/core";
   import type { AppConfig, SupportedLocale } from "$lib/types";
   import { _ } from "svelte-i18n";
-  import { setLocale } from "$lib/i18n";
   import { getSupportedLocales } from "$lib/i18n/utils";
 
   let {
@@ -22,7 +21,6 @@
 
   function handleLocaleChange(newLocale: string) {
     localConfig.general.locale = newLocale as SupportedLocale;
-    setLocale(newLocale as SupportedLocale);
   }
 
   let logs = $state<string[]>([]);

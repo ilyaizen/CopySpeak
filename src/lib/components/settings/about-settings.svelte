@@ -4,7 +4,6 @@
   import InfoTooltip from "$lib/components/ui/info-tooltip.svelte";
   import { openExternal } from "$lib/utils/external-link";
   import { VERSION } from "$lib/version";
-  import { Github } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
 </script>
 
@@ -29,7 +28,6 @@
       size="sm"
       onclick={() => openExternal("https://github.com/ilyaizen/CopySpeak")}
     >
-      <Github class="mr-2 h-4 w-4" />
       {$_("settings.about.github")}
     </Button>
   </div>

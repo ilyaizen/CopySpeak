@@ -95,7 +95,9 @@
     try {
       await invoke("set_config", { newConfig: localConfig });
       originalConfig = JSON.parse(JSON.stringify(localConfig));
-      window.history.back();
+
+      // Reload page to apply new locale and appearance
+      window.location.reload();
     } catch (e) {
       console.error("Failed to save config:", e);
       toast.error(`Failed to save settings: ${e}`);

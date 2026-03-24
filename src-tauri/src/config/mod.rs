@@ -187,6 +187,7 @@ impl Default for AppConfig {
                 locale: "en".to_string(),
             },
             trigger: TriggerConfig {
+                listen_enabled: true,
                 double_copy_window_ms: 1500,
                 max_text_length: 100000,
             },

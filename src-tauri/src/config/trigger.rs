@@ -6,9 +6,15 @@ use super::ValidationError;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TriggerConfig {
+    #[serde(default = "default_listen_enabled")]
+    pub listen_enabled: bool,
     pub double_copy_window_ms: u64,
     #[serde(default = "default_max_text_length")]
     pub max_text_length: u64,
+}
+
+fn default_listen_enabled() -> bool {
+    true
 }
 
 fn default_max_text_length() -> u64 {

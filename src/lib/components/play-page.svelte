@@ -16,6 +16,7 @@
 
   const mockConfig: AppConfig = {
     trigger: {
+      listen_enabled: true,
       double_copy_window_ms: 800,
       max_text_length: 50000
     },

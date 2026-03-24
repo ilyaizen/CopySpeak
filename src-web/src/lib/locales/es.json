@@ -80,6 +80,8 @@
     },
     "triggers": {
       "title": "Configuración de disparadores",
+      "listen": "Escuchar",
+      "listenDescription": "Monitorear el portapapeles para eventos de doble copia",
       "doubleCopyWindow": "Ventana de detección de doble copia (ms)",
       "doubleCopyWindowDescription": "Ventana de tiempo en la que una segunda copia activa TTS (100-5000ms)",
       "maxTextLength": "Longitud máxima de texto",

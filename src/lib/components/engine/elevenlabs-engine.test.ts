@@ -11,7 +11,7 @@ import ElevenLabsEngine from "./elevenlabs-engine.svelte";
 
 describe("ElevenLabsEngine", () => {
   const mockConfig = {
-    trigger: { double_copy_window_ms: 1000, max_text_length: 1000 },
+    trigger: { listen_enabled: true, double_copy_window_ms: 1000, max_text_length: 1000 },
     tts: {
       active_backend: "elevenlabs",
       preset: "piper",

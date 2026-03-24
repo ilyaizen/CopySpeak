@@ -8,6 +8,7 @@
 import { isTauri } from "$lib/services/tauri.js";
 
 let invoke: typeof import("@tauri-apps/api/core").invoke | null = null;
+let listenFn: typeof import("@tauri-apps/api/event").listen | null = null;
 
 class ListeningStore {
   private _isListening = $state(true);
@@ -28,7 +29,6 @@ class ListeningStore {
 
   async toggle(): Promise<void> {
     if (!isTauri || !invoke) {
-      // In non-Tauri environment, just toggle locally
       this._isListening = !this._isListening;
       return;
     }
@@ -74,13 +74,22 @@ class ListeningStore {
 
 export const listeningStore = new ListeningStore();
 
-// Initialize on load
 if (isTauri) {
-  import("@tauri-apps/api/core")
-    .then((core) => {
+  Promise.all([
+    import("@tauri-apps/api/core").then((core) => {
       invoke = core.invoke;
-      // Load initial state from backend
-      listeningStore.loadFromBackend();
+    }),
+    import("@tauri-apps/api/event").then((event) => {
+      listenFn = event.listen;
     })
-    .catch(() => {});
+  ])
+    .then(() => {
+      listeningStore.loadFromBackend();
+      if (listenFn) {
+        listenFn("config-changed", () => {
+          listeningStore.loadFromBackend();
+        });
+      }
+    })
+    .catch(() => { });
 }

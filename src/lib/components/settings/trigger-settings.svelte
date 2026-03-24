@@ -18,6 +18,13 @@
 <div class="border-border bg-card rounded-lg border p-4 shadow-sm">
   <h3 class="text-card-foreground mb-4 text-lg font-medium">{$_("settings.triggers.title")}</h3>
   <div class="space-y-4">
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-1.5">
+        <Label for="listen-double-copy">{$_("settings.triggers.listen")}</Label>
+        <InfoTooltip text={$_("settings.triggers.listenDescription")} />
+      </div>
+      <Switch id="listen-double-copy" bind:checked={localConfig.trigger.listen_enabled} />
+    </div>
     <div class="space-y-2">
       <div class="flex items-center gap-1.5">
         <Label for="double-copy-window">{$_("settings.triggers.doubleCopyWindow")}</Label>

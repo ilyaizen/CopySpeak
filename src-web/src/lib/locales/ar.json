@@ -80,6 +80,8 @@
     },
     "triggers": {
       "title": "إعدادات المشغلات",
+      "listen": "الاستماع",
+      "listenDescription": "مراقبة الحافظة لأحداث النسخ المزدوج",
       "doubleCopyWindow": "نافذة كشف النسخ المزدوج (مللي ثانية)",
       "doubleCopyWindowDescription": "الفترة الزمنية التي يتم فيها تشغيل TTS عند النسخ مرة أخرى (100-5000 مللي ثانية)",
       "maxTextLength": "الحد الأقصى للنص",

@@ -31,7 +31,7 @@ describe("EnginePage", () => {
 
   it("Task-1: should render all five backend tabs after config loads", async () => {
     mockInvoke.mockResolvedValue({
-      trigger: { double_copy_window_ms: 1000, max_text_length: 1000 },
+      trigger: { listen_enabled: true, double_copy_window_ms: 1000, max_text_length: 1000 },
       tts: {
         active_backend: "local",
         preset: "piper",
@@ -102,7 +102,7 @@ describe("EnginePage", () => {
 
   it("Task-1: should load config on mount", async () => {
     mockInvoke.mockResolvedValue({
-      trigger: { double_copy_window_ms: 1000, max_text_length: 1000 },
+      trigger: { listen_enabled: true, double_copy_window_ms: 1000, max_text_length: 1000 },
       tts: {
         active_backend: "local",
         preset: "piper",
@@ -166,7 +166,7 @@ describe("EnginePage", () => {
   it("Task-1: should save config with set_config IPC", async () => {
     mockInvoke
       .mockResolvedValueOnce({
-        trigger: { double_copy_window_ms: 1000, max_text_length: 1000 },
+        trigger: { listen_enabled: true, double_copy_window_ms: 1000, max_text_length: 1000 },
         tts: {
           active_backend: "local",
           preset: "piper",
