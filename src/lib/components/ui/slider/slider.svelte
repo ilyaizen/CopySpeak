@@ -54,6 +54,6 @@
   />
   <div
     class="border-primary/50 bg-background pointer-events-none absolute block h-4 w-4 rounded-full border shadow transition-colors"
-    style="left: calc({percentage}% - 8px)"
+    style="inset-inline-start: calc({percentage}% - 8px)"
   ></div>
 </div>

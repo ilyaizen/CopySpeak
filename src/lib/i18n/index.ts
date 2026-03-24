@@ -5,6 +5,8 @@ import type { SupportedLocale } from "$lib/types";
 // Register translation dictionaries
 register("en", () => import("$lib/locales/en.json"));
 register("es", () => import("$lib/locales/es.json"));
+register("ar", () => import("$lib/locales/ar.json"));
+register("he", () => import("$lib/locales/he.json"));
 
 // Initialize with default locale
 // Actual locale will be set from AppConfig after load

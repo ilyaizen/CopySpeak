@@ -3,7 +3,7 @@ import { locale as svelteLocale } from "svelte-i18n";
 import type { SupportedLocale } from "$lib/types";
 
 // RTL locales list
-const RTL_LOCALES: readonly SupportedLocale[] = ["ar"]; // Arabic only for now
+const RTL_LOCALES: readonly SupportedLocale[] = ["ar", "he"];
 
 // Store for current locale
 export const locale = svelteLocale;

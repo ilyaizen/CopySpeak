@@ -1,0 +1,464 @@
+{
+  "app": {
+    "title": "CopySpeak",
+    "tagline": "نسخ مزدوج → كلام فوري"
+  },
+  "nav": {
+    "play": "تشغيل",
+    "engine": "المحرك",
+    "settings": "الإعدادات"
+  },
+  "common": {
+    "loading": "جاري التحميل...",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "reset": "إعادة للافتراضي",
+    "test": "اختبار",
+    "close": "إغلاق",
+    "back": "رجوع",
+    "next": "التالي",
+    "done": "تم",
+    "yes": "نعم",
+    "no": "لا",
+    "ok": "موافق",
+    "error": "خطأ",
+    "success": "نجاح",
+    "warning": "تحذير",
+    "info": "معلومات"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "categories": {
+      "general": "عام",
+      "playback": "التشغيل",
+      "triggers": "المشغلات",
+      "sanitization": "التنقية",
+      "history": "السجل",
+      "hud": "واجهة العرض",
+      "about": "حول"
+    },
+    "descriptions": {
+      "general": "سلوك بدء التشغيل وعناصر التحكم في النافذة",
+      "playback": "إعدادات الصوت ومستوى الصوت",
+      "triggers": "كشف النسخ وحدود النص",
+      "sanitization": "تنظيف النص الطبيعي",
+      "history": "سجل الإنشاء والتخزين",
+      "hud": "تصور الموجة والموضع",
+      "about": "معلومات الإصدار والشكر"
+    },
+    "actions": {
+      "save": "حفظ التغييرات",
+      "cancel": "إلغاء",
+      "reset": "إعادة للافتراضي",
+      "test": "اختبار",
+      "tryAgain": "حاول مرة أخرى"
+    },
+    "general": {
+      "language": "اللغة",
+      "languageDescription": "اختر لغتك المفضلة",
+      "startWithWindows": "بدء مع ويندوز",
+      "startMinimized": "البدء مصغراً في علبة النظام",
+      "showNotifications": "إظهار الإشعارات",
+      "closeBehavior": "سلوك زر الإغلاق",
+      "appearance": "المظهر",
+      "debugMode": "وضع التصحيح",
+      "updateChecks": "التحقق من التحديثات تلقائياً"
+    },
+    "playback": {
+      "title": "إعدادات التشغيل",
+      "onRetrigger": "عند إعادة التشغيل",
+      "onRetriggerDescription": "ماذا يحدث عند تشغيل TTS وهو يتحدث بالفعل",
+      "volume": "مستوى الصوت",
+      "volumeDescription": "مستوى صوت التشغيل (0-100%)",
+      "playbackSpeed": "السرعة",
+      "playbackSpeedDescription": "سرعة التشغيل (0.5x - 2x)",
+      "pitch": "طبقة الصوت",
+      "pitchDescription": "تحويل طبقة الصوت (0.5x - 2x)",
+      "stopAndRestart": "إيقاف وإعادة التشغيل",
+      "queueAfterCurrent": "إضافة بعد الحالي",
+      "ignoreNewTrigger": "تجاهل المشغل الجديد"
+    },
+    "triggers": {
+      "title": "إعدادات المشغلات",
+      "doubleCopyWindow": "نافذة كشف النسخ المزدوج (مللي ثانية)",
+      "doubleCopyWindowDescription": "الفترة الزمنية التي يتم فيها تشغيل TTS عند النسخ مرة أخرى (100-5000 مللي ثانية)",
+      "maxTextLength": "الحد الأقصى للنص",
+      "maxTextLengthDescription": "الحد الأقصى للأحرف للتحدث (سيتم قطع النص الأطول مع تحذير)",
+      "paginationTitle": "إعدادات التقسيم",
+      "paginationEnabled": "تفعيل التقسيم",
+      "paginationDescription": "تقسيم النصوص الطويلة إلى أجزاء للتشغيل التدريجي لـ TTS",
+      "fragmentSize": "حجم الجزء (أحرف)",
+      "fragmentSizeDescription": "الحد الأقصى للأحرف لكل جزء من النص (100-10000)"
+    },
+    "hud": {
+      "enabled": "تفعيل الواجهة",
+      "enabledDescription": "إظهار طبقة الموجة أثناء التشغيل",
+      "position": "الموضع",
+      "testHud": "اختبار الواجهة",
+      "topLeft": "أعلى اليسار",
+      "topCenter": "أعلى الوسط",
+      "topRight": "أعلى اليمين",
+      "bottomLeft": "أسفل اليسار",
+      "bottomCenter": "أسفل الوسط",
+      "bottomRight": "أسفل اليمين"
+    },
+    "history": {
+      "title": "إعدادات السجل",
+      "enabled": "تفعيل السجل",
+      "enabledDescription": "الاحتفاظ بسجل لجميع عمليات TTS",
+      "storageMode": "وضع التخزين",
+      "persistent": "دائم",
+      "temporary": "مؤقت",
+      "generationsFolder": "مجلد الإنشاءات",
+      "generationsFolderDescription": "الدليل لحفظ إنشاءات TTS. اتركه فارغاً للافتراضي.",
+      "generationsFolderPlaceholder": "الافتراضي: المستندات/CopySpeak",
+      "autoDeleteTitle": "الحذف التلقائي للإنشاءات",
+      "autoDeleteKeepLatest": "الاحتفاظ بالأحدث",
+      "autoDeleteNever": "أبداً",
+      "autoDeleteAfterDays": "بعد",
+      "days": "أيام",
+      "manualCleanupTitle": "التنظيف اليدوي",
+      "manualCleanupDescription": "تشغيل التنظيف الآن لإزالة الإدخالات القديمة والملفات اليتيمة",
+      "runCleanup": "تشغيل التنظيف الآن",
+      "cleanupDialog": {
+        "title": "تشغيل تنظيف السجل؟",
+        "description": "سيتم تطبيق قواعد الحذف التلقائي الحالية",
+        "orphanedFiles": "إزالة ملفات الصوت اليتيمة غير المشار إليها في السجل",
+        "cannotUndo": "لا يمكن التراجع عن هذا الإجراء.",
+        "cancel": "إلغاء",
+        "confirm": "تشغيل التنظيف"
+      },
+      "cleanupOrphaned": "تنظيف الملفات اليتيمة"
+    },
+    "sanitization": {
+      "title": "إعدادات التنقية",
+      "enabled": "تفعيل التنقية",
+      "enabledDescription": "إزالة التنسيق غير المرغوب من نص الحافظة قبل TTS",
+      "markdown": "إزالة ترميز Markdown",
+      "markdownDescription": "إزالة جميع تنسيقات Markdown (العناوين، الغامق، المائل، كتل الكود، الروابط، القوائم، الاقتباسات)",
+      "ttsNormalization": "توسيع الاختصارات المرئية",
+      "ttsNormalizationDescription": "تحويل الروابط والشرطات والاختصارات والوحدات المترية والرموز إلى نص منطوق"
+    },
+    "about": {
+      "title": "حول الإعدادات",
+      "version": "الإصدار",
+      "versionDescription": "إصدار CopySpeak الحالي",
+      "sourceCode": "كود المصدر",
+      "sourceCodeDescription": "عرض CopySpeak على GitHub",
+      "github": "GitHub",
+      "acknowledgments": "الشكر والتقدير",
+      "openai": {
+        "title": "OpenAI TTS",
+        "description": "تحويل النص إلى كلام عصبي عالي الجودة"
+      },
+      "elevenlabs": {
+        "title": "ElevenLabs",
+        "description": "تركيب صوتي ذكي متقدم"
+      },
+      "kokoro": {
+        "title": "Kokoro TTS",
+        "description": "TTS محلي مفتوح المصدر"
+      },
+      "piper": {
+        "title": "Piper",
+        "description": "TTS عصبي سريع"
+      }
+    }
+  },
+  "engine": {
+    "title": "المحرك",
+    "selectEngine": "اختر محرك TTS",
+    "testing": "جاري الاختبار...",
+    "kitten": {
+      "title": "Kitten TTS",
+      "description": "محلي: TTS خفيف جداً (25-80 ميجابايت) مع 8 أصوات طبيعية. تحسين ONNX للمعالج، لا حاجة لبطاقة رسومية."
+    },
+    "piper": {
+      "title": "Piper TTS",
+      "description": "محلي: TTS عصبي سريع وخفيف مع أكثر من 20 صوتاً إنجليزياً. يعمل بالكامل بدون اتصال - لا حاجة لحساب أو إنترنت."
+    },
+    "kokoro": {
+      "title": "Kokoro TTS",
+      "description": "محلي: TTS عالي الجودة بدون اتصال بأصوات طبيعية وتغطية واسعة اللهجات. يتطلب برنامج kokoro-tts."
+    },
+    "pocket": {
+      "title": "Pocket TTS",
+      "description": "محلي: محرك TTS صغير بدون اتصال مع اختيار صوتي مباشر عبر سطر الأوامر."
+    },
+    "elevenlabs": {
+      "title": "ElevenLabs",
+      "description": "سحابي: تركيب صوتي ذكي متميز مع نطاق عاطفي، أكثر من 1000 صوت، ودعم متعدد اللغات.",
+      "apiKey": "مفتاح API",
+      "apiKeyDescription": "مفتاح API الخاص بك مخزن محلياً ولم يتم مشاركته أبداً.",
+      "check": "تحقق",
+      "testEngine": "اختبار المحرك"
+    },
+    "openai": {
+      "title": "OpenAI",
+      "description": "سحابي: أصوات طبيعية عالية الجودة عبر واجهة OpenAI API. يتطلب مفتح API واتصالاً بالإنترنت.",
+      "apiKey": "مفتاح API",
+      "apiKeyDescription": "مفتاح API الخاص بك مخزن محلياً ولم يتم مشاركته أبداً.",
+      "check": "تحقق",
+      "testEngine": "اختبار المحرك"
+    },
+    "badges": {
+      "active": "نشط",
+      "default": "افتراضي",
+      "offline": "غير متصل",
+      "free": "مجاني",
+      "cloud": "سحابي",
+      "paid": "مدفوع",
+      "freemium": "مجاني مع ميزات مدفوعة"
+    },
+    "info": {
+      "engineInformation": "معلومات المحرك"
+    },
+    "loading": "جاري تحميل إعدادات المحرك...",
+    "saveBar": {
+      "saving": "جاري الحفظ...",
+      "cancel": "إلغاء",
+      "saveChanges": "حفظ التغييرات"
+    },
+    "testVoice": {
+      "title": "اختبار الصوت",
+      "playing": "جاري التشغيل...",
+      "description": "تشغيل عبارة قصيرة بالمحرك الحالي"
+    },
+    "localEngine": {
+      "voice": "الصوت",
+      "kittenInstall": "تشغيل ./install-kittentts.ps1 من جذر المشروع لتثبيت Kitten TTS. يتم تنزيل النماذج تلقائياً عند أول استخدام (~25-80 ميجابايت حسب المتغير).",
+      "piperModels": "يجب وضع ملفات النموذج (.onnx + .onnx.json) في {dataDir}. تنزيل من",
+      "commandPreview": "معاينة الأمر",
+      "tempDirectory": "يحل إلى دليل النظام المؤقت وقت التشغيل.",
+      "testEngine": "اختبار المحرك",
+      "testing": "جاري الاختبار...",
+      "engineWorking": "المحرك يعمل",
+      "engineFailed": "فشل اختبار المحرك"
+    },
+    "openaiEngine": {
+      "model": "النموذج",
+      "modelTooltip": "نموذج TTS من OpenAI المراد استخدامه لتوليد الكلام",
+      "voice": "الصوت",
+      "voiceTooltip": "نمط الصوت لتوليد الكلام"
+    },
+    "elevenlabsEngine": {
+      "manualVoiceId": "معرف الصوت اليدوي",
+      "manualVoiceIdTooltip": "تفعيل لإدخال معرف الصوت يدوياً بدلاً من الاختيار من القائمة",
+      "voiceId": "معرف الصوت",
+      "voiceIdPlaceholder": "مثال: 21m00Tcm4TlvDq8ikWAM",
+      "verify": "تحقق",
+      "verified": "تم التحقق",
+      "cached": "محفوظ",
+      "findVoices": "اعرف معرفات الأصوات في",
+      "voice": "الصوت",
+      "voiceTooltip": "اختر من مكتبة أصوات ElevenLabs",
+      "load": "تحميل",
+      "setupApiKeyFirst": "قم بإعداد مفتاح API أولاً",
+      "clickLoadToFetch": "انقر على \"تحميل\" لجلب الأصوات المتاحة",
+      "setupApiKeyInSettings": "قم بإعداد مفتاح API في الإعدادات أولاً",
+      "model": "النموذج",
+      "modelTooltip": "نموذج الذكاء الاصطناعي لتوليد الكلام",
+      "format": "الصيغة",
+      "formatTooltip": "صيغة إخراج الصوت",
+      "voiceSettings": "إعدادات الصوت",
+      "stability": "الاستقرار",
+      "stabilityTooltip": "القيم الأعلى تجعل الصوت أكثر اتساقاً، والقيم المنخفضة أكثر تبايناً",
+      "similarity": "التشابه",
+      "similarityTooltip": "القيم الأعلى تجعل الصوت أكثر تشابهاً مع المتحدث الأصلي",
+      "style": "الأسلوب",
+      "styleTooltip": "القيم الأعلى تجعل الصوت أكثر تعبيراً (0 للتعطيل)",
+      "speakerBoost": "تعزيز المتحدث",
+      "speakerBoostTooltip": "يحسن وضوح وجودة إخراج الصوت"
+    },
+    "apiSetup": {
+      "title": "إعداد {engine} API",
+      "description": "أدخل مفتاح API لتمكين تحويل {engine} النص إلى كلام.",
+      "apiKey": "مفتاح API",
+      "placeholderOpenai": "sk-...",
+      "placeholderElevenlabs": "xi-...",
+      "checkButton": "تحقق",
+      "testButton": "اختبار",
+      "valid": "مفتاح API صالح",
+      "invalid": "فشل التحقق من مفتاح API",
+      "testPassed": "نجح اختبار المحرك",
+      "testFailed": "فشل اختبار المحرك",
+      "cancel": "إلغاء",
+      "save": "حفظ"
+    },
+    "error": {
+      "loadFailed": "فشل تحميل إعدادات المحرك",
+      "loadDescription": "حدث خطأ أثناء تحميل تكوين المحرك."
+    }
+  },
+  "play": {
+    "title": "تشغيل",
+    "placeholder": "اكتب أو الصق نصاً للتوليد.",
+    "clear": "مسح",
+    "play": "تشغيل",
+    "pause": "إيقاف مؤقت",
+    "resume": "استئناف",
+    "stop": "إيقاف",
+    "replay": "إعادة التشغيل",
+    "abort": "إلغاء",
+    "listening": "جاري الاستماع",
+    "paused": "متوقف مؤقتاً",
+    "processing": "جاري المعالجة...",
+    "history": "السجل الأخير",
+    "noHistory": "لا يوجد سجل بعد",
+    "truncated": "تم قطع النص",
+    "truncatedDescription": "تم قطع النص من {original} إلى {truncated} حرف (الحد الأقصى: {max})",
+    "characters": "{count} حرف",
+    "replayTooltip": "إعادة تشغيل الصوت الأخير",
+    "playLatestTooltip": "تشغيل الأحدث من السجل",
+    "playTooltip": "تشغيل",
+    "pauseTooltip": "إيقاف مؤقت",
+    "resumeTooltip": "استئناف",
+    "stopTooltip": "إيقاف",
+    "abortTooltip": "إلغاء التوليد أو التشغيل"
+  },
+  "history": {
+    "title": "السجل",
+    "loading": "جاري التحميل...",
+    "empty": "لا توجد عناصر في السجل بعد",
+    "fragments": "{count} أجزاء",
+    "playSaved": "تشغيل الصوت المحفوظ",
+    "reSynthesize": "إعادة التوليد والتشغيل",
+    "reSynthesizeTooltip": "إعادة التوليد بالإعدادات الحالية",
+    "delete": "حذف من السجل",
+    "deleteAllFragments": "حذف جميع الأجزاء",
+    "playAll": "تشغيل الكل",
+    "playAllTooltip": "تشغيل جميع الأجزاء بالترتيب",
+    "playThisFragment": "تشغيل هذا الجزء",
+    "noAudioFile": "لا يوجد ملف صوتي",
+    "deleteEntry": "حذف الإدخال؟",
+    "deleteBatch": "حذف جميع الأجزاء؟",
+    "deleteBatchDescription": "سيؤدي هذا إلى حذف جميع الأجزاء في هذه الدفعة وملفات الصوت الخاصة بها نهائياً. لا يمكن التراجع عن هذا الإجراء.",
+    "deleteEntryWithFile": "سيؤدي هذا إلى حذف إدخال السجل وملف الصوت الخاص به نهائياً. لا يمكن التراجع عن هذا الإجراء.",
+    "deleteEntryOnly": "سيؤدي هذا إلى حذف إدخال السجل فقط نهائياً. لا يمكن التراجع عن هذا الإجراء.",
+    "cancel": "إلغاء",
+    "confirmDelete": "حذف",
+    "toast": {
+      "playing": "تشغيل الصوت من السجل",
+      "playingFragments": "تشغيل جميع الأجزاء",
+      "reSynthesizing": "إعادة التوليد والتشغيل",
+      "deleted": "تم الحذف من السجل",
+      "deletedBatch": "تم حذف الدفعة من السجل",
+      "failedToPlay": "فشل التشغيل",
+      "failedToReSpeak": "فشل إعادة التحدث",
+      "failedToDelete": "فشل الحذف"
+    }
+  },
+  "toast": {
+    "success": {
+      "engineSaved": "تم حفظ المحرك بنجاح",
+      "settingsSaved": "تم حفظ الإعدادات",
+      "welcome": "مرحباً بك في CopySpeak!",
+      "configSaved": "تم حفظ الإعدادات! لنبدأ.",
+      "hudTest": "تم تشغيل اختبار الواجهة",
+      "historyCleanup": "اكتمل تنظيف السجل",
+      "installerLaunched": "تم تشغيل مثبت Kitten TTS في نافذة جديدة",
+      "settingsCopied": "تم نسخ الإعدادات إلى الحافظة",
+      "settingsDownloaded": "تم تنزيل الإعدادات",
+      "settingsImported": "تم استيراد الإعدادات بنجاح",
+      "settingsReset": "تم إعادة تعيين الإعدادات - بدء الإعداد من جديد",
+      "synthesisAborted": "تم إلغاء التوليد"
+    },
+    "error": {
+      "loadSettings": "فشل تحميل الإعدادات",
+      "saveSettings": "فشل حفظ الإعدادات",
+      "loadConfig": "فشل تحميل التكوين",
+      "saveConfig": "فشل حفظ الإعدادات",
+      "voiceTest": "فشل اختبار الصوت",
+      "hudTest": "فشل اختبار الواجهة",
+      "cleanup": "فشل التنظيف",
+      "installer": "فشل تشغيل المثبت",
+      "switchEngine": "فشل تبديل المحرك"
+    },
+    "info": {
+      "httpEngineRemoved": "تم إزالة محرك HTTP. تم التبديل إلى المحرك المحلي."
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "مرحباً بك في CopySpeak",
+      "subtitle": "قم بتكوين محرك تحويل النص إلى كلام للبدء، أو تخطى وقم بإعداده لاحقاً."
+    },
+    "engineConfig": "تكوين المحرك",
+    "engineDescription": "قم بإعداد محرك TTS. يمكنك تغيير هذا لاحقاً في علامة تبويب المحرك.",
+    "recommendation": {
+      "title": "نوصي بـ Kitten TTS للبدء",
+      "description": "Kitten TTS هو محرك TTS خفيف جداً (25-80 ميجابايت) يعمل على المعالج دون الحاجة لبطاقة رسومية. انقر على الزر أدناه لتثبيته تلقائياً - لا حاجة لإعداد يدوي."
+    },
+    "install": "تثبيت Kitten TTS",
+    "installing": "جاري التثبيت...",
+    "skip": "تخطي الآن",
+    "complete": "ابدأ الآن",
+    "loading": "جاري تحميل التكوين...",
+    "installed": "تم التثبيت!",
+    "openTerminal": "فتح terminal",
+    "checkingEngine": "جاري فحص المحرك...",
+    "helpText": "يمكنك دائماً تكوين محركك لاحقاً من علامة تبويب المحرك."
+  },
+  "header": {
+    "play": "تشغيل",
+    "engine": "النموذج",
+    "settings": "الإعدادات",
+    "tagline": "اقرأ الحافظة بصوت عالٍ فوراً"
+  },
+  "footer": {
+    "listening": "جاري الاستماع",
+    "paused": "متوقف مؤقتاً",
+    "switchEngine": "تبديل محرك TTS. المحرك الحالي: {engine}",
+    "available": "متاح",
+    "unavailable": "غير متاح - تحقق من التكوين",
+    "error": "خطأ في فحص التوفر",
+    "notChecked": "لم يتم الفحص - انقر للتبديل"
+  },
+  "landing": {
+    "hero": {
+      "title": "CopySpeak",
+      "subtitle": "نسخ مزدوج → كلام فوري",
+      "description": "تطبيق سطح مكتب ويندوز خفيف يقرأ نص الحافظة بصوت عالٍ باستخدام محركات تحويل النص إلى كلام بالذكاء الاصطناعي.",
+      "download": "تنزيل لويندوز",
+      "github": "عرض على GitHub",
+      "version": "إصدار {version}"
+    },
+    "features": {
+      "title": "الميزات",
+      "doubleCopy": {
+        "title": "مشغل النسخ المزدوج",
+        "description": "انسخ النص مرتين خلال 1.5 ثانية لتشغيل الكلام فوراً. لا حاجة لمفاتيح اختصار."
+      },
+      "engines": {
+        "title": "5 محركات TTS",
+        "description": "اختر من Kitten TTS أو Piper أو Kokoro أو OpenAI أو ElevenLabs. خيارات محلية وسحابية."
+      },
+      "hud": {
+        "title": "واجهة العرض",
+        "description": "عرض رأس متمFloat مع تصور الموجة في الوقت الفعلي أثناء التشغيل."
+      },
+      "history": {
+        "title": "السجل",
+        "description": "سجل دائم لتوليد TTS مع التشغيل وإدارة الدفعات وتصدير الصوت."
+      },
+      "sanitization": {
+        "title": "تنقية النص",
+        "description": "إزالة تلقائية لـ Markdown وتوسيع الروابط وتطبيع النص للحصول على كلام أنظف."
+      },
+      "configurable": {
+        "title": "قابل للتخصيص بدرجة عالية",
+        "description": "سرعة التشغيل ومستوى الصوت وطبقة الصوت والمشغلات والمظهر والمزيد. سمات داكنة ومضيئة."
+      }
+    },
+    "screenshots": {
+      "title": "لقطات الشاشة",
+      "subtitle": "شاهد CopySpeak أثناء العمل",
+      "caption": "CopySpeak الإصدار 0.0.1 — الواجهة الرئيسية مع علامة تبويب التشغيل"
+    },
+    "footer": {
+      "github": "GitHub",
+      "license": "ترخيص MIT",
+      "madeWith": "صنع بـ Rust وSvelte والذكاء الاصطناعي."
+    }
+  }
+}

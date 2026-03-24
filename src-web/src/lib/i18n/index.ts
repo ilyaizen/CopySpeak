@@ -8,18 +8,21 @@ function getBrowserLocale(): SupportedLocale {
   if (typeof window === "undefined") return "en";
   const navLang = navigator.language.split("-")[0];
   if (navLang === "es") return "es";
+  if (navLang === "he") return "he";
   return "en";
 }
 
 function getStoredLocale(): SupportedLocale | null {
   if (typeof window === "undefined") return null;
   const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored === "en" || stored === "es" || stored === "ar") return stored;
+  if (stored === "en" || stored === "es" || stored === "ar" || stored === "he") return stored;
   return null;
 }
 
 register("en", () => import("$lib/locales/en.json"));
 register("es", () => import("$lib/locales/es.json"));
+register("ar", () => import("$lib/locales/ar.json"));
+register("he", () => import("$lib/locales/he.json"));
 
 const initialLocale = getStoredLocale() ?? getBrowserLocale();
 
