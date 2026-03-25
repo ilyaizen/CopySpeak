@@ -51,7 +51,7 @@
   {disabled}
   data-slot="switch"
   class={cn(
-    "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center justify-between rounded-none border-2 border-transparent shadow-xs transition-colors",
+    "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center justify-between rounded-sm border-2 border-transparent shadow-xs transition-colors",
     "focus-visible:ring-ring focus-visible:ring-offset-background focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
     "disabled:cursor-not-allowed disabled:opacity-50",
     checked ? "bg-primary" : "bg-input",
@@ -64,13 +64,13 @@
   <!-- Use opacity instead of translate for better RTL support -->
   <span
     class={cn(
-      "bg-background pointer-events-none block h-4 w-4 rounded-none shadow-lg ring-0 transition-opacity",
+      "bg-background pointer-events-none block h-4 w-4 rounded-sm shadow-lg ring-0 transition-opacity",
       checked ? "opacity-0" : "opacity-100"
     )}
   ></span>
   <span
     class={cn(
-      "bg-background pointer-events-none block h-4 w-4 rounded-none shadow-lg ring-0 transition-opacity",
+      "bg-background pointer-events-none block h-4 w-4 rounded-sm shadow-lg ring-0 transition-opacity",
       checked ? "opacity-100" : "opacity-0"
     )}
   ></span>

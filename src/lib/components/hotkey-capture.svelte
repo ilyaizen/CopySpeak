@@ -18,7 +18,7 @@
       Control: "Ctrl",
       Alt: "Alt",
       Shift: "Shift",
-      Meta: "Super",
+      Meta: "Win",
       ArrowUp: "Up",
       ArrowDown: "Down",
       ArrowLeft: "Left",
@@ -51,7 +51,7 @@
     if (e.ctrlKey) modifiers.push("Ctrl");
     if (e.altKey) modifiers.push("Alt");
     if (e.shiftKey) modifiers.push("Shift");
-    if (e.metaKey) modifiers.push("Super");
+    if (e.metaKey) modifiers.push("Win");
 
     let key = formatKey(e.key);
 

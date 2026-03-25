@@ -18,7 +18,7 @@
   }
 
   function handleShortcutClear() {
-    localConfig.hotkey.shortcut = "Super+Shift+A";
+    localConfig.hotkey.shortcut = "Win+Shift+A";
   }
 </script>
 
@@ -54,8 +54,8 @@
           </p>
         {/if}
         <p class="text-muted-foreground text-xs">
-          Press the key combination you want to use. Must include at least one modifier (Ctrl, Alt,
-          Shift, or Win/Super).
+          Press the key combination you want to use. Must include at least one modifier (Ctrl, Alt
+          Shift, or Win).
         </p>
         <p class="text-muted-foreground text-xs">
           <strong>Default:</strong> Win+Shift+A reads clipboard contents aloud.

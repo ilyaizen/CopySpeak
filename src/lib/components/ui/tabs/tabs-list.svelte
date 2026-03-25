@@ -12,7 +12,7 @@
 <div
   data-slot="tabs-list"
   class={cn(
-    "bg-muted text-muted-foreground inline-flex h-9 items-center justify-center rounded-none p-1",
+    "bg-muted text-muted-foreground inline-flex h-9 items-center justify-center rounded-sm p-1",
     className
   )}
   {...restProps}

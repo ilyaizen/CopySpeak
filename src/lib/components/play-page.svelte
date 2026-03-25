@@ -112,7 +112,7 @@
     },
     hotkey: {
       enabled: false,
-      shortcut: "Super+Shift+A"
+      shortcut: "Win+Shift+A"
     }
   };
 
@@ -138,6 +138,13 @@
   $effect(() => {
     if (config) {
       const { volume, playback_speed, pitch } = config.playback;
+      const hotkeyEnabled = config.hotkey.enabled;
+      const hotkeyShortcut = config.hotkey.shortcut;
+
+      console.log("[PlayPage] Config effect triggered - hotkey:", {
+        hotkeyEnabled,
+        hotkeyShortcut
+      });
 
       // Keep playback store in sync so audio plays at correct settings
       playbackStore.syncPlaybackConfig(volume, playback_speed, pitch);
@@ -318,37 +325,41 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  {#if config}
-    <QuickSettings bind:config>
-      <div class="border-border bg-card flex h-full flex-col rounded-lg border p-3 shadow-sm">
-        <Textarea
-          class="min-h-0 flex-1 resize-none"
-          placeholder={$_("play.placeholder")}
-          bind:value={manualText}
+  <!-- Two-column grid: Text area (left) | Quick settings (right) -->
+  <div class="grid grid-cols-3 gap-4">
+    <!-- Quick settings panel -->
+    {#if config}
+      <QuickSettings bind:config />
+    {/if}
+    <!-- Text area with play controls -->
+    <div class="border-border bg-card col-span-2 flex flex-col rounded-lg border p-3 shadow-sm">
+      <Textarea
+        class="min-h-0 flex-1 resize-none"
+        placeholder={$_("play.placeholder")}
+        bind:value={manualText}
+      />
+      <div class="mt-2 flex items-center gap-2">
+        <PlaybackControls
+          {isPlaying}
+          {isPaused}
+          isSynthesizing={playbackStore.isSynthesizing}
+          {playMode}
+          onPlay={handlePlay}
+          onStop={handleStop}
+          onTogglePause={handleTogglePause}
+          onAbort={handleAbort}
         />
-        <div class="mt-2 flex items-center gap-2">
-          <PlaybackControls
-            {isPlaying}
-            {isPaused}
-            isSynthesizing={playbackStore.isSynthesizing}
-            {playMode}
-            onPlay={handlePlay}
-            onStop={handleStop}
-            onTogglePause={handleTogglePause}
-            onAbort={handleAbort}
-          />
-          {#if manualText}
-            <Button variant="ghost" size="sm" onclick={() => (manualText = "")}
-              >{$_("play.clear")}</Button
-            >
-          {/if}
-          <span class="text-muted-foreground ml-auto text-xs">
-            {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
-          </span>
-        </div>
+        {#if manualText}
+          <Button variant="ghost" size="sm" onclick={() => (manualText = "")}
+            >{$_("play.clear")}</Button
+          >
+        {/if}
+        <span class="text-muted-foreground ml-auto text-xs">
+          {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
+        </span>
       </div>
-    </QuickSettings>
-  {/if}
+    </div>
+  </div>
 
   <!-- Recent Generations History -->
   <div class="border-border bg-card rounded-lg border p-4 shadow-sm">
@@ -365,7 +376,7 @@
 {/if}
 
 {#if truncationWarning}
-  <div class="mt-4 rounded-none border border-amber-500/50 bg-amber-500/10 p-3">
+  <div class="mt-4 rounded-sm border border-amber-500/50 bg-amber-500/10 p-3">
     <p class="text-sm text-amber-600 dark:text-amber-400">
       {$_("play.truncatedDescription", {
         values: {

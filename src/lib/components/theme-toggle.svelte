@@ -12,7 +12,7 @@
     onclick={toggleMode}
     variant="outline"
     size="icon"
-    class="hover:bg-primary/10 hover:border-primary/50 rounded-none border-2 px-3 py-2 transition-colors duration-150"
+    class="hover:bg-primary/10 hover:border-primary/50 rounded-sm border-2 px-3 py-2 transition-colors duration-150"
     aria-label="Toggle theme"
   >
     {#if preferredMode === "light"}

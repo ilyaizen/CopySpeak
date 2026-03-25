@@ -12,7 +12,7 @@ impl Default for HotkeyConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            shortcut: "Super+Shift+A".to_string(),
+            shortcut: "Win+Shift+A".to_string(),
         }
     }
 }
@@ -42,8 +42,7 @@ impl HotkeyConfig {
 
         if !has_modifier {
             return Err(
-                "Hotkey must include at least one modifier (Ctrl, Alt, Shift, or Win/ Super)"
-                    .to_string(),
+                "Hotkey must include at least one modifier (Ctrl, Alt, Shift, or Win)".to_string(),
             );
         }
 

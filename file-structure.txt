@@ -1,0 +1,284 @@
+.
+├── .github
+│   └── workflows
+│       └── build-windows.yml
+├── docs
+│   └── CONTRIBUTING.md
+├── docs_internal
+│   ├── README.md
+│   ├── add-comments.md
+│   ├── architecture.md
+│   ├── brutalist_design.md
+│   ├── build_workflow.md
+│   ├── development_guide.md
+│   ├── event-system.md
+│   ├── hud-overlay.md
+│   ├── implemented_features.md
+│   ├── project-overview.md
+│   ├── requirements.md
+│   ├── roadmap.md
+│   ├── security_hardening_plan.md
+│   └── tts_backends.md
+├── plans
+│   ├── about-settings-implementation.md
+│   ├── auto-updater-debugging-plan.md
+│   ├── auto-updater-implementation.md
+│   ├── footer-engine-dropdown.md
+│   ├── history-directory-change.md
+│   ├── hud-synthesis-progress-improvement.md
+│   ├── kittentts-clean-install-fix.md
+│   ├── streaming-pagination-playback.md
+│   ├── swirling-snuggling-valiant.md
+│   ├── tts-refactoring.md
+│   ├── update-checker-production-fix.md
+│   └── waveform-improvements.md
+├── scripts
+│   ├── fix-ports.ps1
+│   ├── generate-i18n-types.js
+│   └── version-bumper.mjs
+├── src
+│   ├── lib
+│   │   ├── assets
+│   │   │   └── app-logo.png
+│   │   ├── components
+│   │   │   ├── engine
+│   │   │   │   ├── elevenlabs-engine.svelte
+│   │   │   │   ├── elevenlabs-engine.test.ts
+│   │   │   │   ├── eng02-minimal.test.ts
+│   │   │   │   ├── engine-page.svelte
+│   │   │   │   ├── engine-page.test.ts
+│   │   │   │   ├── local-engine.svelte
+│   │   │   │   ├── local-engine.test.ts
+│   │   │   │   ├── openai-engine.svelte
+│   │   │   │   └── openai-engine.test.ts
+│   │   │   ├── history
+│   │   │   │   ├── export-dialog.svelte
+│   │   │   │   ├── history-bulk-actions.svelte
+│   │   │   │   ├── history-entry.svelte
+│   │   │   │   └── history-search.svelte
+│   │   │   ├── hud
+│   │   │   │   ├── clipboard-notification.svelte
+│   │   │   │   ├── hud-playback-content.svelte
+│   │   │   │   ├── hud-status.svelte
+│   │   │   │   ├── hud-synthesis-progress.svelte
+│   │   │   │   └── index.ts
+│   │   │   ├── layout
+│   │   │   │   ├── app-footer.svelte
+│   │   │   │   └── app-header.svelte
+│   │   │   ├── settings
+│   │   │   │   ├── about-settings.svelte
+│   │   │   │   ├── appearance-settings.svelte
+│   │   │   │   ├── batch-settings.svelte
+│   │   │   │   ├── general-settings.svelte
+│   │   │   │   ├── history-settings.svelte
+│   │   │   │   ├── hotkey-settings.svelte
+│   │   │   │   ├── hud-settings.svelte
+│   │   │   │   ├── import-export-settings.svelte
+│   │   │   │   ├── pagination-settings.svelte
+│   │   │   │   ├── playback-settings.svelte
+│   │   │   │   ├── sanitization-settings.svelte
+│   │   │   │   └── trigger-settings.svelte
+│   │   │   ├── global-player.svelte
+│   │   │   ├── hotkey-capture.svelte
+│   │   │   ├── hud-overlay.svelte
+│   │   │   ├── play-page.svelte
+│   │   │   ├── playback-controls.svelte
+│   │   │   ├── quick-settings.svelte
+│   │   │   ├── recent-history.svelte
+│   │   │   ├── settings-page.svelte
+│   │   │   ├── theme-toggle.svelte
+│   │   │   ├── update-checker.svelte
+│   │   │   ├── virtual-list.svelte
+│   │   │   └── waveform.svelte
+│   │   ├── composables
+│   │   │   └── use-hud-events.ts
+│   │   ├── i18n
+│   │   │   ├── index.ts
+│   │   │   ├── store.ts
+│   │   │   ├── types.ts
+│   │   │   └── utils.ts
+│   │   ├── locales
+│   │   │   ├── DO_NOT_TOUCH
+│   │   │   │   ├── ar.json
+│   │   │   │   ├── es.json
+│   │   │   │   └── he.json
+│   │   │   └── en.json
+│   │   ├── models
+│   │   │   ├── history.ts
+│   │   │   ├── html-export.ts
+│   │   │   ├── html-templates.example.ts
+│   │   │   ├── html-templates.test.ts
+│   │   │   ├── html-templates.ts
+│   │   │   └── index.ts
+│   │   ├── services
+│   │   │   └── tauri.ts
+│   │   ├── stores
+│   │   │   ├── playback
+│   │   │   │   ├── analyser.ts
+│   │   │   │   ├── audio-utils.ts
+│   │   │   │   └── fragment-queue.ts
+│   │   │   ├── history-store.svelte.ts
+│   │   │   ├── hud-store.svelte.ts
+│   │   │   ├── index.ts
+│   │   │   ├── listening-store.svelte.ts
+│   │   │   ├── playback-store.svelte.ts
+│   │   │   └── synthesis-store.svelte.ts
+│   │   ├── types
+│   │   │   └── hud.ts
+│   │   ├── utils
+│   │   │   ├── external-link.ts
+│   │   │   ├── history-events.ts
+│   │   │   ├── html-export.test.ts
+│   │   │   ├── html-export.ts
+│   │   │   ├── text.ts
+│   │   │   └── timer.ts
+│   │   ├── types.ts
+│   │   ├── utils.ts
+│   │   └── version.ts
+│   ├── mocks
+│   │   └── state.ts
+│   ├── routes
+│   │   ├── engine
+│   │   │   └── +page.svelte
+│   │   ├── hud
+│   │   │   ├── +page.svelte
+│   │   │   └── +page.ts
+│   │   ├── onboarding
+│   │   │   └── +page.svelte
+│   │   ├── settings
+│   │   │   └── +page.svelte
+│   │   ├── +layout.css
+│   │   ├── +layout.svelte
+│   │   ├── +layout.ts
+│   │   ├── +page.svelte
+│   │   └── +page.ts
+│   ├── app.html
+│   └── test-setup.ts
+├── src-tauri
+│   ├── capabilities
+│   │   ├── default.json
+│   │   └── hud.json
+│   ├── src
+│   │   ├── audio
+│   │   │   ├── format.rs
+│   │   │   ├── mod.rs
+│   │   │   ├── player.rs
+│   │   │   ├── stream.rs
+│   │   │   └── wav.rs
+│   │   ├── commands
+│   │   │   ├── tts
+│   │   │   │   ├── credentials.rs
+│   │   │   │   ├── health.rs
+│   │   │   │   ├── helpers.rs
+│   │   │   │   ├── mod.rs
+│   │   │   │   ├── selection.rs
+│   │   │   │   ├── synthesis.rs
+│   │   │   │   └── voices.rs
+│   │   │   ├── config.rs
+│   │   │   ├── history.rs
+│   │   │   ├── install.rs
+│   │   │   ├── logging.rs
+│   │   │   ├── mod.rs
+│   │   │   ├── playback.rs
+│   │   │   ├── queue.rs
+│   │   │   └── update.rs
+│   │   ├── config
+│   │   │   ├── general.rs
+│   │   │   ├── hotkey.rs
+│   │   │   ├── hud.rs
+│   │   │   ├── mod.rs
+│   │   │   ├── output.rs
+│   │   │   ├── playback.rs
+│   │   │   ├── sanitization.rs
+│   │   │   ├── tests.rs
+│   │   │   ├── trigger.rs
+│   │   │   └── tts.rs
+│   │   ├── sanitize
+│   │   │   ├── cleanup.rs
+│   │   │   ├── markdown.rs
+│   │   │   ├── mod.rs
+│   │   │   └── tts_normalize.rs
+│   │   ├── tts
+│   │   │   ├── cli.rs
+│   │   │   ├── elevenlabs.rs
+│   │   │   ├── mod.rs
+│   │   │   └── openai.rs
+│   │   ├── autostart.rs
+│   │   ├── clipboard.rs
+│   │   ├── fragment_queue.rs
+│   │   ├── history.rs
+│   │   ├── history_manager.rs
+│   │   ├── hud.rs
+│   │   ├── logging.rs
+│   │   ├── main.rs
+│   │   ├── pagination.rs
+│   │   └── telemetry.rs
+│   ├── .gitignore
+│   ├── Cargo.lock
+│   ├── Cargo.toml
+│   ├── build.rs
+│   └── tauri.conf.json
+├── src-web
+│   ├── src
+│   │   ├── lib
+│   │   │   ├── components
+│   │   │   │   ├── landing
+│   │   │   │   │   ├── features.svelte
+│   │   │   │   │   ├── footer.svelte
+│   │   │   │   │   ├── hero.svelte
+│   │   │   │   │   ├── language-switcher.svelte
+│   │   │   │   │   └── screenshots.svelte
+│   │   │   │   └── theme-toggle.svelte
+│   │   │   ├── i18n
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── store.ts
+│   │   │   │   ├── types.ts
+│   │   │   │   └── utils.ts
+│   │   │   ├── locales
+│   │   │   │   ├── DO_NOT_TOUCH
+│   │   │   │   │   ├── ar.json
+│   │   │   │   │   ├── es.json
+│   │   │   │   │   └── he.json
+│   │   │   │   └── en.json
+│   │   │   ├── types.ts
+│   │   │   └── utils.ts
+│   │   ├── routes
+│   │   │   ├── +layout.css
+│   │   │   ├── +layout.svelte
+│   │   │   └── +page.svelte
+│   │   └── app.html
+│   ├── static
+│   │   ├── app-logo.png
+│   │   ├── favicon.png
+│   │   └── screen-v0.0.1.png
+│   ├── .gitignore
+│   ├── package.json
+│   ├── svelte.config.js
+│   ├── tsconfig.json
+│   ├── vercel.json
+│   └── vite.config.js
+├── static
+│   ├── app-logo.png
+│   ├── favicon.png
+│   └── screen-v0.0.1.png
+├── .gitignore
+├── .hintrc
+├── .prettierignore
+├── .prettierrc
+├── .vercelignore
+├── AGENTS.md
+├── CHANGELOG.md
+├── CLAUDE.md
+├── GEMINI.md
+├── LICENCE.txt
+├── README.md
+├── components.json
+├── file-structure.txt
+├── install-kittentts.ps1
+├── kittentts-cli.py
+├── package.json
+├── svelte.config.js
+├── tsconfig.json
+├── vite.config.js
+├── vitest-plugin-mock-state.ts
+└── vitest.config.ts

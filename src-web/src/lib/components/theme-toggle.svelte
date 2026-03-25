@@ -10,7 +10,7 @@
     onclick={toggleMode}
     variant="outline"
     size="icon"
-    class="hover:bg-primary/10 hover:border-primary/50 rounded-none border-2 px-3 py-2 transition-colors duration-150"
+    class="hover:bg-primary/10 hover:border-primary/50 rounded-sm border-2 px-3 py-2 transition-colors duration-150"
     aria-label="Toggle theme"
   >
     <SunIcon class="h-5 w-5 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />

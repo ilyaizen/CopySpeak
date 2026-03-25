@@ -24,7 +24,7 @@
   bind:value
   data-slot="select"
   class={cn(
-    "border-input flex h-9 w-full items-center justify-between rounded-none border bg-transparent px-3 py-2 text-sm shadow-xs",
+    "border-input flex h-9 w-full items-center justify-between rounded-sm border bg-transparent px-3 py-2 text-sm shadow-xs",
     "ring-offset-background",
     "focus:ring-ring focus:ring-1 focus:outline-none",
     "disabled:cursor-not-allowed disabled:opacity-50",

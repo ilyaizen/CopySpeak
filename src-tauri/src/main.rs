@@ -174,11 +174,13 @@ fn parse_hotkey(hotkey: &str) -> Result<Shortcut, String> {
 
 /// Register the global hotkey for speak-from-clipboard.
 pub fn register_hotkey(app: &tauri::AppHandle, hotkey_config: &config::HotkeyConfig) -> Result<(), String> {
+    log::info!("[Hotkey] Attempting to register - enabled: {}, shortcut: {}", hotkey_config.enabled, hotkey_config.shortcut);
+    
     app.global_shortcut().unregister_all()
         .map_err(|e| format!("Failed to unregister shortcuts: {}", e))?;
 
     if !hotkey_config.enabled {
-        log::info!("Hotkey disabled, skipping registration");
+        log::info!("[Hotkey] Disabled, skipping registration");
         return Ok(());
     }
 
@@ -186,7 +188,7 @@ pub fn register_hotkey(app: &tauri::AppHandle, hotkey_config: &config::HotkeyCon
     app.global_shortcut().register(shortcut)
         .map_err(|e| format!("Failed to register shortcut '{}': {}", hotkey_config.shortcut, e))?;
 
-    log::info!("Registered global hotkey: {}", hotkey_config.shortcut);
+    log::info!("[Hotkey] Successfully registered: {}", hotkey_config.shortcut);
     Ok(())
 }
 
@@ -478,6 +480,23 @@ fn main() {
             log::info!("CopySpeak started");
             Ok(())
         })
+        .plugin(tauri_plugin_global_shortcut::Builder::new()
+            .with_handler(move |app, _shortcut, event| {
+                if event.state() == ShortcutState::Pressed {
+                    log::info!("Global hotkey triggered: speak from clipboard");
+                    let app_handle = app.clone();
+                    tauri::async_runtime::spawn(async move {
+                        let config: State<std::sync::Mutex<config::AppConfig>> = app_handle.state();
+                        let player: State<std::sync::Mutex<audio::AudioPlayer>> = app_handle.state();
+                        let history: State<std::sync::Mutex<history::HistoryLog>> = app_handle.state();
+                        let telemetry_state: State<std::sync::Mutex<telemetry::TelemetryLog>> = app_handle.state();
+                        if let Err(e) = commands::speak_now(app_handle.clone(), config, player, history, telemetry_state, None).await {
+                            log::error!("Failed to speak from hotkey: {}", e);
+                        }
+                    });
+                }
+            })
+            .build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())

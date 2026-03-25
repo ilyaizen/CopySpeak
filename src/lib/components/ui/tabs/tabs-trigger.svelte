@@ -59,7 +59,7 @@
   data-slot="tabs-trigger"
   data-state={isActive ? "active" : "inactive"}
   class={cn(
-    "ring-offset-background inline-flex items-center justify-center rounded-none px-3 py-1 text-sm font-medium whitespace-nowrap transition-all",
+    "ring-offset-background inline-flex items-center justify-center rounded-sm px-3 py-1 text-sm font-medium whitespace-nowrap transition-all",
     "focus-visible:ring-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
     "disabled:pointer-events-none disabled:opacity-50",
     isActive

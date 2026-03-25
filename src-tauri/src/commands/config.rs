@@ -157,10 +157,15 @@ pub fn set_config(
     if hotkey_changed {
         let new_hotkey = {
             let cfg = config.lock().unwrap();
+            log::info!(
+                "[Config] Hotkey changed - enabled: {}, shortcut: {}",
+                cfg.hotkey.enabled,
+                cfg.hotkey.shortcut
+            );
             cfg.hotkey.clone()
         };
         if let Err(e) = crate::register_hotkey(&app, &new_hotkey) {
-            log::error!("Failed to re-register hotkey after config change: {}", e);
+            log::error!("[Config] Failed to re-register hotkey: {}", e);
         }
     }
 

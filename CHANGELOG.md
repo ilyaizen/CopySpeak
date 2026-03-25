@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Global hotkey speak-from-clipboard** — Hotkey now triggers TTS directly from clipboard content
+  - Added handler in global-shortcut plugin to call `speak_from_clipboard` on hotkey press
+  - Logs hotkey trigger events for debugging
+
 ### Fixed
 
 - **Windows CLI backend PATH resolution** — Expanded PATH for finding Python/uv tools on Windows
@@ -15,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Default hotkey shortcut** — Changed from `Super+Shift+A` to `Win+Shift+A` for Windows clarity
+- **Hotkey error messages** — Updated to use "Win" instead of "Win/Super" for consistency
+- **Hotkey logging** — Added structured logging with `[Hotkey]` prefix for registration attempts and config changes
+- **Border radius system** — Simplified radius variables for sharper brutalist aesthetic
+  - `--radius-sm: 2px`, `--radius-md: var(--radius)`, `--radius-lg: 4px`, `--radius-xl: 6px`
+  - Theme toggle and UI components updated to use `rounded-sm` instead of `rounded-none`
 - **Logging noise reduction** — Suppressed verbose debug logs from tauri_plugin_updater and reqwest
 - **Engine page layout refactor** — Moved badges to header section for cleaner UI
 - **Quick-settings redesign** — 2-column layout with integrated text input
