@@ -45,7 +45,7 @@
     </div>
     <div class="border-border bg-muted/30 space-y-1 rounded-lg border p-2">
       <div class="flex items-center justify-between">
-        <Label for="qs-volume" class="text-xs">Vol</Label>
+        <Label for="qs-volume" class="text-xs">Volume</Label>
         <span class="text-muted-foreground text-xs">{config.playback.volume}%</span>
       </div>
       <Slider id="qs-volume" min={0} max={100} step={1} bind:value={config.playback.volume} />
@@ -53,24 +53,22 @@
     <div class="border-border bg-muted/30 space-y-1 rounded-lg border p-2">
       <div class="flex items-center justify-between">
         <Label for="qs-speed" class="text-xs">Speed</Label>
-        <span class="text-muted-foreground text-xs"
-          >{config.playback.playback_speed.toFixed(1)}x</span
-        >
+        <span class="text-muted-foreground text-xs">{config.playback.playback_speed}x</span>
       </div>
       <Slider
         id="qs-speed"
         min={0.5}
         max={2}
-        step={0.1}
+        step={0.05}
         bind:value={config.playback.playback_speed}
       />
     </div>
     <div class="border-border bg-muted/30 space-y-1 rounded-lg border p-2">
       <div class="flex items-center justify-between">
         <Label for="qs-pitch" class="text-xs">Pitch</Label>
-        <span class="text-muted-foreground text-xs">{config.playback.pitch.toFixed(1)}x</span>
+        <span class="text-muted-foreground text-xs">{config.playback.pitch}x</span>
       </div>
-      <Slider id="qs-pitch" min={0.5} max={2} step={0.1} bind:value={config.playback.pitch} />
+      <Slider id="qs-pitch" min={0.5} max={2} step={0.05} bind:value={config.playback.pitch} />
     </div>
   {/if}
 </div>

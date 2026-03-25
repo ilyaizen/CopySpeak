@@ -42,10 +42,10 @@
     white-space: nowrap;
   }
 
-  .progress-bar :global([data-slot="progress-indicator"]) {
+  /* .progress-bar :global([data-slot="progress-indicator"]) {
     animation: progress-fill var(--duration) cubic-bezier(0, 0.7, 0.1, 1) forwards;
     transform-origin: left;
-  }
+  } */
 
   @keyframes progress-fill {
     from {
