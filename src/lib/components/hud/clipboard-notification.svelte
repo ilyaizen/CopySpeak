@@ -1,29 +1,15 @@
 <script lang="ts">
   import Progress from "$lib/components/ui/progress/progress.svelte";
-  import { onMount } from "svelte";
 
   let { durationMs }: { durationMs: number } = $props();
 
-  let progressValue = $state(0);
-  let startTime = $state(0);
-
-  onMount(() => {
-    startTime = Date.now();
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      progressValue = Math.min(100, (elapsed / durationMs) * 100);
-      if (progressValue >= 100) {
-        clearInterval(interval);
-      }
-    }, 16);
-
-    return () => clearInterval(interval);
-  });
+  // Convert ms to seconds for CSS animation
+  let durationSec = $derived(durationMs / 1000);
 </script>
 
 <div class="clipboard-notification">
   <span class="clipboard-title">Clipboard Copied</span>
-  <Progress value={progressValue} max={100} class="progress-bar" />
+  <Progress value={100} max={100} class="progress-bar" style="--duration: {durationSec}s" />
 </div>
 
 <style>
@@ -54,5 +40,19 @@
     color: oklch(0.96 0.01 264.8);
     letter-spacing: 0.02em;
     white-space: nowrap;
+  }
+
+  .progress-bar :global([data-slot="progress-indicator"]) {
+    animation: progress-fill var(--duration) cubic-bezier(0, 0.7, 0.1, 1) forwards;
+    transform-origin: left;
+  }
+
+  @keyframes progress-fill {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
   }
 </style>

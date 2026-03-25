@@ -17,8 +17,9 @@ pub fn init_logging() -> Result<(), String> {
     }
 
     // Use debug level in debug builds, info level in release builds
+    // Suppress verbose tauri_plugin_updater and reqwest debug logs
     #[cfg(debug_assertions)]
-    let log_level = "debug";
+    let log_level = "debug,tauri_plugin_updater=info,reqwest=info";
     #[cfg(not(debug_assertions))]
     let log_level = "info";
 

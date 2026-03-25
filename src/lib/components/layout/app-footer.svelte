@@ -132,7 +132,7 @@
   const DEFAULT_VOICES: Record<string, string> = {
     kitten: "Rosie",
     piper: "en_US-joe-medium",
-    kokoro: "af_heart",
+    kokoro: "adam",
     pocket: "alba",
     openai: "alloy",
     elevenlabs: "21m00Tcm4TlvDq8ikWAM"

@@ -15,6 +15,148 @@ use std::os::windows::process::CommandExt;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
+#[cfg(windows)]
+fn get_expanded_path() -> String {
+    use std::collections::HashSet;
+    use std::env;
+
+    let current_path = env::var("PATH").unwrap_or_default();
+    let mut paths: Vec<String> = current_path.split(';').map(|s| s.to_string()).collect();
+    let mut seen: HashSet<String> = paths.iter().cloned().collect();
+
+    let home = dirs::home_dir();
+
+    let extra_paths: Vec<String> = vec![
+        home.as_ref()
+            .map(|h| h.join(".local").join("bin").to_string_lossy().into_owned()),
+        home.as_ref().map(|h| {
+            h.join("AppData")
+                .join("Roaming")
+                .join("uv")
+                .join("tools")
+                .join("kokoro-tts")
+                .join("Scripts")
+                .to_string_lossy()
+                .into_owned()
+        }),
+        home.as_ref().map(|h| {
+            h.join("AppData")
+                .join("Roaming")
+                .join("uv")
+                .join("tools")
+                .join("piper")
+                .join("Scripts")
+                .to_string_lossy()
+                .into_owned()
+        }),
+        home.as_ref().map(|h| {
+            h.join("AppData")
+                .join("Local")
+                .join("bin")
+                .to_string_lossy()
+                .into_owned()
+        }),
+        home.as_ref().map(|h| {
+            h.join("AppData")
+                .join("Roaming")
+                .join("Python")
+                .join("Python314")
+                .join("Scripts")
+                .to_string_lossy()
+                .into_owned()
+        }),
+        home.as_ref().map(|h| {
+            h.join("AppData")
+                .join("Roaming")
+                .join("Python")
+                .join("Python313")
+                .join("Scripts")
+                .to_string_lossy()
+                .into_owned()
+        }),
+        home.as_ref().map(|h| {
+            h.join("AppData")
+                .join("Roaming")
+                .join("Python")
+                .join("Python312")
+                .join("Scripts")
+                .to_string_lossy()
+                .into_owned()
+        }),
+        home.as_ref().map(|h| {
+            h.join("AppData")
+                .join("Roaming")
+                .join("Python")
+                .join("Python311")
+                .join("Scripts")
+                .to_string_lossy()
+                .into_owned()
+        }),
+        home.as_ref().map(|h| {
+            h.join("AppData")
+                .join("Roaming")
+                .join("Python")
+                .join("Python310")
+                .join("Scripts")
+                .to_string_lossy()
+                .into_owned()
+        }),
+        home.as_ref().map(|h| {
+            h.join("AppData")
+                .join("Local")
+                .join("Python")
+                .join("pythoncore-3.14-64")
+                .join("Scripts")
+                .to_string_lossy()
+                .into_owned()
+        }),
+        home.as_ref().map(|h| {
+            h.join("AppData")
+                .join("Local")
+                .join("Python")
+                .join("pythoncore-3.13-64")
+                .join("Scripts")
+                .to_string_lossy()
+                .into_owned()
+        }),
+        home.as_ref().map(|h| {
+            h.join("AppData")
+                .join("Local")
+                .join("Python")
+                .join("pythoncore-3.12-64")
+                .join("Scripts")
+                .to_string_lossy()
+                .into_owned()
+        }),
+        home.as_ref().map(|h| {
+            h.join("AppData")
+                .join("Local")
+                .join("Python")
+                .join("pythoncore-3.11-64")
+                .join("Scripts")
+                .to_string_lossy()
+                .into_owned()
+        }),
+        Some(r"C:\Python314\Scripts".to_string()),
+        Some(r"C:\Python313\Scripts".to_string()),
+        Some(r"C:\Python312\Scripts".to_string()),
+        Some(r"C:\Python311\Scripts".to_string()),
+        Some(r"C:\Python310\Scripts".to_string()),
+    ]
+    .into_iter()
+    .filter_map(|p| p)
+    .collect();
+
+    for p in extra_paths {
+        if !seen.contains(&p) {
+            seen.insert(p.clone());
+            paths.push(p);
+        }
+    }
+
+    paths.join(";")
+}
+
 pub struct CliTtsBackend {
     pub command: String,
     pub args_template: Vec<String>,
@@ -215,7 +357,10 @@ impl TtsBackend for CliTtsBackend {
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
         #[cfg(windows)]
-        cmd.creation_flags(CREATE_NO_WINDOW);
+        {
+            cmd.creation_flags(CREATE_NO_WINDOW);
+            cmd.env("PATH", get_expanded_path());
+        }
         let child = cmd
             .spawn()
             .map_err(|e| TtsError::Unavailable(format!("{}: {e}", self.command)))?;
@@ -413,7 +558,10 @@ impl TtsBackend for CliTtsBackend {
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped());
             #[cfg(windows)]
-            cmd.creation_flags(CREATE_NO_WINDOW);
+            {
+                cmd.creation_flags(CREATE_NO_WINDOW);
+                cmd.env("PATH", get_expanded_path());
+            }
 
             let result = cmd.output().map_err(|e| {
                 log::error!(
@@ -479,7 +627,10 @@ impl TtsBackend for CliTtsBackend {
             let mut cmd = Command::new(&self.command);
             cmd.arg("--help");
             #[cfg(windows)]
-            cmd.creation_flags(CREATE_NO_WINDOW);
+            {
+                cmd.creation_flags(CREATE_NO_WINDOW);
+                cmd.env("PATH", get_expanded_path());
+            }
             cmd.output().map_err(|e| {
                 log::error!(
                     "[CLI TTS] Health check failed - command not found: {}",

@@ -25,7 +25,7 @@
       preset: "kokoro-tts",
       command: "kokoro-tts",
       args_template: [],
-      voice: "af_heart",
+      voice: "adam",
       openai: {
         api_key: "",
         model: "tts-1",
@@ -318,42 +318,37 @@
 </script>
 
 <div class="flex flex-col gap-4">
-  <!-- Quick Settings: always at top -->
   {#if config}
-    <QuickSettings bind:config />
-  {/if}
-
-  <!-- Text input for manual generation -->
-  <div class="border-border bg-card rounded-lg border p-4 shadow-sm">
-    <div class="space-y-3">
-      <Textarea
-        class="min-h-24 resize-none"
-        placeholder={$_("play.placeholder")}
-        bind:value={manualText}
-        rows={4}
-      />
-      <div class="flex items-center gap-2">
-        <PlaybackControls
-          {isPlaying}
-          {isPaused}
-          isSynthesizing={playbackStore.isSynthesizing}
-          {playMode}
-          onPlay={handlePlay}
-          onStop={handleStop}
-          onTogglePause={handleTogglePause}
-          onAbort={handleAbort}
+    <QuickSettings bind:config>
+      <div class="border-border bg-card flex h-full flex-col rounded-lg border p-3 shadow-sm">
+        <Textarea
+          class="min-h-0 flex-1 resize-none"
+          placeholder={$_("play.placeholder")}
+          bind:value={manualText}
         />
-        {#if manualText}
-          <Button variant="ghost" size="sm" onclick={() => (manualText = "")}
-            >{$_("play.clear")}</Button
-          >
-        {/if}
-        <span class="text-muted-foreground ml-auto text-xs">
-          {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
-        </span>
+        <div class="mt-2 flex items-center gap-2">
+          <PlaybackControls
+            {isPlaying}
+            {isPaused}
+            isSynthesizing={playbackStore.isSynthesizing}
+            {playMode}
+            onPlay={handlePlay}
+            onStop={handleStop}
+            onTogglePause={handleTogglePause}
+            onAbort={handleAbort}
+          />
+          {#if manualText}
+            <Button variant="ghost" size="sm" onclick={() => (manualText = "")}
+              >{$_("play.clear")}</Button
+            >
+          {/if}
+          <span class="text-muted-foreground ml-auto text-xs">
+            {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
+          </span>
+        </div>
       </div>
-    </div>
-  </div>
+    </QuickSettings>
+  {/if}
 
   <!-- Recent Generations History -->
   <div class="border-border bg-card rounded-lg border p-4 shadow-sm">

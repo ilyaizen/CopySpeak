@@ -88,7 +88,7 @@
   const DEFAULT_VOICES: Record<string, string> = {
     kitten: "Rosie",
     piper: "en_US-joe-medium",
-    kokoro: "af_heart",
+    kokoro: "adam",
     pocket: "alba",
     openai: "alloy",
     elevenlabs: "21m00Tcm4TlvDq8ikWAM"
@@ -209,12 +209,6 @@
   }
 
   const currentMeta = $derived(getMetaWithActive(activeTab, originalConfig));
-
-  // Derived stores for translations that depend on reactive values
-  const engineDescription = $derived(() => {
-    if (!activeTab) return "";
-    return $_(`engine.${activeTab}.description`);
-  });
 
   const apiSetupTitle = $derived(() => {
     if (!cloudDialogEngine) return "";
@@ -466,8 +460,21 @@
             <div class="bg-muted/50 border-border border-b p-4">
               <div class="flex items-center justify-between">
                 <div>
-                  <h2 class="text-lg font-semibold">{$_("engine.elevenlabs.title")}</h2>
-                  <p class="text-muted-foreground text-sm">{$_("engine.elevenlabs.description")}</p>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-lg font-semibold">{$_("engine.elevenlabs.title")}</h2>
+                    {#each currentMeta.badges as badge}
+                      <span
+                        class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[
+                          badge
+                        ]}"
+                      >
+                        {getBadgeLabel(badge)}
+                      </span>
+                    {/each}
+                  </div>
+                  <p class="text-muted-foreground mt-1 text-sm">
+                    {$_("engine.elevenlabs.description")}
+                  </p>
                 </div>
                 <Button variant="outline" size="sm" onclick={() => openCloudDialog("elevenlabs")}>
                   <Key size={14} class="mr-2" />
@@ -476,34 +483,17 @@
               </div>
             </div>
             <div class="p-4">
-              <div class="mb-4 space-y-3">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 class="text-sm font-semibold">{$_("engine.info.engineInformation")}</h3>
-                  </div>
-                  {#if currentMeta.link}
-                    <button
-                      onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
-                      class="text-muted-foreground hover:text-foreground flex shrink-0 cursor-pointer items-center gap-1 text-xs transition-colors"
-                    >
-                      <ExternalLink size={12} />
-                      {currentMeta.linkLabel}
-                    </button>
-                  {/if}
+              {#if currentMeta.link}
+                <div class="mb-4">
+                  <button
+                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    {currentMeta.linkLabel}
+                  </button>
                 </div>
-                <div class="flex flex-wrap gap-1.5">
-                  {#each currentMeta.badges as badge}
-                    <span
-                      class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[badge]}"
-                    >
-                      {getBadgeLabel(badge)}
-                    </span>
-                  {/each}
-                </div>
-                <p class="text-muted-foreground text-xs leading-relaxed">
-                  {engineDescription()}
-                </p>
-              </div>
+              {/if}
               <ElevenLabsEngine bind:localConfig />
             </div>
           </div>
@@ -512,8 +502,21 @@
             <div class="bg-muted/50 border-border border-b p-4">
               <div class="flex items-center justify-between">
                 <div>
-                  <h2 class="text-lg font-semibold">{$_("engine.openai.title")}</h2>
-                  <p class="text-muted-foreground text-sm">{$_("engine.openai.description")}</p>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-lg font-semibold">{$_("engine.openai.title")}</h2>
+                    {#each currentMeta.badges as badge}
+                      <span
+                        class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[
+                          badge
+                        ]}"
+                      >
+                        {getBadgeLabel(badge)}
+                      </span>
+                    {/each}
+                  </div>
+                  <p class="text-muted-foreground mt-1 text-sm">
+                    {$_("engine.openai.description")}
+                  </p>
                 </div>
                 <Button variant="outline" size="sm" onclick={() => openCloudDialog("openai")}>
                   <Key size={14} class="mr-2" />
@@ -522,194 +525,137 @@
               </div>
             </div>
             <div class="p-4">
-              <div class="mb-4 space-y-3">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 class="text-sm font-semibold">{$_("engine.info.engineInformation")}</h3>
-                  </div>
-                  {#if currentMeta.link}
-                    <button
-                      onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
-                      class="text-muted-foreground hover:text-foreground flex shrink-0 cursor-pointer items-center gap-1 text-xs transition-colors"
-                    >
-                      <ExternalLink size={12} />
-                      {currentMeta.linkLabel}
-                    </button>
-                  {/if}
+              {#if currentMeta.link}
+                <div class="mb-4">
+                  <button
+                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    {currentMeta.linkLabel}
+                  </button>
                 </div>
-                <div class="flex flex-wrap gap-1.5">
-                  {#each currentMeta.badges as badge}
-                    <span
-                      class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[badge]}"
-                    >
-                      {getBadgeLabel(badge)}
-                    </span>
-                  {/each}
-                </div>
-                <p class="text-muted-foreground text-xs leading-relaxed">
-                  {engineDescription()}
-                </p>
-              </div>
+              {/if}
               <OpenAiEngine bind:localConfig />
             </div>
           </div>
         {:else if activeTab === "kitten"}
           <div class="border-border overflow-hidden rounded-lg border">
             <div class="bg-muted/50 border-border border-b p-4">
-              <div>
+              <div class="flex flex-wrap items-center gap-2">
                 <h2 class="text-lg font-semibold">{$_("engine.kitten.title")}</h2>
-                <p class="text-muted-foreground text-sm">{$_("engine.kitten.description")}</p>
+                {#each currentMeta.badges as badge}
+                  <span
+                    class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[badge]}"
+                  >
+                    {getBadgeLabel(badge)}
+                  </span>
+                {/each}
               </div>
+              <p class="text-muted-foreground mt-1 text-sm">{$_("engine.kitten.description")}</p>
             </div>
             <div class="p-4">
-              <div class="mb-4 space-y-3">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 class="text-sm font-semibold">{$_("engine.info.engineInformation")}</h3>
-                  </div>
-                  {#if currentMeta.link}
-                    <button
-                      onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
-                      class="text-muted-foreground hover:text-foreground flex shrink-0 cursor-pointer items-center gap-1 text-xs transition-colors"
-                    >
-                      <ExternalLink size={12} />
-                      {currentMeta.linkLabel}
-                    </button>
-                  {/if}
+              {#if currentMeta.link}
+                <div class="mb-4">
+                  <button
+                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    {currentMeta.linkLabel}
+                  </button>
                 </div>
-                <div class="flex flex-wrap gap-1.5">
-                  {#each currentMeta.badges as badge}
-                    <span
-                      class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[badge]}"
-                    >
-                      {getBadgeLabel(badge)}
-                    </span>
-                  {/each}
-                </div>
-                <p class="text-muted-foreground text-xs leading-relaxed">
-                  {engineDescription()}
-                </p>
-              </div>
+              {/if}
               <LocalEngine bind:localConfig />
             </div>
           </div>
         {:else if activeTab === "piper"}
           <div class="border-border overflow-hidden rounded-lg border">
             <div class="bg-muted/50 border-border border-b p-4">
-              <div>
+              <div class="flex flex-wrap items-center gap-2">
                 <h2 class="text-lg font-semibold">{$_("engine.piper.title")}</h2>
-                <p class="text-muted-foreground text-sm">{$_("engine.piper.description")}</p>
+                {#each currentMeta.badges as badge}
+                  <span
+                    class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[badge]}"
+                  >
+                    {getBadgeLabel(badge)}
+                  </span>
+                {/each}
               </div>
+              <p class="text-muted-foreground mt-1 text-sm">{$_("engine.piper.description")}</p>
             </div>
             <div class="p-4">
-              <div class="mb-4 space-y-3">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 class="text-sm font-semibold">{$_("engine.info.engineInformation")}</h3>
-                  </div>
-                  {#if currentMeta.link}
-                    <button
-                      onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
-                      class="text-muted-foreground hover:text-foreground flex shrink-0 cursor-pointer items-center gap-1 text-xs transition-colors"
-                    >
-                      <ExternalLink size={12} />
-                      {currentMeta.linkLabel}
-                    </button>
-                  {/if}
+              {#if currentMeta.link}
+                <div class="mb-4">
+                  <button
+                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    {currentMeta.linkLabel}
+                  </button>
                 </div>
-                <div class="flex flex-wrap gap-1.5">
-                  {#each currentMeta.badges as badge}
-                    <span
-                      class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[badge]}"
-                    >
-                      {getBadgeLabel(badge)}
-                    </span>
-                  {/each}
-                </div>
-                <p class="text-muted-foreground text-xs leading-relaxed">
-                  {engineDescription()}
-                </p>
-              </div>
+              {/if}
               <LocalEngine bind:localConfig />
             </div>
           </div>
         {:else if activeTab === "kokoro"}
           <div class="border-border overflow-hidden rounded-lg border">
             <div class="bg-muted/50 border-border border-b p-4">
-              <div>
+              <div class="flex flex-wrap items-center gap-2">
                 <h2 class="text-lg font-semibold">{$_("engine.kokoro.title")}</h2>
-                <p class="text-muted-foreground text-sm">{$_("engine.kokoro.description")}</p>
+                {#each currentMeta.badges as badge}
+                  <span
+                    class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[badge]}"
+                  >
+                    {getBadgeLabel(badge)}
+                  </span>
+                {/each}
               </div>
+              <p class="text-muted-foreground mt-1 text-sm">{$_("engine.kokoro.description")}</p>
             </div>
             <div class="p-4">
-              <div class="mb-4 space-y-3">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 class="text-sm font-semibold">{$_("engine.info.engineInformation")}</h3>
-                  </div>
-                  {#if currentMeta.link}
-                    <button
-                      onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
-                      class="text-muted-foreground hover:text-foreground flex shrink-0 cursor-pointer items-center gap-1 text-xs transition-colors"
-                    >
-                      <ExternalLink size={12} />
-                      {currentMeta.linkLabel}
-                    </button>
-                  {/if}
+              {#if currentMeta.link}
+                <div class="mb-4">
+                  <button
+                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    {currentMeta.linkLabel}
+                  </button>
                 </div>
-                <div class="flex flex-wrap gap-1.5">
-                  {#each currentMeta.badges as badge}
-                    <span
-                      class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[badge]}"
-                    >
-                      {getBadgeLabel(badge)}
-                    </span>
-                  {/each}
-                </div>
-                <p class="text-muted-foreground text-xs leading-relaxed">
-                  {engineDescription()}
-                </p>
-              </div>
+              {/if}
               <LocalEngine bind:localConfig />
             </div>
           </div>
         {:else if activeTab === "pocket"}
           <div class="border-border overflow-hidden rounded-lg border">
             <div class="bg-muted/50 border-border border-b p-4">
-              <div>
+              <div class="flex flex-wrap items-center gap-2">
                 <h2 class="text-lg font-semibold">{$_("engine.pocket.title")}</h2>
-                <p class="text-muted-foreground text-sm">{$_("engine.pocket.description")}</p>
+                {#each currentMeta.badges as badge}
+                  <span
+                    class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[badge]}"
+                  >
+                    {getBadgeLabel(badge)}
+                  </span>
+                {/each}
               </div>
+              <p class="text-muted-foreground mt-1 text-sm">{$_("engine.pocket.description")}</p>
             </div>
             <div class="p-4">
-              <div class="mb-4 space-y-3">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 class="text-sm font-semibold">{$_("engine.info.engineInformation")}</h3>
-                  </div>
-                  {#if currentMeta.link}
-                    <button
-                      onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
-                      class="text-muted-foreground hover:text-foreground flex shrink-0 cursor-pointer items-center gap-1 text-xs transition-colors"
-                    >
-                      <ExternalLink size={12} />
-                      {currentMeta.linkLabel}
-                    </button>
-                  {/if}
+              {#if currentMeta.link}
+                <div class="mb-4">
+                  <button
+                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    {currentMeta.linkLabel}
+                  </button>
                 </div>
-                <div class="flex flex-wrap gap-1.5">
-                  {#each currentMeta.badges as badge}
-                    <span
-                      class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[badge]}"
-                    >
-                      {getBadgeLabel(badge)}
-                    </span>
-                  {/each}
-                </div>
-                <p class="text-muted-foreground text-xs leading-relaxed">
-                  {engineDescription()}
-                </p>
-              </div>
+              {/if}
               <LocalEngine bind:localConfig />
             </div>
           </div>

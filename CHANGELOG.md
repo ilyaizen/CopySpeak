@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Windows CLI backend PATH resolution** — Expanded PATH for finding Python/uv tools on Windows
+  - Added `get_expanded_path()` to include common Python and uv installation paths
+  - Fixes "executable not found" errors on clean Windows installations
+
+### Changed
+
+- **Logging noise reduction** — Suppressed verbose debug logs from tauri_plugin_updater and reqwest
+- **Engine page layout refactor** — Moved badges to header section for cleaner UI
+- **Quick-settings redesign** — 2-column layout with integrated text input
+- **Progress bar animation** — Converted from JavaScript interval to CSS animation for smoother performance
+- **Default Kokoro voice** — Changed from `af_heart` to `adam`
+- **Internationalization** — Temporarily disabled language switcher, hardcoded to English during development
+
 ## [0.0.5] - 2026-03-24
 
 ### Added
