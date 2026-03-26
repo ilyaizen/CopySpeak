@@ -28,6 +28,24 @@
   },
   "settings": {
     "title": "Settings",
+    "tabs": {
+      "general": "General",
+      "advanced": "Advanced",
+      "about": "About"
+    },
+    "sections": {
+      "startup": "Startup",
+      "appearance": "Appearance",
+      "playback": "Playback",
+      "hud": "HUD Overlay",
+      "history": "History",
+      "triggers": "Triggers",
+      "hotkeys": "Hotkeys",
+      "pagination": "Pagination",
+      "sanitization": "Sanitization",
+      "appInfo": "App Info",
+      "importExport": "Import / Export"
+    },
     "categories": {
       "general": "General",
       "playback": "Playback",
