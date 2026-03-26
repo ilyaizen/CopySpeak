@@ -29,7 +29,10 @@
 4. User sees App info and Import/Export sections within About tab
 5. Active navigation item highlights correctly when scrolling within consolidated tabs
 
-**Plans:** TBD
+**Plans:**
+
+- [ ] 10-01-PLAN.md — Tab navigation structure (Wave 1)
+- [ ] 10-02-PLAN.md — Content reorganization and scroll highlighting (Wave 2)
 
 **UI hint:** yes
 
