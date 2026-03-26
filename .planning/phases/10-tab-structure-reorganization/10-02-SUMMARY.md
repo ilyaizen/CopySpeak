@@ -106,3 +106,9 @@ None - no external service configuration required.
 
 _Phase: 10-tab-structure-reorganization_
 _Completed: 2026-03-26_
+
+## Self-Check: PASSED
+
+- SUMMARY.md exists at `.planning/phases/10-tab-structure-reorganization/10-02-SUMMARY.md`
+- Task commit found: `5957e67` (feat: reorganize settings sections by tab)
+- Metadata commit found: `71bb4eb` (docs: complete settings content reorganization plan)

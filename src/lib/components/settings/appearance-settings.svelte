@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SettingRow from "$lib/components/ui/setting-row/index.js";
+  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
   import { Select } from "$lib/components/ui/select/index.js";
   import { _ } from "svelte-i18n";
   import { getSupportedLocales } from "$lib/i18n/utils";
