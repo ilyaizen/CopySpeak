@@ -1,49 +1,50 @@
 <script lang="ts">
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
-  import { Switch } from "$lib/components/ui/switch/index.js";
+  import SettingRow from "$lib/components/ui/setting-row/index.js";
+  import { Select } from "$lib/components/ui/select/index.js";
   import InfoTooltip from "$lib/components/ui/info-tooltip.svelte";
   import type { AppConfig } from "$lib/types";
   import { _ } from "svelte-i18n";
 
-  let {
-    localConfig = $bindable(),
-    errors
-  }: {
-    localConfig: AppConfig;
-    errors: Record<string, string>;
-  } = $props();
+  let { localConfig = $bindable() }: { localConfig: AppConfig } = $props();
+
+  const PAGINATION_OPTIONS = [
+    { value: "disabled", label: "Disabled" },
+    { value: "200", label: "200 characters" },
+    { value: "400", label: "400 characters" },
+    { value: "600", label: "600 characters" },
+    { value: "800", label: "800 characters" },
+    { value: "1000", label: "1000 characters" },
+    { value: "1200", label: "1200 characters" },
+    { value: "1400", label: "1400 characters" },
+    { value: "1600", label: "1600 characters" },
+    { value: "1800", label: "1800 characters" },
+    { value: "2000", label: "2000 characters" }
+  ];
+
+  let paginationValue = $derived(
+    localConfig.pagination.enabled ? String(localConfig.pagination.fragment_size) : "disabled"
+  );
+
+  function handlePaginationChange(e: Event) {
+    const target = e.target as HTMLSelectElement;
+    const value = target.value;
+    if (value === "disabled") {
+      localConfig.pagination.enabled = false;
+    } else {
+      localConfig.pagination.enabled = true;
+      localConfig.pagination.fragment_size = parseInt(value, 10);
+    }
+  }
 </script>
 
-<div class="border-border bg-card rounded-lg border p-4 shadow-sm">
-  <h3 class="text-card-foreground mb-4 text-lg font-medium">{$_("settings.pagination.title")}</h3>
-  <div class="space-y-4">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-1.5">
-        <Label for="pagination-enabled">{$_("settings.pagination.enabled")}</Label>
-        <InfoTooltip text={$_("settings.pagination.description")} />
-      </div>
-      <Switch id="pagination-enabled" bind:checked={localConfig.pagination.enabled} />
-    </div>
-
-    <div class="space-y-2">
-      <div class="flex items-center gap-1.5">
-        <Label for="fragment-size">{$_("settings.pagination.fragmentSize")}</Label>
-        <InfoTooltip text={$_("settings.pagination.fragmentSizeDescription")} />
-      </div>
-      <Input
-        id="fragment-size"
-        type="number"
-        min={100}
-        max={10000}
-        step={100}
-        bind:value={localConfig.pagination.fragment_size}
-      />
-      {#if errors.fragment_size}
-        <p class="text-destructive text-sm">
-          {errors.fragment_size}
-        </p>
-      {/if}
-    </div>
-  </div>
-</div>
+<SettingRow
+  label={$_("settings.pagination.enabled")}
+  tooltip={$_("settings.pagination.description")}
+>
+  <Select
+    options={PAGINATION_OPTIONS}
+    value={paginationValue}
+    onchange={handlePaginationChange}
+    class="w-40"
+  />
+</SettingRow>

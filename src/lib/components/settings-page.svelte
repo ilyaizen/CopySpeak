@@ -31,21 +31,6 @@
   // Flag to prevent IntersectionObserver from fighting with manual scroll clicks
   let isManualScroll = false;
 
-  const hudPositionOptions = [
-    { value: "top-left", label: $_("settings.hud.topLeft") },
-    { value: "top-center", label: $_("settings.hud.topCenter") },
-    { value: "top-right", label: $_("settings.hud.topRight") },
-    { value: "bottom-left", label: $_("settings.hud.bottomLeft") },
-    { value: "bottom-center", label: $_("settings.hud.bottomCenter") },
-    { value: "bottom-right", label: $_("settings.hud.bottomRight") }
-  ];
-
-  function handlePositionChange(e: Event): void {
-    const target = e.target as HTMLSelectElement;
-    if (!localConfig?.hud) return;
-    localConfig.hud.position = target.value as any;
-  }
-
   const retriggerModeOptions = [
     { value: "stop", label: $_("settings.playback.stopAndRestart") },
     { value: "queue", label: $_("settings.playback.queueAfterCurrent") },
@@ -360,7 +345,7 @@
               </div>
               <div class="p-4">
                 {#if mountedCount > 8}
-                  <HudSettings {localConfig} {hudPositionOptions} {handlePositionChange} />
+                  <HudSettings {localConfig} />
                   <div class="border-border mt-4 border-t pt-4">
                     <Button onclick={handleTestHud} variant="outline" size="sm">
                       {$_("settings.hud.testHud")}
