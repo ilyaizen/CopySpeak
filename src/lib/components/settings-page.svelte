@@ -23,6 +23,7 @@
   let isLoading = $state(true);
   let isSaving = $state(false);
   let activeSection = $state("app");
+  let activeTab = $state<"general" | "advanced" | "about">("general");
 
   // Staggered rendering: mount components one-by-one to avoid WebView2 crash
   let mountedCount = $state(999);
@@ -58,6 +59,31 @@
   //   { value: "flac", label: "FLAC (Lossless, Requires ffmpeg)" },
   // ];
 
+  const tabs = [
+    { id: "general" as const, labelKey: "settings.tabs.general" },
+    { id: "advanced" as const, labelKey: "settings.tabs.advanced" },
+    { id: "about" as const, labelKey: "settings.tabs.about" }
+  ];
+  const tabSections: Record<string, { id: string; categoryKey: string; labelKey: string }[]> = {
+    general: [
+      { id: "app", categoryKey: "general", labelKey: "settings.sections.startup" },
+      { id: "appearance", categoryKey: "appearance", labelKey: "settings.sections.appearance" },
+      { id: "playback", categoryKey: "playback", labelKey: "settings.sections.playback" },
+      { id: "hud", categoryKey: "hud", labelKey: "settings.sections.hud" },
+      { id: "history", categoryKey: "history", labelKey: "settings.sections.history" },
+      { id: "triggers", categoryKey: "triggers", labelKey: "settings.sections.triggers" },
+      { id: "hotkeys", categoryKey: "hotkeys", labelKey: "settings.sections.hotkeys" }
+    ],
+    advanced: [
+      { id: "pagination", categoryKey: "pagination", labelKey: "settings.sections.pagination" },
+      {
+        id: "sanitization",
+        categoryKey: "sanitization",
+        labelKey: "settings.sections.sanitization"
+      }
+    ],
+    about: [{ id: "about", categoryKey: "about", labelKey: "settings.sections.appInfo" }]
+  }; // Legacy categories kept for scroll observer compatibility
   const settingsCategories = [
     { id: "app", categoryKey: "general" },
     { id: "playback", categoryKey: "playback" },
@@ -129,6 +155,16 @@
     setTimeout(() => {
       isManualScroll = false;
     }, 800);
+  }
+
+  function switchTab(tabId: "general" | "advanced" | "about") {
+    activeTab = tabId;
+    const firstSection = tabSections[tabId][0];
+    if (firstSection) {
+      activeSection = firstSection.id;
+    }
+    // Reset scroll position for smooth UX
+    window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   function staggerMount() {
