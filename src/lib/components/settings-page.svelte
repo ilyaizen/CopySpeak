@@ -13,7 +13,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { invoke } from "$lib/services/tauri";
   import { toast } from "svelte-sonner";
-  import { onMount, onDestroy } from "svelte";
+  import { onMount } from "svelte";
   import { _ } from "svelte-i18n";
 
   import type { AppConfig } from "$lib/types";
@@ -22,67 +22,14 @@
   let originalConfig = $state<AppConfig | null>(null);
   let isLoading = $state(true);
   let isSaving = $state(false);
-  let activeSection = $state("app");
-  let activeTab = $state<"general" | "advanced" | "about">("general");
 
   // Staggered rendering: mount components one-by-one to avoid WebView2 crash
   let mountedCount = $state(999);
-
-  // Flag to prevent IntersectionObserver from fighting with manual scroll clicks
-  let isManualScroll = false;
 
   const retriggerModeOptions = [
     { value: "stop", label: $_("settings.playback.stopAndRestart") },
     { value: "queue", label: $_("settings.playback.queueAfterCurrent") },
     { value: "ignore", label: $_("settings.playback.ignoreNewTrigger") }
-  ];
-
-  // const audioFormatOptions = [
-  //   { value: "wav", label: "WAV (Uncompressed)" },
-  //   { value: "mp3", label: "MP3 (Requires ffmpeg)" },
-  //   { value: "ogg", label: "OGG Vorbis (Requires ffmpeg)" },
-  //   { value: "flac", label: "FLAC (Lossless, Requires ffmpeg)" },
-  // ];
-
-  const tabs = [
-    { id: "general" as const, labelKey: "settings.tabs.general" },
-    { id: "advanced" as const, labelKey: "settings.tabs.advanced" },
-    { id: "about" as const, labelKey: "settings.tabs.about" }
-  ];
-  const tabSections: Record<string, { id: string; categoryKey: string; labelKey: string }[]> = {
-    general: [
-      { id: "app", categoryKey: "general", labelKey: "settings.sections.startup" },
-      { id: "playback", categoryKey: "playback", labelKey: "settings.sections.playback" },
-      { id: "hud", categoryKey: "hud", labelKey: "settings.sections.hud" },
-      { id: "history", categoryKey: "history", labelKey: "settings.sections.history" },
-      { id: "triggers", categoryKey: "triggers", labelKey: "settings.sections.triggers" }
-    ],
-    advanced: [
-      { id: "pagination", categoryKey: "pagination", labelKey: "settings.sections.pagination" },
-      {
-        id: "sanitization",
-        categoryKey: "sanitization",
-        labelKey: "settings.sections.sanitization"
-      }
-    ],
-    about: [
-      { id: "about", categoryKey: "about", labelKey: "settings.sections.appInfo" },
-      {
-        id: "importexport",
-        categoryKey: "importExport",
-        labelKey: "settings.sections.importExport"
-      }
-    ]
-  }; // Legacy categories kept for scroll observer compatibility
-  const settingsCategories = [
-    { id: "app", categoryKey: "general" },
-    { id: "playback", categoryKey: "playback" },
-    { id: "triggers", categoryKey: "triggers" },
-    { id: "pagination", categoryKey: "pagination" },
-    { id: "sanitization", categoryKey: "sanitization" },
-    { id: "history", categoryKey: "history" },
-    { id: "hud", categoryKey: "hud" },
-    { id: "about", categoryKey: "about" }
   ];
 
   const hasChanges = $derived(
@@ -135,84 +82,6 @@
     await loadConfig();
   }
 
-  function scrollToSection(sectionId: string) {
-    isManualScroll = true;
-    activeSection = sectionId;
-    const element = document.getElementById(`section-${sectionId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-    setTimeout(() => {
-      isManualScroll = false;
-    }, 800);
-  }
-
-  function switchTab(tabId: "general" | "advanced" | "about") {
-    activeTab = tabId;
-    const firstSection = tabSections[tabId][0];
-    if (firstSection) {
-      activeSection = firstSection.id;
-    }
-    // Reset scroll position for smooth UX
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }
-
-  function staggerMount() {
-    setupScrollObserver();
-  }
-
-  // IntersectionObserver for scroll-aware sidebar tracking
-  let observer: IntersectionObserver | null = null;
-
-  function setupScrollObserver() {
-    if (observer) observer.disconnect();
-
-    observer = new IntersectionObserver(
-      (entries) => {
-        if (isManualScroll) return;
-        let topEntry: IntersectionObserverEntry | null = null;
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            if (!topEntry || entry.boundingClientRect.top < topEntry.boundingClientRect.top) {
-              topEntry = entry;
-            }
-          }
-        }
-        if (topEntry) {
-          const id = topEntry.target.id.replace("section-", "");
-          if (activeSection !== id) activeSection = id;
-        }
-      },
-      { rootMargin: "-120px 0px -60% 0px", threshold: 0 }
-    );
-
-    // Only observe sections for the current tab
-    const sections = tabSections[activeTab] || [];
-    for (const section of sections) {
-      const el = document.getElementById(`section-${section.id}`);
-      if (el) observer.observe(el);
-    }
-  }
-
-  onMount(() => {
-    loadConfig().then(() => {
-      requestAnimationFrame(staggerMount);
-    });
-  });
-
-  // Re-setup observer when tab changes
-  $effect(() => {
-    if (activeTab) {
-      requestAnimationFrame(() => {
-        setupScrollObserver();
-      });
-    }
-  });
-
-  onDestroy(() => {
-    if (observer) observer.disconnect();
-  });
-
   function handleImport(config: AppConfig) {
     localConfig = JSON.parse(JSON.stringify(config));
   }
@@ -234,6 +103,10 @@
       toast.error(`HUD test failed: ${e}`);
     }
   }
+
+  onMount(() => {
+    loadConfig();
+  });
 </script>
 
 <div class="w-full">
@@ -247,264 +120,209 @@
       </div>
     </div>
   {:else if localConfig}
-    <div class="flex flex-row gap-4">
-      <!-- Left Sidebar Menu (sticky) -->
-      <aside class="w-28 shrink-0">
-        <!-- Tab Navigation -->
-        <nav class="sticky top-24">
-          <div class="mb-2 space-y-0.5">
-            {#each tabs as tab}
-              <button
-                class="w-full rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors {activeTab ===
-                tab.id
-                  ? 'bg-primary/10 text-primary border-primary border-l-2'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
-                onclick={() => switchTab(tab.id)}
-              >
-                {$_(tab.labelKey)}
-              </button>
-            {/each}
+    <div class="space-y-6 pb-20">
+      <!-- General Category -->
+      <section class="scroll-mt-32">
+        <div class="border-border overflow-hidden rounded-lg border">
+          <div class="bg-muted/50 border-border border-b p-3">
+            <h2 class="text-base font-semibold">{$_("settings.tabs.general")}</h2>
           </div>
-
-          <!-- Section Navigation (for active tab) -->
-          {#if tabSections[activeTab].length > 0}
-            <div class="border-border mt-2 space-y-0.5 border-t pt-2">
-              {#each tabSections[activeTab] as section}
-                <button
-                  class="w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {activeSection ===
-                  section.id
-                    ? 'bg-primary/10 text-primary border-primary border-l-2'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
-                  onclick={() => scrollToSection(section.id)}
-                >
-                  {$_(section.labelKey)}
-                </button>
-              {/each}
+          <div class="space-y-0">
+            <!-- Startup -->
+            <div class="border-border border-b p-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.startup")}
+              </h3>
+              {#if mountedCount > 0}
+                <GeneralSettings bind:localConfig showDebugMode={true} />
+              {:else}
+                <div class="flex h-24 items-center justify-center">
+                  <div
+                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                  ></div>
+                </div>
+              {/if}
             </div>
-          {/if}
-        </nav>
-      </aside>
 
-      <!-- Main Content -->
-      <main class="flex-1 space-y-8 pb-20">
-        {#if activeTab === "general"}
-          <!-- General Tab Sections -->
-
-          <!-- Startup (General + Appearance) -->
-          <section id="section-app" class="scroll-mt-32">
-            <div class="border-border overflow-hidden rounded-lg border">
-              <div class="bg-muted/50 border-border border-b p-4">
-                <h2 class="text-lg font-semibold">{$_("settings.sections.startup")}</h2>
-                <p class="text-muted-foreground text-sm">{$_("settings.descriptions.general")}</p>
-              </div>
-              <div class="p-4">
-                {#if mountedCount > 0}
-                  <GeneralSettings bind:localConfig showDebugMode={true} />
-                  <AppearanceSettings
-                    appearance={localConfig!.general.appearance}
-                    onchange={(v) => (localConfig!.general.appearance = v)}
-                  />
-                {:else}
-                  <div class="flex h-24 items-center justify-center">
-                    <div
-                      class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                    ></div>
-                  </div>
-                {/if}
-              </div>
+            <!-- Appearance -->
+            <div class="border-border border-b p-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.appearance")}
+              </h3>
+              {#if mountedCount > 1}
+                <AppearanceSettings bind:localConfig />
+              {:else}
+                <div class="flex h-24 items-center justify-center">
+                  <div
+                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                  ></div>
+                </div>
+              {/if}
             </div>
-          </section>
 
-          <!-- Playback -->
-          <section id="section-playback" class="scroll-mt-32">
-            <div class="border-border overflow-hidden rounded-lg border">
-              <div class="bg-muted/50 border-border border-b p-4">
-                <h2 class="text-lg font-semibold">{$_("settings.sections.playback")}</h2>
-                <p class="text-muted-foreground text-sm">{$_("settings.descriptions.playback")}</p>
-              </div>
-              <div class="p-4">
-                {#if mountedCount > 3}
-                  <PlaybackSettings bind:localConfig {retriggerModeOptions} />
-                {:else}
-                  <div class="flex h-24 items-center justify-center">
-                    <div
-                      class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                    ></div>
-                  </div>
-                {/if}
-              </div>
+            <!-- Playback -->
+            <div class="border-border border-b p-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.playback")}
+              </h3>
+              {#if mountedCount > 2}
+                <PlaybackSettings bind:localConfig {retriggerModeOptions} />
+              {:else}
+                <div class="flex h-24 items-center justify-center">
+                  <div
+                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                  ></div>
+                </div>
+              {/if}
             </div>
-          </section>
 
-          <!-- HUD Overlay -->
-          <section id="section-hud" class="scroll-mt-32">
-            <div class="border-border overflow-hidden rounded-lg border">
-              <div class="bg-muted/50 border-border border-b p-4">
-                <h2 class="text-lg font-semibold">{$_("settings.sections.hud")}</h2>
-                <p class="text-muted-foreground text-sm">{$_("settings.descriptions.hud")}</p>
-              </div>
-              <div class="p-4">
-                {#if mountedCount > 8}
-                  <HudSettings {localConfig} />
-                  <div class="border-border mt-4 border-t pt-4">
-                    <Button onclick={handleTestHud} variant="outline" size="sm">
-                      {$_("settings.hud.testHud")}
-                    </Button>
-                  </div>
-                {:else}
-                  <div class="flex h-24 items-center justify-center">
-                    <div
-                      class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                    ></div>
-                  </div>
-                {/if}
-              </div>
+            <!-- HUD Overlay -->
+            <div class="border-border border-b p-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.hud")}
+              </h3>
+              {#if mountedCount > 3}
+                <HudSettings {localConfig} />
+                <div class="border-border mt-4 border-t pt-4">
+                  <Button onclick={handleTestHud} variant="outline" size="sm">
+                    {$_("settings.hud.testHud")}
+                  </Button>
+                </div>
+              {:else}
+                <div class="flex h-24 items-center justify-center">
+                  <div
+                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                  ></div>
+                </div>
+              {/if}
             </div>
-          </section>
 
-          <!-- History -->
-          <section id="section-history" class="scroll-mt-32">
-            <div class="border-border overflow-hidden rounded-lg border">
-              <div class="bg-muted/50 border-border border-b p-4">
-                <h2 class="text-lg font-semibold">{$_("settings.sections.history")}</h2>
-                <p class="text-muted-foreground text-sm">{$_("settings.descriptions.history")}</p>
-              </div>
-              <div class="p-4">
-                {#if mountedCount > 7}
-                  <HistorySettings bind:localConfig onRunCleanup={handleRunCleanup} />
-                {:else}
-                  <div class="flex h-24 items-center justify-center">
-                    <div
-                      class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                    ></div>
-                  </div>
-                {/if}
-              </div>
+            <!-- History -->
+            <div class="border-border border-b p-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.history")}
+              </h3>
+              {#if mountedCount > 4}
+                <HistorySettings bind:localConfig onRunCleanup={handleRunCleanup} />
+              {:else}
+                <div class="flex h-24 items-center justify-center">
+                  <div
+                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                  ></div>
+                </div>
+              {/if}
             </div>
-          </section>
 
-          <!-- Triggers + Hotkeys -->
-          <section id="section-triggers" class="scroll-mt-32">
-            <div class="border-border overflow-hidden rounded-lg border">
-              <div class="bg-muted/50 border-border border-b p-4">
-                <h2 class="text-lg font-semibold">{$_("settings.sections.triggers")}</h2>
-                <p class="text-muted-foreground text-sm">{$_("settings.descriptions.triggers")}</p>
-              </div>
-              <div class="p-4">
-                {#if mountedCount > 4}
-                  <TriggerSettings bind:localConfig {errors} />
-                  <div class="border-border mt-4 border-t pt-4">
-                    <h3 class="mb-2 text-sm font-medium">{$_("settings.sections.hotkeys")}</h3>
-                    <HotkeySettings bind:localConfig {errors} />
-                  </div>
-                {:else}
-                  <div class="flex h-24 items-center justify-center">
-                    <div
-                      class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                    ></div>
-                  </div>
-                {/if}
-              </div>
+            <!-- Triggers + Hotkeys -->
+            <div class="p-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.triggers")}
+              </h3>
+              {#if mountedCount > 5}
+                <TriggerSettings bind:localConfig {errors} />
+                <div class="border-border mt-4 border-t pt-4">
+                  <h4 class="mb-2 text-sm font-medium">{$_("settings.sections.hotkeys")}</h4>
+                  <HotkeySettings bind:localConfig {errors} />
+                </div>
+              {:else}
+                <div class="flex h-24 items-center justify-center">
+                  <div
+                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                  ></div>
+                </div>
+              {/if}
             </div>
-          </section>
-        {:else if activeTab === "advanced"}
-          <!-- Advanced Tab Sections -->
+          </div>
+        </div>
+      </section>
 
-          <!-- Pagination -->
-          <section id="section-pagination" class="scroll-mt-32">
-            <div class="border-border overflow-hidden rounded-lg border">
-              <div class="bg-muted/50 border-border border-b p-4">
-                <h2 class="text-lg font-semibold">{$_("settings.sections.pagination")}</h2>
-                <p class="text-muted-foreground text-sm">
-                  {$_("settings.descriptions.pagination")}
-                </p>
-              </div>
-              <div class="p-4">
-                {#if mountedCount > 5}
-                  <PaginationSettings bind:localConfig {errors} />
-                {:else}
-                  <div class="flex h-24 items-center justify-center">
-                    <div
-                      class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                    ></div>
-                  </div>
-                {/if}
-              </div>
+      <!-- Advanced Category -->
+      <section class="scroll-mt-32">
+        <div class="border-border overflow-hidden rounded-lg border">
+          <div class="bg-muted/50 border-border border-b p-3">
+            <h2 class="text-base font-semibold">{$_("settings.tabs.advanced")}</h2>
+          </div>
+          <div class="space-y-0">
+            <!-- Pagination -->
+            <div class="border-border border-b p-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.pagination")}
+              </h3>
+              {#if mountedCount > 6}
+                <PaginationSettings bind:localConfig {errors} />
+              {:else}
+                <div class="flex h-24 items-center justify-center">
+                  <div
+                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                  ></div>
+                </div>
+              {/if}
             </div>
-          </section>
 
-          <!-- Sanitization -->
-          <section id="section-sanitization" class="scroll-mt-32">
-            <div class="border-border overflow-hidden rounded-lg border">
-              <div class="bg-muted/50 border-border border-b p-4">
-                <h2 class="text-lg font-semibold">{$_("settings.sections.sanitization")}</h2>
-                <p class="text-muted-foreground text-sm">
-                  {$_("settings.descriptions.sanitization")}
-                </p>
-              </div>
-              <div class="p-4">
-                {#if mountedCount > 6}
-                  <SanitizationSettings bind:localConfig />
-                {:else}
-                  <div class="flex h-24 items-center justify-center">
-                    <div
-                      class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                    ></div>
-                  </div>
-                {/if}
-              </div>
+            <!-- Sanitization -->
+            <div class="p-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.sanitization")}
+              </h3>
+              {#if mountedCount > 7}
+                <SanitizationSettings bind:localConfig />
+              {:else}
+                <div class="flex h-24 items-center justify-center">
+                  <div
+                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                  ></div>
+                </div>
+              {/if}
             </div>
-          </section>
-        {:else if activeTab === "about"}
-          <!-- About Tab Sections -->
+          </div>
+        </div>
+      </section>
 
-          <!-- App Info -->
-          <section id="section-about" class="scroll-mt-32">
-            <div class="border-border overflow-hidden rounded-lg border">
-              <div class="bg-muted/50 border-border border-b p-4">
-                <h2 class="text-lg font-semibold">{$_("settings.sections.appInfo")}</h2>
-                <p class="text-muted-foreground text-sm">{$_("settings.descriptions.about")}</p>
-              </div>
-              <div class="p-4">
-                {#if mountedCount > 9}
-                  <AboutSettings />
-                {:else}
-                  <div class="flex h-24 items-center justify-center">
-                    <div
-                      class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                    ></div>
-                  </div>
-                {/if}
-              </div>
+      <!-- About Category -->
+      <section class="scroll-mt-32">
+        <div class="border-border overflow-hidden rounded-lg border">
+          <div class="bg-muted/50 border-border border-b p-3">
+            <h2 class="text-base font-semibold">{$_("settings.tabs.about")}</h2>
+          </div>
+          <div class="space-y-0">
+            <!-- App Info -->
+            <div class="border-border border-b p-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.appInfo")}
+              </h3>
+              {#if mountedCount > 8}
+                <AboutSettings />
+              {:else}
+                <div class="flex h-24 items-center justify-center">
+                  <div
+                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                  ></div>
+                </div>
+              {/if}
             </div>
-          </section>
 
-          <!-- Import / Export -->
-          <section id="section-importexport" class="scroll-mt-32">
-            <div class="border-border overflow-hidden rounded-lg border">
-              <div class="bg-muted/50 border-border border-b p-4">
-                <h2 class="text-lg font-semibold">{$_("settings.sections.importExport")}</h2>
-                <p class="text-muted-foreground text-sm">Export, import, or reset your settings</p>
-              </div>
-              <div class="p-4">
-                {#if mountedCount > 10}
-                  <ImportExportSettings
-                    {localConfig}
-                    onImport={handleImport}
-                    onReset={resetToDefaults}
-                  />
-                {:else}
-                  <div class="flex h-24 items-center justify-center">
-                    <div
-                      class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                    ></div>
-                  </div>
-                {/if}
-              </div>
+            <!-- Import / Export -->
+            <div class="p-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.importExport")}
+              </h3>
+              {#if mountedCount > 9}
+                <ImportExportSettings
+                  {localConfig}
+                  onImport={handleImport}
+                  onReset={resetToDefaults}
+                />
+              {:else}
+                <div class="flex h-24 items-center justify-center">
+                  <div
+                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
+                  ></div>
+                </div>
+              {/if}
             </div>
-          </section>
-        {/if}
-      </main>
+          </div>
+        </div>
+      </section>
     </div>
 
     <!-- Save Bar -->
@@ -512,7 +330,6 @@
       <div
         class="border-border bg-card fixed right-4 bottom-12 z-60 flex items-center gap-3 border px-4 py-2.5 shadow-lg"
       >
-        <!-- <span class="text-muted-foreground text-xs whitespace-nowrap">Unsaved setting changes</span> -->
         <Button
           size="sm"
           variant="ghost"

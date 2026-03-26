@@ -1,14 +1,10 @@
 <script lang="ts">
   import SettingRow from "$lib/components/ui/setting-row/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
   import { Switch } from "$lib/components/ui/switch/index.js";
   import { Badge } from "$lib/components/ui/badge/index.js";
-  import { Select } from "$lib/components/ui/select/index.js";
   import InfoTooltip from "$lib/components/ui/info-tooltip.svelte";
   import { invoke } from "@tauri-apps/api/core";
-  import type { AppConfig, SupportedLocale } from "$lib/types";
-  import { _ } from "svelte-i18n";
-  import { getSupportedLocales } from "$lib/i18n/utils";
+  import type { AppConfig } from "$lib/types";
 
   let {
     localConfig = $bindable(),
@@ -17,12 +13,6 @@
     localConfig: AppConfig;
     showDebugMode: boolean;
   } = $props();
-
-  const localeOptions = getSupportedLocales();
-
-  function handleLocaleChange(newLocale: string) {
-    localConfig.general.locale = newLocale as SupportedLocale;
-  }
 
   let logs = $state<string[]>([]);
   let logsPath = $state("");
@@ -89,19 +79,6 @@
       onchange={(v) => {
         localConfig.general.update_checks_enabled = v;
       }}
-    />
-  </SettingRow>
-
-  <SettingRow
-    label={$_("settings.general.language")}
-    tooltip={$_("settings.general.languageDescription")}
-  >
-    <Select
-      id="language"
-      options={localeOptions}
-      value={localConfig.general.locale}
-      onchange={(e: Event) => handleLocaleChange((e.target as HTMLSelectElement).value)}
-      class="w-32"
     />
   </SettingRow>
 
