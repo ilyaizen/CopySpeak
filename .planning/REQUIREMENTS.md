@@ -9,9 +9,9 @@ Requirements for Settings Consolidation milestone. Each maps to roadmap phases.
 
 ### Tab Structure
 
-- [ ] **SETT-01**: User sees General tab with Startup, Appearance, Playback, HUD (minified select), History, Triggers, Hotkeys sections
-- [ ] **SETT-02**: User sees Advanced tab with Pagination (minified select), Sanitization sections
-- [ ] **SETT-03**: User sees About tab with App info, Import/Export sections
+- [x] **SETT-01**: User sees General tab with Startup, Appearance, Playback, HUD (minified select), History, Triggers, Hotkeys sections
+- [x] **SETT-02**: User sees Advanced tab with Pagination (minified select), Sanitization sections
+- [x] **SETT-03**: User sees About tab with App info, Import/Export sections
 
 ### Layout
 
@@ -22,7 +22,7 @@ Requirements for Settings Consolidation milestone. Each maps to roadmap phases.
 ### Navigation
 
 - [x] **SETT-08**: Settings sidebar shows 3 navigation items instead of 8
-- [ ] **SETT-09**: Active section highlight updates correctly when scrolling within consolidated tabs
+- [x] **SETT-09**: Active section highlight updates correctly when scrolling within consolidated tabs
 
 ## Out of Scope
 
@@ -41,14 +41,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase    | Status  |
 | ----------- | -------- | ------- |
-| SETT-01     | Phase 10 | Pending |
-| SETT-02     | Phase 10 | Pending |
-| SETT-03     | Phase 10 | Pending |
+| SETT-01     | Phase 10 | Complete |
+| SETT-02     | Phase 10 | Complete |
+| SETT-03     | Phase 10 | Complete |
 | SETT-05     | Phase 11 | Pending |
 | SETT-06     | Phase 11 | Pending |
 | SETT-07     | Phase 11 | Pending |
 | SETT-08     | Phase 10 | Complete |
-| SETT-09     | Phase 10 | Pending |
+| SETT-09     | Phase 10 | Complete |
 
 **Coverage:**
 
