@@ -6,6 +6,19 @@ CopySpeak is a lightweight Windows desktop application that wraps AI Text-to-Spe
 
 **Shipped:** v0.1 TTS Engine Overhaul (2026-03-26) — HTTP engine removed, CLI consolidated to 3 presets, ElevenLabs/OpenAI two-stage health checks, OpenAI 9-voice dropdown.
 
+## Current Milestone: v0.2 Settings Consolidation
+
+**Goal:** Reduce settings tabs from 8 to 4, implement 2-column layout, and minify redundant UI controls.
+
+**Target features:**
+
+- Consolidate 8 tabs → 4 tabs (General, Pre-processing, Advanced, About)
+- 2-column layout (Label+InfoTip | Control) across all settings
+- Minify Pagination to single select dropdown (Disabled/200/400.../2000)
+- Minify HUD position to single select dropdown (Disabled/positions)
+- Move Import/Export to About tab
+- Cards within tabs to differentiate sections (Startup, Appearance, Playback, HUD, History in General; Pagination, Sanitization in Pre-processing; Triggers, Hotkeys in Advanced)
+
 ## Core Value
 
 Double-copy → instant speech must be flawless. If the trigger misfires or the voice takes too long, the app is useless.
@@ -45,8 +58,8 @@ Double-copy → instant speech must be flawless. If the trigger misfires or the 
 
 - [ ] Startup engine health check — detect if TTS engine is configured/working on launch; show setup prompt if broken
 - [ ] First-run onboarding with config detection — redirect to setup if no config exists
-- [ ] Non-blocking onboarding — user can skip and use app immediately (known gap: nav tabs visible during onboarding)
-- [ ] CLI preset auto-apply — selecting preset should populate command/args (known gap: ENG-02)
+- [ ] Non-blocking onboarding — user can skip and use app immediately
+- [ ] CLI preset auto-apply — selecting preset should populate command/args
 
 ### Out of Scope
 
@@ -84,6 +97,25 @@ Double-copy → instant speech must be flawless. If the trigger misfires or the 
 | Two-stage health checks                 | Separate credential validation from synthesis             | ✓ Good    |
 | ElevenLabs voice dropdown only          | API fetch is reliable; raw ID is error-prone              | ✓ Good    |
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
 
-_Last updated: 2026-03-26 after v0.1 milestone_
+_Last updated: 2026-03-26 after v0.2 milestone planning started_

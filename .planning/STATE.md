@@ -1,10 +1,10 @@
 ---
 gsd_state_version: 1.0
-milestone: null
-milestone_name: null
+milestone: v0.2
+milestone_name: Settings Consolidation
 status: planning
 stopped_at: null
-last_updated: "2026-03-26T02:30:00.000Z"
+last_updated: "2026-03-26T12:00:00.000Z"
 last_activity: 2026-03-26
 progress:
   total_phases: 0
@@ -21,13 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-26)
 
 **Core value:** Double-copy → instant speech must be flawless
-**Current focus:** Planning next milestone
+**Current focus:** Settings Consolidation — reduce 8 tabs to 4, implement 2-column layout
 
 ## Current Position
 
-**Milestone v0.1 complete.** Ready to plan next milestone.
+**Phase: Not started (defining requirements)**
 
-Progress: [██████████] 100% (v0.1 archived)
+**Milestone v0.2: Settings Consolidation**
+
+Status: Defining requirements
+Last activity: 2026-03-26 — Milestone v0.2 started
 
 ## Performance Metrics
 
@@ -62,4 +65,4 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-26
-Status: Milestone v0.1 complete, ready for next milestone planning
+Status: Planning v0.2 Settings Consolidation milestone
