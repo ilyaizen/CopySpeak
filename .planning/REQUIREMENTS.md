@@ -21,7 +21,7 @@ Requirements for Settings Consolidation milestone. Each maps to roadmap phases.
 
 ### Navigation
 
-- [ ] **SETT-08**: Settings sidebar shows 3 navigation items instead of 8
+- [x] **SETT-08**: Settings sidebar shows 3 navigation items instead of 8
 - [ ] **SETT-09**: Active section highlight updates correctly when scrolling within consolidated tabs
 
 ## Out of Scope
@@ -47,7 +47,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SETT-05     | Phase 11 | Pending |
 | SETT-06     | Phase 11 | Pending |
 | SETT-07     | Phase 11 | Pending |
-| SETT-08     | Phase 10 | Pending |
+| SETT-08     | Phase 10 | Complete |
 | SETT-09     | Phase 10 | Pending |
 
 **Coverage:**

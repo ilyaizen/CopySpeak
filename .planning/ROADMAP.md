@@ -31,7 +31,7 @@
 
 **Plans:**
 
-- [ ] 10-01-PLAN.md — Tab navigation structure (Wave 1)
+1/2 plans executed
 - [ ] 10-02-PLAN.md — Content reorganization and scroll highlighting (Wave 2)
 
 **UI hint:** yes
@@ -63,7 +63,7 @@
 
 | Phase                    | Plans Complete | Status      | Completed |
 | ------------------------ | -------------- | ----------- | --------- |
-| 10. Tab Structure        | 0/2            | Not started | -         |
+| 10. Tab Structure        | 1/2 | In Progress|  |
 | 11. Layout Consolidation | 0/2            | Not started | -         |
 
 ---
