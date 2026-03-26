@@ -29,7 +29,7 @@ Plan: Complete
 **Milestone v0.2: Settings Consolidation**
 
 Status: Phase complete
-Last activity: 2026-03-26
+Last activity: 2026-03-26 - Completed quick task 260326-eqy: consolidate settings menus - remove double left menu, use main cards with subsections
 
 ## Performance Metrics
 
@@ -71,6 +71,12 @@ None.
 ### Blockers/Concerns
 
 None.
+
+### Quick Tasks Completed
+
+| #          | Description                                                                           | Date       | Commit  | Directory                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------- | ---------- | ------- | ------------------------------------------------------------------------------------------------------------------- |
+| 260326-eqy | Consolidate settings menus - remove double left menu, use main cards with subsections | 2026-03-26 | 288953a | [260326-eqy-consolidate-settings-menus-remove-double](./quick/260326-eqy-consolidate-settings-menus-remove-double/) |
 
 ## Session Continuity
 
