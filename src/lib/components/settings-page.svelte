@@ -249,18 +249,38 @@
     <div class="flex flex-row gap-4">
       <!-- Left Sidebar Menu (sticky) -->
       <aside class="w-28 shrink-0">
-        <nav class="sticky top-24 space-y-0.5">
-          {#each settingsCategories as category}
-            <button
-              class="w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {activeSection ===
-              category.id
-                ? 'bg-primary/10 text-primary border-primary border-l-2 font-medium'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
-              onclick={() => scrollToSection(category.id)}
-            >
-              {$_(`settings.categories.${category.categoryKey}`)}
-            </button>
-          {/each}
+        <!-- Tab Navigation -->
+        <nav class="sticky top-24">
+          <div class="mb-2 space-y-0.5">
+            {#each tabs as tab}
+              <button
+                class="w-full rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors {activeTab ===
+                tab.id
+                  ? 'bg-primary/10 text-primary border-primary border-l-2'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
+                onclick={() => switchTab(tab.id)}
+              >
+                {$_(tab.labelKey)}
+              </button>
+            {/each}
+          </div>
+
+          <!-- Section Navigation (for active tab) -->
+          {#if tabSections[activeTab].length > 0}
+            <div class="border-border mt-2 space-y-0.5 border-t pt-2">
+              {#each tabSections[activeTab] as section}
+                <button
+                  class="w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {activeSection ===
+                  section.id
+                    ? 'bg-primary/10 text-primary border-primary border-l-2'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
+                  onclick={() => scrollToSection(section.id)}
+                >
+                  {$_(section.labelKey)}
+                </button>
+              {/each}
+            </div>
+          {/if}
         </nav>
       </aside>
 
