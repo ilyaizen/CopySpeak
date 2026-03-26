@@ -32,6 +32,7 @@
 **Plans:**
 
 2/2 plans complete
+
 - [x] 10-02-PLAN.md — Content reorganization and scroll highlighting (Wave 2)
 
 **UI hint:** yes
@@ -53,7 +54,13 @@
 3. User selects HUD position from a single dropdown with Disabled option followed by position options
 4. Layout remains consistent across all tabs after consolidation
 
-**Plans:** TBD
+**Plans:**
+
+3 plans in 3 waves
+
+- [ ] 11-01-PLAN.md — SettingRow component (Wave 1)
+- [ ] 11-02-PLAN.md — Pagination and HUD minified dropdowns (Wave 2)
+- [ ] 11-03-PLAN.md — Apply SettingRow to all settings (Wave 3)
 
 **UI hint:** yes
 
@@ -61,10 +68,10 @@
 
 ## Progress
 
-| Phase                    | Plans Complete | Status      | Completed |
-| ------------------------ | -------------- | ----------- | --------- |
-| 10. Tab Structure        | 2/2 | Complete    | 2026-03-26 |
-| 11. Layout Consolidation | 0/2            | Not started | -         |
+| Phase                    | Plans Complete | Status   | Completed  |
+| ------------------------ | -------------- | -------- | ---------- |
+| 10. Tab Structure        | 2/2            | Complete | 2026-03-26 |
+| 11. Layout Consolidation | 0/3            | Ready    | -          |
 
 ---
 
