@@ -12,12 +12,12 @@ CopySpeak is a lightweight Windows desktop application that wraps AI Text-to-Spe
 
 **Target features:**
 
-- Consolidate 8 tabs → 4 tabs (General, Pre-processing, Advanced, About)
+- Consolidate 8 tabs → 3 tabs (General, Advanced, About)
 - 2-column layout (Label+InfoTip | Control) across all settings
 - Minify Pagination to single select dropdown (Disabled/200/400.../2000)
 - Minify HUD position to single select dropdown (Disabled/positions)
 - Move Import/Export to About tab
-- Cards within tabs to differentiate sections (Startup, Appearance, Playback, HUD, History in General; Pagination, Sanitization in Pre-processing; Triggers, Hotkeys in Advanced)
+- Cards within tabs to differentiate sections (Startup, Appearance, Playback, HUD, History, Triggers, Hotkeys in General; Pagination, Sanitization in Advanced)
 
 ## Core Value
 
