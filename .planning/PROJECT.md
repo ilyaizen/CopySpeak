@@ -10,14 +10,16 @@ CopySpeak is a lightweight Windows desktop application that wraps AI Text-to-Spe
 
 **Goal:** Reduce settings tabs from 8 to 4, implement 2-column layout, and minify redundant UI controls.
 
+**Progress:** Phase 10 complete — 3-tab structure implemented. Phase 11 pending (2-column layout).
+
 **Target features:**
 
-- Consolidate 8 tabs → 3 tabs (General, Advanced, About)
-- 2-column layout (Label+InfoTip | Control) across all settings
-- Minify Pagination to single select dropdown (Disabled/200/400.../2000)
-- Minify HUD position to single select dropdown (Disabled/positions)
-- Move Import/Export to About tab
-- Cards within tabs to differentiate sections (Startup, Appearance, Playback, HUD, History, Triggers, Hotkeys in General; Pagination, Sanitization in Advanced)
+- ✓ Consolidate 8 tabs → 3 tabs (General, Advanced, About) — Phase 10
+- 2-column layout (Label+InfoTip | Control) across all settings — Phase 11
+- Minify Pagination to single select dropdown (Disabled/200/400.../2000) — Phase 11
+- Minify HUD position to single select dropdown (Disabled/positions) — Phase 11
+- ✓ Move Import/Export to About tab — Phase 10
+- ✓ Cards within tabs to differentiate sections — Phase 10
 
 ## Core Value
 
@@ -53,6 +55,9 @@ Double-copy → instant speech must be flawless. If the trigger misfires or the 
 - ✓ Two-stage health checks for API engines — v0.1
 - ✓ ElevenLabs voice dropdown from API — v0.1
 - ✓ OpenAI 9-voice dropdown — v0.1
+- ✓ Settings: 3-tab navigation (General, Advanced, About) — Phase 10
+- ✓ Settings: Content organized by tab (Startup/Playback/HUD/History/Triggers in General, Pagination/Sanitization in Advanced, AppInfo/ImportExport in About) — Phase 10
+- ✓ Settings: Scroll-aware navigation highlighting within tabs — Phase 10
 
 ### Active
 
@@ -118,4 +123,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-_Last updated: 2026-03-26 after v0.2 milestone planning started_
+_Last updated: 2026-03-26 after Phase 10 complete_
