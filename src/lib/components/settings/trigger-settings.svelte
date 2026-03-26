@@ -1,6 +1,6 @@
 <script lang="ts">
+  import SettingRow from "$lib/components/ui/setting-row/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
   import { Switch } from "$lib/components/ui/switch/index.js";
   import InfoTooltip from "$lib/components/ui/info-tooltip.svelte";
   import type { AppConfig } from "$lib/types";
@@ -15,21 +15,19 @@
   } = $props();
 </script>
 
-<div class="border-border bg-card rounded-lg border p-4 shadow-sm">
-  <h3 class="text-card-foreground mb-4 text-lg font-medium">{$_("settings.triggers.title")}</h3>
-  <div class="space-y-4">
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-1.5">
-        <Label for="listen-double-copy">{$_("settings.triggers.listen")}</Label>
-        <InfoTooltip text={$_("settings.triggers.listenDescription")} />
-      </div>
-      <Switch id="listen-double-copy" bind:checked={localConfig.trigger.listen_enabled} />
-    </div>
-    <div class="space-y-2">
-      <div class="flex items-center gap-1.5">
-        <Label for="double-copy-window">{$_("settings.triggers.doubleCopyWindow")}</Label>
-        <InfoTooltip text={$_("settings.triggers.doubleCopyWindowDescription")} />
-      </div>
+<div class="space-y-4">
+  <SettingRow
+    label={$_("settings.triggers.listen")}
+    tooltip={$_("settings.triggers.listenDescription")}
+  >
+    <Switch id="listen-double-copy" bind:checked={localConfig.trigger.listen_enabled} />
+  </SettingRow>
+
+  <SettingRow
+    label={$_("settings.triggers.doubleCopyWindow")}
+    tooltip={$_("settings.triggers.doubleCopyWindowDescription")}
+  >
+    <div class="space-y-1">
       <Input
         id="double-copy-window"
         type="number"
@@ -37,19 +35,19 @@
         max={5000}
         step={50}
         bind:value={localConfig.trigger.double_copy_window_ms}
+        class="w-32"
       />
       {#if errors.double_copy_window_ms}
-        <p class="text-destructive text-sm">
-          {errors.double_copy_window_ms}
-        </p>
+        <p class="text-destructive text-xs">{errors.double_copy_window_ms}</p>
       {/if}
     </div>
+  </SettingRow>
 
-    <div class="space-y-2">
-      <div class="flex items-center gap-1.5">
-        <Label for="max-text-length">{$_("settings.triggers.maxTextLength")}</Label>
-        <InfoTooltip text={$_("settings.triggers.maxTextLengthDescription")} />
-      </div>
+  <SettingRow
+    label={$_("settings.triggers.maxTextLength")}
+    tooltip={$_("settings.triggers.maxTextLengthDescription")}
+  >
+    <div class="space-y-1">
       <Input
         id="max-text-length"
         type="number"
@@ -57,12 +55,11 @@
         max={1000000}
         step={1000}
         bind:value={localConfig.trigger.max_text_length}
+        class="w-32"
       />
       {#if errors.max_text_length}
-        <p class="text-destructive text-sm">
-          {errors.max_text_length}
-        </p>
+        <p class="text-destructive text-xs">{errors.max_text_length}</p>
       {/if}
     </div>
-  </div>
+  </SettingRow>
 </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SettingRow from "$lib/components/ui/setting-row/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import { Switch } from "$lib/components/ui/switch/index.js";
   import { Badge } from "$lib/components/ui/badge/index.js";
@@ -56,35 +57,22 @@
 </script>
 
 <div class="space-y-4">
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-1.5">
-      <Label for="start-windows">Start with Windows</Label>
-      <InfoTooltip text="Launch CopySpeak when Windows starts" />
-    </div>
+  <SettingRow label="Start with Windows" tooltip="Launch CopySpeak when Windows starts">
     <Switch id="start-windows" bind:checked={localConfig.general.start_with_windows} />
-  </div>
+  </SettingRow>
 
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-1.5">
-      <Label for="start-minimized">Start Minimized</Label>
-      <InfoTooltip text="Start the application minimized to system tray" />
-    </div>
+  <SettingRow label="Start Minimized" tooltip="Start the application minimized to system tray">
     <Switch id="start-minimized" bind:checked={localConfig.general.start_minimized} />
-  </div>
+  </SettingRow>
 
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-1.5">
-      <Label for="show-notifications">Show Notifications</Label>
-      <InfoTooltip text="Show system notifications for TTS events" />
-    </div>
+  <SettingRow label="Show Notifications" tooltip="Show system notifications for TTS events">
     <Switch id="show-notifications" bind:checked={localConfig.general.show_notifications} />
-  </div>
+  </SettingRow>
 
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-1.5">
-      <Label for="minimize-to-tray">Minimize to Tray on Close</Label>
-      <InfoTooltip text="Minimize to system tray instead of exiting when closing the window" />
-    </div>
+  <SettingRow
+    label="Minimize to Tray on Close"
+    tooltip="Minimize to system tray instead of exiting when closing the window"
+  >
     <Switch
       id="minimize-to-tray"
       checked={localConfig.general.close_behavior === "minimize-to-tray"}
@@ -92,13 +80,9 @@
         localConfig.general.close_behavior = v ? "minimize-to-tray" : "exit";
       }}
     />
-  </div>
+  </SettingRow>
 
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-1.5">
-      <Label for="update-checks">Check for Updates</Label>
-      <InfoTooltip text="Automatically check for new versions on startup" />
-    </div>
+  <SettingRow label="Check for Updates" tooltip="Automatically check for new versions on startup">
     <Switch
       id="update-checks"
       checked={localConfig.general.update_checks_enabled ?? true}
@@ -106,13 +90,12 @@
         localConfig.general.update_checks_enabled = v;
       }}
     />
-  </div>
+  </SettingRow>
 
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-1.5">
-      <Label for="language">{$_("settings.general.language")}</Label>
-      <InfoTooltip text={$_("settings.general.languageDescription")} />
-    </div>
+  <SettingRow
+    label={$_("settings.general.language")}
+    tooltip={$_("settings.general.languageDescription")}
+  >
     <Select
       id="language"
       options={localeOptions}
@@ -120,17 +103,13 @@
       onchange={(e: Event) => handleLocaleChange((e.target as HTMLSelectElement).value)}
       class="w-32"
     />
-  </div>
+  </SettingRow>
 
   {#if showDebugMode}
     <div class="border-border mt-4 border-t pt-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-1.5">
-          <Label for="debug-mode" class="text-amber-600 dark:text-amber-400">Debug Mode</Label>
-          <InfoTooltip text="Enable verbose logging and additional status info" />
-        </div>
+      <SettingRow label="Debug Mode" tooltip="Enable verbose logging and additional status info">
         <Switch id="debug-mode" bind:checked={localConfig.general.debug_mode} />
-      </div>
+      </SettingRow>
 
       {#if localConfig.general.debug_mode}
         <div class="mt-4 space-y-2">
