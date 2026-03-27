@@ -34,6 +34,7 @@
       "about": "About"
     },
     "sections": {
+      "general": "General",
       "startup": "Startup",
       "appearance": "Appearance",
       "playback": "Playback",
@@ -100,7 +101,7 @@
     },
     "triggers": {
       "title": "Trigger Settings",
-      "listen": "Listen",
+      "listen": "Listen to Double-copy",
       "listenDescription": "Monitor clipboard for double-copy events",
       "doubleCopyWindow": "Double-Copy Detection Window (ms)",
       "doubleCopyWindowDescription": "Time window in which a second copy triggers TTS (100-5000ms)",
@@ -117,6 +118,7 @@
     "hud": {
       "enabled": "Enable HUD",
       "enabledDescription": "Show waveform overlay during playback",
+      "overlay": "HUD Overlay",
       "position": "Position",
       "testHud": "Test HUD Display",
       "topLeft": "Top Left",

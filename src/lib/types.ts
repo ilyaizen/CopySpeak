@@ -1,27 +1,27 @@
 export type ValidationError =
   | {
-      type: "OpacityOutOfRange";
-      value: number;
-      min: number;
-      max: number;
-    }
+    type: "OpacityOutOfRange";
+    value: number;
+    min: number;
+    max: number;
+  }
   | {
-      type: "CommandEmpty";
-    }
+    type: "CommandEmpty";
+  }
   | {
-      type: "ArgsTemplateMissingPlaceholder";
-      placeholder: string;
-    }
+    type: "ArgsTemplateMissingPlaceholder";
+    placeholder: string;
+  }
   | {
-      type: "DoubleCopyWindowTooSmall";
-      value: number;
-      min: number;
-    }
+    type: "DoubleCopyWindowTooSmall";
+    value: number;
+    min: number;
+  }
   | {
-      type: "MaxTextLengthTooSmall";
-      value: number;
-      min: number;
-    };
+    type: "MaxTextLengthTooSmall";
+    value: number;
+    min: number;
+  };
 
 export type ValidationResult = ValidationError[];
 
@@ -123,7 +123,6 @@ export type AppearanceMode = "system" | "light" | "dark";
 export interface GeneralConfig {
   start_with_windows: boolean;
   start_minimized: boolean;
-  show_notifications: boolean;
   debug_mode: boolean;
   close_behavior: CloseBehavior;
   appearance: AppearanceMode;

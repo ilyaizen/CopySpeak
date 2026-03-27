@@ -14,14 +14,14 @@
   } = $props();
 </script>
 
-<div class="grid grid-cols-[auto_1fr] items-center gap-x-4">
+<div class="flex min-h-9 items-center justify-between gap-x-4 py-1">
   <div class="flex items-center gap-1.5">
     <Label>{label}</Label>
     {#if tooltip}
       <InfoTooltip text={tooltip} />
     {/if}
   </div>
-  <div class="flex justify-end">
+  <div class="flex shrink-0 items-center justify-end">
     {@render children()}
   </div>
 </div>

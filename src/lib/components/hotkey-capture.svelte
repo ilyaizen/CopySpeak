@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { Label } from "$lib/components/ui/label/index.js";
+  import Kbd from "$lib/components/ui/kbd/kbd.svelte";
+  import KbdGroup from "$lib/components/ui/kbd/kbd-group.svelte";
+  import { X } from "@lucide/svelte";
 
   interface Props {
     value: string;
@@ -19,10 +21,10 @@
       Alt: "Alt",
       Shift: "Shift",
       Meta: "Win",
-      ArrowUp: "Up",
-      ArrowDown: "Down",
-      ArrowLeft: "Left",
-      ArrowRight: "Right",
+      ArrowUp: "↑",
+      ArrowDown: "↓",
+      ArrowLeft: "←",
+      ArrowRight: "→",
       " ": "Space",
       Escape: "Esc",
       Delete: "Del"
@@ -81,70 +83,46 @@
   function handleBlur() {
     isCapturing = false;
   }
-
-  function handleFocus() {
-    if (!disabled) {
-      isCapturing = true;
-    }
-  }
 </script>
 
-<div class="flex items-center justify-between gap-4">
-  <div class="min-w-0 flex-1">
-    <Label for="hotkey-input" class="font-medium">Global Shortcut</Label>
-    <p class="text-muted-foreground mt-0.5 text-xs">Press a key combination to set the shortcut</p>
-  </div>
+<div class="flex items-center gap-1">
+  <button
+    type="button"
+    id="hotkey-input"
+    bind:this={inputRef}
+    class="inline-flex min-w-20 items-center gap-1 rounded border px-2 py-1 text-sm transition-colors
+      {isCapturing
+      ? 'border-primary bg-primary/10'
+      : 'border-input bg-background hover:bg-accent/50'}
+      {disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
+      focus:ring-ring focus:ring-2 focus:ring-offset-1 focus:outline-none"
+    onclick={startCapture}
+    onkeydown={handleKeyDown}
+    onblur={handleBlur}
+    {disabled}
+    aria-label="Set global hotkey"
+  >
+    {#if isCapturing}
+      <span class="text-primary animate-pulse">...</span>
+    {:else if value}
+      <KbdGroup>
+        {#each value.split("+") as key}
+          <Kbd>{key}</Kbd>
+        {/each}
+      </KbdGroup>
+    {:else}
+      <span class="text-muted-foreground">Set</span>
+    {/if}
+  </button>
 
-  <div class="flex items-center gap-2">
+  {#if value && !disabled}
     <button
       type="button"
-      id="hotkey-input"
-      bind:this={inputRef}
-      class="min-w-32 rounded-md border px-3 py-1.5 text-sm transition-colors
-				{isCapturing
-        ? 'border-primary bg-primary/10 text-primary'
-        : 'border-input bg-background hover:bg-accent hover:text-accent-foreground'}
-				{disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}
-				focus:ring-ring focus:ring-2 focus:ring-offset-2 focus:outline-none"
-      onclick={startCapture}
-      onkeydown={handleKeyDown}
-      onblur={handleBlur}
-      onfocus={handleFocus}
-      {disabled}
-      aria-label="Set global hotkey"
+      class="hover:bg-muted/50 rounded p-1 transition-colors"
+      onclick={onclear}
+      aria-label="Clear hotkey"
     >
-      {#if isCapturing}
-        <span class="animate-pulse">Press keys...</span>
-      {:else if value}
-        <span class="font-mono">{value}</span>
-      {:else}
-        <span class="text-muted-foreground">Click to set</span>
-      {/if}
+      <X class="size-3.5 text-muted-foreground" />
     </button>
-
-    {#if value && !disabled}
-      <button
-        type="button"
-        class="hover:bg-muted text-muted-foreground hover:text-foreground rounded p-1"
-        onclick={() => onclear()}
-        title="Clear hotkey"
-        aria-label="Clear hotkey"
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
-    {/if}
-  </div>
+  {/if}
 </div>

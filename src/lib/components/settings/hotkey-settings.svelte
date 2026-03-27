@@ -1,7 +1,6 @@
 <script lang="ts">
-  import SettingRow from "$lib/components/ui/setting-row/index.js";
+  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
   import { Switch } from "$lib/components/ui/switch/index.js";
-  import InfoTooltip from "$lib/components/ui/info-tooltip.svelte";
   import HotkeyCapture from "$lib/components/hotkey-capture.svelte";
   import type { AppConfig } from "$lib/types";
 
@@ -18,38 +17,34 @@
   }
 
   function handleShortcutClear() {
-    localConfig.hotkey.shortcut = "Win+Shift+A";
+    localConfig.hotkey.enabled = false;
   }
 </script>
 
 <div class="space-y-4">
   <SettingRow
     label="Enable Global Hotkey"
-    tooltip="When enabled, the hotkey will work from any application to read clipboard contents aloud."
+    tooltip="Trigger TTS from any application"
   >
     <Switch id="hotkey-enabled" bind:checked={localConfig.hotkey.enabled} />
   </SettingRow>
 
   {#if localConfig.hotkey.enabled}
-    <div class="space-y-2">
+    <SettingRow
+      label="Global Hotkey"
+      tooltip="Press a key combination to set. Requires at least one modifier (Ctrl, Alt, Shift, Win)."
+    >
       <HotkeyCapture
         value={localConfig.hotkey.shortcut}
         disabled={!localConfig.hotkey.enabled}
         onchange={handleShortcutChange}
         onclear={handleShortcutClear}
       />
-      {#if errors.hotkey}
-        <p class="text-destructive text-sm">
-          {errors.hotkey}
-        </p>
-      {/if}
-      <p class="text-muted-foreground text-xs">
-        Press the key combination you want to use. Must include at least one modifier (Ctrl, Alt
-        Shift, or Win).
+    </SettingRow>
+    {#if errors.hotkey}
+      <p class="text-destructive text-sm">
+        {errors.hotkey}
       </p>
-      <p class="text-muted-foreground text-xs">
-        <strong>Default:</strong> Win+Shift+A reads clipboard contents aloud.
-      </p>
-    </div>
+    {/if}
   {/if}
 </div>

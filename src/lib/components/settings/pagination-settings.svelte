@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SettingRow from "$lib/components/ui/setting-row/index.js";
+  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
   import { Select } from "$lib/components/ui/select/index.js";
   import InfoTooltip from "$lib/components/ui/info-tooltip.svelte";
   import type { AppConfig } from "$lib/types";

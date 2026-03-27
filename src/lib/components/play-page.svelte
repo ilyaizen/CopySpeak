@@ -64,7 +64,6 @@
     general: {
       start_with_windows: false,
       start_minimized: true,
-      show_notifications: true,
       debug_mode: false,
       close_behavior: "minimize-to-tray",
       appearance: "system",

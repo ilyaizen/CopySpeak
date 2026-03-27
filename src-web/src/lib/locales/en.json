@@ -28,6 +28,10 @@
   },
   "settings": {
     "title": "Settings",
+    "sections": {
+      "general": "General",
+      "pagination": "Pagination"
+    },
     "categories": {
       "general": "General",
       "playback": "Playback",
@@ -82,7 +86,7 @@
     },
     "triggers": {
       "title": "Trigger Settings",
-      "listen": "Listen",
+      "listen": "Listen to Double-copy",
       "listenDescription": "Monitor clipboard for double-copy events",
       "doubleCopyWindow": "Double-Copy Detection Window (ms)",
       "doubleCopyWindowDescription": "Time window in which a second copy triggers TTS (100-5000ms)",
@@ -144,6 +148,18 @@
       "markdownDescription": "Remove all markdown formatting (headers, bold, italic, code blocks, links, lists, blockquotes)",
       "ttsNormalization": "Expand Visual Shorthand",
       "ttsNormalizationDescription": "Resolve URLs, slashes, abbreviations, metric units, and symbols into spoken-friendly text"
+    },
+    "hotkey": {
+      "title": "Hotkey",
+      "enabled": "Enable Global Hotkey",
+      "enabledDescription": "Trigger TTS from any application",
+      "shortcut": "Shortcut",
+      "shortcutDescription": "Press a key combination to set",
+      "capturing": "Press keys...",
+      "clickToSet": "Click to set",
+      "clear": "Clear",
+      "default": "Default: {shortcut}",
+      "modifierRequired": "Requires at least one modifier (Ctrl, Alt, Shift, Win)"
     }
   },
   "engine": {
