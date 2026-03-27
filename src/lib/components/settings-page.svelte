@@ -150,7 +150,7 @@
       </div>
     </div>
   {:else if localConfig}
-    <div class="flex flex-row gap-4">
+    <div class="flex flex-row items-start gap-4">
       <!-- Left Sidebar - Tab Navigation -->
       <aside class="w-28 shrink-0">
         <nav class="sticky top-24">

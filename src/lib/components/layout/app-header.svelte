@@ -52,7 +52,7 @@
   ]);
 </script>
 
-<header class="border-border bg-background sticky top-0 z-50 border-b" data-testid="app-header">
+<header class="border-border bg-background z-50 border-b" data-testid="app-header">
   <div class="flex items-center justify-between px-6 py-3">
     <div class="flex items-center gap-3">
       <a href="/" class="flex items-center gap-3">

@@ -292,7 +292,7 @@
 <div class="flex min-h-0 flex-1 flex-col gap-4">
   <div class="grid min-h-0 flex-1 grid-cols-3 gap-4">
     {#if config}
-      <div class="self-start">
+      <div class="min-h-0">
         <QuickSettings bind:config />
       </div>
     {/if}

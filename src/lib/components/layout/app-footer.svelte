@@ -372,7 +372,7 @@
 
 {#if !isHudRoute}
   <footer
-    class="border-border bg-card/95 fixed right-0 bottom-0 left-0 z-50 border-t px-4 py-2.5 shadow-[0_-2px_10px_rgba(0,0,0,0.08)] backdrop-blur-sm"
+    class="border-border bg-card/95 z-50 border-t px-4 py-2.5 shadow-[0_-2px_10px_rgba(0,0,0,0.08)] backdrop-blur-sm"
   >
     <div class="flex items-center justify-between gap-2">
       <!-- Engine status with listening indicator -->
