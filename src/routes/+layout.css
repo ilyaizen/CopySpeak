@@ -111,6 +111,7 @@
   }
   body {
     @apply text-foreground font-sans;
+    overflow: hidden;
   }
   /* Apply bg-background only to the main app window.
      The HUD window sets [data-hud] on <body> to opt out. */

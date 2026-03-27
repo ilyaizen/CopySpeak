@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Label } from "$lib/components/ui/label/index.js";
+  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
   import { Switch } from "$lib/components/ui/switch/index.js";
   import { Slider } from "$lib/components/ui/slider/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
@@ -31,21 +31,20 @@
 </script>
 
 <div class="space-y-4">
-  <div class="flex items-center justify-between">
-    <div class="flex items-center gap-1.5">
-      <Label for="history-enabled">{$_("settings.history.enabled")}</Label>
-      <InfoTooltip text={$_("settings.history.enabledDescription")} />
-    </div>
+  <SettingRow
+    label={$_("settings.history.enabled")}
+    tooltip={$_("settings.history.enabledDescription")}
+  >
     <Switch id="history-enabled" bind:checked={localConfig.history.enabled} />
-  </div>
+  </SettingRow>
 
   {#if localConfig.history.enabled}
     {#if localConfig.history.storage_mode === "persistent"}
       <div class="space-y-2">
-        <div class="flex items-center gap-1.5">
-          <Label for="persistent-dir">{$_("settings.history.generationsFolder")}</Label>
+        <label for="persistent-dir" class="flex items-center gap-1.5">
+          <span class="text-sm font-medium">{$_("settings.history.generationsFolder")}</span>
           <InfoTooltip text={$_("settings.history.generationsFolderDescription")} />
-        </div>
+        </label>
         <div class="flex gap-2">
           <input
             id="persistent-dir"

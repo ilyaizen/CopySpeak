@@ -28,6 +28,25 @@
   },
   "settings": {
     "title": "Settings",
+    "tabs": {
+      "general": "General",
+      "advanced": "Advanced",
+      "about": "About"
+    },
+    "sections": {
+      "general": "General",
+      "startup": "Startup",
+      "appearance": "Appearance",
+      "playback": "Playback",
+      "hud": "HUD Overlay",
+      "history": "History",
+      "triggers": "Triggers",
+      "hotkeys": "Hotkeys",
+      "pagination": "Advanced",
+      "sanitization": "Sanitization",
+      "appInfo": "App Info",
+      "importExport": "Import / Export"
+    },
     "categories": {
       "general": "General",
       "playback": "Playback",
@@ -82,7 +101,7 @@
     },
     "triggers": {
       "title": "Trigger Settings",
-      "listen": "Listen",
+      "listen": "Listen to Double-copy",
       "listenDescription": "Monitor clipboard for double-copy events",
       "doubleCopyWindow": "Double-Copy Detection Window (ms)",
       "doubleCopyWindowDescription": "Time window in which a second copy triggers TTS (100-5000ms)",
@@ -99,6 +118,7 @@
     "hud": {
       "enabled": "Enable HUD",
       "enabledDescription": "Show waveform overlay during playback",
+      "overlay": "HUD Overlay",
       "position": "Position",
       "testHud": "Test HUD Display",
       "topLeft": "Top Left",
@@ -410,6 +430,7 @@
   },
   "header": {
     "play": "Play",
+    "history": "History",
     "engine": "Engine",
     "settings": "Settings",
     "tagline": "Read clipboard aloud instantly"

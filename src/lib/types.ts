@@ -123,7 +123,6 @@ export type AppearanceMode = "system" | "light" | "dark";
 export interface GeneralConfig {
   start_with_windows: boolean;
   start_minimized: boolean;
-  show_notifications: boolean;
   debug_mode: boolean;
   close_behavior: CloseBehavior;
   appearance: AppearanceMode;

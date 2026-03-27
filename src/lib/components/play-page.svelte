@@ -1,9 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import PlaybackControls from "$lib/components/playback-controls.svelte";
-  import RecentHistory from "$lib/components/recent-history.svelte";
   import QuickSettings from "$lib/components/quick-settings.svelte";
-  import { historyStore } from "$lib/stores/history-store.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { playbackStore } from "$lib/stores/playback-store.svelte";
@@ -66,7 +64,6 @@
     general: {
       start_with_windows: false,
       start_minimized: true,
-      show_notifications: true,
       debug_mode: false,
       close_behavior: "minimize-to-tray",
       appearance: "system",
@@ -128,7 +125,6 @@
   } | null>(null);
 
   let unlistenTruncated: (() => void) | null = null;
-  let unlistenHistoryUpdate: (() => void) | null = null;
 
   // Proxy store state for template readability
   let isPlaying = $derived(playbackStore.isPlaying);
@@ -178,21 +174,14 @@
   // Determine current content from manual text input
   let currentContent = $derived(manualText.trim() || "");
 
-  // Most-recent history item, pre-sorted to avoid re-sorting in handlers
-  let latestHistoryItem = $derived(
-    [...historyStore.items].sort((a, b) => b.timestamp - a.timestamp)[0] ?? null
-  );
-
   // Smart play mode: what the Play button will do
-  type PlayMode = "play" | "replay" | "history" | "disabled";
+  type PlayMode = "play" | "replay" | "disabled";
   let playMode: PlayMode = $derived(
     currentContent
       ? playbackStore.hasCachedAudio && currentContent === lastPlayedContent
         ? "replay"
         : "play"
-      : historyStore.items.length > 0
-        ? "history"
-        : "disabled"
+      : "disabled"
   );
 
   async function handleReplay() {
@@ -207,25 +196,6 @@
       await handleGenerate();
     } else if (playMode === "replay") {
       await handleReplay();
-    } else if (playMode === "history") {
-      const latest = latestHistoryItem;
-      if (latest) {
-        // Check if output_path exists before trying to play
-        if (latest.output_path) {
-          try {
-            await historyStore.playEntry(latest.id);
-          } catch (e) {
-            error = `Failed to play: ${e}`;
-          }
-        } else {
-          // No saved file — re-synthesize
-          try {
-            await historyStore.reSpeakEntry(latest.id);
-          } catch (e) {
-            error = `${e}`;
-          }
-        }
-      }
     }
   }
 
@@ -297,7 +267,6 @@
     await loadConfig();
 
     if (isTauri) {
-      await historyStore.loadHistory();
       try {
         unlistenTruncated = await listen<{
           original_length: number;
@@ -311,28 +280,25 @@
           };
           setTimeout(() => (truncationWarning = null), 5000);
         });
-        unlistenHistoryUpdate = await listen<any>("history-updated", async () => {
-          await historyStore.refresh();
-        });
       } catch {}
     }
   });
 
   onDestroy(() => {
     if (unlistenTruncated) unlistenTruncated();
-    if (unlistenHistoryUpdate) unlistenHistoryUpdate();
   });
 </script>
 
-<div class="flex flex-col gap-4">
-  <!-- Two-column grid: Text area (left) | Quick settings (right) -->
-  <div class="grid grid-cols-3 gap-4">
-    <!-- Quick settings panel -->
+<div class="flex min-h-0 flex-1 flex-col gap-4">
+  <div class="grid min-h-0 flex-1 grid-cols-3 gap-4">
     {#if config}
-      <QuickSettings bind:config />
+      <div class="min-h-0">
+        <QuickSettings bind:config />
+      </div>
     {/if}
-    <!-- Text area with play controls -->
-    <div class="border-border bg-card col-span-2 flex flex-col rounded-lg border p-3 shadow-sm">
+    <div
+      class="border-border bg-card col-span-2 flex min-h-0 flex-1 flex-col rounded-lg border p-3 shadow-sm"
+    >
       <Textarea
         class="min-h-0 flex-1 resize-none"
         placeholder={$_("play.placeholder")}
@@ -361,30 +327,25 @@
     </div>
   </div>
 
-  <!-- Recent Generations History -->
-  <div class="border-border bg-card rounded-lg border p-4 shadow-sm">
-    <RecentHistory limit={10} />
-  </div>
+  {#if error}
+    <div class="border-destructive/50 bg-destructive/10 rounded-lg border p-3">
+      <p class="text-destructive text-sm">
+        {error}
+      </p>
+    </div>
+  {/if}
+
+  {#if truncationWarning}
+    <div class="rounded-sm border border-amber-500/50 bg-amber-500/10 p-3">
+      <p class="text-sm text-amber-600 dark:text-amber-400">
+        {$_("play.truncatedDescription", {
+          values: {
+            original: truncationWarning.originalLength.toLocaleString(),
+            truncated: truncationWarning.truncatedLength.toLocaleString(),
+            max: truncationWarning.maxLength.toLocaleString()
+          }
+        })}
+      </p>
+    </div>
+  {/if}
 </div>
-
-{#if error}
-  <div class="border-destructive/50 bg-destructive/10 mt-4 rounded-lg border p-3">
-    <p class="text-destructive text-sm">
-      {error}
-    </p>
-  </div>
-{/if}
-
-{#if truncationWarning}
-  <div class="mt-4 rounded-sm border border-amber-500/50 bg-amber-500/10 p-3">
-    <p class="text-sm text-amber-600 dark:text-amber-400">
-      {$_("play.truncatedDescription", {
-        values: {
-          original: truncationWarning.originalLength.toLocaleString(),
-          truncated: truncationWarning.truncatedLength.toLocaleString(),
-          max: truncationWarning.maxLength.toLocaleString()
-        }
-      })}
-    </p>
-  </div>
-{/if}

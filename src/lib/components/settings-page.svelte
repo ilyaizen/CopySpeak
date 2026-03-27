@@ -2,35 +2,40 @@
   import GeneralSettings from "$lib/components/settings/general-settings.svelte";
   import AppearanceSettings from "$lib/components/settings/appearance-settings.svelte";
   import PlaybackSettings from "$lib/components/settings/playback-settings.svelte";
-  import TriggerSettings from "$lib/components/settings/trigger-settings.svelte";
   import PaginationSettings from "$lib/components/settings/pagination-settings.svelte";
   import HotkeySettings from "$lib/components/settings/hotkey-settings.svelte";
   import SanitizationSettings from "$lib/components/settings/sanitization-settings.svelte";
   import HistorySettings from "$lib/components/settings/history-settings.svelte";
   import ImportExportSettings from "$lib/components/settings/import-export-settings.svelte";
-  import HudSettings from "$lib/components/settings/hud-settings.svelte";
   import AboutSettings from "$lib/components/settings/about-settings.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
+  import { Switch } from "$lib/components/ui/switch/index.js";
+  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
+  import { Select } from "$lib/components/ui/select/index.js";
   import { invoke } from "$lib/services/tauri";
   import { toast } from "svelte-sonner";
   import { onMount, onDestroy } from "svelte";
+  import { tick } from "svelte";
   import { _ } from "svelte-i18n";
 
-  import type { AppConfig } from "$lib/types";
+  import type { AppConfig, HudPosition } from "$lib/types";
 
   let localConfig = $state<AppConfig | null>(null);
   let originalConfig = $state<AppConfig | null>(null);
   let isLoading = $state(true);
   let isSaving = $state(false);
-  let activeSection = $state("app");
+  let activeTab = $state<"general" | "advanced" | "about">("general");
 
-  // Staggered rendering: mount components one-by-one to avoid WebView2 crash
-  let mountedCount = $state(999);
+  let isScrolling = $state(false);
 
-  // Flag to prevent IntersectionObserver from fighting with manual scroll clicks
-  let isManualScroll = false;
+  const retriggerModeOptions = [
+    { value: "stop", label: $_("settings.playback.stopAndRestart") },
+    { value: "queue", label: $_("settings.playback.queueAfterCurrent") },
+    { value: "ignore", label: $_("settings.playback.ignoreNewTrigger") }
+  ];
 
-  const hudPositionOptions = [
+  const HUD_OPTIONS = [
+    { value: "disabled", label: "Disabled" },
     { value: "top-left", label: $_("settings.hud.topLeft") },
     { value: "top-center", label: $_("settings.hud.topCenter") },
     { value: "top-right", label: $_("settings.hud.topRight") },
@@ -39,35 +44,34 @@
     { value: "bottom-right", label: $_("settings.hud.bottomRight") }
   ];
 
-  function handlePositionChange(e: Event): void {
+  let hudValue = $derived(
+    localConfig?.hud
+      ? localConfig.hud.enabled
+        ? localConfig.hud.position
+        : "disabled"
+      : "disabled"
+  );
+
+  function handleHudChange(e: Event) {
     const target = e.target as HTMLSelectElement;
+    const value = target.value;
     if (!localConfig?.hud) return;
-    localConfig.hud.position = target.value as any;
+
+    if (value === "disabled") {
+      localConfig.hud.enabled = false;
+    } else {
+      localConfig.hud.enabled = true;
+      localConfig.hud.position = value as HudPosition;
+    }
   }
 
-  const retriggerModeOptions = [
-    { value: "stop", label: $_("settings.playback.stopAndRestart") },
-    { value: "queue", label: $_("settings.playback.queueAfterCurrent") },
-    { value: "ignore", label: $_("settings.playback.ignoreNewTrigger") }
+  const tabs = [
+    { id: "general" as const, labelKey: "settings.tabs.general" },
+    { id: "advanced" as const, labelKey: "settings.tabs.advanced" },
+    { id: "about" as const, labelKey: "settings.tabs.about" }
   ];
 
-  // const audioFormatOptions = [
-  //   { value: "wav", label: "WAV (Uncompressed)" },
-  //   { value: "mp3", label: "MP3 (Requires ffmpeg)" },
-  //   { value: "ogg", label: "OGG Vorbis (Requires ffmpeg)" },
-  //   { value: "flac", label: "FLAC (Lossless, Requires ffmpeg)" },
-  // ];
-
-  const settingsCategories = [
-    { id: "app", categoryKey: "general" },
-    { id: "playback", categoryKey: "playback" },
-    { id: "triggers", categoryKey: "triggers" },
-    { id: "pagination", categoryKey: "pagination" },
-    { id: "sanitization", categoryKey: "sanitization" },
-    { id: "history", categoryKey: "history" },
-    { id: "hud", categoryKey: "hud" },
-    { id: "about", categoryKey: "about" }
-  ];
+  const TAB_ORDER: Array<"general" | "advanced" | "about"> = ["general", "advanced", "about"];
 
   const hasChanges = $derived(
     originalConfig !== null &&
@@ -75,6 +79,48 @@
       JSON.stringify(localConfig) !== JSON.stringify(originalConfig)
   );
   let errors = $state<Record<string, string>>({});
+
+  let observer: IntersectionObserver | null = null;
+
+  function setupScrollSpy() {
+    observer = new IntersectionObserver(
+      (entries) => {
+        if (isScrolling) return;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            const id = entry.target.id as "general" | "advanced" | "about";
+            if (TAB_ORDER.includes(id)) {
+              activeTab = id;
+            }
+          }
+        }
+      },
+      { rootMargin: "-20% 0px -60% 0px", threshold: 0 }
+    );
+
+    for (const tab of tabs) {
+      const el = document.getElementById(tab.id);
+      if (el) observer.observe(el);
+    }
+  }
+
+  function destroyScrollSpy() {
+    observer?.disconnect();
+    observer = null;
+  }
+
+  async function scrollToTab(tabId: "general" | "advanced" | "about") {
+    isScrolling = true;
+    activeTab = tabId;
+    await tick();
+    const el = document.getElementById(tabId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    setTimeout(() => {
+      isScrolling = false;
+    }, 600);
+  }
 
   async function loadConfig() {
     isLoading = true;
@@ -99,7 +145,6 @@
       await invoke("set_config", { newConfig: localConfig });
       originalConfig = JSON.parse(JSON.stringify(localConfig));
 
-      // Reload page to apply new locale and appearance
       window.location.reload();
     } catch (e) {
       console.error("Failed to save config:", e);
@@ -119,63 +164,6 @@
     await loadConfig();
   }
 
-  function scrollToSection(sectionId: string) {
-    isManualScroll = true;
-    activeSection = sectionId;
-    const element = document.getElementById(`section-${sectionId}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-    setTimeout(() => {
-      isManualScroll = false;
-    }, 800);
-  }
-
-  function staggerMount() {
-    setupScrollObserver();
-  }
-
-  // IntersectionObserver for scroll-aware sidebar tracking
-  let observer: IntersectionObserver | null = null;
-
-  function setupScrollObserver() {
-    if (observer) observer.disconnect();
-
-    observer = new IntersectionObserver(
-      (entries) => {
-        if (isManualScroll) return;
-        let topEntry: IntersectionObserverEntry | null = null;
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            if (!topEntry || entry.boundingClientRect.top < topEntry.boundingClientRect.top) {
-              topEntry = entry;
-            }
-          }
-        }
-        if (topEntry) {
-          const id = topEntry.target.id.replace("section-", "");
-          if (activeSection !== id) activeSection = id;
-        }
-      },
-      { rootMargin: "-120px 0px -60% 0px", threshold: 0 }
-    );
-
-    for (const cat of settingsCategories) {
-      const el = document.getElementById(`section-${cat.id}`);
-      if (el) observer.observe(el);
-    }
-  }
-
-  onMount(() => {
-    loadConfig().then(() => {
-      requestAnimationFrame(staggerMount);
-    });
-  });
-
-  onDestroy(() => {
-    if (observer) observer.disconnect();
-  });
-
   function handleImport(config: AppConfig) {
     localConfig = JSON.parse(JSON.stringify(config));
   }
@@ -189,14 +177,15 @@
     }
   }
 
-  async function handleTestHud() {
-    try {
-      await invoke("test_show_hud");
-      toast.success($_("toast.success.hudTest"));
-    } catch (e) {
-      toast.error(`HUD test failed: ${e}`);
-    }
-  }
+  onMount(async () => {
+    await loadConfig();
+    await tick();
+    setupScrollSpy();
+  });
+
+  onDestroy(() => {
+    destroyScrollSpy();
+  });
 </script>
 
 <div class="w-full">
@@ -210,209 +199,146 @@
       </div>
     </div>
   {:else if localConfig}
-    <div class="flex flex-row gap-4">
-      <!-- Left Sidebar Menu (sticky) -->
-      <aside class="w-28 shrink-0">
-        <nav class="sticky top-24 space-y-0.5">
-          {#each settingsCategories as category}
-            <button
-              class="w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {activeSection ===
-              category.id
-                ? 'bg-primary/10 text-primary border-primary border-l-2 font-medium'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
-              onclick={() => scrollToSection(category.id)}
-            >
-              {$_(`settings.categories.${category.categoryKey}`)}
-            </button>
-          {/each}
+    <div class="flex flex-row items-start gap-2">
+      <!-- Left Sidebar - Scroll Spy Navigation -->
+      <aside class="w-28 shrink-0 self-stretch">
+        <nav class="sticky top-0">
+          <div class="space-y-0.5">
+            {#each tabs as tab}
+              <button
+                class="w-full rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors {activeTab ===
+                tab.id
+                  ? 'bg-primary/10 text-primary border-primary border-l-2'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
+                onclick={() => scrollToTab(tab.id)}
+              >
+                {$_(tab.labelKey)}
+              </button>
+            {/each}
+          </div>
         </nav>
       </aside>
 
-      <!-- Main Content -->
-      <main class="flex-1 space-y-8 pb-20">
-        <!-- General -->
-        <section id="section-app" class="scroll-mt-32">
+      <!-- Main Content - Continuous Scroll -->
+      <main class="flex-1 space-y-6 pb-20">
+        <!-- General Section -->
+        <section id="general" class="scroll-mt-4">
           <div class="border-border overflow-hidden rounded-lg border">
-            <div class="bg-muted/50 border-border border-b p-4">
-              <h2 class="text-lg font-semibold">{$_("settings.categories.general")}</h2>
-              <p class="text-muted-foreground text-sm">{$_("settings.descriptions.general")}</p>
+            <div class="space-y-0">
+              <!-- General -->
+              <div class="border-border border-b p-4">
+                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                  {$_("settings.sections.general")}
+                </h3>
+                <div class="space-y-4">
+                  <SettingRow
+                    label={$_("settings.triggers.listen")}
+                    tooltip={$_("settings.triggers.listenDescription")}
+                  >
+                    <Switch
+                      id="listen-double-copy"
+                      bind:checked={localConfig.trigger.listen_enabled}
+                    />
+                  </SettingRow>
+                  <HotkeySettings bind:localConfig {errors} />
+                  {#if localConfig.hud}
+                    <SettingRow
+                      label={$_("settings.hud.overlay")}
+                      tooltip={$_("settings.hud.enabledDescription")}
+                    >
+                      <Select
+                        options={HUD_OPTIONS}
+                        value={hudValue}
+                        onchange={handleHudChange}
+                        class="w-40"
+                      />
+                    </SettingRow>
+                  {/if}
+                </div>
+              </div>
+
+              <!-- Startup -->
+              <div class="border-border border-b p-4">
+                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                  {$_("settings.sections.startup")}
+                </h3>
+                <GeneralSettings bind:localConfig />
+              </div>
+
+              <!-- Appearance -->
+              <div class="border-border border-b p-4">
+                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                  {$_("settings.sections.appearance")}
+                </h3>
+                <AppearanceSettings bind:localConfig />
+              </div>
+
+              <!-- Playback -->
+              <div class="border-border border-b p-4">
+                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                  {$_("settings.sections.playback")}
+                </h3>
+                <PlaybackSettings bind:localConfig {retriggerModeOptions} />
+              </div>
+
+              <!-- History -->
+              <div class="border-border border-b p-4">
+                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                  {$_("settings.sections.history")}
+                </h3>
+                <HistorySettings bind:localConfig onRunCleanup={handleRunCleanup} />
+              </div>
             </div>
-            <div class="p-4">
-              {#if mountedCount > 0}
+          </div>
+        </section>
+
+        <!-- Advanced Section -->
+        <section id="advanced" class="scroll-mt-4">
+          <div class="border-border overflow-hidden rounded-lg border">
+            <div class="space-y-0">
+              <!-- Advanced -->
+              <div class="border-border border-b p-4">
+                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                  {$_("settings.sections.pagination")}
+                </h3>
+
+                <PaginationSettings bind:localConfig />
+              </div>
+
+              <!-- Sanitization -->
+              <div class="p-4">
+                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                  {$_("settings.sections.sanitization")}
+                </h3>
+                <SanitizationSettings bind:localConfig />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="scroll-mt-4">
+          <div class="border-border overflow-hidden rounded-lg border">
+            <div class="space-y-0">
+              <!-- App Info -->
+              <div class="border-border border-b p-4">
+                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                  {$_("settings.sections.appInfo")}
+                </h3>
+                <AboutSettings bind:localConfig showDebugMode={true} />
+              </div>
+
+              <!-- Import / Export -->
+              <div class="p-4">
+                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                  {$_("settings.sections.importExport")}
+                </h3>
                 <ImportExportSettings
                   {localConfig}
                   onImport={handleImport}
                   onReset={resetToDefaults}
                 />
-                <GeneralSettings bind:localConfig showDebugMode={true} />
-                <AppearanceSettings
-                  appearance={localConfig!.general.appearance}
-                  onchange={(v) => (localConfig!.general.appearance = v)}
-                />
-              {:else}
-                <div class="flex h-24 items-center justify-center">
-                  <div
-                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                  ></div>
-                </div>
-              {/if}
-            </div>
-          </div>
-        </section>
-
-        <!-- Playback -->
-        <section id="section-playback" class="scroll-mt-32">
-          <div class="border-border overflow-hidden rounded-lg border">
-            <div class="bg-muted/50 border-border border-b p-4">
-              <h2 class="text-lg font-semibold">{$_("settings.categories.playback")}</h2>
-              <p class="text-muted-foreground text-sm">{$_("settings.descriptions.playback")}</p>
-            </div>
-            <div class="p-4">
-              {#if mountedCount > 3}
-                <PlaybackSettings bind:localConfig {retriggerModeOptions} />
-              {:else}
-                <div class="flex h-24 items-center justify-center">
-                  <div
-                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                  ></div>
-                </div>
-              {/if}
-            </div>
-          </div>
-        </section>
-
-        <!-- Triggers -->
-        <section id="section-triggers" class="scroll-mt-32">
-          <div class="border-border overflow-hidden rounded-lg border">
-            <div class="bg-muted/50 border-border border-b p-4">
-              <h2 class="text-lg font-semibold">{$_("settings.categories.triggers")}</h2>
-              <p class="text-muted-foreground text-sm">{$_("settings.descriptions.triggers")}</p>
-            </div>
-            <div class="p-4">
-              {#if mountedCount > 4}
-                <TriggerSettings bind:localConfig {errors} />
-                <div class="border-border mt-4 border-t pt-4">
-                  <HotkeySettings bind:localConfig {errors} />
-                </div>
-              {:else}
-                <div class="flex h-24 items-center justify-center">
-                  <div
-                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                  ></div>
-                </div>
-              {/if}
-            </div>
-          </div>
-        </section>
-
-        <!-- Pagination -->
-        <section id="section-pagination" class="scroll-mt-32">
-          <div class="border-border overflow-hidden rounded-lg border">
-            <div class="bg-muted/50 border-border border-b p-4">
-              <h2 class="text-lg font-semibold">{$_("settings.categories.pagination")}</h2>
-              <p class="text-muted-foreground text-sm">{$_("settings.descriptions.pagination")}</p>
-            </div>
-            <div class="p-4">
-              {#if mountedCount > 5}
-                <PaginationSettings bind:localConfig {errors} />
-              {:else}
-                <div class="flex h-24 items-center justify-center">
-                  <div
-                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                  ></div>
-                </div>
-              {/if}
-            </div>
-          </div>
-        </section>
-
-        <!-- Sanitization -->
-        <section id="section-sanitization" class="scroll-mt-32">
-          <div class="border-border overflow-hidden rounded-lg border">
-            <div class="bg-muted/50 border-border border-b p-4">
-              <h2 class="text-lg font-semibold">{$_("settings.categories.sanitization")}</h2>
-              <p class="text-muted-foreground text-sm">
-                {$_("settings.descriptions.sanitization")}
-              </p>
-            </div>
-            <div class="p-4">
-              {#if mountedCount > 6}
-                <SanitizationSettings bind:localConfig />
-              {:else}
-                <div class="flex h-24 items-center justify-center">
-                  <div
-                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                  ></div>
-                </div>
-              {/if}
-            </div>
-          </div>
-        </section>
-
-        <!-- History -->
-        <section id="section-history" class="scroll-mt-32">
-          <div class="border-border overflow-hidden rounded-lg border">
-            <div class="bg-muted/50 border-border border-b p-4">
-              <h2 class="text-lg font-semibold">{$_("settings.categories.history")}</h2>
-              <p class="text-muted-foreground text-sm">{$_("settings.descriptions.history")}</p>
-            </div>
-            <div class="p-4">
-              {#if mountedCount > 7}
-                <HistorySettings bind:localConfig onRunCleanup={handleRunCleanup} />
-              {:else}
-                <div class="flex h-24 items-center justify-center">
-                  <div
-                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                  ></div>
-                </div>
-              {/if}
-            </div>
-          </div>
-        </section>
-
-        <!-- HUD Overlay -->
-        <section id="section-hud" class="scroll-mt-32">
-          <div class="border-border overflow-hidden rounded-lg border">
-            <div class="bg-muted/50 border-border border-b p-4">
-              <h2 class="text-lg font-semibold">{$_("settings.categories.hud")}</h2>
-              <p class="text-muted-foreground text-sm">{$_("settings.descriptions.hud")}</p>
-            </div>
-            <div class="p-4">
-              {#if mountedCount > 8}
-                <HudSettings {localConfig} {hudPositionOptions} {handlePositionChange} />
-                <div class="border-border mt-4 border-t pt-4">
-                  <Button onclick={handleTestHud} variant="outline" size="sm">
-                    {$_("settings.hud.testHud")}
-                  </Button>
-                </div>
-              {:else}
-                <div class="flex h-24 items-center justify-center">
-                  <div
-                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                  ></div>
-                </div>
-              {/if}
-            </div>
-          </div>
-        </section>
-
-        <!-- About -->
-        <section id="section-about" class="scroll-mt-32">
-          <div class="border-border overflow-hidden rounded-lg border">
-            <div class="bg-muted/50 border-border border-b p-4">
-              <h2 class="text-lg font-semibold">{$_("settings.categories.about")}</h2>
-              <p class="text-muted-foreground text-sm">{$_("settings.descriptions.about")}</p>
-            </div>
-            <div class="p-4">
-              {#if mountedCount > 9}
-                <AboutSettings />
-              {:else}
-                <div class="flex h-24 items-center justify-center">
-                  <div
-                    class="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent"
-                  ></div>
-                </div>
-              {/if}
+              </div>
             </div>
           </div>
         </section>
@@ -424,7 +350,6 @@
       <div
         class="border-border bg-card fixed right-4 bottom-12 z-60 flex items-center gap-3 border px-4 py-2.5 shadow-lg"
       >
-        <!-- <span class="text-muted-foreground text-xs whitespace-nowrap">Unsaved setting changes</span> -->
         <Button
           size="sm"
           variant="ghost"

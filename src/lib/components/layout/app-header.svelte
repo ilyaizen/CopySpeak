@@ -1,7 +1,24 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { page } from "$app/state";
-  import { Play, Settings, Cpu } from "@lucide/svelte";
+  import { Play, Settings, Cpu, Clock } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
+  import { invoke } from "@tauri-apps/api/core";
+  import { isTauri } from "$lib/services/tauri.js";
+  import type { AppConfig } from "$lib/types";
+
+  let historyEnabled = $state(false);
+
+  onMount(async () => {
+    if (isTauri) {
+      try {
+        const config = await invoke<AppConfig>("get_config");
+        historyEnabled = config.history.enabled;
+      } catch {
+        // Ignore errors
+      }
+    }
+  });
 
   const navItems = $derived([
     {
@@ -10,6 +27,16 @@
       href: "/",
       icon: Play
     },
+    ...(historyEnabled
+      ? [
+          {
+            id: "history",
+            label: $_("header.history"),
+            href: "/history",
+            icon: Clock
+          }
+        ]
+      : []),
     {
       id: "engine",
       label: $_("header.engine"),
@@ -25,7 +52,7 @@
   ]);
 </script>
 
-<header class="border-border bg-background sticky top-0 z-50 border-b" data-testid="app-header">
+<header class="border-border bg-background z-50 border-b" data-testid="app-header">
   <div class="flex items-center justify-between px-6 py-3">
     <div class="flex items-center gap-3">
       <a href="/" class="flex items-center gap-3">

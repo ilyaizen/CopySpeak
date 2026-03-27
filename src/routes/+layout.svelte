@@ -148,12 +148,17 @@
   <GlobalPlayer />
 
   <TooltipProvider delayDuration={300}>
-    <div class="bg-background relative flex min-h-screen flex-col" dir={$isRtl ? "rtl" : "ltr"}>
+    <div
+      class="bg-background grid h-screen grid-rows-[auto_1fr_auto] overflow-hidden"
+      dir={$isRtl ? "rtl" : "ltr"}
+    >
       {#if !isOnboarding}
         <AppHeader />
       {/if}
 
-      <main class={isOnboarding ? "w-full flex-1" : "w-full flex-1 px-4 py-6 pb-24 sm:px-6"}>
+      <main
+        class={isOnboarding ? "w-full overflow-y-auto" : "w-full overflow-y-auto px-4 py-6 sm:px-6"}
+      >
         {@render children()}
       </main>
 

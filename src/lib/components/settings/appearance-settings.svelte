@@ -1,42 +1,57 @@
 <script lang="ts">
-  import { Sun, Moon, Monitor } from "@lucide/svelte";
+  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
+  import { Select } from "$lib/components/ui/select/index.js";
+  import { _ } from "svelte-i18n";
+  import { getSupportedLocales } from "$lib/i18n/utils";
+  import type { AppConfig, SupportedLocale } from "$lib/types";
 
   let {
-    appearance = "system",
-    onchange
+    localConfig = $bindable()
   }: {
-    appearance: "system" | "light" | "dark";
-    onchange: (value: "system" | "light" | "dark") => void;
+    localConfig: AppConfig;
   } = $props();
 
   const appearanceOptions = [
-    { value: "system", label: "System", icon: Monitor },
-    { value: "light", label: "Light", icon: Sun },
-    { value: "dark", label: "Dark", icon: Moon }
+    { value: "system", label: "System" },
+    { value: "light", label: "Light" },
+    { value: "dark", label: "Dark" }
   ];
+
+  const localeOptions = getSupportedLocales();
+
+  function handleThemeChange(e: Event) {
+    localConfig.general.appearance = (e.target as HTMLSelectElement).value as
+      | "system"
+      | "light"
+      | "dark";
+  }
+
+  function handleLocaleChange(e: Event) {
+    localConfig.general.locale = (e.target as HTMLSelectElement).value as SupportedLocale;
+  }
 </script>
 
-<div class="border-border my-4 space-y-3 border-t pt-4">
-  <p class="text-sm font-medium">Theme</p>
-  <div class="grid grid-cols-3 gap-2">
-    {#each appearanceOptions as option}
-      <button
-        type="button"
-        class="flex flex-col items-center gap-2 rounded-lg border-2 p-3 transition-all {appearance ===
-        option.value
-          ? 'border-primary bg-primary/10'
-          : 'border-border hover:border-primary/50 hover:bg-accent'}"
-        onclick={() => onchange(option.value as "system" | "light" | "dark")}
-      >
-        {#if option.value === "system"}
-          <Monitor class="h-6 w-6" />
-        {:else if option.value === "light"}
-          <Sun class="h-6 w-6" />
-        {:else}
-          <Moon class="h-6 w-6" />
-        {/if}
-        <span class="text-sm font-medium">{option.label}</span>
-      </button>
-    {/each}
-  </div>
+<div class="space-y-4">
+  <SettingRow
+    label={$_("settings.general.language")}
+    tooltip={$_("settings.general.languageDescription")}
+  >
+    <Select
+      id="language"
+      options={localeOptions}
+      value={localConfig.general.locale}
+      onchange={handleLocaleChange}
+      class="w-32"
+    />
+  </SettingRow>
+
+  <SettingRow label="Theme" tooltip="Choose your preferred color theme">
+    <Select
+      id="theme"
+      options={appearanceOptions}
+      value={localConfig.general.appearance}
+      onchange={handleThemeChange}
+      class="w-32"
+    />
+  </SettingRow>
 </div>

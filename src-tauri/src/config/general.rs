@@ -33,7 +33,6 @@ impl Default for AppearanceMode {
 pub struct GeneralConfig {
     pub start_with_windows: bool,
     pub start_minimized: bool,
-    pub show_notifications: bool,
     #[serde(default)]
     pub debug_mode: bool,
     #[serde(default)]

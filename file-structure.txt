@@ -2,6 +2,8 @@
 ├── .github
 │   └── workflows
 │       └── build-windows.yml
+├── .vscode
+│   └── settings.json
 ├── docs
 │   └── CONTRIBUTING.md
 ├── docs_internal
@@ -72,13 +74,12 @@
 │   │   │   │   ├── general-settings.svelte
 │   │   │   │   ├── history-settings.svelte
 │   │   │   │   ├── hotkey-settings.svelte
-│   │   │   │   ├── hud-settings.svelte
 │   │   │   │   ├── import-export-settings.svelte
 │   │   │   │   ├── pagination-settings.svelte
 │   │   │   │   ├── playback-settings.svelte
-│   │   │   │   ├── sanitization-settings.svelte
-│   │   │   │   └── trigger-settings.svelte
+│   │   │   │   └── sanitization-settings.svelte
 │   │   │   ├── global-player.svelte
+│   │   │   ├── history-page.svelte
 │   │   │   ├── hotkey-capture.svelte
 │   │   │   ├── hud-overlay.svelte
 │   │   │   ├── play-page.svelte
@@ -139,6 +140,8 @@
 │   │   └── state.ts
 │   ├── routes
 │   │   ├── engine
+│   │   │   └── +page.svelte
+│   │   ├── history
 │   │   │   └── +page.svelte
 │   │   ├── hud
 │   │   │   ├── +page.svelte
