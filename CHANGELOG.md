@@ -7,11 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-03-27
+
 ### Added
 
 - **Global hotkey speak-from-clipboard** — Hotkey now triggers TTS directly from clipboard content
   - Added handler in global-shortcut plugin to call `speak_from_clipboard` on hotkey press
   - Logs hotkey trigger events for debugging
+
+- **Dedicated History page** — New `/history` route for viewing all TTS generations
+  - Moved history from play page to its own route
+  - Conditionally shown in nav when history is enabled
+
+- **SettingRow component** — Reusable settings row with label, tooltip, and consistent layout
+  - Applied across all settings components for uniform UI
+
+- **Live debug logs viewer** — Real-time log tail in About section when debug mode enabled
+  - Shows last 20 lines, auto-refreshes every 2s
 
 ### Fixed
 
@@ -21,6 +33,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Settings page consolidation** — Major restructure from 8 sections to 3 tabs (General, Advanced, About)
+  - Continuous scroll with scroll-spy navigation
+  - Removed staggered loading (WebView2 crash workaround no longer needed)
+  - HUD settings moved to General section as dropdown
+  - Pagination/Sanitization moved to Advanced tab
+
+- **Window size increased** — 675x540 → 775x640 for better content visibility
+
+- **Hotkey capture redesign** — Cleaner UI with Kbd components and arrow key symbols (↑↓←→)
+
+- **Quick-settings redesign** — Larger controls with clearer labels (Volume, Speed, Pitch)
+
+- **App shell refactor** — Grid-based layout for better content distribution
+
+- **Removed `show_notifications`** config field — Unused setting cleaned up
+
 - **Default hotkey shortcut** — Changed from `Super+Shift+A` to `Win+Shift+A` for Windows clarity
 - **Hotkey error messages** — Updated to use "Win" instead of "Win/Super" for consistency
 - **Hotkey logging** — Added structured logging with `[Hotkey]` prefix for registration attempts and config changes
@@ -29,7 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Theme toggle and UI components updated to use `rounded-sm` instead of `rounded-none`
 - **Logging noise reduction** — Suppressed verbose debug logs from tauri_plugin_updater and reqwest
 - **Engine page layout refactor** — Moved badges to header section for cleaner UI
-- **Quick-settings redesign** — 2-column layout with integrated text input
 - **Progress bar animation** — Converted from JavaScript interval to CSS animation for smoother performance
 - **Default Kokoro voice** — Changed from `af_heart` to `adam`
 - **Internationalization** — Temporarily disabled language switcher, hardcoded to English during development
