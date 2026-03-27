@@ -19,7 +19,7 @@
     "bump:minor": "node ./scripts/version-bumper.mjs minor",
     "bump:major": "node ./scripts/version-bumper.mjs major",
     "fix": "powershell -ExecutionPolicy Bypass -File ./scripts/fix-ports.ps1",
-    "tree": "wsl bash -c \"tree -a -I 'node_modules|.next|src-tauri/target|.git|prompts|skills|.vercel|dist|out|gen|target|.svelte-kit|.obsidian|ui|build|icons|.agent|.agents|.claude|.tauri|.ruff_cache|__pycache__|.gemini|.opencode|.kilocode|archive|backups|bun.lock|openspec' --noreport --dirsfirst > file-structure.txt\""
+    "tree": "wsl bash -c \"tree -a -I 'node_modules|.next|src-tauri/target|.git|prompts|skills|.vercel|dist|out|gen|target|.svelte-kit|.obsidian|ui|build|icons|.agent|.agents|.claude|.tauri|.ruff_cache|__pycache__|.gemini|.opencode|.kilocode|archive|backups|bun.lock|openspec|.planning' --noreport --dirsfirst > file-structure.txt\""
   },
   "license": "MIT",
   "dependencies": {

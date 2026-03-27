@@ -434,10 +434,10 @@
       </div>
     </div>
   {:else if localConfig}
-    <div class="flex flex-row items-start gap-4">
+    <div class="flex flex-row items-start gap-2">
       <!-- Left Sidebar Navigation -->
-      <aside class="w-28 shrink-0">
-        <nav class="sticky top-24 space-y-0.5">
+      <aside class="w-28 shrink-0 self-stretch">
+        <nav class="sticky top-0 space-y-0.5">
           {#each ENGINE_CATEGORIES as category}
             <button
               class="w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {activeTab ===

@@ -9,3 +9,4 @@ coverage/
 .git/
 .obsidian/
 src-tauri/
+.planning/

@@ -22,10 +22,7 @@
 </script>
 
 <div class="space-y-4">
-  <SettingRow
-    label="Enable Global Hotkey"
-    tooltip="Trigger TTS from any application"
-  >
+  <SettingRow label="Enable Global Hotkey" tooltip="Trigger TTS from any application">
     <Switch id="hotkey-enabled" bind:checked={localConfig.hotkey.enabled} />
   </SettingRow>
 

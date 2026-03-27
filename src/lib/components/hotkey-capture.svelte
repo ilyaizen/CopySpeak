@@ -122,7 +122,7 @@
       onclick={onclear}
       aria-label="Clear hotkey"
     >
-      <X class="size-3.5 text-muted-foreground" />
+      <X class="text-muted-foreground size-3.5" />
     </button>
   {/if}
 </div>
