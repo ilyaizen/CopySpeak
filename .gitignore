@@ -27,9 +27,9 @@ src-tauri/Cargo.lock
 /.tauri
 /.opencode
 /openspec
-AGENTS.md
-CLAUDE.md
-GEMINI.md
+# AGENTS.md
+# CLAUDE.md
+# GEMINI.md
 /docs_internal
 /plans
 # file-structure.txt
