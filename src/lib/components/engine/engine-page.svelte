@@ -136,6 +136,15 @@
 
   const ENGINE_CATEGORIES: EngineCategory[] = [
     {
+      id: "cartesia",
+      meta: {
+        badges: ["default", "cloud", "freemium"],
+        location: "cloud",
+        link: "https://docs.cartesia.ai/get-started/overview",
+        linkLabel: "API Docs"
+      }
+    },
+    {
       id: "kitten",
       meta: {
         badges: ["default", "offline", "free"],
@@ -169,15 +178,6 @@
         location: "local",
         link: null,
         linkLabel: null
-      }
-    },
-    {
-      id: "cartesia",
-      meta: {
-        badges: ["default", "cloud", "paid"],
-        location: "cloud",
-        link: "https://docs.cartesia.ai/get-started/overview",
-        linkLabel: "API Docs"
       }
     },
     {
@@ -235,7 +235,10 @@
 
   const apiSetupDescription = $derived(() => {
     if (!cloudDialogEngine) return "";
-    return $_("engine.apiSetup.description").replace("{engine}", cloudEngineName(cloudDialogEngine));
+    return $_("engine.apiSetup.description").replace(
+      "{engine}",
+      cloudEngineName(cloudDialogEngine)
+    );
   });
 
   function presetToTab(preset: string): string {
@@ -335,6 +338,7 @@
       localConfig.tts.active_backend = "cartesia";
       if (!localConfig.tts.cartesia.voice_id) {
         localConfig.tts.cartesia.voice_id = DEFAULT_VOICES.cartesia;
+        localConfig.tts.cartesia.voice_name = "Katie";
       }
     } else {
       localConfig.tts.active_backend = "local";
@@ -407,7 +411,10 @@
       await invoke("set_config", { newConfig: localConfig });
 
       if (cloudDialogEngine === "cartesia") {
-        credCheckResult = { success: true, message: "API key saved. Use Test to validate synthesis." };
+        credCheckResult = {
+          success: true,
+          message: "API key saved. Use Test to validate synthesis."
+        };
         return;
       }
 

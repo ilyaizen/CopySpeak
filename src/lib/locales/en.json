@@ -281,6 +281,10 @@
     "cartesiaEngine": {
       "model": "Model",
       "modelTooltip": "Cartesia Sonic model to use for speech synthesis",
+      "manualVoiceId": "Manual voice ID",
+      "manualVoiceIdTooltip": "Enable this to paste a custom Cartesia voice ID instead of choosing a known voice.",
+      "voice": "Voice",
+      "voiceTooltip": "Resolved Cartesia voice name to use for speech synthesis",
       "voiceId": "Voice ID",
       "voiceIdTooltip": "Cartesia voice ID. Katie is the default recommended American English voice.",
       "format": "Format",

@@ -108,7 +108,9 @@ pub struct CartesiaConfig {
     pub api_key: String,
     pub model_id: String,
     pub voice_id: String,
+    pub voice_name: Option<String>,
     pub output_format: String,
+    pub use_manual_voice_id: bool,
 }
 
 impl Default for CartesiaConfig {
@@ -117,7 +119,9 @@ impl Default for CartesiaConfig {
             api_key: String::new(),
             model_id: "sonic-3.5".into(),
             voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02".into(),
+            voice_name: Some("Katie".into()),
             output_format: "wav".into(),
+            use_manual_voice_id: false,
         }
     }
 }

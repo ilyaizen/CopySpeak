@@ -29,7 +29,7 @@ describe("EnginePage", () => {
     });
   });
 
-  it("Task-1: should render all six backend tabs after config loads", async () => {
+  it("Task-1: should render all seven backend tabs after config loads", async () => {
     mockInvoke.mockResolvedValue({
       trigger: { listen_enabled: true, double_copy_window_ms: 1000, max_text_length: 1000 },
       tts: {
@@ -51,7 +51,9 @@ describe("EnginePage", () => {
           api_key: "",
           model_id: "sonic-3.5",
           voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02",
-          output_format: "wav"
+          voice_name: "Katie",
+          output_format: "wav",
+          use_manual_voice_id: false
         }
       },
       playback: { on_retrigger: "interrupt", volume: 100, playback_speed: 1.0 },
@@ -96,14 +98,15 @@ describe("EnginePage", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     const tabs = container.querySelectorAll('[role="tab"]');
-    expect(tabs).toHaveLength(6);
+    expect(tabs).toHaveLength(7);
 
-    expect(tabs[0].textContent).toBe("Piper TTS");
-    expect(tabs[1].textContent).toBe("Kokoro TTS");
-    expect(tabs[2].textContent).toBe("Pocket TTS");
-    expect(tabs[3].textContent).toBe("Cartesia");
-    expect(tabs[4].textContent).toBe("ElevenLabs");
-    expect(tabs[5].textContent).toBe("OpenAI");
+    expect(tabs[0].textContent).toBe("Cartesia");
+    expect(tabs[1].textContent).toBe("Kitten TTS");
+    expect(tabs[2].textContent).toBe("Piper TTS");
+    expect(tabs[3].textContent).toBe("Kokoro TTS");
+    expect(tabs[4].textContent).toBe("Pocket TTS");
+    expect(tabs[5].textContent).toBe("ElevenLabs");
+    expect(tabs[6].textContent).toBe("OpenAI");
   });
 
   it("Task-1: should load config on mount", async () => {
@@ -128,7 +131,9 @@ describe("EnginePage", () => {
           api_key: "",
           model_id: "sonic-3.5",
           voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02",
-          output_format: "wav"
+          voice_name: "Katie",
+          output_format: "wav",
+          use_manual_voice_id: false
         }
       },
       playback: { on_retrigger: "interrupt", volume: 100, playback_speed: 1.0 },

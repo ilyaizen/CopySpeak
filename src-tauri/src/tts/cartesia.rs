@@ -113,10 +113,10 @@ impl TtsBackend for CartesiaTtsBackend {
     }
 
     fn voice_display_name(&self, voice_id: &str) -> String {
-        match voice_id {
-            "f786b574-daa5-4673-aa0c-cbe3e8534c02" => "katie".to_string(),
-            "a5136bf9-224c-4d76-b823-52bd5efcffcc" => "jameson".to_string(),
-            _ => "voice".to_string(),
-        }
+        self.config.voice_name.clone().unwrap_or_else(|| match voice_id {
+            "f786b574-daa5-4673-aa0c-cbe3e8534c02" => "Katie".to_string(),
+            "a5136bf9-224c-4d76-b823-52bd5efcffcc" => "Jameson".to_string(),
+            _ => "Voice".to_string(),
+        })
     }
 }

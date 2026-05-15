@@ -62,6 +62,57 @@ pub fn check_elevenlabs_credentials(
     }
 }
 
+/// Validate a Cartesia API key via GET /voices (no synthesis credits consumed).
+#[tauri::command]
+pub fn check_cartesia_credentials(
+    config: State<'_, Mutex<AppConfig>>,
+) -> Result<CredentialCheckResult, String> {
+    if crate::logging::is_debug_mode() {
+        log::debug!("[IPC] check_cartesia_credentials called");
+    }
+
+    let api_key = config.lock().unwrap().tts.cartesia.api_key.clone();
+
+    if api_key.trim().is_empty() {
+        return Ok(CredentialCheckResult {
+            success: false,
+            message: "API key is empty. Enter your Cartesia API key.".into(),
+            error_type: Some("api_key_missing".into()),
+        });
+    }
+
+    let client = reqwest::blocking::Client::new();
+    match client
+        .get("https://api.cartesia.ai/voices")
+        .header("X-API-Key", &api_key)
+        .header("Cartesia-Version", "2024-06-10")
+        .send()
+    {
+        Ok(resp) => match resp.status().as_u16() {
+            200 => Ok(CredentialCheckResult {
+                success: true,
+                message: "Cartesia API key is valid.".into(),
+                error_type: None,
+            }),
+            401 | 403 => Ok(CredentialCheckResult {
+                success: false,
+                message: "Authentication failed. Check your Cartesia API key.".into(),
+                error_type: Some("auth_failed".into()),
+            }),
+            status => Ok(CredentialCheckResult {
+                success: false,
+                message: format!("Cartesia API returned unexpected status: {}", status),
+                error_type: Some("http_error".into()),
+            }),
+        },
+        Err(e) => Ok(CredentialCheckResult {
+            success: false,
+            message: format!("Network error: {}", e),
+            error_type: Some("http_error".into()),
+        }),
+    }
+}
+
 /// Validate an OpenAI API key via GET /v1/models (no synthesis credits consumed).
 #[tauri::command]
 pub fn check_openai_credentials(

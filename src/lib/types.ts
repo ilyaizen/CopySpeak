@@ -83,7 +83,9 @@ export interface CartesiaConfig {
   api_key: string;
   model_id: string;
   voice_id: string;
+  voice_name?: string;
   output_format: string;
+  use_manual_voice_id?: boolean;
 }
 
 export interface TtsConfig {

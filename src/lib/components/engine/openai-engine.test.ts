@@ -31,7 +31,9 @@ describe("OpenAiEngine", () => {
         api_key: "",
         model_id: "sonic-3.5",
         voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02",
-        output_format: "wav"
+        voice_name: "Katie",
+        output_format: "wav",
+        use_manual_voice_id: false
       }
     },
     playback: { on_retrigger: "interrupt", volume: 100, playback_speed: 1.0 },

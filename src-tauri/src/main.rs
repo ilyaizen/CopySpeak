@@ -556,6 +556,7 @@ fn main() {
             commands::test_tts_engine,
             commands::check_command_exists,
             commands::check_elevenlabs_credentials,
+            commands::check_cartesia_credentials,
             commands::check_openai_credentials,
             commands::list_elevenlabs_voices,
             commands::get_elevenlabs_voice_by_id,

@@ -75,7 +75,7 @@ impl Default for PaginationConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            fragment_size: 800,
+            fragment_size: 500,
         }
     }
 }

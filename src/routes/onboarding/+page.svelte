@@ -4,42 +4,28 @@
   import { invoke } from "@tauri-apps/api/core";
   import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/ui/button/index.js";
-  import LocalEngine from "$lib/components/engine/local-engine.svelte";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Label } from "$lib/components/ui/label/index.js";
   import type { AppConfig } from "$lib/types";
-  import { Download, Terminal, CheckCircle } from "@lucide/svelte";
+  import { CheckCircle, KeyRound, Loader2, Sparkles } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
 
   let localConfig = $state<AppConfig | null>(null);
   let isLoading = $state(true);
   let isSaving = $state(false);
-  let healthResult = $state<{
+  let isCheckingKey = $state(false);
+  let keyResult = $state<{
     success: boolean;
     message: string;
     error_type: string | null;
   } | null>(null);
-  let isCheckingHealth = $state(false);
-  let isInstalling = $state(false);
-  let installComplete = $state(false);
-
-  async function runHealthCheck() {
-    isCheckingHealth = true;
-    healthResult = null;
-    try {
-      const result = await invoke<{ success: boolean; message: string; error_type: string | null }>(
-        "test_tts_engine"
-      );
-      healthResult = result;
-    } catch (e) {
-      healthResult = { success: false, message: String(e), error_type: "unavailable" };
-    } finally {
-      isCheckingHealth = false;
-    }
-  }
 
   async function loadDefaultConfig() {
     isLoading = true;
     try {
       const config = await invoke<AppConfig>("get_config");
+      config.tts.active_backend = "cartesia";
+      config.pagination.fragment_size = 500;
       localConfig = config;
     } catch (e) {
       console.error("Failed to load config:", e);
@@ -49,17 +35,29 @@
     }
   }
 
-  async function runInstaller() {
-    isInstalling = true;
+  function updateCartesiaApiKey(value: string) {
+    if (!localConfig) return;
+    localConfig.tts.cartesia.api_key = value.trim();
+    keyResult = null;
+  }
+
+  async function checkCartesiaKey() {
+    if (!localConfig) return;
+    isCheckingKey = true;
+    keyResult = null;
     try {
-      await invoke("run_kittentts_installer");
-      toast.success("Kitten TTS installer launched in a new window");
-      installComplete = true;
+      await invoke("set_config", { newConfig: localConfig });
+      const result = await invoke<{ success: boolean; message: string; error_type: string | null }>(
+        "check_cartesia_credentials"
+      );
+      keyResult = result;
+      if (result.success) toast.success(result.message);
+      else toast.error(result.message);
     } catch (e) {
-      console.error("Failed to run installer:", e);
-      toast.error(`Failed to run installer: ${e}`);
+      keyResult = { success: false, message: String(e), error_type: "unavailable" };
+      toast.error(`Failed to check Cartesia key: ${e}`);
     } finally {
-      isInstalling = false;
+      isCheckingKey = false;
     }
   }
 
@@ -93,10 +91,7 @@
     }
   }
 
-  onMount(async () => {
-    await loadDefaultConfig();
-    runHealthCheck();
-  });
+  onMount(loadDefaultConfig);
 </script>
 
 <div
@@ -123,84 +118,70 @@
           <div class="text-muted-foreground">{$_("onboarding.loading")}</div>
         </div>
       {:else if localConfig}
-        <div class="border-border space-y-4 border-t border-b py-6">
-          <div class="space-y-2">
-            <h2 class="font-mono text-lg font-semibold">{$_("onboarding.engineConfig")}</h2>
-            <p class="text-muted-foreground text-xs">
-              {$_("onboarding.engineDescription")}
-            </p>
-          </div>
-
-          <!-- Kitten TTS recommendation callout -->
-          <div
-            class="flex gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/8 px-4 py-3"
-          >
-            <span class="mt-0.5 text-base leading-none">💡</span>
-            <div class="space-y-1">
-              <p class="text-sm font-medium text-emerald-700 dark:text-emerald-400">
-                {$_("onboarding.recommendation.title")}
-              </p>
-              <p class="text-muted-foreground text-xs leading-relaxed">
-                {$_("onboarding.recommendation.description")}
-              </p>
+        <div class="border-border space-y-5 border-t border-b py-6">
+          <div class="rounded-lg border border-sky-500/30 bg-sky-500/8 p-5">
+            <div class="flex items-start gap-3">
+              <div class="rounded-md bg-sky-500/15 p-2 text-sky-700 dark:text-sky-300">
+                <Sparkles class="h-5 w-5" />
+              </div>
+              <div class="space-y-1">
+                <h2 class="font-mono text-lg font-semibold">Start with Cartesia Cloud</h2>
+                <p class="text-muted-foreground text-sm leading-relaxed">
+                  CopySpeak is set to Cartesia by default for fast, high-quality speech. Paste your
+                  API key, verify it without spending synthesis credits, then start listening.
+                </p>
+              </div>
             </div>
           </div>
 
-          <!-- Install Button -->
-          <div class="mt-4">
+          <div class="grid gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+            <div class="space-y-2">
+              <Label for="cartesia-api-key">Cartesia API key</Label>
+              <Input
+                id="cartesia-api-key"
+                type="password"
+                placeholder="Paste your Cartesia API key"
+                value={localConfig.tts.cartesia.api_key}
+                oninput={(e) => updateCartesiaApiKey((e.target as HTMLInputElement).value)}
+              />
+            </div>
             <Button
               variant="outline"
-              size="sm"
-              onclick={runInstaller}
-              disabled={isInstalling || installComplete}
-              class="flex items-center gap-2"
+              onclick={checkCartesiaKey}
+              disabled={isCheckingKey || !localConfig.tts.cartesia.api_key.trim()}
+              class="gap-2"
             >
-              {#if installComplete}
-                <CheckCircle class="h-4 w-4 text-emerald-600" />
-                <span class="text-emerald-700 dark:text-emerald-400"
-                  >{$_("onboarding.installed")}</span
-                >
-              {:else if isInstalling}
-                <Terminal class="h-4 w-4 animate-spin" />
-                <span class="text-muted-foreground">{$_("onboarding.installing")}</span>
+              {#if isCheckingKey}
+                <Loader2 class="h-4 w-4 animate-spin" />
+                Checking
               {:else}
-                <Download class="h-4 w-4" />
-                <span class="text-muted-foreground">{$_("onboarding.openTerminal")}</span>
+                <KeyRound class="h-4 w-4" />
+                Verify key
               {/if}
             </Button>
           </div>
 
-          <LocalEngine bind:localConfig />
-        </div>
-
-        <!-- Health Check Status -->
-        {#if isCheckingHealth}
-          <div
-            class="border-border bg-muted/30 flex items-center gap-2 rounded-md border px-4 py-3"
-          >
-            <div class="bg-muted h-2.5 w-2.5 animate-pulse rounded-full"></div>
-            <span class="text-muted-foreground text-sm">{$_("onboarding.checkingEngine")}</span>
-          </div>
-        {:else if healthResult}
-          <div
-            class="flex items-center gap-2 rounded-md border px-4 py-3 {healthResult.success
-              ? 'border-green-500/40 bg-green-500/10'
-              : 'border-destructive/40 bg-destructive/10'}"
-          >
+          {#if keyResult}
             <div
-              class="h-2.5 w-2.5 shrink-0 rounded-full {healthResult.success
-                ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
-                : 'bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.6)]'}"
-            ></div>
-            <span
-              class="text-sm {healthResult.success
-                ? 'text-green-700 dark:text-green-400'
-                : 'text-destructive'}"
+              class="flex items-center gap-2 rounded-md border px-4 py-3 {keyResult.success
+                ? 'border-green-500/40 bg-green-500/10'
+                : 'border-destructive/40 bg-destructive/10'}"
             >
-              {healthResult.message}
-            </span>
-          </div>
-        {/if}
+              {#if keyResult.success}
+                <CheckCircle class="h-4 w-4 text-green-600" />
+              {:else}
+                <div class="bg-destructive h-2.5 w-2.5 shrink-0 rounded-full"></div>
+              {/if}
+              <span
+                class="text-sm {keyResult.success
+                  ? 'text-green-700 dark:text-green-400'
+                  : 'text-destructive'}"
+              >
+                {keyResult.message}
+              </span>
+            </div>
+          {/if}
+        </div>
 
         <!-- Action Buttons -->
         <div class="flex flex-col gap-3 pt-2 sm:flex-row">

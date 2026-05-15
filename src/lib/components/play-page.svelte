@@ -19,7 +19,7 @@
       max_text_length: 50000
     },
     tts: {
-      active_backend: "local",
+      active_backend: "cartesia",
       preset: "kokoro-tts",
       command: "kokoro-tts",
       args_template: [],
@@ -43,7 +43,9 @@
         api_key: "",
         model_id: "sonic-3.5",
         voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02",
-        output_format: "wav"
+        voice_name: "Katie",
+        output_format: "wav",
+        use_manual_voice_id: false
       }
     },
     playback: {
@@ -104,7 +106,7 @@
     },
     pagination: {
       enabled: true,
-      fragment_size: 2000
+      fragment_size: 500
     },
     history: {
       enabled: true,
