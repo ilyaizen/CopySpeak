@@ -9,6 +9,7 @@
   import LocalEngine from "./local-engine.svelte";
   import OpenAiEngine from "./openai-engine.svelte";
   import ElevenLabsEngine from "./elevenlabs-engine.svelte";
+  import CartesiaEngine from "./cartesia-engine.svelte";
   import type { AppConfig } from "$lib/types";
   import { openExternal } from "$lib/utils/external-link";
   import {
@@ -32,7 +33,7 @@
 
   // Cloud TTS Dialog state
   let cloudDialogOpen = $state(false);
-  let cloudDialogEngine = $state<"openai" | "elevenlabs" | null>(null);
+  let cloudDialogEngine = $state<"openai" | "elevenlabs" | "cartesia" | null>(null);
   let tempApiKey = $state("");
   let isCheckingCreds = $state(false);
   let isTestingEngine = $state(false);
@@ -91,7 +92,8 @@
     kokoro: "adam",
     pocket: "alba",
     openai: "alloy",
-    elevenlabs: "21m00Tcm4TlvDq8ikWAM"
+    elevenlabs: "21m00Tcm4TlvDq8ikWAM",
+    cartesia: "f786b574-daa5-4673-aa0c-cbe3e8534c02"
   };
 
   type BadgeKind = "active" | "default" | "offline" | "free" | "cloud" | "paid" | "freemium";
@@ -170,6 +172,15 @@
       }
     },
     {
+      id: "cartesia",
+      meta: {
+        badges: ["default", "cloud", "paid"],
+        location: "cloud",
+        link: "https://docs.cartesia.ai/get-started/overview",
+        linkLabel: "API Docs"
+      }
+    },
+    {
       id: "elevenlabs",
       meta: {
         badges: ["cloud", "freemium"],
@@ -193,6 +204,7 @@
     if (!config) return false;
     if (tabId === "openai") return config.tts.active_backend === "openai";
     if (tabId === "elevenlabs") return config.tts.active_backend === "elevenlabs";
+    if (tabId === "cartesia") return config.tts.active_backend === "cartesia";
     const preset = TAB_PRESET_MAP[tabId];
     return config.tts.active_backend === "local" && config.tts.preset === preset;
   }
@@ -210,16 +222,20 @@
 
   const currentMeta = $derived(getMetaWithActive(activeTab, originalConfig));
 
+  function cloudEngineName(engine: "openai" | "elevenlabs" | "cartesia"): string {
+    if (engine === "openai") return "OpenAI";
+    if (engine === "cartesia") return "Cartesia";
+    return "ElevenLabs";
+  }
+
   const apiSetupTitle = $derived(() => {
     if (!cloudDialogEngine) return "";
-    const engineName = cloudDialogEngine === "openai" ? "OpenAI" : "ElevenLabs";
-    return $_("engine.apiSetup.title").replace("{engine}", engineName);
+    return $_("engine.apiSetup.title").replace("{engine}", cloudEngineName(cloudDialogEngine));
   });
 
   const apiSetupDescription = $derived(() => {
     if (!cloudDialogEngine) return "";
-    const engineName = cloudDialogEngine === "openai" ? "OpenAI" : "ElevenLabs";
-    return $_("engine.apiSetup.description").replace("{engine}", engineName);
+    return $_("engine.apiSetup.description").replace("{engine}", cloudEngineName(cloudDialogEngine));
   });
 
   function presetToTab(preset: string): string {
@@ -233,6 +249,7 @@
   function getTabFromConfig(config: AppConfig): string {
     if (config.tts.active_backend === "openai") return "openai";
     if (config.tts.active_backend === "elevenlabs") return "elevenlabs";
+    if (config.tts.active_backend === "cartesia") return "cartesia";
     return presetToTab(config.tts.preset ?? "piper");
   }
 
@@ -314,6 +331,11 @@
       if (!localConfig.tts.elevenlabs.voice_id) {
         localConfig.tts.elevenlabs.voice_id = DEFAULT_VOICES.elevenlabs;
       }
+    } else if (newTab === "cartesia") {
+      localConfig.tts.active_backend = "cartesia";
+      if (!localConfig.tts.cartesia.voice_id) {
+        localConfig.tts.cartesia.voice_id = DEFAULT_VOICES.cartesia;
+      }
     } else {
       localConfig.tts.active_backend = "local";
       const preset = TAB_PRESET_MAP[newTab];
@@ -346,7 +368,7 @@
   }
 
   // Cloud TTS Dialog functions
-  function openCloudDialog(engine: "openai" | "elevenlabs") {
+  function openCloudDialog(engine: "openai" | "elevenlabs" | "cartesia") {
     cloudDialogEngine = engine;
     tempApiKey = localConfig?.tts[engine].api_key ?? "";
     credCheckResult = null;
@@ -383,6 +405,11 @@
     try {
       // Temporarily persist the config so backend can read it
       await invoke("set_config", { newConfig: localConfig });
+
+      if (cloudDialogEngine === "cartesia") {
+        credCheckResult = { success: true, message: "API key saved. Use Test to validate synthesis." };
+        return;
+      }
 
       const command =
         cloudDialogEngine === "openai"
@@ -455,7 +482,49 @@
       <!-- Main Content -->
       <main class="flex-1 space-y-6 pb-20">
         <!-- Engine Configuration -->
-        {#if activeTab === "elevenlabs"}
+        {#if activeTab === "cartesia"}
+          <div class="border-border overflow-hidden rounded-lg border">
+            <div class="bg-muted/50 border-border border-b p-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="text-lg font-semibold">{$_("engine.cartesia.title")}</h2>
+                    {#each currentMeta.badges as badge}
+                      <span
+                        class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[
+                          badge
+                        ]}"
+                      >
+                        {getBadgeLabel(badge)}
+                      </span>
+                    {/each}
+                  </div>
+                  <p class="text-muted-foreground mt-1 text-sm">
+                    {$_("engine.cartesia.description")}
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onclick={() => openCloudDialog("cartesia")}>
+                  <Key size={14} class="mr-2" />
+                  {$_("engine.cartesia.apiKey")}
+                </Button>
+              </div>
+            </div>
+            <div class="p-4">
+              {#if currentMeta.link}
+                <div class="mb-4">
+                  <button
+                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
+                  >
+                    <ExternalLink size={12} />
+                    {currentMeta.linkLabel}
+                  </button>
+                </div>
+              {/if}
+              <CartesiaEngine bind:localConfig />
+            </div>
+          </div>
+        {:else if activeTab === "elevenlabs"}
           <div class="border-border overflow-hidden rounded-lg border">
             <div class="bg-muted/50 border-border border-b p-4">
               <div class="flex items-center justify-between">
@@ -724,13 +793,17 @@
             type="password"
             placeholder={cloudDialogEngine === "openai"
               ? $_("engine.apiSetup.placeholderOpenai")
-              : $_("engine.apiSetup.placeholderElevenlabs")}
+              : cloudDialogEngine === "cartesia"
+                ? $_("engine.apiSetup.placeholderCartesia")
+                : $_("engine.apiSetup.placeholderElevenlabs")}
             bind:value={tempApiKey}
           />
           <p class="text-muted-foreground text-xs">
             {cloudDialogEngine === "openai"
               ? $_("engine.openai.apiKeyDescription")
-              : $_("engine.elevenlabs.apiKeyDescription")}
+              : cloudDialogEngine === "cartesia"
+                ? $_("engine.cartesia.apiKeyDescription")
+                : $_("engine.elevenlabs.apiKeyDescription")}
           </p>
         </div>
 

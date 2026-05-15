@@ -214,6 +214,14 @@
       "title": "Pocket TTS",
       "description": "Local: Compact offline TTS engine with straightforward voice selection via CLI."
     },
+    "cartesia": {
+      "title": "Cartesia",
+      "description": "Cloud: Low-latency, natural TTS powered by Sonic 3.5. Requires an API key and internet connection.",
+      "apiKey": "API Key",
+      "apiKeyDescription": "Your API key is stored locally and never shared.",
+      "check": "Check",
+      "testEngine": "Test Engine"
+    },
     "elevenlabs": {
       "title": "ElevenLabs",
       "description": "Cloud: Premium AI voice synthesis with emotional range, 1000+ voices, and multilingual support.",
@@ -270,6 +278,14 @@
       "voice": "Voice",
       "voiceTooltip": "Voice style for speech synthesis"
     },
+    "cartesiaEngine": {
+      "model": "Model",
+      "modelTooltip": "Cartesia Sonic model to use for speech synthesis",
+      "voiceId": "Voice ID",
+      "voiceIdTooltip": "Cartesia voice ID. Katie is the default recommended American English voice.",
+      "format": "Format",
+      "formatTooltip": "Audio output container"
+    },
     "elevenlabsEngine": {
       "manualVoiceId": "Manual Voice ID",
       "manualVoiceIdTooltip": "Toggle to enter voice ID manually instead of selecting from list",
@@ -305,6 +321,7 @@
       "apiKey": "API Key",
       "placeholderOpenai": "sk-...",
       "placeholderElevenlabs": "xi-...",
+      "placeholderCartesia": "sk_car_...",
       "checkButton": "Check",
       "testButton": "Test",
       "valid": "API Key Valid",

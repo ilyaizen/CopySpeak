@@ -114,6 +114,12 @@
       ]
     },
     {
+      id: "cartesia",
+      name: "Cartesia",
+      type: "cloud",
+      tier: "paid"
+    },
+    {
       id: "elevenlabs",
       name: "ElevenLabs",
       type: "cloud",
@@ -135,7 +141,8 @@
     kokoro: "adam",
     pocket: "alba",
     openai: "alloy",
-    elevenlabs: "21m00Tcm4TlvDq8ikWAM"
+    elevenlabs: "21m00Tcm4TlvDq8ikWAM",
+    cartesia: "f786b574-daa5-4673-aa0c-cbe3e8534c02"
   };
 
   // Derive current engine ID from config
@@ -159,6 +166,8 @@
         return "ElevenLabs";
       case "openai":
         return "OpenAI";
+      case "cartesia":
+        return "Cartesia";
       case "local":
         return "Local";
       default:
@@ -201,6 +210,8 @@
       }
       case "openai":
         return capitalizeVoice(config.tts.openai.voice);
+      case "cartesia":
+        return "Katie";
       case "piper":
       case "kitten":
       case "kokoro":
@@ -324,6 +335,8 @@
         newConfig.tts.elevenlabs.voice_id = DEFAULT_VOICES.elevenlabs;
       } else if (engine.id === "openai" && !newConfig.tts.openai.voice) {
         newConfig.tts.openai.voice = DEFAULT_VOICES.openai;
+      } else if (engine.id === "cartesia" && !newConfig.tts.cartesia.voice_id) {
+        newConfig.tts.cartesia.voice_id = DEFAULT_VOICES.cartesia;
       }
     } else {
       newConfig.tts.active_backend = "local";

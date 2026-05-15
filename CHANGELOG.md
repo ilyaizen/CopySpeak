@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Cartesia TTS backend** — Added Cartesia Sonic 3.5 as a cloud TTS engine
+  - Added `CartesiaConfig`, `TtsEngine::Cartesia`, and `CartesiaTtsBackend`
+  - Added Cartesia engine settings UI with model, voice ID, and output format controls
+
+### Changed
+
+- **Default TTS engine** — New configs now default to Cartesia Sonic 3.5 with the Katie voice
+
 ## [0.1.0] - 2026-03-27
 
 ### Added

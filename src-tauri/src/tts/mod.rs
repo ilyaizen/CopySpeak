@@ -2,6 +2,7 @@
 // Each engine (CLI, HTTP, future sidecar) implements TtsBackend.
 // The app doesn't care how speech is synthesized — only that it gets audio bytes back.
 
+pub mod cartesia;
 pub mod cli;
 pub mod elevenlabs;
 pub mod openai;

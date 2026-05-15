@@ -45,7 +45,7 @@ export interface TriggerConfig {
   max_text_length: number;
 }
 
-export type TtsEngine = "local" | "openai" | "elevenlabs";
+export type TtsEngine = "local" | "openai" | "elevenlabs" | "cartesia";
 
 export interface OpenAIConfig {
   api_key: string;
@@ -79,6 +79,13 @@ export interface ElevenLabsConfig {
   use_manual_voice_id?: boolean;
 }
 
+export interface CartesiaConfig {
+  api_key: string;
+  model_id: string;
+  voice_id: string;
+  output_format: string;
+}
+
 export interface TtsConfig {
   active_backend: TtsEngine;
   preset: string;
@@ -87,6 +94,7 @@ export interface TtsConfig {
   voice: string;
   openai: OpenAIConfig;
   elevenlabs: ElevenLabsConfig;
+  cartesia: CartesiaConfig;
 }
 
 export interface PlaybackConfig {

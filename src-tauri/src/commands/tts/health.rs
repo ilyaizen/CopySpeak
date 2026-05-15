@@ -74,6 +74,7 @@ pub fn test_tts_engine(
         crate::config::TtsEngine::Local => tts_config.command.clone(),
         crate::config::TtsEngine::OpenAI => format!("OpenAI ({})", tts_config.openai.model),
         crate::config::TtsEngine::ElevenLabs => format!("ElevenLabs ({})", tts_config.elevenlabs.model_id),
+        crate::config::TtsEngine::Cartesia => format!("Cartesia ({})", tts_config.cartesia.model_id),
     };
 
     match backend.health_check() {

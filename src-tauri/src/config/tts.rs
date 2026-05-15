@@ -10,11 +10,12 @@ pub enum TtsEngine {
     Local,
     OpenAI,
     ElevenLabs,
+    Cartesia,
 }
 
 impl Default for TtsEngine {
     fn default() -> Self {
-        TtsEngine::Local
+        TtsEngine::Cartesia
     }
 }
 
@@ -103,6 +104,32 @@ impl ElevenLabsConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CartesiaConfig {
+    pub api_key: String,
+    pub model_id: String,
+    pub voice_id: String,
+    pub output_format: String,
+}
+
+impl Default for CartesiaConfig {
+    fn default() -> Self {
+        Self {
+            api_key: String::new(),
+            model_id: "sonic-3.5".into(),
+            voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02".into(),
+            output_format: "wav".into(),
+        }
+    }
+}
+
+impl CartesiaConfig {
+    pub fn validate(&self) -> Vec<ValidationError> {
+        let errors = Vec::new();
+        errors
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TtsConfig {
     pub active_backend: TtsEngine,
@@ -116,12 +143,13 @@ pub struct TtsConfig {
     // Cloud Configs
     pub openai: OpenAIConfig,
     pub elevenlabs: ElevenLabsConfig,
+    pub cartesia: CartesiaConfig,
 }
 
 impl Default for TtsConfig {
     fn default() -> Self {
         Self {
-            active_backend: TtsEngine::Local,
+            active_backend: TtsEngine::Cartesia,
             preset: "kitten-tts".into(),
             command: "py".into(),
             args_template: vec![
@@ -137,6 +165,7 @@ impl Default for TtsConfig {
             voice: "Rosie".into(),
             openai: OpenAIConfig::default(),
             elevenlabs: ElevenLabsConfig::default(),
+            cartesia: CartesiaConfig::default(),
         }
     }
 }
@@ -176,6 +205,9 @@ impl TtsConfig {
             }
             TtsEngine::ElevenLabs => {
                 errors.extend(self.elevenlabs.validate());
+            }
+            TtsEngine::Cartesia => {
+                errors.extend(self.cartesia.validate());
             }
         }
 

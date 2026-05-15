@@ -38,6 +38,12 @@
         voice_similarity_boost: 0.75,
         voice_style: undefined,
         use_speaker_boost: undefined
+      },
+      cartesia: {
+        api_key: "",
+        model_id: "sonic-3.5",
+        voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02",
+        output_format: "wav"
       }
     },
     playback: {
