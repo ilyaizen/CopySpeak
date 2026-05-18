@@ -14,6 +14,7 @@
   import GlobalPlayer from "$lib/components/global-player.svelte";
   import { setLocale } from "$lib/i18n";
   import { isRtl } from "$lib/i18n/store";
+  import ThemeToggle from "$lib/components/theme-toggle.svelte";
 
   let { children } = $props();
 
@@ -45,10 +46,13 @@
   // isHudByPath is a synchronous const checked before SvelteKit hydration — include it
   // so the HUD renders correctly even if page.url.pathname hasn't updated yet.
   const isHud = $derived(page.url.pathname === "/hud" || isHudByPath);
+  const isWeb = import.meta.env.VITE_IS_VERCEL;
 
   let unlistenSpeak: (() => void) | null = null;
 
   onMount(async () => {
+    if (isWeb) return;
+
     console.log(
       "[LAYOUT] onMount, isHudWindow:",
       isHudWindow,
@@ -133,12 +137,37 @@
 
   // Cleanup event listeners when app unmounts
   onDestroy(async () => {
+    if (isWeb) return;
     await stopHistoryEventListeners();
     if (unlistenSpeak) unlistenSpeak();
   });
 </script>
 
-{#if isHud}
+<svelte:head>
+  {#if isWeb}
+    <title>CopySpeak - AI Text-to-Speech for Windows</title>
+  {/if}
+</svelte:head>
+
+{#if isWeb}
+  <ModeWatcher />
+  <div class="bg-background min-h-screen">
+    <header class="border-border bg-background sticky top-0 z-50 border-b">
+      <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
+        <a href="/" class="flex items-center gap-3">
+          <img src="/app-logo.png" alt="CopySpeak Logo" class="h-8 w-8" />
+          <span class="text-foreground font-mono text-lg font-semibold">CopySpeak</span>
+        </a>
+        <div class="flex items-center gap-4">
+          <ThemeToggle />
+        </div>
+      </div>
+    </header>
+    <main>
+      {@render children()}
+    </main>
+  </div>
+{:else if isHud}
   {@render children()}
 {:else if isHudWindow}
   <!-- HUD window is navigating to /hud — render nothing during transition -->

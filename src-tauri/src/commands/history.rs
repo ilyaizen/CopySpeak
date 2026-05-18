@@ -93,7 +93,10 @@ pub fn clear_history(history: State<'_, Mutex<HistoryLog>>) -> Result<(), String
 #[tauri::command]
 pub fn get_history_with_metadata(
     history: State<'_, Mutex<HistoryLog>>,
-) -> (Vec<crate::history::HistoryEntry>, crate::history::HistoryLogMetadata) {
+) -> (
+    Vec<crate::history::HistoryEntry>,
+    crate::history::HistoryLogMetadata,
+) {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] get_history_with_metadata called");
     }
@@ -142,10 +145,7 @@ pub fn get_entry_by_file_path(
 
 /// Verify that a tracked file exists on disk
 #[tauri::command]
-pub fn verify_file_exists(
-    history: State<'_, Mutex<HistoryLog>>,
-    file_path: String,
-) -> bool {
+pub fn verify_file_exists(history: State<'_, Mutex<HistoryLog>>, file_path: String) -> bool {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] verify_file_exists called (path: {})", file_path);
     }
@@ -155,9 +155,7 @@ pub fn verify_file_exists(
 
 /// Verify all tracked files and update their existence status
 #[tauri::command]
-pub fn verify_all_files(
-    history: State<'_, Mutex<HistoryLog>>,
-) -> (usize, usize) {
+pub fn verify_all_files(history: State<'_, Mutex<HistoryLog>>) -> (usize, usize) {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] verify_all_files called");
     }
@@ -167,9 +165,7 @@ pub fn verify_all_files(
 
 /// Get all orphaned files (files in tracking directory but not referenced)
 #[tauri::command]
-pub fn get_orphaned_files(
-    history: State<'_, Mutex<HistoryLog>>,
-) -> Vec<String> {
+pub fn get_orphaned_files(history: State<'_, Mutex<HistoryLog>>) -> Vec<String> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] get_orphaned_files called");
     }
@@ -179,9 +175,7 @@ pub fn get_orphaned_files(
 
 /// Get all missing files (tracked files that don't exist on disk)
 #[tauri::command]
-pub fn get_missing_files(
-    history: State<'_, Mutex<HistoryLog>>,
-) -> Vec<(String, String)> {
+pub fn get_missing_files(history: State<'_, Mutex<HistoryLog>>) -> Vec<(String, String)> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] get_missing_files called");
     }
@@ -217,10 +211,7 @@ pub fn get_file_metadata(
 
 /// Check if a file path is tracked in history
 #[tauri::command]
-pub fn is_file_tracked(
-    history: State<'_, Mutex<HistoryLog>>,
-    file_path: String,
-) -> bool {
+pub fn is_file_tracked(history: State<'_, Mutex<HistoryLog>>, file_path: String) -> bool {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] is_file_tracked called (path: {})", file_path);
     }
@@ -290,7 +281,8 @@ pub fn copy_history_entry_text(
     }
 
     let hist = history.lock().unwrap();
-    let entry = hist.get_by_id(&entry_id)
+    let entry = hist
+        .get_by_id(&entry_id)
         .ok_or_else(|| format!("History entry not found: {}", entry_id))?;
 
     let text = entry.text.clone();
@@ -316,20 +308,20 @@ pub fn list_history(
     let mut entries: Vec<HistoryEntry> = hist.entries().iter().cloned().collect();
 
     // Apply sorting
-    let sort_order = options.as_ref().and_then(|o| o.sort_order.as_deref()).unwrap_or("newest");
+    let sort_order = options
+        .as_ref()
+        .and_then(|o| o.sort_order.as_deref())
+        .unwrap_or("newest");
     match sort_order {
         "oldest" => entries.reverse(),
-        _ => {},
+        _ => {}
     }
 
     // Apply pagination
     let limit = options.as_ref().and_then(|o| o.limit).unwrap_or(100);
     let offset = options.as_ref().and_then(|o| o.offset).unwrap_or(0);
 
-    entries.into_iter()
-        .skip(offset)
-        .take(limit)
-        .collect()
+    entries.into_iter().skip(offset).take(limit).collect()
 }
 
 /// Search history with text and filter options
@@ -358,11 +350,16 @@ pub fn search_history(
             .map(|dt| chrono::DateTime::<chrono::Utc>::from_naive_utc_and_offset(dt, chrono::Utc))
     });
 
-    let results: Vec<HistoryEntry> = hist.entries()
+    let results: Vec<HistoryEntry> = hist
+        .entries()
         .iter()
         .filter(|entry| {
             if let Some(ref search_text) = options.search_text {
-                if !entry.text.to_lowercase().contains(&search_text.to_lowercase()) {
+                if !entry
+                    .text
+                    .to_lowercase()
+                    .contains(&search_text.to_lowercase())
+                {
                     return false;
                 }
             }
@@ -431,8 +428,7 @@ pub fn export_history(
         HistoryExportFormat::Json => {
             let json = serde_json::to_string_pretty(&entries)
                 .map_err(|e| format!("Serialize error: {}", e))?;
-            std::fs::write(&file_path, json)
-                .map_err(|e| format!("Write error: {}", e))?;
+            std::fs::write(&file_path, json).map_err(|e| format!("Write error: {}", e))?;
         }
         HistoryExportFormat::Csv => {
             let mut csv = "id,timestamp,text,tts_engine,voice,success\n".to_string();
@@ -447,8 +443,7 @@ pub fn export_history(
                     entry.success
                 ));
             }
-            std::fs::write(&file_path, csv)
-                .map_err(|e| format!("Write error: {}", e))?;
+            std::fs::write(&file_path, csv).map_err(|e| format!("Write error: {}", e))?;
         }
     }
 
@@ -464,9 +459,7 @@ pub fn export_history(
 
 /// Get unique TTS engines from history for filter dropdowns
 #[tauri::command]
-pub fn get_history_unique_engines(
-    history: State<'_, Mutex<HistoryLog>>,
-) -> Vec<String> {
+pub fn get_history_unique_engines(history: State<'_, Mutex<HistoryLog>>) -> Vec<String> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] get_history_unique_engines called");
     }
@@ -476,9 +469,7 @@ pub fn get_history_unique_engines(
 
 /// Get unique voices from history for filter dropdowns
 #[tauri::command]
-pub fn get_history_unique_voices(
-    history: State<'_, Mutex<HistoryLog>>,
-) -> Vec<String> {
+pub fn get_history_unique_voices(history: State<'_, Mutex<HistoryLog>>) -> Vec<String> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] get_history_unique_voices called");
     }
@@ -488,9 +479,7 @@ pub fn get_history_unique_voices(
 
 /// Get unique tags from history for filter dropdowns
 #[tauri::command]
-pub fn get_history_unique_tags(
-    history: State<'_, Mutex<HistoryLog>>,
-) -> Vec<String> {
+pub fn get_history_unique_tags(history: State<'_, Mutex<HistoryLog>>) -> Vec<String> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] get_history_unique_tags called");
     }
@@ -500,9 +489,7 @@ pub fn get_history_unique_tags(
 
 /// Get date range of history entries for filter UI
 #[tauri::command]
-pub fn get_history_date_range(
-    history: State<'_, Mutex<HistoryLog>>,
-) -> Option<(String, String)> {
+pub fn get_history_date_range(history: State<'_, Mutex<HistoryLog>>) -> Option<(String, String)> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] get_history_date_range called");
     }
@@ -635,11 +622,7 @@ pub fn delete_history_batch(
         }
     }
 
-    log::info!(
-        "Deleted batch {} ({} entries)",
-        batch_id,
-        deleted_count
-    );
+    log::info!("Deleted batch {} ({} entries)", batch_id, deleted_count);
 
     Ok(deleted_count)
 }
@@ -662,7 +645,9 @@ pub async fn play_history_batch(
         let p = player.lock().unwrap();
         if p.is_playing() {
             log::warn!("Cannot start batch playback: audio already playing");
-            return Err("Audio is already playing. Please stop current playback first.".to_string());
+            return Err(
+                "Audio is already playing. Please stop current playback first.".to_string(),
+            );
         }
     }
 
@@ -689,7 +674,11 @@ pub async fn play_history_batch(
     log::info!("[IPC] Playing batch {} ({} fragments)", batch_id, total);
 
     // Get the combined text from all fragments for HUD display
-    let combined_text: String = entries.iter().map(|e|e.text.as_str()).collect::<Vec<_>>().join(" ");
+    let combined_text: String = entries
+        .iter()
+        .map(|e| e.text.as_str())
+        .collect::<Vec<_>>()
+        .join(" ");
 
     // Calculate total duration from all entries
     let total_duration_ms: u64 = entries.iter().map(|e| e.duration_ms).sum();
@@ -715,7 +704,8 @@ pub async fn play_history_batch(
             Some(path) => path.clone(),
             None => {
                 log::warn!("Entry {} has no output_path, skipping", entry.id);
-                missing_fragments.push((index, format!("fragment {} has no audio file", index + 1)));
+                missing_fragments
+                    .push((index, format!("fragment {} has no audio file", index + 1)));
                 continue;
             }
         };
@@ -731,7 +721,10 @@ pub async fn play_history_batch(
             Ok(bytes) => bytes,
             Err(e) => {
                 log::error!("Failed to read audio file '{}': {}", output_path, e);
-                missing_fragments.push((index, format!("fragment {} audio file unreadable", index + 1)));
+                missing_fragments.push((
+                    index,
+                    format!("fragment {} audio file unreadable", index + 1),
+                ));
                 continue;
             }
         };

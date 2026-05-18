@@ -50,6 +50,16 @@
       </div>
       <Switch id="qs-hotkey" bind:checked={config.hotkey.enabled} />
     </div>
+    <!-- Effects toggle — binds to config; active_effect preserved when disabled -->
+    <div
+      class="border-border bg-muted/30 flex items-center justify-between gap-2 rounded-lg border px-3 py-4"
+    >
+      <div class="flex items-center gap-1">
+        <Label for="qs-effects" class="text-xs">Effects</Label>
+        <InfoTooltip text="Apply audio effect to TTS playback" />
+      </div>
+      <Switch id="qs-effects" bind:checked={config.effects.enabled} />
+    </div>
     <!-- Volume slider — 0–100% range with integer steps for precise control -->
     <div class="border-border bg-muted/30 space-y-1 rounded-lg border px-3 py-4">
       <div class="flex items-center justify-between">

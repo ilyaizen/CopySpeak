@@ -211,8 +211,7 @@ impl ElevenLabsTtsBackend {
             }
             Err(_) => {
                 // No runtime context, create a new one
-                let rt = tokio::runtime::Runtime::new()
-                    .expect("Failed to create Tokio runtime");
+                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
                 rt.block_on(f)
             }
         }
@@ -234,7 +233,10 @@ impl ElevenLabsTtsBackend {
         match self.list_voices_internal() {
             Ok(voices) => Ok(voices),
             Err(e) => {
-                log::warn!("ElevenLabs - failed to fetch voices from API, using defaults: {}", e);
+                log::warn!(
+                    "ElevenLabs - failed to fetch voices from API, using defaults: {}",
+                    e
+                );
                 Ok(Self::default_voices())
             }
         }
@@ -261,17 +263,20 @@ impl ElevenLabsTtsBackend {
                     .map_err(|e| TtsError::Http(format!("Failed to fetch voices: {}", e)))?;
 
                 let status = response.status();
-                let body = response
-                    .bytes()
-                    .await
-                    .map_err(|e| TtsError::Http(format!("Failed to read voices response: {}", e)))?;
+                let body = response.bytes().await.map_err(|e| {
+                    TtsError::Http(format!("Failed to read voices response: {}", e))
+                })?;
 
                 Ok((status, body.to_vec()))
             });
 
         let (status, response_bytes) = fetch_result.map_err(|e| {
             let elapsed = start_time.elapsed();
-            log::error!("ElevenLabs - failed to fetch voices after {:?}: {}", elapsed, e);
+            log::error!(
+                "ElevenLabs - failed to fetch voices after {:?}: {}",
+                elapsed,
+                e
+            );
             e
         })?;
 
@@ -287,7 +292,10 @@ impl ElevenLabsTtsBackend {
 
         if !status.is_success() {
             log::error!("ElevenLabs API error {}: {}", status, response_text);
-            return Err(TtsError::Http(format!("ElevenLabs API error {}: {}", status, response_text)));
+            return Err(TtsError::Http(format!(
+                "ElevenLabs API error {}: {}",
+                status, response_text
+            )));
         }
 
         log::debug!(
@@ -301,13 +309,17 @@ impl ElevenLabsTtsBackend {
             voices: Vec<ElevenLabsVoice>,
         }
 
-        let voices_response: VoicesResponse = serde_json::from_str(&response_text).map_err(|e| {
-            log::error!("ElevenLabs - failed to parse voices response: {}", e);
-            log::error!("ElevenLabs - response text was: {}", response_text);
-            TtsError::Http(format!("Failed to parse voices response: {}", e))
-        })?;
+        let voices_response: VoicesResponse =
+            serde_json::from_str(&response_text).map_err(|e| {
+                log::error!("ElevenLabs - failed to parse voices response: {}", e);
+                log::error!("ElevenLabs - response text was: {}", response_text);
+                TtsError::Http(format!("Failed to parse voices response: {}", e))
+            })?;
 
-        log::info!("ElevenLabs - fetched {} voices", voices_response.voices.len());
+        log::info!(
+            "ElevenLabs - fetched {} voices",
+            voices_response.voices.len()
+        );
 
         Ok(voices_response.voices)
     }
@@ -410,8 +422,15 @@ impl ElevenLabsTtsBackend {
         log::debug!("ElevenLabs - fetching voice by ID: {}", voice_id);
 
         // First check if it's a known default voice
-        if let Some(voice) = Self::default_voices().iter().find(|v| v.voice_id == voice_id) {
-            log::info!("ElevenLabs - using default voice: {} ({})", voice.name.as_deref().unwrap_or("Unknown"), voice.voice_id);
+        if let Some(voice) = Self::default_voices()
+            .iter()
+            .find(|v| v.voice_id == voice_id)
+        {
+            log::info!(
+                "ElevenLabs - using default voice: {} ({})",
+                voice.name.as_deref().unwrap_or("Unknown"),
+                voice.voice_id
+            );
             return Ok(voice.clone());
         }
 
@@ -426,7 +445,11 @@ impl ElevenLabsTtsBackend {
         match self.get_voice_by_id_internal(voice_id) {
             Ok(voice) => Ok(voice),
             Err(e) => {
-                log::warn!("ElevenLabs - failed to fetch voice {} from API: {}", voice_id, e);
+                log::warn!(
+                    "ElevenLabs - failed to fetch voice {} from API: {}",
+                    voice_id,
+                    e
+                );
                 // Return not found error since we don't have it in defaults
                 Err(TtsError::Http(format!("Voice {} not found", voice_id)))
             }
@@ -485,7 +508,10 @@ impl ElevenLabsTtsBackend {
 
         if !status.is_success() {
             log::error!("ElevenLabs API error {}: {}", status, body);
-            return Err(TtsError::Http(format!("ElevenLabs API error {}: {}", status, body)));
+            return Err(TtsError::Http(format!(
+                "ElevenLabs API error {}: {}",
+                status, body
+            )));
         }
 
         log::debug!("ElevenLabs - raw voice {} response: {}", voice_id, body);
@@ -496,7 +522,11 @@ impl ElevenLabsTtsBackend {
             TtsError::Http(format!("Failed to parse voice response: {}", e))
         })?;
 
-        log::info!("ElevenLabs - fetched voice: {} ({})", voice.name.as_deref().unwrap_or("Unknown"), voice.voice_id);
+        log::info!(
+            "ElevenLabs - fetched voice: {} ({})",
+            voice.name.as_deref().unwrap_or("Unknown"),
+            voice.voice_id
+        );
 
         Ok(voice)
     }
@@ -551,8 +581,13 @@ impl TtsBackend for ElevenLabsTtsBackend {
         // Note: _speed parameter is ignored as ElevenLabs API doesn't support direct speed control
         // Speed adjustment should be done at playback level via audio player
 
-        log::info!("ElevenLabs TTS request - voice: {}, model: {}, format: {}, text length: {} chars",
-            self.config.voice_id, self.config.model_id, self.config.output_format.as_str(), text.len());
+        log::info!(
+            "ElevenLabs TTS request - voice: {}, model: {}, format: {}, text length: {} chars",
+            self.config.voice_id,
+            self.config.model_id,
+            self.config.output_format.as_str(),
+            text.len()
+        );
 
         let url = format!(
             "https://api.elevenlabs.io/v1/text-to-speech/{}",
@@ -571,7 +606,10 @@ impl TtsBackend for ElevenLabsTtsBackend {
         });
 
         if crate::logging::is_debug_mode() {
-            log::debug!("ElevenLabs TTS request body: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+            log::debug!(
+                "ElevenLabs TTS request body: {}",
+                serde_json::to_string_pretty(&body).unwrap_or_default()
+            );
         }
 
         let api_key = self.config.api_key.clone();
@@ -591,7 +629,8 @@ impl TtsBackend for ElevenLabsTtsBackend {
                 .json(&body)
                 .send()
                 .await
-        }).map_err(|e| {
+        })
+        .map_err(|e| {
             let elapsed = start_time.elapsed();
             log::error!("ElevenLabs TTS request failed after {:?}: {}", elapsed, e);
             TtsError::Http(format!("Request failed: {}", e))
@@ -609,13 +648,9 @@ impl TtsBackend for ElevenLabsTtsBackend {
         );
 
         if !response.status().is_success() {
-            let error_text = Self::block_on_async(async {
-                response.text().await.unwrap_or_default()
-            });
-            log::error!(
-                "ElevenLabs API error {}: {}",
-                status, error_text
-            );
+            let error_text =
+                Self::block_on_async(async { response.text().await.unwrap_or_default() });
+            log::error!("ElevenLabs API error {}: {}", status, error_text);
             // Provide a user-friendly message for payment-required errors (library voices)
             if status == reqwest::StatusCode::PAYMENT_REQUIRED
                 || error_text.contains("paid_plan_required")
@@ -633,14 +668,15 @@ impl TtsBackend for ElevenLabsTtsBackend {
             )));
         }
 
-        let bytes = Self::block_on_async(async {
-            response.bytes().await
-        }).map_err(|e| {
+        let bytes = Self::block_on_async(async { response.bytes().await }).map_err(|e| {
             log::error!("Failed to read response bytes: {}", e);
             TtsError::Http(format!("Failed to read bytes: {}", e))
         })?;
 
-        log::info!("ElevenLabs TTS synthesis complete: received {} bytes", bytes.len());
+        log::info!(
+            "ElevenLabs TTS synthesis complete: received {} bytes",
+            bytes.len()
+        );
 
         Ok(bytes.to_vec())
     }

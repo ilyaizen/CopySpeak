@@ -8,6 +8,7 @@ mod autostart;
 mod clipboard;
 mod commands;
 mod config;
+mod control_server;
 mod fragment_queue;
 mod history;
 mod history_manager;
@@ -168,15 +169,32 @@ fn parse_hotkey(hotkey: &str) -> Result<Shortcut, String> {
     }
 
     key_code
-        .map(|code| Shortcut::new(if modifiers.is_empty() { None } else { Some(modifiers) }, code))
+        .map(|code| {
+            Shortcut::new(
+                if modifiers.is_empty() {
+                    None
+                } else {
+                    Some(modifiers)
+                },
+                code,
+            )
+        })
         .ok_or_else(|| "No key code found in hotkey string".into())
 }
 
 /// Register the global hotkey for speak-from-clipboard.
-pub fn register_hotkey(app: &tauri::AppHandle, hotkey_config: &config::HotkeyConfig) -> Result<(), String> {
-    log::info!("[Hotkey] Attempting to register - enabled: {}, shortcut: {}", hotkey_config.enabled, hotkey_config.shortcut);
-    
-    app.global_shortcut().unregister_all()
+pub fn register_hotkey(
+    app: &tauri::AppHandle,
+    hotkey_config: &config::HotkeyConfig,
+) -> Result<(), String> {
+    log::info!(
+        "[Hotkey] Attempting to register - enabled: {}, shortcut: {}",
+        hotkey_config.enabled,
+        hotkey_config.shortcut
+    );
+
+    app.global_shortcut()
+        .unregister_all()
         .map_err(|e| format!("Failed to unregister shortcuts: {}", e))?;
 
     if !hotkey_config.enabled {
@@ -185,10 +203,17 @@ pub fn register_hotkey(app: &tauri::AppHandle, hotkey_config: &config::HotkeyCon
     }
 
     let shortcut = parse_hotkey(&hotkey_config.shortcut)?;
-    app.global_shortcut().register(shortcut)
-        .map_err(|e| format!("Failed to register shortcut '{}': {}", hotkey_config.shortcut, e))?;
+    app.global_shortcut().register(shortcut).map_err(|e| {
+        format!(
+            "Failed to register shortcut '{}': {}",
+            hotkey_config.shortcut, e
+        )
+    })?;
 
-    log::info!("[Hotkey] Successfully registered: {}", hotkey_config.shortcut);
+    log::info!(
+        "[Hotkey] Successfully registered: {}",
+        hotkey_config.shortcut
+    );
     Ok(())
 }
 
@@ -292,25 +317,36 @@ fn main() {
 
             // --- Build system tray ---
             let version = app.package_info().version.to_string();
-            let version_item = MenuItem::with_id(app, "version", format!("CopySpeak v{version}"), false, None::<&str>)?;
+            let version_item = MenuItem::with_id(
+                app,
+                "version",
+                format!("CopySpeak v{version}"),
+                false,
+                None::<&str>,
+            )?;
             let sep1 = PredefinedMenuItem::separator(app)?;
             let toggle_item = MenuItem::with_id(app, "toggle", "● Listening", true, None::<&str>)?;
-            let speak_item = MenuItem::with_id(app, "speak", "Speak Clipboard Now", true, None::<&str>)?;
+            let speak_item =
+                MenuItem::with_id(app, "speak", "Speak Clipboard Now", true, None::<&str>)?;
             let sep2 = PredefinedMenuItem::separator(app)?;
-            let settings_item = MenuItem::with_id(app, "settings", "Settings...", true, Some("Ctrl+,"))?;
+            let settings_item =
+                MenuItem::with_id(app, "settings", "Settings...", true, Some("Ctrl+,"))?;
             let sep3 = PredefinedMenuItem::separator(app)?;
             let quit_item = MenuItem::with_id(app, "quit", "Quit", true, Some("Ctrl+Q"))?;
 
-            let menu = Menu::with_items(app, &[
-                &version_item,
-                &sep1,
-                &toggle_item,
-                &speak_item,
-                &sep2,
-                &settings_item,
-                &sep3,
-                &quit_item,
-            ])?;
+            let menu = Menu::with_items(
+                app,
+                &[
+                    &version_item,
+                    &sep1,
+                    &toggle_item,
+                    &speak_item,
+                    &sep2,
+                    &settings_item,
+                    &sep3,
+                    &quit_item,
+                ],
+            )?;
 
             let is_listening_for_tray = is_listening.clone();
             let toggle_item_for_event = toggle_item.clone();
@@ -340,11 +376,25 @@ fn main() {
                             let app_handle = app.clone();
                             tauri::async_runtime::spawn(async move {
                                 // Get required states inside the async block
-                                let config: State<std::sync::Mutex<config::AppConfig>> = app_handle.state();
-                                let player: State<std::sync::Mutex<audio::AudioPlayer>> = app_handle.state();
-                                let history: State<std::sync::Mutex<history::HistoryLog>> = app_handle.state();
-                                let telemetry_state: State<std::sync::Mutex<telemetry::TelemetryLog>> = app_handle.state();
-                                if let Err(e) = commands::speak_now(app_handle.clone(), config, player, history, telemetry_state, None).await {
+                                let config: State<std::sync::Mutex<config::AppConfig>> =
+                                    app_handle.state();
+                                let player: State<std::sync::Mutex<audio::AudioPlayer>> =
+                                    app_handle.state();
+                                let history: State<std::sync::Mutex<history::HistoryLog>> =
+                                    app_handle.state();
+                                let telemetry_state: State<
+                                    std::sync::Mutex<telemetry::TelemetryLog>,
+                                > = app_handle.state();
+                                if let Err(e) = commands::speak_now(
+                                    app_handle.clone(),
+                                    config,
+                                    player,
+                                    history,
+                                    telemetry_state,
+                                    None,
+                                )
+                                .await
+                                {
                                     log::error!("Failed to speak from tray: {}", e);
                                 }
                             });
@@ -387,7 +437,8 @@ fn main() {
                             // Toggle pause when tray icon clicked during playback
                             let _ = app.emit("playback-toggle-pause", ());
                             {
-                                let player_state = app.state::<std::sync::Mutex<audio::AudioPlayer>>();
+                                let player_state =
+                                    app.state::<std::sync::Mutex<audio::AudioPlayer>>();
                                 if let Ok(mut p) = player_state.lock() {
                                     p.toggle_pause();
                                 };
@@ -409,7 +460,8 @@ fn main() {
                 main_window.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                         let close_behavior = {
-                            let cfg: State<std::sync::Mutex<config::AppConfig>> = app_handle.state();
+                            let cfg: State<std::sync::Mutex<config::AppConfig>> =
+                                app_handle.state();
                             let cfg = cfg.lock().unwrap();
                             cfg.general.close_behavior.clone()
                         };
@@ -439,6 +491,9 @@ fn main() {
                 let _ = hud_window.set_ignore_cursor_events(true);
             }
 
+            // --- Start local control server for trusted localhost integrations (Pi, etc.) ---
+            control_server::start(app.handle().clone());
+
             // --- Start clipboard watcher (background thread) ---
             let app_handle = app.handle().clone();
             let is_listening_clone = is_listening.clone();
@@ -452,24 +507,23 @@ fn main() {
                 let cfg = cfg.lock().unwrap();
                 cfg.hotkey.clone()
             };
-            
+
             if let Err(e) = register_hotkey(app.handle(), &hotkey_config) {
                 log::warn!("Failed to register initial hotkey: {}", e);
             }
 
             // --- Start playback monitor thread (auto-hide HUD when audio finishes) ---
             let app_handle_for_monitor = app.handle().clone();
-            std::thread::spawn(move || {
-                loop {
-                    std::thread::sleep(std::time::Duration::from_millis(100));
-                    let player: State<std::sync::Mutex<audio::AudioPlayer>> = app_handle_for_monitor.state();
-                    let finished = {
-                        let p = player.lock().unwrap();
-                        p.take_playback_finished()
-                    };
-                    if finished {
-                        hud::hide_hud(&app_handle_for_monitor);
-                    }
+            std::thread::spawn(move || loop {
+                std::thread::sleep(std::time::Duration::from_millis(100));
+                let player: State<std::sync::Mutex<audio::AudioPlayer>> =
+                    app_handle_for_monitor.state();
+                let finished = {
+                    let p = player.lock().unwrap();
+                    p.take_playback_finished()
+                };
+                if finished {
+                    hud::hide_hud(&app_handle_for_monitor);
                 }
             });
 
@@ -480,23 +534,38 @@ fn main() {
             log::info!("CopySpeak started");
             Ok(())
         })
-        .plugin(tauri_plugin_global_shortcut::Builder::new()
-            .with_handler(move |app, _shortcut, event| {
-                if event.state() == ShortcutState::Pressed {
-                    log::info!("Global hotkey triggered: speak from clipboard");
-                    let app_handle = app.clone();
-                    tauri::async_runtime::spawn(async move {
-                        let config: State<std::sync::Mutex<config::AppConfig>> = app_handle.state();
-                        let player: State<std::sync::Mutex<audio::AudioPlayer>> = app_handle.state();
-                        let history: State<std::sync::Mutex<history::HistoryLog>> = app_handle.state();
-                        let telemetry_state: State<std::sync::Mutex<telemetry::TelemetryLog>> = app_handle.state();
-                        if let Err(e) = commands::speak_now(app_handle.clone(), config, player, history, telemetry_state, None).await {
-                            log::error!("Failed to speak from hotkey: {}", e);
-                        }
-                    });
-                }
-            })
-            .build())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(move |app, _shortcut, event| {
+                    if event.state() == ShortcutState::Pressed {
+                        log::info!("Global hotkey triggered: speak from clipboard");
+                        let app_handle = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            let config: State<std::sync::Mutex<config::AppConfig>> =
+                                app_handle.state();
+                            let player: State<std::sync::Mutex<audio::AudioPlayer>> =
+                                app_handle.state();
+                            let history: State<std::sync::Mutex<history::HistoryLog>> =
+                                app_handle.state();
+                            let telemetry_state: State<std::sync::Mutex<telemetry::TelemetryLog>> =
+                                app_handle.state();
+                            if let Err(e) = commands::speak_now(
+                                app_handle.clone(),
+                                config,
+                                player,
+                                history,
+                                telemetry_state,
+                                None,
+                            )
+                            .await
+                            {
+                                log::error!("Failed to speak from hotkey: {}", e);
+                            }
+                        });
+                    }
+                })
+                .build(),
+        )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_process::init())
@@ -514,11 +583,24 @@ fn main() {
                         log::info!("Global hotkey triggered: speak from clipboard");
                         let app_handle = app.clone();
                         tauri::async_runtime::spawn(async move {
-                            let config: State<std::sync::Mutex<config::AppConfig>> = app_handle.state();
-                            let player: State<std::sync::Mutex<audio::AudioPlayer>> = app_handle.state();
-                            let history: State<std::sync::Mutex<history::HistoryLog>> = app_handle.state();
-                            let telemetry_state: State<std::sync::Mutex<telemetry::TelemetryLog>> = app_handle.state();
-                            if let Err(e) = commands::speak_now(app_handle.clone(), config, player, history, telemetry_state, None).await {
+                            let config: State<std::sync::Mutex<config::AppConfig>> =
+                                app_handle.state();
+                            let player: State<std::sync::Mutex<audio::AudioPlayer>> =
+                                app_handle.state();
+                            let history: State<std::sync::Mutex<history::HistoryLog>> =
+                                app_handle.state();
+                            let telemetry_state: State<std::sync::Mutex<telemetry::TelemetryLog>> =
+                                app_handle.state();
+                            if let Err(e) = commands::speak_now(
+                                app_handle.clone(),
+                                config,
+                                player,
+                                history,
+                                telemetry_state,
+                                None,
+                            )
+                            .await
+                            {
                                 log::error!("Failed to speak from hotkey: {}", e);
                             }
                         });
@@ -578,9 +660,9 @@ fn main() {
             commands::get_history_with_metadata,
             commands::get_history_statistics,
             commands::get_file_tracking,
-             commands::get_history_unique_engines,
-             commands::get_history_unique_voices,
-             commands::get_history_unique_tags,
+            commands::get_history_unique_engines,
+            commands::get_history_unique_voices,
+            commands::get_history_unique_tags,
             commands::get_history_date_range,
             commands::run_history_cleanup,
             commands::get_entry_by_file_path,

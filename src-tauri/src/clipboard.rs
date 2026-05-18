@@ -7,7 +7,6 @@ use std::sync::Arc;
 use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager};
 
-
 use windows::core::w;
 use windows::Win32::Foundation::{HGLOBAL, HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::System::DataExchange::{
@@ -243,12 +242,18 @@ unsafe extern "system" fn clipboard_wndproc(
                         if crate::logging::is_debug_mode() {
                             log::debug!("[Clipboard] Change detected at {}", timestamp);
                             log::debug!("[Clipboard] Text length: {} chars", text_len);
-                            log::debug!("[Clipboard] Text preview: {:?}{}", text_preview, if text_len > 50 { "..." } else { "" });
+                            log::debug!(
+                                "[Clipboard] Text preview: {:?}{}",
+                                text_preview,
+                                if text_len > 50 { "..." } else { "" }
+                            );
                         } else {
                             log::debug!("[Clipboard] Change detected: {} chars", text_len);
                         }
 
-                        let _ = ctx.app.emit("clipboard-change", ClipboardChange { text: text.clone() });
+                        let _ = ctx
+                            .app
+                            .emit("clipboard-change", ClipboardChange { text: text.clone() });
 
                         if !ctx.is_listening.load(Ordering::Relaxed) {
                             if crate::logging::is_debug_mode() {
@@ -260,18 +265,23 @@ unsafe extern "system" fn clipboard_wndproc(
                         }
 
                         let (trigger_window_ms, max_text_length) = {
-                            let config_state =
-                                ctx.app.state::<std::sync::Mutex<crate::config::AppConfig>>();
+                            let config_state = ctx
+                                .app
+                                .state::<std::sync::Mutex<crate::config::AppConfig>>();
                             let config = config_state.lock().unwrap();
-                            (config.trigger.double_copy_window_ms, config.trigger.max_text_length)
+                            (
+                                config.trigger.double_copy_window_ms,
+                                config.trigger.max_text_length,
+                            )
                         };
 
                         if ctx.state.on_change(&text, trigger_window_ms) {
                             log::info!("[Clipboard] Double-copy detected");
 
                             let sanitized_text = {
-                                let config_state =
-                                    ctx.app.state::<std::sync::Mutex<crate::config::AppConfig>>();
+                                let config_state = ctx
+                                    .app
+                                    .state::<std::sync::Mutex<crate::config::AppConfig>>();
                                 let config = config_state.lock().unwrap();
                                 let sanitization_config = config.sanitization.clone();
                                 if sanitization_config.enabled {
@@ -283,38 +293,59 @@ unsafe extern "system" fn clipboard_wndproc(
 
                             let final_char_count: usize = sanitized_text.chars().count();
                             if crate::logging::is_debug_mode() {
-                                log::debug!("[Clipboard] Sanitized: {} → {} chars", text_len, final_char_count);
+                                log::debug!(
+                                    "[Clipboard] Sanitized: {} → {} chars",
+                                    text_len,
+                                    final_char_count
+                                );
                             }
 
                             // Apply max_text_length truncation
-                            let final_text = if sanitized_text.chars().count() > max_text_length as usize {
-                                let truncated: String = sanitized_text.chars().take(max_text_length as usize).collect();
-                                log::info!(
-                                    "[Clipboard] Text truncated from {} to {} chars (max: {})",
-                                    sanitized_text.chars().count(),
-                                    truncated.chars().count(),
-                                    max_text_length
-                                );
-                                let _ = ctx.app.emit("text-truncated", TextTruncated {
-                                    original_length: sanitized_text.chars().count(),
-                                    truncated_length: truncated.chars().count(),
-                                    max_length: max_text_length,
-                                });
-                                truncated
-                            } else {
-                                sanitized_text
-                            };
+                            let final_text =
+                                if sanitized_text.chars().count() > max_text_length as usize {
+                                    let truncated: String = sanitized_text
+                                        .chars()
+                                        .take(max_text_length as usize)
+                                        .collect();
+                                    log::info!(
+                                        "[Clipboard] Text truncated from {} to {} chars (max: {})",
+                                        sanitized_text.chars().count(),
+                                        truncated.chars().count(),
+                                        max_text_length
+                                    );
+                                    let _ = ctx.app.emit(
+                                        "text-truncated",
+                                        TextTruncated {
+                                            original_length: sanitized_text.chars().count(),
+                                            truncated_length: truncated.chars().count(),
+                                            max_length: max_text_length,
+                                        },
+                                    );
+                                    truncated
+                                } else {
+                                    sanitized_text
+                                };
 
-                            log::debug!("[Clipboard] Emitting speak-request ({} chars)", final_text.chars().count());
+                            log::debug!(
+                                "[Clipboard] Emitting speak-request ({} chars)",
+                                final_text.chars().count()
+                            );
 
                             // Emit the full text — the frontend will call speak_queued,
                             // which handles pagination and sequential fragment playback.
-                            let _ = ctx.app.emit("speak-request", SpeakRequest { text: final_text });
+                            let _ = ctx
+                                .app
+                                .emit("speak-request", SpeakRequest { text: final_text });
                         } else {
                             if crate::logging::is_debug_mode() {
-                                log::debug!("[Clipboard] Single copy - waiting for second copy within {}ms", trigger_window_ms);
+                                log::debug!(
+                                    "[Clipboard] Single copy - waiting for second copy within {}ms",
+                                    trigger_window_ms
+                                );
                             } else {
-                                log::debug!("[Clipboard] Single copy detected, waiting for second copy");
+                                log::debug!(
+                                    "[Clipboard] Single copy detected, waiting for second copy"
+                                );
                             }
                             crate::hud::show_hud_clipboard_copied(&ctx.app, trigger_window_ms);
                         }

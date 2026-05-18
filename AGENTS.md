@@ -6,16 +6,16 @@
 ## Core Development Rules
 
 ### 1. Think Before Code
-No assume. No hide confusion. Surface tradeoffs.
 
+No assume. No hide confusion. Surface tradeoffs.
 State assumptions. Uncertain → ask.
 Multiple interpretations → present, no silent pick.
 Simpler path exist → say so. Push back when warranted.
 Unclear → stop. Name confusion. Ask.
 
 ### 2. Simplicity First
-Min code that solve problem. Nothing speculative.
 
+Min code that solve problem. Nothing speculative.
 No features beyond ask.
 No abstractions for single-use code.
 No "flexibility"/"configurability" not requested.
@@ -24,8 +24,8 @@ No error handling for impossible cases.
 Test: senior eng call this overcomplicated? Yes → simplify.
 
 ### 3. Surgical Changes
-Touch only what must. Clean only own mess.
 
+Touch only what must. Clean only own mess.
 No "improve" adjacent code/comments/format.
 No refactor things not broken.
 Match existing style even if disagree.
@@ -35,21 +35,22 @@ Pre-existing dead code → leave unless asked.
 Test: every changed line trace to user request.
 
 ### 4. Goal-Driven Execution
-Define success. Loop until verified.
 
+Define success. Loop until verified.
 "Add validation" → write failing tests, make pass.
 "Fix bug" → write reproducing test, make pass.
 "Refactor X" → tests pass before and after.
 Multi-step → state plan: [step] → verify: [check].
 
 ### 5. Testing / Committing
-DO NOT run checks. ALWAYS ASK USER for explicit confirmation before running any verification, linting, type-check, or build commands.
 
+DO NOT run checks. ALWAYS ASK USER for explicit confirmation before running any verification, linting, type-check, or build commands.
 DO NOT commit changes without explicit user confirmation. Before ending a task, ask whether to run checks and commit. If the user confirms committing, generate a suitable Conventional Commits message that summarizes the diff concisely.
 
 bun format — biome + prettier hybrid format.
 bun check — types + svelte-check.
 bun build — production build.
+
 Use running dev server. Test scroll, theme toggle, cursor.
 
 ## Commands

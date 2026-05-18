@@ -12,10 +12,10 @@ use super::synthesis::speak_now;
 // ── simulate_copy_sequence ──────────────────────────────────────────────────
 
 fn simulate_copy_sequence() -> Result<(), String> {
+    use std::mem::size_of;
     use windows::Win32::UI::Input::KeyboardAndMouse::{
         SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, VK_C, VK_CONTROL,
     };
-    use std::mem::size_of;
 
     unsafe {
         let inputs = [

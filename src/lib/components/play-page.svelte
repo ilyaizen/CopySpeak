@@ -54,6 +54,10 @@
       playback_speed: 1.0,
       pitch: 1.0
     },
+    effects: {
+      enabled: false,
+      active_effect: "none"
+    },
     hud: {
       enabled: false,
       position: "bottom-right",
@@ -144,6 +148,7 @@
       const { volume, playback_speed, pitch } = config.playback;
       const hotkeyEnabled = config.hotkey.enabled;
       const hotkeyShortcut = config.hotkey.shortcut;
+      const activeEffect = config.effects?.enabled ? config.effects.active_effect : "none";
 
       console.log("[PlayPage] Config effect triggered - hotkey:", {
         hotkeyEnabled,
@@ -151,7 +156,7 @@
       });
 
       // Keep playback store in sync so audio plays at correct settings
-      playbackStore.syncPlaybackConfig(volume, playback_speed, pitch);
+      playbackStore.syncPlaybackConfig(volume, playback_speed, pitch, activeEffect);
 
       const timeout = setTimeout(async () => {
         if (isTauri) {

@@ -44,6 +44,7 @@
 │   │   │   └── app-logo.png
 │   │   ├── components
 │   │   │   ├── engine
+│   │   │   │   ├── cartesia-engine.svelte
 │   │   │   │   ├── elevenlabs-engine.svelte
 │   │   │   │   ├── elevenlabs-engine.test.ts
 │   │   │   │   ├── eng02-minimal.test.ts
@@ -202,6 +203,7 @@
 │   │   │   ├── mod.rs
 │   │   │   └── tts_normalize.rs
 │   │   ├── tts
+│   │   │   ├── cartesia.rs
 │   │   │   ├── cli.rs
 │   │   │   ├── elevenlabs.rs
 │   │   │   ├── mod.rs
@@ -270,16 +272,18 @@
 ├── .prettierrc
 ├── .vercelignore
 ├── AGENTS.md
+├── CARTESIA_TTS_PLAN.md
 ├── CHANGELOG.md
 ├── CLAUDE.md
-├── GEMINI.md
 ├── LICENCE.txt
 ├── README.md
+├── app-logo.png
 ├── components.json
 ├── file-structure.txt
 ├── install-kittentts.ps1
 ├── kittentts-cli.py
 ├── package.json
+├── skills-lock.json
 ├── svelte.config.js
 ├── tsconfig.json
 ├── vite.config.js

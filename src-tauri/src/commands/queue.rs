@@ -39,21 +39,21 @@ pub fn skip_to_fragment(
     q.skip_to(index)?;
 
     // Emit skip event
-    let _ = app.emit("pagination:skipped", PaginationEvent {
-        total,
-        current_index: index,
-        is_paginated,
-    });
+    let _ = app.emit(
+        "pagination:skipped",
+        PaginationEvent {
+            total,
+            current_index: index,
+            is_paginated,
+        },
+    );
 
     Ok(())
 }
 
 /// Stop fragment queue playback.
 #[tauri::command]
-pub fn stop_queue(
-    app: AppHandle,
-    queue: State<'_, Mutex<FragmentQueue>>,
-) -> Result<(), String> {
+pub fn stop_queue(app: AppHandle, queue: State<'_, Mutex<FragmentQueue>>) -> Result<(), String> {
     let q = queue.lock().unwrap();
     let total = q.len();
     let current_index = q.current_index().unwrap_or(0);
@@ -61,21 +61,21 @@ pub fn stop_queue(
     q.stop();
 
     // Emit stopped event
-    let _ = app.emit("pagination:stopped", PaginationEvent {
-        total,
-        current_index,
-        is_paginated,
-    });
+    let _ = app.emit(
+        "pagination:stopped",
+        PaginationEvent {
+            total,
+            current_index,
+            is_paginated,
+        },
+    );
 
     Ok(())
 }
 
 /// Clear fragment queue.
 #[tauri::command]
-pub fn clear_queue(
-    app: AppHandle,
-    queue: State<'_, Mutex<FragmentQueue>>,
-) -> Result<(), String> {
+pub fn clear_queue(app: AppHandle, queue: State<'_, Mutex<FragmentQueue>>) -> Result<(), String> {
     let q = queue.lock().unwrap();
     let total = q.len();
     let current_index = q.current_index().unwrap_or(0);
@@ -83,11 +83,14 @@ pub fn clear_queue(
     q.clear();
 
     // Emit cleared event
-    let _ = app.emit("pagination:cleared", PaginationEvent {
-        total,
-        current_index,
-        is_paginated,
-    });
+    let _ = app.emit(
+        "pagination:cleared",
+        PaginationEvent {
+            total,
+            current_index,
+            is_paginated,
+        },
+    );
 
     Ok(())
 }

@@ -26,8 +26,7 @@ impl OpenAiTtsBackend {
             }
             Err(_) => {
                 // No runtime context, create a new one
-                let rt = tokio::runtime::Runtime::new()
-                    .expect("Failed to create Tokio runtime");
+                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
                 rt.block_on(f)
             }
         }
@@ -53,11 +52,19 @@ impl TtsBackend for OpenAiTtsBackend {
         let api_key = self.config.api_key.clone();
 
         // Log request details
-        log::info!("OpenAI TTS request - model: {}, voice: {}, speed: {}, text length: {} chars",
-            self.config.model, self.config.voice, speed, text.len());
+        log::info!(
+            "OpenAI TTS request - model: {}, voice: {}, speed: {}, text length: {} chars",
+            self.config.model,
+            self.config.voice,
+            speed,
+            text.len()
+        );
 
         if crate::logging::is_debug_mode() {
-            log::debug!("OpenAI TTS request body: {}", serde_json::to_string_pretty(&body).unwrap_or_default());
+            log::debug!(
+                "OpenAI TTS request body: {}",
+                serde_json::to_string_pretty(&body).unwrap_or_default()
+            );
         }
 
         let start_time = std::time::Instant::now();
@@ -71,7 +78,8 @@ impl TtsBackend for OpenAiTtsBackend {
                 .json(&body)
                 .send()
                 .await
-        }).map_err(|e| {
+        })
+        .map_err(|e| {
             let elapsed = start_time.elapsed();
             log::error!("OpenAI TTS request failed after {:?}: {}", elapsed, e);
             TtsError::Http(format!("Request failed: {}", e))
@@ -89,27 +97,24 @@ impl TtsBackend for OpenAiTtsBackend {
         );
 
         if !response.status().is_success() {
-            let error_text = Self::block_on_async(async {
-                response.text().await.unwrap_or_default()
-            });
-            log::error!(
-                "OpenAI API error {}: {}",
-                status, error_text
-            );
+            let error_text =
+                Self::block_on_async(async { response.text().await.unwrap_or_default() });
+            log::error!("OpenAI API error {}: {}", status, error_text);
             return Err(TtsError::Http(format!(
                 "OpenAI API error {}: {}",
                 status, error_text
             )));
         }
 
-        let bytes = Self::block_on_async(async {
-            response.bytes().await
-        }).map_err(|e| {
+        let bytes = Self::block_on_async(async { response.bytes().await }).map_err(|e| {
             log::error!("Failed to read response bytes: {}", e);
             TtsError::Http(format!("Failed to read bytes: {}", e))
         })?;
 
-        log::info!("OpenAI TTS synthesis complete: received {} bytes", bytes.len());
+        log::info!(
+            "OpenAI TTS synthesis complete: received {} bytes",
+            bytes.len()
+        );
 
         Ok(bytes.to_vec())
     }

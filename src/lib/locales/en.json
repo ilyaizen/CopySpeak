@@ -30,6 +30,7 @@
     "title": "Settings",
     "tabs": {
       "general": "General",
+      "effects": "Effects",
       "advanced": "Advanced",
       "about": "About"
     },
@@ -44,6 +45,7 @@
       "hotkeys": "Hotkeys",
       "pagination": "Advanced",
       "sanitization": "Sanitization",
+      "effects": "Effects",
       "appInfo": "App Info",
       "importExport": "Import / Export"
     },
@@ -164,6 +166,17 @@
       "markdownDescription": "Remove all markdown formatting (headers, bold, italic, code blocks, links, lists, blockquotes)",
       "ttsNormalization": "Expand Visual Shorthand",
       "ttsNormalizationDescription": "Resolve URLs, slashes, abbreviations, metric units, and symbols into spoken-friendly text"
+    },
+    "effects": {
+      "enabled": "Enable Effects",
+      "enabledDescription": "Show the Effects tab in the main menu and apply post-processing to TTS playback",
+      "active": "Active Effect",
+      "activeDescription": "Audio effect applied to every TTS playback",
+      "options": {
+        "none": "None",
+        "walkieTalkie": "Walkie-Talkie",
+        "gameBoy": "8-bit Game Boy"
+      }
     },
     "about": {
       "version": "Version",
@@ -452,9 +465,17 @@
   "header": {
     "play": "Play",
     "history": "History",
+    "effects": "Effects",
     "engine": "Engine",
     "settings": "Settings",
     "tagline": "Read clipboard aloud instantly"
+  },
+  "effects": {
+    "title": "Audio Effects",
+    "description": "Apply a post-processing effect to TTS playback. Effects are applied in real time and do not modify saved audio.",
+    "preview": "Preview",
+    "previewing": "Previewing...",
+    "activeTooltip": "The effect applied to every TTS playback. Switch instantly without restarting."
   },
   "footer": {
     "listening": "Listening",

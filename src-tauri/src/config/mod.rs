@@ -2,8 +2,9 @@
 // Auto-saved on every change from the frontend via set_config command.
 
 /// Current config schema version. Bumped when making breaking changes to config structure.
-const CONFIG_VERSION: &str = "0.1.1";
+const CONFIG_VERSION: &str = "0.1.2";
 
+mod effects;
 mod general;
 mod hotkey;
 mod hud;
@@ -22,6 +23,7 @@ use std::sync::atomic::AtomicU32;
 use std::sync::{Mutex, OnceLock};
 
 // Re-export all public types so external code can use `crate::config::*` unchanged.
+pub use effects::*;
 pub use general::*;
 pub use hotkey::*;
 pub use hud::*;
@@ -174,6 +176,8 @@ pub struct AppConfig {
     pub history: HistoryConfig,
     #[serde(default)]
     pub hotkey: HotkeyConfig,
+    #[serde(default)]
+    pub effects: EffectsConfig,
 }
 
 fn default_config_version() -> String {
@@ -217,6 +221,7 @@ impl Default for AppConfig {
             pagination: PaginationConfig::default(),
             history: HistoryConfig::default(),
             hotkey: HotkeyConfig::default(),
+            effects: EffectsConfig::default(),
         }
     }
 }

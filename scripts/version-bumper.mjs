@@ -20,11 +20,7 @@ const filesToUpdate = {
   [versionFile]: (content, version) =>
     content.replace(/export const VERSION = "[^"]+";/, `export const VERSION = "${version}";`),
   "README.md": (content, version) =>
-    content.replace(/(\*\*Current Version:\*\*\s*)[\d.]+/, `$1${version}`),
-  "src-web/package.json": (content, version) =>
-    content.replace(/("version":\s*)"[^"]+"/, `$1"${version}"`),
-  "src-web/src/lib/components/landing/hero.svelte": (content, version) =>
-    content.replace(/(version:\s*)"[^"]+"/, `$1"${version}"`)
+    content.replace(/(\*\*Current Version:\*\*\s*)[\d.]+/, `$1${version}`)
 };
 
 // --- Script ---

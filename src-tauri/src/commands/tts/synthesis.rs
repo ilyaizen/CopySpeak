@@ -35,8 +35,9 @@ fn truncate_preview(text: &str, max_len: usize) -> String {
 fn get_text_or_clipboard(text: Option<String>) -> Result<String, String> {
     match text {
         Some(t) => Ok(t),
-        None => crate::clipboard::get_clipboard_text()
-            .ok_or_else(|| "No text in clipboard".to_string()),
+        None => {
+            crate::clipboard::get_clipboard_text().ok_or_else(|| "No text in clipboard".to_string())
+        }
     }
 }
 
@@ -100,7 +101,16 @@ fn add_history_with_metadata(
 ) {
     let mut metadata = extra_metadata.unwrap_or_default();
     metadata.insert("synthesis_ms".to_string(), serde_json::json!(synthesis_ms));
-    history::add_entry_with_batch(history, text, engine, voice, duration_ms, path, batch_id, metadata);
+    history::add_entry_with_batch(
+        history,
+        text,
+        engine,
+        voice,
+        duration_ms,
+        path,
+        batch_id,
+        metadata,
+    );
 }
 
 /// Emit audio-ready event with base64 encoded audio
@@ -146,7 +156,13 @@ fn save_to_history_storage(
     audio_ext: &str,
 ) -> Option<String> {
     let history_config = config.lock().unwrap().history.clone();
-    crate::history::save_audio_to_storage(&history_config, wav_bytes, engine_id, voice_name, audio_ext)
+    crate::history::save_audio_to_storage(
+        &history_config,
+        wav_bytes,
+        engine_id,
+        voice_name,
+        audio_ext,
+    )
 }
 
 /// Cache audio for replay
@@ -203,7 +219,11 @@ pub async fn speak_now(
     let cached_path = {
         let hist = history.lock().unwrap();
         hist.entries().iter().rev().find_map(|e| {
-            if e.text == text && e.voice == voice && e.tts_engine == engine_str_for_cache && e.success {
+            if e.text == text
+                && e.voice == voice
+                && e.tts_engine == engine_str_for_cache
+                && e.success
+            {
                 e.output_path.as_ref().and_then(|path| {
                     if std::path::Path::new(path).exists() {
                         Some(path.clone())
@@ -420,7 +440,8 @@ fn handle_file_output(
     std::fs::create_dir_all(output_dir)
         .map_err(|e| format!("Failed to create output directory: {e}"))?;
 
-    let mut filename = config::expand_filename_pattern(&output_config.filename_pattern, voice, text);
+    let mut filename =
+        config::expand_filename_pattern(&output_config.filename_pattern, voice, text);
 
     let audio_bytes = if output_config.format_config.format != crate::config::AudioFormat::Wav {
         if filename.to_lowercase().ends_with(".wav") {
@@ -486,7 +507,8 @@ fn handle_playback_output(
     let voice_name = voice_display_name(active_backend, tts_config, voice);
     let audio_ext = backend_arc.file_extension().to_string();
 
-    let history_path = save_to_history_storage(config, wav_bytes, &engine_id, &voice_name, &audio_ext);
+    let history_path =
+        save_to_history_storage(config, wav_bytes, &engine_id, &voice_name, &audio_ext);
 
     add_history_with_metadata(
         history,
@@ -677,12 +699,8 @@ pub async fn speak_queued(
 
         // Synthesize fragment
         let fragment_start = Instant::now();
-        let wav_bytes = synthesize_async(
-            backend_arc.clone(),
-            fragment.text.clone(),
-            voice.clone(),
-        )
-        .await?;
+        let wav_bytes =
+            synthesize_async(backend_arc.clone(), fragment.text.clone(), voice.clone()).await?;
         let fragment_duration = fragment_start.elapsed();
 
         // Record telemetry
@@ -700,7 +718,11 @@ pub async fn speak_queued(
             q.set_audio(index, wav_bytes.clone());
         }
 
-        log::debug!("[Queue] Synthesized fragment {} ({} bytes)", index + 1, wav_bytes.len());
+        log::debug!(
+            "[Queue] Synthesized fragment {} ({} bytes)",
+            index + 1,
+            wav_bytes.len()
+        );
 
         // Extract envelope
         let envelope = extract_envelope_or_default(&wav_bytes);
@@ -713,13 +735,8 @@ pub async fn speak_queued(
         // Save to history
         let audio_ext = backend_arc.file_extension().to_string();
         let voice_name = voice_display_name(&active_backend, &tts_config, &voice);
-        let history_path = save_to_history_storage(
-            &config,
-            &wav_bytes,
-            &engine_id_val,
-            &voice_name,
-            &audio_ext,
-        );
+        let history_path =
+            save_to_history_storage(&config, &wav_bytes, &engine_id_val, &voice_name, &audio_ext);
 
         // Build metadata
         let mut metadata = HashMap::new();
@@ -850,8 +867,7 @@ pub async fn speak_history_entry(
     let synthesis_start = Instant::now();
 
     // Synthesize
-    let wav_bytes =
-        synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?;
+    let wav_bytes = synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?;
     let synthesis_ms = synthesis_start.elapsed().as_millis() as u64;
 
     // Record telemetry
@@ -867,7 +883,8 @@ pub async fn speak_history_entry(
     let envelope = extract_envelope_or_default(&wav_bytes);
 
     // Save to history
-    let history_path = save_to_history_storage(&config, &wav_bytes, &engine_id, &voice_name, &audio_ext);
+    let history_path =
+        save_to_history_storage(&config, &wav_bytes, &engine_id, &voice_name, &audio_ext);
 
     add_history_with_metadata(
         &history,

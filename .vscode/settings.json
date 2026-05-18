@@ -1,19 +1,17 @@
 {
   "i18n-ally.localesPaths": [
     "src/lib/i18n",
-    "src/lib/locales",
-    "src-web/src/lib/i18n",
-    "src-web/src/lib/locales"
+    "src/lib/locales"
   ],
   "i18n-ally.keystyle": "nested",
   // "window.titleBarStyle": "custom",
   // Custom title bar and status bar colors
   "workbench.colorCustomizations": {
-    "titleBar.activeBackground": "#2f353d",
+    "titleBar.activeBackground": "#0a2e2c",
     "titleBar.activeForeground": "#fcfcfc",
-    "titleBar.inactiveBackground": "#3d4856",
+    "titleBar.inactiveBackground": "#191f1e",
     "titleBar.inactiveForeground": "#b0b8c1",
-    "statusBar.background": "#2f353d",
+    "statusBar.background": "#0a2e2c",
     "statusBar.foreground": "#fcfcfc"
   }
 }
