@@ -205,7 +205,10 @@ The project is valued at **100M** with 5k users. Cost is €50 per unit & ~10% p
             "Should not contain markdown links"
         );
         assert!(!result.contains("- "), "Should not contain list markers");
-        assert!(!result.contains("> "), "Should not contain blockquote markers");
+        assert!(
+            !result.contains("> "),
+            "Should not contain blockquote markers"
+        );
         assert!(!result.contains('`'), "Should not contain code markers");
         assert!(!result.contains("https://"), "Should not contain URLs");
         assert!(result.contains("for example"), "Should expand 'e.g.'");

@@ -4,12 +4,12 @@
 
 mod config;
 mod history;
+mod install;
 mod logging;
 mod playback;
 mod queue;
 mod tts;
 mod update;
-mod install;
 
 // Re-export all public commands and types so `main.rs` can use `commands::*` unchanged.
 pub use config::*;

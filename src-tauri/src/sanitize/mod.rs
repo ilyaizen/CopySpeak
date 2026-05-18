@@ -1,8 +1,8 @@
 // Sanitize: multi-pass text cleaning pipeline for TTS.
 // Removes markdown formatting, normalizes text for speech, and cleans up artifacts.
 
-mod markdown;
 pub(crate) mod cleanup;
+mod markdown;
 pub(crate) mod tts_normalize;
 
 use crate::config::SanitizationConfig;

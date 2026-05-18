@@ -71,7 +71,11 @@ impl TtsBackend for CartesiaTtsBackend {
                 .await
         })
         .map_err(|e| {
-            log::error!("Cartesia TTS request failed after {:?}: {}", start_time.elapsed(), e);
+            log::error!(
+                "Cartesia TTS request failed after {:?}: {}",
+                start_time.elapsed(),
+                e
+            );
             TtsError::Http(format!("Request failed: {}", e))
         })?;
 
@@ -84,7 +88,8 @@ impl TtsBackend for CartesiaTtsBackend {
         );
 
         if !status.is_success() {
-            let error_text = Self::block_on_async(async { response.text().await.unwrap_or_default() });
+            let error_text =
+                Self::block_on_async(async { response.text().await.unwrap_or_default() });
             log::error!("Cartesia API error {}: {}", status, error_text);
             return Err(TtsError::Http(format!(
                 "Cartesia API error {}: {}",
@@ -97,7 +102,10 @@ impl TtsBackend for CartesiaTtsBackend {
             TtsError::Http(format!("Failed to read bytes: {}", e))
         })?;
 
-        log::info!("Cartesia TTS synthesis complete: received {} bytes", bytes.len());
+        log::info!(
+            "Cartesia TTS synthesis complete: received {} bytes",
+            bytes.len()
+        );
         Ok(bytes.to_vec())
     }
 
@@ -113,10 +121,13 @@ impl TtsBackend for CartesiaTtsBackend {
     }
 
     fn voice_display_name(&self, voice_id: &str) -> String {
-        self.config.voice_name.clone().unwrap_or_else(|| match voice_id {
-            "f786b574-daa5-4673-aa0c-cbe3e8534c02" => "Katie".to_string(),
-            "a5136bf9-224c-4d76-b823-52bd5efcffcc" => "Jameson".to_string(),
-            _ => "Voice".to_string(),
-        })
+        self.config
+            .voice_name
+            .clone()
+            .unwrap_or_else(|| match voice_id {
+                "f786b574-daa5-4673-aa0c-cbe3e8534c02" => "Katie".to_string(),
+                "a5136bf9-224c-4d76-b823-52bd5efcffcc" => "Jameson".to_string(),
+                _ => "Voice".to_string(),
+            })
     }
 }

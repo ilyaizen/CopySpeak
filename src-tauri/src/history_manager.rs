@@ -265,12 +265,18 @@ impl HistoryManager {
     }
 
     /// Cleanup old entries based on auto delete mode
-    pub fn cleanup_old_entries(&self, auto_delete_mode: &crate::config::AutoDeleteMode) -> Result<usize, String> {
+    pub fn cleanup_old_entries(
+        &self,
+        auto_delete_mode: &crate::config::AutoDeleteMode,
+    ) -> Result<usize, String> {
         history::cleanup_old_entries(&self.history, auto_delete_mode)
     }
 
     /// Run full cleanup (orphaned files and old entries)
-    pub fn run_full_cleanup(&self, auto_delete_mode: &crate::config::AutoDeleteMode) -> (usize, usize) {
+    pub fn run_full_cleanup(
+        &self,
+        auto_delete_mode: &crate::config::AutoDeleteMode,
+    ) -> (usize, usize) {
         history::run_full_cleanup(&self.history, auto_delete_mode)
     }
 
