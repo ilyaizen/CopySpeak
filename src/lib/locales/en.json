@@ -477,6 +477,53 @@
     "previewing": "Previewing...",
     "activeTooltip": "The effect applied to every TTS playback. Switch instantly without restarting."
   },
+  "landing": {
+    "hero": {
+      "title": "CopySpeak",
+      "subtitle": "Double-copy → instant speech",
+      "description": "A lightweight Windows app that reads clipboard text aloud using AI text-to-speech engines.",
+      "download": "Download for Windows",
+      "github": "View on GitHub",
+      "version": "v{version}"
+    },
+    "features": {
+      "title": "Features",
+      "doubleCopy": {
+        "title": "Double-Copy Trigger",
+        "description": "Copy text twice within 1.5 seconds to trigger speech instantly. No hotkeys needed."
+      },
+      "engines": {
+        "title": "5 TTS Engines",
+        "description": "Choose from Kitten TTS, Piper, Kokoro, OpenAI, or ElevenLabs. Local and cloud options."
+      },
+      "hud": {
+        "title": "HUD Overlay",
+        "description": "Floating heads-up display with real-time waveform visualization during playback."
+      },
+      "history": {
+        "title": "History",
+        "description": "Persistent TTS generation history with playback, batch management, and audio export."
+      },
+      "sanitization": {
+        "title": "Text Sanitization",
+        "description": "Automatic markdown stripping, URL expansion, and text normalization for clearer speech."
+      },
+      "configurable": {
+        "title": "Highly Configurable",
+        "description": "Playback speed, volume, pitch, triggers, appearance, and more. Dark and light themes."
+      }
+    },
+    "screenshots": {
+      "title": "Screenshots",
+      "subtitle": "See CopySpeak in action",
+      "caption": "CopySpeak v0.0.1 — Main interface with Play tab"
+    },
+    "footer": {
+      "github": "GitHub",
+      "license": "MIT License",
+      "madeWith": "Made with Rust, Svelte, and AI."
+    }
+  },
   "footer": {
     "listening": "Listening",
     "paused": "Paused",
