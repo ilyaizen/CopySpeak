@@ -31,13 +31,9 @@ pub fn check_command_exists(command: String) -> Result<CommandExistsResult, Stri
 
     // Try to find the command in PATH using `which` on Unix or `where` on Windows
     let result = if cfg!(target_os = "windows") {
-        std::process::Command::new("where")
-            .arg(&command)
-            .output()
+        std::process::Command::new("where").arg(&command).output()
     } else {
-        std::process::Command::new("which")
-            .arg(&command)
-            .output()
+        std::process::Command::new("which").arg(&command).output()
     };
 
     match result {
@@ -56,9 +52,7 @@ pub fn check_command_exists(command: String) -> Result<CommandExistsResult, Stri
 }
 
 #[tauri::command]
-pub fn test_tts_engine(
-    config: State<'_, Mutex<AppConfig>>,
-) -> Result<TtsHealthResult, String> {
+pub fn test_tts_engine(config: State<'_, Mutex<AppConfig>>) -> Result<TtsHealthResult, String> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] test_tts_engine called");
     }
@@ -73,8 +67,12 @@ pub fn test_tts_engine(
     let backend_name = match active_backend {
         crate::config::TtsEngine::Local => tts_config.command.clone(),
         crate::config::TtsEngine::OpenAI => format!("OpenAI ({})", tts_config.openai.model),
-        crate::config::TtsEngine::ElevenLabs => format!("ElevenLabs ({})", tts_config.elevenlabs.model_id),
-        crate::config::TtsEngine::Cartesia => format!("Cartesia ({})", tts_config.cartesia.model_id),
+        crate::config::TtsEngine::ElevenLabs => {
+            format!("ElevenLabs ({})", tts_config.elevenlabs.model_id)
+        }
+        crate::config::TtsEngine::Cartesia => {
+            format!("Cartesia ({})", tts_config.cartesia.model_id)
+        }
     };
 
     match backend.health_check() {
@@ -91,29 +89,62 @@ pub fn test_tts_engine(
             let (message, error_type) = match &e {
                 TtsError::Unavailable(msg) => {
                     if msg.contains("API key") {
-                        (format!("{} - API key is missing or invalid", backend_name), "api_key_missing")
+                        (
+                            format!("{} - API key is missing or invalid", backend_name),
+                            "api_key_missing",
+                        )
                     } else if msg.contains("not found") || msg.contains("The system cannot find") {
                         (format!("Command '{}' not found. Please ensure the TTS engine is installed and in PATH.", backend_name), "not_found")
                     } else if msg.contains("Access is denied") || msg.contains("permission") {
-                        (format!("Permission denied accessing '{}'. Check permissions.", backend_name), "permission_denied")
+                        (
+                            format!(
+                                "Permission denied accessing '{}'. Check permissions.",
+                                backend_name
+                            ),
+                            "permission_denied",
+                        )
                     } else {
-                        (format!("{} unavailable: {}", backend_name, msg), "unavailable")
+                        (
+                            format!("{} unavailable: {}", backend_name, msg),
+                            "unavailable",
+                        )
                     }
                 }
                 TtsError::Http(msg) => {
                     if msg.contains("401") || msg.contains("403") {
-                        (format!("{} - Authentication failed. Check your API key.", backend_name), "auth_failed")
+                        (
+                            format!(
+                                "{} - Authentication failed. Check your API key.",
+                                backend_name
+                            ),
+                            "auth_failed",
+                        )
                     } else if msg.contains("429") {
-                        (format!("{} - Rate limit exceeded. Please try again later.", backend_name), "rate_limit")
+                        (
+                            format!(
+                                "{} - Rate limit exceeded. Please try again later.",
+                                backend_name
+                            ),
+                            "rate_limit",
+                        )
                     } else {
-                        (format!("{} - Network error: {}", backend_name, msg), "http_error")
+                        (
+                            format!("{} - Network error: {}", backend_name, msg),
+                            "http_error",
+                        )
                     }
                 }
                 TtsError::Io(e) => {
                     if e.kind() == std::io::ErrorKind::NotFound {
                         (format!("Command '{}' not found. Please ensure the TTS engine is installed.", backend_name), "not_found")
                     } else if e.kind() == std::io::ErrorKind::PermissionDenied {
-                        (format!("Permission denied running '{}'. Check file permissions.", backend_name), "permission_denied")
+                        (
+                            format!(
+                                "Permission denied running '{}'. Check file permissions.",
+                                backend_name
+                            ),
+                            "permission_denied",
+                        )
                     } else {
                         (format!("IO error: {}", e), "io_error")
                     }

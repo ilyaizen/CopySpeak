@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Audio Effects system** — Frontend-only post-processing applied to TTS playback
+  - New `EffectsConfig` (Rust + TS) persisted in `AppConfig` with `enabled` and `active_effect`
+  - New Effects settings tab and conditional main-menu Effects tab (gated by `effects.enabled`)
+  - New `/effects` route with live effect selector and preview button
+  - **Walkie-talkie effect** — Narrow radio EQ, subtle saturation, light AM wobble, normalized PTT clicks, and low static under the voice
+  - **8-bit Game Boy effect** — 4-bit sample quantization resampled to 11025 Hz for crunchy retro voice
+  - `Effect` interface and registry in `src/lib/stores/playback/effects/` for extensibility
+  - Effects render inside `OfflineAudioContext` and integrate with existing pitch-shift pipeline; results cached per `{pitch, effect}` pair
+
 - **Cartesia onboarding verification** — Onboarding now accepts a Cartesia API key and validates it via `check_cartesia_credentials` without synthesis.
 
 - **Cartesia TTS backend** — Added Cartesia Sonic 3.5 as a cloud TTS engine
@@ -17,11 +26,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Unified web and desktop SvelteKit app** — Consolidated the former `src-web` landing page into the main `src` app
+  - Added Vercel environment detection via `import.meta.env.VITE_IS_VERCEL`
+  - Route layout now renders the marketing landing page on Vercel and the Tauri app shell locally/in desktop builds
+  - Removed the redundant `src-web` SvelteKit project
+
 - **Default TTS engine** — New configs now default to Cartesia Sonic 3.5 with the Katie voice
 - **Default pagination fragment size** — New configs now use `fragment_size: 500`
 - **Engine picker order** — Cartesia now appears first in engine settings and footer selector
 - **Cartesia voice selection** — Cartesia settings now show resolved voice names with a manual voice ID fallback
 - **Onboarding flow** — First-run setup now focuses on Cartesia Cloud instead of local Kitten TTS installation
+
+### Fixed
+
+- **CopySpeak Pi voice extension** — Switched Pi speech triggering from clipboard double-copy writes to the local CopySpeak control server, avoiding primer speech and Windows clipboard failures.
+- **CopySpeak Pi voice extension** — Disabled activity/tool announcements by default so normal use only speaks final assistant responses unless `/copyspeak-voice activity on` is enabled.
+- **CopySpeak control server** — Fixed `Content-Length` parsing so `/speak` accepts normal HTTP POST bodies from Pi, curl, and other clients.
 
 ## [0.1.0] - 2026-03-27
 
@@ -42,6 +62,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Shows last 20 lines, auto-refreshes every 2s
 
 ### Fixed
+
+- **CopySpeak Pi voice extension** — Reworked clipboard triggering to serialize double-copy events and avoid repeated trigger loops; startup now avoids focusing an already-running CopySpeak instance.
 
 - **Windows CLI backend PATH resolution** — Expanded PATH for finding Python/uv tools on Windows
   - Added `get_expanded_path()` to include common Python and uv installation paths

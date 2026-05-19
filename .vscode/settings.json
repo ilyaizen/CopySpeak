@@ -1,9 +1,7 @@
 {
   "i18n-ally.localesPaths": [
     "src/lib/i18n",
-    "src/lib/locales",
-    "src-web/src/lib/i18n",
-    "src-web/src/lib/locales"
+    "src/lib/locales"
   ],
   "i18n-ally.keystyle": "nested",
   // "window.titleBarStyle": "custom",

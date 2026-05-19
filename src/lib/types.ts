@@ -199,6 +199,13 @@ export interface HotkeyConfig {
   shortcut: string;
 }
 
+export type EffectId = "none" | "walkie_talkie" | "game_boy";
+
+export interface EffectsConfig {
+  enabled: boolean;
+  active_effect: EffectId;
+}
+
 export interface AppConfig {
   trigger: TriggerConfig;
   tts: TtsConfig;
@@ -210,6 +217,7 @@ export interface AppConfig {
   pagination: PaginationConfig;
   history: HistoryConfig;
   hotkey: HotkeyConfig;
+  effects: EffectsConfig;
 }
 
 // History types for tracking text-to-speech operations

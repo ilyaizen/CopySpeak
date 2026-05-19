@@ -2,7 +2,6 @@ node_modules
 .svelte-kit
 dist
 src-tauri
-/src
 /archive
 /docs
 /docs_internal
@@ -14,5 +13,3 @@ src-tauri
 /.opencode
 /.github
 /.git
-bun.lock
-

@@ -10,8 +10,10 @@
  */
 
 import { isTauri } from "$lib/services/tauri.js";
+import type { EffectId } from "$lib/types";
 import { audioBufferToWavBlob, detectAudioMimeType } from "./playback/audio-utils.js";
 import { AudioAnalyser } from "./playback/analyser.js";
+import { getEffect } from "./playback/effects/registry.js";
 import { FragmentQueue, type QueuedFragment } from "./playback/fragment-queue.js";
 import { hudStore } from "./hud-store.svelte.js";
 
@@ -30,12 +32,13 @@ class PlaybackStore {
   pitch = $state(1.0);
   volume = $state(100);
   speed = $state(1.0);
+  activeEffect = $state<EffectId>("none");
 
   private _audioEl: HTMLAudioElement | null = null;
   private _audioCtx: AudioContext | null = null;
   private _decodedBuffer: AudioBuffer | null = null;
   private _originalBytes: ArrayBuffer | null = null;
-  private _cachedPitchUrl: { ratio: number; url: string } | null = null;
+  private _cachedPitchUrl: { ratio: number; effectId: EffectId; url: string } | null = null;
   private _unlistenFns: Array<() => void> = [];
   private _emit: ((name: string, payload: unknown) => Promise<void>) | null = null;
   private _emitTo: ((target: string, name: string, payload: unknown) => Promise<void>) | null =
@@ -91,36 +94,50 @@ class PlaybackStore {
   }
 
   async buildPlaybackUrl(pitchRatio: number): Promise<string> {
-    if (this._cachedPitchUrl && this._cachedPitchUrl.ratio === pitchRatio) {
+    const effectId = this.activeEffect;
+    if (
+      this._cachedPitchUrl &&
+      this._cachedPitchUrl.ratio === pitchRatio &&
+      this._cachedPitchUrl.effectId === effectId
+    ) {
       return this._cachedPitchUrl.url;
     }
     if (this._cachedPitchUrl) {
       URL.revokeObjectURL(this._cachedPitchUrl.url);
       this._cachedPitchUrl = null;
     }
+    const effect = getEffect(effectId);
     let blob: Blob;
-    if (pitchRatio === 1.0 && this._originalBytes) {
+    if (pitchRatio === 1.0 && !effect && this._originalBytes) {
       const mimeType = detectAudioMimeType(this._originalBytes);
       blob = new Blob([this._originalBytes], { type: mimeType });
     } else if (this._decodedBuffer && this._audioCtx) {
-      const outputLen = Math.max(1, Math.round(this._decodedBuffer.length / pitchRatio));
-      const offline = new OfflineAudioContext(
-        this._decodedBuffer.numberOfChannels,
-        outputLen,
-        this._decodedBuffer.sampleRate
-      );
-      const src = offline.createBufferSource();
-      src.buffer = this._decodedBuffer;
-      src.playbackRate.value = pitchRatio;
-      src.connect(offline.destination);
-      src.start(0);
-      const rendered = await offline.startRendering();
-      blob = audioBufferToWavBlob(rendered);
+      let buffer: AudioBuffer;
+      if (pitchRatio === 1.0) {
+        buffer = this._decodedBuffer;
+      } else {
+        const outputLen = Math.max(1, Math.round(this._decodedBuffer.length / pitchRatio));
+        const offline = new OfflineAudioContext(
+          this._decodedBuffer.numberOfChannels,
+          outputLen,
+          this._decodedBuffer.sampleRate
+        );
+        const src = offline.createBufferSource();
+        src.buffer = this._decodedBuffer;
+        src.playbackRate.value = pitchRatio;
+        src.connect(offline.destination);
+        src.start(0);
+        buffer = await offline.startRendering();
+      }
+      if (effect) {
+        buffer = await effect.process(buffer, this._audioCtx);
+      }
+      blob = audioBufferToWavBlob(buffer);
     } else {
       return "";
     }
     const url = URL.createObjectURL(blob);
-    this._cachedPitchUrl = { ratio: pitchRatio, url };
+    this._cachedPitchUrl = { ratio: pitchRatio, effectId, url };
     return url;
   }
 
@@ -275,10 +292,17 @@ class PlaybackStore {
   }
 
   // Keep volume/speed in sync with config (called by synthesize-page via $effect)
-  syncPlaybackConfig(volume: number, speed: number, pitch: number) {
+  syncPlaybackConfig(volume: number, speed: number, pitch: number, effect: EffectId = "none") {
     this.volume = volume;
     this.speed = speed;
     this.pitch = pitch;
+    if (this.activeEffect !== effect) {
+      this.activeEffect = effect;
+      if (this._cachedPitchUrl) {
+        URL.revokeObjectURL(this._cachedPitchUrl.url);
+        this._cachedPitchUrl = null;
+      }
+    }
     if (this._audioEl) {
       this._audioEl.volume = volume / 100;
       this._audioEl.playbackRate = speed;
