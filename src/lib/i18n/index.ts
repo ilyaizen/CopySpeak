@@ -6,9 +6,9 @@ import type { SupportedLocale } from "$lib/types";
 // NOTE: Non-English translations are managed externally in src-web/src/lib/locales/DO_NOT_TOUCH/
 // During pre-production, translation keys change frequently - only English is stable
 register("en", () => import("$lib/locales/en.json"));
-register("es", () => import("$lib/locales/DO_NOT_TOUCH/es.json"));
-register("ar", () => import("$lib/locales/DO_NOT_TOUCH/ar.json"));
-register("he", () => import("$lib/locales/DO_NOT_TOUCH/he.json"));
+// register("es", () => import("$lib/locales/DO_NOT_TOUCH/es.json"));
+// register("ar", () => import("$lib/locales/DO_NOT_TOUCH/ar.json"));
+// register("he", () => import("$lib/locales/DO_NOT_TOUCH/he.json"));
 
 // Initialize with default locale
 // Actual locale will be set from AppConfig after load
