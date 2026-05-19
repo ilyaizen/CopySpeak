@@ -205,6 +205,21 @@
         "title": "Piper",
         "description": "Fast neural TTS",
         "detail": "Fast, local neural text-to-speech system with low latency."
+      },
+      "cartesia": {
+        "title": "Cartesia",
+        "description": "Low-latency cloud TTS (Sonic 3.5)",
+        "detail": "Cloud API powered by the Sonic 3.5 model. Requires an API key."
+      },
+      "kitten": {
+        "title": "Kitten TTS",
+        "description": "Ultra-lightweight local ONNX TTS",
+        "detail": "Default engine. 25-80MB CPU-only ONNX inference with 8 built-in voices, no GPU required."
+      },
+      "pocket": {
+        "title": "Pocket TTS",
+        "description": "Compact offline CLI TTS",
+        "detail": "Local CLI engine with straightforward voice selection."
       }
     }
   },
