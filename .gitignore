@@ -14,7 +14,8 @@ bun.lock
 skills-lock.json
 package-lock.json
 /.agents
-/.claude
+# Track repo Claude settings/examples, but keep local overrides and generated skills/commands ignored.
+/.claude/settings.local.json
 /.kilocode
 src-tauri/Cargo.lock
 /.gemini
@@ -34,3 +35,5 @@ src-tauri/Cargo.lock
 /plans
 # file-structure.txt
 DO_NOT_TOUCH/
+/.claude/skills
+/.claude/commands
