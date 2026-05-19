@@ -27,7 +27,7 @@ if (!state.enabled) process.exit(0);
 if (state.launchCopySpeak) launchCopySpeak();
 
 const transcriptPath = hookInput?.transcript_path;
-const text = cleanForSpeech(findLastAssistantText(transcriptPath)).slice(0, state.maxChars);
+const text = truncateAtBoundary(cleanForSpeech(findLastAssistantText(transcriptPath)), state.maxChars);
 if (!text) process.exit(0);
 
 try {
@@ -148,12 +148,24 @@ function findBuiltCopySpeak() {
 function cleanForSpeech(text) {
   return text
     .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`[^`]*`/g, " ")
-    .replace(/\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/https?:\/\/\S+/g, " link ")
     .replace(/[#*_>~|]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function truncateAtBoundary(text, max) {
+  if (text.length <= max) return text;
+  const slice = text.slice(0, max);
+  const boundary = Math.max(
+    slice.lastIndexOf(". "),
+    slice.lastIndexOf("! "),
+    slice.lastIndexOf("? "),
+    slice.lastIndexOf("\n")
+  );
+  return boundary > max * 0.5 ? slice.slice(0, boundary + 1) : slice;
 }
 
 function envBool(name, fallback) {

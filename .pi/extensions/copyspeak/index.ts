@@ -79,7 +79,7 @@ export default function (pi: ExtensionAPI) {
     const message = [...((event as any).messages || [])]
       .reverse()
       .find((message) => message?.role === "assistant");
-    const text = cleanForSpeech(extractText(message)).slice(0, state.maxChars);
+    const text = truncateAtBoundary(cleanForSpeech(extractText(message)), state.maxChars);
     if (text) await speakSafe(text, ctx);
   });
 
@@ -262,12 +262,24 @@ function hasSpokenThinkingContent(content: string): boolean {
 function cleanForSpeech(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`[^`]*`/g, " ")
-    .replace(/\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/https?:\/\/\S+/g, " link ")
     .replace(/[#*_>~|]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function truncateAtBoundary(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const slice = text.slice(0, max);
+  const boundary = Math.max(
+    slice.lastIndexOf(". "),
+    slice.lastIndexOf("! "),
+    slice.lastIndexOf("? "),
+    slice.lastIndexOf("\n")
+  );
+  return boundary > max * 0.5 ? slice.slice(0, boundary + 1) : slice;
 }
 
 function isEngine(value: string | undefined): value is Engine {
