@@ -30,6 +30,7 @@
     "title": "Settings",
     "tabs": {
       "general": "General",
+      "history": "History",
       "effects": "Effects",
       "advanced": "Advanced",
       "about": "About"

@@ -25,7 +25,9 @@
   let originalConfig = $state<AppConfig | null>(null);
   let isLoading = $state(true);
   let isSaving = $state(false);
-  let activeTab = $state<"general" | "effects" | "advanced" | "about">("general");
+  type SettingsTab = "general" | "history" | "effects" | "advanced" | "about";
+
+  let activeTab = $state<SettingsTab>("general");
 
   let isScrolling = $state(false);
 
@@ -68,17 +70,13 @@
 
   const tabs = [
     { id: "general" as const, labelKey: "settings.tabs.general" },
+    { id: "history" as const, labelKey: "settings.tabs.history" },
     { id: "effects" as const, labelKey: "settings.tabs.effects" },
     { id: "advanced" as const, labelKey: "settings.tabs.advanced" },
     { id: "about" as const, labelKey: "settings.tabs.about" }
   ];
 
-  const TAB_ORDER: Array<"general" | "effects" | "advanced" | "about"> = [
-    "general",
-    "effects",
-    "advanced",
-    "about"
-  ];
+  const TAB_ORDER: SettingsTab[] = ["general", "history", "effects", "advanced", "about"];
 
   const hasChanges = $derived(
     originalConfig !== null &&
@@ -95,7 +93,7 @@
         if (isScrolling) return;
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            const id = entry.target.id as "general" | "effects" | "advanced" | "about";
+            const id = entry.target.id as SettingsTab;
             if (TAB_ORDER.includes(id)) {
               activeTab = id;
             }
@@ -116,7 +114,7 @@
     observer = null;
   }
 
-  async function scrollToTab(tabId: "general" | "effects" | "advanced" | "about") {
+  async function scrollToTab(tabId: SettingsTab) {
     isScrolling = true;
     activeTab = tabId;
     await tick();
@@ -288,8 +286,15 @@
                 <PlaybackSettings bind:localConfig {retriggerModeOptions} />
               </div>
 
-              <!-- History -->
-              <div class="border-border border-b p-4">
+            </div>
+          </div>
+        </section>
+
+        <!-- History Section -->
+        <section id="history" class="scroll-mt-4">
+          <div class="border-border overflow-hidden rounded-lg border">
+            <div class="space-y-0">
+              <div class="p-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.history")}
                 </h3>
