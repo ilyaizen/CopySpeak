@@ -1,5 +1,4 @@
 {
-  "statusLine": { "type": "command", "command": "node scripts/claude-copyspeak-status.mjs" },
   "hooks": {
     "Stop": [
       {

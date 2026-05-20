@@ -173,6 +173,20 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
     }
 
     let config_state: State<Mutex<AppConfig>> = app.state();
+    let text = {
+        let cfg = config_state.lock().map_err(|e| e.to_string())?;
+        let text = if cfg.sanitization.enabled {
+            crate::sanitize::sanitize_text(&request.text, &cfg.sanitization)
+        } else {
+            request.text
+        };
+        if text.chars().count() > cfg.trigger.max_text_length as usize {
+            text.chars().take(cfg.trigger.max_text_length as usize).collect()
+        } else {
+            text
+        }
+    };
+
     let player: State<Mutex<AudioPlayer>> = app.state();
     let history: State<Mutex<HistoryLog>> = app.state();
     let telemetry_state: State<Mutex<telemetry::TelemetryLog>> = app.state();
@@ -182,7 +196,7 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
         player,
         history,
         telemetry_state,
-        Some(request.text),
+        Some(text),
     )
     .await
 }
