@@ -151,10 +151,11 @@ async function speakSafe(text: string, ctx?: any, force = false, clean = true) {
   await speakQueue;
 }
 
-async function speak(text: string) {
-  await postSpeak(text);
+async function speak(text: string): Promise<unknown> {
+  const response = await postSpeak(text);
   clipboardFailureCount = 0;
   clipboardFailureNotified = false;
+  return response;
 }
 
 function shouldSkipDuplicate(text: string) {
@@ -165,11 +166,11 @@ function shouldSkipDuplicate(text: string) {
   return false;
 }
 
-async function postSpeak(text: string) {
+async function postSpeak(text: string): Promise<unknown> {
   const body = JSON.stringify({ text, engine: state.engine, effect: state.effect });
   const url = new URL(process.env.COPYSPEAK_CONTROL_URL || "http://127.0.0.1:43117/speak");
 
-  await new Promise<void>((resolve, reject) => {
+  return await new Promise<unknown>((resolve, reject) => {
     const req = request(
       {
         method: "POST",
@@ -188,8 +189,9 @@ async function postSpeak(text: string) {
           responseBody += chunk;
         });
         res.on("end", () => {
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) resolve();
-          else reject(new Error(`HTTP ${res.statusCode}: ${responseBody}`));
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(parseJson(responseBody));
+          } else reject(new Error(`HTTP ${res.statusCode}: ${responseBody}`));
         });
       }
     );
@@ -255,6 +257,11 @@ function extractText(message: any): string {
 
 function hasSpokenThinkingContent(content: string): boolean {
   return [...spokenThinkingBlocks].some((entry) => entry.endsWith(`:${content}`));
+}
+
+function prepareText(text: string): string {
+  const cleaned = cleanForSpeech(text);
+  return state.maxChars > 0 ? truncateAtBoundary(cleaned, state.maxChars) : cleaned;
 }
 
 function cleanForSpeech(text: string): string {

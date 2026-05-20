@@ -8,6 +8,7 @@
   import PostProcessSettings from "$lib/components/settings/post-process-settings.svelte";
   import HistorySettings from "$lib/components/settings/history-settings.svelte";
   import EffectsSettings from "$lib/components/settings/effects-settings.svelte";
+  import PostProcessingSettings from "$lib/components/settings/post-processing-settings.svelte";
   import ImportExportSettings from "$lib/components/settings/import-export-settings.svelte";
   import AboutSettings from "$lib/components/settings/about-settings.svelte";
   import { Button } from "$lib/components/ui/button/index.js";

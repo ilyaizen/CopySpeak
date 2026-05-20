@@ -99,6 +99,34 @@ export interface TtsConfig {
   cartesia: CartesiaConfig;
 }
 
+export type PostProcessingProvider =
+  | "groq"
+  | "openai"
+  | "anthropic"
+  | "gemini"
+  | "openrouter"
+  | "ollama"
+  | "custom";
+
+export interface LlmProviderConfig {
+  api_key: string;
+  model: string;
+  endpoint: string;
+}
+
+export interface PostProcessingConfig {
+  enabled: boolean;
+  provider: PostProcessingProvider;
+  prompt: string;
+  groq: LlmProviderConfig;
+  openai: LlmProviderConfig;
+  anthropic: LlmProviderConfig;
+  gemini: LlmProviderConfig;
+  openrouter: LlmProviderConfig;
+  ollama: LlmProviderConfig;
+  custom: LlmProviderConfig;
+}
+
 export interface PlaybackConfig {
   on_retrigger: RetriggerMode;
   volume: number;

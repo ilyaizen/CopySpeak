@@ -33,7 +33,9 @@
 │   ├── COPYSPEAK.md
 │   └── setup.py
 ├── docs
-│   └── CONTRIBUTING.md
+│   ├── CONTRIBUTING.md
+│   ├── COPYSPEAK_PI_VOICE.md
+│   └── COPYSPEAK_PI_VOICE_2.md
 ├── docs_internal
 │   ├── CARTESIA_TTS_PLAN.md
 │   ├── README.md
@@ -66,8 +68,10 @@
 │   ├── update-checker-production-fix.md
 │   └── waveform-improvements.md
 ├── scripts
+│   ├── claude-copyspeak-hook.mjs
 │   ├── fix-ports.ps1
 │   ├── generate-i18n-types.js
+│   ├── screenshot-window.ps1
 │   └── version-bumper.mjs
 ├── src
 │   ├── lib
@@ -116,6 +120,7 @@
 │   │   │   │   ├── import-export-settings.svelte
 │   │   │   │   ├── pagination-settings.svelte
 │   │   │   │   ├── playback-settings.svelte
+│   │   │   │   ├── post-processing-settings.svelte
 │   │   │   │   └── sanitization-settings.svelte
 │   │   │   ├── effects-page.svelte
 │   │   │   ├── global-player.svelte
@@ -240,6 +245,7 @@
 │   │   │   ├── mod.rs
 │   │   │   ├── output.rs
 │   │   │   ├── playback.rs
+│   │   │   ├── post_processing.rs
 │   │   │   ├── sanitization.rs
 │   │   │   ├── tests.rs
 │   │   │   ├── trigger.rs
@@ -265,6 +271,7 @@
 │   │   ├── logging.rs
 │   │   ├── main.rs
 │   │   ├── pagination.rs
+│   │   ├── post_processing.rs
 │   │   └── telemetry.rs
 │   ├── .gitignore
 │   ├── Cargo.lock
@@ -277,20 +284,17 @@
 │   │   └── walkie-static.wav
 │   ├── app-logo.png
 │   ├── favicon.png
-│   └── screen-v0.0.1.png
+│   └── screen-v0.1.4.png
 ├── .gitignore
 ├── .hintrc
 ├── .prettierignore
 ├── .prettierrc
 ├── .vercelignore
 ├── AGENTS.md
-├── CARTESIA_TTS_PLAN.md
 ├── CHANGELOG.md
 ├── CLAUDE.md
-├── COPYSPEAK_PI_VOICE.md
 ├── LICENCE.txt
 ├── README.md
-├── app-logo.png
 ├── components.json
 ├── file-structure.txt
 ├── install-kittentts.ps1
