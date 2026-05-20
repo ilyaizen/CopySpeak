@@ -2,7 +2,7 @@
 // Auto-saved on every change from the frontend via set_config command.
 
 /// Current config schema version. Bumped when making breaking changes to config structure.
-const CONFIG_VERSION: &str = "0.1.4";
+const CONFIG_VERSION: &str = "0.1.5";
 
 mod effects;
 mod general;
@@ -10,6 +10,7 @@ mod hotkey;
 mod hud;
 mod output;
 mod playback;
+mod post_process;
 mod sanitization;
 mod trigger;
 mod tts;
@@ -29,6 +30,7 @@ pub use hotkey::*;
 pub use hud::*;
 pub use output::*;
 pub use playback::*;
+pub use post_process::*;
 pub use sanitization::*;
 pub use trigger::*;
 pub use tts::*;
@@ -178,6 +180,8 @@ pub struct AppConfig {
     pub hotkey: HotkeyConfig,
     #[serde(default)]
     pub effects: EffectsConfig,
+    #[serde(default)]
+    pub post_process: PostProcessConfig,
 }
 
 fn default_config_version() -> String {
@@ -222,6 +226,7 @@ impl Default for AppConfig {
             history: HistoryConfig::default(),
             hotkey: HotkeyConfig::default(),
             effects: EffectsConfig::default(),
+            post_process: PostProcessConfig::default(),
         }
     }
 }

@@ -15,6 +15,7 @@ mod history_manager;
 mod hud;
 mod logging;
 mod pagination;
+mod post_process;
 mod sanitize;
 mod telemetry;
 mod tts;
@@ -640,6 +641,7 @@ fn main() {
             commands::check_elevenlabs_credentials,
             commands::check_cartesia_credentials,
             commands::check_openai_credentials,
+            commands::check_groq_credentials,
             commands::list_elevenlabs_voices,
             commands::get_elevenlabs_voice_by_id,
             commands::get_elevenlabs_output_formats,
