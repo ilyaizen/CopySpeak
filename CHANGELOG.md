@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-05-20
+
 ### Added
 
 - **CopySpeak Claude Code hook** — Added `scripts/claude-copyspeak-hook.mjs` to speak Claude Code `Stop`/`SubagentStop` assistant responses through the CopySpeak control server.
@@ -257,7 +259,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/copyspeak/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/ilyaizen/copyspeak/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/ilyaizen/copyspeak/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/ilyaizen/copyspeak/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/ilyaizen/copyspeak/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/ilyaizen/copyspeak/compare/v0.1.0...v0.1.1
