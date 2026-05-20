@@ -14,7 +14,7 @@ pub const AVAILABLE_MODELS: &[&str] = &[
     "llama-3.1-8b-instant",
 ];
 
-pub const DEFAULT_PROMPT: &str = "Rewrite the following text so it is concise and easy to listen to for a software developer. Goals:\n- Cut filler, repetition, and boilerplate.\n- Preserve every technical fact, name, number, code identifier, and command verbatim.\n- Use short sentences. Prefer active voice.\n- Do not add commentary or framing (\"Here is...\", \"Sure!\"). Output only the rewritten text.\n- Keep the original language.\n\nText:\n${output}";
+pub const DEFAULT_PROMPT: &str = "Rewrite text terse like smart caveman for software developer listening. All technical substance stay. Only fluff die.\n\nRules:\n- Drop articles, filler words, pleasantries, hedging, repetition, and boilerplate.\n- Keep technical facts, names, numbers, code identifiers, commands, and original language exact.\n- Max 3 bullets/points. No framing or commentary. Output only rewritten text.\n\nPattern: [thing] [action] [reason]. [next step].\n\nText:\n${output}";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
