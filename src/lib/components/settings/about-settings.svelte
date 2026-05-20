@@ -153,6 +153,39 @@
         </p>
       </div>
 
+      <!-- Cartesia -->
+      <div>
+        <div class="flex items-center gap-1.5">
+          <Label class="text-sm">{$_("settings.about.cartesia.title")}</Label>
+          <InfoTooltip text={$_("settings.about.cartesia.description")} />
+        </div>
+        <p class="text-muted-foreground mt-1 text-xs">
+          {$_("settings.about.cartesia.detail")}
+        </p>
+      </div>
+
+      <!-- Kitten -->
+      <div>
+        <div class="flex items-center gap-1.5">
+          <Label class="text-sm">{$_("settings.about.kitten.title")}</Label>
+          <InfoTooltip text={$_("settings.about.kitten.description")} />
+        </div>
+        <p class="text-muted-foreground mt-1 text-xs">
+          {$_("settings.about.kitten.detail")}
+        </p>
+      </div>
+
+      <!-- Pocket -->
+      <div>
+        <div class="flex items-center gap-1.5">
+          <Label class="text-sm">{$_("settings.about.pocket.title")}</Label>
+          <InfoTooltip text={$_("settings.about.pocket.description")} />
+        </div>
+        <p class="text-muted-foreground mt-1 text-xs">
+          {$_("settings.about.pocket.detail")}
+        </p>
+      </div>
+
       <!-- Kokoro -->
       <div>
         <div class="flex items-center gap-1.5">

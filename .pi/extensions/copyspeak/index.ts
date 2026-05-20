@@ -23,7 +23,7 @@ const state: State = {
   effect: process.env.COPYSPEAK_PI_EFFECT || undefined,
   speakAssistant: envBool("COPYSPEAK_PI_ASSISTANT", true),
   speakActivity: envBool("COPYSPEAK_PI_ACTIVITY", false),
-  speakThinking: envBool("COPYSPEAK_PI_THINKING", true),
+  speakThinking: envBool("COPYSPEAK_PI_THINKING", false),
   maxChars: Number(process.env.COPYSPEAK_PI_MAX_CHARS || 700),
   launchCopySpeak: envBool("COPYSPEAK_PI_LAUNCH", false)
 };
@@ -40,7 +40,7 @@ export default function (pi: ExtensionAPI) {
     try {
       if (state.launchCopySpeak) launchCopySpeak();
       ctx.ui.setStatus("copyspeak", statusText());
-      ctx.ui.notify(`CopySpeak ${statusText()}`, "info");
+      ctx.ui.notify(statusText(), "info");
     } catch (error) {
       ctx.ui.setStatus("copyspeak", "voice config failed");
       ctx.ui.notify(`CopySpeak voice setup failed: ${String(error)}`, "error");
@@ -79,7 +79,7 @@ export default function (pi: ExtensionAPI) {
     const message = [...((event as any).messages || [])]
       .reverse()
       .find((message) => message?.role === "assistant");
-    const text = cleanForSpeech(extractText(message)).slice(0, state.maxChars);
+    const text = truncateAtBoundary(cleanForSpeech(extractText(message)), state.maxChars);
     if (text) await speakSafe(text, ctx);
   });
 
@@ -123,7 +123,14 @@ export default function (pi: ExtensionAPI) {
 }
 
 function statusText() {
-  return state.enabled ? "on" : "off";
+  const power = state.enabled ? "on" : "off";
+  const overrides = [
+    state.speakAssistant === false ? "assistant off" : undefined,
+    state.speakThinking === true ? "thinking on" : undefined,
+    state.speakActivity === true ? "activity on" : undefined
+  ].filter(Boolean);
+  const detail = overrides.length ? ` (${overrides.join(", ")})` : "";
+  return `copyspeak ${power}${detail}`;
 }
 
 async function speakSafe(text: string, ctx?: any, force = false) {
@@ -255,12 +262,24 @@ function hasSpokenThinkingContent(content: string): boolean {
 function cleanForSpeech(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`[^`]*`/g, " ")
-    .replace(/\[[^\]]*\]\([^)]*\)/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
     .replace(/https?:\/\/\S+/g, " link ")
     .replace(/[#*_>~|]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function truncateAtBoundary(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const slice = text.slice(0, max);
+  const boundary = Math.max(
+    slice.lastIndexOf(". "),
+    slice.lastIndexOf("! "),
+    slice.lastIndexOf("? "),
+    slice.lastIndexOf("\n")
+  );
+  return boundary > max * 0.5 ? slice.slice(0, boundary + 1) : slice;
 }
 
 function isEngine(value: string | undefined): value is Engine {
