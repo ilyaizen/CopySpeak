@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **AI post-processing providers** — Added Groq-primary post-processing config and settings for OpenAI, Anthropic, Gemini, OpenRouter, Ollama, and custom OpenAI-compatible endpoints before TTS generation.
+- **Post-processing prompt presets** — Added concise developer, cleanup, professional, summarize, TTS-optimized, and revised caveman prompts.
+
 ### Fixed
 
 - **Vercel landing page** — Updated the displayed version, screenshot asset, and removed the double-copy hero tagline.

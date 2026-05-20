@@ -6,6 +6,7 @@ Reads only final Pi assistant responses aloud through the real CopySpeak app by 
 
 - Pi extension speaks once per completed agent run (`agent_end`) by default. Optional activity mode also listens to `agent_start` and `tool_execution_start` events. Thinking blocks are off by default.
 - It speaks through CopySpeak's local control server (`http://127.0.0.1:43117/speak`) so Pi does not touch the Windows clipboard.
+- When CopySpeak returns post-processed text, Pi shows that processed text in a notification and widget.
 - By default it does not patch CopySpeak config or force engine/effect; it uses the settings from the running CopySpeak app.
 
 ## Setup
@@ -56,6 +57,6 @@ If you explicitly set `COPYSPEAK_PI_LAUNCH=1`, the extension can auto-launch Cop
 - `COPYSPEAK_PI_ASSISTANT=0` disables speaking final assistant messages.
 - `COPYSPEAK_PI_ACTIVITY=1` enables optional agent/tool activity announcements.
 - `COPYSPEAK_PI_THINKING=1` enables speaking assistant thinking blocks when Pi includes them. Default is off.
-- `COPYSPEAK_PI_MAX_CHARS=700` controls max spoken final response length.
+- `COPYSPEAK_PI_MAX_CHARS=<number>` optionally caps spoken final response length. Default is unlimited (`0`).
 - `COPYSPEAK_PI_LAUNCH=1` enables auto-launching CopySpeak. Default is manual/no launch.
 - `COPYSPEAK_CONTROL_URL=http://127.0.0.1:43117/speak` overrides the local control endpoint.

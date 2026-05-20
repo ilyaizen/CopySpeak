@@ -24,7 +24,7 @@ const state: State = {
   speakAssistant: envBool("COPYSPEAK_PI_ASSISTANT", true),
   speakActivity: envBool("COPYSPEAK_PI_ACTIVITY", false),
   speakThinking: envBool("COPYSPEAK_PI_THINKING", false),
-  maxChars: Number(process.env.COPYSPEAK_PI_MAX_CHARS || 700),
+  maxChars: Number(process.env.COPYSPEAK_PI_MAX_CHARS || 0),
   launchCopySpeak: envBool("COPYSPEAK_PI_LAUNCH", false)
 };
 
@@ -79,7 +79,7 @@ export default function (pi: ExtensionAPI) {
     const message = [...((event as any).messages || [])]
       .reverse()
       .find((message) => message?.role === "assistant");
-    const text = truncateAtBoundary(cleanForSpeech(extractText(message)), state.maxChars);
+    const text = prepareText(extractText(message));
     if (text) await speakSafe(text, ctx);
   });
 
@@ -134,13 +134,16 @@ function statusText() {
 }
 
 async function speakSafe(text: string, ctx?: any, force = false) {
-  const cleaned = cleanForSpeech(text);
+  const cleaned = prepareText(text);
   if (!cleaned) return;
   if (!force && shouldSkipDuplicate(cleaned)) return;
 
   speakQueue = speakQueue
     .catch(() => undefined)
-    .then(() => speak(cleaned))
+    .then(async () => {
+      const response = await speak(cleaned);
+      showProcessedText(response, cleaned, ctx);
+    })
     .catch((error) => {
       clipboardFailureCount++;
       ctx?.ui?.setStatus?.("copyspeak", "voice failed");
@@ -153,10 +156,11 @@ async function speakSafe(text: string, ctx?: any, force = false) {
   await speakQueue;
 }
 
-async function speak(text: string) {
-  await postSpeak(text);
+async function speak(text: string): Promise<unknown> {
+  const response = await postSpeak(text);
   clipboardFailureCount = 0;
   clipboardFailureNotified = false;
+  return response;
 }
 
 function shouldSkipDuplicate(text: string) {
@@ -167,11 +171,11 @@ function shouldSkipDuplicate(text: string) {
   return false;
 }
 
-async function postSpeak(text: string) {
+async function postSpeak(text: string): Promise<unknown> {
   const body = JSON.stringify({ text, engine: state.engine, effect: state.effect });
   const url = new URL(process.env.COPYSPEAK_CONTROL_URL || "http://127.0.0.1:43117/speak");
 
-  await new Promise<void>((resolve, reject) => {
+  return await new Promise<unknown>((resolve, reject) => {
     const req = request(
       {
         method: "POST",
@@ -190,8 +194,9 @@ async function postSpeak(text: string) {
           responseBody += chunk;
         });
         res.on("end", () => {
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) resolve();
-          else reject(new Error(`HTTP ${res.statusCode}: ${responseBody}`));
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            resolve(parseJson(responseBody));
+          } else reject(new Error(`HTTP ${res.statusCode}: ${responseBody}`));
         });
       }
     );
@@ -259,6 +264,11 @@ function hasSpokenThinkingContent(content: string): boolean {
   return [...spokenThinkingBlocks].some((entry) => entry.endsWith(`:${content}`));
 }
 
+function prepareText(text: string): string {
+  const cleaned = cleanForSpeech(text);
+  return state.maxChars > 0 ? truncateAtBoundary(cleaned, state.maxChars) : cleaned;
+}
+
 function cleanForSpeech(text: string): string {
   return text
     .replace(/```[\s\S]*?```/g, " ")
@@ -271,7 +281,7 @@ function cleanForSpeech(text: string): string {
 }
 
 function truncateAtBoundary(text: string, max: number): string {
-  if (text.length <= max) return text;
+  if (max <= 0 || text.length <= max) return text;
   const slice = text.slice(0, max);
   const boundary = Math.max(
     slice.lastIndexOf(". "),
@@ -280,6 +290,47 @@ function truncateAtBoundary(text: string, max: number): string {
     slice.lastIndexOf("\n")
   );
   return boundary > max * 0.5 ? slice.slice(0, boundary + 1) : slice;
+}
+
+function showProcessedText(response: unknown, originalText: string, ctx?: any) {
+  const processedText = extractProcessedText(response);
+  if (!processedText || processedText === originalText) return;
+
+  ctx?.ui?.setWidget?.("copyspeak-processed", splitWidgetLines(processedText));
+  ctx?.ui?.notify?.(`CopySpeak post-processed text:\n${processedText}`, "info");
+}
+
+function extractProcessedText(response: unknown): string {
+  if (!response || typeof response !== "object") return "";
+  const record = response as Record<string, unknown>;
+  const value =
+    record.post_processed_text ??
+    record.postProcessedText ??
+    record.processed_text ??
+    record.processedText ??
+    record.spoken_text ??
+    record.spokenText ??
+    record.text;
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function splitWidgetLines(text: string): string[] {
+  const lines = text.split(/\r?\n/).flatMap((line) => {
+    if (line.length <= 100) return [line];
+    const chunks: string[] = [];
+    for (let i = 0; i < line.length; i += 100) chunks.push(line.slice(i, i + 100));
+    return chunks;
+  });
+  return ["CopySpeak post-processed:", ...lines.slice(0, 12)];
+}
+
+function parseJson(text: string): unknown {
+  if (!text.trim()) return undefined;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
 }
 
 function isEngine(value: string | undefined): value is Engine {

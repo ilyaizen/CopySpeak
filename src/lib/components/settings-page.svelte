@@ -7,6 +7,7 @@
   import SanitizationSettings from "$lib/components/settings/sanitization-settings.svelte";
   import HistorySettings from "$lib/components/settings/history-settings.svelte";
   import EffectsSettings from "$lib/components/settings/effects-settings.svelte";
+  import PostProcessingSettings from "$lib/components/settings/post-processing-settings.svelte";
   import ImportExportSettings from "$lib/components/settings/import-export-settings.svelte";
   import AboutSettings from "$lib/components/settings/about-settings.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
@@ -332,11 +333,17 @@
               </div>
 
               <!-- Sanitization -->
-              <div class="p-4">
+              <div class="border-border border-b p-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.sanitization")}
                 </h3>
                 <SanitizationSettings bind:localConfig />
+              </div>
+
+              <!-- Post-processing -->
+              <div class="p-4">
+                <h3 class="text-muted-foreground mb-3 text-sm font-medium">Post-processing</h3>
+                <PostProcessingSettings bind:localConfig />
               </div>
             </div>
           </div>

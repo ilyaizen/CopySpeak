@@ -190,6 +190,9 @@ pub async fn speak_now(
         return Err("Nothing to speak".into());
     }
 
+    let post_processing_config = config.lock().unwrap().post_processing.clone();
+    let text = crate::post_processing::process_text(&post_processing_config, &text).await?;
+
     let lock_state = app.state::<tokio::sync::Mutex<()>>();
     let _queue_lock = lock_state.lock().await;
 

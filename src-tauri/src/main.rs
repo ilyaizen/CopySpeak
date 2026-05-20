@@ -15,6 +15,7 @@ mod history_manager;
 mod hud;
 mod logging;
 mod pagination;
+mod post_processing;
 mod sanitize;
 mod telemetry;
 mod tts;
