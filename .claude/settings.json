@@ -1,17 +1,7 @@
 {
+  "statusLine": { "type": "command", "command": "node scripts/claude-copyspeak-status.mjs" },
   "hooks": {
     "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node scripts/claude-copyspeak-hook.mjs"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
       {
         "matcher": "",
         "hooks": [

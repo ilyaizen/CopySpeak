@@ -1,41 +1,94 @@
 #!/usr/bin/env node
 import { execFileSync, spawn } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
 import { request } from "node:http";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 const ENGINES = new Set(["cartesia", "openai", "elevenlabs", "local"]);
 
-const state = {
-  enabled: envBool("COPYSPEAK_CLAUDE_ENABLED", envBool("COPYSPEAK_PI_ENABLED", true)),
-  engine: ENGINES.has(process.env.COPYSPEAK_CLAUDE_ENGINE)
-    ? process.env.COPYSPEAK_CLAUDE_ENGINE
-    : ENGINES.has(process.env.COPYSPEAK_PI_ENGINE)
-      ? process.env.COPYSPEAK_PI_ENGINE
-      : undefined,
-  effect: process.env.COPYSPEAK_CLAUDE_EFFECT || process.env.COPYSPEAK_PI_EFFECT || undefined,
-  maxChars: Number(process.env.COPYSPEAK_CLAUDE_MAX_CHARS || process.env.COPYSPEAK_PI_MAX_CHARS || 700),
-  launchCopySpeak: envBool(
-    "COPYSPEAK_CLAUDE_LAUNCH",
-    envBool("COPYSPEAK_PI_LAUNCH", false)
-  )
+const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
+const CONFIG_PATH = join(CLAUDE_DIR, "hooks", "copyspeak", "config.json");
+
+const DEFAULT_CONFIG = {
+  enabled: true,
+  engine: null,
+  effect: null,
+  max_chars: 700,
+  launch: false
 };
 
+function loadConfig() {
+  let cfg = { ...DEFAULT_CONFIG };
+
+  if (existsSync(CONFIG_PATH)) {
+    try {
+      cfg = { ...DEFAULT_CONFIG, ...JSON.parse(readFileSync(CONFIG_PATH, "utf8")) };
+    } catch {
+      // Corrupt config — use defaults
+    }
+  } else {
+    // First run — write defaults so skills can edit the file
+    try {
+      mkdirSync(dirname(CONFIG_PATH), { recursive: true });
+      writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2), "utf8");
+    } catch {
+      // Non-fatal — proceed with in-memory defaults
+    }
+  }
+
+  // Env vars override config file (backward compat / CI override)
+  const envEnabled = process.env.COPYSPEAK_CLAUDE_ENABLED ?? process.env.COPYSPEAK_PI_ENABLED;
+  if (envEnabled != null && envEnabled !== "") {
+    cfg.enabled = !/^(0|false|no|off)$/i.test(envEnabled);
+  }
+
+  const envEngine = process.env.COPYSPEAK_CLAUDE_ENGINE ?? process.env.COPYSPEAK_PI_ENGINE;
+  if (ENGINES.has(envEngine)) cfg.engine = envEngine;
+
+  const envEffect = process.env.COPYSPEAK_CLAUDE_EFFECT ?? process.env.COPYSPEAK_PI_EFFECT;
+  if (envEffect) cfg.effect = envEffect;
+
+  const envMaxChars = process.env.COPYSPEAK_CLAUDE_MAX_CHARS ?? process.env.COPYSPEAK_PI_MAX_CHARS;
+  if (envMaxChars) cfg.max_chars = Number(envMaxChars);
+
+  const envLaunch = process.env.COPYSPEAK_CLAUDE_LAUNCH ?? process.env.COPYSPEAK_PI_LAUNCH;
+  if (envLaunch != null && envLaunch !== "") {
+    cfg.launch = !/^(0|false|no|off)$/i.test(envLaunch);
+  }
+
+  return cfg;
+}
+
+const config = loadConfig();
 const hookInput = await readStdinJson();
 
-if (!state.enabled) process.exit(0);
-if (state.launchCopySpeak) launchCopySpeak();
+if (!config.enabled) {
+  console.log("🔇 copyspeak disabled");
+  process.exit(0);
+}
+
+if (config.launch) launchCopySpeak();
 
 const transcriptPath = hookInput?.transcript_path;
-const text = truncateAtBoundary(cleanForSpeech(findLastAssistantText(transcriptPath)), state.maxChars);
+const text = truncateAtBoundary(cleanForSpeech(findLastAssistantText(transcriptPath)), config.max_chars);
+
 if (!text) process.exit(0);
 
 try {
-  await postSpeak(text);
+  await postSpeak(text, config.engine, config.effect);
+  const label = config.engine ?? "default";
+  console.log(`🔊 copyspeak · ${text.length} chars [${label}]`);
 } catch (error) {
-  console.error(`CopySpeak Claude hook failed: ${String(error)}`);
+  if (error.code === "ECONNREFUSED") {
+    console.log("⚠️ copyspeak · app not running");
+  } else {
+    console.error(`copyspeak hook: ${String(error)}`);
+  }
   process.exit(0);
 }
+
+// --- helpers ---
 
 async function readStdinJson() {
   let input = "";
@@ -59,10 +112,10 @@ function findLastAssistantText(transcriptPath) {
       const entry = JSON.parse(line);
       const message = entry.message || entry;
       if (message?.role !== "assistant") continue;
-      const text = extractText(message);
-      if (text) lastText = text;
+      const t = extractText(message);
+      if (t) lastText = t;
     } catch {
-      // Ignore malformed transcript lines. Claude owns this file format.
+      // Ignore malformed transcript lines
     }
   }
 
@@ -73,7 +126,6 @@ function extractText(message) {
   const content = message?.content;
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return "";
-
   return content
     .map((part) => {
       if (typeof part === "string") return part;
@@ -83,8 +135,8 @@ function extractText(message) {
     .join("\n");
 }
 
-async function postSpeak(text) {
-  const body = JSON.stringify({ text, engine: state.engine, effect: state.effect });
+async function postSpeak(text, engine, effect) {
+  const body = JSON.stringify({ text, engine, effect });
   const url = new URL(process.env.COPYSPEAK_CONTROL_URL || "http://127.0.0.1:43117/speak");
 
   await new Promise((resolve, reject) => {
@@ -102,11 +154,9 @@ async function postSpeak(text) {
       (res) => {
         let responseBody = "";
         res.setEncoding("utf8");
-        res.on("data", (chunk) => {
-          responseBody += chunk;
-        });
+        res.on("data", (chunk) => (responseBody += chunk));
         res.on("end", () => {
-          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) resolve();
+          if (res.statusCode >= 200 && res.statusCode < 300) resolve();
           else reject(new Error(`HTTP ${res.statusCode}: ${responseBody}`));
         });
       }
@@ -166,10 +216,4 @@ function truncateAtBoundary(text, max) {
     slice.lastIndexOf("\n")
   );
   return boundary > max * 0.5 ? slice.slice(0, boundary + 1) : slice;
-}
-
-function envBool(name, fallback) {
-  const value = process.env[name];
-  if (value == null || value === "") return fallback;
-  return !/^(0|false|no|off)$/i.test(value);
 }
