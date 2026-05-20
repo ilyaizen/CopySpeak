@@ -199,15 +199,20 @@ pub async fn speak_now(
     // Enter critical section for TTS synthesis
     let _synthesis_guard = SynthesisGuard::new(&app);
 
-    let (active_backend, tts_config, output_config, pagination_config) = {
+    let (active_backend, tts_config, output_config, pagination_config, post_process_config) = {
         let cfg = config.lock().unwrap();
         (
             cfg.tts.active_backend.clone(),
             cfg.tts.clone(),
             cfg.output.clone(),
             cfg.pagination.clone(),
+            cfg.post_process.clone(),
         )
     };
+
+    // Optional LLM post-processing (e.g., Groq) — best-effort; falls back to
+    // the input text on any failure so synthesis is never blocked.
+    let text = crate::post_process::try_process(text, &post_process_config).await;
 
     log_tts_debug("TTS", &format!("{:?}", active_backend), &text);
 
@@ -554,14 +559,18 @@ pub async fn speak_queued(
         return Err("Nothing to speak".into());
     }
 
-    let (active_backend, tts_config, pagination_config) = {
+    let (active_backend, tts_config, pagination_config, post_process_config) = {
         let cfg = config.lock().unwrap();
         (
             cfg.tts.active_backend.clone(),
             cfg.tts.clone(),
             cfg.pagination.clone(),
+            cfg.post_process.clone(),
         )
     };
+
+    // Optional LLM post-processing — best-effort; falls back on failure.
+    let text = crate::post_process::try_process(text, &post_process_config).await;
 
     log_tts_debug("Queue", &format!("{:?}", active_backend), &text);
 

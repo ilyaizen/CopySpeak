@@ -206,6 +206,13 @@ export interface EffectsConfig {
   active_effect: EffectId;
 }
 
+export interface PostProcessConfig {
+  enabled: boolean;
+  api_key: string;
+  model: string;
+  prompt: string;
+}
+
 export interface AppConfig {
   trigger: TriggerConfig;
   tts: TtsConfig;
@@ -218,6 +225,7 @@ export interface AppConfig {
   history: HistoryConfig;
   hotkey: HotkeyConfig;
   effects: EffectsConfig;
+  post_process: PostProcessConfig;
 }
 
 // History types for tracking text-to-speech operations

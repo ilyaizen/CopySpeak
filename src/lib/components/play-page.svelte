@@ -122,6 +122,12 @@
     hotkey: {
       enabled: false,
       shortcut: "Win+Shift+A"
+    },
+    post_process: {
+      enabled: false,
+      api_key: "",
+      model: "openai/gpt-oss-20b",
+      prompt: ""
     }
   };
 

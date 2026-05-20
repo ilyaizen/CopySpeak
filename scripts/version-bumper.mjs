@@ -15,8 +15,6 @@ const filesToUpdate = {
     content.replace(/("version":\s*)"[^"]+"/, `$1"${version}"`),
   "src-tauri/Cargo.toml": (content, version) =>
     content.replace(/(version\s*=\s*)"[^"]+"/, `$1"${version}"`),
-  "src-tauri/src/config/mod.rs": (content, version) =>
-    content.replace(/(const CONFIG_VERSION: &str = ")[^"]+(")/, `$1${version}$2`),
   [versionFile]: (content, version) =>
     content.replace(/export const VERSION = "[^"]+";/, `export const VERSION = "${version}";`),
   "README.md": (content, version) =>

@@ -5,6 +5,7 @@
   import PaginationSettings from "$lib/components/settings/pagination-settings.svelte";
   import HotkeySettings from "$lib/components/settings/hotkey-settings.svelte";
   import SanitizationSettings from "$lib/components/settings/sanitization-settings.svelte";
+  import PostProcessSettings from "$lib/components/settings/post-process-settings.svelte";
   import HistorySettings from "$lib/components/settings/history-settings.svelte";
   import EffectsSettings from "$lib/components/settings/effects-settings.svelte";
   import ImportExportSettings from "$lib/components/settings/import-export-settings.svelte";
@@ -332,11 +333,19 @@
               </div>
 
               <!-- Sanitization -->
-              <div class="p-4">
+              <div class="border-border border-b p-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.sanitization")}
                 </h3>
                 <SanitizationSettings bind:localConfig />
+              </div>
+
+              <!-- LLM Post-Processing -->
+              <div class="p-4">
+                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                  {$_("settings.sections.postProcess")}
+                </h3>
+                <PostProcessSettings bind:localConfig />
               </div>
             </div>
           </div>

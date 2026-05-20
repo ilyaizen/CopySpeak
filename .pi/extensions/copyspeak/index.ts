@@ -13,7 +13,6 @@ type State = {
   speakAssistant: boolean;
   speakActivity: boolean;
   speakThinking: boolean;
-  maxChars: number;
   launchCopySpeak: boolean;
 };
 
@@ -24,7 +23,6 @@ const state: State = {
   speakAssistant: envBool("COPYSPEAK_PI_ASSISTANT", true),
   speakActivity: envBool("COPYSPEAK_PI_ACTIVITY", false),
   speakThinking: envBool("COPYSPEAK_PI_THINKING", false),
-  maxChars: Number(process.env.COPYSPEAK_PI_MAX_CHARS || 700),
   launchCopySpeak: envBool("COPYSPEAK_PI_LAUNCH", false)
 };
 
@@ -79,8 +77,8 @@ export default function (pi: ExtensionAPI) {
     const message = [...((event as any).messages || [])]
       .reverse()
       .find((message) => message?.role === "assistant");
-    const text = truncateAtBoundary(cleanForSpeech(extractText(message)), state.maxChars);
-    if (text) await speakSafe(text, ctx);
+    const text = extractText(message).trim();
+    if (text) await speakSafe(text, ctx, false, false);
   });
 
   pi.registerCommand("copyspeak", {
@@ -133,14 +131,14 @@ function statusText() {
   return `copyspeak ${power}${detail}`;
 }
 
-async function speakSafe(text: string, ctx?: any, force = false) {
-  const cleaned = cleanForSpeech(text);
-  if (!cleaned) return;
-  if (!force && shouldSkipDuplicate(cleaned)) return;
+async function speakSafe(text: string, ctx?: any, force = false, clean = true) {
+  const speakText = clean ? cleanForSpeech(text) : text.trim();
+  if (!speakText) return;
+  if (!force && shouldSkipDuplicate(speakText)) return;
 
   speakQueue = speakQueue
     .catch(() => undefined)
-    .then(() => speak(cleaned))
+    .then(() => speak(speakText))
     .catch((error) => {
       clipboardFailureCount++;
       ctx?.ui?.setStatus?.("copyspeak", "voice failed");
@@ -268,18 +266,6 @@ function cleanForSpeech(text: string): string {
     .replace(/[#*_>~|]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-}
-
-function truncateAtBoundary(text: string, max: number): string {
-  if (text.length <= max) return text;
-  const slice = text.slice(0, max);
-  const boundary = Math.max(
-    slice.lastIndexOf(". "),
-    slice.lastIndexOf("! "),
-    slice.lastIndexOf("? "),
-    slice.lastIndexOf("\n")
-  );
-  return boundary > max * 0.5 ? slice.slice(0, boundary + 1) : slice;
 }
 
 function isEngine(value: string | undefined): value is Engine {

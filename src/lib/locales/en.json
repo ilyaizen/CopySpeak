@@ -46,6 +46,7 @@
       "hotkeys": "Hotkeys",
       "pagination": "Advanced",
       "sanitization": "Sanitization",
+      "postProcess": "LLM Post-Processing",
       "effects": "Effects",
       "appInfo": "App Info",
       "importExport": "Import / Export"
@@ -167,6 +168,23 @@
       "markdownDescription": "Remove all markdown formatting (headers, bold, italic, code blocks, links, lists, blockquotes)",
       "ttsNormalization": "Expand Visual Shorthand",
       "ttsNormalizationDescription": "Resolve URLs, slashes, abbreviations, metric units, and symbols into spoken-friendly text"
+    },
+    "postProcess": {
+      "title": "LLM Post-Processing",
+      "description": "Rewrite copied text with Groq Cloud for concise, listener-friendly speech.",
+      "enabled": "Enable Post-Processing",
+      "enabledDescription": "Run sanitized text through a Groq chat model before TTS. Failures fall back to the original text.",
+      "apiKey": "Groq API Key",
+      "apiKeyPlaceholder": "gsk_...",
+      "apiKeyHelp": "Create a key at console.groq.com",
+      "testKey": "Test",
+      "testOk": "Groq API key is valid",
+      "testFail": "Invalid key",
+      "model": "Model",
+      "modelTooltip": "Smaller models are faster; larger models follow instructions more reliably.",
+      "prompt": "Prompt Template",
+      "promptHelp": "Use ${output} where the copied text should be inserted.",
+      "restoreDefault": "Restore Default Prompt"
     },
     "effects": {
       "enabled": "Enable Effects",
