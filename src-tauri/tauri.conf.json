@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "CopySpeak",
+  "productName": "CopySpeak TTS",
   "version": "0.1.5",
-  "identifier": "com.copyspeak",
+  "identifier": "com.copyspeak.tts",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -21,7 +21,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "publisher": "CopySpeak",
+    "publisher": "CopySpeak TTS",
     "shortDescription": "Clipboard text-to-speech tool",
     "longDescription": "A lightweight tool for quick AI text-to-speech generation.",
     "category": "Productivity",
@@ -39,7 +39,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "CopySpeak",
+        "title": "CopySpeak TTS",
         "width": 775,
         "height": 580,
         "resizable": false,
@@ -66,7 +66,7 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": ["https://github.com/ilyaizen/CopySpeak/releases/latest/download/latest.json"],
+      "endpoints": ["https://github.com/ilyaizen/copyspeak-tts/releases/latest/download/latest.json"],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU5NEU5MjFEMEZBOUQ5MApSV1NRbmZyUUllbVVEbkwrajB5ZjNXbml2U2tuTTZXVmhhektTS2RxM1dYaks5TC9SY0I2alVwRQo=",
       "windows": {
         "installMode": "passive"

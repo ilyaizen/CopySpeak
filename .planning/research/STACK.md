@@ -109,5 +109,5 @@ Confidence: HIGH (observed pattern in Tauri community; consistent with how WebVi
 - Tauri v2 SvelteKit guide: https://v2.tauri.app/start/frontend/sveltekit/ — confirms adapter-static SPA mode as the standard Tauri+SvelteKit setup (HIGH confidence)
 
 ---
-*Stack research for: CopySpeak multi-route navigation (Play / Engine / Settings)*
+*Stack research for: CopySpeak TTS multi-route navigation (Play / Engine / Settings)*
 *Researched: 2026-03-04*

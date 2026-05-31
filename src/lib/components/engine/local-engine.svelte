@@ -165,7 +165,7 @@
       />
       <p class="text-muted-foreground text-xs">
         {$_("engine.localEngine.piperModels", {
-          values: { dataDir: dataDir ?? "%APPDATA%\\CopySpeak" }
+          values: { dataDir: dataDir ?? "%APPDATA%\\CopySpeak TTS" }
         })}
         <button
           onclick={() => openExternal("https://github.com/OHF-Voice/piper1-gpl")}

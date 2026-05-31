@@ -1,18 +1,30 @@
-"""Backend wrappers that invoke the real CopySpeak/TTS software, never reimplement rendering."""
+"""Backend wrappers that invoke the real CopySpeak TTS/TTS software, never reimplement rendering."""
 from __future__ import annotations
 import os, shutil, subprocess, sys
 from pathlib import Path
 
-INSTALL = "Build/install CopySpeak and set COPYSPEAK_EXE, or install Kitten/Piper/Kokoro CLI for synthesis."
+INSTALL = "Build/install CopySpeak TTS and set COPYSPEAK_EXE, or install Kitten/Piper/Kokoro CLI for synthesis."
 
 
 def find_copyspeak():
-    candidates = [os.environ.get("COPYSPEAK_EXE"), shutil.which("copyspeak"), shutil.which("CopySpeak")]
+    candidates = [
+        os.environ.get("COPYSPEAK_EXE"),
+        shutil.which("copyspeak"),
+        shutil.which("CopySpeak TTS"),
+        shutil.which("copyspeak-tts"),
+    ]
     root = Path(__file__).resolve().parents[4]
-    candidates += [str(root/"src-tauri"/"target"/"release"/"copyspeak.exe"), str(root/"src-tauri"/"target"/"debug"/"copyspeak.exe")]
+    candidates += [
+        str(root/"src-tauri"/"target"/"release"/"CopySpeak TTS.exe"),
+        str(root/"src-tauri"/"target"/"release"/"copyspeak-tts.exe"),
+        str(root/"src-tauri"/"target"/"release"/"copyspeak.exe"),
+        str(root/"src-tauri"/"target"/"debug"/"CopySpeak TTS.exe"),
+        str(root/"src-tauri"/"target"/"debug"/"copyspeak-tts.exe"),
+        str(root/"src-tauri"/"target"/"debug"/"copyspeak.exe"),
+    ]
     for c in candidates:
         if c and Path(c).exists(): return str(Path(c).resolve())
-    raise RuntimeError("CopySpeak executable not found. " + INSTALL)
+    raise RuntimeError("CopySpeak TTS executable not found. " + INSTALL)
 
 
 def find_tts_engine(engine):

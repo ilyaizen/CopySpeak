@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Installs KittenTTS for CopySpeak text-to-speech.
+    Installs KittenTTS for CopySpeak TTS text-to-speech.
 
 .DESCRIPTION
     This script installs KittenTTS - an ultra-lightweight TTS engine (25-80MB)
@@ -268,14 +268,14 @@ function Install-CliWrapper {
         
         $wrapperContent = @"
 #!/usr/bin/env python3
-"""CLI wrapper for KittenTTS - used by CopySpeak application."""
+"""CLI wrapper for KittenTTS - used by CopySpeak TTS application."""
 
 import argparse
 import sys
 from pathlib import Path
 
 def main():
-    parser = argparse.ArgumentParser(description="KittenTTS CLI wrapper for CopySpeak")
+    parser = argparse.ArgumentParser(description="KittenTTS CLI wrapper for CopySpeak TTS")
     parser.add_argument("--text", required=True, help="Text to synthesize")
     parser.add_argument("--voice", default="Rosie", help="Voice name (default: Rosie)")
     parser.add_argument("--output", required=True, help="Output WAV file path")
@@ -310,7 +310,7 @@ if __name__ == "__main__":
 function Test-Installation {
     Write-Step "Verifying installation..."
     
-    $testText = "CopySpeak test"
+    $testText = "CopySpeak TTS test"
     $testOutput = Join-Path ([System.IO.Path]::GetTempPath()) "kittentts_test.wav"
     $cliPath = Join-Path $InstallDir "kittentts-cli.py"
     
@@ -409,7 +409,7 @@ function Show-Success {
     Write-Host "  Available voices: Bella, Jasper, Luna, Bruno, Rosie, Hugo, Kiki, Leo" -ForegroundColor Gray
     Write-Host ""
     Write-Host "  Next steps:" -ForegroundColor Yellow
-    Write-Host "  1. Open CopySpeak" -ForegroundColor Gray
+    Write-Host "  1. Open CopySpeak TTS" -ForegroundColor Gray
     Write-Host "  2. Go to Engine settings" -ForegroundColor Gray
     Write-Host "  3. Select 'KittenTTS' tab" -ForegroundColor Gray
     Write-Host "  4. Click 'Test Engine' to verify" -ForegroundColor Gray
@@ -417,9 +417,9 @@ function Show-Success {
 }
 
 function Update-Config {
-    Write-Step "Updating CopySpeak configuration..."
+    Write-Step "Updating CopySpeak TTS configuration..."
     
-    $configDir = Join-Path $env:APPDATA "CopySpeak"
+    $configDir = Join-Path $env:APPDATA "CopySpeak TTS"
     $configPath = Join-Path $configDir "config.json"
     
     $pythonCommand = if ($UseLauncher) { "py" } else { $PythonCmd }
@@ -464,7 +464,7 @@ function Update-Config {
             }
         }
         catch {
-            Write-Host "  Warning: Could not update CopySpeak config: $_" -ForegroundColor Yellow
+            Write-Host "  Warning: Could not update CopySpeak TTS config: $_" -ForegroundColor Yellow
         }
     } else {
         try {
@@ -516,8 +516,8 @@ function Update-Config {
             Write-Host "  Created config with TTS command: $pythonCommand $versionArg" -ForegroundColor Gray
         }
         catch {
-            Write-Host "  Warning: Could not create CopySpeak config: $_" -ForegroundColor Yellow
-            Write-Host "  You may need to manually configure the TTS engine in CopySpeak." -ForegroundColor Yellow
+            Write-Host "  Warning: Could not create CopySpeak TTS config: $_" -ForegroundColor Yellow
+            Write-Host "  You may need to manually configure the TTS engine in CopySpeak TTS." -ForegroundColor Yellow
         }
     }
 }
@@ -531,7 +531,7 @@ function Show-Usage {
 # Main execution
 Write-Host ""
 Write-Host "  ========================================" -ForegroundColor Magenta
-Write-Host "  |  KittenTTS Installer for CopySpeak  |" -ForegroundColor Magenta
+Write-Host "  |  KittenTTS Installer for CopySpeak TTS  |" -ForegroundColor Magenta
 Write-Host "  ========================================" -ForegroundColor Magenta
 
 Test-Python

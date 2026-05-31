@@ -1,20 +1,20 @@
 ---
 name: "cli-anything-copyspeak"
-description: "Operate CopySpeak desktop TTS from a stateful CLI: manage projects, queue text, invoke real TTS backends, and verify audio output."
+description: "Operate CopySpeak TTS desktop TTS from a stateful CLI: manage projects, queue text, invoke real TTS backends, and verify audio output."
 ---
 
 # cli-anything-copyspeak
 
-Use this skill when an agent needs to drive CopySpeak without the GUI.
+Use this skill when an agent needs to drive CopySpeak TTS without the GUI.
 
 ## Install
 
 ```bash
-cd /d/GitHub/CopySpeak/agent-harness
+cd /d/GitHub/copyspeak-tts/agent-harness
 pip install -e .
 ```
 
-Hard dependencies: real CopySpeak (`COPYSPEAK_EXE` or built Tauri executable) and a real TTS backend (`kittentts-cli.py`, Piper, Kokoro, etc.). Exports fail loudly if the backend is missing.
+Hard dependencies: real CopySpeak TTS (`COPYSPEAK_EXE` or built Tauri executable) and a real TTS backend (`kittentts-cli.py`, Piper, Kokoro, etc.). Exports fail loudly if the backend is missing.
 
 ## Command pattern
 
@@ -37,8 +37,8 @@ Use `--json` for machine-readable output. Mutations auto-save; add `--dry-run` t
 - `queue clear` — clear queue.
 - `export text -t TEXT -o AUDIO [--overwrite]` — synthesize one item using the real backend.
 - `export queue -o DIR [--overwrite]` — synthesize all queued items.
-- `backend check` — locate CopySpeak executable.
-- `backend launch` — launch CopySpeak.
+- `backend check` — locate CopySpeak TTS executable.
+- `backend launch` — launch CopySpeak TTS.
 
 ## Examples
 

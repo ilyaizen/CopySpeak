@@ -3,15 +3,15 @@
   import { VERSION } from "$lib/version";
   // import LanguageSwitcher from "./language-switcher.svelte";
 
-  const GITHUB_URL = "https://github.com/ilyaizen/CopySpeak";
+  const GITHUB_URL = "https://github.com/ilyaizen/copyspeak-tts";
 </script>
 
 <footer class="border-border bg-muted/30 border-t px-6 py-8">
   <div class="mx-auto max-w-5xl">
     <div class="flex flex-col items-center justify-between gap-4 sm:flex-row">
       <div class="flex items-center gap-3">
-        <img src="/app-logo.png" alt="CopySpeak" class="h-8 w-8" />
-        <span class="text-foreground font-mono text-sm font-semibold">CopySpeak v{VERSION}</span>
+        <img src="/app-logo.png" alt="CopySpeak TTS" class="h-8 w-8" />
+        <span class="text-foreground font-mono text-sm font-semibold">CopySpeak TTS v{VERSION}</span>
       </div>
 
       <div class="flex items-center gap-6">
@@ -26,7 +26,7 @@
         </a>
 
         <a
-          href="https://github.com/ilyaizen/CopySpeak/blob/main/LICENCE.txt"
+          href="https://github.com/ilyaizen/copyspeak-tts/blob/main/LICENCE.txt"
           class="text-muted-foreground hover:text-foreground text-sm transition-colors"
         >
           MIT License

@@ -407,7 +407,7 @@ pub fn run_clipboard_listener(app: AppHandle, is_listening: Arc<AtomicBool>) {
         let hwnd = match CreateWindowExW(
             Default::default(),
             class_name,
-            w!("CopySpeak Clipboard Listener"),
+            w!("CopySpeak TTS Clipboard Listener"),
             WS_OVERLAPPEDWINDOW,
             CW_USEDEFAULT,
             CW_USEDEFAULT,

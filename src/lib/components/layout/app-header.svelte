@@ -70,9 +70,9 @@
   <div class="flex items-center justify-between px-6 py-3">
     <div class="flex items-center gap-3">
       <a href="/" class="flex items-center gap-3">
-        <img src="/app-logo.png" alt="CopySpeak Logo" class="h-10 w-10" />
+        <img src="/app-logo.png" alt="CopySpeak TTS Logo" class="h-10 w-10" />
         <div>
-          <h1 class="text-foreground font-mono text-xl font-semibold tracking-tight">CopySpeak</h1>
+          <h1 class="text-foreground font-mono text-xl font-semibold tracking-tight">CopySpeak TTS</h1>
           <!-- <p class="text-muted-foreground text-xs">{$_("header.tagline")}</p> -->
         </div>
       </a>

@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "CopySpeak",
+    "title": "CopySpeak TTS",
     "tagline": "AI text-to-speech for your clipboard"
   },
   "nav": {
@@ -141,7 +141,7 @@
       "temporary": "Temporary",
       "generationsFolder": "Generations Folder",
       "generationsFolderDescription": "Directory to save TTS generations. Leave blank for default.",
-      "generationsFolderPlaceholder": "Default: Documents/CopySpeak",
+      "generationsFolderPlaceholder": "Default: Documents/CopySpeak TTS",
       "autoDeleteTitle": "Auto-Delete Generations",
       "autoDeleteKeepLatest": "Keep latest",
       "autoDeleteNever": "Never",
@@ -199,15 +199,15 @@
     },
     "about": {
       "version": "Version",
-      "versionDescription": "Current CopySpeak version",
+      "versionDescription": "Current CopySpeak TTS version",
       "sourceCode": "Source Code",
-      "sourceCodeDescription": "View CopySpeak on GitHub",
+      "sourceCodeDescription": "View CopySpeak TTS on GitHub",
       "github": "GitHub",
       "acknowledgments": "Acknowledgments",
       "openai": {
         "title": "OpenAI TTS",
         "description": "High-quality neural text-to-speech",
-        "detail": "CopySpeak uses OpenAI's text-to-speech API for high-quality voice synthesis."
+        "detail": "CopySpeak TTS uses OpenAI's text-to-speech API for high-quality voice synthesis."
       },
       "elevenlabs": {
         "title": "ElevenLabs",
@@ -449,7 +449,7 @@
     "success": {
       "engineSaved": "Engine saved successfully",
       "settingsSaved": "Settings saved",
-      "welcome": "Welcome to CopySpeak!",
+      "welcome": "Welcome to CopySpeak TTS!",
       "configSaved": "Configuration saved! Let's get started.",
       "hudTest": "HUD test triggered",
       "historyCleanup": "History cleanup completed",
@@ -477,7 +477,7 @@
   },
   "onboarding": {
     "welcome": {
-      "title": "Welcome to CopySpeak",
+      "title": "Welcome to CopySpeak TTS",
       "subtitle": "Configure your text-to-speech engine to get started, or skip and set it up later."
     },
     "engineConfig": "Engine Configuration",
@@ -513,7 +513,7 @@
   },
   "landing": {
     "hero": {
-      "title": "CopySpeak",
+      "title": "CopySpeak TTS",
       "subtitle": "",
       "description": "A lightweight Windows app that reads clipboard text aloud using AI text-to-speech engines.",
       "download": "Download for Windows",
@@ -549,8 +549,8 @@
     },
     "screenshots": {
       "title": "Screenshots",
-      "subtitle": "See CopySpeak in action",
-      "caption": "CopySpeak v0.1.4 — Main interface with Play tab"
+      "subtitle": "See CopySpeak TTS in action",
+      "caption": "CopySpeak TTS v0.1.4 — Main interface with Play tab"
     },
     "footer": {
       "github": "GitHub",

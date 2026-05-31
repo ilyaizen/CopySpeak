@@ -591,13 +591,13 @@ pub struct HistoryStatistics {
 /// Get the path to the history.json file
 pub fn history_path() -> PathBuf {
     let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-    base.join("CopySpeak").join("history.json")
+    base.join("CopySpeak TTS").join("history.json")
 }
 
 /// Get the directory containing history data files
 pub fn history_dir() -> PathBuf {
     let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-    base.join("CopySpeak").join("history")
+    base.join("CopySpeak TTS").join("history")
 }
 
 /// Load history from disk, creating default if not found
@@ -954,7 +954,7 @@ pub fn save_audio_to_storage(
             config.persistent_dir.clone().unwrap_or_else(|| {
                 dirs::document_dir()
                     .unwrap_or_else(|| std::path::PathBuf::from("."))
-                    .join("CopySpeak")
+                    .join("CopySpeak TTS")
             })
         }
     };

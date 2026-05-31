@@ -1,4 +1,4 @@
-"""CopySpeak project/session document model."""
+"""CopySpeak TTS project/session document model."""
 from __future__ import annotations
 
 import json, os, time, uuid
@@ -34,7 +34,7 @@ def load_project(path):
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
     if data.get("schema") != "cli-anything-copyspeak/v1":
-        raise ValueError("Not a CopySpeak CLI project (expected schema cli-anything-copyspeak/v1)")
+        raise ValueError("Not a CopySpeak TTS CLI project (expected schema cli-anything-copyspeak/v1)")
     return data
 
 

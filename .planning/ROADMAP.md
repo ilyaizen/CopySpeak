@@ -1,4 +1,4 @@
-# Roadmap: CopySpeak
+# Roadmap: CopySpeak TTS
 
 **Milestone:** v0.2 Settings Consolidation
 **Started:** 2026-03-26

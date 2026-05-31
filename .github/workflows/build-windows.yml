@@ -102,7 +102,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           tagName: ${{ steps.tag.outputs.tag }}
-          releaseName: "CopySpeak ${{ steps.tag.outputs.tag }}"
+          releaseName: "CopySpeak TTS ${{ steps.tag.outputs.tag }}"
           releaseBody: ${{ steps.changelog.outputs.notes }}
           releaseDraft: true
           prerelease: false

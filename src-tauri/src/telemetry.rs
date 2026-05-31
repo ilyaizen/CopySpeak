@@ -260,7 +260,7 @@ impl TelemetryLog {
 /// Get the path to the telemetry.json file.
 fn telemetry_path() -> PathBuf {
     let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-    base.join("CopySpeak").join("telemetry.json")
+    base.join("CopySpeak TTS").join("telemetry.json")
 }
 
 /// Load telemetry from disk, creating default if not found.

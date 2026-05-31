@@ -26,7 +26,7 @@ These are features users assume any engine-configuration UI provides. Missing th
 
 ### Differentiators (Competitive Advantage)
 
-These go beyond the baseline and make the engine setup experience genuinely good for CopySpeak's audience (technical users comfortable with CLI tools and local AI models).
+These go beyond the baseline and make the engine setup experience genuinely good for CopySpeak TTS's audience (technical users comfortable with CLI tools and local AI models).
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
@@ -145,7 +145,7 @@ These features make the Engine page functional and trustworthy. Without them the
 
 ## Competitor / Analogue Feature Analysis
 
-| Feature | Home Assistant TTS | AllTalk TTS UI | VS Code Language Servers | CopySpeak Engine Page (plan) |
+| Feature | Home Assistant TTS | AllTalk TTS UI | VS Code Language Servers | CopySpeak TTS Engine Page (plan) |
 |---------|-------------------|----------------|--------------------------|-------------------------------|
 | Engine/provider selector | Dropdown of integrations | Tab per engine | Auto-detected, not user-chosen | Backend selector (CLI/ElevenLabs/OpenAI/HTTP) |
 | Voice selection | Dropdown fetched from provider | Dropdown of installed models | N/A | Text field (CLI); fetched dropdown (ElevenLabs) |
@@ -168,10 +168,10 @@ These features make the Engine page functional and trustworthy. Without them the
 - Carbon Design System notification pattern (banner UX): https://carbondesignsystem.com/patterns/notification-pattern/
 - Notification banner UX (Astro UX DS): https://www.astrouxds.com/components/notification-banner/
 - VS Code language server extension guide (inline error handling): https://code.visualstudio.com/api/language-extensions/language-server-extension-guide
-- CopySpeak docs_internal/tts_backends.md — engine backend detail, TtsError variants, preset configs
-- CopySpeak docs_internal/implemented_features.md — existing implemented/backlogged features
-- CopySpeak .planning/PROJECT.md — milestone scope, constraints, out-of-scope list
+- CopySpeak TTS docs_internal/tts_backends.md — engine backend detail, TtsError variants, preset configs
+- CopySpeak TTS docs_internal/implemented_features.md — existing implemented/backlogged features
+- CopySpeak TTS .planning/PROJECT.md — milestone scope, constraints, out-of-scope list
 
 ---
-*Feature research for: TTS engine configuration page + startup health check UX (CopySpeak milestone)*
+*Feature research for: TTS engine configuration page + startup health check UX (CopySpeak TTS milestone)*
 *Researched: 2026-03-04*

@@ -62,7 +62,7 @@
 | reqwest | 0.11+ | HTTP client for API calls | Already used in elevenlabs.rs, openai.rs |
 | serde | 1.0+ | JSON serialization | Already used throughout codebase |
 | serde_json | 1.0+ | JSON manipulation | Already used for API request bodies |
-| tauri | 2.x | Desktop app framework | Core to CopySpeak architecture |
+| tauri | 2.x | Desktop app framework | Core to CopySpeak TTS architecture |
 | svelte | 5.x | Frontend framework | Already used in all components |
 | svelte-sonner | ^0.5.44 | Toast notifications | Used for migration notification |
 
@@ -75,7 +75,7 @@
 ### Alternatives Considered
 | Instead of | Could Use | Tradeoff |
 |------------|-----------|----------|
-| reqwest (blocking) | ureq + tokio | Simpler for synchronous contexts, but CopySpeak already uses async with spawn_blocking |
+| reqwest (blocking) | ureq + tokio | Simpler for synchronous contexts, but CopySpeak TTS already uses async with spawn_blocking |
 | Custom HTTP client | reqwest | Don't hand-roll — reqwest handles connection pooling, timeouts, retries |
 
 **Installation:**

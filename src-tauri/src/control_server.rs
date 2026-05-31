@@ -72,7 +72,7 @@ fn handle_connection(mut stream: TcpStream, app: AppHandle) {
     };
 
     let response = match read_result.and_then(|()| parse_request(&buffer)) {
-        Ok(ControlRequest::Health) => http_response(200, "OK", r#"{"ok":true,"app":"CopySpeak"}"#),
+        Ok(ControlRequest::Health) => http_response(200, "OK", r#"{"ok":true,"app":"CopySpeak TTS"}"#),
         Ok(ControlRequest::Speak(request)) => {
             match tauri::async_runtime::block_on(speak(app.clone(), request)) {
                 Ok(()) => http_response(200, "OK", r#"{"ok":true}"#),

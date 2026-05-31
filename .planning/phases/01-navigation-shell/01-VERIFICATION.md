@@ -41,7 +41,7 @@ human_verification:
 | Artifact                                          | Expected                               | Status      | Details                                                           |
 | ------------------------------------------------- | -------------------------------------- | ----------- | ----------------------------------------------------------------- |
 | `src/lib/components/layout/app-header.svelte`     | Engine nav item with Cpu icon          | ✓ VERIFIED  | L3: imports Cpu; L12-17: engine entry with id, href, icon        |
-| `src/routes/engine/+page.svelte`                  | Engine stub route page                 | ✓ VERIFIED  | 19 lines; L5: `<title>Engine - CopySpeak</title>`; brutalist card |
+| `src/routes/engine/+page.svelte`                  | Engine stub route page                 | ✓ VERIFIED  | 19 lines; L5: `<title>Engine - CopySpeak TTS</title>`; brutalist card |
 | `src/lib/components/layout/app-header.test.ts`    | Automated tests for NAV-01/02/03       | ✓ VERIFIED  | 78 lines; 5 tests all pass; covers all requirements              |
 
 ### Key Link Verification

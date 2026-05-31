@@ -1,4 +1,4 @@
-// CopySpeak - Clipboard-to-speech orchestrator
+// CopySpeak TTS - Clipboard-to-speech orchestrator
 // Main entry: wires up tray, clipboard watcher, and IPC commands.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -321,7 +321,7 @@ fn main() {
             let version_item = MenuItem::with_id(
                 app,
                 "version",
-                format!("CopySpeak v{version}"),
+                format!("CopySpeak TTS v{version}"),
                 false,
                 None::<&str>,
             )?;
@@ -353,7 +353,7 @@ fn main() {
             let toggle_item_for_event = toggle_item.clone();
             let _tray = TrayIconBuilder::with_id("main")
                 .menu(&menu)
-                .tooltip("CopySpeak")
+                .tooltip("CopySpeak TTS")
                 .icon(app.default_window_icon().unwrap().clone())
                 .on_menu_event(move |app, event| {
                     match event.id.as_ref() {
@@ -532,7 +532,7 @@ fn main() {
             let app_handle_for_cleanup = app.handle().clone();
             history::start_cleanup_service(app_handle_for_cleanup);
 
-            log::info!("CopySpeak started");
+            log::info!("CopySpeak TTS started");
             Ok(())
         })
         .plugin(
@@ -684,5 +684,5 @@ fn main() {
             commands::run_kittentts_installer,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running CopySpeak");
+        .expect("error while running CopySpeak TTS");
 }

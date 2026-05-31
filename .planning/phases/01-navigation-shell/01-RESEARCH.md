@@ -133,7 +133,7 @@ const isActive =
 ```svelte
 <!-- Source: pattern from src/routes/+page.svelte structure -->
 <svelte:head>
-  <title>Engine - CopySpeak</title>
+  <title>Engine - CopySpeak TTS</title>
 </svelte:head>
 
 <div class="w-full max-w-6xl mx-auto">
@@ -188,9 +188,9 @@ const isActive =
 **Warning signs:** Play tab stays highlighted when on Engine page (would mean the guard was removed).
 
 ### Pitfall 3: Missing `<svelte:head>` title
-**What goes wrong:** Browser tab shows "CopySpeak" but no page-specific title, making it harder to distinguish routes during development.
+**What goes wrong:** Browser tab shows "CopySpeak TTS" but no page-specific title, making it harder to distinguish routes during development.
 **Why it happens:** Forgetting `<svelte:head>` on the stub page.
-**How to avoid:** Include `<title>Engine - CopySpeak</title>` in a `<svelte:head>` block (see existing `+page.svelte` for pattern).
+**How to avoid:** Include `<title>Engine - CopySpeak TTS</title>` in a `<svelte:head>` block (see existing `+page.svelte` for pattern).
 
 ---
 
@@ -276,7 +276,7 @@ None. Phase scope is fully understood from existing source code inspection. No e
 | Property | Value |
 |----------|-------|
 | Framework | Vitest 4.0.18 |
-| Config file | `/home/ubuntu/CopySpeak/vitest.config.ts` |
+| Config file | `/home/ubuntu/CopySpeak TTS/vitest.config.ts` |
 | Quick run command | `bun run test` |
 | Full suite command | `bun run test` |
 
@@ -308,9 +308,9 @@ None. Phase scope is fully understood from existing source code inspection. No e
 ## Sources
 
 ### Primary (HIGH confidence)
-- Direct source code inspection: `/home/ubuntu/CopySpeak/src/lib/components/layout/app-header.svelte` — all patterns verified from live file
-- Direct source code inspection: `/home/ubuntu/CopySpeak/src/routes/+page.svelte` and `settings/+page.svelte` — stub page aesthetic reference
-- `/home/ubuntu/CopySpeak/vitest.config.ts` — test framework configuration verified
+- Direct source code inspection: `/home/ubuntu/CopySpeak TTS/src/lib/components/layout/app-header.svelte` — all patterns verified from live file
+- Direct source code inspection: `/home/ubuntu/CopySpeak TTS/src/routes/+page.svelte` and `settings/+page.svelte` — stub page aesthetic reference
+- `/home/ubuntu/CopySpeak TTS/vitest.config.ts` — test framework configuration verified
 
 ### Secondary (MEDIUM confidence)
 - `@lucide/svelte` package.json version `^0.561.0` — `Cpu` icon confirmed available in Lucide icon set (stable, high availability in all recent versions)

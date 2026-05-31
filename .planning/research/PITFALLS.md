@@ -221,5 +221,5 @@ Settings refactor phase. The move must be atomic: add Engine route, move TTS UI,
 - Codebase analysis: `src/routes/+layout.svelte`, `src/routes/settings/+page.svelte`, `src-tauri/src/commands/config.rs`, `src-tauri/src/main.rs` — direct inspection (HIGH confidence)
 
 ---
-*Pitfalls research for: CopySpeak — multi-route navigation and startup onboarding (Tauri v2 + Svelte 5 + SvelteKit)*
+*Pitfalls research for: CopySpeak TTS — multi-route navigation and startup onboarding (Tauri v2 + Svelte 5 + SvelteKit)*
 *Researched: 2026-03-04*

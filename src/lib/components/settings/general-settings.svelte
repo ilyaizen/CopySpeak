@@ -11,7 +11,7 @@
 </script>
 
 <div class="space-y-4">
-  <SettingRow label="Start with Windows" tooltip="Launch CopySpeak when Windows starts">
+  <SettingRow label="Start with Windows" tooltip="Launch CopySpeak TTS when Windows starts">
     <Switch id="start-windows" bind:checked={localConfig.general.start_with_windows} />
   </SettingRow>
 

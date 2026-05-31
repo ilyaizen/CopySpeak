@@ -3,7 +3,7 @@ from setuptools import setup, find_namespace_packages
 setup(
     name="cli-anything-copyspeak",
     version="0.1.0",
-    description="Stateful CLI harness for CopySpeak desktop TTS",
+    description="Stateful CLI harness for CopySpeak TTS desktop TTS",
     packages=find_namespace_packages(include=["cli_anything.*"]),
     include_package_data=True,
     package_data={"cli_anything.copyspeak": ["skills/*.md"]},

@@ -1,10 +1,10 @@
-# Contributing to CopySpeak
+# Contributing to CopySpeak TTS
 
-Thank you for your interest in contributing to CopySpeak! This guide will help you get started with contributing to this open source text-to-speech application.
+Thank you for your interest in contributing to CopySpeak TTS! This guide will help you get started with contributing to this open source text-to-speech application.
 
 ## 📖 Philosophy
 
-CopySpeak aims to make AI text-to-speech accessible to everyone. The goal is to create both a useful tool and a foundation for others to build upon—a well-patterned, simple codebase that serves the community. We prioritize:
+CopySpeak TTS aims to make AI text-to-speech accessible to everyone. The goal is to create both a useful tool and a foundation for others to build upon—a well-patterned, simple codebase that serves the community. We prioritize:
 
 - **Simplicity**: Clear, maintainable code over clever solutions
 - **Extensibility**: Make it easy for others to fork and customize
@@ -27,14 +27,14 @@ Before you begin, ensure you have the following installed:
 2. **Clone your fork**:
 
    ```bash
-   git clone https://github.com/ilyaizen/CopySpeak.git
-   cd CopySpeak
+   git clone https://github.com/ilyaizen/copyspeak-tts.git
+   cd copyspeak-tts
    ```
 
 3. **Add upstream remote**:
 
    ```bash
-   git remote add upstream git@github.com:ilyaizen/CopySpeak.git
+   git remote add upstream git@github.com:ilyaizen/copyspeak-tts.git
    ```
 
 4. **Install dependencies**:
@@ -50,7 +50,7 @@ Before you begin, ensure you have the following installed:
 
 ### Understanding the Codebase
 
-CopySpeak follows a clean architecture pattern:
+CopySpeak TTS follows a clean architecture pattern:
 
 **Backend (Rust - `src-tauri/src/`):**
 
@@ -74,8 +74,8 @@ CopySpeak follows a clean architecture pattern:
 
 ### Before Submitting a Bug Report
 
-1. **Search existing issues** at [github.com/ilyaizen/CopySpeak/issues](https://github.com/ilyaizen/CopySpeak/issues)
-2. **Check discussions** at [github.com/ilyaizen/CopySpeak/discussions](https://github.com/ilyaizen/CopySpeak/discussions)
+1. **Search existing issues** at [github.com/ilyaizen/CopySpeak TTS/issues](https://github.com/ilyaizen/copyspeak-tts/issues)
+2. **Check discussions** at [github.com/ilyaizen/CopySpeak TTS/discussions](https://github.com/ilyaizen/copyspeak-tts/discussions)
 3. **Try the latest release** to see if the issue has been fixed
 
 ### Submitting a Bug Report
@@ -104,14 +104,14 @@ We use GitHub Discussions for feature requests rather than issues. This keeps is
 
 ### Submitting a Feature Request
 
-1. Go to [Discussions](https://github.com/ilyaizen/CopySpeak/discussions)
+1. Go to [Discussions](https://github.com/ilyaizen/copyspeak-tts/discussions)
 2. Click "New discussion"
 3. Choose the appropriate category (Ideas, Feature Requests, etc.)
 4. Describe your feature idea including:
    - The problem you're trying to solve
    - Your proposed solution
    - Any alternatives you've considered
-   - How it fits with CopySpeak's philosophy
+   - How it fits with CopySpeak TTS's philosophy
 
 ## 🔧 Making Code Contributions
 
@@ -120,19 +120,19 @@ We use GitHub Discussions for feature requests rather than issues. This keeps is
 **This is critical:** Before writing any code, please do the following:
 
 1. **Search existing issues and PRs** - Check both open AND closed issues and pull requests. Someone may have already addressed this, or there may be a reason it was closed.
-   - [Open issues](https://github.com/ilyaizen/CopySpeak/issues)
-   - [Closed issues](https://github.com/ilyaizen/CopySpeak/issues?q=is%3Aissue+is%3Aclosed)
-   - [Open PRs](https://github.com/ilyaizen/CopySpeak/pulls)
-   - [Closed PRs](https://github.com/ilyaizen/CopySpeak/pulls?q=is%3Apr+is%3Aclosed)
+   - [Open issues](https://github.com/ilyaizen/copyspeak-tts/issues)
+   - [Closed issues](https://github.com/ilyaizen/copyspeak-tts/issues?q=is%3Aissue+is%3Aclosed)
+   - [Open PRs](https://github.com/ilyaizen/copyspeak-tts/pulls)
+   - [Closed PRs](https://github.com/ilyaizen/copyspeak-tts/pulls?q=is%3Apr+is%3Aclosed)
 
 2. **If something was previously closed** - If you want to revisit a closed issue or PR, you need to:
    - Provide a strong argument for why it should be reconsidered
-   - Gather community feedback first via [Discussions](https://github.com/ilyaizen/CopySpeak/discussions)
+   - Gather community feedback first via [Discussions](https://github.com/ilyaizen/copyspeak-tts/discussions)
    - Link to that discussion in your PR
 
-3. **Get community feedback for features** - PRs with demonstrated community interest are **much more likely to be merged**. Start a discussion, get feedback, and link to it in your PR. This helps ensure CopySpeak stays focused and useful for the most people without becoming bloated.
+3. **Get community feedback for features** - PRs with demonstrated community interest are **much more likely to be merged**. Start a discussion, get feedback, and link to it in your PR. This helps ensure CopySpeak TTS stays focused and useful for the most people without becoming bloated.
 
-Community feedback is essential to keeping CopySpeak the best it can be for everyone. It helps prioritize what matters most and prevents feature creep.
+Community feedback is essential to keeping CopySpeak TTS the best it can be for everyone. It helps prioritize what matters most and prevents feature creep.
 
 ### Development Workflow
 
@@ -186,7 +186,7 @@ Community feedback is essential to keeping CopySpeak the best it can be for ever
    ```
 
 7. **Create a Pull Request**:
-   - Go to the [CopySpeak repository](https://github.com/ilyaizen/CopySpeak)
+   - Go to the [CopySpeak TTS repository](https://github.com/ilyaizen/copyspeak-tts)
    - Click "New Pull Request"
    - Select your fork and branch
    - Fill out the PR template completely, including:
@@ -197,7 +197,7 @@ Community feedback is essential to keeping CopySpeak the best it can be for ever
      - Screenshots/videos if applicable
      - Breaking changes (if any)
 
-   **Remember:** PRs with community support are prioritized. If you haven't already, start a [discussion](https://github.com/ilyaizen/CopySpeak/discussions) to gather feedback before or alongside your PR. It is not explicitly required to gather feedback, but it certainly helps your PR get merged faster.
+   **Remember:** PRs with community support are prioritized. If you haven't already, start a [discussion](https://github.com/ilyaizen/copyspeak-tts/discussions) to gather feedback before or alongside your PR. It is not explicitly required to gather feedback, but it certainly helps your PR get merged faster.
 
 ### AI Assistance Disclosure
 
@@ -307,9 +307,9 @@ Look for issues labeled `good first issue` or `help wanted` if you're new to the
 
 ## 📞 Getting Help
 
-- **Discussions**: Ask questions in [GitHub Discussions](https://github.com/ilyaizen/CopySpeak/discussions)
-- **Issues**: Report bugs via [GitHub Issues](https://github.com/ilyaizen/CopySpeak/issues)
+- **Discussions**: Ask questions in [GitHub Discussions](https://github.com/ilyaizen/copyspeak-tts/discussions)
+- **Issues**: Report bugs via [GitHub Issues](https://github.com/ilyaizen/copyspeak-tts/issues)
 
 ---
 
-**Thank you for contributing to CopySpeak!** Your efforts help make text-to-speech technology more accessible and extensible for everyone.
+**Thank you for contributing to CopySpeak TTS!** Your efforts help make text-to-speech technology more accessible and extensible for everyone.

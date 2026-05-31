@@ -24,22 +24,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **CopySpeak Pi extension** — Routes final Pi responses through the running app's sanitization, max-length, LLM post-processing, effects, and TTS pipeline instead of filtering/truncating in the extension.
+- **CopySpeak TTS Pi extension** — Routes final Pi responses through the running app's sanitization, max-length, LLM post-processing, effects, and TTS pipeline instead of filtering/truncating in the extension.
 - **Vercel landing page** — Updated the displayed version, screenshot asset, and removed the double-copy hero tagline.
 
 ## [0.1.4] - 2026-05-20
 
 ### Added
 
-- **CopySpeak Claude Code hook** — Added `scripts/claude-copyspeak-hook.mjs` to speak Claude Code `Stop`/`SubagentStop` assistant responses through the CopySpeak control server.
+- **CopySpeak TTS Claude Code hook** — Added `scripts/claude-copyspeak-hook.mjs` to speak Claude Code `Stop`/`SubagentStop` assistant responses through the CopySpeak TTS control server.
 
 ### Changed
 
-- **CopySpeak Pi extension** — Disabled speaking Pi thinking blocks by default and expanded status text to show only non-default assistant/thinking/activity modes.
+- **CopySpeak TTS Pi extension** — Disabled speaking Pi thinking blocks by default and expanded status text to show only non-default assistant/thinking/activity modes.
 
 ### Fixed
 
-- **CopySpeak Pi extension** — Removed the stale `.pi/extensions/copyspeak-voice` extension so only `/copyspeak` is registered.
+- **CopySpeak TTS Pi extension** — Removed the stale `.pi/extensions/copyspeak-voice` extension so only `/copyspeak` is registered.
 - **Vercel deployments** — Added a repository `ignoreCommand` that runs production builds and skips preview builds.
 
 ## [0.1.3] - 2026-05-19
@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **CopySpeak Pi extension** — Renamed the Pi command/extension path to `copyspeak` and shortened its Pi status text to `on`/`off`.
+- **CopySpeak TTS Pi extension** — Renamed the Pi command/extension path to `copyspeak` and shortened its Pi status text to `on`/`off`.
 - **Vercel landing page** — Re-enabled non-English locale registration and footer language switching, and restored page scrolling despite the desktop app's global hidden body overflow.
 - **Windows audio wake-up** — Add a low-level preroll to desktop playback on Windows so the audio device wakes before speech or radio effects begin.
 - **About settings layout** — Removed the stale import/export separator and aligned About rows with the shared `SettingRow` spacing.
@@ -77,14 +77,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **CopySpeak Pi extension** — Switched Pi speech triggering from clipboard double-copy writes to the local CopySpeak control server, avoiding primer speech and Windows clipboard failures.
-- **CopySpeak Pi extension** — Disabled activity/tool announcements by default so normal use only speaks final assistant responses unless `/copyspeak activity on` is enabled.
-- **CopySpeak Pi extension** — Now speaks only once after an agent run completes and no longer auto-launches CopySpeak unless `COPYSPEAK_PI_LAUNCH=1` is set.
-- **CopySpeak Pi extension** — Added a two-minute duplicate speech guard to avoid charging TTS credits for repeated final messages.
-- **CopySpeak Pi extension** — Uses the running app's engine/effect settings by default and can include Pi thinking blocks in spoken assistant responses.
-- **CopySpeak Pi extension** — Speaks Pi thinking blocks as soon as each thinking block finishes streaming, while avoiding replaying those blocks in the final response.
-- **CopySpeak control server** — Fixed `Content-Length` parsing so `/speak` accepts normal HTTP POST bodies from Pi, curl, and other clients.
-- **CopySpeak control server** — `/speak` now waits for speech generation to complete before responding, allowing Pi extension requests to queue synthesis instead of overlapping.
+- **CopySpeak TTS Pi extension** — Switched Pi speech triggering from clipboard double-copy writes to the local CopySpeak TTS control server, avoiding primer speech and Windows clipboard failures.
+- **CopySpeak TTS Pi extension** — Disabled activity/tool announcements by default so normal use only speaks final assistant responses unless `/copyspeak activity on` is enabled.
+- **CopySpeak TTS Pi extension** — Now speaks only once after an agent run completes and no longer auto-launches CopySpeak TTS unless `COPYSPEAK_PI_LAUNCH=1` is set.
+- **CopySpeak TTS Pi extension** — Added a two-minute duplicate speech guard to avoid charging TTS credits for repeated final messages.
+- **CopySpeak TTS Pi extension** — Uses the running app's engine/effect settings by default and can include Pi thinking blocks in spoken assistant responses.
+- **CopySpeak TTS Pi extension** — Speaks Pi thinking blocks as soon as each thinking block finishes streaming, while avoiding replaying those blocks in the final response.
+- **CopySpeak TTS control server** — Fixed `Content-Length` parsing so `/speak` accepts normal HTTP POST bodies from Pi, curl, and other clients.
+- **CopySpeak TTS control server** — `/speak` now waits for speech generation to complete before responding, allowing Pi extension requests to queue synthesis instead of overlapping.
 - **Playback queue** — Single `audio-ready` events now use the existing fragment queue so Pi-generated thinking and final responses play sequentially instead of interrupting each other.
 - **Global playback settings** — Sync playback volume, speed, pitch, and effects during app startup so Pi control-server speech uses the configured walkie-talkie effect outside the Play page.
 
@@ -122,9 +122,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **CopySpeak Pi extension** — Switched Pi speech triggering from clipboard double-copy writes to the local CopySpeak control server, avoiding primer speech and Windows clipboard failures.
-- **CopySpeak Pi extension** — Disabled activity/tool announcements by default so normal use only speaks final assistant responses unless `/copyspeak activity on` is enabled.
-- **CopySpeak control server** — Fixed `Content-Length` parsing so `/speak` accepts normal HTTP POST bodies from Pi, curl, and other clients.
+- **CopySpeak TTS Pi extension** — Switched Pi speech triggering from clipboard double-copy writes to the local CopySpeak TTS control server, avoiding primer speech and Windows clipboard failures.
+- **CopySpeak TTS Pi extension** — Disabled activity/tool announcements by default so normal use only speaks final assistant responses unless `/copyspeak activity on` is enabled.
+- **CopySpeak TTS control server** — Fixed `Content-Length` parsing so `/speak` accepts normal HTTP POST bodies from Pi, curl, and other clients.
 
 ## [0.1.0] - 2026-03-27
 
@@ -146,7 +146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **CopySpeak Pi extension** — Reworked clipboard triggering to serialize double-copy events and avoid repeated trigger loops; startup now avoids focusing an already-running CopySpeak instance.
+- **CopySpeak TTS Pi extension** — Reworked clipboard triggering to serialize double-copy events and avoid repeated trigger loops; startup now avoids focusing an already-running CopySpeak TTS instance.
 
 - **Windows CLI backend PATH resolution** — Expanded PATH for finding Python/uv tools on Windows
   - Added `get_expanded_path()` to include common Python and uv installation paths
@@ -279,13 +279,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/copyspeak/compare/v0.1.4...HEAD
-[0.1.4]: https://github.com/ilyaizen/copyspeak/compare/v0.1.3...v0.1.4
-[0.1.3]: https://github.com/ilyaizen/copyspeak/compare/v0.1.2...v0.1.3
-[0.1.2]: https://github.com/ilyaizen/copyspeak/compare/v0.1.1...v0.1.2
-[0.1.1]: https://github.com/ilyaizen/copyspeak/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/ilyaizen/copyspeak/compare/v0.0.5...v0.1.0
-[0.0.5]: https://github.com/ilyaizen/copyspeak/compare/v0.0.3...v0.0.5
-[0.0.3]: https://github.com/ilyaizen/copyspeak/compare/v0.0.2...v0.0.3
-[0.0.2]: https://github.com/ilyaizen/copyspeak/compare/v0.0.1...v0.0.2
-[0.0.1]: https://github.com/ilyaizen/copyspeak/releases/tag/v0.0.1
+[Unreleased]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.1.3...v0.1.4
+[0.1.3]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.1.2...v0.1.3
+[0.1.2]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.0.5...v0.1.0
+[0.0.5]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.0.3...v0.0.5
+[0.0.3]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.0.2...v0.0.3
+[0.0.2]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.0.1...v0.0.2
+[0.0.1]: https://github.com/ilyaizen/copyspeak-tts/releases/tag/v0.0.1

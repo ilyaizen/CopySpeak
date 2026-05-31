@@ -1,4 +1,4 @@
-# Requirements: CopySpeak
+# Requirements: CopySpeak TTS
 
 **Defined:** 2026-03-26
 **Core Value:** Double-copy → instant speech must be flawless

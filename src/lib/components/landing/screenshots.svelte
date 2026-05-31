@@ -14,7 +14,7 @@
 
     <div class="mt-12">
       <div class="border-border bg-muted/30 mx-auto max-w-3xl border p-2">
-        <img src="/screen-v0.1.4.png" alt="CopySpeak Screenshot" class="w-full" />
+        <img src="/screen-v0.1.4.png" alt="CopySpeak TTS Screenshot" class="w-full" />
       </div>
       <p class="text-muted-foreground mt-4 text-center text-sm">
         {$_("landing.screenshots.caption")}

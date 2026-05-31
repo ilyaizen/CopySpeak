@@ -41,13 +41,13 @@ export default function (pi: ExtensionAPI) {
       ctx.ui.notify(statusText(), "info");
     } catch (error) {
       ctx.ui.setStatus("copyspeak", "voice config failed");
-      ctx.ui.notify(`CopySpeak voice setup failed: ${String(error)}`, "error");
+      ctx.ui.notify(`CopySpeak TTS voice setup failed: ${String(error)}`, "error");
     }
   });
 
   pi.on("agent_start", async (_event, ctx) => {
     spokenThinkingBlocks = new Set();
-    if (state.enabled && state.speakActivity) await speakSafe("CopySpeak: agent thinking.", ctx);
+    if (state.enabled && state.speakActivity) await speakSafe("CopySpeak TTS: agent thinking.", ctx);
   });
 
   pi.on("message_update", async (event, ctx) => {
@@ -83,7 +83,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerCommand("copyspeak", {
     description:
-      "Control CopySpeak voice notifications: on/off/status/test/engine <cartesia|openai|elevenlabs|local>",
+      "Control CopySpeak TTS voice notifications: on/off/status/test/engine <cartesia|openai|elevenlabs|local>",
     handler: async (args, ctx) => {
       const [cmd, value] = args.trim().split(/\s+/);
       try {
@@ -96,7 +96,7 @@ export default function (pi: ExtensionAPI) {
         else if (cmd === "test")
           await speakSafe(
             args.replace(/^test\s*/, "") ||
-              "CopySpeak voice hook is online with walkie talkie effect.",
+              "CopySpeak TTS voice hook is online with walkie talkie effect.",
             ctx,
             true
           );
@@ -114,7 +114,7 @@ export default function (pi: ExtensionAPI) {
         ctx.ui.setStatus("copyspeak", statusText());
         ctx.ui.notify(statusText(), "info");
       } catch (error) {
-        ctx.ui.notify(`CopySpeak voice: ${String(error)}`, "error");
+        ctx.ui.notify(`CopySpeak TTS voice: ${String(error)}`, "error");
       }
     }
   });
@@ -144,7 +144,7 @@ async function speakSafe(text: string, ctx?: any, force = false, clean = true) {
       ctx?.ui?.setStatus?.("copyspeak", "voice failed");
       if (!clipboardFailureNotified) {
         clipboardFailureNotified = true;
-        ctx?.ui?.notify?.(`CopySpeak voice failed; voice disabled: ${String(error)}`, "error");
+        ctx?.ui?.notify?.(`CopySpeak TTS voice failed; voice disabled: ${String(error)}`, "error");
       }
       if (clipboardFailureCount >= 2) state.enabled = false;
     });

@@ -1,4 +1,4 @@
-// Config: typed settings struct, persisted as JSON to %APPDATA%/CopySpeak/config.json.
+// Config: typed settings struct, persisted as JSON to %APPDATA%/CopySpeak TTS/config.json.
 // Auto-saved on every change from the frontend via set_config command.
 
 /// Current config schema version. Bumped when making breaking changes to config structure.
@@ -252,10 +252,10 @@ impl AppConfig {
     }
 }
 
-/// Returns the config file path: %APPDATA%/CopySpeak/config.json
+/// Returns the config file path: %APPDATA%/CopySpeak TTS/config.json
 pub fn config_path() -> PathBuf {
     let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-    base.join("CopySpeak").join("config.json")
+    base.join("CopySpeak TTS").join("config.json")
 }
 
 /// Load config from disk, or return defaults if missing/corrupt.

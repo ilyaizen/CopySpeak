@@ -1,14 +1,14 @@
-# CopySpeak Agent Voice
+# CopySpeak TTS Agent Voice
 
 Project-local Pi extension: `.pi/extensions/copyspeak/`.
 Project-local Claude Code hook: `scripts/claude-copyspeak-hook.mjs` wired from `.claude/settings.json` or `.claude/settings.local.json`.
 
 ## What it does
 
-- Speaks final Pi or Claude Code assistant responses through the running CopySpeak app by default.
+- Speaks final Pi or Claude Code assistant responses through the running CopySpeak TTS app by default.
 - Pi can optionally speak agent/tool activity and thinking blocks.
 - Claude Code uses `Stop`/`SubagentStop` hooks to read the latest assistant message from the transcript.
-- Triggers speech through CopySpeak's local control server, not the Windows clipboard.
+- Triggers speech through CopySpeak TTS's local control server, not the Windows clipboard.
 
 ## Setup
 
@@ -20,7 +20,7 @@ $env:COPYSPEAK_PI_ENGINE="cartesia" # optional override; omit to use app setting
 pi
 ```
 
-Start CopySpeak yourself before using the extension. If `COPYSPEAK_PI_LAUNCH=1` is set, the extension looks for release/debug `copyspeak.exe` under `src-tauri/target/` and launches it when needed.
+Start CopySpeak TTS yourself before using the extension. If `COPYSPEAK_PI_LAUNCH=1` is set, the extension looks for release/debug `copyspeak.exe` under `src-tauri/target/` and launches it when needed.
 
 ## Claude Code hook
 
@@ -59,5 +59,5 @@ The repo-local Claude hook is configured in `.claude/settings.json`; `.claude/se
 - `COPYSPEAK_PI_ACTIVITY=1` enables thinking/tool announcements in Pi.
 - `COPYSPEAK_PI_THINKING=0` disables spoken thinking blocks in Pi.
 - `COPYSPEAK_PI_MAX_CHARS=700` / `COPYSPEAK_CLAUDE_MAX_CHARS=700` limits final response speech length.
-- `COPYSPEAK_PI_LAUNCH=1` / `COPYSPEAK_CLAUDE_LAUNCH=1` enables auto-launching CopySpeak.
+- `COPYSPEAK_PI_LAUNCH=1` / `COPYSPEAK_CLAUDE_LAUNCH=1` enables auto-launching CopySpeak TTS.
 - `COPYSPEAK_CONTROL_URL=http://127.0.0.1:43117/speak` overrides the local control endpoint.

@@ -66,7 +66,7 @@
     isSaving = true;
     try {
       await invoke("set_config", { newConfig: localConfig });
-      toast.success("Welcome to CopySpeak!");
+      toast.success("Welcome to CopySpeak TTS!");
       await goto("/");
     } catch (e) {
       console.error("Failed to save config:", e);
@@ -127,7 +127,7 @@
               <div class="space-y-1">
                 <h2 class="font-mono text-lg font-semibold">Start with Cartesia Cloud</h2>
                 <p class="text-muted-foreground text-sm leading-relaxed">
-                  CopySpeak is set to Cartesia by default for fast, high-quality speech. Paste your
+                  CopySpeak TTS is set to Cartesia by default for fast, high-quality speech. Paste your
                   API key, verify it without spending synthesis credits, then start listening.
                 </p>
               </div>

@@ -30,7 +30,7 @@ export async function exportHistoryToHtml(
 ): Promise<void> {
   const {
     filename = `copyspeak_history_${new Date().toISOString().split("T")[0]}`,
-    title = "CopySpeak History Export",
+    title = "CopySpeak TTS History Export",
     includeStatistics = true,
     includeToc = items.length > 10,
     cssTheme = "light",

@@ -593,7 +593,7 @@ impl TtsBackend for CliTtsBackend {
             if stderr.contains("ModuleNotFoundError") || stderr.contains("ImportError") {
                 log::error!("[CLI TTS] Health check failed - missing Python module");
                 return Err(TtsError::Unavailable(
-                    "KittenTTS is not installed in the configured Python environment. Run the KittenTTS installer from CopySpeak settings.".to_string()
+                    "KittenTTS is not installed in the configured Python environment. Run the KittenTTS installer from CopySpeak TTS settings.".to_string()
                 ));
             }
 

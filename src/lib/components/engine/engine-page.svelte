@@ -357,7 +357,7 @@
     isTesting = true;
     try {
       await invoke("speak_now", {
-        text: "Hello from CopySpeak. This is a voice test."
+        text: "Hello from CopySpeak TTS. This is a voice test."
       });
     } catch (e) {
       toast.error(`Voice test failed: ${e}`);

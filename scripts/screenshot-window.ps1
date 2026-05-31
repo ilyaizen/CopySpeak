@@ -1,7 +1,7 @@
 # Capture a screenshot of a running window by title (substring, case-insensitive).
-# Usage: pwsh scripts/screenshot-window.ps1 [-WindowTitle "CopySpeak"] [-OutPath "static/screen-v0.1.4.png"] [-List]
+# Usage: pwsh scripts/screenshot-window.ps1 [-WindowTitle "CopySpeak TTS"] [-OutPath "static/screen-v0.1.4.png"] [-List]
 param(
-  [string]$WindowTitle = "CopySpeak",
+  [string]$WindowTitle = "CopySpeak TTS",
   [string]$OutPath = "static/screen-v0.1.4.png",
   [switch]$List
 )

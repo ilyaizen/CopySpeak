@@ -330,7 +330,7 @@ impl Default for TtsConfig {
 </script>
 
 <svelte:head>
-  <title>Engine - CopySpeak</title>
+  <title>Engine - CopySpeak TTS</title>
 </svelte:head>
 
 <div class="w-full">

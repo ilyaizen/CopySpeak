@@ -1,4 +1,4 @@
-# CopySpeak Agent Guide
+# CopySpeak TTS Agent Guide
 
 > For AI coding agents (OpenCode, KiloCode, Claude Code, Cursor, etc.)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CLI wrapper for KittenTTS - used by CopySpeak application.
+CLI wrapper for KittenTTS - used by CopySpeak TTS application.
 
 KittenTTS is an ultra-lightweight TTS model (15M-80M parameters, 25-80MB on disk)
 that runs on CPU without requiring a GPU.
@@ -29,7 +29,7 @@ from pathlib import Path
 
 def main():
     parser = argparse.ArgumentParser(
-        description="KittenTTS CLI wrapper for CopySpeak",
+        description="KittenTTS CLI wrapper for CopySpeak TTS",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

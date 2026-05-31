@@ -3,7 +3,7 @@ use winreg::enums::*;
 use winreg::RegKey;
 
 const REGISTRY_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
-const APP_NAME: &str = "CopySpeak";
+const APP_NAME: &str = "CopySpeak TTS";
 
 fn get_current_exe_path() -> Result<PathBuf, String> {
     std::env::current_exe().map_err(|e| format!("Failed to get executable path: {}", e))

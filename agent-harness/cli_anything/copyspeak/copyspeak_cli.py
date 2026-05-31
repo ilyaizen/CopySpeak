@@ -46,7 +46,7 @@ def project_group(): pass
 
 @project_group.command("new")
 @click.option("-o","--output", required=True, type=click.Path())
-@click.option("--name", default="CopySpeak Project")
+@click.option("--name", default="CopySpeak TTS Project")
 @click.pass_context
 def project_new(ctx, output, name):
     p=project_core.create_project(name); res=project_core.save_project(p, output); emit(res, ctx.obj["json"])

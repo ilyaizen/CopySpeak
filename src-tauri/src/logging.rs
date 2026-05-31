@@ -6,7 +6,7 @@ static DEBUG_MODE: AtomicBool = AtomicBool::new(false);
 
 pub fn logs_dir() -> PathBuf {
     let base = dirs::data_dir().unwrap_or_else(|| PathBuf::from("."));
-    base.join("CopySpeak").join("logs")
+    base.join("CopySpeak TTS").join("logs")
 }
 
 pub fn init_logging() -> Result<(), String> {
@@ -83,14 +83,14 @@ mod tests {
     fn test_logs_dir_returns_valid_path() {
         let path = logs_dir();
         assert!(path.ends_with("logs"));
-        assert!(path.to_string_lossy().contains("CopySpeak"));
+        assert!(path.to_string_lossy().contains("CopySpeak TTS"));
     }
 
     #[test]
     fn test_logs_dir_uses_data_dir() {
         let path = logs_dir();
         let data_dir = dirs::data_dir().unwrap_or_else(|| PathBuf::from("."));
-        let expected = data_dir.join("CopySpeak").join("logs");
+        let expected = data_dir.join("CopySpeak TTS").join("logs");
         assert_eq!(path, expected);
     }
 }

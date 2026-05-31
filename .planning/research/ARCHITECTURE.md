@@ -198,7 +198,7 @@ Save bar appears
     ↓ (user clicks Save)
 invoke("set_config", { newConfig: localConfig })
     ↓
-Rust: Mutex<AppConfig> updated + config.json written to %APPDATA%/CopySpeak/
+Rust: Mutex<AppConfig> updated + config.json written to %APPDATA%/CopySpeak TTS/
     ↓
 originalConfig = deep clone of localConfig
     ↓
@@ -376,7 +376,7 @@ This is a desktop app — single user, single machine. "Scaling" means component
 
 **What people do:** Show a modal on launch that must be dismissed before the app is usable.
 
-**Why it's wrong:** If the health check takes time (network timeout for cloud backends), the app is blocked. Users who know what they're doing are frustrated. CopySpeak already works — the play page should be accessible even if TTS is broken.
+**Why it's wrong:** If the health check takes time (network timeout for cloud backends), the app is blocked. Users who know what they're doing are frustrated. CopySpeak TTS already works — the play page should be accessible even if TTS is broken.
 
 **Do this instead:** Navigate to `/engine?setup=true` silently. The Engine page shows a non-blocking banner at the top: "Your TTS engine needs configuration." The Play page remains accessible; the user can dismiss the setup state.
 
@@ -430,5 +430,5 @@ The only new Rust work needed is the startup health check trigger, which reuses 
 
 ---
 
-*Architecture research for: CopySpeak 3-tab navigation + Engine route extraction*
+*Architecture research for: CopySpeak TTS 3-tab navigation + Engine route extraction*
 *Researched: 2026-03-04*

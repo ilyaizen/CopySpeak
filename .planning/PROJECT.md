@@ -1,8 +1,8 @@
-# CopySpeak
+# CopySpeak TTS
 
 ## What This Is
 
-CopySpeak is a lightweight Windows desktop application that wraps AI Text-to-Speech engines. It silently monitors the clipboard and reads text aloud when the user copies the same text twice in quick succession (double-copy trigger). It runs in the system tray, staying out of the way until needed.
+CopySpeak TTS is a lightweight Windows desktop application that wraps AI Text-to-Speech engines. It silently monitors the clipboard and reads text aloud when the user copies the same text twice in quick succession (double-copy trigger). It runs in the system tray, staying out of the way until needed.
 
 **Shipped:** v0.1 TTS Engine Overhaul (2026-03-26) — HTTP engine removed, CLI consolidated to 3 presets, ElevenLabs/OpenAI two-stage health checks, OpenAI 9-voice dropdown.
 
@@ -34,7 +34,7 @@ Double-copy → instant speech must be flawless. If the trigger misfires or the 
 - ✓ Streaming TTS playback (audio starts before synthesis completes) — existing
 - ✓ Audio playback via rodio with output device selection — existing
 - ✓ Re-trigger modes: Interrupt or Queue — existing
-- ✓ JSON config persistence to %APPDATA%/CopySpeak/config.json — existing
+- ✓ JSON config persistence to %APPDATA%/CopySpeak TTS/config.json — existing
 - ✓ Configuration validation (ranges, hotkey format, command templates) — existing
 - ✓ System tray: Toggle Listening, Speak Now, Settings, Quit — existing
 - ✓ Main window: Status view (listening state, last spoken, Pause/Speak Now) — existing

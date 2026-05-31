@@ -222,7 +222,7 @@ Replace the `audioBlobUrl` + `audioElement.src` approach with an AudioContext-ba
 **Svelte 5 code style:** Use `$state`, `$effect`, `$derived`, Svelte 5 runes throughout. Use `onclick` not `on:click`.
   </action>
   <verify>
-    <automated>cd /mnt/d/GitHub/CopySpeak && rtk bun run check</automated>
+    <automated>cd /mnt/d/GitHub/CopySpeak TTS && rtk bun run check</automated>
   </verify>
   <done>TypeScript/Svelte type check passes. synthesize-page.svelte has pitch $state, AudioContext-based playback, no HTMLAudioElement, and passes pitch to QuickSettings.</done>
 </task>
@@ -332,7 +332,7 @@ Add under `[Unreleased]` → `Added`:
 ```
   </action>
   <verify>
-    <automated>cd /mnt/d/GitHub/CopySpeak && rtk bun run check</automated>
+    <automated>cd /mnt/d/GitHub/CopySpeak TTS && rtk bun run check</automated>
   </verify>
   <done>Type check passes. Playback Settings has Pitch slider below Speed. Quick Settings has Speed + Pitch sliders. CHANGELOG updated.</done>
 </task>

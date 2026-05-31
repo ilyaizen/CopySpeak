@@ -51,7 +51,7 @@ class TestCLISubprocess:
     def test_real_text_export(self, tmp_path):
         proj = tmp_path / "test.json"; wav = tmp_path / "hello.wav"
         self._run(["project", "new", "-o", str(proj)])
-        self._run(["--project", str(proj), "export", "text", "-t", "Hello from CopySpeak", "-o", str(wav), "--overwrite"])
+        self._run(["--project", str(proj), "export", "text", "-t", "Hello from CopySpeak TTS", "-o", str(wav), "--overwrite"])
         _assert_audio(wav)
 
     def test_real_queue_export(self, tmp_path):

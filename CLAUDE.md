@@ -1,4 +1,4 @@
-# CopySpeak Agent Guide
+# CopySpeak TTS Agent Guide
 
 > Guidance for Claude Code (claude.ai/code) when working with code in this repository.
 

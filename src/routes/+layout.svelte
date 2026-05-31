@@ -160,7 +160,7 @@
 
 <svelte:head>
   {#if isWeb}
-    <title>CopySpeak - AI Text-to-Speech for Windows</title>
+    <title>CopySpeak TTS - AI Text-to-Speech for Windows</title>
   {/if}
 </svelte:head>
 
@@ -170,8 +170,8 @@
     <header class="border-border bg-background sticky top-0 z-50 border-b">
       <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
         <a href="/" class="flex items-center gap-3">
-          <img src="/app-logo.png" alt="CopySpeak Logo" class="h-8 w-8" />
-          <span class="text-foreground font-mono text-lg font-semibold">CopySpeak</span>
+          <img src="/app-logo.png" alt="CopySpeak TTS Logo" class="h-8 w-8" />
+          <span class="text-foreground font-mono text-lg font-semibold">CopySpeak TTS</span>
         </a>
         <div class="flex items-center gap-4">
           <ThemeToggle />

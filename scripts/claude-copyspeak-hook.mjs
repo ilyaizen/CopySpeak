@@ -176,11 +176,11 @@ function launchCopySpeak() {
 function isCopySpeakRunning() {
   if (process.platform !== "win32") return false;
   try {
-    const output = execFileSync("tasklist.exe", ["/FI", "IMAGENAME eq copyspeak.exe", "/NH"], {
+    const output = execFileSync("tasklist.exe", ["/NH"], {
       encoding: "utf8",
       windowsHide: true
     });
-    return /^copyspeak\.exe\s+/im.test(output);
+    return /^(?:copyspeak(?:-tts)?|CopySpeak TTS)\.exe\s+/im.test(output);
   } catch {
     return false;
   }
@@ -189,7 +189,11 @@ function isCopySpeakRunning() {
 function findBuiltCopySpeak() {
   const cwd = process.cwd();
   const candidates = [
+    join(cwd, "src-tauri", "target", "release", "CopySpeak TTS.exe"),
+    join(cwd, "src-tauri", "target", "release", "copyspeak-tts.exe"),
     join(cwd, "src-tauri", "target", "release", "copyspeak.exe"),
+    join(cwd, "src-tauri", "target", "debug", "CopySpeak TTS.exe"),
+    join(cwd, "src-tauri", "target", "debug", "copyspeak-tts.exe"),
     join(cwd, "src-tauri", "target", "debug", "copyspeak.exe")
   ];
   return candidates.find(existsSync);
