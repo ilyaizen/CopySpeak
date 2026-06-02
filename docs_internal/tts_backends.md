@@ -206,17 +206,21 @@ Default model is `nano` (fastest, smallest). Change via `--model` flag in CLI.
 
 #### 1. Setup & Automation
 
-To automate installing Piper and setting up GPU/CUDA acceleration on Windows, run the helper script in the project root:
+To automate installing Piper and setting up dependencies on Windows, run one of the helper scripts in the project root:
 
+##### For CPU-Only Caching Server:
+```powershell
+# Run in PowerShell
+./setup-piper-cpu.ps1
+```
+This script will install `piper-tts[http]` and standard `onnxruntime` CPU-only dependencies.
+
+##### For GPU/CUDA Caching Server:
 ```powershell
 # Run in PowerShell
 ./setup-piper-cuda.ps1
 ```
-
-This script will automatically:
-- Install `piper-tts` with HTTP support.
-- Uninstall conflicting CPU onnxruntime libraries.
-- Install `onnxruntime-gpu` and its official NVIDIA PyPI library dependencies (`nvidia-cuda-runtime-cu12`, `nvidia-cudnn-cu12`, etc.) to run on the GPU out-of-the-box.
+This script will install `piper-tts[http]`, `onnxruntime-gpu`, and official NVIDIA PyPI library dependencies (`nvidia-cuda-runtime-cu12`, `nvidia-cudnn-cu12`, etc.) to run on the GPU out-of-the-box.
 
 #### 2. Manual Installation
 
