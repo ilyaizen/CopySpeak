@@ -232,7 +232,7 @@ pub fn prewarm_piper_server(command: String, voice: String, data_dir: String, cu
         // This makes the FIRST real synthesis fast instead of paying the warm-up penalty.
         let warmup_client = reqwest::blocking::Client::new();
         let warmup_url = format!("http://127.0.0.1:{}/", port);
-        let warmup_body = serde_json::json!({ "text": "." });
+        let warmup_body = serde_json::json!({ "text": "Hello" });
         let warmup_start = std::time::Instant::now();
         match warmup_client.post(&warmup_url).json(&warmup_body).send() {
             Ok(resp) => {
