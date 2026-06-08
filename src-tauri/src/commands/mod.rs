@@ -52,22 +52,3 @@ pub struct AudioFragmentEvent {
     /// Text being spoken in this fragment
     pub text: String,
 }
-
-/// Event emitted during synthesis to show progress with ETA.
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct SynthesisProgressEvent {
-    /// Estimated total duration in milliseconds (if available)
-    pub estimated_total_ms: Option<u64>,
-    /// Time elapsed since synthesis started in milliseconds
-    pub elapsed_ms: u64,
-    /// Current fragment index (0-based) for paginated texts
-    pub fragment_index: usize,
-    /// Total number of fragments (1 for non-paginated)
-    pub fragment_total: usize,
-    /// Whether this is a paginated synthesis
-    pub is_paginated: bool,
-    /// Confidence levelfor the estimate (0-1)
-    pub confidence: f32,
-    /// Text being synthesized (truncated)
-    pub text_preview: String,
-}

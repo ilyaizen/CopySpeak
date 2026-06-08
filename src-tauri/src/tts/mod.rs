@@ -40,6 +40,7 @@ pub struct Voice {
 /// Kept intentionally small — synthesize text, get audio bytes.
 pub trait TtsBackend: Send + Sync {
     /// Human-readable name for settings UI display.
+    #[allow(dead_code)]
     fn name(&self) -> &str;
 
     /// Synthesize text into WAV audio bytes.
@@ -57,6 +58,7 @@ pub trait TtsBackend: Send + Sync {
 
     /// Resolve voice ID to human-readable name for display and filenames.
     /// Returns lowercase, filesystem-safe name.
+    #[allow(dead_code)]
     fn voice_display_name(&self, voice_id: &str) -> String {
         voice_id.to_lowercase()
     }

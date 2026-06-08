@@ -746,15 +746,16 @@ pub async fn speak_queued(
     let backend: Box<dyn TtsBackend> = create_backend(&active_backend, &tts_config);
     let backend_arc = Arc::new(backend);
 
-    let is_cloud = matches!(
+    let is_parallel_capable = matches!(
         active_backend,
         crate::config::TtsEngine::OpenAI
             | crate::config::TtsEngine::ElevenLabs
             | crate::config::TtsEngine::Cartesia
-    );
+    ) || (matches!(active_backend, crate::config::TtsEngine::Local)
+        && tts_config.preset == "piper");
 
-    // Parallel synthesis for cloud backends with multiple fragments
-    if is_cloud && fragments.len() > 1 {
+    // Parallel synthesis for cloud backends or Piper with multiple fragments
+    if is_parallel_capable && fragments.len() > 1 {
         synthesize_queued_parallel(
             &app,
             backend_arc,
@@ -929,8 +930,8 @@ async fn synthesize_queued_sequential(
     Ok(())
 }
 
-/// Parallel synthesis for cloud backends with multiple fragments.
-/// Spawns all fragments concurrently via tokio tasks, collects results sorted
+/// Parallel synthesis for cloud backends or Piper with multiple fragments.
+/// Processes all fragments with a concurrency cap, collecting results sorted
 /// by index, then emits in order for correct sequential playback.
 async fn synthesize_queued_parallel(
     app: &AppHandle,
@@ -948,99 +949,104 @@ async fn synthesize_queued_parallel(
     batch_id: &Option<String>,
 ) {
     use tokio::task::JoinSet;
+    const MAX_CONCURRENT: usize = 3;
 
     let mut join_set = JoinSet::new();
-    let total_frags = fragments.len().min(3); // Cap concurrency at 3
-
-    for (index, fragment) in fragments.iter().take(total_frags).enumerate() {
-        let backend = backend_arc.clone();
-        let text = fragment.text.clone();
-        let voice = voice.to_string();
-        let fragment = fragment.clone();
-
-        join_set.spawn(async move {
-            let wav_bytes =
-                synthesize_async(backend, text.clone(), voice.clone()).await?;
-            Ok::<_, String>((index as u32, fragment, wav_bytes))
-        });
-    }
-
+    let total_frags = fragments.len();
     let mut per_fragment_wavs: Vec<Option<Vec<u8>>> = vec![None; total_frags];
+    let mut next_idx = 0usize;
 
-    while let Some(result) = join_set.join_next().await {
-        match result {
-            Ok(Ok((idx, _fragment, wav_bytes))) => {
+    loop {
+        while join_set.len() < MAX_CONCURRENT && next_idx < total_frags {
+            let idx = next_idx;
+            let backend = backend_arc.clone();
+            let text = fragments[idx].text.clone();
+            let voice = voice.to_string();
+            let fragment = fragments[idx].clone();
+
+            join_set.spawn(async move {
+                let wav_bytes = synthesize_async(backend, text, voice).await?;
+                Ok::<_, String>((idx as u32, fragment, wav_bytes))
+            });
+            next_idx += 1;
+        }
+
+        match join_set.join_next().await {
+            Some(Ok(Ok((idx, _fragment, wav_bytes)))) => {
                 let i = idx as usize;
                 if i < per_fragment_wavs.len() {
                     per_fragment_wavs[i] = Some(wav_bytes);
                 }
             }
-            Ok(Err(e)) => {
+            Some(Ok(Err(e))) => {
                 log::error!("[Queue] Parallel fragment synthesis failed: {}", e);
             }
-            Err(e) => {
+            Some(Err(e)) => {
                 log::error!("[Queue] JoinSet task panicked: {}", e);
             }
+            None => break,
         }
     }
 
     // Emit fragments in index order for correct sequential playback
-    for (idx, wav_opt) in per_fragment_wavs.iter().enumerate() {
-        if let Some(wav_bytes) = wav_opt {
-            let fragment = &fragments[idx];
-            let envelope = extract_envelope_or_default(wav_bytes);
+    for idx in 0..total_frags {
+        let wav_bytes = match &per_fragment_wavs[idx] {
+            Some(w) => w,
+            None => continue,
+        };
+        let fragment = &fragments[idx];
+        let envelope = extract_envelope_or_default(wav_bytes);
 
-            if idx == 0 {
-                hud::show_hud(app, envelope.clone(), None);
-            }
-
-            let audio_ext = backend_arc.file_extension().to_string();
-            let voice_name = voice_display_name(active_backend, tts_config, voice);
-            let history_path = save_to_history_storage(
-                config,
-                wav_bytes,
-                engine_id_val,
-                &voice_name,
-                &audio_ext,
-            );
-
-            let mut metadata = HashMap::new();
-            if total > 1 {
-                metadata.insert("fragment_index".to_string(), serde_json::json!(idx));
-                metadata.insert("fragment_total".to_string(), serde_json::json!(total));
-            }
-
-            add_history_with_metadata(
-                history,
-                &fragment.text,
-                engine_str_val,
-                voice,
-                envelope.duration_ms,
-                history_path,
-                batch_id.clone(),
-                0,
-                Some(metadata),
-            );
-
-            emit_audio_fragment(app, wav_bytes, idx, total, fragment.text.clone()).await;
-
-            let _ = app.emit(
-                "pagination:fragment-ready",
-                PaginationEvent {
-                    total,
-                    current_index: idx,
-                    is_paginated: total > 1,
-                },
-            );
-            let _ = app.emit(
-                "pagination:fragment-complete",
-                PaginationEvent {
-                    total,
-                    current_index: idx,
-                    is_paginated: total > 1,
-                },
-            );
+        if idx == 0 {
+            hud::show_hud(app, envelope.clone(), None);
         }
+
+        let audio_ext = backend_arc.file_extension().to_string();
+        let voice_name = voice_display_name(active_backend, tts_config, voice);
+        let history_path = save_to_history_storage(
+            config,
+            wav_bytes,
+            engine_id_val,
+            &voice_name,
+            &audio_ext,
+        );
+
+        let mut metadata = HashMap::new();
+        if total > 1 {
+            metadata.insert("fragment_index".to_string(), serde_json::json!(idx));
+            metadata.insert("fragment_total".to_string(), serde_json::json!(total));
+        }
+
+        add_history_with_metadata(
+            history,
+            &fragment.text,
+            engine_str_val,
+            voice,
+            envelope.duration_ms,
+            history_path,
+            batch_id.clone(),
+            0,
+            Some(metadata),
+        );
+
+        emit_audio_fragment(app, wav_bytes, idx, total, fragment.text.clone()).await;
+
+        let _ = app.emit(
+            "pagination:fragment-ready",
+            PaginationEvent {
+                total,
+                current_index: idx,
+                is_paginated: total > 1,
+            },
+        );
+        let _ = app.emit(
+            "pagination:fragment-complete",
+            PaginationEvent {
+                total,
+                current_index: idx,
+                is_paginated: total > 1,
+            },
+        );
     }
 
     let _ = app.emit("history-updated", ());

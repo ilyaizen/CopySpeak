@@ -17,8 +17,15 @@ use std::os::windows::process::CommandExt;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
-fn build_client() -> reqwest::blocking::Client {
-    reqwest::blocking::Client::new()
+fn get_piper_client() -> &'static reqwest::blocking::Client {
+    static CLIENT: std::sync::OnceLock<reqwest::blocking::Client> = std::sync::OnceLock::new();
+    CLIENT.get_or_init(|| {
+        reqwest::blocking::Client::builder()
+            .tcp_nodelay(true)
+            .pool_max_idle_per_host(2)
+            .build()
+            .expect("Failed to build Piper HTTP client")
+    })
 }
 
 pub struct PiperServerState {
@@ -218,6 +225,8 @@ pub fn prewarm_piper_server(command: String, voice: String, data_dir: String, cu
         let url = format!("http://127.0.0.1:{}/voices", port);
         let poll_start = std::time::Instant::now();
         let mut ready = false;
+        let mut poll_delay_ms = 100u64;
+        let max_poll_delay_ms = 1600u64;
 
         while poll_start.elapsed() < std::time::Duration::from_secs(15) {
             if let Ok(Some(status)) = child.try_wait() {
@@ -228,9 +237,8 @@ pub fn prewarm_piper_server(command: String, voice: String, data_dir: String, cu
                 ready = true;
                 break;
             }
-            let elapsed = poll_start.elapsed().as_millis();
-            let delay = if elapsed < 2000 { 50 } else { 200 };
-            std::thread::sleep(std::time::Duration::from_millis(delay));
+            std::thread::sleep(std::time::Duration::from_millis(poll_delay_ms));
+            poll_delay_ms = (poll_delay_ms * 2).min(max_poll_delay_ms);
         }
 
         if !ready {
@@ -250,7 +258,7 @@ pub fn prewarm_piper_server(command: String, voice: String, data_dir: String, cu
 
         // Warm-up: send a minimal text to force ONNX runtime JIT / GPU kernel init.
         // This makes the FIRST real synthesis fast instead of paying the warm-up penalty.
-        let warmup_client = build_client();
+        let warmup_client = get_piper_client().clone();
         let warmup_url = format!("http://127.0.0.1:{}/", port);
         let warmup_body = serde_json::json!({ "text": "Hello" });
         let warmup_start = std::time::Instant::now();
@@ -273,23 +281,25 @@ pub fn prewarm_piper_server(command: String, voice: String, data_dir: String, cu
             model_name: voice.clone(),
             port,
             cuda,
-            client: build_client(),
+            client: get_piper_client().clone(),
         });
     });
 }
 
 #[cfg(windows)]
 fn get_expanded_path() -> String {
-    use std::collections::HashSet;
-    use std::env;
+    static EXPANDED_PATH: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+    EXPANDED_PATH.get_or_init(|| {
+        use std::collections::HashSet;
+        use std::env;
 
-    let current_path = env::var("PATH").unwrap_or_default();
-    let mut paths: Vec<String> = current_path.split(';').map(|s| s.to_string()).collect();
-    let mut seen: HashSet<String> = paths.iter().cloned().collect();
+        let current_path = env::var("PATH").unwrap_or_default();
+        let mut paths: Vec<String> = current_path.split(';').map(|s| s.to_string()).collect();
+        let mut seen: HashSet<String> = paths.iter().cloned().collect();
 
-    let home = dirs::home_dir();
+        let home = dirs::home_dir();
 
-    let extra_paths: Vec<String> = vec![
+        let extra_paths: Vec<String> = vec![
         home.as_ref()
             .map(|h| h.join(".local").join("bin").to_string_lossy().into_owned()),
         home.as_ref().map(|h| {
@@ -418,6 +428,7 @@ fn get_expanded_path() -> String {
     }
 
     paths.join(";")
+    }).clone()
 }
 
 #[cfg(windows)]
@@ -636,10 +647,8 @@ impl CliTtsBackend {
             }
         }
 
-        // ── Single lock acquisition: check, start, and extract port ──
-        let port = {
-            // If a prewarm thread is already spinning up a server (due to config
-            // change or startup), wait for it to finish instead of starting a duplicate.
+        // Single lock acquisition: check/start server, extract port+client
+        let (port, client) = {
             if PIPER_WARMING.load(Ordering::SeqCst) {
                 log::info!("[Piper] Pre-warm in progress, waiting for it to complete");
                 let wait_start = std::time::Instant::now();
@@ -722,6 +731,8 @@ impl CliTtsBackend {
                 let url = format!("http://127.0.0.1:{}/voices", new_port);
                 let start = std::time::Instant::now();
                 let mut ready = false;
+                let mut poll_delay_ms = 100u64;
+                let max_poll_delay_ms = 1600u64;
 
                 while start.elapsed() < std::time::Duration::from_secs(15) {
                     if let Ok(Some(status)) = child.try_wait() {
@@ -731,9 +742,8 @@ impl CliTtsBackend {
                         ready = true;
                         break;
                     }
-                    let elapsed = start.elapsed().as_millis();
-                    let delay = if elapsed < 2000 { 50 } else { 200 };
-                    std::thread::sleep(std::time::Duration::from_millis(delay));
+                    std::thread::sleep(std::time::Duration::from_millis(poll_delay_ms));
+                    poll_delay_ms = (poll_delay_ms * 2).min(max_poll_delay_ms);
                 }
 
                 if !ready {
@@ -746,34 +756,20 @@ impl CliTtsBackend {
                     new_port, start.elapsed().as_secs_f64()
                 );
 
+                let client = get_piper_client().clone();
                 *server = Some(PiperServerState {
                     child,
                     model_name: voice.to_string(),
                     port: new_port,
                     cuda,
-                    client: build_client(),
+                    client: client.clone(),
                 });
-                new_port
+                (new_port, client)
             } else {
-                server
+                let state = server
                     .as_ref()
-                    .ok_or_else(|| "Piper server state is unexpectedly missing".to_string())?
-                    .port
-            }
-        };
-
-        // ── Synthesis request — reuse server's keep-alive client ──
-        // Lock once more just to clone the client (connection pool is Send+Sync)
-        let client = {
-            let server = get_piper_server().lock().unwrap();
-            match server.as_ref() {
-                Some(state) => state.client.clone(),
-                None => {
-                    // Server was cleared (e.g. unload_model); do a quick cold start
-                    log::info!("[Piper] Server disappeared; cold-starting for immediate synthesis");
-                    drop(server);
-                    return self.synthesize_via_server(text, voice, speed);
-                }
+                    .ok_or_else(|| "Piper server state is unexpectedly missing".to_string())?;
+                (state.port, state.client.clone())
             }
         };
 
@@ -794,17 +790,11 @@ impl CliTtsBackend {
             return Err(format!("HTTP error {}: {}", status, err_text));
         }
 
-        // Pre-allocate buffer based on Content-Length when available
         let t_read = std::time::Instant::now();
-        let cap_hint = response
-            .content_length()
-            .map(|n| n as usize)
-            .unwrap_or(64 * 1024);
-        let mut bytes = Vec::with_capacity(cap_hint);
-        let raw = response
+        let bytes = response
             .bytes()
-            .map_err(|e| format!("Failed to read response bytes: {}", e))?;
-        bytes.extend_from_slice(&raw);
+            .map_err(|e| format!("Failed to read response bytes: {}", e))?
+            .to_vec();
         let read_ms = t_read.elapsed().as_millis();
 
         let total_ms = t_total.elapsed().as_millis();

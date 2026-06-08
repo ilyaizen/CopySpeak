@@ -54,10 +54,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Synthesis timing always visible** — Changed synthesis completion from `log::debug!` (debug-mode only) to `log::info!` so millisecond timings are always in console output.
 - **Audio thread poll interval** — Increased the audio playback monitor's channel receive timeout from 50ms to 200ms, reducing idle CPU wake-ups by 4×.
 - **Piper log prefix standardized** — All Piper-related log messages use `[Piper]` prefix for consistency across prewarm, synthesis, restart, and health-check paths.
-- **`SynthesisGuard` RAII semantics** — `SynthesisGuard` now resets `is_synthesizing` via `Drop` impl, preventing stale synthesis-state on early returns or panics.
+- **Piper server port+client extracted in a single Mutex lock** — `synthesize_via_server()` now returns a `(port, client)` tuple from one lock acquisition, eliminating a second lock/unlock cycle that cloned the HTTP client handle separately.
+- **Piper parallel paginated synthesis** — `speak_queued` now routes the Piper preset (`Local + preset "piper"`) through `synthesize_queued_parallel` alongside cloud engines, enabling concurrent fragment synthesis for multi-fragment texts via the persistent server.
 
 ### Fixed
 
+- **Parallel fragment synthesis processes all fragments** — `synthesize_queued_parallel` now loops with a max-concurrency cap of 3 until every fragment is synthesized, fixing a bug where `fragments.len().min(3)` silently dropped fragments beyond the first three. Emit order remains sequential.
 - **Piper prewarm/synthesis race condition** — Added `PIPER_WARMING` atomic flag with `ClearWarming` RAII drop guard. `synthesize_via_server()` polls this flag before starting a new server, eliminating a race where `restart_piper_server`'s background prewarm thread and a foreground synthesis call would start two separate server processes simultaneously.
 - **System Tray and Configuration Sync** — Fixed the listening state toggle sync by making `set_listening` IPC command update and persist the `AppConfig` to disk and emit the `config-changed` event.
 - **Listening State Initialization** — Initialized the tray listening menu item label dynamically on startup using the user's persistent config instead of hardcoding `"● Listening"`.
@@ -68,6 +70,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Clippy and Panic Fixes in CLI TTS backend** — Resolved option unwrap panic vector in Piper server port logic and simplified file extension checks using `is_some_and`.
 
 ### Performance
+
+- **Piper unified HTTP client** — Replaced ad-hoc `build_client()` with a `OnceLock<reqwest::Client>` singleton configured with `tcp_nodelay(true)` and `pool_max_idle_per_host(2)`. All Piper call sites (prewarm warm-up, server storage, synthesis) share the same connection pool via `.clone()`.
+- **Piper HTTP response double-buffer eliminated** — `synthesize_via_server()` now calls `response.bytes()?.to_vec()` directly for zero-copy `Bytes`→`Vec` conversion, avoiding pre-allocation + `extend_from_slice()` copy.
+- **Piper health-poll exponential backoff** — Replaced fixed 50ms/200ms delays with 100→200→400→800→1600ms exponential backoff in both `prewarm_piper_server()` and `synthesize_via_server()`, reducing CPU wake-ups during server startup.
+- **Windows PATH expansion cached** — Wrapped `get_expanded_path()` in a `OnceLock<String>`; the 20-path iteration now computes once per process lifetime instead of on every CLI synthesis call.
+- **Removed dead `AudioCommand::Play/Pause/Resume`** — Removed 3 variants, their match arms in the audio thread loop, and the `AudioPlayer::play()/pause()/resume()/is_paused()` methods (never called externally; playback uses `TogglePause`/`Stop` only).
+- **Removed dead `SynthesisProgressEvent`** — 12-line struct never constructed; frontend uses a separate `SynthesisProgressPayload` type for the `hud:synthesis-progress` event.
+- **Removed dead `FragmentQueue` methods** — Removed `add_fragment`, `is_empty`, `current_fragment`, `get_fragment`, `get_audio`, `has_audio`, `next`, `previous`, `clear_stop_flag`, `pause`, `resume`, `start` (~120 lines of untested-in-production queue navigation API) plus their test suite, reducing from 17 test cases to 7 focused tests.
+- **Removed unused `Cursor`/`Decoder` imports** — Cleaned up imports in `audio/player.rs` after `play()` method removal.
 
 - **base64 decode optimization** — Replaced the manual `for` loop over `charCodeAt(i)` with `Uint8Array.from(binary, c => c.charCodeAt(0))` in both `handleAudioReady` and `predecodeNextFragment`, leveraging V8's internal typed-array fast path for ~2M fewer JavaScript VM bytecode iterations per fragment.
 - **WAV conversion optimization** — Rewrote `audioBufferToWavBlob()` to use a single `Int16Array` view over the output buffer with interleaved channel writes, replacing the inner-per-sample `DataView.setInt16()` loop for ~10× faster PCM sample writing.

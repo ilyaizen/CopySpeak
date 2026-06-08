@@ -2,8 +2,7 @@
 // Handles playback with interrupt/queue modes via a dedicated audio thread.
 
 use crate::config::RetriggerMode;
-use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink};
-use std::io::Cursor;
+use rodio::{OutputStream, OutputStreamHandle, Sink};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{channel, Sender};
 use std::sync::Arc;
@@ -11,10 +10,7 @@ use std::thread;
 
 /// Commands sent to the audio thread
 pub(super) enum AudioCommand {
-    Play(Vec<u8>),
     Stop,
-    Pause,
-    Resume,
     TogglePause,
     SetMode(RetriggerMode),
     SetVolume(u8),
@@ -62,102 +58,6 @@ impl AudioPlayerInner {
         }
     }
 
-    fn play(&mut self, audio_bytes: Vec<u8>) -> Result<(), String> {
-        log::debug!(
-            "play() called with {} bytes, mode: {:?}",
-            audio_bytes.len(),
-            self.mode
-        );
-
-        // Validate audio data before attempting playback
-        if audio_bytes.is_empty() {
-            log::error!("Cannot play empty audio data");
-            return Err(
-                "Cannot play empty audio data. The audio file may be corrupted.".to_string(),
-            );
-        }
-
-        // Minimum size check for any audio format (MP3, WAV, etc. need at least some bytes)
-        if audio_bytes.len() < 16 {
-            log::error!(
-                "Audio data too small ({} bytes), likely corrupted",
-                audio_bytes.len()
-            );
-            return Err(format!(
-                "Audio data too small ({} bytes). The audio file is corrupted or incomplete.",
-                audio_bytes.len()
-            ));
-        }
-
-        // Log audio format for debugging (check for common headers)
-        let header = &audio_bytes[0..4];
-        if header == b"RIFF" {
-            log::debug!("Detected WAV format (RIFF header)");
-        } else if header[0] == 0xFF && (header[1] & 0xE0) == 0xE0 {
-            log::debug!("Detected MP3 format (MPEG sync word)");
-        } else if header == b"OggS" {
-            log::debug!("Detected OGG format");
-        } else if header == b"fLaC" {
-            log::debug!("Detected FLAC format");
-        } else {
-            log::debug!("Unknown audio format, letting decoder handle it");
-        }
-
-        match self.mode {
-            RetriggerMode::Interrupt => {
-                log::debug!("Interrupt mode: stopping current playback");
-                self.stop();
-            }
-            RetriggerMode::Queue => {
-                if let Some(ref sink) = self.sink {
-                    if !sink.empty() {
-                        log::debug!("Queue mode: appending to existing playback");
-                        let cursor = Cursor::new(audio_bytes);
-                        let source = Decoder::new(cursor).map_err(|e| {
-                            log::error!("Failed to decode audio for queue: {}", e);
-                            format!("Failed to decode audio: {}. The audio file may be corrupted or in an unsupported format.", e)
-                        })?;
-                        sink.set_volume(self.volume as f32 / 100.0);
-                        sink.append(source);
-                        return Ok(());
-                    }
-                }
-            }
-        }
-
-        log::debug!("Creating new stream and sink for playback");
-        let (stream, handle) = OutputStream::try_default().map_err(|e| {
-            log::error!("Failed to open default audio output device: {}", e);
-            format!("No audio output device found: {}", e)
-        })?;
-
-        let sink = Sink::try_new(&handle).map_err(|e| {
-            log::error!("Failed to create audio sink: {}", e);
-            format!(
-                "Failed to initialize audio playback: {}. Check your audio device settings.",
-                e
-            )
-        })?;
-        let cursor = Cursor::new(audio_bytes);
-        let source = Decoder::new(cursor).map_err(|e| {
-            log::error!("Failed to decode audio: {}", e);
-            format!("Failed to decode audio: {}. The audio file may be corrupted or in an unsupported format.", e)
-        })?;
-
-        sink.set_volume(self.volume as f32 / 100.0);
-        sink.append(source);
-
-        self.sink = Some(sink);
-        self._stream = Some(stream);
-        self.stream_handle = Some(handle);
-        self.playback_start = Some(std::time::Instant::now());
-        self.paused_duration = std::time::Duration::ZERO;
-        self.pause_start = None;
-        self.current_position = std::time::Duration::ZERO;
-        log::info!("Audio playback started");
-        Ok(())
-    }
-
     fn stop(&mut self) {
         if let Some(sink) = self.sink.take() {
             log::info!("Audio playback stopped");
@@ -171,29 +71,6 @@ impl AudioPlayerInner {
         self.paused_duration = std::time::Duration::ZERO;
         self.pause_start = None;
         self.current_position = std::time::Duration::ZERO;
-    }
-
-    fn pause(&mut self) {
-        if let Some(ref sink) = self.sink {
-            log::info!("Audio playback paused");
-            sink.pause();
-            self.pause_start = Some(std::time::Instant::now());
-        } else {
-            log::debug!("pause() called but no active playback");
-        }
-    }
-
-    fn resume(&mut self) {
-        if let Some(ref sink) = self.sink {
-            log::info!("Audio playback resumed");
-            sink.play();
-            if let Some(pause_start) = self.pause_start {
-                self.paused_duration += pause_start.elapsed();
-                self.pause_start = None;
-            }
-        } else {
-            log::debug!("resume() called but no active playback");
-        }
     }
 
     fn is_playing(&self) -> bool {
@@ -327,19 +204,8 @@ impl AudioPlayer {
 
                 match rx.recv_timeout(std::time::Duration::from_millis(200)) {
                     Ok(cmd) => match cmd {
-                        AudioCommand::Play(wav_bytes) => {
-                            if let Err(e) = player.play(wav_bytes) {
-                                log::error!("Audio play error: {}", e);
-                            }
-                        }
                         AudioCommand::Stop => {
                             player.stop();
-                        }
-                        AudioCommand::Pause => {
-                            player.pause();
-                        }
-                        AudioCommand::Resume => {
-                            player.resume();
                         }
                         AudioCommand::TogglePause => {
                             player.toggle_pause();
@@ -387,24 +253,8 @@ impl AudioPlayer {
         let _ = self.tx.send(AudioCommand::SetVolume(volume));
     }
 
-    /// Play WAV audio bytes. Behavior on re-trigger depends on current mode.
-    pub fn play(&mut self, wav_bytes: Vec<u8>) -> Result<(), String> {
-        self.tx
-            .send(AudioCommand::Play(wav_bytes))
-            .map_err(|e| format!("Failed to send play command: {e}"))?;
-        Ok(())
-    }
-
     pub fn stop(&mut self) {
         let _ = self.tx.send(AudioCommand::Stop);
-    }
-
-    pub fn pause(&mut self) {
-        let _ = self.tx.send(AudioCommand::Pause);
-    }
-
-    pub fn resume(&mut self) {
-        let _ = self.tx.send(AudioCommand::Resume);
     }
 
     pub fn toggle_pause(&mut self) {
@@ -421,10 +271,6 @@ impl AudioPlayer {
 
     pub fn is_playing(&self) -> bool {
         self.is_playing.load(Ordering::Relaxed)
-    }
-
-    pub fn is_paused(&self) -> bool {
-        self.is_paused.load(Ordering::Relaxed)
     }
 
     pub fn get_state(&self) -> PlaybackState {
