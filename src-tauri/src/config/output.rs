@@ -25,17 +25,6 @@ impl AudioFormat {
             AudioFormat::Flac => "flac",
         }
     }
-
-    #[allow(dead_code)]
-    pub fn from_extension(ext: &str) -> Option<Self> {
-        match ext.to_lowercase().as_str() {
-            "wav" => Some(AudioFormat::Wav),
-            "mp3" => Some(AudioFormat::Mp3),
-            "ogg" => Some(AudioFormat::Ogg),
-            "flac" => Some(AudioFormat::Flac),
-            _ => None,
-        }
-    }
 }
 
 impl Default for AudioFormat {

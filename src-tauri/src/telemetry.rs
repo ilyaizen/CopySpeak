@@ -22,19 +22,6 @@ pub fn get_bucket_index(char_count: usize) -> usize {
     CHAR_BUCKETS.len() - 2
 }
 
-/// Get the bucket label for display/debugging.
-#[allow(dead_code)]
-fn get_bucket_label(char_count: usize) -> String {
-    let idx = get_bucket_index(char_count);
-    let start = CHAR_BUCKETS[idx];
-    let end = CHAR_BUCKETS.get(idx + 1).copied().unwrap_or(std::u32::MAX);
-    if end == std::u32::MAX {
-        format!("{}+", start)
-    } else {
-        format!("{}-{}", start, end)
-    }
-}
-
 /// Single timing entry for a synthesis operation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(dead_code)]
@@ -295,7 +282,15 @@ pub fn save(telemetry: &TelemetryLog) {
     }
 }
 
-/// Record a timing sample and persist.
+use std::sync::atomic::{AtomicU32, Ordering};
+
+/// How often to persist telemetry to disk (every N samples).
+const SAVE_EVERY_N_SAMPLES: u32 = 10;
+
+/// Counter for deferred telemetry saves — avoids disk I/O on every synthesis.
+static SAMPLE_COUNTER: AtomicU32 = AtomicU32::new(0);
+
+/// Record a timing sample and persist every N samples.
 pub fn record_sample(
     telemetry: &Mutex<TelemetryLog>,
     backend: &str,
@@ -305,7 +300,10 @@ pub fn record_sample(
 ) {
     let mut tel = telemetry.lock().unwrap();
     tel.record(backend, voice, char_count, duration_ms);
-    save(&tel);
+    let count = SAMPLE_COUNTER.fetch_add(1, Ordering::Relaxed) + 1;
+    if count % SAVE_EVERY_N_SAMPLES == 0 {
+        save(&tel);
+    }
 }
 
 /// Get an estimate without modifying the log.

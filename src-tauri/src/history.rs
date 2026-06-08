@@ -294,13 +294,6 @@ impl HistoryLog {
         Some((entries.first()?.timestamp, entries.last()?.timestamp))
     }
 
-    /// Update file size tracking
-    #[allow(dead_code)]
-    pub fn update_file_size(&mut self, _file_path: &str, size_bytes: u64) {
-        self.metadata.file_tracking.total_file_size_bytes += size_bytes;
-        self.metadata.file_tracking.last_updated = Utc::now();
-    }
-
     /// Link a file path to a history entry with metadata
     pub fn link_file_to_entry(
         &mut self,
@@ -510,12 +503,6 @@ impl HistoryLog {
         missing
     }
 
-    /// Get total size of tracked files in a human-readable format
-    pub fn get_total_file_size_human(&self) -> String {
-        let bytes = self.metadata.file_tracking.total_file_size_bytes;
-        format_file_size(bytes)
-    }
-
     /// Get file size for a specific entry
     pub fn get_entry_file_size(&self, entry_id: &str) -> Option<u64> {
         self.get_file_metadata(entry_id)
@@ -554,24 +541,6 @@ impl HistoryLog {
             unique_engines_count: self.metadata.unique_engines.len(),
             file_size_bytes: self.metadata.file_tracking.total_file_size_bytes,
         }
-    }
-}
-
-/// Format file size in bytes to human-readable format
-#[allow(dead_code)]
-fn format_file_size(bytes: u64) -> String {
-    const KB: u64 = 1024;
-    const MB: u64 = 1024 * KB;
-    const GB: u64 = 1024 * MB;
-
-    if bytes >= GB {
-        format!("{:.2} GB", bytes as f64 / GB as f64)
-    } else if bytes >= MB {
-        format!("{:.2} MB", bytes as f64 / MB as f64)
-    } else if bytes >= KB {
-        format!("{:.2} KB", bytes as f64 / KB as f64)
-    } else {
-        format!("{} B", bytes)
     }
 }
 
@@ -642,55 +611,9 @@ fn generate_id() -> String {
     format!("hist_{}_{:x}", timestamp, random)
 }
 
-/// Create a new history entry with complete metadata
-#[allow(dead_code)]
-pub fn create_entry(text: &str, tts_engine: &str, voice: &str, speed: f32) -> HistoryEntry {
-    HistoryEntry {
-        id: generate_id(),
-        timestamp: Utc::now(),
-        text: text.to_string(),
-        text_length: text.len() as u32,
-        tts_engine: tts_engine.to_string(),
-        voice: voice.to_string(),
-        speed,
-        output_format: None,
-        output_path: None,
-        duration_ms: 0,
-        batch_id: None,
-        app_name: None,
-        source: None,
-        filters_applied: Vec::new(),
-        success: false,
-        error_message: None,
-        attempts: 0,
-        tags: Vec::new(),
-        metadata: HashMap::new(),
-    }
-}
-
-/// Add a new entry to the history with basic info
-#[allow(dead_code)]
-pub fn add_entry(
-    history: &Mutex<HistoryLog>,
-    text: &str,
-    tts_engine: &str,
-    voice: &str,
-    duration_ms: u64,
-    output_path: Option<String>,
-) {
-    add_entry_with_batch(
-        history,
-        text,
-        tts_engine,
-        voice,
-        duration_ms,
-        output_path,
-        None,
-        HashMap::new(),
-    );
-}
-
-/// Add a new entry to the history with batch info and metadata
+/// Add a new entry to the history with batch info and metadata.
+/// If `skip_save` is true, the entry is added in memory but the log is
+/// NOT persisted to disk (caller must save once after all entries).
 pub fn add_entry_with_batch(
     history: &Mutex<HistoryLog>,
     text: &str,
@@ -700,6 +623,7 @@ pub fn add_entry_with_batch(
     output_path: Option<String>,
     batch_id: Option<String>,
     metadata: HashMap<String, serde_json::Value>,
+    skip_save: bool,
 ) {
     let entry = HistoryEntry {
         id: generate_id(),
@@ -726,17 +650,11 @@ pub fn add_entry_with_batch(
     let mut hist = history.lock().unwrap();
     hist.add(entry);
 
-    if let Err(e) = save(&hist) {
-        log::error!("Failed to save history: {}", e);
+    if !skip_save {
+        if let Err(e) = save(&hist) {
+            log::error!("Failed to save history: {}", e);
+        }
     }
-}
-
-/// Add a complete entry with all metadata
-#[allow(dead_code)]
-pub fn add_entry_complete(history: &Mutex<HistoryLog>, entry: HistoryEntry) -> Result<(), String> {
-    let mut hist = history.lock().unwrap();
-    hist.add(entry);
-    save(&hist)
 }
 
 /// Cleanup orphaned history files not referenced in the current history log
@@ -878,17 +796,19 @@ pub fn run_full_cleanup(
 /// - Optionally removes orphaned files (if cleanup_orphaned_files is true)
 pub fn start_cleanup_service(app_handle: tauri::AppHandle) {
     std::thread::spawn(move || {
-        let cleanup_interval = std::time::Duration::from_secs(24 * 3600);
+        const CLEANUP_INTERVAL: std::time::Duration = std::time::Duration::from_secs(24 * 3600);
+        const INITIAL_DELAY: std::time::Duration = std::time::Duration::from_secs(30);
         let mut first_run = true;
 
-        log::info!("History background cleanup service started");
+        log::info!("History background cleanup service started (first run in 30s)");
 
         loop {
-            // Skip delay on first run to execute cleanup immediately on startup
+            // Defer first cleanup to avoid disk I/O during app startup
             if first_run {
+                std::thread::sleep(INITIAL_DELAY);
                 first_run = false;
             } else {
-                std::thread::sleep(cleanup_interval);
+                std::thread::sleep(CLEANUP_INTERVAL);
             }
 
             // Re-read config to pick up any changes

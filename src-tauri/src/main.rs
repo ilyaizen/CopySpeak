@@ -11,7 +11,6 @@ mod config;
 mod control_server;
 mod fragment_queue;
 mod history;
-mod history_manager;
 mod hud;
 mod logging;
 mod pagination;
@@ -218,6 +217,30 @@ pub fn register_hotkey(
     Ok(())
 }
 
+/// Spawn an async task to read clipboard and speak it.
+/// Shared by tray button and global hotkey.
+fn spawn_speak(app: &tauri::AppHandle) {
+    let app_handle = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let config: State<std::sync::Mutex<config::AppConfig>> = app_handle.state();
+        let player: State<std::sync::Mutex<audio::AudioPlayer>> = app_handle.state();
+        let history: State<std::sync::Mutex<history::HistoryLog>> = app_handle.state();
+        let telemetry_state: State<std::sync::Mutex<telemetry::TelemetryLog>> = app_handle.state();
+        if let Err(e) = commands::speak_now(
+            app_handle.clone(),
+            config,
+            player,
+            history,
+            telemetry_state,
+            None,
+        )
+        .await
+        {
+            log::error!("Failed to speak: {}", e);
+        }
+    });
+}
+
 /// Abort any in-progress synthesis and stop playback.
 /// Called from the abort_synthesis command and tray icon click handler.
 pub fn do_abort_synthesis(app: &tauri::AppHandle) {
@@ -290,10 +313,6 @@ fn main() {
             // --- Init speech history log ---
             let history = history::load();
             app.manage(std::sync::Mutex::new(history));
-
-            // --- Init history manager (centralized history operations) ---
-            let history_manager = history_manager::HistoryManager::new();
-            app.manage(std::sync::Mutex::new(history_manager));
 
             // --- Init cached audio state (for replay) ---
             app.manage(std::sync::Mutex::new(commands::CachedAudio::default()));
@@ -399,32 +418,7 @@ fn main() {
                         }
                         "speak" => {
                             log::info!("Tray: speak clipboard");
-                            // Clone app handle for async context
-                            let app_handle = app.clone();
-                            tauri::async_runtime::spawn(async move {
-                                // Get required states inside the async block
-                                let config: State<std::sync::Mutex<config::AppConfig>> =
-                                    app_handle.state();
-                                let player: State<std::sync::Mutex<audio::AudioPlayer>> =
-                                    app_handle.state();
-                                let history: State<std::sync::Mutex<history::HistoryLog>> =
-                                    app_handle.state();
-                                let telemetry_state: State<
-                                    std::sync::Mutex<telemetry::TelemetryLog>,
-                                > = app_handle.state();
-                                if let Err(e) = commands::speak_now(
-                                    app_handle.clone(),
-                                    config,
-                                    player,
-                                    history,
-                                    telemetry_state,
-                                    None,
-                                )
-                                .await
-                                {
-                                    log::error!("Failed to speak from tray: {}", e);
-                                }
-                            });
+                            spawn_speak(app);
                         }
                         "unload_model" => {
                             log::info!("Tray: Unload Model");
@@ -586,29 +580,7 @@ fn main() {
                 .with_handler(move |app, _shortcut, event| {
                     if event.state() == ShortcutState::Pressed {
                         log::info!("Global hotkey triggered: speak from clipboard");
-                        let app_handle = app.clone();
-                        tauri::async_runtime::spawn(async move {
-                            let config: State<std::sync::Mutex<config::AppConfig>> =
-                                app_handle.state();
-                            let player: State<std::sync::Mutex<audio::AudioPlayer>> =
-                                app_handle.state();
-                            let history: State<std::sync::Mutex<history::HistoryLog>> =
-                                app_handle.state();
-                            let telemetry_state: State<std::sync::Mutex<telemetry::TelemetryLog>> =
-                                app_handle.state();
-                            if let Err(e) = commands::speak_now(
-                                app_handle.clone(),
-                                config,
-                                player,
-                                history,
-                                telemetry_state,
-                                None,
-                            )
-                            .await
-                            {
-                                log::error!("Failed to speak from hotkey: {}", e);
-                            }
-                        });
+                        spawn_speak(app);
                     }
                 })
                 .build(),

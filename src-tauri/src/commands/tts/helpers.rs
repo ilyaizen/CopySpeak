@@ -46,6 +46,7 @@ impl Drop for SynthesisGuard {
 // ── Backend / voice / engine helpers ────────────────────────────────────────
 
 /// Create a TTS backend instance based on the active backend config.
+#[inline]
 pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<dyn TtsBackend> {
     match active {
         TtsEngine::Local => Box::new(CliTtsBackend::new(
@@ -66,6 +67,7 @@ pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<
 }
 
 /// Get the voice string for the active backend.
+#[inline]
 pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> String {
     match active {
         TtsEngine::Local => tts_config.voice.clone(),
@@ -152,6 +154,7 @@ pub(crate) fn voice_display_name(
 }
 
 /// Get the engine string identifier for a backend (legacy function, prefer engine_identifier).
+#[inline]
 pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
     match active {
         TtsEngine::Local => "local",

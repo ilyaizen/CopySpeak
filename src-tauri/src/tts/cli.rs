@@ -256,11 +256,11 @@ pub fn prewarm_piper_server(command: String, voice: String, data_dir: String, cu
             poll_start.elapsed().as_secs_f64()
         );
 
-        // Warm-up: send a minimal text to force ONNX runtime JIT / GPU kernel init.
-        // This makes the FIRST real synthesis fast instead of paying the warm-up penalty.
+        // Warm-up: send a substantial sentence to force ONNX runtime JIT / GPU kernel init.
+        // A longer text warms more model layers, making the first real synthesis fast.
         let warmup_client = get_piper_client().clone();
         let warmup_url = format!("http://127.0.0.1:{}/", port);
-        let warmup_body = serde_json::json!({ "text": "Hello" });
+        let warmup_body = serde_json::json!({ "text": "The quick brown fox jumps over the lazy dog. This warms the model layers for faster synthesis.", "length_scale": 1.0 });
         let warmup_start = std::time::Instant::now();
         match warmup_client.post(&warmup_url).json(&warmup_body).send() {
             Ok(resp) => {
@@ -647,29 +647,35 @@ impl CliTtsBackend {
             }
         }
 
-        // Single lock acquisition: check/start server, extract port+client
-        let (port, client) = {
-            if PIPER_WARMING.load(Ordering::SeqCst) {
-                log::info!("[Piper] Pre-warm in progress, waiting for it to complete");
-                let wait_start = std::time::Instant::now();
-                while PIPER_WARMING.load(Ordering::SeqCst) {
-                    if wait_start.elapsed() > std::time::Duration::from_secs(20) {
-                        return Err("Timeout waiting for Piper server prewarm".to_string());
-                    }
-                    std::thread::sleep(std::time::Duration::from_millis(200));
-                }
-                log::info!(
-                    "[Piper] Pre-warm completed after {:.1}s",
-                    wait_start.elapsed().as_secs_f64()
-                );
-            }
+        // ── Server check / start (with minimal lock hold time) ────────────────
+        let t_lock_start = std::time::Instant::now();
 
+        if PIPER_WARMING.load(Ordering::SeqCst) {
+            log::debug!("[Piper] Pre-warm in progress, waiting for it to complete");
+            let wait_start = std::time::Instant::now();
+            while PIPER_WARMING.load(Ordering::SeqCst) {
+                if wait_start.elapsed() > std::time::Duration::from_secs(20) {
+                    return Err("Timeout waiting for Piper server prewarm".to_string());
+                }
+                std::thread::sleep(std::time::Duration::from_millis(200));
+            }
+            log::debug!(
+                "[Piper] Pre-warm completed after {:.1}s",
+                wait_start.elapsed().as_secs_f64()
+            );
+        }
+
+        // Acquire lock briefly to check server state / decide if restart needed.
+        // The lock is released before the HTTP synthesis request so other callers
+        // are not blocked during synthesis.
+        let (port, client) = {
             let mut server = get_piper_server().lock().unwrap();
             let mut need_start = true;
 
             if let Some(ref mut state) = *server {
                 let is_running = matches!(state.child.try_wait(), Ok(None));
                 if is_running && state.model_name == voice && state.cuda == cuda {
+                    // Server alive with correct model — reuse
                     need_start = false;
                 } else {
                     log::info!(
@@ -685,10 +691,11 @@ impl CliTtsBackend {
                 let new_port =
                     get_free_port().ok_or_else(|| "Failed to find a free port".to_string())?;
                 log::info!(
-                    "[Piper] Starting HTTP server on port {} — model: {}",
-                    new_port, voice
+                    "[Piper] Starting HTTP server on port {} — model: {} cuda: {}",
+                    new_port, voice, cuda
                 );
 
+                let t_spawn = std::time::Instant::now();
                 let mut cmd = Command::new(&self.command);
                 let mut args = vec![
                     "-m".to_string(), "piper.http_server".to_string(),
@@ -721,23 +728,25 @@ impl CliTtsBackend {
                 let mut child = cmd
                     .spawn()
                     .map_err(|e| format!("Failed to spawn Piper server: {}", e))?;
+                log::debug!(
+                    "[Piper] Server process spawned in {:.0}ms",
+                    t_spawn.elapsed().as_millis()
+                );
 
-                let health_client = reqwest::blocking::Client::builder()
-                    .timeout(std::time::Duration::from_millis(500))
-                    .pool_max_idle_per_host(1)
-                    .build()
-                    .map_err(|e| e.to_string())?;
-
+                // Reuse the global Piper client for health-check polling
+                let health_client = get_piper_client();
                 let url = format!("http://127.0.0.1:{}/voices", new_port);
-                let start = std::time::Instant::now();
+                let t_poll = std::time::Instant::now();
                 let mut ready = false;
                 let mut poll_delay_ms = 100u64;
                 let max_poll_delay_ms = 1600u64;
+                let mut poll_attempts = 0u32;
 
-                while start.elapsed() < std::time::Duration::from_secs(15) {
+                while t_poll.elapsed() < std::time::Duration::from_secs(15) {
                     if let Ok(Some(status)) = child.try_wait() {
                         return Err(format!("Piper server exited prematurely: {:?}", status));
                     }
+                    poll_attempts += 1;
                     if health_client.get(&url).send().is_ok() {
                         ready = true;
                         break;
@@ -751,9 +760,10 @@ impl CliTtsBackend {
                     return Err("Timeout waiting for Piper server to start".to_string());
                 }
 
+                let poll_ms = t_poll.elapsed().as_millis();
                 log::info!(
-                    "[Piper] HTTP server ready on port {} — took {:.1}s",
-                    new_port, start.elapsed().as_secs_f64()
+                    "[Piper] Server ready on port {} — poll:{:.0}ms attempts:{} voice:{} cuda:{}",
+                    new_port, poll_ms, poll_attempts, voice, cuda
                 );
 
                 let client = get_piper_client().clone();
@@ -771,8 +781,10 @@ impl CliTtsBackend {
                     .ok_or_else(|| "Piper server state is unexpectedly missing".to_string())?;
                 (state.port, state.client.clone())
             }
-        };
+        }; // Mutex lock released here — HTTP request runs without holding lock
+        let lock_ms = t_lock_start.elapsed().as_millis();
 
+        // ── HTTP synthesis request ────────────────────────────────────────────
         let url = format!("http://127.0.0.1:{}/", port);
         let body = serde_json::json!({ "text": text, "length_scale": speed });
 
@@ -799,8 +811,8 @@ impl CliTtsBackend {
 
         let total_ms = t_total.elapsed().as_millis();
         log::info!(
-            "[Piper] Synthesis — total:{:.0}ms (req:{:.0}ms read:{:.0}ms) size:{}B chars:{} voice:{} cuda:{}",
-            total_ms, req_ms, read_ms, bytes.len(), text.len(), voice, cuda
+            "[Piper] Synth — total:{:.0}ms lock:{:.0}ms req:{:.0}ms read:{:.0}ms size:{}B chars:{} speed:{:.1} voice:{} cuda:{}",
+            total_ms, lock_ms, req_ms, read_ms, bytes.len(), text.len(), speed, voice, cuda
         );
 
         Ok(bytes)
@@ -814,11 +826,11 @@ impl TtsBackend for CliTtsBackend {
 
     fn synthesize(&self, text: &str, voice: &str, speed: f32) -> Result<Vec<u8>, TtsError> {
         if self.is_piper() {
-            log::info!("[Piper] Using persistent server for voice: {} (cuda: {})", voice, self.cuda);
+            log::debug!("[Piper] Using persistent server — voice:{} speed:{:.1} cuda:{}", voice, speed, self.cuda);
             let synth_start = std::time::Instant::now();
             match self.synthesize_via_server(text, voice, speed) {
                 Ok(bytes) => {
-                    log::info!("[Piper] Synthesis via server completed — {} bytes in {:.1}s", bytes.len(), synth_start.elapsed().as_secs_f64());
+                    log::debug!("[Piper] Server synth done — {}B in {:.1}s", bytes.len(), synth_start.elapsed().as_secs_f64());
                     return Ok(bytes);
                 }
                 Err(e) => {

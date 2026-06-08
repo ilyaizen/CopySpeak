@@ -66,15 +66,6 @@ pub fn is_debug_mode() -> bool {
     DEBUG_MODE.load(Ordering::SeqCst)
 }
 
-#[macro_export]
-macro_rules! debug_log {
-    ($($arg:tt)*) => {
-        if $crate::logging::is_debug_mode() {
-            log::debug!($($arg)*);
-        }
-    };
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

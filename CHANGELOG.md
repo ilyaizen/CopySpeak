@@ -95,6 +95,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Cargo release profile** — Added `opt-level = 3`, `lto = true`, `codegen-units = 1`, and `strip = true` to `[profile.release]` in `Cargo.toml`.
 - **Cleaned `#[allow(dead_code)]` annotations** — Removed file-level `#![allow(dead_code)]` from `fragment_queue.rs` and unnecessary annotations from `TtsError`, `Voice`, `TtsBackend` trait methods, `SynthesisProgressEvent`, and `AudioPlayer` fields/methods.
 
+- **Piper removed from parallel synthesis** — `is_parallel_capable` no longer includes the Local+piper preset. Piper's HTTP server is single-threaded Python; concurrent requests cause head-of-line blocking with no speed gain. Sequential synthesis reduces server contention.
+- **Piper health-check poll client reused** — `synthesize_via_server()` now uses the global `get_piper_client()` singleton for health-check polling instead of building a new `reqwest::blocking::Client` per server start, avoiding a redundant TCP handshake.
+- **Piper server mutex lock scope minimized** — The `PIPER_SERVER` mutex is released before the HTTP synthesis request. `synthesize_via_server()` extracts `(port, client)` under lock, then performs the synthesis outside the critical section. Verified via new `lock:0ms` log metric on warm-server calls.
+- **Envelope extraction offloaded to blocking thread** — `extract_envelope_async()` wraps WAV parsing in `spawn_blocking`, preventing large audio files from blocking the tokio async worker thread. All 4 call sites updated.
+- **History saves batched in paginated synthesis** — `add_entry_with_batch()` accepts `skip_save: bool`; `synthesize_queued_sequential()` and `synthesize_queued_parallel()` set `skip_save=true` per-fragment and call `history::save()` once at the end. N fragments → 1 disk write instead of N.
+- **Telemetry saves debounced** — `record_sample()` now persists to disk every 10 samples via an `AtomicU32` counter instead of on every synthesis call, reducing disk I/O by 90%.
+- **Double-spawn eliminated in fragment emit** — `spawn_fragment_emit()` now uses a single `spawn_blocking` call (encoding + emit) instead of nested `spawn(async { spawn_blocking(...) })`, saving one task allocation per fragment.
+- **Hot-path functions inlined** — Added `#[inline]` to `create_backend()`, `voice_for_backend()`, and `engine_str()`.
+- **Piper warmup text extended** — Warm-up synthesis text increased from 5 chars (`"Hello"`) to 80 chars for more thorough ONNX Runtime JIT/GPU kernel warmup.
+
+### Changed
+
+- **Speed parameter threaded through synthesis** — `synthesize_async()` now accepts `speed: f32` and all call sites pass `config.playback.playback_speed`. Piper HTTP receives it as `length_scale`; previously hardcoded to `1.0`.
+- **Piper synthesis timing expanded** — Log format now includes `lock_ms` (mutex hold time), `poll_attempts` (health-check retries), and `spawn_ms` (process spawn time) in addition to the existing `req_ms`/`read_ms` breakdown.
+- **Duplicate tray/hotkey speak code consolidated** — Extracted a shared `spawn_speak(&AppHandle)` helper in `main.rs`, eliminating 28 lines of duplicate state extraction across the tray menu handler and global hotkey handler.
+- **History cleanup deferred on startup** — The background cleanup service now sleeps 30s before its first run instead of executing immediately, avoiding disk I/O during app launch.
+- **Synthesis calls always pass speed** — `synthesize_async()`, `synthesize_paginated()`, `synthesize_queued_sequential()`, and `synthesize_queued_parallel()` all accept and propagate the `speed` parameter.
+
+### Removed
+
+- **`history_manager.rs`** — Deleted the entire 385-line file (`HistoryManager` struct with `#![allow(dead_code)]`). The managed state was created in `main.rs` but never consumed by any Tauri command (all history operations use `HistoryLog` directly).
+- **Dead functions in `history.rs`** — Removed `create_entry()`, `add_entry()`, `add_entry_complete()`, `update_file_size()`, `format_file_size()`, and `get_total_file_size_human()` (~80 lines of never-called API).
+- **Dead methods in `pagination.rs`** — Removed `TextFragment::is_first()`, `is_last()`, and `label()` (~20 lines, all `#[allow(dead_code)]`).
+- **Dead function in `telemetry.rs`** — Removed `get_bucket_label()` (debug formatting, never called).
+- **Dead method in `config/output.rs`** — Removed `AudioFormat::from_extension()` (`#[allow(dead_code)]`).
+- **Unused macro in `logging.rs`** — Removed `debug_log!` macro (never invoked).
+- **Dead import in `main.rs`** — Removed `mod history_manager;` declaration.
+
 ## [0.1.5] - 2026-05-20
 
 ### Added

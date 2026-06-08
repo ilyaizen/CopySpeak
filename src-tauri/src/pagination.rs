@@ -19,24 +19,6 @@ impl TextFragment {
     pub fn new(text: String, index: usize, total: usize) -> Self {
         Self { text, index, total }
     }
-
-    /// Returns true if this is the first fragment.
-    #[allow(dead_code)]
-    pub fn is_first(&self) -> bool {
-        self.index == 0
-    }
-
-    /// Returns true if this is the last fragment.
-    #[allow(dead_code)]
-    pub fn is_last(&self) -> bool {
-        self.index == self.total - 1
-    }
-
-    /// Returns a formatted label like "Part 1 of 3".
-    #[allow(dead_code)]
-    pub fn label(&self) -> String {
-        format!("Part {} of {}", self.index + 1, self.total)
-    }
 }
 
 /// Sentence boundary position in text.
