@@ -190,6 +190,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Control server `/speak` and `/piper-status` now require authentication** — Any external automation sending `POST /speak` or `GET /piper-status` to `127.0.0.1:43117` must include `Authorization: Bearer <token>` where `<token>` is `general.control_token` from `config.json`, or set the `COPYSPEAK_CONTROL_TOKEN` environment variable. `GET /health` remains unauthenticated.
 
+### Dependencies
+
+- **Upgraded `windows` 0.58 → 0.62** — `SetClipboardData` and `CreateWindowExW` now take `Option<HANDLE>`/`Option<HWND>`/`Option<HINSTANCE>` instead of raw handle types. Updated 3 call sites in `clipboard.rs`.
+- **Upgraded `reqwest` 0.12 → 0.13** — `RequestBuilder::query()` removed; moved `output_format` query parameter into the URL string in `elevenlabs.rs`.
+- **Upgraded `tempfile` 3.10 → 3** (resolves to 3.27.0) — semver-compatible, no code changes.
+- **Upgraded `flexi_logger` to 0.31.9**, `regex` to 1.12.4, `uuid` to 1.23.3, `wasm-bindgen` to 0.2.123, `bitflags` to 2.13.0, `serde_with` to 3.21.0 via `cargo update`.
+- **Frontend** — `svelte` 5.56.1 → 5.56.3, `@sveltejs/kit` 2.63.0 → 2.64.0, `prettier` 3.8.3 → 3.8.4, `@types/node` 25.9.1 → 25.9.2 via `bun update`.
+
 ## [0.1.5] - 2026-05-20
 
 ### Added
