@@ -34,5 +34,7 @@ src-tauri/Cargo.lock
 /plans
 # file-structure.txt
 DO_NOT_TOUCH/
+/parrot
+/kokoro
 /.claude/skills
 /.claude/commands

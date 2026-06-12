@@ -331,18 +331,49 @@ pub fn do_abort_synthesis(app: &tauri::AppHandle) {
     // timeout.
     let _ = crate::tts::cli::unload_piper_model_internal();
 
-    // Re-prewarm Piper in the background so the next utterance doesn't pay a
-    // multi-second cold start — the reload overlaps user idle time.
+    // H3: Unload any local TTS server (Kokoro/Kitten/Pocket) for the same reason.
+    crate::tts::local_tts_server::unload_all();
+
+    // Re-prewarm the active engine in the background so the next utterance
+    // doesn't pay a multi-second cold start.
     {
         let config = app.state::<std::sync::Mutex<config::AppConfig>>();
         let cfg = crate::lock_or_recover!(config);
-        if cfg.tts.active_backend == config::TtsEngine::Local && cfg.tts.preset == "piper" {
-            crate::tts::cli::prewarm_piper_server(
-                cfg.tts.command.clone(),
-                cfg.tts.voice.clone(),
-                tts::cli::CliTtsBackend::data_dir(),
-                cfg.tts.cuda,
-            );
+        if cfg.tts.active_backend == config::TtsEngine::Local {
+            match cfg.tts.preset.as_str() {
+                "piper" => {
+                    crate::tts::cli::prewarm_piper_server(
+                        cfg.tts.command.clone(),
+                        cfg.tts.voice.clone(),
+                        tts::cli::CliTtsBackend::data_dir(),
+                        cfg.tts.cuda,
+                    );
+                }
+                "kokoro-tts" => {
+                    let backend = tts::cli::CliTtsBackend::new(
+                        cfg.tts.command.clone(),
+                        cfg.tts.args_template.clone(),
+                        cfg.tts.cuda,
+                        "kokoro-tts".into(),
+                    );
+                    let args = backend.kokoro_model_args();
+                    tts::cli::prewarm_local_server("kokoro".into(), cfg.tts.command.clone(), args);
+                }
+                "kitten-tts" => {
+                    let backend = tts::cli::CliTtsBackend::new(
+                        cfg.tts.command.clone(),
+                        cfg.tts.args_template.clone(),
+                        cfg.tts.cuda,
+                        "kitten-tts".into(),
+                    );
+                    let args = backend.kitten_model_args();
+                    tts::cli::prewarm_local_server("kitten".into(), cfg.tts.command.clone(), args);
+                }
+                "pocket-tts" => {
+                    tts::cli::prewarm_local_server("pocket".into(), cfg.tts.command.clone(), Vec::new());
+                }
+                _ => {}
+            }
         }
     }
 
@@ -628,22 +659,53 @@ fn main() {
                 clipboard::run_clipboard_listener(app_handle, is_listening_clone);
             });
 
-            // --- Pre-warm Piper HTTP server if configured ---
+            // --- Pre-warm local TTS servers if configured ---
             {
-                // Set app handle so piper_server can emit status events
                 tts::piper_server::set_piper_app_handle(app.handle().clone());
+                tts::local_tts_server::set_local_tts_app_handle(app.handle().clone());
 
                 let cfg = app.state::<std::sync::Mutex<config::AppConfig>>();
                 let cfg = crate::lock_or_recover!(cfg);
-                if cfg.tts.active_backend == config::TtsEngine::Local && cfg.tts.preset == "piper" {
-                    let data_dir = tts::cli::CliTtsBackend::data_dir();
-                    log::info!("[Piper] Auto-starting server at app launch (voice: {}, cuda: {})", cfg.tts.voice, cfg.tts.cuda);
-                    tts::cli::prewarm_piper_server(
-                        cfg.tts.command.clone(),
-                        cfg.tts.voice.clone(),
-                        data_dir,
-                        cfg.tts.cuda,
-                    );
+                if cfg.tts.active_backend == config::TtsEngine::Local {
+                    match cfg.tts.preset.as_str() {
+                        "piper" => {
+                            let data_dir = tts::cli::CliTtsBackend::data_dir();
+                            log::info!("[Piper] Auto-starting server at app launch (voice: {}, cuda: {})", cfg.tts.voice, cfg.tts.cuda);
+                            tts::cli::prewarm_piper_server(
+                                cfg.tts.command.clone(),
+                                cfg.tts.voice.clone(),
+                                data_dir,
+                                cfg.tts.cuda,
+                            );
+                        }
+                        "kokoro-tts" => {
+                            log::info!("[Kokoro] Auto-starting server at app launch");
+                            let backend = tts::cli::CliTtsBackend::new(
+                                cfg.tts.command.clone(),
+                                cfg.tts.args_template.clone(),
+                                cfg.tts.cuda,
+                                "kokoro-tts".into(),
+                            );
+                            let args = backend.kokoro_model_args();
+                            tts::cli::prewarm_local_server("kokoro".into(), cfg.tts.command.clone(), args);
+                        }
+                        "kitten-tts" => {
+                            log::info!("[Kitten] Auto-starting server at app launch");
+                            let backend = tts::cli::CliTtsBackend::new(
+                                cfg.tts.command.clone(),
+                                cfg.tts.args_template.clone(),
+                                cfg.tts.cuda,
+                                "kitten-tts".into(),
+                            );
+                            let args = backend.kitten_model_args();
+                            tts::cli::prewarm_local_server("kitten".into(), cfg.tts.command.clone(), args);
+                        }
+                        "pocket-tts" => {
+                            log::info!("[Pocket] Auto-starting server at app launch");
+                            tts::cli::prewarm_local_server("pocket".into(), cfg.tts.command.clone(), Vec::new());
+                        }
+                        _ => {}
+                    }
                 }
             }
 
@@ -783,8 +845,9 @@ fn main() {
 
     app.run(|_app_handle, event| {
         if let tauri::RunEvent::Exit = event {
-            log::info!("App exiting, cleaning up Piper server");
+            log::info!("App exiting, cleaning up TTS servers");
             let _ = crate::tts::cli::unload_piper_model_internal();
+            crate::tts::local_tts_server::unload_all();
 
             // Flush telemetry to disk on exit
             let telemetry_state = _app_handle.state::<std::sync::Mutex<telemetry::TelemetryLog>>();

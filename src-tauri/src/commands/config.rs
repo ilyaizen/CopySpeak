@@ -134,6 +134,8 @@ pub fn set_config(
         None
     };
 
+    let new_config_clone = new_config.clone();
+
     let mut cfg = crate::lock_or_recover!(config);
     *cfg = new_config;
 
@@ -210,6 +212,53 @@ pub fn set_config(
     if switched_away_from_piper {
         log::info!("[Piper] Switched away from Piper — unloading model");
         crate::tts::cli::unload_piper_model_internal();
+    }
+
+    // --- Local TTS server (Kokoro/Kitten/Pocket) lifecycle ---
+    {
+        let old_local = local_engine_from_preset(&old_tts_config.preset);
+        let new_local = local_engine_from_preset(&new_config_clone.tts.preset);
+        let is_local = new_config_clone.tts.active_backend == crate::config::TtsEngine::Local;
+
+        // Unload if switching away from a local engine
+        if let Some(ref old_engine) = old_local {
+            let switched_away = !is_local || old_local != new_local;
+            if switched_away {
+                log::info!(
+                    "[LocalServer] Switched away from {} — unloading model",
+                    old_engine
+                );
+                crate::tts::cli::unload_local_server(old_engine);
+            }
+        }
+
+        // Start new engine if active
+        if is_local {
+            if let Some(ref engine) = new_local {
+                let command_changed = old_tts_config.command != new_config_clone.tts.command
+                    || old_tts_config.args_template != new_config_clone.tts.args_template;
+                let engine_switched = old_local != new_local;
+
+                if engine_switched || command_changed {
+                    log::info!(
+                        "[LocalServer] Starting {} server (switched: {}, command_changed: {})",
+                        engine,
+                        engine_switched,
+                        command_changed
+                    );
+                    let (script_args, cmd) = build_local_server_args(
+                        engine,
+                        &new_config_clone.tts.command,
+                        &new_config_clone.tts.args_template,
+                    );
+                    if engine_switched {
+                        crate::tts::cli::prewarm_local_server(engine.clone(), cmd, script_args);
+                    } else {
+                        crate::tts::cli::restart_local_server(engine.clone(), cmd, script_args);
+                    }
+                }
+            }
+        }
     }
 
     // Emit config-changed event so frontend can react
@@ -319,4 +368,42 @@ pub fn set_debug_mode(enabled: bool) -> Result<(), String> {
     crate::logging::set_debug_mode(enabled);
     log::info!("Debug mode set to: {}", enabled);
     Ok(())
+}
+
+// ── Local TTS server helpers ────────────────────────────────────────────────
+
+fn local_engine_from_preset(preset: &str) -> Option<String> {
+    match preset {
+        "kokoro-tts" => Some("kokoro".into()),
+        "kitten-tts" => Some("kitten".into()),
+        "pocket-tts" => Some("pocket".into()),
+        _ => None,
+    }
+}
+
+fn build_local_server_args(
+    engine: &str,
+    command: &str,
+    args_template: &[String],
+) -> (Vec<String>, String) {
+    let backend = crate::tts::cli::CliTtsBackend::new(
+        command.into(),
+        args_template.to_vec(),
+        false,
+        match engine {
+            "kokoro" => "kokoro-tts",
+            "kitten" => "kitten-tts",
+            "pocket" => "pocket-tts",
+            _ => engine,
+        }
+        .into(),
+    );
+
+    let args = match engine {
+        "kokoro" => backend.kokoro_model_args(),
+        "kitten" => backend.kitten_model_args(),
+        _ => Vec::new(),
+    };
+
+    (args, command.into())
 }

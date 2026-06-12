@@ -5,6 +5,7 @@
 pub mod cartesia;
 pub mod cli;
 pub mod elevenlabs;
+pub mod local_tts_server;
 pub mod openai;
 pub mod piper_server;
 

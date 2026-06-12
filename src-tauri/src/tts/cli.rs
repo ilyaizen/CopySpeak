@@ -46,6 +46,23 @@ pub fn prewarm_piper_server(command: String, voice: String, data_dir: String, cu
     });
 }
 
+pub fn prewarm_local_server(engine: String, command: String, script_args: Vec<String>) {
+    crate::tts::local_tts_server::prewarm(engine, command, script_args);
+}
+
+pub fn unload_local_server(engine: &str) -> bool {
+    crate::tts::local_tts_server::unload(engine)
+}
+
+pub fn restart_local_server(engine: String, command: String, script_args: Vec<String>) {
+    log::info!(
+        "[LocalServer] Restart requested for {}",
+        engine
+    );
+    let _ = crate::tts::local_tts_server::unload(&engine);
+    crate::tts::local_tts_server::prewarm(engine, command, script_args);
+}
+
 #[cfg(windows)]
 fn get_expanded_path() -> String {
     static EXPANDED_PATH: std::sync::OnceLock<String> = std::sync::OnceLock::new();
@@ -253,6 +270,54 @@ impl CliTtsBackend {
         self.preset == "piper"
     }
 
+    fn is_kokoro(&self) -> bool {
+        self.preset == "kokoro-tts"
+    }
+
+    fn is_kitten(&self) -> bool {
+        self.preset == "kitten-tts"
+    }
+
+    fn is_pocket(&self) -> bool {
+        self.preset == "pocket-tts"
+    }
+
+    fn local_server_engine(&self) -> Option<&str> {
+        if self.is_kokoro() {
+            Some("kokoro")
+        } else if self.is_kitten() {
+            Some("kitten")
+        } else if self.is_pocket() {
+            Some("pocket")
+        } else {
+            None
+        }
+    }
+
+    pub fn kokoro_model_args(&self) -> Vec<String> {
+        let mut args: Vec<String> = Vec::new();
+        if let Some((model_path, voices_path)) = self.find_kokoro_models() {
+            args.push("--model".to_string());
+            args.push(model_path);
+            args.push("--voices".to_string());
+            args.push(voices_path);
+        }
+        args
+    }
+
+    pub fn kitten_model_args(&self) -> Vec<String> {
+        // Extract --model from args_template if present
+        let model_idx = self.args_template.iter().position(|a| a == "--model");
+        if let Some(idx) = model_idx {
+            if let Some(val) = self.args_template.get(idx + 1) {
+                if val != "{raw_text}" && val != "{input}" && val != "{output}" {
+                    return vec!["--model".to_string(), val.clone()];
+                }
+            }
+        }
+        Vec::new()
+    }
+
     /// Find kokoro-tts model files in common locations
     fn find_kokoro_models(&self) -> Option<(String, String)> {
         let model_name = "kokoro-v1.0.onnx";
@@ -260,6 +325,17 @@ impl CliTtsBackend {
 
         // Check common installation locations
         let search_paths = [
+            // Project root kokoro/ folder (dev environment)
+            std::env::current_dir().ok().map(|d| d.join("kokoro")),
+            // Project root relative to src-tauri/ (CARGO_MANIFEST_DIR)
+            Some(
+                std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                    .parent()
+                    .map(|p| p.join("kokoro"))
+                    .unwrap_or_default(),
+            ),
+            // src-tauri/kokoro/ (adjacent to manifest)
+            Some(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("kokoro")),
             // Windows: pip user install
             dirs::home_dir().map(|h| h.join(".local").join("bin")),
             dirs::home_dir().map(|h| h.join("AppData").join("Local").join("bin")),
@@ -465,6 +541,82 @@ impl CliTtsBackend {
 
         Ok(bytes)
     }
+
+    fn synthesize_via_local_server(
+        &self,
+        engine: &str,
+        text: &str,
+        voice: &str,
+        _speed: f32,
+    ) -> Result<Vec<u8>, TtsError> {
+        let t_total = std::time::Instant::now();
+
+        let script_args = match engine {
+            "kokoro" => self.kokoro_model_args(),
+            "kitten" => self.kitten_model_args(),
+            _ => Vec::new(),
+        };
+
+        let handle = crate::tts::local_tts_server::ensure_running(
+            engine,
+            self.command.clone(),
+            script_args,
+        )
+        .map_err(TtsError::Server)?;
+
+        let url = format!("http://127.0.0.1:{}/", handle.port);
+        let body = serde_json::json!({ "text": text, "voice": voice, "length_scale": 1.0 });
+
+        let text_chars = text.chars().count() as u64;
+        let deadline_ms = (5000u64 + text_chars * 30).clamp(10_000, 180_000);
+        let deadline = std::time::Duration::from_millis(deadline_ms);
+
+        let t_req = std::time::Instant::now();
+        let response = handle
+            .client
+            .post(&url)
+            .timeout(deadline)
+            .json(&body)
+            .send()
+            .map_err(|e| {
+                if !crate::ABORT_REQUESTED.load(std::sync::atomic::Ordering::Relaxed) {
+                    let _ = crate::tts::local_tts_server::unload(engine);
+                }
+                TtsError::Server(format!("HTTP request failed: {}", e))
+            })?;
+        let req_ms = t_req.elapsed().as_millis();
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let err_text = response.text().unwrap_or_default();
+            return Err(TtsError::Server(format!(
+                "HTTP error {}: {}",
+                status, err_text
+            )));
+        }
+
+        let bytes = response
+            .bytes()
+            .map_err(|e| {
+                if !crate::ABORT_REQUESTED.load(std::sync::atomic::Ordering::Relaxed) {
+                    let _ = crate::tts::local_tts_server::unload(engine);
+                }
+                TtsError::Server(format!("Failed to read response bytes: {}", e))
+            })?
+            .to_vec();
+
+        let total_ms = t_total.elapsed().as_millis();
+        log::info!(
+            "[{}_server] Synth — total:{:.0}ms req:{:.0}ms size:{}B chars:{}",
+            engine,
+            total_ms,
+            req_ms,
+            bytes.len(),
+            text.len()
+        );
+
+        Ok(bytes)
+    }
 }
 
 impl TtsBackend for CliTtsBackend {
@@ -482,13 +634,43 @@ impl TtsBackend for CliTtsBackend {
                     return Ok(bytes);
                 }
                 Err(e) => {
-                    // Aborted: the server was unloaded on purpose. Do not pay a
-                    // cold CLI model load to re-synthesize an aborted fragment.
                     if crate::ABORT_REQUESTED.load(std::sync::atomic::Ordering::Relaxed) {
                         return Err(e);
                     }
                     log::warn!(
                         "[Piper] Server synthesis failed: {}. Falling back to CLI.",
+                        e
+                    );
+                }
+            }
+        }
+
+        // Route Kitten/Kokoro/Pocket through persistent local HTTP server
+        if let Some(engine) = self.local_server_engine() {
+            log::debug!(
+                "[LocalServer] Using persistent {} server — voice:{} speed:{:.1}",
+                engine,
+                voice,
+                speed
+            );
+            let synth_start = std::time::Instant::now();
+            match self.synthesize_via_local_server(engine, text, voice, speed) {
+                Ok(bytes) => {
+                    log::debug!(
+                        "[LocalServer] {} synth done — {}B in {:.1}s",
+                        engine,
+                        bytes.len(),
+                        synth_start.elapsed().as_secs_f64()
+                    );
+                    return Ok(bytes);
+                }
+                Err(e) => {
+                    if crate::ABORT_REQUESTED.load(std::sync::atomic::Ordering::Relaxed) {
+                        return Err(e);
+                    }
+                    log::warn!(
+                        "[LocalServer] {} server synthesis failed: {}. Falling back to CLI.",
+                        engine,
                         e
                     );
                 }

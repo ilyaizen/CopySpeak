@@ -82,6 +82,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Piper performance test script** — `test-piper-perf.ps1` automates synthesis timing measurements via the control server API.
 - **WAV and Serialization Regression Tests** — Added comprehensive unit test suites in `wav.rs` covering truncated WAV buffers, invalid headers, and sample extraction. Added JSON request payload serialization tests in `cli.rs`.
 
+- **Persistent RAM caching for Kokoro, Kitten, and Pocket TTS** — All three local TTS engines now keep their models loaded in RAM between utterances via persistent Python HTTP server processes, matching the existing Piper pattern. A generalized `local_tts_server.rs` state machine manages per-engine server lifecycle (start, health-poll, warmup, unload) with generation counters to prevent zombie processes.
+  - **Kokoro** — `kokoro_server.py` uses `kokoro_tts.Kokoro` API to load the ~500MB ONNX model once. Synthesis time dropped from 7–9s (cold CLI) to ~1.1s (RAM persistent).
+  - **Kitten** — `kitten_server.py` uses `kittentts.KittenTTS` API to load the 25–80MB model once. Synthesis time dropped from 7–14s to ~0.3s.
+  - **Pocket** — `pocket_server.py` uses `pocket_tts.TTSModel` API to load the model once. Synthesis time dropped from 5–16s to ~0.3–0.7s.
+  - **Automatic Python interpreter resolution** — `resolve_python_command()` detects whether the user-configured command is a Python interpreter; for non-Python commands (`kokoro-tts`, `pocket-tts`), it probes `python`/`python3`/`py` to find a suitable interpreter for running the server scripts.
+  - **Auto model-path discovery for Kokoro** — `find_kokoro_models()` now searches the project-root `kokoro/` directory (relative to `CARGO_MANIFEST_DIR` and `current_dir`) in addition to system pip install paths, so dev-environment model files are found automatically.
+  - **Engine-switch lifecycle** — On config change, old engine servers are unloaded and new ones prewarmed. Abort triggers unload+re-prewarm for the active engine. All servers are cleaned up on app exit.
+
 ### Changed
 
 - **Frontend Dependency Upgrades** — Upgraded Svelte to `5.56.1`, `@sveltejs/kit` to `2.63.0`, Vite to `8.0.16`, Vitest to `4.1.8`, and all Tauri frontend modules to their latest v2 releases.
