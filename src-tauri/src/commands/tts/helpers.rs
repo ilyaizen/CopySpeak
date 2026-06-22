@@ -61,6 +61,15 @@ pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<
         TtsEngine::Cartesia => Box::new(crate::tts::cartesia::CartesiaTtsBackend::new(
             tts_config.cartesia.clone(),
         )),
+        TtsEngine::Http => Box::new(crate::tts::http::HttpTtsBackend::new(
+            tts_config.http.clone(),
+        )),
+        TtsEngine::Google => Box::new(crate::tts::google::GoogleTtsBackend::new(
+            tts_config.google.clone(),
+        )),
+        TtsEngine::Microsoft => Box::new(crate::tts::microsoft::MicrosoftTtsBackend::new(
+            tts_config.microsoft.clone(),
+        )),
     }
 }
 
@@ -71,6 +80,9 @@ pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> S
         TtsEngine::OpenAI => tts_config.openai.voice.clone(),
         TtsEngine::ElevenLabs => tts_config.elevenlabs.voice_id.clone(),
         TtsEngine::Cartesia => tts_config.cartesia.voice_id.clone(),
+        TtsEngine::Http => tts_config.http.voice.clone(),
+        TtsEngine::Google => tts_config.google.voice_name.clone(),
+        TtsEngine::Microsoft => tts_config.microsoft.voice_name.clone(),
     }
 }
 
@@ -89,6 +101,9 @@ pub(crate) fn engine_identifier(active: &TtsEngine, tts_config: &TtsConfig) -> S
         TtsEngine::OpenAI => "openai".to_string(),
         TtsEngine::ElevenLabs => "elevenlabs".to_string(),
         TtsEngine::Cartesia => "cartesia".to_string(),
+        TtsEngine::Http => "http".to_string(),
+        TtsEngine::Google => "google".to_string(),
+        TtsEngine::Microsoft => "microsoft".to_string(),
     }
 }
 
@@ -147,6 +162,67 @@ pub(crate) fn voice_display_name(
                 .unwrap_or(voice_id)
                 .to_lowercase()
         }
+        TtsEngine::Http | TtsEngine::Google | TtsEngine::Microsoft => {
+            slugify_filename_part(voice_id)
+        }
+    }
+}
+
+// ── Effective profile resolution ─────────────────────────────────────────────
+
+/// The resolved synthesis parameters for the active voice profile.
+/// Built once per request so profile switching never mutates global config.
+pub(crate) struct EffectiveTtsRequest {
+    pub engine: TtsEngine,
+    pub voice: String,
+    #[allow(dead_code)]
+    pub speed: f32,
+    #[allow(dead_code)]
+    pub pitch: f32,
+    #[allow(dead_code)]
+    pub effects: crate::config::ProfileEffects,
+}
+
+/// Resolve the active voice profile into an effective request.
+///
+/// The migrated `"default"` profile is a passthrough for the legacy single-engine
+/// fields (active_backend + per-provider voice), so existing single-profile users
+/// keep identical behavior and the existing engine tabs stay authoritative.
+/// Any *named* profile is fully authoritative for engine/voice/speed/effects.
+pub(crate) fn resolve_effective(tts_config: &TtsConfig) -> EffectiveTtsRequest {
+    let legacy = || {
+        let engine = tts_config.active_backend.clone();
+        let voice = voice_for_backend(&engine, tts_config);
+        EffectiveTtsRequest {
+            engine,
+            voice,
+            speed: 1.0,
+            pitch: 1.0,
+            effects: crate::config::ProfileEffects::default(),
+        }
+    };
+
+    let profile = tts_config
+        .profiles
+        .iter()
+        .find(|p| p.id == tts_config.active_profile_id);
+
+    match profile {
+        Some(p) if p.id != "default" => {
+            let voice = if p.voice.trim().is_empty() {
+                voice_for_backend(&p.engine, tts_config)
+            } else {
+                p.voice.clone()
+            };
+            EffectiveTtsRequest {
+                engine: p.engine.clone(),
+                voice,
+                speed: p.speed,
+                pitch: p.pitch,
+                effects: p.effects.clone(),
+            }
+        }
+        _ => legacy(),
     }
 }
 
@@ -157,5 +233,8 @@ pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
         TtsEngine::OpenAI => "openai",
         TtsEngine::ElevenLabs => "elevenlabs",
         TtsEngine::Cartesia => "cartesia",
+        TtsEngine::Http => "http",
+        TtsEngine::Google => "google",
+        TtsEngine::Microsoft => "microsoft",
     }
 }

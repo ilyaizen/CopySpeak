@@ -263,26 +263,13 @@ pub fn load_or_default() -> AppConfig {
     let path = config_path();
     match std::fs::read_to_string(&path) {
         Ok(contents) => {
-            // Use a permissive Value parse to detect the old "http" active_backend before
-            // deserializing into AppConfig (which no longer has the Http variant).
-            let raw: serde_json::Value = serde_json::from_str(&contents).unwrap_or_default();
-            let had_http_backend = raw
-                .get("tts")
-                .and_then(|t| t.get("active_backend"))
-                .and_then(|b| b.as_str())
-                == Some("http");
-
             let mut cfg: AppConfig = serde_json::from_str(&contents).unwrap_or_else(|e| {
                 log::warn!("Config parse error, using defaults: {e}");
                 AppConfig::default()
             });
 
-            if had_http_backend {
-                log::warn!(
-                    "Config had deprecated HTTP TTS engine; migrating active_backend to Local"
-                );
-                cfg.tts.active_backend = TtsEngine::Local;
-            }
+            // Migrate legacy single-engine TTS config into the profile model.
+            cfg.tts = migrate_tts_config(cfg.tts);
 
             cfg
         }
