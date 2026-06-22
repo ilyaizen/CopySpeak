@@ -106,6 +106,9 @@ export type PostProcessingProvider =
   | "gemini"
   | "openrouter"
   | "ollama"
+  | "xai"
+  | "aws"
+  | "cerebras"
   | "custom";
 
 export interface LlmProviderConfig {
@@ -114,16 +117,26 @@ export interface LlmProviderConfig {
   endpoint: string;
 }
 
+export interface PostProcessingPromptPreset {
+  label: string;
+  prompt: string;
+}
+
 export interface PostProcessingConfig {
   enabled: boolean;
   provider: PostProcessingProvider;
   prompt: string;
+  selected_prompt_label: string;
+  prompt_presets: PostProcessingPromptPreset[];
   groq: LlmProviderConfig;
   openai: LlmProviderConfig;
   anthropic: LlmProviderConfig;
   gemini: LlmProviderConfig;
   openrouter: LlmProviderConfig;
   ollama: LlmProviderConfig;
+  xai: LlmProviderConfig;
+  aws: LlmProviderConfig;
+  cerebras: LlmProviderConfig;
   custom: LlmProviderConfig;
 }
 

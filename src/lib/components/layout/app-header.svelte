@@ -73,7 +73,7 @@
         <img src="/app-logo.png" alt="CopySpeak Logo" class="h-10 w-10" />
         <div>
           <h1 class="text-foreground font-mono text-xl font-semibold tracking-tight">CopySpeak</h1>
-          <!-- <p class="text-muted-foreground text-xs">{$_("header.tagline")}</p> -->
+          <p class="text-muted-foreground text-xs">{$_("header.tagline")}</p>
         </div>
       </a>
     </div>

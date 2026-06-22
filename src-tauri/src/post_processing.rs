@@ -27,6 +27,9 @@ fn provider_config(config: &PostProcessingConfig) -> &LlmProviderConfig {
         PostProcessingProvider::Gemini => &config.gemini,
         PostProcessingProvider::OpenRouter => &config.openrouter,
         PostProcessingProvider::Ollama => &config.ollama,
+        PostProcessingProvider::Xai => &config.xai,
+        PostProcessingProvider::Aws => &config.aws,
+        PostProcessingProvider::Cerebras => &config.cerebras,
         PostProcessingProvider::Custom => &config.custom,
     }
 }
@@ -61,14 +64,14 @@ async fn process_openai_compatible(
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("Post-processing request failed: {e}"))?
+        .map_err(|e| format!("Post-Processing request failed: {e}"))?
         .error_for_status()
-        .map_err(|e| format!("Post-processing API error: {e}"))?
+        .map_err(|e| format!("Post-Processing API error: {e}"))?
         .json()
         .await
-        .map_err(|e| format!("Post-processing response parse failed: {e}"))?;
+        .map_err(|e| format!("Post-Processing response parse failed: {e}"))?;
 
-    extract_openai_text(&value).ok_or_else(|| "Post-processing response had no text".to_string())
+    extract_openai_text(&value).ok_or_else(|| "Post-Processing response had no text".to_string())
 }
 
 async fn process_anthropic(
@@ -91,19 +94,19 @@ async fn process_anthropic(
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("Post-processing request failed: {e}"))?
+        .map_err(|e| format!("Post-Processing request failed: {e}"))?
         .error_for_status()
-        .map_err(|e| format!("Post-processing API error: {e}"))?
+        .map_err(|e| format!("Post-Processing API error: {e}"))?
         .json()
         .await
-        .map_err(|e| format!("Post-processing response parse failed: {e}"))?;
+        .map_err(|e| format!("Post-Processing response parse failed: {e}"))?;
 
     value["content"]
         .as_array()
         .and_then(|items| items.iter().find_map(|item| item["text"].as_str()))
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
-        .ok_or_else(|| "Post-processing response had no text".to_string())
+        .ok_or_else(|| "Post-Processing response had no text".to_string())
 }
 
 async fn process_gemini(
@@ -128,19 +131,19 @@ async fn process_gemini(
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("Post-processing request failed: {e}"))?
+        .map_err(|e| format!("Post-Processing request failed: {e}"))?
         .error_for_status()
-        .map_err(|e| format!("Post-processing API error: {e}"))?
+        .map_err(|e| format!("Post-Processing API error: {e}"))?
         .json()
         .await
-        .map_err(|e| format!("Post-processing response parse failed: {e}"))?;
+        .map_err(|e| format!("Post-Processing response parse failed: {e}"))?;
 
     value["candidates"][0]["content"]["parts"]
         .as_array()
         .and_then(|parts| parts.iter().find_map(|part| part["text"].as_str()))
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
-        .ok_or_else(|| "Post-processing response had no text".to_string())
+        .ok_or_else(|| "Post-Processing response had no text".to_string())
 }
 
 fn extract_openai_text(value: &Value) -> Option<String> {

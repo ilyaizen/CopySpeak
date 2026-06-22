@@ -9,8 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **AI post-processing providers** — Added Groq-primary post-processing config and settings for OpenAI, Anthropic, Gemini, OpenRouter, Ollama, and custom OpenAI-compatible endpoints before TTS generation.
-- **Post-processing prompt presets** — Added concise developer, cleanup, professional, summarize, TTS-optimized, and revised caveman prompts.
+- **LLM Post-Processing providers** — Added Groq-primary Post-Processing config and settings for OpenAI, Anthropic, Gemini, OpenRouter, Ollama, xAI, AWS Bedrock, Cerebras, and custom OpenAI-compatible endpoints before TTS generation.
+- **Post-Processing prompt presets** — Added editable prompt labels, model refresh, concise developer, cleanup, professional, summarize, TTS-optimized, and revised caveman prompts.
 
 ### Fixed
 
@@ -102,7 +102,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added Vercel environment detection via `import.meta.env.VITE_IS_VERCEL`
   - Route layout now renders the marketing landing page on Vercel and the Tauri app shell locally/in desktop builds
   - Removed the redundant `src-web` SvelteKit project
-
 - **Default TTS engine** — New configs now default to Cartesia Sonic 3.5 with the Katie voice
 - **Default pagination fragment size** — New configs now use `fragment_size: 500`
 - **Engine picker order** — Cartesia now appears first in engine settings and footer selector
@@ -148,17 +147,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed staggered loading (WebView2 crash workaround no longer needed)
   - HUD settings moved to General section as dropdown
   - Pagination/Sanitization moved to Advanced tab
-
 - **Window size increased** — 675x540 → 775x640 for better content visibility
-
 - **Hotkey capture redesign** — Cleaner UI with Kbd components and arrow key symbols (↑↓←→)
-
 - **Quick-settings redesign** — Larger controls with clearer labels (Volume, Speed, Pitch)
-
 - **App shell refactor** — Grid-based layout for better content distribution
-
 - **Removed `show_notifications`** config field — Unused setting cleaned up
-
 - **Default hotkey shortcut** — Changed from `Super+Shift+A` to `Win+Shift+A` for Windows clarity
 - **Hotkey error messages** — Updated to use "Win" instead of "Win/Super" for consistency
 - **Hotkey logging** — Added structured logging with `[Hotkey]` prefix for registration attempts and config changes

@@ -340,9 +340,9 @@
                 <SanitizationSettings bind:localConfig />
               </div>
 
-              <!-- Post-processing -->
+              <!-- Post-Processing -->
               <div class="p-4">
-                <h3 class="text-muted-foreground mb-3 text-sm font-medium">Post-processing</h3>
+                <h3 class="text-muted-foreground mb-3 text-sm font-medium">Post-Processing</h3>
                 <PostProcessingSettings bind:localConfig />
               </div>
             </div>

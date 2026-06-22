@@ -611,6 +611,7 @@ fn main() {
         )
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
+            commands::list_post_processing_models,
             commands::set_config,
             commands::reset_config,
             commands::config_exists,
