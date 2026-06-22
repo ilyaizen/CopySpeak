@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "tauri": "tauri",
+    "tauri": "node ./scripts/tauri-dev.mjs",
     "bump": "node ./scripts/version-bumper.mjs patch",
     "bump:minor": "node ./scripts/version-bumper.mjs minor",
     "bump:major": "node ./scripts/version-bumper.mjs major",

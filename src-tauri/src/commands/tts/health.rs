@@ -73,6 +73,11 @@ pub fn test_tts_engine(config: State<'_, Mutex<AppConfig>>) -> Result<TtsHealthR
         crate::config::TtsEngine::Cartesia => {
             format!("Cartesia ({})", tts_config.cartesia.model_id)
         }
+        crate::config::TtsEngine::Http => format!("HTTP ({})", tts_config.http.url_template),
+        crate::config::TtsEngine::Google => format!("Google ({})", tts_config.google.model),
+        crate::config::TtsEngine::Microsoft => {
+            format!("Microsoft ({})", tts_config.microsoft.model)
+        }
     };
 
     match backend.health_check() {

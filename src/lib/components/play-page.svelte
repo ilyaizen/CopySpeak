@@ -19,7 +19,10 @@
       max_text_length: 50000
     },
     tts: {
+      schema_version: 1,
       active_backend: "cartesia",
+      active_profile_id: "default",
+      profiles: [],
       preset: "kokoro-tts",
       command: "kokoro-tts",
       args_template: [],
@@ -46,6 +49,29 @@
         voice_name: "Katie",
         output_format: "wav",
         use_manual_voice_id: false
+      },
+      google: {
+        api_key: "",
+        model: "gemini-2.5-flash-preview-tts",
+        voice_name: "Kore",
+        output_format: "wav"
+      },
+      microsoft: {
+        api_key: "",
+        endpoint: "",
+        model: "mai-voice-2",
+        voice_name: "",
+        output_format: "wav"
+      },
+      http: {
+        profile_id: "",
+        url_template: "",
+        method: "POST",
+        headers: [],
+        body_template: undefined,
+        voice: "",
+        response_format: "wav",
+        timeout_secs: 60
       }
     },
     playback: {
@@ -122,6 +148,23 @@
     hotkey: {
       enabled: false,
       shortcut: "Win+Shift+A"
+    },
+    post_processing: {
+      enabled: false,
+      provider: "groq",
+      prompt: "",
+      selected_prompt_label: "",
+      prompt_presets: [],
+      groq: { api_key: "", model: "", endpoint: "" },
+      openai: { api_key: "", model: "", endpoint: "" },
+      anthropic: { api_key: "", model: "", endpoint: "" },
+      gemini: { api_key: "", model: "", endpoint: "" },
+      openrouter: { api_key: "", model: "", endpoint: "" },
+      ollama: { api_key: "", model: "", endpoint: "" },
+      xai: { api_key: "", model: "", endpoint: "" },
+      aws: { api_key: "", model: "", endpoint: "" },
+      cerebras: { api_key: "", model: "", endpoint: "" },
+      custom: { api_key: "", model: "", endpoint: "" }
     }
   };
 

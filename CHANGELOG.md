@@ -9,11 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Voice profiles** — Added a profile layer (`VoiceProfile`/`ProfileEffects`) bundling `engine + voice + speed + pitch + effect` as one swappable unit, with a compact profile manager in Engine settings (select, rename, duplicate, delete, import/export JSON). Synthesis resolves an `EffectiveTtsRequest` from the active profile; the migrated `default` profile is a passthrough for the existing engine tabs.
+- **Versioned TTS config + migration** — Added `schema_version` to `TtsConfig` and `migrate_tts_config`, which folds a legacy single-engine config into one `default` profile on load.
+- **Google Gemini TTS backend** — Added `tts/google.rs` (`GoogleTtsBackend`) calling the Gemini `generateContent` AUDIO API and wrapping returned base64 PCM into WAV.
+- **Microsoft MAI-Voice-2 backend** — Added `tts/microsoft.rs` (`MicrosoftTtsBackend`) with a user-configurable endpoint, auto-detecting raw-audio vs base64-JSON responses.
+- **First-class HTTP TTS backend** — Added `tts/http.rs` (`HttpTtsBackend`) and `HttpTtsConfig` with templated URL/body (`{text}`, `{raw_text}`, `{voice}`, `{speed}`) for OpenAI-compatible/local TTS servers.
+- **`{engine_dir}` CLI placeholder** — `CliTtsBackend` now expands `{engine_dir}` to `%LOCALAPPDATA%\CopySpeak\engines` for uv-managed local engines.
+- **uv-based engine installers** — Added `scripts/install-uv.ps1`, `scripts/install-chatterbox.ps1`, `scripts/test-engine.ps1`, and shared `scripts/lib/copyspeak-engine-install.ps1`, plus the stable `scripts/chatterbox/copyspeak-chatterbox.py` wrapper. `uv` is a hard requirement; installers print a profile snippet instead of editing config.
+- **Control server profiles** — `POST /speak` now accepts `"profile"` to select a voice profile per request (alongside the existing `engine`/`effect` shorthands).
 - **LLM Post-Processing providers** — Added Groq-primary Post-Processing config and settings for OpenAI, Anthropic, Gemini, OpenRouter, Ollama, xAI, AWS Bedrock, Cerebras, and custom OpenAI-compatible endpoints before TTS generation.
 - **Post-Processing prompt presets** — Added editable prompt labels, model refresh, concise developer, cleanup, professional, summarize, TTS-optimized, and revised caveman prompts.
 
+### Changed
+
+- **`TtsEngine`** — Added `Http`, `Google`, and `Microsoft` variants. The HTTP engine is first-class again; the previous forced `http`→`local` downgrade on config load was removed.
+
 ### Fixed
 
+- **Tauri dev startup** — Added a preflight check in `scripts/tauri-dev.mjs` so `bun run tauri dev` now fails with a clear Rust/Cargo install message instead of Tauri's raw `cargo metadata` error when Cargo is missing.
 - **Vercel landing page** — Updated the displayed version, screenshot asset, and removed the double-copy hero tagline.
 
 ## [0.1.4] - 2026-05-20

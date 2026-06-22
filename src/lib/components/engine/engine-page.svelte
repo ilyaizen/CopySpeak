@@ -10,6 +10,7 @@
   import OpenAiEngine from "./openai-engine.svelte";
   import ElevenLabsEngine from "./elevenlabs-engine.svelte";
   import CartesiaEngine from "./cartesia-engine.svelte";
+  import ProfileManager from "./profile-manager.svelte";
   import type { AppConfig } from "$lib/types";
   import { openExternal } from "$lib/utils/external-link";
   import {
@@ -266,11 +267,6 @@
     isLoading = true;
     try {
       const config = await invoke<AppConfig>("get_config");
-      // Migrate stale HTTP backend to local (HTTP engine removed)
-      if (config.tts.active_backend === ("http" as any)) {
-        config.tts.active_backend = "local";
-        toast.info("HTTP engine has been removed. Switched to Local engine.");
-      }
       // Migrate qwen3-tts and custom presets to piper
       if (config.tts.preset === "qwen3-tts" || config.tts.preset === "custom") {
         config.tts.preset = "piper";
@@ -488,6 +484,9 @@
 
       <!-- Main Content -->
       <main class="flex-1 space-y-6 pb-20">
+        <!-- Voice Profiles -->
+        <ProfileManager bind:localConfig />
+
         <!-- Engine Configuration -->
         {#if activeTab === "cartesia"}
           <div class="border-border overflow-hidden rounded-lg border">

@@ -18,6 +18,7 @@ struct SpeakRequest {
     text: String,
     engine: Option<String>,
     effect: Option<String>,
+    profile: Option<String>,
 }
 
 enum ControlRequest {
@@ -158,9 +159,17 @@ fn find_header_end(buffer: &[u8]) -> Option<usize> {
 }
 
 async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
-    if request.engine.is_some() || request.effect.is_some() {
+    if request.engine.is_some() || request.effect.is_some() || request.profile.is_some() {
         let config_state: State<Mutex<AppConfig>> = app.state();
         let mut cfg = config_state.lock().map_err(|e| e.to_string())?;
+        // A full profile override takes precedence; engine/effect remain as
+        // backward-compatible shorthand for single-knob overrides.
+        if let Some(profile_id) = request.profile.as_deref() {
+            if !cfg.tts.profiles.iter().any(|p| p.id == profile_id) {
+                return Err(format!("unknown profile: {}", profile_id));
+            }
+            cfg.tts.active_profile_id = profile_id.to_string();
+        }
         if let Some(engine) = request.engine.as_deref() {
             cfg.tts.active_backend = parse_engine(engine)?;
         }
@@ -193,6 +202,9 @@ fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
         "openai" => Ok(TtsEngine::OpenAI),
         "elevenlabs" | "eleven_labs" => Ok(TtsEngine::ElevenLabs),
         "local" => Ok(TtsEngine::Local),
+        "http" => Ok(TtsEngine::Http),
+        "google" | "gemini" => Ok(TtsEngine::Google),
+        "microsoft" | "mai" => Ok(TtsEngine::Microsoft),
         _ => Err(format!("unsupported engine: {}", engine)),
     }
 }

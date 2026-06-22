@@ -43,6 +43,9 @@ fn get_provider_voice(cfg: &AppConfig) -> (Option<String>, Option<String>) {
         TtsEngine::OpenAI => "OpenAI",
         TtsEngine::ElevenLabs => "ElevenLabs",
         TtsEngine::Cartesia => "Cartesia",
+        TtsEngine::Http => "HTTP",
+        TtsEngine::Google => "Google",
+        TtsEngine::Microsoft => "Microsoft",
     }
     .to_string();
     let voice = match cfg.tts.active_backend {
@@ -97,6 +100,9 @@ fn get_provider_voice(cfg: &AppConfig) -> (Option<String>, Option<String>) {
             .voice_name
             .clone()
             .unwrap_or_else(|| "Katie".to_string()),
+        TtsEngine::Http => cfg.tts.http.voice.clone(),
+        TtsEngine::Google => cfg.tts.google.voice_name.clone(),
+        TtsEngine::Microsoft => cfg.tts.microsoft.voice_name.clone(),
     };
     (Some(provider), Some(voice))
 }

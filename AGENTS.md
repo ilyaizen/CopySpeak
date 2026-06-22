@@ -199,7 +199,7 @@ pub async fn speak_now(
 ## Project Structure
 
 ```
-copyspeak/
+copyspeak-tts/
 ├── src/                     # Svelte 5 frontend
 │   ├── lib/
 │   │   ├── components/      # UI components

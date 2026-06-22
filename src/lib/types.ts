@@ -45,7 +45,14 @@ export interface TriggerConfig {
   max_text_length: number;
 }
 
-export type TtsEngine = "local" | "openai" | "elevenlabs" | "cartesia";
+export type TtsEngine =
+  | "local"
+  | "http"
+  | "openai"
+  | "elevenlabs"
+  | "cartesia"
+  | "google"
+  | "microsoft";
 
 export interface OpenAIConfig {
   api_key: string;
@@ -88,8 +95,53 @@ export interface CartesiaConfig {
   use_manual_voice_id?: boolean;
 }
 
+export interface GoogleTtsConfig {
+  api_key: string;
+  model: string;
+  voice_name: string;
+  output_format: string;
+}
+
+export interface MicrosoftTtsConfig {
+  api_key: string;
+  endpoint: string;
+  model: string;
+  voice_name: string;
+  output_format: string;
+}
+
+export interface HttpTtsConfig {
+  profile_id: string;
+  url_template: string;
+  method: string;
+  headers: [string, string][];
+  body_template?: string;
+  voice: string;
+  response_format: string;
+  timeout_secs: number;
+}
+
+export interface ProfileEffects {
+  enabled: boolean;
+  active_effect: EffectId;
+}
+
+export interface VoiceProfile {
+  id: string;
+  name: string;
+  engine: TtsEngine;
+  voice: string;
+  speed: number;
+  pitch: number;
+  effects: ProfileEffects;
+  engine_options: unknown;
+}
+
 export interface TtsConfig {
+  schema_version: number;
   active_backend: TtsEngine;
+  active_profile_id: string;
+  profiles: VoiceProfile[];
   preset: string;
   command: string;
   args_template: string[];
@@ -97,6 +149,9 @@ export interface TtsConfig {
   openai: OpenAIConfig;
   elevenlabs: ElevenLabsConfig;
   cartesia: CartesiaConfig;
+  google: GoogleTtsConfig;
+  microsoft: MicrosoftTtsConfig;
+  http: HttpTtsConfig;
 }
 
 export type PostProcessingProvider =

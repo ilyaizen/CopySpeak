@@ -15,7 +15,7 @@ use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
-    create_backend, engine_identifier, engine_str, voice_display_name, voice_for_backend,
+    create_backend, engine_identifier, engine_str, resolve_effective, voice_display_name,
     SynthesisGuard,
 };
 use crate::commands::{AudioFragmentEvent, CachedAudio, PaginationEvent};
@@ -202,20 +202,19 @@ pub async fn speak_now(
     // Enter critical section for TTS synthesis
     let _synthesis_guard = SynthesisGuard::new(&app);
 
-    let (active_backend, tts_config, output_config, pagination_config) = {
+    let (tts_config, output_config, pagination_config) = {
         let cfg = config.lock().unwrap();
-        (
-            cfg.tts.active_backend.clone(),
-            cfg.tts.clone(),
-            cfg.output.clone(),
-            cfg.pagination.clone(),
-        )
+        (cfg.tts.clone(), cfg.output.clone(), cfg.pagination.clone())
     };
+
+    // Resolve the active voice profile into an effective request.
+    let eff = resolve_effective(&tts_config);
+    let active_backend = eff.engine.clone();
+    let voice = eff.voice.clone();
 
     log_tts_debug("TTS", &format!("{:?}", active_backend), &text);
 
     let backend: Box<dyn TtsBackend> = create_backend(&active_backend, &tts_config);
-    let voice = voice_for_backend(&active_backend, &tts_config);
     let engine_str_for_cache = engine_str(&active_backend);
 
     // Check for cached audio in history
@@ -557,14 +556,13 @@ pub async fn speak_queued(
         return Err("Nothing to speak".into());
     }
 
-    let (active_backend, tts_config, pagination_config) = {
+    let (tts_config, pagination_config) = {
         let cfg = config.lock().unwrap();
-        (
-            cfg.tts.active_backend.clone(),
-            cfg.tts.clone(),
-            cfg.pagination.clone(),
-        )
+        (cfg.tts.clone(), cfg.pagination.clone())
     };
+
+    let eff = resolve_effective(&tts_config);
+    let active_backend = eff.engine.clone();
 
     log_tts_debug("Queue", &format!("{:?}", active_backend), &text);
 
@@ -578,7 +576,7 @@ pub async fn speak_queued(
         log::debug!("[Queue] Created {} fragments", fragments.len());
     }
 
-    let voice = voice_for_backend(&active_backend, &tts_config);
+    let voice = eff.voice.clone();
 
     // Get telemetry estimates
     let char_counts: Vec<usize> = fragments.iter().map(|f| f.text.len()).collect();
@@ -833,10 +831,12 @@ pub async fn speak_history_entry(
         return Err("Nothing to speak".to_string());
     }
 
-    let (active_backend, tts_config) = {
+    let tts_config = {
         let cfg = config.lock().unwrap();
-        (cfg.tts.active_backend.clone(), cfg.tts.clone())
+        cfg.tts.clone()
     };
+
+    let active_backend = resolve_effective(&tts_config).engine;
 
     let backend: Box<dyn TtsBackend> = create_backend(&active_backend, &tts_config);
     let voice = original_voice;
