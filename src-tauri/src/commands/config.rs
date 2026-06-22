@@ -2,7 +2,9 @@
 // Also includes general app state commands (listening, debug mode, clipboard).
 
 use crate::audio::AudioPlayer;
-use crate::config::{self, AppConfig};
+use crate::config::{self, AppConfig, LlmProviderConfig, PostProcessingProvider};
+use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
@@ -63,6 +65,68 @@ pub fn get_config(config: State<'_, Mutex<AppConfig>>) -> AppConfig {
         log::debug!("[IPC] get_config called");
     }
     config.lock().unwrap().clone()
+}
+
+#[tauri::command]
+pub async fn list_post_processing_models(
+    provider: PostProcessingProvider,
+    config: LlmProviderConfig,
+) -> Result<Vec<String>, String> {
+    let endpoint = models_endpoint(&provider, &config)?;
+    let mut headers = HeaderMap::new();
+    if !config.api_key.trim().is_empty() {
+        headers.insert(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", config.api_key.trim()))
+                .map_err(|e| e.to_string())?,
+        );
+    }
+
+    let value: Value = reqwest::Client::new()
+        .get(endpoint)
+        .headers(headers)
+        .send()
+        .await
+        .map_err(|e| format!("Model refresh failed: {e}"))?
+        .error_for_status()
+        .map_err(|e| format!("Model refresh API error: {e}"))?
+        .json()
+        .await
+        .map_err(|e| format!("Model refresh response parse failed: {e}"))?;
+
+    let mut models = value["data"]
+        .as_array()
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item["id"].as_str().map(str::to_string))
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default();
+
+    models.sort();
+    models.dedup();
+    Ok(models)
+}
+
+fn models_endpoint(
+    provider: &PostProcessingProvider,
+    config: &LlmProviderConfig,
+) -> Result<String, String> {
+    match provider {
+        PostProcessingProvider::Anthropic | PostProcessingProvider::Gemini => Err(
+            "Model refresh is only available for OpenAI-compatible Post-Processing APIs."
+                .to_string(),
+        ),
+        _ => Ok(config
+            .endpoint
+            .trim()
+            .trim_end_matches("/chat/completions")
+            .trim_end_matches("/responses")
+            .trim_end_matches('/')
+            .to_string()
+            + "/models"),
+    }
 }
 
 #[tauri::command]
