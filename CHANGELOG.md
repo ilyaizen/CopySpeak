@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Voice profiles** — Added a profile layer (`VoiceProfile`/`ProfileEffects`) bundling `engine + voice + speed + pitch + effect` as one swappable unit, with a compact profile manager in Engine settings (select, rename, duplicate, delete, import/export JSON). Synthesis resolves an `EffectiveTtsRequest` from the active profile; the migrated `default` profile is a passthrough for the existing engine tabs.
+- **Voice profiles** — Added a profile layer (`VoiceProfile`/`ProfileEffects`) bundling `engine + voice + speed + pitch + effect` as one swappable unit, surfaced as a dedicated **Profiles** tab/route with a compact manager (select, rename, duplicate, delete, import/export JSON). Synthesis resolves an `EffectiveTtsRequest` from the active profile; the migrated `default` profile is a passthrough for the existing engine tabs.
 - **Versioned TTS config + migration** — Added `schema_version` to `TtsConfig` and `migrate_tts_config`, which folds a legacy single-engine config into one `default` profile on load.
 - **Google Gemini TTS backend** — Added `tts/google.rs` (`GoogleTtsBackend`) calling the Gemini `generateContent` AUDIO API and wrapping returned base64 PCM into WAV.
 - **Microsoft MAI-Voice-2 backend** — Added `tts/microsoft.rs` (`MicrosoftTtsBackend`) with a user-configurable endpoint, auto-detecting raw-audio vs base64-JSON responses.
@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Voice profiles UI** — Moved profiles out of the Engine page into their own `/profiles` route/nav tab, and rebuilt the editor with the shared settings primitives (`SettingRow` + `Select`/`Slider`/`Input`) instead of raw `<select>`/`<input type="range">` controls.
 - **`TtsEngine`** — Added `Http`, `Google`, and `Microsoft` variants. The HTTP engine is first-class again; the previous forced `http`→`local` downgrade on config load was removed.
 
 ### Fixed

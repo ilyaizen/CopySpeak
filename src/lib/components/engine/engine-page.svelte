@@ -10,7 +10,6 @@
   import OpenAiEngine from "./openai-engine.svelte";
   import ElevenLabsEngine from "./elevenlabs-engine.svelte";
   import CartesiaEngine from "./cartesia-engine.svelte";
-  import ProfileManager from "./profile-manager.svelte";
   import type { AppConfig } from "$lib/types";
   import { openExternal } from "$lib/utils/external-link";
   import {
@@ -484,9 +483,6 @@
 
       <!-- Main Content -->
       <main class="flex-1 space-y-6 pb-20">
-        <!-- Voice Profiles -->
-        <ProfileManager bind:localConfig />
-
         <!-- Engine Configuration -->
         {#if activeTab === "cartesia"}
           <div class="border-border overflow-hidden rounded-lg border">

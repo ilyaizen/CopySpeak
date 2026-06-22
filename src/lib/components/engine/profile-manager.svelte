@@ -1,7 +1,9 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
+  import { Select } from "$lib/components/ui/select/index.js";
+  import { Slider } from "$lib/components/ui/slider/index.js";
+  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
   import { Copy, Trash2, Download, Upload } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
   import type { AppConfig, TtsEngine, EffectId, VoiceProfile } from "$lib/types";
@@ -19,12 +21,16 @@
   ];
   const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy"];
 
+  const engineOptions = ENGINES.map((e) => ({ value: e, label: e }));
+  const effectOptions = EFFECTS.map((e) => ({ value: e, label: e }));
+
   let fileInput: HTMLInputElement | null = $state(null);
 
   const profiles = $derived(localConfig.tts.profiles);
   const activeId = $derived(localConfig.tts.active_profile_id);
   const activeIndex = $derived(profiles.findIndex((p: VoiceProfile) => p.id === activeId));
   const active = $derived(activeIndex >= 0 ? profiles[activeIndex] : null);
+  const profileOptions = $derived(profiles.map((p: VoiceProfile) => ({ value: p.id, label: p.name })));
 
   function selectProfile(id: string) {
     localConfig.tts.active_profile_id = id;
@@ -122,9 +128,15 @@
   }
 </script>
 
-<div class="border-border bg-muted/30 rounded-lg border p-4">
-  <div class="mb-3 flex items-center justify-between">
-    <h3 class="text-sm font-semibold">Voice Profiles</h3>
+<div class="border-border overflow-hidden rounded-lg border">
+  <!-- Header: title + actions -->
+  <div class="bg-muted/50 border-border flex items-center justify-between border-b p-4">
+    <div>
+      <h2 class="text-lg font-semibold">Voice Profiles</h2>
+      <p class="text-muted-foreground mt-1 text-sm">
+        Named presets bundling engine, voice, speed, pitch and effect.
+      </p>
+    </div>
     <div class="flex gap-1.5">
       <Button variant="outline" size="sm" onclick={duplicateActive} title="Duplicate">
         <Copy size={14} />
@@ -155,141 +167,124 @@
     onchange={onFileSelected}
   />
 
-  <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-    <div class="space-y-1.5">
-      <Label class="text-xs">Active Profile</Label>
-      <select
-        class="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+  <div class="space-y-1 p-4">
+    <SettingRow label="Active Profile">
+      <Select
+        options={profileOptions}
         value={activeId}
         onchange={(e) => selectProfile((e.target as HTMLSelectElement).value)}
-      >
-        {#each profiles as p (p.id)}
-          <option value={p.id}>{p.name}</option>
-        {/each}
-      </select>
-    </div>
+        class="w-56"
+      />
+    </SettingRow>
 
     {#if active}
-      <div class="space-y-1.5">
-        <Label class="text-xs">Name</Label>
-        <Input bind:value={localConfig.tts.profiles[activeIndex].name} />
-      </div>
+      <SettingRow label="Name">
+        <Input bind:value={localConfig.tts.profiles[activeIndex].name} class="w-56" />
+      </SettingRow>
 
-      <div class="space-y-1.5">
-        <Label class="text-xs">Engine</Label>
-        <select
-          class="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+      <SettingRow label="Engine">
+        <Select
+          options={engineOptions}
           value={active.engine}
           onchange={(e) => onEngineChange((e.target as HTMLSelectElement).value as TtsEngine)}
-        >
-          {#each ENGINES as eng}
-            <option value={eng}>{eng}</option>
-          {/each}
-        </select>
-      </div>
+          class="w-56"
+        />
+      </SettingRow>
 
-      <div class="space-y-1.5">
-        <Label class="text-xs">Voice</Label>
+      <SettingRow label="Voice" tooltip="Voice id / name. Blank uses the provider default.">
         <Input
           bind:value={localConfig.tts.profiles[activeIndex].voice}
-          placeholder="voice id / name (blank = provider default)"
+          placeholder="provider default"
+          class="w-56"
         />
-      </div>
+      </SettingRow>
 
-      <div class="space-y-1.5">
-        <Label class="text-xs">Speed: {active.speed.toFixed(2)}x</Label>
-        <input
-          type="range"
-          min="0.5"
-          max="2"
-          step="0.05"
-          class="w-full"
-          bind:value={localConfig.tts.profiles[activeIndex].speed}
-        />
-      </div>
+      <SettingRow label="Speed">
+        <div class="flex w-56 items-center gap-2">
+          <span class="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
+            {active.speed.toFixed(2)}x
+          </span>
+          <Slider
+            value={active.speed}
+            min={0.5}
+            max={2}
+            step={0.05}
+            onchange={(v) => (localConfig.tts.profiles[activeIndex].speed = v)}
+          />
+        </div>
+      </SettingRow>
 
-      <div class="space-y-1.5">
-        <Label class="text-xs">Pitch: {active.pitch.toFixed(2)}x</Label>
-        <input
-          type="range"
-          min="0.5"
-          max="2"
-          step="0.05"
-          class="w-full"
-          bind:value={localConfig.tts.profiles[activeIndex].pitch}
-        />
-      </div>
+      <SettingRow label="Pitch">
+        <div class="flex w-56 items-center gap-2">
+          <span class="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
+            {active.pitch.toFixed(2)}x
+          </span>
+          <Slider
+            value={active.pitch}
+            min={0.5}
+            max={2}
+            step={0.05}
+            onchange={(v) => (localConfig.tts.profiles[activeIndex].pitch = v)}
+          />
+        </div>
+      </SettingRow>
 
-      <div class="space-y-1.5">
-        <Label class="text-xs">Effect</Label>
-        <select
-          class="border-input bg-background h-9 w-full rounded-md border px-2 text-sm"
+      <SettingRow label="Effect">
+        <Select
+          options={effectOptions}
           value={active.effects.active_effect}
           onchange={(e) => {
             const v = (e.target as HTMLSelectElement).value as EffectId;
             localConfig.tts.profiles[activeIndex].effects.active_effect = v;
             localConfig.tts.profiles[activeIndex].effects.enabled = v !== "none";
           }}
-        >
-          {#each EFFECTS as fx}
-            <option value={fx}>{fx}</option>
-          {/each}
-        </select>
-      </div>
+          class="w-56"
+        />
+      </SettingRow>
+
+      <!-- Provider-specific fields -->
+      {#if active.engine === "google"}
+        <SettingRow label="Google API Key">
+          <Input type="password" bind:value={localConfig.tts.google.api_key} class="w-56" />
+        </SettingRow>
+        <SettingRow label="Model">
+          <Input bind:value={localConfig.tts.google.model} class="w-56" />
+        </SettingRow>
+      {:else if active.engine === "microsoft"}
+        <SettingRow label="Microsoft API Key">
+          <Input type="password" bind:value={localConfig.tts.microsoft.api_key} class="w-56" />
+        </SettingRow>
+        <SettingRow label="Endpoint">
+          <Input bind:value={localConfig.tts.microsoft.endpoint} placeholder="https://..." class="w-56" />
+        </SettingRow>
+        <SettingRow label="Model / Deployment">
+          <Input bind:value={localConfig.tts.microsoft.model} class="w-56" />
+        </SettingRow>
+      {:else if active.engine === "http"}
+        <SettingRow label="URL Template">
+          <Input
+            bind:value={localConfig.tts.http.url_template}
+            placeholder="http://127.0.0.1/v1/audio/speech"
+            class="w-56"
+          />
+        </SettingRow>
+        <SettingRow label="Body Template (JSON)">
+          <Input bind:value={localConfig.tts.http.body_template} class="w-56" />
+        </SettingRow>
+        <SettingRow label="Response Format">
+          <Input bind:value={localConfig.tts.http.response_format} class="w-56" />
+        </SettingRow>
+        <SettingRow label="Timeout (s)">
+          <Input type="number" bind:value={localConfig.tts.http.timeout_secs} class="w-56" />
+        </SettingRow>
+      {/if}
+    {/if}
+
+    {#if active && active.id === "default"}
+      <p class="text-muted-foreground border-border mt-2 border-t pt-3 text-xs">
+        The Default profile mirrors the engine tabs. Duplicate it to create a named, fully
+        independent profile (engine + voice + speed + pitch + effect).
+      </p>
     {/if}
   </div>
-
-  {#if active && active.engine === "google"}
-    <div class="border-border mt-3 grid grid-cols-1 gap-3 border-t pt-3 sm:grid-cols-2">
-      <div class="space-y-1.5">
-        <Label class="text-xs">Google API Key</Label>
-        <Input type="password" bind:value={localConfig.tts.google.api_key} />
-      </div>
-      <div class="space-y-1.5">
-        <Label class="text-xs">Model</Label>
-        <Input bind:value={localConfig.tts.google.model} />
-      </div>
-    </div>
-  {:else if active && active.engine === "microsoft"}
-    <div class="border-border mt-3 grid grid-cols-1 gap-3 border-t pt-3 sm:grid-cols-2">
-      <div class="space-y-1.5">
-        <Label class="text-xs">Microsoft API Key</Label>
-        <Input type="password" bind:value={localConfig.tts.microsoft.api_key} />
-      </div>
-      <div class="space-y-1.5">
-        <Label class="text-xs">Endpoint</Label>
-        <Input bind:value={localConfig.tts.microsoft.endpoint} placeholder="https://..." />
-      </div>
-      <div class="space-y-1.5">
-        <Label class="text-xs">Model / Deployment</Label>
-        <Input bind:value={localConfig.tts.microsoft.model} />
-      </div>
-    </div>
-  {:else if active && active.engine === "http"}
-    <div class="border-border mt-3 grid grid-cols-1 gap-3 border-t pt-3 sm:grid-cols-2">
-      <div class="space-y-1.5 sm:col-span-2">
-        <Label class="text-xs">URL Template</Label>
-        <Input bind:value={localConfig.tts.http.url_template} placeholder="http://127.0.0.1:.../v1/audio/speech" />
-      </div>
-      <div class="space-y-1.5 sm:col-span-2">
-        <Label class="text-xs">Body Template (JSON)</Label>
-        <Input bind:value={localConfig.tts.http.body_template} />
-      </div>
-      <div class="space-y-1.5">
-        <Label class="text-xs">Response Format</Label>
-        <Input bind:value={localConfig.tts.http.response_format} />
-      </div>
-      <div class="space-y-1.5">
-        <Label class="text-xs">Timeout (s)</Label>
-        <Input type="number" bind:value={localConfig.tts.http.timeout_secs} />
-      </div>
-    </div>
-  {/if}
-
-  {#if active && active.id === "default"}
-    <p class="text-muted-foreground mt-3 text-xs">
-      The Default profile mirrors the engine tabs below. Duplicate it to create a named, fully
-      independent profile (engine + voice + speed + pitch + effect).
-    </p>
-  {/if}
 </div>
