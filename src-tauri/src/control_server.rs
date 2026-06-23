@@ -221,9 +221,10 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
                 return Err(format!("unknown profile: {}", profile_id));
             }
             cfg.tts.active_profile_id = profile_id.to_string();
+            config::sync_active_backend_mirror(&mut cfg.tts);
         }
         if let Some(engine) = request.engine.as_deref() {
-            cfg.tts.active_backend = parse_engine(engine)?;
+            let _ = parse_engine(engine)?;
         }
         if let Some(effect) = request.effect.as_deref() {
             let effect_id = parse_effect(effect)?;
@@ -261,6 +262,7 @@ fn set_active_profile(app: &AppHandle, profile_id: &str) -> Result<(), String> {
         return Err(format!("unknown profile: {}", profile_id));
     }
     cfg.tts.active_profile_id = profile_id.to_string();
+    config::sync_active_backend_mirror(&mut cfg.tts);
     config::save(&cfg)
 }
 

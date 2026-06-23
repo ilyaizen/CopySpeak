@@ -1,6 +1,6 @@
 # Profile Engine Settings
 
-CopySpeak profiles are the user-facing synthesis abstraction. Users should pick `Pi voice`, `Narrator`, or `Rachel`, not rebuild a long engine/voice/model/effect command every time.
+CopySpeak profiles are the user-facing synthesis abstraction. Users should pick `Cartesia - Katie`, `Narrator`, or `Rachel`, not rebuild a long engine/voice/model/effect command every time.
 
 ## Boundary
 
@@ -18,10 +18,11 @@ Profiles may contain non-secret synthesis intent:
 
 ### Global-only
 
-Global engine config owns credentials and machine/account setup:
+Global engine config owns credentials, smoke tests, docs links, and machine/account setup:
 
 - API keys
 - secret auth headers
+- model/output-format fallback defaults for profiles that omit them
 - locally installed engine paths when they are machine-specific
 - cloud account defaults that should not be exported
 
@@ -48,6 +49,12 @@ Exported profiles must be safe to share. If a field can leak a secret, it does n
 - [ ] Verify Microsoft MAI/Azure speech endpoint variants.
 
 Static catalog entries are fallbacks. Provider APIs win when available.
+
+## UX
+
+- The footer is a profile switcher. Switching profiles updates `active_profile_id`; `active_backend` is only a compatibility mirror.
+- The Engine page is for API keys, model/output fallback defaults, engine smoke tests, docs, and future installer links. Voice selection belongs to Profiles.
+- New and migrated default profiles keep `id: "default"` but display as `Engine - Voice` (for example, `Cartesia - Katie`).
 
 ## HTTP and CLI semantics
 

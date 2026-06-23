@@ -16,7 +16,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
     create_backend, create_backend_from_effective, engine_identifier, engine_str,
-    resolve_effective, voice_display_name, SynthesisGuard,
+    active_engine, resolve_effective, voice_display_name, SynthesisGuard,
 };
 use crate::commands::{AudioFragmentEvent, CachedAudio, PaginationEvent};
 
@@ -907,7 +907,7 @@ pub async fn speak_history_entry(
         cfg.tts.clone()
     };
 
-    let active_backend = resolve_effective(&tts_config).engine;
+    let active_backend = active_engine(&tts_config);
 
     let backend: Box<dyn TtsBackend> = create_backend(&active_backend, &tts_config);
     let voice = original_voice;

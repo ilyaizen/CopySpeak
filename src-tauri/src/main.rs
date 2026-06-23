@@ -638,6 +638,8 @@ fn main() {
             commands::get_history,
             commands::clear_history,
             commands::test_tts_engine,
+            commands::test_tts_engine_config,
+            commands::set_active_profile,
             commands::check_command_exists,
             commands::check_elevenlabs_credentials,
             commands::check_cartesia_credentials,

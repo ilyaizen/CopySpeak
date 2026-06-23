@@ -12,6 +12,7 @@
 mod credentials;
 mod health;
 pub(crate) mod helpers;
+mod profiles;
 mod selection;
 mod synthesis;
 mod voices;
@@ -21,6 +22,7 @@ mod voices;
 // public function.
 pub use credentials::*;
 pub use health::*;
+pub use profiles::*;
 pub use selection::*;
 pub use synthesis::*;
 pub use voices::*;

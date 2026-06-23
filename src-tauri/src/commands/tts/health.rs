@@ -1,11 +1,11 @@
 // TTS engine health check commands.
 
-use crate::config::AppConfig;
+use crate::config::{AppConfig, TtsEngine};
 use crate::tts::TtsError;
 use std::sync::Mutex;
 use tauri::State;
 
-use super::helpers::create_backend;
+use super::helpers::{create_backend, create_backend_from_effective, resolve_effective};
 
 /// Result of a TTS engine health check.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -51,20 +51,35 @@ pub fn check_command_exists(command: String) -> Result<CommandExistsResult, Stri
     }
 }
 
+fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
+    match engine {
+        "local" => Ok(TtsEngine::Local),
+        "http" => Ok(TtsEngine::Http),
+        "openai" => Ok(TtsEngine::OpenAI),
+        "elevenlabs" => Ok(TtsEngine::ElevenLabs),
+        "cartesia" => Ok(TtsEngine::Cartesia),
+        "google" => Ok(TtsEngine::Google),
+        "microsoft" => Ok(TtsEngine::Microsoft),
+        _ => Err(format!("unknown engine: {}", engine)),
+    }
+}
+
 #[tauri::command]
 pub fn test_tts_engine(config: State<'_, Mutex<AppConfig>>) -> Result<TtsHealthResult, String> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] test_tts_engine called");
     }
 
-    let (active_backend, tts_config) = {
+    let (effective, tts_config) = {
         let cfg = config.lock().unwrap();
-        (cfg.tts.active_backend.clone(), cfg.tts.clone())
+        let tts = cfg.tts.clone();
+        (resolve_effective(&tts), tts)
     };
 
-    let backend: Box<dyn crate::tts::TtsBackend> = create_backend(&active_backend, &tts_config);
+    let backend: Box<dyn crate::tts::TtsBackend> =
+        create_backend_from_effective(&effective, &tts_config);
 
-    let backend_name = match active_backend {
+    let backend_name = match effective.engine {
         crate::config::TtsEngine::Local => tts_config.command.clone(),
         crate::config::TtsEngine::OpenAI => format!("OpenAI ({})", tts_config.openai.model),
         crate::config::TtsEngine::ElevenLabs => {
@@ -80,6 +95,37 @@ pub fn test_tts_engine(config: State<'_, Mutex<AppConfig>>) -> Result<TtsHealthR
         }
     };
 
+    health_result(backend, backend_name)
+}
+
+#[tauri::command]
+pub fn test_tts_engine_config(
+    config: State<'_, Mutex<AppConfig>>,
+    engine: String,
+    preset: Option<String>,
+) -> Result<TtsHealthResult, String> {
+    let engine = parse_engine(&engine)?;
+    let mut tts_config = config.lock().map_err(|e| e.to_string())?.tts.clone();
+    if let Some(preset) = preset {
+        tts_config.preset = preset;
+    }
+    let backend = create_backend(&engine, &tts_config);
+    let backend_name = match engine {
+        TtsEngine::Local => tts_config.command.clone(),
+        TtsEngine::OpenAI => format!("OpenAI ({})", tts_config.openai.model),
+        TtsEngine::ElevenLabs => format!("ElevenLabs ({})", tts_config.elevenlabs.model_id),
+        TtsEngine::Cartesia => format!("Cartesia ({})", tts_config.cartesia.model_id),
+        TtsEngine::Http => format!("HTTP ({})", tts_config.http.url_template),
+        TtsEngine::Google => format!("Google ({})", tts_config.google.model),
+        TtsEngine::Microsoft => format!("Microsoft ({})", tts_config.microsoft.model),
+    };
+    health_result(backend, backend_name)
+}
+
+fn health_result(
+    backend: Box<dyn crate::tts::TtsBackend>,
+    backend_name: String,
+) -> Result<TtsHealthResult, String> {
     match backend.health_check() {
         Ok(()) => {
             log::info!("TTS engine health check passed: {}", backend_name);

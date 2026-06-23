@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Read/non-mutating control endpoints** — Added `GET /profiles`, `GET /profiles/{id}`, `POST /profiles/active`, `GET /engines`, `GET /engines/{engine}/voices`. `POST /speak` with a profile is request-local by default and only persists the active profile when `"persist_selection": true`. No response exposes API keys.
 - **First-party CLI** — Added `scripts/copyspeak.mjs`, a thin Node wrapper over the localhost control server (`health`, `speak`, `profiles list|use|show`, `engines list`, `voices list --engine`).
 - **Profile engine docs** — Added `docs/profile-engine-settings.md` documenting the profile-vs-global boundary, engine matrix, and HTTP/CLI semantics.
+- **`set_active_profile` IPC** — Added a lightweight profile switch command that validates the profile id, updates the active-profile backend mirror, saves config, and emits `config-changed`.
 - **LLM Post-Processing providers** — Added Groq-primary Post-Processing config and settings for OpenAI, Anthropic, Gemini, OpenRouter, Ollama, xAI, AWS Bedrock, Cerebras, and custom OpenAI-compatible endpoints before TTS generation.
 - **Post-Processing prompt presets** — Added editable prompt labels, model refresh, concise developer, cleanup, professional, summarize, TTS-optimized, and revised caveman prompts.
 
@@ -30,9 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Voice profiles UI** — Moved profiles out of the Engine page into their own `/profiles` route/nav tab, and rebuilt the editor with the shared settings primitives (`SettingRow` + `Select`/`Slider`/`Input`) instead of raw `<select>`/`<input type="range">` controls.
 - **`TtsEngine`** — Added `Http`, `Google`, and `Microsoft` variants. The HTTP engine is first-class again; the previous forced `http`→`local` downgrade on config load was removed.
 - **Profile-first synthesis** — `speak_now` and `speak_queued` (the clipboard double-copy path) both build the backend from the resolved active profile, so profile `engine_options` are honored for short and paginated/long-text playback alike. The OpenAI backend now respects the requested `voice` instead of always using the global config voice.
+- **Profiles drive synthesis end-to-end** — Footer switching now changes profiles instead of engines, `active_backend` is maintained as a derived compatibility mirror, and default profiles are named `Engine - Voice`.
+- **Engine page repurposed** — Engine tabs no longer set the active synthesis engine; they are configuration panels for keys, fallback model/output settings, smoke tests, docs, and future installer guidance.
 
 ### Fixed
 
+- **Profile-aware backend readers** — `test_tts_engine`, HUD provider/voice display, config validation, and control-server persisted profile selection now resolve from the active profile instead of loose `active_backend` state.
 - **Tauri dev startup** — Added a preflight check in `scripts/tauri-dev.mjs` so `bun run tauri dev` now fails with a clear Rust/Cargo install message instead of Tauri's raw `cargo metadata` error when Cargo is missing.
 - **Vercel landing page** — Updated the displayed version, screenshot asset, and removed the double-copy hero tagline.
 
