@@ -15,8 +15,8 @@ use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
-    create_backend, engine_identifier, engine_str, resolve_effective, voice_display_name,
-    SynthesisGuard,
+    create_backend, create_backend_from_effective, engine_identifier, engine_str,
+    resolve_effective, voice_display_name, SynthesisGuard,
 };
 use crate::commands::{AudioFragmentEvent, CachedAudio, PaginationEvent};
 
@@ -61,8 +61,9 @@ async fn synthesize_async(
     backend: Arc<Box<dyn TtsBackend>>,
     text: String,
     voice: String,
+    speed: f32,
 ) -> Result<Vec<u8>, String> {
-    tokio::task::spawn_blocking(move || backend.synthesize(&text, &voice, 1.0))
+    tokio::task::spawn_blocking(move || backend.synthesize(&text, &voice, speed))
         .await
         .map_err(|e| format!("Task join error: {e}"))?
         .map_err(|e| e.to_string())
@@ -185,13 +186,43 @@ pub async fn speak_now(
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     text: Option<String>,
 ) -> Result<(), String> {
+    speak_now_internal(app, config, _player, history, telemetry_state, text, None).await
+}
+
+pub(crate) async fn speak_now_with_profile(
+    app: AppHandle,
+    config: State<'_, Mutex<AppConfig>>,
+    player: State<'_, Mutex<AudioPlayer>>,
+    history: State<'_, Mutex<HistoryLog>>,
+    telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
+    text: Option<String>,
+    profile_id: Option<String>,
+) -> Result<(), String> {
+    speak_now_internal(
+        app,
+        config,
+        player,
+        history,
+        telemetry_state,
+        text,
+        profile_id,
+    )
+    .await
+}
+
+async fn speak_now_internal(
+    app: AppHandle,
+    config: State<'_, Mutex<AppConfig>>,
+    _player: State<'_, Mutex<AudioPlayer>>,
+    history: State<'_, Mutex<HistoryLog>>,
+    telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
+    text: Option<String>,
+    profile_id: Option<String>,
+) -> Result<(), String> {
     let text = get_text_or_clipboard(text)?;
     if text.trim().is_empty() {
         return Err("Nothing to speak".into());
     }
-
-    let post_processing_config = config.lock().unwrap().post_processing.clone();
-    let text = crate::post_processing::process_text(&post_processing_config, &text).await?;
 
     let lock_state = app.state::<tokio::sync::Mutex<()>>();
     let _queue_lock = lock_state.lock().await;
@@ -202,19 +233,33 @@ pub async fn speak_now(
     // Enter critical section for TTS synthesis
     let _synthesis_guard = SynthesisGuard::new(&app);
 
-    let (tts_config, output_config, pagination_config) = {
+    let (tts_config, output_config, pagination_config, post_processing_config) = {
         let cfg = config.lock().unwrap();
-        (cfg.tts.clone(), cfg.output.clone(), cfg.pagination.clone())
+        (
+            cfg.tts.clone(),
+            cfg.output.clone(),
+            cfg.pagination.clone(),
+            cfg.post_processing.clone(),
+        )
     };
 
     // Resolve the active voice profile into an effective request.
-    let eff = resolve_effective(&tts_config);
+    let eff = match profile_id.as_deref() {
+        Some(id) => super::helpers::resolve_effective_for_profile(&tts_config, Some(id))?,
+        None => resolve_effective(&tts_config),
+    };
     let active_backend = eff.engine.clone();
     let voice = eff.voice.clone();
+    let text = crate::post_processing::process_text_for_profile(
+        &post_processing_config,
+        &eff.text_processing,
+        &text,
+    )
+    .await?;
 
     log_tts_debug("TTS", &format!("{:?}", active_backend), &text);
 
-    let backend: Box<dyn TtsBackend> = create_backend(&active_backend, &tts_config);
+    let backend: Box<dyn TtsBackend> = create_backend_from_effective(&eff, &tts_config);
     let engine_str_for_cache = engine_str(&active_backend);
 
     // Check for cached audio in history
@@ -277,7 +322,8 @@ pub async fn speak_now(
                     "[TTS] Found cached history entry but failed to read audio file: {}. Re-synthesizing.",
                     e
                 );
-                synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?
+                synthesize_async(backend_arc.clone(), text.clone(), voice.clone(), eff.speed)
+                    .await?
             }
         }
     } else if pagination::should_paginate(&text, &pagination_config) && !output_config.enabled {
@@ -287,6 +333,7 @@ pub async fn speak_now(
             backend_arc.clone(),
             &text,
             &voice,
+            eff.speed,
             &active_backend,
             &telemetry_state,
             &synthesis_start,
@@ -296,7 +343,7 @@ pub async fn speak_now(
         .await?
     } else {
         // Simple synthesis
-        synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?
+        synthesize_async(backend_arc.clone(), text.clone(), voice.clone(), eff.speed).await?
     };
 
     let synthesis_duration = synthesis_start.elapsed();
@@ -352,6 +399,7 @@ async fn synthesize_paginated(
     backend_arc: Arc<Box<dyn TtsBackend>>,
     text: &str,
     voice: &str,
+    speed: f32,
     active_backend: &crate::config::TtsEngine,
     telemetry_state: &State<'_, Mutex<telemetry::TelemetryLog>>,
     synthesis_start: &Instant,
@@ -363,7 +411,13 @@ async fn synthesize_paginated(
 
     if fragments.len() <= 1 {
         // Only one fragment — fall back to normal synthesis
-        return synthesize_async(backend_arc.clone(), text.to_string(), voice.to_string()).await;
+        return synthesize_async(
+            backend_arc.clone(),
+            text.to_string(),
+            voice.to_string(),
+            speed,
+        )
+        .await;
     }
 
     log::info!(
@@ -415,6 +469,7 @@ async fn synthesize_paginated(
             backend_arc.clone(),
             fragment.text.clone(),
             voice.to_string(),
+            speed,
         )
         .await
         .map_err(|e| format!("Fragment {} synthesis failed: {}", i + 1, e))?;
@@ -556,13 +611,23 @@ pub async fn speak_queued(
         return Err("Nothing to speak".into());
     }
 
-    let (tts_config, pagination_config) = {
+    let (tts_config, pagination_config, post_processing_config) = {
         let cfg = config.lock().unwrap();
-        (cfg.tts.clone(), cfg.pagination.clone())
+        (
+            cfg.tts.clone(),
+            cfg.pagination.clone(),
+            cfg.post_processing.clone(),
+        )
     };
 
     let eff = resolve_effective(&tts_config);
     let active_backend = eff.engine.clone();
+    let text = crate::post_processing::process_text_for_profile(
+        &post_processing_config,
+        &eff.text_processing,
+        &text,
+    )
+    .await?;
 
     log_tts_debug("Queue", &format!("{:?}", active_backend), &text);
 
@@ -694,14 +759,20 @@ pub async fn speak_queued(
             q.set_current_index(index);
         }
 
-        // Create backend for this fragment
-        let backend: Box<dyn TtsBackend> = create_backend(&active_backend, &tts_config);
+        // Create backend for this fragment from the resolved profile so engine
+        // options (model, format, etc.) are honored, not just the global config.
+        let backend: Box<dyn TtsBackend> = create_backend_from_effective(&eff, &tts_config);
         let backend_arc = Arc::new(backend);
 
         // Synthesize fragment
         let fragment_start = Instant::now();
-        let wav_bytes =
-            synthesize_async(backend_arc.clone(), fragment.text.clone(), voice.clone()).await?;
+        let wav_bytes = synthesize_async(
+            backend_arc.clone(),
+            fragment.text.clone(),
+            voice.clone(),
+            eff.speed,
+        )
+        .await?;
         let fragment_duration = fragment_start.elapsed();
 
         // Record telemetry
@@ -870,7 +941,7 @@ pub async fn speak_history_entry(
     let synthesis_start = Instant::now();
 
     // Synthesize
-    let wav_bytes = synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?;
+    let wav_bytes = synthesize_async(backend_arc.clone(), text.clone(), voice.clone(), 1.0).await?;
     let synthesis_ms = synthesis_start.elapsed().as_millis() as u64;
 
     // Record telemetry

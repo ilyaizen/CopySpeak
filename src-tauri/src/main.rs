@@ -643,6 +643,8 @@ fn main() {
             commands::check_cartesia_credentials,
             commands::check_openai_credentials,
             commands::list_elevenlabs_voices,
+            commands::list_tts_engines,
+            commands::list_tts_voices,
             commands::get_elevenlabs_voice_by_id,
             commands::get_elevenlabs_output_formats,
             commands::get_queue_state,

@@ -4,9 +4,18 @@
   import { Select } from "$lib/components/ui/select/index.js";
   import { Slider } from "$lib/components/ui/slider/index.js";
   import { SettingRow } from "$lib/components/ui/setting-row/index.js";
-  import { Copy, Trash2, Download, Upload } from "@lucide/svelte";
+  import { invoke } from "@tauri-apps/api/core";
+  import { Copy, Trash2, Download, Upload, RefreshCw, ExternalLink } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
-  import type { AppConfig, TtsEngine, EffectId, VoiceProfile } from "$lib/types";
+  import type {
+    AppConfig,
+    EngineCatalogEntry,
+    EngineOptionDescriptor,
+    TtsEngine,
+    EffectId,
+    VoiceCatalogEntry,
+    VoiceProfile
+  } from "$lib/types";
 
   let { localConfig = $bindable() } = $props<{ localConfig: AppConfig }>();
 
@@ -21,10 +30,20 @@
   ];
   const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy"];
 
-  const engineOptions = ENGINES.map((e) => ({ value: e, label: e }));
+  const fallbackEngineOptions = ENGINES.map((e) => ({ value: e, label: e }));
   const effectOptions = EFFECTS.map((e) => ({ value: e, label: e }));
 
   let fileInput: HTMLInputElement | null = $state(null);
+  let catalog = $state<EngineCatalogEntry[]>([]);
+  let catalogLoading = $state(false);
+  let voicesByEngine = $state<Partial<Record<TtsEngine, VoiceCatalogEntry[]>>>({});
+  let voicesLoadingFor = $state<TtsEngine | null>(null);
+
+  const engineOptions = $derived(
+    catalog.length
+      ? catalog.map((entry) => ({ value: entry.engine, label: entry.label }))
+      : fallbackEngineOptions
+  );
 
   const profiles = $derived(localConfig.tts.profiles);
   const activeId = $derived(localConfig.tts.active_profile_id);
@@ -32,10 +51,102 @@
   const active = $derived(activeIndex >= 0 ? profiles[activeIndex] : null);
   const profileOptions = $derived(profiles.map((p: VoiceProfile) => ({ value: p.id, label: p.name })));
 
+  const activeCatalogEntry = $derived(
+    active ? catalog.find((entry) => entry.engine === active.engine) : undefined
+  );
+  const activeVoiceCatalog = $derived<VoiceCatalogEntry[]>(
+    active ? catalogVoicesFor(active.engine as TtsEngine) : []
+  );
+  const activeVoiceOptions = $derived(
+    activeVoiceCatalog.map((voice: VoiceCatalogEntry) => ({ value: voice.id, label: voice.label }))
+  );
+
+  $effect(() => {
+    void loadEngineCatalog();
+  });
+
+  async function loadEngineCatalog() {
+    if (catalogLoading || catalog.length > 0) return;
+    catalogLoading = true;
+    try {
+      const entries = (await invoke("list_tts_engines")) as EngineCatalogEntry[];
+      catalog = entries;
+      const next: Partial<Record<TtsEngine, VoiceCatalogEntry[]>> = {};
+      for (const entry of entries) {
+        next[entry.engine] = entry.voices;
+      }
+      voicesByEngine = next;
+    } catch (err) {
+      toast.error(`Could not load engine catalog: ${err}`);
+    } finally {
+      catalogLoading = false;
+    }
+  }
+
+  async function refreshVoices(engine: TtsEngine) {
+    voicesLoadingFor = engine;
+    try {
+      const voices = (await invoke("list_tts_voices", { engine })) as VoiceCatalogEntry[];
+      voicesByEngine = { ...voicesByEngine, [engine]: voices };
+      toast.success(`Loaded ${voices.length} voice${voices.length === 1 ? "" : "s"}`);
+    } catch (err) {
+      toast.error(`Voice refresh failed: ${err}`);
+    } finally {
+      voicesLoadingFor = null;
+    }
+  }
+
+  function optionValue(profile: VoiceProfile, descriptor: EngineOptionDescriptor): unknown {
+    const options = profile.engine_options;
+    if (options && typeof options === "object" && !Array.isArray(options)) {
+      const existing = (options as Record<string, unknown>)[descriptor.key];
+      if (existing !== undefined && existing !== null) return existing;
+    }
+    return descriptor.default_value;
+  }
+
+  function optionInputValue(profile: VoiceProfile, descriptor: EngineOptionDescriptor): string {
+    const value = optionValue(profile, descriptor);
+    if (Array.isArray(value)) return value.join("\n");
+    return String(value ?? "");
+  }
+
+  function catalogVoicesFor(engine: TtsEngine): VoiceCatalogEntry[] {
+    return voicesByEngine[engine] ?? [];
+  }
+
+  function setOptionValue(index: number, key: string, value: unknown) {
+    const profile = localConfig.tts.profiles[index];
+    const current = profile.engine_options;
+    const base = current && typeof current === "object" && !Array.isArray(current) ? current : {};
+    profile.engine_options = {
+      ...base,
+      engine: profile.engine,
+      [key]: value
+    } as VoiceProfile["engine_options"];
+  }
+
+  function setVoice(index: number, voiceId: string) {
+    const profile = localConfig.tts.profiles[index];
+    profile.voice = voiceId;
+    const match = catalogVoicesFor(profile.engine).find((voice) => voice.id === voiceId);
+    profile.voice_label = match?.label;
+  }
+
+  function resetEngineOptions(index: number, engine: TtsEngine) {
+    const entry = catalog.find((item) => item.engine === engine);
+    if (!entry) return;
+    const defaults: Record<string, unknown> = { engine };
+    for (const option of entry.options) {
+      if (option.default_value !== null) defaults[option.key] = option.default_value;
+    }
+    localConfig.tts.profiles[index].engine_options = defaults as VoiceProfile["engine_options"];
+  }
+
   function selectProfile(id: string) {
     localConfig.tts.active_profile_id = id;
     // Mirror a named profile's engine to the legacy field so the rest of the app
-    // (engine tabs, HUD) stays coherent. The "default" profile is legacy passthrough.
+    // (engine tabs, HUD) stays coherent while profile-first synthesis rolls out.
     const p = profiles.find((x: VoiceProfile) => x.id === id);
     if (p && p.id !== "default") {
       localConfig.tts.active_backend = p.engine;
@@ -45,6 +156,11 @@
   function onEngineChange(engine: TtsEngine) {
     if (activeIndex < 0) return;
     localConfig.tts.profiles[activeIndex].engine = engine;
+    resetEngineOptions(activeIndex, engine);
+    const firstVoice = catalogVoicesFor(engine)[0];
+    if (firstVoice && !localConfig.tts.profiles[activeIndex].voice) {
+      setVoice(activeIndex, firstVoice.id);
+    }
     if (active && active.id !== "default") {
       localConfig.tts.active_backend = engine;
     }
@@ -91,7 +207,7 @@
   function exportActive() {
     if (!active) return;
     // Profiles never carry API keys, so this export is safe to share.
-    const json = JSON.stringify({ schema_version: 1, ...active }, null, 2);
+    const json = JSON.stringify({ schema_version: 2, ...active }, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -191,10 +307,11 @@
         />
       </SettingRow>
 
-      <SettingRow label="Voice" tooltip="Voice id / name. Blank uses the provider default.">
+      <SettingRow label="Manual Voice" tooltip="Voice id / name. Blank uses the provider default.">
         <Input
-          bind:value={localConfig.tts.profiles[activeIndex].voice}
+          value={localConfig.tts.profiles[activeIndex].voice}
           placeholder="provider default"
+          onchange={(e) => setVoice(activeIndex, (e.target as HTMLInputElement).value)}
           class="w-56"
         />
       </SettingRow>
@@ -242,48 +359,110 @@
         />
       </SettingRow>
 
-      <!-- Provider-specific fields -->
-      {#if active.engine === "google"}
-        <SettingRow label="Google API Key">
-          <Input type="password" bind:value={localConfig.tts.google.api_key} class="w-56" />
+      {#if activeCatalogEntry}
+        <div class="border-border mt-3 space-y-3 border-t pt-3">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="text-sm font-medium">{activeCatalogEntry.label}</p>
+              <p class="text-muted-foreground text-xs">{activeCatalogEntry.description}</p>
+            </div>
+            <a
+              href={activeCatalogEntry.docs_url}
+              target="_blank"
+              rel="noreferrer"
+              class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
+            >
+              Docs <ExternalLink size={12} />
+            </a>
+          </div>
+        </div>
+      {/if}
+
+      {#if activeVoiceOptions.length > 0}
+        <SettingRow label="Catalog Voice" tooltip="Known voices from the engine catalog or provider API.">
+          <div class="flex w-56 gap-1.5">
+            <Select
+              options={activeVoiceOptions}
+              value={active.voice}
+              onchange={(e) => setVoice(activeIndex, (e.target as HTMLSelectElement).value)}
+              class="min-w-0 flex-1"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onclick={() => refreshVoices(active.engine)}
+              disabled={voicesLoadingFor === active.engine}
+              title="Refresh voices"
+            >
+              <RefreshCw size={14} />
+            </Button>
+          </div>
         </SettingRow>
-        <SettingRow label="Model">
-          <Input bind:value={localConfig.tts.google.model} class="w-56" />
+      {:else if activeCatalogEntry?.supports_voice_refresh}
+        <SettingRow label="Catalog Voice">
+          <Button
+            variant="outline"
+            size="sm"
+            onclick={() => refreshVoices(active.engine)}
+            disabled={voicesLoadingFor === active.engine}
+          >
+            {voicesLoadingFor === active.engine ? "Loading voices…" : "Load voices"}
+          </Button>
         </SettingRow>
-      {:else if active.engine === "microsoft"}
-        <SettingRow label="Microsoft API Key">
-          <Input type="password" bind:value={localConfig.tts.microsoft.api_key} class="w-56" />
-        </SettingRow>
-        <SettingRow label="Endpoint">
-          <Input bind:value={localConfig.tts.microsoft.endpoint} placeholder="https://..." class="w-56" />
-        </SettingRow>
-        <SettingRow label="Model / Deployment">
-          <Input bind:value={localConfig.tts.microsoft.model} class="w-56" />
-        </SettingRow>
-      {:else if active.engine === "http"}
-        <SettingRow label="URL Template">
-          <Input
-            bind:value={localConfig.tts.http.url_template}
-            placeholder="http://127.0.0.1/v1/audio/speech"
-            class="w-56"
-          />
-        </SettingRow>
-        <SettingRow label="Body Template (JSON)">
-          <Input bind:value={localConfig.tts.http.body_template} class="w-56" />
-        </SettingRow>
-        <SettingRow label="Response Format">
-          <Input bind:value={localConfig.tts.http.response_format} class="w-56" />
-        </SettingRow>
-        <SettingRow label="Timeout (s)">
-          <Input type="number" bind:value={localConfig.tts.http.timeout_secs} class="w-56" />
-        </SettingRow>
+      {/if}
+
+      {#if activeCatalogEntry?.options.length}
+        <div class="border-border mt-3 border-t pt-3">
+          <p class="mb-2 text-sm font-medium">Engine Settings</p>
+          {#each activeCatalogEntry.options as option (option.key)}
+            <SettingRow label={option.label} tooltip={option.help}>
+              {#if option.kind === "number"}
+                <Input
+                  type="number"
+                  value={String(optionValue(active, option) ?? "")}
+                  onchange={(e) => {
+                    const raw = (e.target as HTMLInputElement).value;
+                    setOptionValue(activeIndex, option.key, raw === "" ? null : Number(raw));
+                  }}
+                  class="w-56"
+                />
+              {:else if option.kind === "boolean"}
+                <Select
+                  options={[{ value: "true", label: "Enabled" }, { value: "false", label: "Disabled" }]}
+                  value={String(Boolean(optionValue(active, option)))}
+                  onchange={(e) =>
+                    setOptionValue(activeIndex, option.key, (e.target as HTMLSelectElement).value === "true")}
+                  class="w-56"
+                />
+              {:else if option.kind === "textarea"}
+                <textarea
+                  value={optionInputValue(active, option)}
+                  onchange={(e) => {
+                    const raw = (e.target as HTMLTextAreaElement).value;
+                    const value = option.key === "args_template"
+                      ? raw.split("\n").map((line) => line.trim()).filter(Boolean)
+                      : raw;
+                    setOptionValue(activeIndex, option.key, value);
+                  }}
+                  class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-20 w-56 rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                ></textarea>
+              {:else}
+                <Input
+                  value={optionInputValue(active, option)}
+                  onchange={(e) => setOptionValue(activeIndex, option.key, (e.target as HTMLInputElement).value)}
+                  class="w-56"
+                />
+              {/if}
+            </SettingRow>
+          {/each}
+        </div>
       {/if}
     {/if}
 
     {#if active && active.id === "default"}
       <p class="text-muted-foreground border-border mt-2 border-t pt-3 text-xs">
-        The Default profile mirrors the engine tabs. Duplicate it to create a named, fully
-        independent profile (engine + voice + speed + pitch + effect).
+        The Default profile is now a real profile. Duplicate it to create a named profile with
+        independent engine, catalog voice, engine settings, speed, pitch and effect.
       </p>
     {/if}
   </div>

@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`{engine_dir}` CLI placeholder** — `CliTtsBackend` now expands `{engine_dir}` to `%LOCALAPPDATA%\CopySpeak\engines` for uv-managed local engines.
 - **uv-based engine installers** — Added `scripts/install-uv.ps1`, `scripts/install-chatterbox.ps1`, `scripts/test-engine.ps1`, and shared `scripts/lib/copyspeak-engine-install.ps1`, plus the stable `scripts/chatterbox/copyspeak-chatterbox.py` wrapper. `uv` is a hard requirement; installers print a profile snippet instead of editing config.
 - **Control server profiles** — `POST /speak` now accepts `"profile"` to select a voice profile per request (alongside the existing `engine`/`effect` shorthands).
+- **Engine catalog** — Added `tts/catalog.rs` exposing per-engine labels, docs URLs, supported-option descriptors, and static fallback voice lists, surfaced via `list_tts_engines`/`list_tts_voices` IPC, the `/engines` and `/engines/{engine}/voices` control endpoints, and mirrored TypeScript types. The Profiles editor renders engine settings and a catalog/provider voice picker from it.
+- **Profile engine options + text processing** — Profiles now carry `description`, `voice_label`, typed `text_processing` (inherit/disabled/enabled + bracketed-emote strategy), and `engine_options` that override global per-engine synthesis settings (model, output format, ElevenLabs voice settings, HTTP url/body/timeout, etc.) via `create_backend_from_effective`. Bracketed-emote handling (`[laughs]`) is deterministic and local.
+- **Read/non-mutating control endpoints** — Added `GET /profiles`, `GET /profiles/{id}`, `POST /profiles/active`, `GET /engines`, `GET /engines/{engine}/voices`. `POST /speak` with a profile is request-local by default and only persists the active profile when `"persist_selection": true`. No response exposes API keys.
+- **First-party CLI** — Added `scripts/copyspeak.mjs`, a thin Node wrapper over the localhost control server (`health`, `speak`, `profiles list|use|show`, `engines list`, `voices list --engine`).
+- **Profile engine docs** — Added `docs/profile-engine-settings.md` documenting the profile-vs-global boundary, engine matrix, and HTTP/CLI semantics.
 - **LLM Post-Processing providers** — Added Groq-primary Post-Processing config and settings for OpenAI, Anthropic, Gemini, OpenRouter, Ollama, xAI, AWS Bedrock, Cerebras, and custom OpenAI-compatible endpoints before TTS generation.
 - **Post-Processing prompt presets** — Added editable prompt labels, model refresh, concise developer, cleanup, professional, summarize, TTS-optimized, and revised caveman prompts.
 
@@ -24,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Voice profiles UI** — Moved profiles out of the Engine page into their own `/profiles` route/nav tab, and rebuilt the editor with the shared settings primitives (`SettingRow` + `Select`/`Slider`/`Input`) instead of raw `<select>`/`<input type="range">` controls.
 - **`TtsEngine`** — Added `Http`, `Google`, and `Microsoft` variants. The HTTP engine is first-class again; the previous forced `http`→`local` downgrade on config load was removed.
+- **Profile-first synthesis** — `speak_now` and `speak_queued` (the clipboard double-copy path) both build the backend from the resolved active profile, so profile `engine_options` are honored for short and paginated/long-text playback alike. The OpenAI backend now respects the requested `voice` instead of always using the global config voice.
 
 ### Fixed
 

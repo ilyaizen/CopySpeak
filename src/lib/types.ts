@@ -58,6 +58,8 @@ export interface OpenAIConfig {
   api_key: string;
   model: string;
   voice: string;
+  response_format: string;
+  instructions?: string;
 }
 
 export type ElevenLabsOutputFormat =
@@ -92,6 +94,8 @@ export interface CartesiaConfig {
   voice_id: string;
   voice_name?: string;
   output_format: string;
+  encoding?: string;
+  sample_rate?: number;
   use_manual_voice_id?: boolean;
 }
 
@@ -126,15 +130,121 @@ export interface ProfileEffects {
   active_effect: EffectId;
 }
 
+export interface LocalProfileEngineOptions {
+  engine?: "local";
+  preset?: string;
+  command?: string;
+  args_template?: string[];
+}
+
+export interface HttpProfileEngineOptions {
+  engine?: "http";
+  url_template?: string;
+  method?: string;
+  body_template?: string;
+  response_format?: string;
+  timeout_secs?: number;
+}
+
+export interface OpenAiProfileEngineOptions {
+  engine?: "openai";
+  model?: string;
+  response_format?: string;
+  instructions?: string;
+}
+
+export interface ElevenLabsProfileEngineOptions {
+  engine?: "elevenlabs";
+  model_id?: string;
+  output_format?: string;
+  stability?: number;
+  similarity_boost?: number;
+  style?: number;
+  use_speaker_boost?: boolean;
+}
+
+export interface CartesiaProfileEngineOptions {
+  engine?: "cartesia";
+  model_id?: string;
+  output_format?: string;
+  encoding?: string;
+  sample_rate?: number;
+}
+
+export interface GoogleProfileEngineOptions {
+  engine?: "google";
+  model?: string;
+  output_format?: string;
+}
+
+export interface MicrosoftProfileEngineOptions {
+  engine?: "microsoft";
+  endpoint?: string;
+  model?: string;
+  output_format?: string;
+}
+
+export type ProfileEngineOptions =
+  | LocalProfileEngineOptions
+  | HttpProfileEngineOptions
+  | OpenAiProfileEngineOptions
+  | ElevenLabsProfileEngineOptions
+  | CartesiaProfileEngineOptions
+  | GoogleProfileEngineOptions
+  | MicrosoftProfileEngineOptions;
+
 export interface VoiceProfile {
   id: string;
   name: string;
+  description?: string;
   engine: TtsEngine;
   voice: string;
+  voice_label?: string;
   speed: number;
   pitch: number;
   effects: ProfileEffects;
-  engine_options: unknown;
+  text_processing: ProfileTextProcessing;
+  engine_options: ProfileEngineOptions;
+}
+
+export type ProfileTextProcessingMode = "inherit_global" | "disabled" | "enabled";
+export type BracketedEmoteStrategy = "keep_literal" | "strip" | "convert_to_ssml_or_instruction";
+
+export interface ProfileTextProcessing {
+  mode: ProfileTextProcessingMode;
+  strip_emote_brackets: boolean;
+  bracketed_emote_strategy: BracketedEmoteStrategy;
+}
+
+export type EngineOptionKind = "text" | "number" | "boolean" | "select" | "textarea";
+
+export interface EngineOptionDescriptor {
+  key: string;
+  label: string;
+  kind: EngineOptionKind;
+  help: string;
+  default_value: unknown;
+}
+
+export interface VoiceCatalogEntry {
+  id: string;
+  label: string;
+  language?: string;
+  description?: string;
+  preview_url?: string;
+}
+
+export interface EngineCatalogEntry {
+  engine: TtsEngine;
+  label: string;
+  description: string;
+  docs_url: string;
+  supports_voice_refresh: boolean;
+  supports_speed: boolean;
+  supports_pitch: boolean;
+  supports_bracket_emotes: boolean;
+  options: EngineOptionDescriptor[];
+  voices: VoiceCatalogEntry[];
 }
 
 export interface TtsConfig {

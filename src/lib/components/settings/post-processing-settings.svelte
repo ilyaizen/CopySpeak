@@ -9,7 +9,12 @@
   import { Switch } from "$lib/components/ui/switch/index.js";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
 
-  import type { AppConfig, LlmProviderConfig, PostProcessingProvider } from "$lib/types";
+  import type {
+    AppConfig,
+    LlmProviderConfig,
+    PostProcessingPromptPreset,
+    PostProcessingProvider
+  } from "$lib/types";
 
   let { localConfig = $bindable() } = $props<{ localConfig: AppConfig }>();
 
@@ -35,7 +40,7 @@
   );
 
   let promptOptions = $derived(
-    localConfig.post_processing.prompt_presets.map((preset) => ({
+    localConfig.post_processing.prompt_presets.map((preset: PostProcessingPromptPreset) => ({
       value: preset.label,
       label: preset.label
     }))
@@ -49,7 +54,9 @@
 
   function handlePromptPresetChange(e: Event) {
     const label = (e.target as HTMLSelectElement).value;
-    const preset = localConfig.post_processing.prompt_presets.find((item) => item.label === label);
+    const preset = localConfig.post_processing.prompt_presets.find(
+      (item: PostProcessingPromptPreset) => item.label === label
+    );
     if (!preset) return;
 
     localConfig.post_processing.selected_prompt_label = preset.label;
@@ -60,7 +67,9 @@
     const label = localConfig.post_processing.selected_prompt_label.trim();
     if (!label) return;
 
-    const existing = localConfig.post_processing.prompt_presets.find((item) => item.label === label);
+    const existing = localConfig.post_processing.prompt_presets.find(
+      (item: PostProcessingPromptPreset) => item.label === label
+    );
     if (existing) {
       existing.prompt = localConfig.post_processing.prompt;
       return;
@@ -75,7 +84,7 @@
   function deletePromptPreset() {
     const label = localConfig.post_processing.selected_prompt_label;
     localConfig.post_processing.prompt_presets = localConfig.post_processing.prompt_presets.filter(
-      (item) => item.label !== label
+      (item: PostProcessingPromptPreset) => item.label !== label
     );
 
     const next = localConfig.post_processing.prompt_presets[0];

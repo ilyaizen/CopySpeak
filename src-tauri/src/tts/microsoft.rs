@@ -58,7 +58,9 @@ impl TtsBackend for MicrosoftTtsBackend {
 
     fn synthesize(&self, text: &str, voice: &str, _speed: f32) -> Result<Vec<u8>, TtsError> {
         if self.config.endpoint.trim().is_empty() {
-            return Err(TtsError::Unavailable("Microsoft endpoint is not configured".into()));
+            return Err(TtsError::Unavailable(
+                "Microsoft endpoint is not configured".into(),
+            ));
         }
 
         let body = json!({
@@ -91,7 +93,11 @@ impl TtsBackend for MicrosoftTtsBackend {
                 .await
         })
         .map_err(|e| {
-            log::error!("Microsoft TTS request failed after {:?}: {}", start_time.elapsed(), e);
+            log::error!(
+                "Microsoft TTS request failed after {:?}: {}",
+                start_time.elapsed(),
+                e
+            );
             TtsError::Http(format!("Request failed: {}", e))
         })?;
 
@@ -116,7 +122,10 @@ impl TtsBackend for MicrosoftTtsBackend {
         if !status.is_success() {
             let error_text = String::from_utf8_lossy(&bytes);
             log::error!("Microsoft API error {}: {}", status, error_text);
-            return Err(TtsError::Http(format!("Microsoft API error {}: {}", status, error_text)));
+            return Err(TtsError::Http(format!(
+                "Microsoft API error {}: {}",
+                status, error_text
+            )));
         }
 
         // JSON envelope → decode base64; otherwise treat as raw audio bytes.
@@ -135,7 +144,9 @@ impl TtsBackend for MicrosoftTtsBackend {
             return Err(TtsError::Unavailable("Microsoft API key is missing".into()));
         }
         if self.config.endpoint.trim().is_empty() {
-            return Err(TtsError::Unavailable("Microsoft endpoint is missing".into()));
+            return Err(TtsError::Unavailable(
+                "Microsoft endpoint is missing".into(),
+            ));
         }
         Ok(())
     }

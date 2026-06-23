@@ -1,4 +1,7 @@
-use crate::config::{LlmProviderConfig, PostProcessingConfig, PostProcessingProvider};
+use crate::config::{
+    BracketedEmoteStrategy, LlmProviderConfig, PostProcessingConfig, PostProcessingProvider,
+    ProfileTextProcessing, ProfileTextProcessingMode,
+};
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE};
 use serde_json::{json, Value};
 
@@ -17,6 +20,43 @@ pub async fn process_text(config: &PostProcessingConfig, text: &str) -> Result<S
         PostProcessingProvider::Gemini => process_gemini(config, provider_config, text).await,
         _ => process_openai_compatible(config, provider_config, text).await,
     }
+}
+
+pub async fn process_text_for_profile(
+    config: &PostProcessingConfig,
+    profile: &ProfileTextProcessing,
+    text: &str,
+) -> Result<String, String> {
+    let text = apply_bracketed_emote_strategy(text, &profile.bracketed_emote_strategy);
+    match profile.mode {
+        ProfileTextProcessingMode::Disabled => Ok(text),
+        ProfileTextProcessingMode::InheritGlobal | ProfileTextProcessingMode::Enabled => {
+            process_text(config, &text).await
+        }
+    }
+}
+
+pub fn apply_bracketed_emote_strategy(text: &str, strategy: &BracketedEmoteStrategy) -> String {
+    match strategy {
+        BracketedEmoteStrategy::KeepLiteral => text.to_string(),
+        BracketedEmoteStrategy::Strip | BracketedEmoteStrategy::ConvertToSsmlOrInstruction => {
+            strip_bracketed_emotes(text)
+        }
+    }
+}
+
+fn strip_bracketed_emotes(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut depth = 0_u32;
+    for ch in text.chars() {
+        match ch {
+            '[' => depth = depth.saturating_add(1),
+            ']' if depth > 0 => depth -= 1,
+            _ if depth == 0 => out.push(ch),
+            _ => {}
+        }
+    }
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 fn provider_config(config: &PostProcessingConfig) -> &LlmProviderConfig {
@@ -151,4 +191,36 @@ fn extract_openai_text(value: &Value) -> Option<String> {
         .as_str()
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn keep_literal_leaves_brackets_untouched() {
+        let out = apply_bracketed_emote_strategy("[laughs] hello", &BracketedEmoteStrategy::KeepLiteral);
+        assert_eq!(out, "[laughs] hello");
+    }
+
+    #[test]
+    fn strip_removes_brackets_and_normalizes_whitespace() {
+        let out = apply_bracketed_emote_strategy("[laughs] hello", &BracketedEmoteStrategy::Strip);
+        assert_eq!(out, "hello");
+    }
+
+    #[test]
+    fn convert_falls_back_to_strip_deterministically() {
+        let out = apply_bracketed_emote_strategy(
+            "[sighs] hello [whispers] there",
+            &BracketedEmoteStrategy::ConvertToSsmlOrInstruction,
+        );
+        assert_eq!(out, "hello there");
+    }
+
+    #[test]
+    fn strip_handles_nested_brackets() {
+        let out = apply_bracketed_emote_strategy("[a [b] c] keep", &BracketedEmoteStrategy::Strip);
+        assert_eq!(out, "keep");
+    }
 }

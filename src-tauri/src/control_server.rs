@@ -19,11 +19,22 @@ struct SpeakRequest {
     engine: Option<String>,
     effect: Option<String>,
     profile: Option<String>,
+    persist_selection: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ActiveProfileRequest {
+    profile: String,
 }
 
 enum ControlRequest {
     Health,
     Speak(SpeakRequest),
+    Profiles,
+    Profile(String),
+    SetActiveProfile(ActiveProfileRequest),
+    Engines,
+    Voices(TtsEngine),
 }
 
 pub fn start(app: AppHandle) {
@@ -74,6 +85,18 @@ fn handle_connection(mut stream: TcpStream, app: AppHandle) {
 
     let response = match read_result.and_then(|()| parse_request(&buffer)) {
         Ok(ControlRequest::Health) => http_response(200, "OK", r#"{"ok":true,"app":"CopySpeak"}"#),
+        Ok(ControlRequest::Profiles) => json_response(profile_list(&app)),
+        Ok(ControlRequest::Profile(id)) => json_response(profile_detail(&app, &id)),
+        Ok(ControlRequest::SetActiveProfile(request)) => {
+            match set_active_profile(&app, &request.profile) {
+                Ok(()) => http_response(200, "OK", r#"{"ok":true}"#),
+                Err(error) => http_response(400, "Error", &json_error(&error)),
+            }
+        }
+        Ok(ControlRequest::Engines) => {
+            json_response(Ok(serde_json::json!(crate::tts::catalog::list_engines())))
+        }
+        Ok(ControlRequest::Voices(engine)) => json_response(voices_for_engine(&app, &engine)),
         Ok(ControlRequest::Speak(request)) => {
             match tauri::async_runtime::block_on(speak(app.clone(), request)) {
                 Ok(()) => http_response(200, "OK", r#"{"ok":true}"#),
@@ -115,8 +138,7 @@ fn request_state(buffer: &[u8]) -> RequestState {
 }
 
 fn json_error(message: &str) -> String {
-    let value = serde_json::json!({ "error": message });
-    value.to_string()
+    serde_json::json!({ "error": message }).to_string()
 }
 
 fn content_length(headers: &str) -> Option<usize> {
@@ -130,28 +152,58 @@ fn content_length(headers: &str) -> Option<usize> {
 fn parse_request(buffer: &[u8]) -> Result<ControlRequest, (u16, String)> {
     let header_end = find_header_end(buffer).ok_or((400, "missing HTTP headers".to_string()))?;
     let headers = String::from_utf8_lossy(&buffer[..header_end]);
-    let mut lines = headers.lines();
-    let request_line = lines.next().unwrap_or_default();
-    if request_line.starts_with("GET /health ") {
-        return Ok(ControlRequest::Health);
-    }
-    if !request_line.starts_with("POST /speak ") {
-        return Err((404, "expected GET /health or POST /speak".to_string()));
-    }
+    let request_line = headers.lines().next().unwrap_or_default();
+    let mut parts = request_line.split_whitespace();
+    let method = parts.next().unwrap_or_default();
+    let path = parts.next().unwrap_or_default();
 
-    let content_length = content_length(&headers).unwrap_or(0);
+    match (method, path) {
+        ("GET", "/health") => Ok(ControlRequest::Health),
+        ("GET", "/profiles") => Ok(ControlRequest::Profiles),
+        ("GET", "/engines") => Ok(ControlRequest::Engines),
+        ("POST", "/profiles/active") => {
+            let request: ActiveProfileRequest =
+                serde_json::from_slice(request_body(buffer, header_end, &headers)?)
+                    .map_err(|error| (400, format!("invalid JSON: {}", error)))?;
+            Ok(ControlRequest::SetActiveProfile(request))
+        }
+        ("POST", "/speak") => {
+            let request: SpeakRequest =
+                serde_json::from_slice(request_body(buffer, header_end, &headers)?)
+                    .map_err(|error| (400, format!("invalid JSON: {}", error)))?;
+            if request.text.trim().is_empty() {
+                return Err((400, "text is required".to_string()));
+            }
+            Ok(ControlRequest::Speak(request))
+        }
+        ("GET", path) if path.starts_with("/profiles/") => Ok(ControlRequest::Profile(
+            path.trim_start_matches("/profiles/").to_string(),
+        )),
+        ("GET", path) if path.starts_with("/engines/") && path.ends_with("/voices") => {
+            let engine = path
+                .trim_start_matches("/engines/")
+                .trim_end_matches("/voices")
+                .trim_end_matches('/');
+            parse_engine(engine)
+                .map(ControlRequest::Voices)
+                .map_err(|error| (400, error))
+        }
+        _ => Err((404, "unsupported endpoint".to_string())),
+    }
+}
+
+fn request_body<'a>(
+    buffer: &'a [u8],
+    header_end: usize,
+    headers: &str,
+) -> Result<&'a [u8], (u16, String)> {
+    let content_length = content_length(headers).unwrap_or(0);
     let body_start = header_end + 4;
     let body_end = body_start + content_length;
     if buffer.len() < body_end {
         return Err((400, "incomplete body".to_string()));
     }
-
-    let request: SpeakRequest = serde_json::from_slice(&buffer[body_start..body_end])
-        .map_err(|error| (400, format!("invalid JSON: {}", error)))?;
-    if request.text.trim().is_empty() {
-        return Err((400, "text is required".to_string()));
-    }
-    Ok(ControlRequest::Speak(request))
+    Ok(&buffer[body_start..body_end])
 }
 
 fn find_header_end(buffer: &[u8]) -> Option<usize> {
@@ -159,11 +211,11 @@ fn find_header_end(buffer: &[u8]) -> Option<usize> {
 }
 
 async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
-    if request.engine.is_some() || request.effect.is_some() || request.profile.is_some() {
+    if request.persist_selection == Some(true)
+        && (request.engine.is_some() || request.effect.is_some() || request.profile.is_some())
+    {
         let config_state: State<Mutex<AppConfig>> = app.state();
         let mut cfg = config_state.lock().map_err(|e| e.to_string())?;
-        // A full profile override takes precedence; engine/effect remain as
-        // backward-compatible shorthand for single-knob overrides.
         if let Some(profile_id) = request.profile.as_deref() {
             if !cfg.tts.profiles.iter().any(|p| p.id == profile_id) {
                 return Err(format!("unknown profile: {}", profile_id));
@@ -185,15 +237,95 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
     let player: State<Mutex<AudioPlayer>> = app.state();
     let history: State<Mutex<HistoryLog>> = app.state();
     let telemetry_state: State<Mutex<telemetry::TelemetryLog>> = app.state();
-    crate::commands::speak_now(
+    crate::commands::speak_now_with_profile(
         app.clone(),
         config_state,
         player,
         history,
         telemetry_state,
         Some(request.text),
+        request.profile,
     )
     .await
+}
+
+fn set_active_profile(app: &AppHandle, profile_id: &str) -> Result<(), String> {
+    let config_state: State<Mutex<AppConfig>> = app.state();
+    let mut cfg = config_state.lock().map_err(|e| e.to_string())?;
+    if !cfg
+        .tts
+        .profiles
+        .iter()
+        .any(|profile| profile.id == profile_id)
+    {
+        return Err(format!("unknown profile: {}", profile_id));
+    }
+    cfg.tts.active_profile_id = profile_id.to_string();
+    config::save(&cfg)
+}
+
+fn profile_list(app: &AppHandle) -> Result<serde_json::Value, String> {
+    let config_state: State<Mutex<AppConfig>> = app.state();
+    let cfg = config_state.lock().map_err(|e| e.to_string())?;
+    Ok(serde_json::Value::Array(
+        cfg.tts
+            .profiles
+            .iter()
+            .map(|profile| {
+                serde_json::json!({
+                    "id": profile.id,
+                    "name": profile.name,
+                    "engine": profile.engine,
+                    "voice": profile.voice,
+                    "voice_label": profile.voice_label,
+                    "active": profile.id == cfg.tts.active_profile_id
+                })
+            })
+            .collect(),
+    ))
+}
+
+fn profile_detail(app: &AppHandle, profile_id: &str) -> Result<serde_json::Value, String> {
+    let config_state: State<Mutex<AppConfig>> = app.state();
+    let cfg = config_state.lock().map_err(|e| e.to_string())?;
+    cfg.tts
+        .profiles
+        .iter()
+        .find(|profile| profile.id == profile_id)
+        .map(|profile| serde_json::json!(profile))
+        .ok_or_else(|| format!("unknown profile: {}", profile_id))
+}
+
+fn voices_for_engine(app: &AppHandle, engine: &TtsEngine) -> Result<serde_json::Value, String> {
+    if engine == &TtsEngine::ElevenLabs {
+        let config_state: State<Mutex<AppConfig>> = app.state();
+        let cfg = config_state.lock().map_err(|e| e.to_string())?;
+        let backend = crate::tts::elevenlabs::ElevenLabsTtsBackend::new(cfg.tts.elevenlabs.clone());
+        let voices = backend
+            .list_voices()
+            .map_err(|error| format!("Failed to fetch voices: {}", error))?
+            .into_iter()
+            .map(|voice| {
+                serde_json::json!({
+                    "id": voice.voice_id,
+                    "label": voice.name.unwrap_or_default(),
+                    "description": voice.description,
+                    "preview_url": voice.preview_url
+                })
+            })
+            .collect::<Vec<_>>();
+        return Ok(serde_json::json!(voices));
+    }
+    Ok(serde_json::json!(crate::tts::catalog::list_static_voices(
+        engine
+    )))
+}
+
+fn json_response(value: Result<serde_json::Value, String>) -> String {
+    match value {
+        Ok(value) => http_response(200, "OK", &value.to_string()),
+        Err(error) => http_response(400, "Error", &json_error(&error)),
+    }
 }
 
 fn parse_engine(engine: &str) -> Result<TtsEngine, String> {

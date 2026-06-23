@@ -110,7 +110,11 @@ impl TtsBackend for GoogleTtsBackend {
                 .await
         })
         .map_err(|e| {
-            log::error!("Google TTS request failed after {:?}: {}", start_time.elapsed(), e);
+            log::error!(
+                "Google TTS request failed after {:?}: {}",
+                start_time.elapsed(),
+                e
+            );
             TtsError::Http(format!("Request failed: {}", e))
         })?;
 
@@ -126,7 +130,10 @@ impl TtsBackend for GoogleTtsBackend {
 
         if !status.is_success() {
             log::error!("Google API error {}: {}", status, text_body);
-            return Err(TtsError::Http(format!("Google API error {}: {}", status, text_body)));
+            return Err(TtsError::Http(format!(
+                "Google API error {}: {}",
+                status, text_body
+            )));
         }
 
         let parsed: serde_json::Value = serde_json::from_str(&text_body)
@@ -178,8 +185,14 @@ mod tests {
 
     #[test]
     fn test_rate_from_mime() {
-        assert_eq!(GoogleTtsBackend::rate_from_mime("audio/L16;codec=pcm;rate=24000"), 24000);
-        assert_eq!(GoogleTtsBackend::rate_from_mime("audio/L16;rate=16000"), 16000);
+        assert_eq!(
+            GoogleTtsBackend::rate_from_mime("audio/L16;codec=pcm;rate=24000"),
+            24000
+        );
+        assert_eq!(
+            GoogleTtsBackend::rate_from_mime("audio/L16;rate=16000"),
+            16000
+        );
         assert_eq!(GoogleTtsBackend::rate_from_mime("audio/wav"), 24000);
     }
 }

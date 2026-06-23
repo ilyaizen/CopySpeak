@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import "$lib/i18n";
 
 // Create a global mock for $app/state before any imports
 let mockPathname = "/";
@@ -17,4 +18,8 @@ vi.stubGlobal("__setMockPathname", (pathname: string) => {
 // Mock the module
 vi.mock("$app/state", () => ({
   page: pageMock
+}));
+
+vi.mock("$app/navigation", () => ({
+  goto: vi.fn()
 }));

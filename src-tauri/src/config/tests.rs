@@ -213,6 +213,7 @@ mod tests {
     #[test]
     fn test_validation_command_empty() {
         let mut config = AppConfig::default();
+        config.tts.active_backend = TtsEngine::Local;
         config.tts.command = "".into();
         let result = config.validate();
         assert!(result.is_err());
@@ -225,6 +226,7 @@ mod tests {
     #[test]
     fn test_validation_args_template_missing_placeholders() {
         let mut config = AppConfig::default();
+        config.tts.active_backend = TtsEngine::Local;
         config.tts.args_template = vec!["-v".into(), "{voice}".into()];
         let result = config.validate();
         assert!(result.is_err());
@@ -239,7 +241,7 @@ mod tests {
     #[test]
     fn test_default_tts_config_has_one_default_profile() {
         let tts = TtsConfig::default();
-        assert_eq!(tts.schema_version, 1);
+        assert_eq!(tts.schema_version, 2);
         assert_eq!(tts.active_profile_id, "default");
         assert_eq!(tts.profiles.len(), 1);
         assert_eq!(tts.profiles[0].id, "default");
@@ -256,7 +258,7 @@ mod tests {
         tts.elevenlabs.voice_id = "voice-xyz".into();
 
         let migrated = migrate_tts_config(tts);
-        assert_eq!(migrated.schema_version, 1);
+        assert_eq!(migrated.schema_version, 2);
         assert_eq!(migrated.active_profile_id, "default");
         assert_eq!(migrated.profiles.len(), 1);
         assert_eq!(migrated.profiles[0].engine, TtsEngine::ElevenLabs);
@@ -269,7 +271,7 @@ mod tests {
         let once = migrate_tts_config(tts);
         let twice = migrate_tts_config(once.clone());
         assert_eq!(once.profiles.len(), twice.profiles.len());
-        assert_eq!(twice.schema_version, 1);
+        assert_eq!(twice.schema_version, 2);
     }
 
     #[test]
@@ -277,15 +279,21 @@ mod tests {
         let profile = VoiceProfile {
             id: "p1".into(),
             name: "P1".into(),
+            description: None,
             engine: TtsEngine::Http,
             voice: "amy.wav".into(),
+            voice_label: None,
             speed: 1.05,
             pitch: 1.0,
             effects: ProfileEffects {
                 enabled: true,
                 active_effect: EffectId::WalkieTalkie,
             },
-            engine_options: serde_json::json!({ "model": "chatterbox" }),
+            text_processing: crate::config::ProfileTextProcessing::default(),
+            engine_options: ProfileEngineOptions::Http(HttpEngineOptions {
+                body_template: Some(r#"{"model":"chatterbox"}"#.into()),
+                ..HttpEngineOptions::default()
+            }),
         };
         let json = serde_json::to_string(&profile).unwrap();
         let back: VoiceProfile = serde_json::from_str(&json).unwrap();

@@ -30,7 +30,8 @@
       openai: {
         api_key: "",
         model: "tts-1",
-        voice: "alloy"
+        voice: "alloy",
+        response_format: "wav"
       },
       elevenlabs: {
         api_key: "",
