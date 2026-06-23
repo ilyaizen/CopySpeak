@@ -139,7 +139,7 @@ mod tests {
     fn test_strip_lists_legend_example() {
         let input = "## Legend\n\n- **Added**: New features\n- **Changed**: Changes in existing functionality.\n- **Deprecated**: Soon-to-be removed features.\n- **Removed**: Removed features";
         let result = strip_markdown(input);
-        assert_eq!(result, "Legend. Added: New features. Changed: Changes in existing functionality. Deprecated: Soon-to-be removed features. Removed: Removed features");
+        assert_eq!(result, "Legend.\n\nAdded: New features.\nChanged: Changes in existing functionality.\nDeprecated: Soon-to-be removed features.\nRemoved: Removed features.");
     }
 
     #[test]

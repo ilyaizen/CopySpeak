@@ -38,16 +38,24 @@ impl TtsBackend for OpenAiTtsBackend {
         "OpenAI"
     }
 
-    fn synthesize(&self, text: &str, _voice: &str, speed: f32) -> Result<Vec<u8>, TtsError> {
+    fn synthesize(&self, text: &str, voice: &str, speed: f32) -> Result<Vec<u8>, TtsError> {
         let url = "https://api.openai.com/v1/audio/speech";
 
-        let body = json!({
+        let mut body = json!({
             "model": self.config.model,
             "input": text,
-            "voice": self.config.voice,
+            "voice": voice,
             "speed": speed,
-            "response_format": "wav",
+            "response_format": self.config.response_format,
         });
+        if let Some(instructions) = self
+            .config
+            .instructions
+            .as_ref()
+            .filter(|value| !value.trim().is_empty())
+        {
+            body["instructions"] = json!(instructions);
+        }
 
         let api_key = self.config.api_key.clone();
 
@@ -55,7 +63,7 @@ impl TtsBackend for OpenAiTtsBackend {
         log::info!(
             "OpenAI TTS request - model: {}, voice: {}, speed: {}, text length: {} chars",
             self.config.model,
-            self.config.voice,
+            voice,
             speed,
             text.len()
         );

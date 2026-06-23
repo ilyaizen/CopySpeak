@@ -51,7 +51,9 @@ impl TtsBackend for HttpTtsBackend {
 
     fn synthesize(&self, text: &str, voice: &str, speed: f32) -> Result<Vec<u8>, TtsError> {
         if self.config.url_template.trim().is_empty() {
-            return Err(TtsError::Unavailable("HTTP TTS url is not configured".into()));
+            return Err(TtsError::Unavailable(
+                "HTTP TTS url is not configured".into(),
+            ));
         }
 
         let url = Self::fill(&self.config.url_template, text, voice, speed);
@@ -74,9 +76,10 @@ impl TtsBackend for HttpTtsBackend {
         let timeout = Duration::from_secs(self.config.timeout_secs.max(1));
 
         let response = Self::block_on_async(async {
-            let client = Client::builder().timeout(timeout).build().map_err(|e| {
-                TtsError::Http(format!("Failed to build HTTP client: {}", e))
-            })?;
+            let client = Client::builder()
+                .timeout(timeout)
+                .build()
+                .map_err(|e| TtsError::Http(format!("Failed to build HTTP client: {}", e)))?;
             let mut req = match method.as_str() {
                 "GET" => client.get(&url),
                 _ => client.post(&url),
@@ -85,7 +88,9 @@ impl TtsBackend for HttpTtsBackend {
                 req = req.header(k.as_str(), v.as_str());
             }
             if let Some(ref b) = body {
-                req = req.header("Content-Type", "application/json").body(b.clone());
+                req = req
+                    .header("Content-Type", "application/json")
+                    .body(b.clone());
             }
             req.send()
                 .await
@@ -93,7 +98,11 @@ impl TtsBackend for HttpTtsBackend {
         })?;
 
         let status = response.status();
-        log::info!("HTTP TTS response: {} (took {:?})", status.as_u16(), start_time.elapsed());
+        log::info!(
+            "HTTP TTS response: {} (took {:?})",
+            status.as_u16(),
+            start_time.elapsed()
+        );
 
         let bytes = Self::block_on_async(async { response.bytes().await })
             .map_err(|e| TtsError::Http(format!("Failed to read bytes: {}", e)))?;
@@ -101,11 +110,16 @@ impl TtsBackend for HttpTtsBackend {
         if !status.is_success() {
             let error_text = String::from_utf8_lossy(&bytes);
             log::error!("HTTP TTS error {}: {}", status, error_text);
-            return Err(TtsError::Http(format!("HTTP TTS error {}: {}", status, error_text)));
+            return Err(TtsError::Http(format!(
+                "HTTP TTS error {}: {}",
+                status, error_text
+            )));
         }
 
         if bytes.is_empty() {
-            return Err(TtsError::OutputNotFound("HTTP TTS returned no audio bytes".into()));
+            return Err(TtsError::OutputNotFound(
+                "HTTP TTS returned no audio bytes".into(),
+            ));
         }
 
         Ok(bytes.to_vec())
@@ -113,7 +127,9 @@ impl TtsBackend for HttpTtsBackend {
 
     fn health_check(&self) -> Result<(), TtsError> {
         if self.config.url_template.trim().is_empty() {
-            return Err(TtsError::Unavailable("HTTP TTS url is not configured".into()));
+            return Err(TtsError::Unavailable(
+                "HTTP TTS url is not configured".into(),
+            ));
         }
         Ok(())
     }

@@ -118,7 +118,8 @@ fn default_aws_config() -> LlmProviderConfig {
     LlmProviderConfig {
         api_key: String::new(),
         model: "amazon.nova-lite-v1:0".to_string(),
-        endpoint: "https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1/chat/completions".to_string(),
+        endpoint: "https://bedrock-runtime.us-east-1.amazonaws.com/openai/v1/chat/completions"
+            .to_string(),
     }
 }
 

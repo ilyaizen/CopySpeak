@@ -1,6 +1,6 @@
 import type { Plugin } from "vite";
 
-// Mock for $app/state - virtual module
+// Mock for SvelteKit virtual modules used in vitest
 let mockPathname = "/";
 
 export const mockAppStatePlugin = (): Plugin => ({
@@ -8,6 +8,9 @@ export const mockAppStatePlugin = (): Plugin => ({
   resolveId(source) {
     if (source === "$app/state") {
       return "\0mock-app-state";
+    }
+    if (source === "$app/navigation") {
+      return "\0mock-app-navigation";
     }
     return null;
   },
@@ -24,6 +27,13 @@ export const mockAppStatePlugin = (): Plugin => ({
             }
           }
         };
+      `;
+    }
+    if (id === "\0mock-app-navigation") {
+      return `
+        export function goto() {
+          return Promise.resolve();
+        }
       `;
     }
     return null;

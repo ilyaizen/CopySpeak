@@ -1,8 +1,46 @@
 // ElevenLabs voice listing and output format commands.
 
 use crate::config::AppConfig;
+use crate::config::TtsEngine;
 use std::sync::Mutex;
 use tauri::State;
+
+#[tauri::command]
+pub fn list_tts_engines() -> Vec<crate::tts::catalog::EngineCatalogEntry> {
+    crate::tts::catalog::list_engines()
+}
+
+#[tauri::command]
+pub fn list_tts_voices(
+    engine: TtsEngine,
+    config: State<'_, Mutex<AppConfig>>,
+) -> Result<Vec<crate::tts::catalog::VoiceCatalogEntry>, String> {
+    if engine == TtsEngine::ElevenLabs {
+        let cfg = config.lock().unwrap();
+        let backend = crate::tts::elevenlabs::ElevenLabsTtsBackend::new(cfg.tts.elevenlabs.clone());
+        return backend
+            .list_voices()
+            .map(|voices| {
+                voices
+                    .into_iter()
+                    .map(|voice| crate::tts::catalog::VoiceCatalogEntry {
+                        id: voice.voice_id.clone(),
+                        label: voice.name.unwrap_or(voice.voice_id),
+                        language: voice.labels.as_ref().and_then(|labels| {
+                            labels
+                                .get("language")
+                                .and_then(|language| language.as_str().map(str::to_string))
+                        }),
+                        description: voice.description,
+                        preview_url: voice.preview_url,
+                    })
+                    .collect()
+            })
+            .map_err(|e| format!("Failed to fetch voices: {}", e));
+    }
+
+    Ok(crate::tts::catalog::list_static_voices(&engine))
+}
 
 /// List available ElevenLabs voices.
 /// Requires valid API key in config.

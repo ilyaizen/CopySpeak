@@ -27,6 +27,14 @@ pub struct OpenAIConfig {
     pub api_key: String,
     pub model: String,
     pub voice: String,
+    #[serde(default = "default_openai_response_format")]
+    pub response_format: String,
+    #[serde(default)]
+    pub instructions: Option<String>,
+}
+
+fn default_openai_response_format() -> String {
+    "wav".into()
 }
 
 impl Default for OpenAIConfig {
@@ -35,6 +43,8 @@ impl Default for OpenAIConfig {
             api_key: String::new(),
             model: "tts-1".into(),
             voice: "alloy".into(),
+            response_format: default_openai_response_format(),
+            instructions: None,
         }
     }
 }
@@ -113,6 +123,10 @@ pub struct CartesiaConfig {
     pub voice_id: String,
     pub voice_name: Option<String>,
     pub output_format: String,
+    #[serde(default)]
+    pub encoding: Option<String>,
+    #[serde(default)]
+    pub sample_rate: Option<u32>,
     pub use_manual_voice_id: bool,
 }
 
@@ -124,6 +138,8 @@ impl Default for CartesiaConfig {
             voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02".into(),
             voice_name: Some("Katie".into()),
             output_format: "wav".into(),
+            encoding: Some("pcm_f32le".into()),
+            sample_rate: Some(44100),
             use_manual_voice_id: false,
         }
     }
@@ -216,9 +232,7 @@ impl Default for HttpTtsConfig {
             url_template: String::new(),
             method: "POST".into(),
             headers: Vec::new(),
-            body_template: Some(
-                r#"{"model":"tts","input":"{text}","voice":"{voice}"}"#.into(),
-            ),
+            body_template: Some(r#"{"model":"tts","input":"{text}","voice":"{voice}"}"#.into()),
             voice: String::new(),
             response_format: "wav".into(),
             timeout_secs: 60,
@@ -250,17 +264,351 @@ impl Default for ProfileEffects {
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum ProfileTextProcessingMode {
+    InheritGlobal,
+    Disabled,
+    Enabled,
+}
+
+impl Default for ProfileTextProcessingMode {
+    fn default() -> Self {
+        ProfileTextProcessingMode::InheritGlobal
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum BracketedEmoteStrategy {
+    KeepLiteral,
+    Strip,
+    ConvertToSsmlOrInstruction,
+}
+
+impl Default for BracketedEmoteStrategy {
+    fn default() -> Self {
+        BracketedEmoteStrategy::KeepLiteral
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ProfileTextProcessing {
+    pub mode: ProfileTextProcessingMode,
+    pub strip_emote_brackets: bool,
+    pub bracketed_emote_strategy: BracketedEmoteStrategy,
+}
+
+impl Default for ProfileTextProcessing {
+    fn default() -> Self {
+        Self {
+            mode: ProfileTextProcessingMode::InheritGlobal,
+            strip_emote_brackets: false,
+            bracketed_emote_strategy: BracketedEmoteStrategy::KeepLiteral,
+        }
+    }
+}
+
+// ── Typed per-engine profile options ──────────────────────────────────────────
+//
+// On disk each profile's options are an object tagged with the engine name
+// (e.g. `{ "engine": "openai", "model": "tts-1" }`). Legacy configs/exports
+// stored a plain untagged object (or `{}`); those deserialize as `Legacy` and
+// are normalized into the right typed variant during `migrate_tts_config`, using
+// the profile's own `engine` field as the discriminant. Unset keys are omitted
+// on serialize so exports stay minimal and import-compatible.
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct LocalEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub preset: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub args_template: Option<Vec<String>>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct HttpEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url_template: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub method: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub body_template: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_format: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout_secs: Option<u64>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct OpenAiEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_format: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub instructions: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ElevenLabsEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_format: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stability: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub similarity_boost: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub style: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub use_speaker_boost: Option<bool>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct CartesiaEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_format: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub encoding: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sample_rate: Option<u32>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct GoogleEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_format: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MicrosoftEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_format: Option<String>,
+}
+
+/// Engine-specific, non-secret synthesis knobs carried by a voice profile.
+#[derive(Debug, Clone, PartialEq)]
+pub enum ProfileEngineOptions {
+    Local(LocalEngineOptions),
+    Http(HttpEngineOptions),
+    OpenAI(OpenAiEngineOptions),
+    ElevenLabs(ElevenLabsEngineOptions),
+    Cartesia(CartesiaEngineOptions),
+    Google(GoogleEngineOptions),
+    Microsoft(MicrosoftEngineOptions),
+    /// Untagged legacy bag captured at load; resolved during migration.
+    Legacy(serde_json::Map<String, serde_json::Value>),
+}
+
+impl Default for ProfileEngineOptions {
+    fn default() -> Self {
+        ProfileEngineOptions::Cartesia(CartesiaEngineOptions::default())
+    }
+}
+
+impl ProfileEngineOptions {
+    /// Empty typed options for the given engine.
+    pub fn default_for(engine: &TtsEngine) -> Self {
+        Self::from_engine_map(engine, serde_json::Map::new())
+    }
+
+    fn matches_engine(&self, engine: &TtsEngine) -> bool {
+        matches!(
+            (self, engine),
+            (Self::Local(_), TtsEngine::Local)
+                | (Self::Http(_), TtsEngine::Http)
+                | (Self::OpenAI(_), TtsEngine::OpenAI)
+                | (Self::ElevenLabs(_), TtsEngine::ElevenLabs)
+                | (Self::Cartesia(_), TtsEngine::Cartesia)
+                | (Self::Google(_), TtsEngine::Google)
+                | (Self::Microsoft(_), TtsEngine::Microsoft)
+        )
+    }
+
+    fn into_raw_map(self) -> serde_json::Map<String, serde_json::Value> {
+        if let Self::Legacy(map) = self {
+            return map;
+        }
+        match serde_json::to_value(&self) {
+            Ok(serde_json::Value::Object(mut map)) => {
+                map.remove("engine");
+                map
+            }
+            _ => serde_json::Map::new(),
+        }
+    }
+
+    fn from_engine_map(
+        engine: &TtsEngine,
+        map: serde_json::Map<String, serde_json::Value>,
+    ) -> Self {
+        let value = serde_json::Value::Object(map);
+        match engine {
+            TtsEngine::Local => Self::Local(serde_json::from_value(value).unwrap_or_default()),
+            TtsEngine::Http => Self::Http(serde_json::from_value(value).unwrap_or_default()),
+            TtsEngine::OpenAI => Self::OpenAI(serde_json::from_value(value).unwrap_or_default()),
+            TtsEngine::ElevenLabs => {
+                Self::ElevenLabs(serde_json::from_value(value).unwrap_or_default())
+            }
+            TtsEngine::Cartesia => {
+                Self::Cartesia(serde_json::from_value(value).unwrap_or_default())
+            }
+            TtsEngine::Google => Self::Google(serde_json::from_value(value).unwrap_or_default()),
+            TtsEngine::Microsoft => {
+                Self::Microsoft(serde_json::from_value(value).unwrap_or_default())
+            }
+        }
+    }
+
+    /// Normalize to the typed variant matching `engine`, preserving any
+    /// compatible fields from a legacy or mismatched options bag.
+    pub fn normalized_for(self, engine: &TtsEngine) -> Self {
+        if self.matches_engine(engine) {
+            self
+        } else {
+            Self::from_engine_map(engine, self.into_raw_map())
+        }
+    }
+
+    pub fn local(&self) -> Option<&LocalEngineOptions> {
+        match self {
+            Self::Local(o) => Some(o),
+            _ => None,
+        }
+    }
+    pub fn http(&self) -> Option<&HttpEngineOptions> {
+        match self {
+            Self::Http(o) => Some(o),
+            _ => None,
+        }
+    }
+    pub fn openai(&self) -> Option<&OpenAiEngineOptions> {
+        match self {
+            Self::OpenAI(o) => Some(o),
+            _ => None,
+        }
+    }
+    pub fn elevenlabs(&self) -> Option<&ElevenLabsEngineOptions> {
+        match self {
+            Self::ElevenLabs(o) => Some(o),
+            _ => None,
+        }
+    }
+    pub fn cartesia(&self) -> Option<&CartesiaEngineOptions> {
+        match self {
+            Self::Cartesia(o) => Some(o),
+            _ => None,
+        }
+    }
+    pub fn google(&self) -> Option<&GoogleEngineOptions> {
+        match self {
+            Self::Google(o) => Some(o),
+            _ => None,
+        }
+    }
+    pub fn microsoft(&self) -> Option<&MicrosoftEngineOptions> {
+        match self {
+            Self::Microsoft(o) => Some(o),
+            _ => None,
+        }
+    }
+}
+
+impl Serialize for ProfileEngineOptions {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::Error;
+        let (engine, value) = match self {
+            Self::Local(o) => ("local", serde_json::to_value(o)),
+            Self::Http(o) => ("http", serde_json::to_value(o)),
+            Self::OpenAI(o) => ("openai", serde_json::to_value(o)),
+            Self::ElevenLabs(o) => ("elevenlabs", serde_json::to_value(o)),
+            Self::Cartesia(o) => ("cartesia", serde_json::to_value(o)),
+            Self::Google(o) => ("google", serde_json::to_value(o)),
+            Self::Microsoft(o) => ("microsoft", serde_json::to_value(o)),
+            // Legacy bags serialize back as their raw untagged object.
+            Self::Legacy(map) => {
+                return serde_json::Value::Object(map.clone()).serialize(serializer);
+            }
+        };
+        let mut value = value.map_err(S::Error::custom)?;
+        if let serde_json::Value::Object(ref mut map) = value {
+            map.insert(
+                "engine".to_string(),
+                serde_json::Value::String(engine.to_string()),
+            );
+        }
+        value.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ProfileEngineOptions {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let map = match value {
+            serde_json::Value::Object(map) => map,
+            serde_json::Value::Null => return Ok(Self::Legacy(serde_json::Map::new())),
+            other => {
+                return Err(D::Error::custom(format!(
+                    "engine_options must be an object, got {other}"
+                )))
+            }
+        };
+        // Tagged objects resolve directly; untagged legacy bags are deferred to
+        // migration, which knows the owning profile's engine.
+        match map.get("engine").and_then(|v| v.as_str()) {
+            Some("local") => Ok(Self::from_engine_map(&TtsEngine::Local, map)),
+            Some("http") => Ok(Self::from_engine_map(&TtsEngine::Http, map)),
+            Some("openai") => Ok(Self::from_engine_map(&TtsEngine::OpenAI, map)),
+            Some("elevenlabs") => Ok(Self::from_engine_map(&TtsEngine::ElevenLabs, map)),
+            Some("cartesia") => Ok(Self::from_engine_map(&TtsEngine::Cartesia, map)),
+            Some("google") => Ok(Self::from_engine_map(&TtsEngine::Google, map)),
+            Some("microsoft") => Ok(Self::from_engine_map(&TtsEngine::Microsoft, map)),
+            _ => Ok(Self::Legacy(map)),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct VoiceProfile {
     pub id: String,
     pub name: String,
+    pub description: Option<String>,
     pub engine: TtsEngine,
     pub voice: String,
+    pub voice_label: Option<String>,
     pub speed: f32,
     pub pitch: f32,
     pub effects: ProfileEffects,
-    pub engine_options: serde_json::Value,
+    pub text_processing: ProfileTextProcessing,
+    pub engine_options: ProfileEngineOptions,
 }
 
 impl Default for VoiceProfile {
@@ -268,12 +616,15 @@ impl Default for VoiceProfile {
         Self {
             id: "default".into(),
             name: "Default".into(),
+            description: None,
             engine: TtsEngine::Cartesia,
             voice: "f786b574-daa5-4673-aa0c-cbe3e8534c02".into(),
+            voice_label: Some("Katie".into()),
             speed: 1.0,
             pitch: 1.0,
             effects: ProfileEffects::default(),
-            engine_options: serde_json::json!({}),
+            text_processing: ProfileTextProcessing::default(),
+            engine_options: ProfileEngineOptions::default_for(&TtsEngine::Cartesia),
         }
     }
 }
@@ -315,7 +666,7 @@ pub struct TtsConfig {
 impl Default for TtsConfig {
     fn default() -> Self {
         Self {
-            schema_version: 1,
+            schema_version: 2,
             active_backend: TtsEngine::Cartesia,
             active_profile_id: "default".into(),
             profiles: vec![VoiceProfile::default()],
@@ -360,15 +711,29 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
         tts.profiles = vec![VoiceProfile {
             id: "default".into(),
             name: "Default".into(),
+            description: None,
             engine: tts.active_backend.clone(),
             voice,
+            voice_label: None,
             speed: 1.0,
             pitch: 1.0,
             effects: ProfileEffects::default(),
-            engine_options: serde_json::json!({}),
+            text_processing: ProfileTextProcessing::default(),
+            engine_options: ProfileEngineOptions::default_for(&tts.active_backend),
         }];
-        tts.schema_version = 1;
     }
+
+    if tts.active_profile_id.trim().is_empty() {
+        tts.active_profile_id = "default".into();
+    }
+    // Resolve legacy/untagged option bags into the typed variant matching each
+    // profile's engine, filling defaults for any unset knobs.
+    for profile in &mut tts.profiles {
+        let engine = profile.engine.clone();
+        let opts = std::mem::take(&mut profile.engine_options);
+        profile.engine_options = opts.normalized_for(&engine);
+    }
+    tts.schema_version = 2;
 
     tts
 }

@@ -1,6 +1,6 @@
 // Shared helpers used across TTS command sub-modules.
 
-use crate::config::{TtsConfig, TtsEngine};
+use crate::config::{ProfileEngineOptions, ProfileTextProcessing, TtsConfig, TtsEngine};
 use crate::tts::cli::CliTtsBackend;
 use crate::tts::TtsBackend;
 use crate::JobStatus;
@@ -70,6 +70,128 @@ pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<
         TtsEngine::Microsoft => Box::new(crate::tts::microsoft::MicrosoftTtsBackend::new(
             tts_config.microsoft.clone(),
         )),
+    }
+}
+
+pub(crate) fn create_backend_from_effective(
+    eff: &EffectiveTtsRequest,
+    tts_config: &TtsConfig,
+) -> Box<dyn TtsBackend> {
+    match &eff.engine {
+        TtsEngine::Local => {
+            let opts = eff.engine_options.local();
+            let command = opts
+                .and_then(|o| o.command.clone())
+                .unwrap_or_else(|| tts_config.command.clone());
+            let args_template = opts
+                .and_then(|o| o.args_template.clone())
+                .filter(|items| !items.is_empty())
+                .unwrap_or_else(|| tts_config.args_template.clone());
+            Box::new(CliTtsBackend::new(command, args_template))
+        }
+        TtsEngine::OpenAI => {
+            let mut config = tts_config.openai.clone();
+            config.voice = eff.voice.clone();
+            if let Some(o) = eff.engine_options.openai() {
+                if let Some(model) = o.model.clone() {
+                    config.model = model;
+                }
+                if let Some(rf) = o.response_format.clone() {
+                    config.response_format = rf;
+                }
+                config.instructions = o.instructions.clone().or(config.instructions);
+            }
+            Box::new(crate::tts::openai::OpenAiTtsBackend::new(config))
+        }
+        TtsEngine::ElevenLabs => {
+            let mut config = tts_config.elevenlabs.clone();
+            config.voice_id = eff.voice.clone();
+            config.voice_name = eff.voice_label.clone().or(config.voice_name);
+            if let Some(o) = eff.engine_options.elevenlabs() {
+                if let Some(model_id) = o.model_id.clone() {
+                    config.model_id = model_id;
+                }
+                if let Some(output_format) = o.output_format.as_deref() {
+                    if let Ok(parsed) = serde_json::from_value(serde_json::json!(output_format)) {
+                        config.output_format = parsed;
+                    }
+                }
+                if let Some(stability) = o.stability {
+                    config.voice_stability = stability;
+                }
+                if let Some(similarity) = o.similarity_boost {
+                    config.voice_similarity_boost = similarity;
+                }
+                config.voice_style = o.style.or(config.voice_style);
+                config.use_speaker_boost = o.use_speaker_boost.or(config.use_speaker_boost);
+            }
+            Box::new(crate::tts::elevenlabs::ElevenLabsTtsBackend::new(config))
+        }
+        TtsEngine::Cartesia => {
+            let mut config = tts_config.cartesia.clone();
+            config.voice_id = eff.voice.clone();
+            config.voice_name = eff.voice_label.clone().or(config.voice_name);
+            if let Some(o) = eff.engine_options.cartesia() {
+                if let Some(model_id) = o.model_id.clone() {
+                    config.model_id = model_id;
+                }
+                if let Some(output_format) = o.output_format.clone() {
+                    config.output_format = output_format;
+                }
+                config.encoding = o.encoding.clone().or(config.encoding);
+                config.sample_rate = o.sample_rate.or(config.sample_rate);
+            }
+            Box::new(crate::tts::cartesia::CartesiaTtsBackend::new(config))
+        }
+        TtsEngine::Http => {
+            let mut config = tts_config.http.clone();
+            config.voice = eff.voice.clone();
+            if let Some(o) = eff.engine_options.http() {
+                if let Some(url_template) = o.url_template.clone() {
+                    config.url_template = url_template;
+                }
+                if let Some(method) = o.method.clone() {
+                    config.method = method;
+                }
+                config.body_template = o.body_template.clone().or(config.body_template);
+                if let Some(rf) = o.response_format.clone() {
+                    config.response_format = rf;
+                }
+                if let Some(timeout) = o.timeout_secs {
+                    config.timeout_secs = timeout;
+                }
+            }
+            Box::new(crate::tts::http::HttpTtsBackend::new(config))
+        }
+        TtsEngine::Google => {
+            let mut config = tts_config.google.clone();
+            config.voice_name = eff.voice.clone();
+            if let Some(o) = eff.engine_options.google() {
+                if let Some(model) = o.model.clone() {
+                    config.model = model;
+                }
+                if let Some(output_format) = o.output_format.clone() {
+                    config.output_format = output_format;
+                }
+            }
+            Box::new(crate::tts::google::GoogleTtsBackend::new(config))
+        }
+        TtsEngine::Microsoft => {
+            let mut config = tts_config.microsoft.clone();
+            config.voice_name = eff.voice.clone();
+            if let Some(o) = eff.engine_options.microsoft() {
+                if let Some(endpoint) = o.endpoint.clone() {
+                    config.endpoint = endpoint;
+                }
+                if let Some(model) = o.model.clone() {
+                    config.model = model;
+                }
+                if let Some(output_format) = o.output_format.clone() {
+                    config.output_format = output_format;
+                }
+            }
+            Box::new(crate::tts::microsoft::MicrosoftTtsBackend::new(config))
+        }
     }
 }
 
@@ -170,60 +292,68 @@ pub(crate) fn voice_display_name(
 
 // ── Effective profile resolution ─────────────────────────────────────────────
 
-/// The resolved synthesis parameters for the active voice profile.
-/// Built once per request so profile switching never mutates global config.
+/// The resolved synthesis parameters for a voice profile.
+#[allow(dead_code)]
 pub(crate) struct EffectiveTtsRequest {
+    pub profile_id: Option<String>,
+    pub profile_name: Option<String>,
     pub engine: TtsEngine,
     pub voice: String,
-    #[allow(dead_code)]
+    pub voice_label: Option<String>,
     pub speed: f32,
-    #[allow(dead_code)]
     pub pitch: f32,
-    #[allow(dead_code)]
     pub effects: crate::config::ProfileEffects,
+    pub text_processing: ProfileTextProcessing,
+    pub engine_options: ProfileEngineOptions,
 }
 
-/// Resolve the active voice profile into an effective request.
-///
-/// The migrated `"default"` profile is a passthrough for the legacy single-engine
-/// fields (active_backend + per-provider voice), so existing single-profile users
-/// keep identical behavior and the existing engine tabs stay authoritative.
-/// Any *named* profile is fully authoritative for engine/voice/speed/effects.
-pub(crate) fn resolve_effective(tts_config: &TtsConfig) -> EffectiveTtsRequest {
-    let legacy = || {
-        let engine = tts_config.active_backend.clone();
-        let voice = voice_for_backend(&engine, tts_config);
-        EffectiveTtsRequest {
-            engine,
-            voice,
-            speed: 1.0,
-            pitch: 1.0,
-            effects: crate::config::ProfileEffects::default(),
-        }
-    };
-
+pub(crate) fn resolve_effective_for_profile(
+    tts_config: &TtsConfig,
+    profile_id: Option<&str>,
+) -> Result<EffectiveTtsRequest, String> {
+    let selected_id = profile_id.unwrap_or(&tts_config.active_profile_id);
     let profile = tts_config
         .profiles
         .iter()
-        .find(|p| p.id == tts_config.active_profile_id);
+        .find(|p| p.id == selected_id)
+        .ok_or_else(|| format!("unknown profile: {}", selected_id))?;
+    let voice = if profile.voice.trim().is_empty() {
+        voice_for_backend(&profile.engine, tts_config)
+    } else {
+        profile.voice.clone()
+    };
 
-    match profile {
-        Some(p) if p.id != "default" => {
-            let voice = if p.voice.trim().is_empty() {
-                voice_for_backend(&p.engine, tts_config)
-            } else {
-                p.voice.clone()
-            };
-            EffectiveTtsRequest {
-                engine: p.engine.clone(),
-                voice,
-                speed: p.speed,
-                pitch: p.pitch,
-                effects: p.effects.clone(),
-            }
+    Ok(EffectiveTtsRequest {
+        profile_id: Some(profile.id.clone()),
+        profile_name: Some(profile.name.clone()),
+        engine: profile.engine.clone(),
+        voice,
+        voice_label: profile.voice_label.clone(),
+        speed: profile.speed,
+        pitch: profile.pitch,
+        effects: profile.effects.clone(),
+        text_processing: profile.text_processing.clone(),
+        engine_options: profile.engine_options.clone(),
+    })
+}
+
+pub(crate) fn resolve_effective(tts_config: &TtsConfig) -> EffectiveTtsRequest {
+    resolve_effective_for_profile(tts_config, None).unwrap_or_else(|_| {
+        let engine = tts_config.active_backend.clone();
+        let engine_options = ProfileEngineOptions::default_for(&engine);
+        EffectiveTtsRequest {
+            profile_id: None,
+            profile_name: None,
+            voice: voice_for_backend(&engine, tts_config),
+            voice_label: None,
+            engine,
+            speed: 1.0,
+            pitch: 1.0,
+            effects: crate::config::ProfileEffects::default(),
+            text_processing: ProfileTextProcessing::default(),
+            engine_options,
         }
-        _ => legacy(),
-    }
+    })
 }
 
 /// Get the engine string identifier for a backend (legacy function, prefer engine_identifier).
