@@ -794,20 +794,32 @@ impl TtsConfig {
     pub fn validate(&self) -> Vec<ValidationError> {
         let mut errors = Vec::new();
 
-        match self
+        let active_profile = self
             .profiles
             .iter()
-            .find(|profile| profile.id == self.active_profile_id)
+            .find(|profile| profile.id == self.active_profile_id);
+
+        match active_profile
             .map(|profile| &profile.engine)
             .unwrap_or(&self.active_backend)
         {
             TtsEngine::Local => {
-                if self.command.trim().is_empty() {
+                let local_options = active_profile
+                    .and_then(|profile| profile.engine_options.local());
+                let command = local_options
+                    .and_then(|options| options.command.as_deref())
+                    .unwrap_or(&self.command);
+                let args_template = local_options
+                    .and_then(|options| options.args_template.as_ref())
+                    .filter(|items| !items.is_empty())
+                    .unwrap_or(&self.args_template);
+
+                if command.trim().is_empty() {
                     errors.push(ValidationError::CommandEmpty);
                 }
 
                 // Accept {input}, {text} (legacy), or {raw_text} (inline text) placeholder
-                let has_input_placeholder = self.args_template.iter().any(|arg| {
+                let has_input_placeholder = args_template.iter().any(|arg| {
                     arg.contains("{input}") || arg.contains("{text}") || arg.contains("{raw_text}")
                 });
                 if !has_input_placeholder {
@@ -816,8 +828,7 @@ impl TtsConfig {
                     });
                 }
 
-                let has_output_placeholder = self
-                    .args_template
+                let has_output_placeholder = args_template
                     .iter()
                     .any(|arg| arg.contains("{output}"));
                 if !has_output_placeholder {

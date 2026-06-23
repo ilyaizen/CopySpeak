@@ -1,77 +1,13 @@
 <script lang="ts">
-  import { Label } from "$lib/components/ui/label/index.js";
-  import { Select } from "$lib/components/ui/select/index.js";
   import type { AppConfig } from "$lib/types";
   import { invoke } from "@tauri-apps/api/core";
   import { Alert, AlertTitle, AlertDescription } from "$lib/components/ui/alert/index.js";
   import { Button } from "$lib/components/ui/button/index.js";
   import { CheckCircle, XCircle, Terminal, ChevronDown, ChevronRight } from "@lucide/svelte";
   import { onMount } from "svelte";
-  import { openExternal } from "$lib/utils/external-link";
   import { _ } from "svelte-i18n";
 
   let { localConfig = $bindable() }: { localConfig: AppConfig } = $props();
-
-  // KittenTTS 0.8.1 voices
-  const KITTEN_VOICES = [
-    { value: "Bella", label: "Bella" },
-    { value: "Jasper", label: "Jasper" },
-    { value: "Luna", label: "Luna" },
-    { value: "Bruno", label: "Bruno" },
-    { value: "Rosie", label: "Rosie (default)" },
-    { value: "Hugo", label: "Hugo" },
-    { value: "Kiki", label: "Kiki" },
-    { value: "Leo", label: "Leo" }
-  ];
-
-  // EN US voices available in piper1-gpl (medium quality)
-  const PIPER_EN_VOICES = [
-    { value: "en_US-joe-medium", label: "Joe (default)" },
-    { value: "en_US-amy-medium", label: "Amy" },
-    { value: "en_US-arctic-medium", label: "Arctic" },
-    { value: "en_US-bryce-medium", label: "Bryce" },
-    { value: "en_US-danny-medium", label: "Danny" },
-    { value: "en_US-hfc_female-medium", label: "HFC Female" },
-    { value: "en_US-hfc_male-medium", label: "HFC Male" },
-    { value: "en_US-john-medium", label: "John" },
-    { value: "en_US-kathleen-medium", label: "Kathleen" },
-    { value: "en_US-kristin-medium", label: "Kristin" },
-    { value: "en_US-kusal-medium", label: "Kusal" },
-    { value: "en_US-l2arctic-medium", label: "L2Arctic" },
-    { value: "en_US-lessac-medium", label: "Lessac" },
-    { value: "en_US-libritts-medium", label: "LibriTTS" },
-    { value: "en_US-libritts_r-medium", label: "LibriTTS-R" },
-    { value: "en_US-ljspeech-medium", label: "LJSpeech" },
-    { value: "en_US-norman-medium", label: "Norman" },
-    { value: "en_US-reza_ibrahim-medium", label: "Reza Ibrahim" },
-    { value: "en_US-ryan-medium", label: "Ryan" },
-    { value: "en_US-sam-medium", label: "Sam" }
-  ];
-
-  const KOKORO_VOICES = [
-    { value: "af_heart", label: "Heart (af_heart)" },
-    { value: "af_bella", label: "Bella (af_bella)" },
-    { value: "af_nicole", label: "Nicole (af_nicole)" },
-    { value: "af_sarah", label: "Sarah (af_sarah)" },
-    { value: "af_sky", label: "Sky (af_sky)" },
-    { value: "am_adam", label: "Adam (am_adam)" },
-    { value: "am_michael", label: "Michael (am_michael)" },
-    { value: "bf_emma", label: "Emma (bf_emma)" },
-    { value: "bf_isabella", label: "Isabella (bf_isabella)" },
-    { value: "bm_george", label: "George (bm_george)" },
-    { value: "bm_lewis", label: "Lewis (bm_lewis)" }
-  ];
-
-  const POCKET_VOICES = [
-    { value: "alba", label: "Alba (Default)" },
-    { value: "marius", label: "Marius" },
-    { value: "javert", label: "Javert" },
-    { value: "jean", label: "Jean" },
-    { value: "fantine", label: "Fantine" },
-    { value: "cosette", label: "Cosette" },
-    { value: "eponine", label: "Eponine" },
-    { value: "azelma", label: "Azelma" }
-  ];
 
   let isTesting = $state(false);
   let testResult = $state<{
@@ -141,61 +77,6 @@
 </script>
 
 <div class="space-y-4">
-  <div class="space-y-2">
-    <Label for="tts-voice">{$_("engine.localEngine.voice")}</Label>
-    {#if localConfig.tts.preset === "kitten-tts"}
-      <Select
-        id="tts-voice"
-        options={KITTEN_VOICES}
-        value={localConfig.tts.voice}
-        onchange={(e) => {
-          localConfig.tts.voice = (e.target as HTMLSelectElement).value;
-        }}
-      />
-      <p class="text-muted-foreground text-xs">
-        {$_("engine.localEngine.kittenInstall")}
-      </p>
-    {:else if localConfig.tts.preset === "piper"}
-      <Select
-        id="tts-voice"
-        options={PIPER_EN_VOICES}
-        value={localConfig.tts.voice}
-        onchange={(e) => {
-          localConfig.tts.voice = (e.target as HTMLSelectElement).value;
-        }}
-      />
-      <p class="text-muted-foreground text-xs">
-        {$_("engine.localEngine.piperModels", {
-          values: { dataDir: dataDir ?? "%APPDATA%\\CopySpeak" }
-        })}
-        <button
-          onclick={() => openExternal("https://github.com/OHF-Voice/piper1-gpl")}
-          class="cursor-pointer underline"
-        >
-          piper1-gpl
-        </button>.
-      </p>
-    {:else if localConfig.tts.preset === "kokoro-tts"}
-      <Select
-        id="tts-voice"
-        options={KOKORO_VOICES}
-        value={localConfig.tts.voice}
-        onchange={(e) => {
-          localConfig.tts.voice = (e.target as HTMLSelectElement).value;
-        }}
-      />
-    {:else if localConfig.tts.preset === "pocket-tts"}
-      <Select
-        id="tts-voice"
-        options={POCKET_VOICES}
-        value={localConfig.tts.voice}
-        onchange={(e) => {
-          localConfig.tts.voice = (e.target as HTMLSelectElement).value;
-        }}
-      />
-    {/if}
-  </div>
-
   <!-- CLI Command Preview -->
   <div class="border-border rounded-md border">
     <button

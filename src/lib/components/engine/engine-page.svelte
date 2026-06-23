@@ -10,7 +10,7 @@
   import OpenAiEngine from "./openai-engine.svelte";
   import ElevenLabsEngine from "./elevenlabs-engine.svelte";
   import CartesiaEngine from "./cartesia-engine.svelte";
-  import type { AppConfig } from "$lib/types";
+  import type { AppConfig, EngineCatalogEntry, TtsEngine } from "$lib/types";
   import { openExternal } from "$lib/utils/external-link";
   import {
     Dialog,
@@ -30,6 +30,7 @@
   let isSaving = $state(false);
   let activeTab = $state<string>("");
   let isTesting = $state(false);
+  let catalog = $state<EngineCatalogEntry[]>([]);
 
   // Cloud TTS Dialog state
   let cloudDialogOpen = $state(false);
@@ -85,8 +86,6 @@
   interface EngineMeta {
     badges: BadgeKind[];
     location: LocationKind;
-    link: string | null;
-    linkLabel: string | null;
   }
 
   interface EngineCategory {
@@ -120,63 +119,49 @@
       id: "cartesia",
       meta: {
         badges: ["default", "cloud", "freemium"],
-        location: "cloud",
-        link: "https://docs.cartesia.ai/get-started/overview",
-        linkLabel: "API Docs"
+        location: "cloud"
       }
     },
     {
       id: "kitten",
       meta: {
         badges: ["default", "offline", "free"],
-        location: "local",
-        link: "https://github.com/KittenML/KittenTTS",
-        linkLabel: "GitHub"
+        location: "local"
       }
     },
     {
       id: "piper",
       meta: {
         badges: ["offline", "free"],
-        location: "local",
-        link: "https://github.com/OHF-Voice/piper1-gpl",
-        linkLabel: "Setup Guide"
+        location: "local"
       }
     },
     {
       id: "kokoro",
       meta: {
         badges: ["offline", "free"],
-        location: "local",
-        link: "https://github.com/hexgrad/kokoro",
-        linkLabel: "GitHub README"
+        location: "local"
       }
     },
     {
       id: "pocket",
       meta: {
         badges: ["offline", "free"],
-        location: "local",
-        link: null,
-        linkLabel: null
+        location: "local"
       }
     },
     {
       id: "elevenlabs",
       meta: {
         badges: ["cloud", "freemium"],
-        location: "cloud",
-        link: "https://elevenlabs.io/docs/api-reference/text-to-speech",
-        linkLabel: "API Docs"
+        location: "cloud"
       }
     },
     {
       id: "openai",
       meta: {
         badges: ["cloud", "paid"],
-        location: "cloud",
-        link: "https://platform.openai.com/docs/guides/text-to-speech",
-        linkLabel: "API Docs"
+        location: "cloud"
       }
     }
   ];
@@ -186,6 +171,22 @@
   }
 
   const currentMeta = $derived(getMeta(activeTab));
+  const currentDocsUrl = $derived(getDocsUrl(activeTab));
+
+  function catalogEngineForTab(tabId: string): TtsEngine {
+    return tabId === "openai" || tabId === "elevenlabs" || tabId === "cartesia"
+      ? tabId
+      : "local";
+  }
+
+  function getDocsUrl(tabId: string): string | null {
+    const engine = catalogEngineForTab(tabId);
+    return catalog.find((entry) => entry.engine === engine)?.docs_url ?? null;
+  }
+
+  function isLocalTab(tabId: string): boolean {
+    return catalogEngineForTab(tabId) === "local";
+  }
 
   function cloudEngineName(engine: "openai" | "elevenlabs" | "cartesia"): string {
     if (engine === "openai") return "OpenAI";
@@ -212,6 +213,15 @@
       JSON.stringify(localConfig) !== JSON.stringify(originalConfig)
   );
 
+  async function loadEngineCatalog() {
+    try {
+      const entries = await invoke<EngineCatalogEntry[]>("list_tts_engines");
+      catalog = Array.isArray(entries) ? entries : [];
+    } catch (e) {
+      console.error("Failed to load engine catalog:", e);
+    }
+  }
+
   async function loadConfig() {
     isLoading = true;
     try {
@@ -231,6 +241,7 @@
       localConfig = JSON.parse(JSON.stringify(config));
       originalConfig = JSON.parse(JSON.stringify(config));
       activeTab ||= "cartesia";
+      void loadEngineCatalog();
     } catch (e) {
       console.error("Failed to load config:", e);
       toast.error("Failed to load configuration");
@@ -279,9 +290,9 @@
     }
   }
 
-  function handleExternalLinkClick(e: Event, url: string) {
+  function handleExternalLinkClick(e: Event, url: string | null) {
     e.preventDefault();
-    openExternal(url);
+    if (url) openExternal(url);
   }
 
   // Cloud TTS Dialog functions
@@ -433,14 +444,14 @@
               </div>
             </div>
             <div class="p-4">
-              {#if currentMeta.link}
+              {#if currentDocsUrl}
                 <div class="mb-4">
                   <button
-                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    onclick={(e) => handleExternalLinkClick(e, currentDocsUrl)}
                     class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
                   >
                     <ExternalLink size={12} />
-                    {currentMeta.linkLabel}
+                    Docs
                   </button>
                 </div>
               {/if}
@@ -475,14 +486,14 @@
               </div>
             </div>
             <div class="p-4">
-              {#if currentMeta.link}
+              {#if currentDocsUrl}
                 <div class="mb-4">
                   <button
-                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    onclick={(e) => handleExternalLinkClick(e, currentDocsUrl)}
                     class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
                   >
                     <ExternalLink size={12} />
-                    {currentMeta.linkLabel}
+                    Docs
                   </button>
                 </div>
               {/if}
@@ -517,14 +528,14 @@
               </div>
             </div>
             <div class="p-4">
-              {#if currentMeta.link}
+              {#if currentDocsUrl}
                 <div class="mb-4">
                   <button
-                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    onclick={(e) => handleExternalLinkClick(e, currentDocsUrl)}
                     class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
                   >
                     <ExternalLink size={12} />
-                    {currentMeta.linkLabel}
+                    Docs
                   </button>
                 </div>
               {/if}
@@ -547,14 +558,14 @@
               <p class="text-muted-foreground mt-1 text-sm">{$_("engine.kitten.description")}</p>
             </div>
             <div class="p-4">
-              {#if currentMeta.link}
+              {#if currentDocsUrl}
                 <div class="mb-4">
                   <button
-                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    onclick={(e) => handleExternalLinkClick(e, currentDocsUrl)}
                     class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
                   >
                     <ExternalLink size={12} />
-                    {currentMeta.linkLabel}
+                    Docs
                   </button>
                 </div>
               {/if}
@@ -577,14 +588,14 @@
               <p class="text-muted-foreground mt-1 text-sm">{$_("engine.piper.description")}</p>
             </div>
             <div class="p-4">
-              {#if currentMeta.link}
+              {#if currentDocsUrl}
                 <div class="mb-4">
                   <button
-                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    onclick={(e) => handleExternalLinkClick(e, currentDocsUrl)}
                     class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
                   >
                     <ExternalLink size={12} />
-                    {currentMeta.linkLabel}
+                    Docs
                   </button>
                 </div>
               {/if}
@@ -607,14 +618,14 @@
               <p class="text-muted-foreground mt-1 text-sm">{$_("engine.kokoro.description")}</p>
             </div>
             <div class="p-4">
-              {#if currentMeta.link}
+              {#if currentDocsUrl}
                 <div class="mb-4">
                   <button
-                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    onclick={(e) => handleExternalLinkClick(e, currentDocsUrl)}
                     class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
                   >
                     <ExternalLink size={12} />
-                    {currentMeta.linkLabel}
+                    Docs
                   </button>
                 </div>
               {/if}
@@ -637,14 +648,14 @@
               <p class="text-muted-foreground mt-1 text-sm">{$_("engine.pocket.description")}</p>
             </div>
             <div class="p-4">
-              {#if currentMeta.link}
+              {#if currentDocsUrl}
                 <div class="mb-4">
                   <button
-                    onclick={(e) => handleExternalLinkClick(e, currentMeta.link!)}
+                    onclick={(e) => handleExternalLinkClick(e, currentDocsUrl)}
                     class="text-muted-foreground hover:text-foreground flex cursor-pointer items-center gap-1 text-xs transition-colors"
                   >
                     <ExternalLink size={12} />
-                    {currentMeta.linkLabel}
+                    Docs
                   </button>
                 </div>
               {/if}
@@ -652,6 +663,16 @@
             </div>
           </div>
         {/if}
+
+        {#if isLocalTab(activeTab)}
+          <section id="local-engine-installers" class="border-border rounded-lg border p-4">
+            <h3 class="text-sm font-medium">Local engine installers</h3>
+            <p class="text-muted-foreground mt-1 text-sm">
+              Guided installers for local engines will live here in a future release.
+            </p>
+          </section>
+        {/if}
+
         <!-- Test Voice -->
         <div class="border-border hidden border-t pt-4">
           <Button variant="outline" size="sm" onclick={handleTestVoice} disabled={isTesting}>

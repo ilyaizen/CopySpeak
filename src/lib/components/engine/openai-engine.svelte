@@ -20,18 +20,6 @@
     "tts-1-hd",
     "tts-1-hd-1106"
   ]);
-
-  const voiceOptions = createOptions([
-    "Alloy",
-    "Ash",
-    "Coral",
-    "Echo",
-    "Fable",
-    "Nova",
-    "Onyx",
-    "Shimmer",
-    "Verse"
-  ]);
 </script>
 
 <div class="bg-card border-border rounded-lg border p-3">
@@ -48,21 +36,6 @@
         value={localConfig.tts.openai.model}
         onchange={(e) => {
           localConfig.tts.openai.model = (e.target as HTMLSelectElement).value;
-        }}
-      />
-    </div>
-    <div class="flex items-center justify-between gap-4">
-      <div class="flex w-40 items-center gap-1.5">
-        <Label for="openai-voice" class="whitespace-nowrap">{$_("engine.openaiEngine.voice")}</Label
-        >
-        <InfoTooltip text={$_("engine.openaiEngine.voiceTooltip")} />
-      </div>
-      <Select
-        id="openai-voice"
-        options={voiceOptions}
-        value={localConfig.tts.openai.voice}
-        onchange={(e) => {
-          localConfig.tts.openai.voice = (e.target as HTMLSelectElement).value;
         }}
       />
     </div>

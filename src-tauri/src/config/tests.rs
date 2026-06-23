@@ -213,7 +213,9 @@ mod tests {
     #[test]
     fn test_validation_command_empty() {
         let mut config = AppConfig::default();
-        config.tts.active_backend = TtsEngine::Local;
+        config.tts.profiles[0].engine = TtsEngine::Local;
+        config.tts.profiles[0].engine_options =
+            ProfileEngineOptions::Local(LocalEngineOptions::default());
         config.tts.command = "".into();
         let result = config.validate();
         assert!(result.is_err());
@@ -226,9 +228,31 @@ mod tests {
     #[test]
     fn test_validation_args_template_missing_placeholders() {
         let mut config = AppConfig::default();
-        config.tts.active_backend = TtsEngine::Local;
+        config.tts.profiles[0].engine = TtsEngine::Local;
+        config.tts.profiles[0].engine_options =
+            ProfileEngineOptions::Local(LocalEngineOptions::default());
         config.tts.args_template = vec!["-v".into(), "{voice}".into()];
         let result = config.validate();
+        assert!(result.is_err());
+        let errors = result.unwrap_err();
+        assert!(errors
+            .iter()
+            .any(|e| matches!(e, ValidationError::ArgsTemplateMissingPlaceholder { .. })));
+    }
+
+    #[test]
+    fn test_validation_uses_active_profile_local_options() {
+        let mut config = AppConfig::default();
+        config.tts.command = "python3".into();
+        config.tts.args_template = vec!["{input}".into(), "{output}".into()];
+        config.tts.profiles[0].engine = TtsEngine::Local;
+        config.tts.profiles[0].engine_options = ProfileEngineOptions::Local(LocalEngineOptions {
+            args_template: Some(vec!["--voice".into(), "{voice}".into()]),
+            ..LocalEngineOptions::default()
+        });
+
+        let result = config.validate();
+
         assert!(result.is_err());
         let errors = result.unwrap_err();
         assert!(errors

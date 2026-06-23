@@ -145,12 +145,6 @@
 
   function selectProfile(id: string) {
     localConfig.tts.active_profile_id = id;
-    // Mirror a named profile's engine to the legacy field so the rest of the app
-    // (engine tabs, HUD) stays coherent while profile-first synthesis rolls out.
-    const p = profiles.find((x: VoiceProfile) => x.id === id);
-    if (p && p.id !== "default") {
-      localConfig.tts.active_backend = p.engine;
-    }
   }
 
   function onEngineChange(engine: TtsEngine) {
@@ -160,9 +154,6 @@
     const firstVoice = catalogVoicesFor(engine)[0];
     if (firstVoice && !localConfig.tts.profiles[activeIndex].voice) {
       setVoice(activeIndex, firstVoice.id);
-    }
-    if (active && active.id !== "default") {
-      localConfig.tts.active_backend = engine;
     }
   }
 
