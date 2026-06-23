@@ -37,3 +37,5 @@ src-tauri/Cargo.lock
 DO_NOT_TOUCH/
 /.claude/skills
 /.claude/commands
+/.hermes
+/.pi
