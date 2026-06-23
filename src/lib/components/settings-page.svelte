@@ -205,18 +205,16 @@
       </div>
     </div>
   {:else if localConfig}
-    <div class="flex flex-row items-start">
-      <!-- Left Sidebar - Scroll Spy Navigation (attached to content card) -->
-      <aside class="border-border w-28 shrink-0 self-stretch border-r">
-        <nav
-          class="border-border bg-card sticky top-0 overflow-hidden rounded-l-lg border-y border-l"
-        >
-          <div class="divide-y divide-border">
+    <div class="flex flex-row items-start gap-2">
+      <!-- Left Sidebar - Scroll Spy Navigation -->
+      <aside class="w-28 shrink-0 self-stretch">
+        <nav class="sticky top-0">
+          <div class="space-y-0.5">
             {#each tabs as tab}
               <button
-                class="w-full px-2 py-1.5 text-left text-sm font-medium transition-colors {activeTab ===
+                class="w-full rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors {activeTab ===
                 tab.id
-                  ? 'bg-primary/10 text-primary'
+                  ? 'bg-primary/10 text-primary border-primary border-l-2'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
                 onclick={() => scrollToTab(tab.id)}
               >
@@ -231,7 +229,7 @@
       <main class="flex-1 space-y-6 pb-20">
         <!-- General Section -->
         <section id="general" class="scroll-mt-4">
-          <div class="border-border overflow-hidden rounded-r-lg border-y border-r">
+          <div class="border-border overflow-hidden rounded-lg border">
             <div class="space-y-0">
               <!-- General -->
               <div class="border-border border-b p-4">
@@ -295,7 +293,7 @@
 
         <!-- History Section -->
         <section id="history" class="scroll-mt-4">
-          <div class="border-border overflow-hidden rounded-r-lg border-y border-r">
+          <div class="border-border overflow-hidden rounded-lg border">
             <div class="space-y-0">
               <div class="p-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
@@ -309,7 +307,7 @@
 
         <!-- Effects Section -->
         <section id="effects" class="scroll-mt-4">
-          <div class="border-border overflow-hidden rounded-r-lg border-y border-r">
+          <div class="border-border overflow-hidden rounded-lg border">
             <div class="space-y-0">
               <div class="p-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
@@ -323,7 +321,7 @@
 
         <!-- Advanced Section -->
         <section id="advanced" class="scroll-mt-4">
-          <div class="border-border overflow-hidden rounded-r-lg border-y border-r">
+          <div class="border-border overflow-hidden rounded-lg border">
             <div class="space-y-0">
               <!-- Advanced -->
               <div class="border-border border-b p-4">
@@ -353,7 +351,7 @@
 
         <!-- About Section -->
         <section id="about" class="scroll-mt-4">
-          <div class="border-border overflow-hidden rounded-r-lg border-y border-r">
+          <div class="border-border overflow-hidden rounded-lg border">
             <div class="space-y-0">
               <!-- App Info -->
               <div class="border-border border-b p-4">
