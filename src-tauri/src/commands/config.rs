@@ -135,7 +135,7 @@ pub fn set_config(
     config: State<'_, Mutex<AppConfig>>,
     player: State<'_, Mutex<AudioPlayer>>,
     is_listening: State<'_, Arc<AtomicBool>>,
-    new_config: AppConfig,
+    mut new_config: AppConfig,
 ) -> Result<(), String> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] set_config called");
@@ -177,6 +177,8 @@ pub fn set_config(
     }
 
     let listen_enabled_value = new_config.trigger.listen_enabled;
+
+    crate::config::sync_active_backend_mirror(&mut new_config.tts);
 
     let mut cfg = config.lock().unwrap();
     *cfg = new_config;

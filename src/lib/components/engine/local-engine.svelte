@@ -83,8 +83,6 @@
   let homeDir = $state<string | null>(null);
   let previewExpanded = $state(false);
 
-  const isActiveBackend = $derived(localConfig.tts.active_backend === "local");
-
   // Resolved CLI command preview using actual data dir path
   const cliPreview = $derived.by(() => {
     const dir = dataDir ?? "{data_dir}";
@@ -115,7 +113,10 @@
     isTesting = true;
     testResult = null;
     try {
-      const result = (await invoke("test_tts_engine")) as {
+      const result = (await invoke("test_tts_engine_config", {
+        engine: "local",
+        preset: localConfig.tts.preset
+      })) as {
         success: boolean;
         message: string;
         error_type?: string;
@@ -224,8 +225,7 @@
     {/if}
   </div>
 
-  {#if isActiveBackend}
-    <div class="border-border border-t pt-4">
+  <div class="border-border border-t pt-4">
       <Button variant="outline" size="sm" onclick={testEngine} disabled={isTesting}>
         {#if isTesting}
           {$_("engine.localEngine.testing")}
@@ -251,6 +251,5 @@
           </AlertDescription>
         </Alert>
       {/if}
-    </div>
-  {/if}
+  </div>
 </div>

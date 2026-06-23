@@ -162,7 +162,7 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
         let config_state: State<Mutex<AppConfig>> = app.state();
         let mut cfg = config_state.lock().map_err(|e| e.to_string())?;
         if let Some(engine) = request.engine.as_deref() {
-            cfg.tts.active_backend = parse_engine(engine)?;
+            let _ = parse_engine(engine)?;
         }
         if let Some(effect) = request.effect.as_deref() {
             let effect_id = parse_effect(effect)?;

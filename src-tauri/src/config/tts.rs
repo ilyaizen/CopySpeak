@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::ValidationError;
+use crate::tts::catalog;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -611,15 +612,54 @@ pub struct VoiceProfile {
     pub engine_options: ProfileEngineOptions,
 }
 
+fn prettify_voice_id(voice: &str) -> String {
+    voice
+        .split(['-', '_'])
+        .filter(|part| !part.is_empty())
+        .map(|part| {
+            let mut chars = part.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                None => String::new(),
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+pub fn profile_display_name(engine: &TtsEngine, voice_label: Option<&str>, voice: &str) -> String {
+    let engine_label = catalog::list_engines()
+        .into_iter()
+        .find(|entry| entry.engine == *engine)
+        .map(|entry| entry.label)
+        .unwrap_or_else(|| format!("{:?}", engine));
+    let voice_name = voice_label
+        .filter(|label| !label.trim().is_empty())
+        .map(str::to_string)
+        .unwrap_or_else(|| prettify_voice_id(voice));
+    format!("{} - {}", engine_label, voice_name)
+}
+
+fn catalog_voice_label(engine: &TtsEngine, voice: &str) -> Option<String> {
+    catalog::list_engines()
+        .into_iter()
+        .find(|entry| entry.engine == *engine)
+        .and_then(|entry| entry.voices.into_iter().find(|v| v.id == voice))
+        .map(|voice| voice.label)
+}
+
 impl Default for VoiceProfile {
     fn default() -> Self {
+        let engine = TtsEngine::Cartesia;
+        let voice = "f786b574-daa5-4673-aa0c-cbe3e8534c02".to_string();
+        let voice_label = Some("Katie".to_string());
         Self {
             id: "default".into(),
-            name: "Default".into(),
+            name: profile_display_name(&engine, voice_label.as_deref(), &voice),
             description: None,
-            engine: TtsEngine::Cartesia,
-            voice: "f786b574-daa5-4673-aa0c-cbe3e8534c02".into(),
-            voice_label: Some("Katie".into()),
+            engine,
+            voice,
+            voice_label,
             speed: 1.0,
             pitch: 1.0,
             effects: ProfileEffects::default(),
@@ -695,6 +735,12 @@ impl Default for TtsConfig {
 
 /// Migrate a legacy single-engine TTS config into the profile model.
 /// Idempotent: a config already at schema_version 1 with profiles is returned unchanged.
+pub fn sync_active_backend_mirror(tts: &mut TtsConfig) {
+    if let Some(profile) = tts.profiles.iter().find(|p| p.id == tts.active_profile_id) {
+        tts.active_backend = profile.engine.clone();
+    }
+}
+
 pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
     if tts.schema_version == 0 || tts.profiles.is_empty() {
         let voice = match tts.active_backend {
@@ -707,14 +753,19 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             TtsEngine::Microsoft => tts.microsoft.voice_name.clone(),
         };
 
+        let voice_label = catalog_voice_label(&tts.active_backend, &voice).or_else(|| match tts.active_backend {
+            TtsEngine::ElevenLabs => tts.elevenlabs.voice_name.clone(),
+            TtsEngine::Cartesia => tts.cartesia.voice_name.clone(),
+            _ => None,
+        });
         tts.active_profile_id = "default".into();
         tts.profiles = vec![VoiceProfile {
             id: "default".into(),
-            name: "Default".into(),
+            name: profile_display_name(&tts.active_backend, voice_label.as_deref(), &voice),
             description: None,
             engine: tts.active_backend.clone(),
             voice,
-            voice_label: None,
+            voice_label,
             speed: 1.0,
             pitch: 1.0,
             effects: ProfileEffects::default(),
@@ -734,6 +785,7 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
         profile.engine_options = opts.normalized_for(&engine);
     }
     tts.schema_version = 2;
+    sync_active_backend_mirror(&mut tts);
 
     tts
 }
@@ -742,7 +794,13 @@ impl TtsConfig {
     pub fn validate(&self) -> Vec<ValidationError> {
         let mut errors = Vec::new();
 
-        match self.active_backend {
+        match self
+            .profiles
+            .iter()
+            .find(|profile| profile.id == self.active_profile_id)
+            .map(|profile| &profile.engine)
+            .unwrap_or(&self.active_backend)
+        {
             TtsEngine::Local => {
                 if self.command.trim().is_empty() {
                     errors.push(ValidationError::CommandEmpty);

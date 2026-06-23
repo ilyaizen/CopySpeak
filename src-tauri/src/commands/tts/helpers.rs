@@ -337,6 +337,10 @@ pub(crate) fn resolve_effective_for_profile(
     })
 }
 
+pub(crate) fn active_engine(tts_config: &TtsConfig) -> TtsEngine {
+    resolve_effective(tts_config).engine
+}
+
 pub(crate) fn resolve_effective(tts_config: &TtsConfig) -> EffectiveTtsRequest {
     resolve_effective_for_profile(tts_config, None).unwrap_or_else(|_| {
         let engine = tts_config.active_backend.clone();

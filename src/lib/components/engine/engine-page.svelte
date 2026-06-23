@@ -79,24 +79,7 @@
     }
   };
 
-  const TAB_PRESET_MAP: Record<string, string> = {
-    kitten: "kitten-tts",
-    piper: "piper",
-    kokoro: "kokoro-tts",
-    pocket: "pocket-tts"
-  };
-
-  const DEFAULT_VOICES: Record<string, string> = {
-    kitten: "Rosie",
-    piper: "en_US-joe-medium",
-    kokoro: "adam",
-    pocket: "alba",
-    openai: "alloy",
-    elevenlabs: "21m00Tcm4TlvDq8ikWAM",
-    cartesia: "f786b574-daa5-4673-aa0c-cbe3e8534c02"
-  };
-
-  type BadgeKind = "active" | "default" | "offline" | "free" | "cloud" | "paid" | "freemium";
+  type BadgeKind = "default" | "offline" | "free" | "cloud" | "paid" | "freemium";
   type LocationKind = "local" | "cloud";
 
   interface EngineMeta {
@@ -112,7 +95,6 @@
   }
 
   const BADGE_STYLES: Record<BadgeKind, string> = {
-    active: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400 ring-1 ring-cyan-500/30",
     default: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/30",
     offline: "bg-blue-500/15 text-blue-700 dark:text-blue-400 ring-1 ring-blue-500/30",
     free: "bg-green-500/10 text-green-700 dark:text-green-400 ring-1 ring-green-500/25",
@@ -123,7 +105,6 @@
 
   const getBadgeLabel = (badge: BadgeKind): string => {
     const labels: Record<BadgeKind, string> = {
-      active: $_("engine.badges.active"),
       default: $_("engine.badges.default"),
       offline: $_("engine.badges.offline"),
       free: $_("engine.badges.free"),
@@ -200,27 +181,11 @@
     }
   ];
 
-  function isActiveEngine(tabId: string, config: AppConfig | null): boolean {
-    if (!config) return false;
-    if (tabId === "openai") return config.tts.active_backend === "openai";
-    if (tabId === "elevenlabs") return config.tts.active_backend === "elevenlabs";
-    if (tabId === "cartesia") return config.tts.active_backend === "cartesia";
-    const preset = TAB_PRESET_MAP[tabId];
-    return config.tts.active_backend === "local" && config.tts.preset === preset;
+  function getMeta(tabId: string): EngineMeta {
+    return ENGINE_CATEGORIES.find((cat) => cat.id === tabId)?.meta ?? ENGINE_CATEGORIES[0].meta;
   }
 
-  function getMetaWithActive(tabId: string, config: AppConfig | null): EngineMeta {
-    const cat = ENGINE_CATEGORIES.find((cat) => cat.id === tabId);
-    if (!cat) return ENGINE_CATEGORIES[0].meta;
-    const baseMeta = cat.meta;
-    if (isActiveEngine(tabId, config)) {
-      const badges: BadgeKind[] = ["active", ...baseMeta.badges.filter((b) => b !== "active")];
-      return { ...baseMeta, badges };
-    }
-    return baseMeta;
-  }
-
-  const currentMeta = $derived(getMetaWithActive(activeTab, originalConfig));
+  const currentMeta = $derived(getMeta(activeTab));
 
   function cloudEngineName(engine: "openai" | "elevenlabs" | "cartesia"): string {
     if (engine === "openai") return "OpenAI";
@@ -240,21 +205,6 @@
       cloudEngineName(cloudDialogEngine)
     );
   });
-
-  function presetToTab(preset: string): string {
-    if (preset === "kitten-tts") return "kitten";
-    if (preset === "piper") return "piper";
-    if (preset === "kokoro-tts") return "kokoro";
-    if (preset === "pocket-tts") return "pocket";
-    return "kitten";
-  }
-
-  function getTabFromConfig(config: AppConfig): string {
-    if (config.tts.active_backend === "openai") return "openai";
-    if (config.tts.active_backend === "elevenlabs") return "elevenlabs";
-    if (config.tts.active_backend === "cartesia") return "cartesia";
-    return presetToTab(config.tts.preset ?? "piper");
-  }
 
   const hasChanges = $derived(
     originalConfig !== null &&
@@ -280,8 +230,7 @@
       }
       localConfig = JSON.parse(JSON.stringify(config));
       originalConfig = JSON.parse(JSON.stringify(config));
-      // Set active tab based on loaded config
-      activeTab = getTabFromConfig(config);
+      activeTab ||= "cartesia";
     } catch (e) {
       console.error("Failed to load config:", e);
       toast.error("Failed to load configuration");
@@ -310,42 +259,11 @@
   function cancelChanges() {
     if (!originalConfig) return;
     localConfig = JSON.parse(JSON.stringify(originalConfig));
-    // Reset to the original active engine tab
-    activeTab = getTabFromConfig(originalConfig);
+    activeTab ||= "cartesia";
   }
 
   function handleTabChange(newTab: string) {
-    if (!localConfig) return;
-
     activeTab = newTab;
-
-    if (newTab === "openai") {
-      localConfig.tts.active_backend = "openai";
-      if (!localConfig.tts.openai.voice) {
-        localConfig.tts.openai.voice = DEFAULT_VOICES.openai;
-      }
-    } else if (newTab === "elevenlabs") {
-      localConfig.tts.active_backend = "elevenlabs";
-      if (!localConfig.tts.elevenlabs.voice_id) {
-        localConfig.tts.elevenlabs.voice_id = DEFAULT_VOICES.elevenlabs;
-      }
-    } else if (newTab === "cartesia") {
-      localConfig.tts.active_backend = "cartesia";
-      if (!localConfig.tts.cartesia.voice_id) {
-        localConfig.tts.cartesia.voice_id = DEFAULT_VOICES.cartesia;
-        localConfig.tts.cartesia.voice_name = "Katie";
-      }
-    } else {
-      localConfig.tts.active_backend = "local";
-      const preset = TAB_PRESET_MAP[newTab];
-      localConfig.tts.preset = preset;
-      const cfg = LOCAL_PRESET_CONFIGS[preset];
-      if (cfg) {
-        localConfig.tts.command = cfg.command;
-        localConfig.tts.args_template = cfg.args;
-      }
-      localConfig.tts.voice = DEFAULT_VOICES[newTab];
-    }
   }
 
   async function handleTestVoice() {
@@ -438,7 +356,10 @@
       // Temporarily persist the config so backend can read it
       await invoke("set_config", { newConfig: localConfig });
 
-      const result = await invoke<{ success: boolean; message: string }>("test_tts_engine");
+      const result = await invoke<{ success: boolean; message: string }>("test_tts_engine_config", {
+        engine: cloudDialogEngine,
+        preset: null
+      });
       engineTestResult = result;
     } catch (e) {
       engineTestResult = { success: false, message: String(e) };

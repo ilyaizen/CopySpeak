@@ -9,6 +9,7 @@
 // the HUD component registers handlers for `hud:*` events.
 
 use crate::audio::AmplitudeEnvelope;
+use crate::commands::helpers::{engine_identifier, resolve_effective};
 use crate::config::{AppConfig, HudConfig, HudPosition, HudPresetPosition, TtsEngine};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Monitor, PhysicalPosition, WebviewWindow};
@@ -29,81 +30,31 @@ pub struct HudSynthesizingPayload {
     pub duration_ms: Option<u64>,
 }
 
-fn get_provider_voice(cfg: &AppConfig) -> (Option<String>, Option<String>) {
-    let provider = match cfg.tts.active_backend {
-        TtsEngine::Local => {
-            // Determine specific local engine name
-            match cfg.tts.preset.as_str() {
-                "piper" => "Piper",
-                "kokoro-tts" => "Kokoro",
-                "pocket-tts" => "Pocket",
-                _ => "Local",
-            }
-        }
-        TtsEngine::OpenAI => "OpenAI",
-        TtsEngine::ElevenLabs => "ElevenLabs",
-        TtsEngine::Cartesia => "Cartesia",
-        TtsEngine::Http => "HTTP",
-        TtsEngine::Google => "Google",
-        TtsEngine::Microsoft => "Microsoft",
+fn title_case(value: &str) -> String {
+    let mut chars = value.chars();
+    match chars.next() {
+        None => String::new(),
+        Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
     }
-    .to_string();
-    let voice = match cfg.tts.active_backend {
-        TtsEngine::Local => {
-            let voice_id = cfg.tts.voice.clone();
-            match cfg.tts.preset.as_str() {
-                "kokoro-tts" => {
-                    // Kokoro voices use underscore format (e.g., "af_heart" -> "Heart")
-                    voice_id
-                        .split('_')
-                        .nth(1)
-                        .map(|s| {
-                            let mut chars = s.chars();
-                            match chars.next() {
-                                None => String::new(),
-                                Some(first) => {
-                                    first.to_uppercase().collect::<String>() + chars.as_str()
-                                }
-                            }
-                        })
-                        .unwrap_or_else(|| voice_id.clone())
-                }
-                _ => voice_id,
-            }
-        }
-        TtsEngine::OpenAI => {
-            let voice_id = cfg.tts.openai.voice.clone();
-            // Capitalize first letter (e.g., "alloy" -> "Alloy")
-            let mut chars = voice_id.chars();
-            match chars.next() {
-                None => voice_id,
-                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-            }
-        }
-        TtsEngine::ElevenLabs => {
-            // Use cached voice_name if available, otherwise fall back to static resolver
-            let voice_name = cfg.tts.elevenlabs.voice_name.clone().unwrap_or_else(|| {
-                crate::tts::elevenlabs::ElevenLabsTtsBackend::resolve_voice_name_static(
-                    &cfg.tts.elevenlabs.voice_id,
-                )
-            });
-            // Capitalize first letter (e.g., "rachel" -> "Rachel")
-            let mut chars = voice_name.chars();
-            match chars.next() {
-                None => voice_name,
-                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-            }
-        }
-        TtsEngine::Cartesia => cfg
-            .tts
-            .cartesia
-            .voice_name
-            .clone()
-            .unwrap_or_else(|| "Katie".to_string()),
-        TtsEngine::Http => cfg.tts.http.voice.clone(),
-        TtsEngine::Google => cfg.tts.google.voice_name.clone(),
-        TtsEngine::Microsoft => cfg.tts.microsoft.voice_name.clone(),
+}
+
+fn get_provider_voice(cfg: &AppConfig) -> (Option<String>, Option<String>) {
+    let eff = resolve_effective(&cfg.tts);
+    let provider = match eff.engine {
+        TtsEngine::Local => match engine_identifier(&eff.engine, &cfg.tts).as_str() {
+            "piper" => "Piper".to_string(),
+            "kokoro" => "Kokoro".to_string(),
+            "pocket" => "Pocket".to_string(),
+            _ => "Local".to_string(),
+        },
+        TtsEngine::OpenAI => "OpenAI".to_string(),
+        TtsEngine::ElevenLabs => "ElevenLabs".to_string(),
+        TtsEngine::Cartesia => "Cartesia".to_string(),
+        TtsEngine::Http => "HTTP".to_string(),
+        TtsEngine::Google => "Google".to_string(),
+        TtsEngine::Microsoft => "Microsoft".to_string(),
     };
+    let voice = eff.voice_label.unwrap_or_else(|| title_case(&eff.voice));
     (Some(provider), Some(voice))
 }
 
