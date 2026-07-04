@@ -614,8 +614,6 @@ fn main() {
             commands::set_config,
             commands::reset_config,
             commands::config_exists,
-            commands::get_data_dir,
-            commands::get_home_dir,
             commands::speak_now,
             commands::replay_cached,
             commands::speak_selected_text,
@@ -680,8 +678,6 @@ fn main() {
             commands::delete_history_batch,
             commands::play_history_batch,
             commands::trigger_update_check,
-            commands::get_installer_script_path,
-            commands::run_kittentts_installer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running CopySpeak TTS");

@@ -250,6 +250,9 @@ async fn speak_now_internal(
 
     log_tts_debug("TTS", &format!("{:?}", active_backend), &text);
 
+    let eff = resolve_effective(&tts_config);
+    let voice = eff.voice.clone();
+
     let backend: Box<dyn TtsBackend> = create_backend_from_effective(&eff, &tts_config);
     let engine_str_for_cache = engine_str(&active_backend);
 
@@ -627,6 +630,7 @@ pub async fn speak_queued(
         log::debug!("[Queue] Created {} fragments", fragments.len());
     }
 
+    let eff = resolve_effective(&tts_config);
     let voice = eff.voice.clone();
 
     // Get telemetry estimates

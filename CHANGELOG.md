@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **CI release build (Rust compile)** — Resolved 24 compile errors blocking `tauri build`:
+  - Wired up `config::post_processing` module (declared + re-exported in `config/mod.rs`) so `LlmProviderConfig` and `PostProcessingProvider` resolve from `commands/config.rs`.
+  - Removed 4 dead command registrations in `main.rs` (`get_data_dir`, `get_home_dir`, `get_installer_script_path`, `run_kittentts_installer`) — no definitions, no frontend callers.
+  - Added missing `let eff = resolve_effective(&tts_config)` + `voice` bindings in `speak_now` and `speak_queued` (`commands/tts/synthesis.rs`) where `eff`/`voice` were referenced but never bound.
+
+### Fixed
+
 - **CI release build** — Removed stale `bundle.resources` entries in `tauri.conf.json` (`../install-kittentts.ps1`, `../kittentts-cli.py`) that referenced non-existent repo-root files and aborted the bundler. Engine installer scripts are resolved at runtime under `scripts/` via `install_engine`.
 
 ### Changed
