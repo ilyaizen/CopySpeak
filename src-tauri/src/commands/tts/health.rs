@@ -60,6 +60,7 @@ fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
         "cartesia" => Ok(TtsEngine::Cartesia),
         "google" => Ok(TtsEngine::Google),
         "microsoft" => Ok(TtsEngine::Microsoft),
+        "edge" => Ok(TtsEngine::Edge),
         _ => Err(format!("unknown engine: {}", engine)),
     }
 }
@@ -93,6 +94,9 @@ pub fn test_tts_engine(config: State<'_, Mutex<AppConfig>>) -> Result<TtsHealthR
         crate::config::TtsEngine::Microsoft => {
             format!("Microsoft ({})", tts_config.microsoft.model)
         }
+        crate::config::TtsEngine::Edge => {
+            format!("Edge-TTS ({})", tts_config.edge.voice)
+        }
     };
 
     health_result(backend, backend_name)
@@ -118,6 +122,7 @@ pub fn test_tts_engine_config(
         TtsEngine::Http => format!("HTTP ({})", tts_config.http.url_template),
         TtsEngine::Google => format!("Google ({})", tts_config.google.model),
         TtsEngine::Microsoft => format!("Microsoft ({})", tts_config.microsoft.model),
+        TtsEngine::Edge => format!("Edge-TTS ({})", tts_config.edge.voice),
     };
     health_result(backend, backend_name)
 }

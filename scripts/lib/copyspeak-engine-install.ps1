@@ -75,6 +75,32 @@ function Test-AudioFile {
     return $true
 }
 
+# ── CLI chrome (shared banner + permission prompt) ──────────────────────────
+
+function Write-EngineBanner {
+    param([Parameter(Mandatory)][string]$Title)
+    $bar = "=" * 40
+    Write-Host "" -ForegroundColor Magenta
+    Write-Host "  $bar" -ForegroundColor Magenta
+    Write-Host "  |  $Title$(" " * [Math]::Max(1, 37 - $Title.Length))|" -ForegroundColor Magenta
+    Write-Host "  $bar" -ForegroundColor Magenta
+    Write-Host "" -ForegroundColor Magenta
+}
+
+# Ask the user before doing something destructive or network-heavy.
+# Defaults to Yes. Returns $true for yes.
+function Confirm-Install {
+    param(
+        [Parameter(Mandatory)][string]$Prompt,
+        [switch]$DefaultNo
+    )
+    $default = if ($DefaultNo) { "N" } else { "Y" }
+    Write-Host "  $Prompt" -ForegroundColor Yellow
+    $answer = Read-Host "  Proceed? (Y/n) [$default]"
+    if ([string]::IsNullOrWhiteSpace($answer)) { $answer = $default }
+    return $answer.Trim().ToUpperInvariant() -eq "Y"
+}
+
 # Print a ready-to-paste CopySpeak profile snippet. Does NOT edit config (v1).
 function Write-ProfileSnippet {
     param([Parameter(Mandatory)][string]$Json)

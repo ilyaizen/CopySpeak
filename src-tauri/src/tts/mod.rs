@@ -5,6 +5,7 @@
 pub mod cartesia;
 pub mod catalog;
 pub mod cli;
+pub mod edge;
 pub mod elevenlabs;
 pub mod google;
 pub mod http;

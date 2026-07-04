@@ -16,7 +16,7 @@ use std::os::windows::process::CommandExt;
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 #[cfg(windows)]
-fn get_expanded_path() -> String {
+pub(crate) fn get_expanded_path() -> String {
     use std::collections::HashSet;
     use std::env;
 

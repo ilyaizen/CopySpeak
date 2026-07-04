@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { goto } from "$app/navigation";
   import { Button } from "$lib/components/ui/button/index.js";
   import { invoke } from "@tauri-apps/api/core";
   import { toast } from "svelte-sonner";
@@ -13,16 +12,20 @@
   import type { AppConfig } from "$lib/types";
   import { openExternal } from "$lib/utils/external-link";
   import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle
-  } from "$lib/components/ui/dialog/index.js";
+    ExternalLink,
+    Key,
+    CheckCircle,
+    XCircle,
+    Terminal,
+    Download,
+    Loader2
+  } from "@lucide/svelte";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
+  import { openExternal } from "$lib/utils/external-link";
   import { _ } from "svelte-i18n";
+  import type { AppConfig, TtsEngine } from "$lib/types";
 
   let localConfig = $state<AppConfig | null>(null);
   let originalConfig = $state<AppConfig | null>(null);
@@ -80,7 +83,9 @@
   };
 
   type BadgeKind = "default" | "offline" | "free" | "cloud" | "paid" | "freemium";
-  type LocationKind = "local" | "cloud";
+  type Location = "local" | "cloud";
+  type CredentialKind = "none" | "api_key" | "api_key_endpoint";
+  type CredentialTarget = "openai" | "elevenlabs" | "cartesia" | "google" | "microsoft";
 
   interface EngineMeta {
     badges: BadgeKind[];
@@ -91,8 +96,121 @@
 
   interface EngineCategory {
     id: string;
-    meta: EngineMeta;
+    location: Location;
+    badges: BadgeKind[];
+    docsUrl: string;
+    credential: CredentialKind;
+    credentialTarget?: CredentialTarget;
+    /** Engine id passed to test_tts_engine_config (null = no setup test). */
+    testEngine?: TtsEngine;
+    /** Engine id passed to install_engine (null = no installer button). */
+    installer?: string;
   }
+
+  const ENGINE_TABS: EngineTab[] = [
+    {
+      id: "edge",
+      location: "cloud",
+      badges: ["default", "cloud", "free"],
+      docsUrl: "https://github.com/rany2/edge-tts",
+      credential: "none",
+      testEngine: "edge",
+      installer: "edge"
+    },
+    {
+      id: "cartesia",
+      location: "cloud",
+      badges: ["cloud", "freemium"],
+      docsUrl: "https://docs.cartesia.ai/api-reference/tts/bytes",
+      credential: "api_key",
+      credentialTarget: "cartesia",
+      testEngine: "cartesia"
+    },
+    {
+      id: "elevenlabs",
+      location: "cloud",
+      badges: ["cloud", "freemium"],
+      docsUrl: "https://elevenlabs.io/docs/api-reference/text-to-speech/convert",
+      credential: "api_key",
+      credentialTarget: "elevenlabs",
+      testEngine: "elevenlabs"
+    },
+    {
+      id: "openai",
+      location: "cloud",
+      badges: ["cloud", "paid"],
+      docsUrl: "https://platform.openai.com/docs/guides/text-to-speech",
+      credential: "api_key",
+      credentialTarget: "openai",
+      testEngine: "openai"
+    },
+    {
+      id: "google",
+      location: "cloud",
+      badges: ["cloud", "freemium"],
+      docsUrl: "https://ai.google.dev/gemini-api/docs/speech-generation",
+      credential: "api_key",
+      credentialTarget: "google",
+      testEngine: "google"
+    },
+    {
+      id: "microsoft",
+      location: "cloud",
+      badges: ["cloud", "paid"],
+      docsUrl:
+        "https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech",
+      credential: "api_key_endpoint",
+      credentialTarget: "microsoft",
+      testEngine: "microsoft"
+    },
+    {
+      id: "kitten",
+      location: "local",
+      badges: ["offline", "free"],
+      docsUrl: "https://github.com/KittenML/KittenTTS",
+      credential: "none",
+      installer: "kitten"
+    },
+    {
+      id: "piper",
+      location: "local",
+      badges: ["offline", "free"],
+      docsUrl: "https://github.com/OHF-Voice/piper1-gpl",
+      credential: "none",
+      installer: "piper"
+    },
+    {
+      id: "kokoro",
+      location: "local",
+      badges: ["offline", "free"],
+      docsUrl: "https://github.com/hexgrad/kokoro",
+      credential: "none",
+      installer: "kokoro"
+    },
+    {
+      id: "pocket",
+      location: "local",
+      badges: ["offline", "free"],
+      docsUrl: "https://github.com/pocket-tts/pocket-tts",
+      credential: "none",
+      installer: "pocket"
+    },
+    {
+      id: "chatterbox",
+      location: "local",
+      badges: ["offline", "free"],
+      docsUrl: "https://github.com/resemble-ai/chatterbox",
+      credential: "none",
+      installer: "chatterbox"
+    },
+    {
+      id: "http",
+      location: "cloud",
+      badges: ["cloud"],
+      docsUrl: "docs/profile-engine-settings.md",
+      credential: "none"
+    }
+  ];
 
   const BADGE_STYLES: Record<BadgeKind, string> = {
     default: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-500/30",
@@ -103,17 +221,7 @@
     freemium: "bg-yellow-500/15 text-yellow-700 dark:text-yellow-400 ring-1 ring-yellow-500/30"
   };
 
-  const getBadgeLabel = (badge: BadgeKind): string => {
-    const labels: Record<BadgeKind, string> = {
-      default: $_("engine.badges.default"),
-      offline: $_("engine.badges.offline"),
-      free: $_("engine.badges.free"),
-      cloud: $_("engine.badges.cloud"),
-      paid: $_("engine.badges.paid"),
-      freemium: $_("engine.badges.freemium")
-    };
-    return labels[badge];
-  };
+  const getBadgeLabel = (badge: BadgeKind): string => $_(`engine.badges.${badge}`);
 
   const ENGINE_CATEGORIES: EngineCategory[] = [
     {
@@ -181,9 +289,11 @@
     }
   ];
 
-  function getMeta(tabId: string): EngineMeta {
-    return ENGINE_CATEGORIES.find((cat) => cat.id === tabId)?.meta ?? ENGINE_CATEGORIES[0].meta;
-  }
+  let localConfig = $state<AppConfig | null>(null);
+  let originalConfig = $state<AppConfig | null>(null);
+  let isLoading = $state(true);
+  let isSaving = $state(false);
+  let activeTab = $state<string>("edge");
 
   const currentMeta = $derived(getMeta(activeTab));
 
@@ -216,18 +326,6 @@
     isLoading = true;
     try {
       const config = await invoke<AppConfig>("get_config");
-      // Migrate qwen3-tts and custom presets to piper
-      if (config.tts.preset === "qwen3-tts" || config.tts.preset === "custom") {
-        config.tts.preset = "piper";
-        const piperCfg = LOCAL_PRESET_CONFIGS.piper;
-        config.tts.command = piperCfg.command;
-        config.tts.args_template = piperCfg.args;
-      }
-      // Migrate stale pocket-tts args (-o → --output-path, {input} → {raw_text})
-      if (config.tts.preset === "pocket-tts" && config.tts.args_template?.includes("-o")) {
-        const pocketCfg = LOCAL_PRESET_CONFIGS["pocket-tts"];
-        config.tts.args_template = pocketCfg.args;
-      }
       localConfig = JSON.parse(JSON.stringify(config));
       originalConfig = JSON.parse(JSON.stringify(config));
       activeTab ||= "cartesia";
@@ -245,9 +343,7 @@
     try {
       await invoke("set_config", { newConfig: localConfig });
       originalConfig = JSON.parse(JSON.stringify(localConfig));
-      toast.success("Engine saved successfully");
-      // Navigate to Play page after successful save
-      goto("/");
+      toast.success("Engine settings saved");
     } catch (e) {
       console.error("Failed to save config:", e);
       toast.error(`Failed to save settings: ${e}`);
@@ -259,23 +355,44 @@
   function cancelChanges() {
     if (!originalConfig) return;
     localConfig = JSON.parse(JSON.stringify(originalConfig));
-    activeTab ||= "cartesia";
   }
 
-  function handleTabChange(newTab: string) {
-    activeTab = newTab;
+  // ── Credential helpers ─────────────────────────────────────────────────────
+
+  function apiKey(target: CredentialTarget): string {
+    if (!localConfig) return "";
+    return localConfig.tts[target].api_key ?? "";
   }
 
-  async function handleTestVoice() {
-    isTesting = true;
+  function setApiKey(tab: EngineTab, value: string) {
+    if (!localConfig || !tab.credentialTarget) return;
+    localConfig.tts[tab.credentialTarget].api_key = value;
+  }
+
+  function endpoint(): string {
+    if (!localConfig) return "";
+    return localConfig.tts.microsoft.endpoint ?? "";
+  }
+
+  function setEndpoint(value: string) {
+    if (!localConfig) return;
+    localConfig.tts.microsoft.endpoint = value;
+  }
+
+  // ── Setup test (uses the engine's default voice via global config) ────────
+
+  async function runSetupTest(tab: EngineTab) {
+    if (!localConfig || !tab.testEngine) return;
+    testingFor = tab.id;
+    testResult = null;
     try {
       await invoke("speak_now", {
         text: "Hello from CopySpeak TTS. This is a voice test."
       });
     } catch (e) {
-      toast.error(`Voice test failed: ${e}`);
+      testResult = { engine: tab.id, success: false, message: String(e) };
     } finally {
-      isTesting = false;
+      testingFor = null;
     }
   }
 
@@ -384,53 +501,50 @@
       </div>
     </div>
   {:else if localConfig}
+    <!-- uv missing banner -->
+    {#if uvAvailable === false}
+      <div
+        class="border-amber-500/30 bg-amber-500/10 mb-4 flex items-center justify-between gap-3 rounded-md border p-3"
+      >
+        <p class="text-amber-700 text-sm dark:text-amber-400">
+          {$_("engine.setup.uvMissing")}
+        </p>
+        <Button variant="outline" size="sm" onclick={() => runInstaller("uv")}>
+          <Download size={14} class="mr-2" />
+          {$_("engine.setup.installUv")}
+        </Button>
+      </div>
+    {/if}
+
     <div class="flex flex-row items-start gap-2">
-      <!-- Left Sidebar Navigation -->
+      <!-- Tab sidebar -->
       <aside class="w-28 shrink-0 self-stretch">
         <nav class="sticky top-0 space-y-0.5">
-          {#each ENGINE_CATEGORIES as category}
+          {#each ENGINE_TABS as tab}
             <button
               class="w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {activeTab ===
-              category.id
-                ? 'bg-primary/10 text-primary border-primary border-l-2 font-medium'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
-              onclick={() => handleTabChange(category.id)}
+              tab.id
+                ? "bg-primary/10 text-primary border-primary border-l-2 font-medium"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}"
+              onclick={() => (activeTab = tab.id)}
             >
-              {$_(`engine.${category.id}.title`)}
+              {$_(`engine.${tab.id}.title`)}
             </button>
           {/each}
         </nav>
       </aside>
 
-      <!-- Main Content -->
+      <!-- Active engine panel -->
       <main class="flex-1 space-y-6 pb-20">
-        <!-- Engine Configuration -->
-        {#if activeTab === "cartesia"}
-          <div class="border-border overflow-hidden rounded-lg border">
-            <div class="bg-muted/50 border-border border-b p-4">
-              <div class="flex items-center justify-between">
-                <div>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <h2 class="text-lg font-semibold">{$_("engine.cartesia.title")}</h2>
-                    {#each currentMeta.badges as badge}
-                      <span
-                        class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[
-                          badge
-                        ]}"
-                      >
-                        {getBadgeLabel(badge)}
-                      </span>
-                    {/each}
-                  </div>
-                  <p class="text-muted-foreground mt-1 text-sm">
-                    {$_("engine.cartesia.description")}
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" onclick={() => openCloudDialog("cartesia")}>
-                  <Key size={14} class="mr-2" />
-                  {$_("engine.cartesia.apiKey")}
-                </Button>
-              </div>
+        <section class="border-border overflow-hidden rounded-lg border">
+          <div class="bg-muted/50 border-border border-b p-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <h2 class="text-lg font-semibold">{$_(`engine.${active.id}.title`)}</h2>
+              {#each active.badges as badge}
+                <span class="rounded-full px-2 py-0.5 text-[11px] font-medium {BADGE_STYLES[badge]}">
+                  {getBadgeLabel(badge)}
+                </span>
+              {/each}
             </div>
             <div class="p-4">
               {#if currentMeta.link}
@@ -669,13 +783,7 @@
       <div
         class="border-border bg-card fixed right-4 bottom-12 z-60 flex items-center gap-3 border px-4 py-2.5 shadow-lg"
       >
-        <Button
-          size="sm"
-          variant="ghost"
-          onclick={cancelChanges}
-          disabled={isSaving}
-          class="h-8 px-3"
-        >
+        <Button size="sm" variant="ghost" onclick={cancelChanges} disabled={isSaving} class="h-8 px-3">
           {$_("engine.saveBar.cancel")}
         </Button>
         <Button size="sm" onclick={saveConfig} disabled={isSaving} class="h-8 px-4">
@@ -687,147 +795,9 @@
     <div class="flex min-h-[60vh] items-center justify-center px-6">
       <div class="mx-auto w-full max-w-sm text-center">
         <h2 class="mb-2 text-xl font-semibold">{$_("engine.error.loadFailed")}</h2>
-        <p class="text-muted-foreground mb-4">
-          {$_("engine.error.loadDescription")}
-        </p>
-        <Button onclick={loadConfig}>{$_("settings.actions.tryAgain")}</Button>
+        <p class="text-muted-foreground mb-4">{$_("engine.error.loadDescription")}</p>
+        <Button onclick={loadConfig}>{$_("engine.setup.tryAgain")}</Button>
       </div>
     </div>
   {/if}
-
-  <!-- Cloud TTS API Key Dialog -->
-  <Dialog bind:open={cloudDialogOpen}>
-    <DialogContent class="sm:max-w-md">
-      <DialogHeader>
-        <DialogTitle>
-          {apiSetupTitle()}
-        </DialogTitle>
-        <DialogDescription>
-          {apiSetupDescription()}
-        </DialogDescription>
-      </DialogHeader>
-
-      <div class="space-y-4 py-4">
-        <!-- API Key Input -->
-        <div class="space-y-2">
-          <Label for="cloud-api-key">{$_("engine.apiSetup.apiKey")}</Label>
-          <Input
-            id="cloud-api-key"
-            type="password"
-            placeholder={cloudDialogEngine === "openai"
-              ? $_("engine.apiSetup.placeholderOpenai")
-              : cloudDialogEngine === "cartesia"
-                ? $_("engine.apiSetup.placeholderCartesia")
-                : $_("engine.apiSetup.placeholderElevenlabs")}
-            bind:value={tempApiKey}
-          />
-          <p class="text-muted-foreground text-xs">
-            {cloudDialogEngine === "openai"
-              ? $_("engine.openai.apiKeyDescription")
-              : cloudDialogEngine === "cartesia"
-                ? $_("engine.cartesia.apiKeyDescription")
-                : $_("engine.elevenlabs.apiKeyDescription")}
-          </p>
-        </div>
-
-        <!-- Test Results -->
-        {#if credCheckResult}
-          <div
-            class="rounded-lg border p-3 {credCheckResult.success
-              ? 'border-emerald-500/30 bg-emerald-500/10'
-              : 'border-destructive/30 bg-destructive/10'}"
-          >
-            <div class="flex items-start gap-2">
-              {#if credCheckResult.success}
-                <CheckCircle class="mt-0.5 h-4 w-4 text-emerald-600" />
-              {:else}
-                <XCircle class="text-destructive mt-0.5 h-4 w-4" />
-              {/if}
-              <div>
-                <p
-                  class="text-sm font-medium {credCheckResult.success
-                    ? 'text-emerald-700'
-                    : 'text-destructive'}"
-                >
-                  {credCheckResult.success
-                    ? $_("engine.apiSetup.valid")
-                    : $_("engine.apiSetup.invalid")}
-                </p>
-                <p class="text-muted-foreground text-xs">{credCheckResult.message}</p>
-              </div>
-            </div>
-          </div>
-        {/if}
-
-        {#if engineTestResult}
-          <div
-            class="rounded-lg border p-3 {engineTestResult.success
-              ? 'border-emerald-500/30 bg-emerald-500/10'
-              : 'border-destructive/30 bg-destructive/10'}"
-          >
-            <div class="flex items-start gap-2">
-              {#if engineTestResult.success}
-                <CheckCircle class="mt-0.5 h-4 w-4 text-emerald-600" />
-              {:else}
-                <XCircle class="text-destructive mt-0.5 h-4 w-4" />
-              {/if}
-              <div>
-                <p
-                  class="text-sm font-medium {engineTestResult.success
-                    ? 'text-emerald-700'
-                    : 'text-destructive'}"
-                >
-                  {engineTestResult.success
-                    ? $_("engine.apiSetup.testPassed")
-                    : $_("engine.apiSetup.testFailed")}
-                </p>
-                <p class="text-muted-foreground text-xs">{engineTestResult.message}</p>
-              </div>
-            </div>
-          </div>
-        {/if}
-      </div>
-
-      <DialogFooter class="flex-col gap-2 sm:flex-row">
-        <div class="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onclick={checkCloudCredentials}
-            disabled={isCheckingCreds || isTestingEngine || !tempApiKey}
-          >
-            {#if isCheckingCreds}
-              <Spinner class="mr-2 h-4 w-4" />
-            {/if}
-            {$_("engine.apiSetup.checkButton")}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onclick={testCloudEngine}
-            disabled={isCheckingCreds || isTestingEngine || !tempApiKey}
-          >
-            {#if isTestingEngine}
-              <Spinner class="mr-2 h-4 w-4" />
-            {/if}
-            {$_("engine.apiSetup.testButton")}
-          </Button>
-        </div>
-        <div class="flex gap-2 sm:ml-auto">
-          <Button variant="ghost" size="sm" onclick={() => closeCloudDialog()}>
-            {$_("engine.apiSetup.cancel")}
-          </Button>
-          <Button
-            size="sm"
-            onclick={() => {
-              saveApiKeyToConfig();
-              closeCloudDialog(false);
-            }}
-          >
-            {$_("engine.apiSetup.save")}
-          </Button>
-        </div>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
 </div>

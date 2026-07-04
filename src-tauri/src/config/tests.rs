@@ -245,7 +245,7 @@ mod tests {
         assert_eq!(tts.active_profile_id, "default");
         assert_eq!(tts.profiles.len(), 1);
         assert_eq!(tts.profiles[0].id, "default");
-        assert_eq!(tts.profiles[0].engine, TtsEngine::Cartesia);
+        assert_eq!(tts.profiles[0].engine, TtsEngine::Edge);
     }
 
     #[test]

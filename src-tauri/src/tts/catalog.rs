@@ -414,6 +414,58 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             ],
             voices: vec![],
         },
+        EngineCatalogEntry {
+            engine: TtsEngine::Edge,
+            label: "Edge-TTS".into(),
+            description: "Free Microsoft Read Aloud voices via edge-tts. No API key required."
+                .into(),
+            docs_url: "https://github.com/rany2/edge-tts".into(),
+            supports_voice_refresh: false,
+            supports_speed: true,
+            supports_pitch: false,
+            supports_bracket_emotes: false,
+            options: vec![],
+            voices: [
+                // ── US ──────────────────────────────────────────
+                ("en-US-AvaMultilingualNeural", "Ava (Multilingual)"),
+                ("en-US-EmmaMultilingualNeural", "Emma (Multilingual)"),
+                ("en-US-AndrewMultilingualNeural", "Andrew (Multilingual)"),
+                ("en-US-BrianMultilingualNeural", "Brian (Multilingual)"),
+                ("en-US-AriaNeural", "Aria"),
+                ("en-US-JennyNeural", "Jenny"),
+                ("en-US-GuyNeural", "Guy"),
+                ("en-US-DavisNeural", "Davis"),
+                ("en-US-AmberNeural", "Amber"),
+                ("en-US-AnaNeural", "Ana"),
+                ("en-US-AndrewNeural", "Andrew"),
+                ("en-US-AvaNeural", "Ava"),
+                ("en-US-BrianNeural", "Brian"),
+                ("en-US-ChristopherNeural", "Christopher"),
+                ("en-US-EmmaNeural", "Emma"),
+                ("en-US-EricNeural", "Eric"),
+                ("en-US-MichelleNeural", "Michelle"),
+                ("en-US-RogerNeural", "Roger"),
+                ("en-US-SteffanNeural", "Steffan"),
+                // ── GB ──────────────────────────────────────────
+                ("en-GB-SoniaNeural", "Sonia (GB)"),
+                ("en-GB-RyanNeural", "Ryan (GB)"),
+                ("en-GB-LibbyNeural", "Libby (GB)"),
+                ("en-GB-MaisieNeural", "Maisie (GB)"),
+                ("en-GB-ThomasNeural", "Thomas (GB)"),
+                // ── AU ──────────────────────────────────────────
+                ("en-AU-NatashaNeural", "Natasha (AU)"),
+                ("en-AU-WilliamMultilingualNeural", "William (AU, Multilingual)"),
+                // ── CA ──────────────────────────────────────────
+                ("en-CA-ClaraNeural", "Clara (CA)"),
+                ("en-CA-LiamNeural", "Liam (CA)"),
+                // ── IE ──────────────────────────────────────────
+                ("en-IE-ConnorNeural", "Connor (IE)"),
+                ("en-IE-EmilyNeural", "Emily (IE)"),
+            ]
+            .iter()
+            .map(|(id, label)| voice(id, label, Some("en"), None))
+            .collect(),
+        },
     ]
 }
 
@@ -440,6 +492,7 @@ mod tests {
             TtsEngine::Cartesia,
             TtsEngine::Google,
             TtsEngine::Microsoft,
+            TtsEngine::Edge,
         ] {
             assert_eq!(
                 entries
@@ -449,7 +502,7 @@ mod tests {
                 1
             );
         }
-        assert_eq!(entries.len(), 7);
+        assert_eq!(entries.len(), 8);
     }
 
     #[test]
