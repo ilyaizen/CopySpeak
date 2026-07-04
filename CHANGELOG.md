@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.16] - 2026-07-04
 
 ### Added
 
@@ -57,14 +57,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Profile-first synthesis** — `speak_now` and `speak_queued` (the clipboard double-copy path) both build the backend from the resolved active profile, so profile `engine_options` are honored for short and paginated/long-text playback alike. The OpenAI backend now respects the requested `voice` instead of always using the global config voice.
 - **Profiles drive synthesis end-to-end** — Footer switching now changes profiles instead of engines, `active_backend` is maintained as a derived compatibility mirror, and default profiles are named `Engine - Voice`.
 - **Engine page repurposed** — Engine tabs no longer set the active synthesis engine; they are configuration panels for keys, fallback model/output settings, smoke tests, docs, and future installer guidance.
+- **Brand renamed to CopySpeak** — Removed "TTS" suffix from all user-facing copy, descriptions, and page titles. Added "AI text-to-speech for your clipboard" tagline to the app header, landing page hero subtitle, and Vercel-mode web header.
 
 ### Fixed
 
 - **Profile-aware backend readers** — `test_tts_engine`, HUD provider/voice display, config validation, and control-server persisted profile selection now resolve from the active profile instead of loose `active_backend` state.
 - **Tauri dev startup** — Added a preflight check in `scripts/tauri-dev.mjs` so `bun run tauri dev` now fails with a clear Rust/Cargo install message instead of Tauri's raw `cargo metadata` error when Cargo is missing.
 - **Vercel landing page** — Updated the displayed version, screenshot asset, and removed the double-copy hero tagline.
+- **Default voice label** — Fixed voice label format from "Ava (Multilingual)" to "Ava, Multilingual".
 
-## [0.1.4] - 2026-05-20
+## [Unreleased]
 
 ### Added
 
@@ -309,13 +311,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/copyspeak/compare/v0.1.4...HEAD
-[0.1.4]: https://github.com/ilyaizen/copyspeak/compare/v0.1.3...v0.1.4
-[0.1.3]: https://github.com/ilyaizen/copyspeak/compare/v0.1.2...v0.1.3
-[0.1.2]: https://github.com/ilyaizen/copyspeak/compare/v0.1.1...v0.1.2
-[0.1.1]: https://github.com/ilyaizen/copyspeak/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/ilyaizen/copyspeak/compare/v0.0.5...v0.1.0
-[0.0.5]: https://github.com/ilyaizen/copyspeak/compare/v0.0.3...v0.0.5
-[0.0.3]: https://github.com/ilyaizen/copyspeak/compare/v0.0.2...v0.0.3
-[0.0.2]: https://github.com/ilyaizen/copyspeak/compare/v0.0.1...v0.0.2
-[0.0.1]: https://github.com/ilyaizen/copyspeak/releases/tag/v0.0.1
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.16...HEAD
+[0.1.16]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.4...v0.1.16
+[0.1.4]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.3...v0.1.4
+[0.1.3]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.2...v0.1.3
+[0.1.2]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/ilyaizen/CopySpeak/compare/v0.0.5...v0.1.0
+[0.0.5]: https://github.com/ilyaizen/CopySpeak/compare/v0.0.3...v0.0.5
+[0.0.3]: https://github.com/ilyaizen/CopySpeak/compare/v0.0.2...v0.0.3
+[0.0.2]: https://github.com/ilyaizen/CopySpeak/compare/v0.0.1...v0.0.2
+[0.0.1]: https://github.com/ilyaizen/CopySpeak/releases/tag/v0.0.1
