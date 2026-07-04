@@ -5,8 +5,8 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { VERSION } from "$lib/version";
 
-  const DOWNLOAD_URL = "https://github.com/ilyaizen/copyspeak-tts/releases";
-  const GITHUB_URL = "https://github.com/ilyaizen/copyspeak-tts";
+  const DOWNLOAD_URL = "https://github.com/ilyaizen/CopySpeak/releases";
+  const GITHUB_URL = "https://github.com/ilyaizen/CopySpeak";
 </script>
 
 <section class="border-border bg-background border-b px-6 py-16 sm:py-24">

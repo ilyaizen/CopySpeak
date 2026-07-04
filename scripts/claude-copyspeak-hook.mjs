@@ -189,12 +189,10 @@ function isCopySpeakRunning() {
 function findBuiltCopySpeak() {
   const cwd = process.cwd();
   const candidates = [
-    join(cwd, "src-tauri", "target", "release", "CopySpeak.exe"),
-    join(cwd, "src-tauri", "target", "release", "copyspeak-tts.exe"),
     join(cwd, "src-tauri", "target", "release", "copyspeak.exe"),
-    join(cwd, "src-tauri", "target", "debug", "CopySpeak TTS.exe"),
-    join(cwd, "src-tauri", "target", "debug", "copyspeak-tts.exe"),
-    join(cwd, "src-tauri", "target", "debug", "copyspeak.exe")
+    join(cwd, "src-tauri", "target", "release", "CopySpeak.exe"),
+    join(cwd, "src-tauri", "target", "debug", "copyspeak.exe"),
+    join(cwd, "src-tauri", "target", "debug", "CopySpeak.exe")
   ];
   return candidates.find(existsSync);
 }

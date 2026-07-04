@@ -88,7 +88,7 @@
     <Button
       variant="outline"
       size="sm"
-      onclick={() => openExternal("https://github.com/ilyaizen/copyspeak-tts")}
+      onclick={() => openExternal("https://github.com/ilyaizen/CopySpeak")}
     >
       {$_("settings.about.github")}
     </Button>

@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Product naming reverted to `CopySpeak`** — Dropped the `-tts` suffix and lowercasing introduced in the 0.1.5 rename. User-facing strings, package identity, and bundle metadata now use `CopySpeak` consistently.
-  - `package.json` and `src-tauri/Cargo.toml` package name: `copyspeak-tts` → `CopySpeak`.
+  - `package.json` and `src-tauri/Cargo.toml` package name restored to the `CopySpeak`/`copyspeak` identity.
   - `src-tauri/tauri.conf.json`: `productName`, `publisher`, and main window `title` → `CopySpeak`.
   - Landing page (hero, footer, screenshots), in-app header, browser title, onboarding, settings tooltips, and HTML history-export titles now read `CopySpeak`.
   - Locale strings in `en.json` updated (`landing.hero.title`, `screenshots.*`, onboarding/welcome, about, app title, OpenAI engine detail).
@@ -306,13 +306,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.1.4...HEAD
-[0.1.4]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.1.3...v0.1.4
-[0.1.3]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.1.2...v0.1.3
-[0.1.2]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.1.1...v0.1.2
-[0.1.1]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.1.0...v0.1.1
-[0.1.0]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.0.5...v0.1.0
-[0.0.5]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.0.3...v0.0.5
-[0.0.3]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.0.2...v0.0.3
-[0.0.2]: https://github.com/ilyaizen/copyspeak-tts/compare/v0.0.1...v0.0.2
-[0.0.1]: https://github.com/ilyaizen/copyspeak-tts/releases/tag/v0.0.1
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.3...v0.1.4
+[0.1.3]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.2...v0.1.3
+[0.1.2]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.1...v0.1.2
+[0.1.1]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.0...v0.1.1
+[0.1.0]: https://github.com/ilyaizen/CopySpeak/compare/v0.0.5...v0.1.0
+[0.0.5]: https://github.com/ilyaizen/CopySpeak/compare/v0.0.3...v0.0.5
+[0.0.3]: https://github.com/ilyaizen/CopySpeak/compare/v0.0.2...v0.0.3
+[0.0.2]: https://github.com/ilyaizen/CopySpeak/compare/v0.0.1...v0.0.2
+[0.0.1]: https://github.com/ilyaizen/CopySpeak/releases/tag/v0.0.1

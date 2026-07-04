@@ -3,7 +3,7 @@
   import { VERSION } from "$lib/version";
   // import LanguageSwitcher from "./language-switcher.svelte";
 
-  const GITHUB_URL = "https://github.com/ilyaizen/copyspeak-tts";
+  const GITHUB_URL = "https://github.com/ilyaizen/CopySpeak";
 </script>
 
 <footer class="border-border bg-muted/30 border-t px-6 py-8">
@@ -26,7 +26,7 @@
         </a>
 
         <a
-          href="https://github.com/ilyaizen/copyspeak-tts/blob/main/LICENCE.txt"
+          href="https://github.com/ilyaizen/CopySpeak/blob/main/LICENCE.txt"
           class="text-muted-foreground hover:text-foreground text-sm transition-colors"
         >
           MIT License
