@@ -101,7 +101,7 @@
 
 {#if !isHudRoute}
   <footer
-    class="border-border bg-card/95 z-50 border-t px-4 py-2.5 shadow-[0_-2px_10px_rgba(0,0,0,0.08)] backdrop-blur-sm"
+    class="border-border bg-card/95 z-50 border-t px-4 py-1.5 shadow-[0_-2px_10px_rgba(0,0,0,0.08)] backdrop-blur-sm"
   >
     <div class="flex items-center justify-between gap-2">
       <div class="flex min-w-0 items-center gap-2">
@@ -116,7 +116,7 @@
 
           <DropdownMenu bind:open={dropdownOpen}>
             <DropdownMenuTrigger
-              class="hover:bg-muted/50 focus:ring-ring cursor-pointer rounded px-1 py-0.5 text-sm transition-colors focus:ring-2 focus:ring-offset-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              class="hover:bg-muted/50 focus:ring-ring cursor-pointer rounded px-1 py-0.5 text-xs transition-colors focus:ring-2 focus:ring-offset-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               aria-label={`Switch profile: ${activeProfile.name}`}
             >
               <span class="text-card-foreground truncate">{activeProfile.name}</span>
@@ -162,7 +162,7 @@
               isListening ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-muted"
             )}
           ></div>
-          <span class="text-card-foreground truncate text-sm">
+          <span class="text-card-foreground truncate text-xs">
             {isListening ? $_("footer.listening") : $_("footer.paused")}
           </span>
         {/if}

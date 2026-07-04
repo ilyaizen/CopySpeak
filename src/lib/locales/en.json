@@ -260,7 +260,7 @@
       "apiKeyPlaceholder": "AIza..."
     },
     "microsoft": {
-      "title": "Microsoft / Azure",
+      "title": "Microsoft AI",
       "description": "Cloud: Microsoft MAI-Voice / Azure speech endpoint. Requires an endpoint and API key.",
       "apiKeyDescription": "Your Azure / Foundry API key, stored locally and never shared.",
       "endpoint": "Endpoint",
@@ -440,7 +440,7 @@
     "engine": "Engine",
     "profiles": "Profiles",
     "settings": "Settings",
-    "tagline": "Read clipboard aloud instantly"
+    "tagline": "Modern AI TTS Orchestrator"
   },
   "effects": {
     "title": "Audio Effects",

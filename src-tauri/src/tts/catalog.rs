@@ -380,7 +380,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
         },
         EngineCatalogEntry {
             engine: TtsEngine::Microsoft,
-            label: "Microsoft / Azure".into(),
+            label: "Microsoft AI".into(),
             description: "Microsoft MAI/Azure speech endpoint.".into(),
             docs_url:
                 "https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech"
@@ -427,10 +427,10 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             options: vec![],
             voices: [
                 // ── US ──────────────────────────────────────────
-                ("en-US-AvaMultilingualNeural", "Ava (Multilingual)"),
-                ("en-US-EmmaMultilingualNeural", "Emma (Multilingual)"),
-                ("en-US-AndrewMultilingualNeural", "Andrew (Multilingual)"),
-                ("en-US-BrianMultilingualNeural", "Brian (Multilingual)"),
+                ("en-US-AvaMultilingualNeural", "Ava, Multilingual"),
+                ("en-US-EmmaMultilingualNeural", "Emma, Multilingual"),
+                ("en-US-AndrewMultilingualNeural", "Andrew, Multilingual"),
+                ("en-US-BrianMultilingualNeural", "Brian, Multilingual"),
                 ("en-US-AriaNeural", "Aria"),
                 ("en-US-JennyNeural", "Jenny"),
                 ("en-US-GuyNeural", "Guy"),
@@ -447,20 +447,20 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                 ("en-US-RogerNeural", "Roger"),
                 ("en-US-SteffanNeural", "Steffan"),
                 // ── GB ──────────────────────────────────────────
-                ("en-GB-SoniaNeural", "Sonia (GB)"),
-                ("en-GB-RyanNeural", "Ryan (GB)"),
-                ("en-GB-LibbyNeural", "Libby (GB)"),
-                ("en-GB-MaisieNeural", "Maisie (GB)"),
-                ("en-GB-ThomasNeural", "Thomas (GB)"),
+                ("en-GB-SoniaNeural", "Sonia, United Kingdom"),
+                ("en-GB-RyanNeural", "Ryan, United Kingdom"),
+                ("en-GB-LibbyNeural", "Libby, United Kingdom"),
+                ("en-GB-MaisieNeural", "Maisie, United Kingdom"),
+                ("en-GB-ThomasNeural", "Thomas, United Kingdom"),
                 // ── AU ──────────────────────────────────────────
-                ("en-AU-NatashaNeural", "Natasha (AU)"),
-                ("en-AU-WilliamMultilingualNeural", "William (AU, Multilingual)"),
+                ("en-AU-NatashaNeural", "Natasha, Australia"),
+                ("en-AU-WilliamMultilingualNeural", "William, Australia, Multilingual"),
                 // ── CA ──────────────────────────────────────────
-                ("en-CA-ClaraNeural", "Clara (CA)"),
-                ("en-CA-LiamNeural", "Liam (CA)"),
+                ("en-CA-ClaraNeural", "Clara, Canada"),
+                ("en-CA-LiamNeural", "Liam, Canada"),
                 // ── IE ──────────────────────────────────────────
-                ("en-IE-ConnorNeural", "Connor (IE)"),
-                ("en-IE-EmilyNeural", "Emily (IE)"),
+                ("en-IE-ConnorNeural", "Connor, Ireland"),
+                ("en-IE-EmilyNeural", "Emily, Ireland"),
             ]
             .iter()
             .map(|(id, label)| voice(id, label, Some("en"), None))
