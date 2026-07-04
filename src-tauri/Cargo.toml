@@ -2,7 +2,7 @@
 name = "CopySpeak"
 version = "0.1.6"
 edition = "2021"
-description = "Simple and configurable TTS orchestrator for Windows"
+description = "CopySpeak — AI text-to-speech orchestrator for Windows"
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon", "image-png"] }

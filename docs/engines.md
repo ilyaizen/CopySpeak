@@ -1,4 +1,4 @@
-# CopySpeak TTS Engines
+# CopySpeak Engines
 
 CopySpeak is a TTS **orchestrator**: it drives engines you choose, it does not
 bundle one. Pick an engine, set it up once on the **Engine** page (API key or

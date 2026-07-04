@@ -22,7 +22,7 @@
     ],
     "publisher": "CopySpeak",
     "shortDescription": "Clipboard text-to-speech tool",
-    "longDescription": "A lightweight tool for quick AI text-to-speech generation.",
+    "longDescription": "CopySpeak — A lightweight AI text-to-speech orchestrator for Windows.",
     "category": "Productivity",
     "windows": {
       "certificateThumbprint": null,

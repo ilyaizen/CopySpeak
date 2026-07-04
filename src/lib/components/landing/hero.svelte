@@ -19,6 +19,12 @@
       {$_("landing.hero.title")}
     </h1>
 
+    {#if $_("landing.hero.subtitle")}
+      <p class="text-muted-foreground mt-2 text-sm font-medium">
+        {$_("landing.hero.subtitle")}
+      </p>
+    {/if}
+
     <p class="text-muted-foreground mt-4 text-base">
       {$_("landing.hero.description")}
     </p>

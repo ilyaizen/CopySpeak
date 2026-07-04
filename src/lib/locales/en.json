@@ -452,7 +452,7 @@
   "landing": {
     "hero": {
       "title": "CopySpeak",
-      "subtitle": "",
+      "subtitle": "AI text-to-speech for your clipboard",
       "description": "A lightweight Windows app that reads clipboard text aloud using AI text-to-speech engines.",
       "download": "Download for Windows",
       "github": "View on GitHub",
