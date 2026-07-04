@@ -5,6 +5,7 @@
 
 mod audio;
 mod autostart;
+mod cli;
 mod clipboard;
 mod commands;
 mod config;
@@ -264,7 +265,63 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
+/// Recognized CLI subcommands. Anything else (e.g. Tauri's own args on relaunch,
+/// or no args at all) falls through to the normal GUI boot.
+const CLI_SUBCOMMANDS: &[&str] = &[
+    "speak",
+    "profiles",
+    "profile",
+    "engines",
+    "voices",
+    "health",
+    "ping",
+    "help",
+    "--help",
+    "-h",
+    "/?",
+];
+
+fn is_cli_subcommand(arg: &str) -> bool {
+    CLI_SUBCOMMANDS.contains(&arg)
+}
+
+/// Attach to the parent's console so CLI output is visible in cmd/PowerShell.
+/// Only relevant on the GUI-subsystem build; no-op if already attached.
+/// After Attach/Alloc, GetStdHandle returns the console handles, and Rust's
+/// std streams re-query it on every write — so no manual CreateFileW needed.
+#[cfg(windows)]
+fn attach_parent_console() {
+    use windows::Win32::System::Console::{
+        AllocConsole, AttachConsole, GetStdHandle, SetStdHandle, ATTACH_PARENT_PROCESS,
+        STD_ERROR_HANDLE, STD_OUTPUT_HANDLE,
+    };
+    use windows::Win32::Foundation::INVALID_HANDLE_VALUE;
+
+    unsafe {
+        if AttachConsole(ATTACH_PARENT_PROCESS).is_err() {
+            let _ = AllocConsole();
+        }
+        // Some launchers pass invalid handles; rebind to the freshly-attached ones.
+        for kind in [STD_OUTPUT_HANDLE, STD_ERROR_HANDLE] {
+            if let Ok(h) = GetStdHandle(kind) {
+                if h != INVALID_HANDLE_VALUE {
+                    let _ = SetStdHandle(kind, h);
+                }
+            }
+        }
+    }
+}
+
 fn main() {
+    // --- CLI dispatch: if invoked with a subcommand, run the thin client ---
+    let raw_args: Vec<String> = std::env::args().skip(1).collect();
+    let is_cli = raw_args.first().map(|a| is_cli_subcommand(a)).unwrap_or(false);
+    if is_cli {
+        #[cfg(windows)]
+        attach_parent_console();
+        std::process::exit(cli::run(&raw_args));
+    }
+
     if let Err(e) = logging::init_logging() {
         eprintln!("Failed to initialize logging: {}", e);
     }

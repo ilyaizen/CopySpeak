@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CLI mode for `copyspeak.exe`** — Same binary now doubles as a thin client of the running control server (`src-tauri/src/cli.rs`, dispatched from `main()` before the GUI boots). Subcommands: `speak "<text>" [--profile X] [--engine X] [--effect X] [--persist]`, `profiles`, `profile <id>`, `profile --set <id>`, `engines`, `voices <engine>`, `health`. If no instance is reachable it auto-launches a detached GUI and polls `/health` (up to 20s). Windows console attach (`attach_parent_console`) wires `CONOUT$` to stdout/stderr so output is visible when invoked from cmd/PowerShell. Added `Win32_System_Console` feature on the `windows` crate.
+
 ### Breaking Changes
 
 - **Engine page is now credentials/setup-only.** Removed the per-engine panels (`openai-engine`, `elevenlabs-engine`, `cartesia-engine`, `edge-engine`, `local-engine`) that edited voice/model/format/stability/args into the global provider structs — those fields are owned by voice profiles and were being silently overwritten at synthesis time. The Engine page now renders a single catalog-driven registry (`ENGINE_TABS`): cloud tabs take an API key (+ endpoint for Microsoft) and offer a Setup Test; local tabs launch an installer. Any voice/model you previously set on the Engine page should now be set on the Profiles page.
