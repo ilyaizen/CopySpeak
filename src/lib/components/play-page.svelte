@@ -64,6 +64,9 @@
         voice_name: "",
         output_format: "wav"
       },
+      edge: {
+        voice: "en-US-EmmaMultilingualNeural"
+      },
       http: {
         profile_id: "",
         url_template: "",

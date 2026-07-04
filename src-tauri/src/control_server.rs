@@ -339,6 +339,7 @@ fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
         "http" => Ok(TtsEngine::Http),
         "google" | "gemini" => Ok(TtsEngine::Google),
         "microsoft" | "mai" => Ok(TtsEngine::Microsoft),
+        "edge" => Ok(TtsEngine::Edge),
         _ => Err(format!("unsupported engine: {}", engine)),
     }
 }

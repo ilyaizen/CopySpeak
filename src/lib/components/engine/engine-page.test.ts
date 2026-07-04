@@ -1,263 +1,62 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render } from "@testing-library/svelte";
+import { render, waitFor } from "@testing-library/svelte";
 
-// Mock Tauri IPC before importing components
 const mockInvoke = vi.hoisted(() => vi.fn());
-vi.mock("@tauri-apps/api/core", () => ({
-  invoke: mockInvoke
-}));
+vi.mock("@tauri-apps/api/core", () => ({ invoke: mockInvoke }));
 
 import EnginePage from "./engine-page.svelte";
+
+// Minimal config the unified engine page reads. The page only touches
+// credentials now; voice/model fields are intentionally absent to prove the
+// engine page no longer depends on them.
+function mockConfig() {
+  return {
+    tts: {
+      active_backend: "edge",
+      active_profile_id: "default",
+      profiles: [{ id: "default", name: "Edge - Ava", engine: "edge", voice: "en-US-AvaNeural", speed: 1, pitch: 1, effects: { enabled: false, active_effect: "none" } }],
+      openai: { api_key: "" },
+      elevenlabs: { api_key: "" },
+      cartesia: { api_key: "" },
+      google: { api_key: "" },
+      microsoft: { api_key: "", endpoint: "" }
+    }
+  } as any;
+}
 
 describe("EnginePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockInvoke.mockImplementation((command: string) => {
+      if (command === "get_config") return Promise.resolve(mockConfig());
+      if (command === "check_command_exists") return Promise.resolve({ available: true });
+      return Promise.resolve({});
+    });
   });
 
-  it("Task-1: should not contain centralized test button", () => {
+  it("renders one nav tab per registered engine", async () => {
     const { container } = render(EnginePage);
-
-    // Verify no centralized "Test Engine" button exists at bottom of page
-    const testButtons = container.querySelectorAll("button");
-    testButtons.forEach((btn) => {
-      if (btn.textContent?.includes("Test Engine") || btn.textContent?.includes("Test TTS")) {
-        // Test buttons in backend components are OK, but verify they're NOT centralized
-        // Centralized button would be in the save bar area or separate section
-        const parent = btn.parentElement;
-        expect(parent?.classList.contains("border-border")).toBe(false);
-      }
+    await waitFor(() => {
+      const tabs = container.querySelectorAll("aside nav button");
+      // edge, cartesia, elevenlabs, openai, google, microsoft,
+      // kitten, piper, kokoro, pocket, chatterbox, http
+      expect(tabs).toHaveLength(12);
     });
   });
 
-  it("Task-1: should render all seven backend tabs after config loads", async () => {
-    mockInvoke.mockResolvedValue({
-      trigger: { listen_enabled: true, double_copy_window_ms: 1000, max_text_length: 1000 },
-      tts: {
-        active_backend: "local",
-        preset: "piper",
-        command: "python3",
-        args_template: ["-m", "piper"],
-        voice: "en_US-joe-medium",
-        openai: { api_key: "", model: "tts-1", voice: "alloy" },
-        elevenlabs: {
-          api_key: "",
-          voice_id: "",
-          model_id: "eleven_turbo_v2_5",
-          output_format: "mp3_44100_128",
-          voice_stability: 0.5,
-          voice_similarity_boost: 0.75
-        },
-        cartesia: {
-          api_key: "",
-          model_id: "sonic-3.5",
-          voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02",
-          voice_name: "Katie",
-          output_format: "wav",
-          use_manual_voice_id: false
-        }
-      },
-      playback: { on_retrigger: "interrupt", volume: 100, playback_speed: 1.0 },
-      general: {
-        start_with_windows: false,
-        start_minimized: false,
-        debug_mode: false,
-        close_behavior: "minimize-to-tray",
-        appearance: "system"
-      },
-      output: {
-        enabled: false,
-        directory: "",
-        filename_pattern: "{timestamp}_{text}",
-        format_config: { format: "wav", mp3_bitrate: 128, ogg_bitrate: 64, flac_compression: 5 }
-      },
-      sanitization: {
-        enabled: false,
-        markdown: {
-          enabled: false,
-          strip_headers: false,
-          strip_code_blocks: false,
-          strip_inline_code: false,
-          strip_links: false,
-          strip_bold_italic: false,
-          strip_lists: false,
-          strip_blockquotes: false
-        },
-        tts_normalization: { enabled: false }
-      },
-      pagination: { enabled: false, fragment_size: 500 },
-      history: {
-        enabled: false,
-        storage_mode: "temp",
-        persistent_dir: null,
-        auto_delete: "never",
-        cleanup_orphaned_files: false
-      }
-    });
-
-    const { container } = render(EnginePage);
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    const tabs = container.querySelectorAll('[role="tab"]');
-    expect(tabs).toHaveLength(7);
-
-    expect(tabs[0].textContent).toBe("Cartesia");
-    expect(tabs[1].textContent).toBe("Kitten TTS");
-    expect(tabs[2].textContent).toBe("Piper TTS");
-    expect(tabs[3].textContent).toBe("Kokoro TTS");
-    expect(tabs[4].textContent).toBe("Pocket TTS");
-    expect(tabs[5].textContent).toBe("ElevenLabs");
-    expect(tabs[6].textContent).toBe("OpenAI");
-  });
-
-  it("Task-1: should load config on mount", async () => {
-    mockInvoke.mockResolvedValue({
-      trigger: { listen_enabled: true, double_copy_window_ms: 1000, max_text_length: 1000 },
-      tts: {
-        active_backend: "local",
-        preset: "piper",
-        command: "python3",
-        args_template: ["-m", "piper"],
-        voice: "en_US-joe-medium",
-        openai: { api_key: "", model: "tts-1", voice: "alloy" },
-        elevenlabs: {
-          api_key: "",
-          voice_id: "",
-          model_id: "eleven_turbo_v2_5",
-          output_format: "mp3_44100_128",
-          voice_stability: 0.5,
-          voice_similarity_boost: 0.75
-        },
-        cartesia: {
-          api_key: "",
-          model_id: "sonic-3.5",
-          voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02",
-          voice_name: "Katie",
-          output_format: "wav",
-          use_manual_voice_id: false
-        }
-      },
-      playback: { on_retrigger: "interrupt", volume: 100, playback_speed: 1.0 },
-      general: {
-        start_with_windows: false,
-        start_minimized: false,
-        debug_mode: false,
-        close_behavior: "minimize-to-tray",
-        appearance: "system"
-      },
-      output: {
-        enabled: false,
-        directory: "",
-        filename_pattern: "{timestamp}_{text}",
-        format_config: { format: "wav", mp3_bitrate: 128, ogg_bitrate: 64, flac_compression: 5 }
-      },
-      sanitization: {
-        enabled: false,
-        markdown: {
-          enabled: false,
-          strip_headers: false,
-          strip_code_blocks: false,
-          strip_inline_code: false,
-          strip_links: false,
-          strip_bold_italic: false,
-          strip_lists: false,
-          strip_blockquotes: false
-        },
-        tts_normalization: { enabled: false }
-      },
-      pagination: { enabled: false, fragment_size: 500 },
-      history: {
-        enabled: false,
-        storage_mode: "temp",
-        persistent_dir: null,
-        auto_delete: "never",
-        cleanup_orphaned_files: false
-      }
-    });
-
+  it("loads config and checks uv availability on mount", async () => {
     render(EnginePage);
-
-    expect(mockInvoke).toHaveBeenCalledWith("get_config");
+    await waitFor(() => {
+      expect(mockInvoke).toHaveBeenCalledWith("get_config");
+      expect(mockInvoke).toHaveBeenCalledWith("check_command_exists", { command: "uv" });
+    });
   });
 
-  it("Task-1: should save config with set_config IPC", async () => {
-    mockInvoke
-      .mockResolvedValueOnce({
-        trigger: { listen_enabled: true, double_copy_window_ms: 1000, max_text_length: 1000 },
-        tts: {
-          active_backend: "local",
-          preset: "piper",
-          command: "python3",
-          args_template: ["-m", "piper"],
-          voice: "en_US-joe-medium",
-          openai: { api_key: "", model: "tts-1", voice: "alloy" },
-          elevenlabs: {
-            api_key: "",
-            voice_id: "",
-            model_id: "eleven_turbo_v2_5",
-            output_format: "mp3_44100_128",
-            voice_stability: 0.5,
-            voice_similarity_boost: 0.75
-          },
-          cartesia: {
-            api_key: "",
-            model_id: "sonic-3.5",
-            voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02",
-            output_format: "wav"
-          }
-        },
-        playback: { on_retrigger: "interrupt", volume: 100, playback_speed: 1.0 },
-        general: {
-          start_with_windows: false,
-          start_minimized: false,
-          debug_mode: false,
-          close_behavior: "minimize-to-tray",
-          appearance: "system"
-        },
-        output: {
-          enabled: false,
-          directory: "",
-          filename_pattern: "{timestamp}_{text}",
-          format_config: { format: "wav", mp3_bitrate: 128, ogg_bitrate: 64, flac_compression: 5 }
-        },
-        sanitization: {
-          enabled: false,
-          markdown: {
-            enabled: false,
-            strip_headers: false,
-            strip_code_blocks: false,
-            strip_inline_code: false,
-            strip_links: false,
-            strip_bold_italic: false,
-            strip_lists: false,
-            strip_blockquotes: false
-          },
-          tts_normalization: { enabled: false }
-        },
-        pagination: { enabled: false, fragment_size: 500 },
-        history: {
-          enabled: false,
-          storage_mode: "temp",
-          persistent_dir: null,
-          auto_delete: "never",
-          cleanup_orphaned_files: false
-        }
-      })
-      .mockResolvedValue(undefined);
-
+  it("does not render voice or model controls on the engine page", async () => {
     const { container } = render(EnginePage);
-
-    // Wait for config to load
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    // Trigger save by clicking Save button
-    const saveButton = Array.from(container.querySelectorAll("button")).find((btn) =>
-      btn.textContent?.includes("Save Changes")
-    );
-
-    if (saveButton) {
-      saveButton.click();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-      expect(mockInvoke).toHaveBeenCalledWith("set_config", { newConfig: expect.any(Object) });
-    }
+    await waitFor(() => expect(container.querySelectorAll("aside nav button").length).toBe(12));
+    // No selects/sliders on this page — those belong to profiles.
+    expect(container.querySelector("select")).toBeNull();
+    expect(container.querySelector('input[type="range"]')).toBeNull();
   });
 });

@@ -53,7 +53,7 @@ Static catalog entries are fallbacks. Provider APIs win when available.
 ## UX
 
 - The footer is a profile switcher. Switching profiles updates `active_profile_id`; `active_backend` is only a compatibility mirror.
-- The Engine page is for API keys, model/output fallback defaults, engine smoke tests, docs, and future installer links. Voice selection belongs to Profiles.
+- The Engine page is for API keys, engine setup tests, docs, and local-engine installers (see [`engines.md`](./engines.md)). Voice, model, and per-engine knobs belong to Profiles.
 - New and migrated default profiles keep `id: "default"` but display as `Engine - Voice` (for example, `Cartesia - Katie`).
 
 ## HTTP and CLI semantics

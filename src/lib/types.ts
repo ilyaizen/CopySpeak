@@ -52,7 +52,8 @@ export type TtsEngine =
   | "elevenlabs"
   | "cartesia"
   | "google"
-  | "microsoft";
+  | "microsoft"
+  | "edge";
 
 export interface OpenAIConfig {
   api_key: string;
@@ -112,6 +113,10 @@ export interface MicrosoftTtsConfig {
   model: string;
   voice_name: string;
   output_format: string;
+}
+
+export interface EdgeTtsConfig {
+  voice: string;
 }
 
 export interface HttpTtsConfig {
@@ -184,6 +189,11 @@ export interface MicrosoftProfileEngineOptions {
   output_format?: string;
 }
 
+export interface EdgeProfileEngineOptions {
+  engine?: "edge";
+  voice?: string;
+}
+
 export type ProfileEngineOptions =
   | LocalProfileEngineOptions
   | HttpProfileEngineOptions
@@ -191,7 +201,8 @@ export type ProfileEngineOptions =
   | ElevenLabsProfileEngineOptions
   | CartesiaProfileEngineOptions
   | GoogleProfileEngineOptions
-  | MicrosoftProfileEngineOptions;
+  | MicrosoftProfileEngineOptions
+  | EdgeProfileEngineOptions;
 
 export interface VoiceProfile {
   id: string;
@@ -261,6 +272,7 @@ export interface TtsConfig {
   cartesia: CartesiaConfig;
   google: GoogleTtsConfig;
   microsoft: MicrosoftTtsConfig;
+  edge: EdgeTtsConfig;
   http: HttpTtsConfig;
 }
 

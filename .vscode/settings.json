@@ -1,6 +1,7 @@
 {
   "i18n-ally.localesPaths": ["src/lib/i18n", "src/lib/locales"],
   "i18n-ally.keystyle": "nested",
+  "rust-analyzer.linkedProjects": ["src-tauri/Cargo.toml"],
   // "window.titleBarStyle": "custom",
   // Custom title bar and status bar colors
   "workbench.colorCustomizations": {

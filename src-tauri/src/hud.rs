@@ -53,6 +53,7 @@ fn get_provider_voice(cfg: &AppConfig) -> (Option<String>, Option<String>) {
         TtsEngine::Http => "HTTP".to_string(),
         TtsEngine::Google => "Google".to_string(),
         TtsEngine::Microsoft => "Microsoft".to_string(),
+        TtsEngine::Edge => "Edge-TTS".to_string(),
     };
     let voice = eff.voice_label.unwrap_or_else(|| title_case(&eff.voice));
     (Some(provider), Some(voice))

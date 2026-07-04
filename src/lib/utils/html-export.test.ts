@@ -68,7 +68,7 @@ describe("HTML Export Utilities", () => {
       successful_items: 1,
       failed_items: 0,
       success_rate: 1.0,
-      by_engine: { local: 1, http: 0, openai: 0, elevenlabs: 0, cartesia: 0, google: 0, microsoft: 0 },
+      by_engine: { local: 1, http: 0, openai: 0, elevenlabs: 0, cartesia: 0, google: 0, microsoft: 0, edge: 0 },
       by_format: { mp3: 1, wav: 0, ogg: 0, flac: 0 },
       by_hour: { 12: 1 },
       by_day: { "2024-01-01": 1 },

@@ -70,6 +70,9 @@ pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<
         TtsEngine::Microsoft => Box::new(crate::tts::microsoft::MicrosoftTtsBackend::new(
             tts_config.microsoft.clone(),
         )),
+        TtsEngine::Edge => Box::new(crate::tts::edge::EdgeTtsBackend::new(
+            tts_config.edge.clone(),
+        )),
     }
 }
 
@@ -192,6 +195,16 @@ pub(crate) fn create_backend_from_effective(
             }
             Box::new(crate::tts::microsoft::MicrosoftTtsBackend::new(config))
         }
+        TtsEngine::Edge => {
+            let mut config = tts_config.edge.clone();
+            config.voice = eff.voice.clone();
+            if let Some(o) = eff.engine_options.edge() {
+                if let Some(voice) = o.voice.clone() {
+                    config.voice = voice;
+                }
+            }
+            Box::new(crate::tts::edge::EdgeTtsBackend::new(config))
+        }
     }
 }
 
@@ -205,6 +218,7 @@ pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> S
         TtsEngine::Http => tts_config.http.voice.clone(),
         TtsEngine::Google => tts_config.google.voice_name.clone(),
         TtsEngine::Microsoft => tts_config.microsoft.voice_name.clone(),
+        TtsEngine::Edge => tts_config.edge.voice.clone(),
     }
 }
 
@@ -226,6 +240,7 @@ pub(crate) fn engine_identifier(active: &TtsEngine, tts_config: &TtsConfig) -> S
         TtsEngine::Http => "http".to_string(),
         TtsEngine::Google => "google".to_string(),
         TtsEngine::Microsoft => "microsoft".to_string(),
+        TtsEngine::Edge => "edge".to_string(),
     }
 }
 
@@ -286,6 +301,15 @@ pub(crate) fn voice_display_name(
         }
         TtsEngine::Http | TtsEngine::Google | TtsEngine::Microsoft => {
             slugify_filename_part(voice_id)
+        }
+        TtsEngine::Edge => {
+            // "en-US-EmmaMultilingualNeural" → "emma"
+            voice_id
+                .split('-')
+                .nth(2)
+                .unwrap_or(voice_id)
+                .trim_end_matches("Neural")
+                .to_lowercase()
         }
     }
 }
@@ -370,5 +394,6 @@ pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
         TtsEngine::Http => "http",
         TtsEngine::Google => "google",
         TtsEngine::Microsoft => "microsoft",
+        TtsEngine::Edge => "edge",
     }
 }

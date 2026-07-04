@@ -220,52 +220,76 @@
         "title": "Pocket TTS",
         "description": "Compact offline CLI TTS",
         "detail": "Local CLI engine with straightforward voice selection."
+      },
+      "edge": {
+        "title": "Edge-TTS",
+        "description": "Free online neural TTS",
+        "detail": "Accesses Microsoft's free Read Aloud service via the edge-tts Python library. 400+ neural voices across 50+ languages. No API key needed."
       }
     }
   },
   "engine": {
     "title": "Engine",
-    "selectEngine": "Select TTS Engine",
-    "testing": "Testing...",
-    "kitten": {
-      "title": "Kitten TTS",
-      "description": "Local: Ultra-lightweight TTS (25-80MB) with 8 natural voices. CPU-optimized ONNX inference, no GPU required."
-    },
-    "piper": {
-      "title": "Piper TTS",
-      "description": "Local: Fast, lightweight neural TTS with 20+ English voices. Works fully offline — no account or internet required."
-    },
-    "kokoro": {
-      "title": "Kokoro TTS",
-      "description": "Local: High-quality offline TTS with natural-sounding voices and broad accent coverage. Requires kokoro-tts CLI."
-    },
-    "pocket": {
-      "title": "Pocket TTS",
-      "description": "Local: Compact offline TTS engine with straightforward voice selection via CLI."
+    "loading": "Loading engine settings...",
+    "edge": {
+      "title": "Edge-TTS",
+      "description": "Cloud: Free Microsoft Read Aloud voices (400+ neural voices, 50+ languages). No API key — requires the edge-tts CLI (use Install)."
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "Cloud: Low-latency, natural TTS powered by Sonic 3.5. Requires an API key and internet connection.",
-      "apiKey": "API Key",
+      "description": "Cloud: Low-latency, natural TTS powered by Sonic. Requires an API key and internet.",
       "apiKeyDescription": "Your API key is stored locally and never shared.",
-      "check": "Check",
-      "testEngine": "Test Engine"
+      "apiKeyPlaceholder": "sk_car_..."
     },
     "elevenlabs": {
       "title": "ElevenLabs",
-      "description": "Cloud: Premium AI voice synthesis with emotional range, 1000+ voices, and multilingual support.",
-      "apiKey": "API Key",
+      "description": "Cloud: Premium AI voice synthesis with emotional range and 1000+ voices.",
       "apiKeyDescription": "Your API key is stored locally and never shared.",
-      "check": "Check",
-      "testEngine": "Test Engine"
+      "apiKeyPlaceholder": "xi-..."
     },
     "openai": {
       "title": "OpenAI",
-      "description": "Cloud: High-quality natural voices via the OpenAI API. Requires an API key and internet connection.",
-      "apiKey": "API Key",
+      "description": "Cloud: High-quality natural voices via the OpenAI API. Requires an API key.",
       "apiKeyDescription": "Your API key is stored locally and never shared.",
-      "check": "Check",
-      "testEngine": "Test Engine"
+      "apiKeyPlaceholder": "sk-..."
+    },
+    "google": {
+      "title": "Google Gemini",
+      "description": "Cloud: Native audio generation from the Gemini TTS preview models.",
+      "apiKeyDescription": "Your Google AI Studio API key, stored locally and never shared.",
+      "apiKeyPlaceholder": "AIza..."
+    },
+    "microsoft": {
+      "title": "Microsoft / Azure",
+      "description": "Cloud: Microsoft MAI-Voice / Azure speech endpoint. Requires an endpoint and API key.",
+      "apiKeyDescription": "Your Azure / Foundry API key, stored locally and never shared.",
+      "endpoint": "Endpoint",
+      "endpointDescription": "Your Azure AI Foundry / deployment endpoint URL."
+    },
+    "kitten": {
+      "title": "Kitten TTS",
+      "description": "Local: Ultra-lightweight TTS (25-80MB) with 8 natural voices. CPU ONNX, no GPU."
+    },
+    "piper": {
+      "title": "Piper TTS",
+      "description": "Local: Fast, lightweight neural TTS with many English voices. Fully offline."
+    },
+    "kokoro": {
+      "title": "Kokoro TTS",
+      "description": "Local: High-quality offline TTS with natural voices and broad accent coverage."
+    },
+    "pocket": {
+      "title": "Pocket TTS",
+      "description": "Local: Compact offline TTS engine with straightforward CLI voice selection."
+    },
+    "chatterbox": {
+      "title": "Chatterbox",
+      "description": "Local: Open-source zero-shot TTS with emotion control from Resemble AI (~2GB)."
+    },
+    "http": {
+      "title": "HTTP Server",
+      "description": "Call any local or remote HTTP TTS endpoint (OpenAI-compatible or custom).",
+      "note": "HTTP servers are configured per profile. Create or edit a profile to set the URL, method, headers, body template, voice, and response format."
     },
     "badges": {
       "active": "Active",
@@ -276,93 +300,24 @@
       "paid": "Paid",
       "freemium": "Freemium"
     },
-    "info": {
-      "engineInformation": "Engine Information"
+    "apiSetup": {
+      "apiKey": "API Key",
+      "testPassed": "Setup test passed",
+      "testFailed": "Setup test failed"
     },
-    "loading": "Loading engine settings...",
+    "setup": {
+      "docs": "Docs",
+      "testSetup": "Test Setup",
+      "install": "Install",
+      "installUv": "Install uv",
+      "uvMissing": "uv is required to install local engines. Install it once to enable every local engine.",
+      "profilesHint": "Voice, model and per-engine knobs live in Profiles. This page only holds credentials and engine setup.",
+      "tryAgain": "Try Again"
+    },
     "saveBar": {
       "saving": "Saving...",
       "cancel": "Cancel",
       "saveChanges": "Save Changes"
-    },
-    "testVoice": {
-      "title": "Test Voice",
-      "playing": "Playing...",
-      "description": "Plays a short phrase with the current engine"
-    },
-    "localEngine": {
-      "voice": "Voice",
-      "kittenInstall": "Run ./install-kittentts.ps1 from the project root to install Kitten TTS. Models are downloaded automatically on first use (~25-80MB depending on variant).",
-      "piperModels": "Model files (.onnx + .onnx.json) must be placed in {dataDir}. Download from",
-      "commandPreview": "Command Preview",
-      "tempDirectory": "resolves to your system temp directory at runtime.",
-      "testEngine": "Test Engine",
-      "testing": "Testing...",
-      "engineWorking": "Engine is working",
-      "engineFailed": "Engine test failed"
-    },
-    "openaiEngine": {
-      "model": "Model",
-      "modelTooltip": "OpenAI TTS model to use for speech synthesis",
-      "voice": "Voice",
-      "voiceTooltip": "Voice style for speech synthesis"
-    },
-    "cartesiaEngine": {
-      "model": "Model",
-      "modelTooltip": "Cartesia Sonic model to use for speech synthesis",
-      "manualVoiceId": "Manual voice ID",
-      "manualVoiceIdTooltip": "Enable this to paste a custom Cartesia voice ID instead of choosing a known voice.",
-      "voice": "Voice",
-      "voiceTooltip": "Resolved Cartesia voice name to use for speech synthesis",
-      "voiceId": "Voice ID",
-      "voiceIdTooltip": "Cartesia voice ID. Katie is the default recommended American English voice.",
-      "format": "Format",
-      "formatTooltip": "Audio output container"
-    },
-    "elevenlabsEngine": {
-      "manualVoiceId": "Manual Voice ID",
-      "manualVoiceIdTooltip": "Toggle to enter voice ID manually instead of selecting from list",
-      "voiceId": "Voice ID",
-      "voiceIdPlaceholder": "e.g., 21m00Tcm4TlvDq8ikWAM",
-      "verify": "Verify",
-      "verified": "Verified",
-      "cached": "Cached",
-      "findVoices": "Find voice IDs at",
-      "voice": "Voice",
-      "voiceTooltip": "Select from your ElevenLabs voice library",
-      "load": "Load",
-      "setupApiKeyFirst": "Set up your API key first",
-      "clickLoadToFetch": "Click \"Load\" to fetch available voices",
-      "setupApiKeyInSettings": "Set up your API key in Settings first",
-      "model": "Model",
-      "modelTooltip": "AI model for speech synthesis",
-      "format": "Format",
-      "formatTooltip": "Audio output format",
-      "voiceSettings": "Voice Settings",
-      "stability": "Stability",
-      "stabilityTooltip": "Higher values make voice more consistent, lower values more variable",
-      "similarity": "Similarity",
-      "similarityTooltip": "Higher values make voice more similar to original speaker",
-      "style": "Style",
-      "styleTooltip": "Higher values make voice more expressive (0 to disable)",
-      "speakerBoost": "Speaker Boost",
-      "speakerBoostTooltip": "Improves clarity and quality of voice output"
-    },
-    "apiSetup": {
-      "title": "{engine} API Setup",
-      "description": "Enter your API key to enable {engine} text-to-speech.",
-      "apiKey": "API Key",
-      "placeholderOpenai": "sk-...",
-      "placeholderElevenlabs": "xi-...",
-      "placeholderCartesia": "sk_car_...",
-      "checkButton": "Check",
-      "testButton": "Test",
-      "valid": "API Key Valid",
-      "invalid": "API Key Check Failed",
-      "testPassed": "Engine Test Passed",
-      "testFailed": "Engine Test Failed",
-      "cancel": "Cancel",
-      "save": "Save"
     },
     "error": {
       "loadFailed": "Failed to Load Engine Settings",

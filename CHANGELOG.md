@@ -7,7 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking Changes
+
+- **Engine page is now credentials/setup-only.** Removed the per-engine panels (`openai-engine`, `elevenlabs-engine`, `cartesia-engine`, `edge-engine`, `local-engine`) that edited voice/model/format/stability/args into the global provider structs — those fields are owned by voice profiles and were being silently overwritten at synthesis time. The Engine page now renders a single catalog-driven registry (`ENGINE_TABS`): cloud tabs take an API key (+ endpoint for Microsoft) and offer a Setup Test; local tabs launch an installer. Any voice/model you previously set on the Engine page should now be set on the Profiles page.
+
 ### Added
+
+- **Unified Engine page** — Single credentials/test/install surface driven by an `ENGINE_TABS` registry (`src/lib/components/engine/engine-page.svelte`). Includes an **Install uv** banner when `uv` is missing.
+- **`install_engine` IPC** — `commands/install.rs` rewritten to a generic launcher that resolves `scripts/install-<name>.ps1` (dev path via `CARGO_MANIFEST_DIR`, plus exe-relative candidates) and spawns it in a detached PowerShell window (pwsh → powershell fallback) with a pause-at-end wrapper.
+- **Local engine installers** — Added `scripts/install-edge-tts.ps1`, `install-kittentts.ps1`, `install-piper.ps1`, `install-kokoro.ps1`, `install-pocket.ps1`; shared CLI chrome (`Write-EngineBanner`, `Confirm-Install`) in `scripts/lib/copyspeak-engine-install.ps1`; stable wrappers `scripts/kitten/copyspeak-kitten.py` and `scripts/piper/copyspeak-piper.py`.
+- **`docs/engines.md`** — Public engine matrix (setup, voices, cost, offline/cloud, installer command, API-key link).
+
+### Removed
+
+- **Legacy embedded KittenTTS installer.** Deleted `commands::get_installer_script_path`, `commands::run_kittentts_installer`, root `install-kittentts.ps1`, root `kittentts-cli.py`, and `docs_internal/kittentts-cli.py`. Superseded by the uv-based `scripts/install-kittentts.ps1` + `scripts/kitten/copyspeak-kitten.py`.
+- **Orphan IPC** — Removed `get_data_dir` and `get_home_dir` (only caller was the deleted local-engine command preview).
+- **Dead per-engine components/tests** — Removed `openai-engine`, `elevenlabs-engine`, `cartesia-engine`, `edge-engine`, `local-engine` components and their tests, plus the self-referential `eng02-minimal.test.ts`.
+- **Dead i18n keys** — Pruned `engine.*Engine.*`, `engine.selectEngine`, `engine.testing`, `engine.testVoice`, `engine.info`, and the old `engine.apiSetup` dialog keys from `en.json`.
+
+### Added
+
+- **Edge-TTS backend** — Added `tts/edge.rs` (`EdgeTtsBackend`) calling the free Microsoft Read Aloud service via the `edge-tts` Python CLI (subprocess). No API key required. Speed maps from profile multiplier to `--rate` percentage. Text piped via stdin to avoid command-line length limits.
 
 - **Voice profiles** — Added a profile layer (`VoiceProfile`/`ProfileEffects`) bundling `engine + voice + speed + pitch + effect` as one swappable unit, surfaced as a dedicated **Profiles** tab/route with a compact manager (select, rename, duplicate, delete, import/export JSON). Synthesis resolves an `EffectiveTtsRequest` from the active profile; the migrated `default` profile is a passthrough for the existing engine tabs.
 - **Versioned TTS config + migration** — Added `schema_version` to `TtsConfig` and `migrate_tts_config`, which folds a legacy single-engine config into one `default` profile on load.

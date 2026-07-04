@@ -13,7 +13,6 @@
     "active": true,
     "createUpdaterArtifacts": true,
     "targets": "all",
-    "resources": ["../install-kittentts.ps1", "../kittentts-cli.py"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -44,7 +43,9 @@
         "height": 580,
         "resizable": false,
         "center": true,
-        "visible": true
+        "visible": true,
+        "devtools": true,
+        "additionalBrowserArgs": "--force-prefers-no-reduced-motion --enable-smooth-scrolling --allow-file-access-from-files --allow-universal-access-from-files --disable-features=VizDisplayCompositor"
       },
       {
         "label": "hud",
@@ -55,7 +56,12 @@
         "decorations": false,
         "transparent": true,
         "shadow": false,
-        "backgroundColor": [0, 0, 0, 0],
+        "backgroundColor": [
+          0,
+          0,
+          0,
+          0
+        ],
         "alwaysOnTop": true,
         "resizable": false,
         "skipTaskbar": true,
@@ -66,7 +72,9 @@
   },
   "plugins": {
     "updater": {
-      "endpoints": ["https://github.com/ilyaizen/CopySpeak/releases/latest/download/latest.json"],
+      "endpoints": [
+        "https://github.com/ilyaizen/CopySpeak/releases/latest/download/latest.json"
+      ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEU5NEU5MjFEMEZBOUQ5MApSV1NRbmZyUUllbVVEbkwrajB5ZjNXbml2U2tuTTZXVmhhektTS2RxM1dYaks5TC9SY0I2alVwRQo=",
       "windows": {
         "installMode": "passive"

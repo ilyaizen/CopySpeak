@@ -15,11 +15,12 @@ pub enum TtsEngine {
     Cartesia,
     Google,
     Microsoft,
+    Edge,
 }
 
 impl Default for TtsEngine {
     fn default() -> Self {
-        TtsEngine::Cartesia
+        TtsEngine::Edge
     }
 }
 
@@ -206,6 +207,28 @@ impl Default for MicrosoftTtsConfig {
 }
 
 impl MicrosoftTtsConfig {
+    pub fn validate(&self) -> Vec<ValidationError> {
+        Vec::new()
+    }
+}
+
+// ── Edge-TTS (free Microsoft Read Aloud via rany2/edge-tts) ───────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct EdgeTtsConfig {
+    pub voice: String,
+}
+
+impl Default for EdgeTtsConfig {
+    fn default() -> Self {
+        Self {
+            voice: "en-US-AvaMultilingualNeural".into(),
+        }
+    }
+}
+
+impl EdgeTtsConfig {
     pub fn validate(&self) -> Vec<ValidationError> {
         Vec::new()
     }
@@ -407,6 +430,13 @@ pub struct MicrosoftEngineOptions {
     pub output_format: Option<String>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct EdgeEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub voice: Option<String>,
+}
+
 /// Engine-specific, non-secret synthesis knobs carried by a voice profile.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ProfileEngineOptions {
@@ -417,13 +447,14 @@ pub enum ProfileEngineOptions {
     Cartesia(CartesiaEngineOptions),
     Google(GoogleEngineOptions),
     Microsoft(MicrosoftEngineOptions),
+    Edge(EdgeEngineOptions),
     /// Untagged legacy bag captured at load; resolved during migration.
     Legacy(serde_json::Map<String, serde_json::Value>),
 }
 
 impl Default for ProfileEngineOptions {
     fn default() -> Self {
-        ProfileEngineOptions::Cartesia(CartesiaEngineOptions::default())
+        ProfileEngineOptions::Edge(EdgeEngineOptions::default())
     }
 }
 
@@ -443,6 +474,7 @@ impl ProfileEngineOptions {
                 | (Self::Cartesia(_), TtsEngine::Cartesia)
                 | (Self::Google(_), TtsEngine::Google)
                 | (Self::Microsoft(_), TtsEngine::Microsoft)
+                | (Self::Edge(_), TtsEngine::Edge)
         )
     }
 
@@ -478,6 +510,7 @@ impl ProfileEngineOptions {
             TtsEngine::Microsoft => {
                 Self::Microsoft(serde_json::from_value(value).unwrap_or_default())
             }
+            TtsEngine::Edge => Self::Edge(serde_json::from_value(value).unwrap_or_default()),
         }
     }
 
@@ -533,6 +566,12 @@ impl ProfileEngineOptions {
             _ => None,
         }
     }
+    pub fn edge(&self) -> Option<&EdgeEngineOptions> {
+        match self {
+            Self::Edge(o) => Some(o),
+            _ => None,
+        }
+    }
 }
 
 impl Serialize for ProfileEngineOptions {
@@ -549,6 +588,7 @@ impl Serialize for ProfileEngineOptions {
             Self::Cartesia(o) => ("cartesia", serde_json::to_value(o)),
             Self::Google(o) => ("google", serde_json::to_value(o)),
             Self::Microsoft(o) => ("microsoft", serde_json::to_value(o)),
+            Self::Edge(o) => ("edge", serde_json::to_value(o)),
             // Legacy bags serialize back as their raw untagged object.
             Self::Legacy(map) => {
                 return serde_json::Value::Object(map.clone()).serialize(serializer);
@@ -591,6 +631,7 @@ impl<'de> Deserialize<'de> for ProfileEngineOptions {
             Some("cartesia") => Ok(Self::from_engine_map(&TtsEngine::Cartesia, map)),
             Some("google") => Ok(Self::from_engine_map(&TtsEngine::Google, map)),
             Some("microsoft") => Ok(Self::from_engine_map(&TtsEngine::Microsoft, map)),
+            Some("edge") => Ok(Self::from_engine_map(&TtsEngine::Edge, map)),
             _ => Ok(Self::Legacy(map)),
         }
     }
@@ -650,9 +691,9 @@ fn catalog_voice_label(engine: &TtsEngine, voice: &str) -> Option<String> {
 
 impl Default for VoiceProfile {
     fn default() -> Self {
-        let engine = TtsEngine::Cartesia;
-        let voice = "f786b574-daa5-4673-aa0c-cbe3e8534c02".to_string();
-        let voice_label = Some("Katie".to_string());
+        let engine = TtsEngine::Edge;
+        let voice = "en-US-AvaMultilingualNeural".to_string();
+        let voice_label = Some("Ava (Multilingual)".to_string());
         Self {
             id: "default".into(),
             name: profile_display_name(&engine, voice_label.as_deref(), &voice),
@@ -664,7 +705,7 @@ impl Default for VoiceProfile {
             pitch: 1.0,
             effects: ProfileEffects::default(),
             text_processing: ProfileTextProcessing::default(),
-            engine_options: ProfileEngineOptions::default_for(&TtsEngine::Cartesia),
+            engine_options: ProfileEngineOptions::default_for(&TtsEngine::Edge),
         }
     }
 }
@@ -700,6 +741,7 @@ pub struct TtsConfig {
     pub cartesia: CartesiaConfig,
     pub google: GoogleTtsConfig,
     pub microsoft: MicrosoftTtsConfig,
+    pub edge: EdgeTtsConfig,
     pub http: HttpTtsConfig,
 }
 
@@ -707,16 +749,19 @@ impl Default for TtsConfig {
     fn default() -> Self {
         Self {
             schema_version: 2,
-            active_backend: TtsEngine::Cartesia,
+            active_backend: TtsEngine::Edge,
             active_profile_id: "default".into(),
             profiles: vec![VoiceProfile::default()],
             preset: "kitten-tts".into(),
-            command: "py".into(),
+            command: "uv".into(),
             args_template: vec![
-                "-3.12".into(),
-                "{home_dir}/kittentts/kittentts-cli.py".into(),
-                "--text".into(),
-                "{raw_text}".into(),
+                "run".into(),
+                "--project".into(),
+                "{engine_dir}/kitten".into(),
+                "python".into(),
+                "scripts/copyspeak-kitten.py".into(),
+                "--text-file".into(),
+                "{input}".into(),
                 "--voice".into(),
                 "{voice}".into(),
                 "--output".into(),
@@ -728,6 +773,7 @@ impl Default for TtsConfig {
             cartesia: CartesiaConfig::default(),
             google: GoogleTtsConfig::default(),
             microsoft: MicrosoftTtsConfig::default(),
+            edge: EdgeTtsConfig::default(),
             http: HttpTtsConfig::default(),
         }
     }
@@ -751,6 +797,7 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             TtsEngine::Cartesia => tts.cartesia.voice_id.clone(),
             TtsEngine::Google => tts.google.voice_name.clone(),
             TtsEngine::Microsoft => tts.microsoft.voice_name.clone(),
+            TtsEngine::Edge => tts.edge.voice.clone(),
         };
 
         let voice_label = catalog_voice_label(&tts.active_backend, &voice).or_else(|| match tts.active_backend {
@@ -854,6 +901,9 @@ impl TtsConfig {
             }
             TtsEngine::Microsoft => {
                 errors.extend(self.microsoft.validate());
+            }
+            TtsEngine::Edge => {
+                errors.extend(self.edge.validate());
             }
         }
 

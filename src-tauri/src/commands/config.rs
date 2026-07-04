@@ -261,27 +261,6 @@ pub fn validate_config(config: AppConfig) -> Result<(), String> {
     }
 }
 
-/// Returns the Piper voices directory path (e.g. C:\Users\<User>\piper-voices on Windows).
-/// Used by the frontend to build CLI command previews with resolved paths.
-#[tauri::command]
-pub fn get_data_dir() -> String {
-    dirs::home_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("piper-voices")
-        .to_string_lossy()
-        .into_owned()
-}
-
-/// Returns the user's home directory path.
-/// Used by the frontend to resolve {home_dir} placeholder in CLI templates.
-#[tauri::command]
-pub fn get_home_dir() -> String {
-    dirs::home_dir()
-        .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .to_string_lossy()
-        .into_owned()
-}
-
 /// Check if the config file exists on disk.
 /// Used for first-run detection to show onboarding.
 #[tauri::command]
