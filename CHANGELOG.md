@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CI release build** — Removed stale `bundle.resources` entries in `tauri.conf.json` (`../install-kittentts.ps1`, `../kittentts-cli.py`) that referenced non-existent repo-root files and aborted the bundler. Engine installer scripts are resolved at runtime under `scripts/` via `install_engine`.
+
 ### Changed
 
 - **Engine page refactor** — Consolidated `engine-page.svelte` from per-engine subcomponents into a single data-driven panel driven by `ENGINE_TABS`. Removed the cloud-TTS API-key dialog, credential check/test helpers, and unused category metadata; engine settings are now edited inline with a single save flow.
