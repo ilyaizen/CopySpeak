@@ -4,7 +4,7 @@
 
 ## Project
 
-CopySpeak - A modern AI text-to-speech orchestrator for Windows that reads clipboard text aloud when double-copied, Svelte 5, Tauri 2.
+CopySpeak - A modern AI text-to-speech orchestrator for Windows that reads clipboard text aloud when double-copied. Stack: Svelte 5, Tauri 2.
 
 ## Core Development Rules
 
@@ -132,45 +132,67 @@ Example:
 - `OldClass::method()` now requires `newParam` parameter
 ```
 
-## Documentation
-
-- Internal Docs: project-overview.md (project context and key decisions), requirements.md (feature requirements and traceability), architecture.md (system architecture and design), development_guide.md (setup and development workflow), tts_backends.md (TTS engine integration guide), brutalist_design.md (UI design system and aesthetics), roadmap.md (development roadmap and phases), code-patterns-reference.md (Svelte 5, Rust, and Tauri IPC code examples).
-
-- Public Docs: CONTRIBUTING.md (contribution guidelines).
-
 ## Project Structure
 
 ```
-CopySpeak/
-├── src/                     # Svelte 5 frontend
-│   ├── lib/
-│   │   ├── components/      # UI components
-│   │   │   ├── ui/          # shadcn-svelte
-│   │   │   └── *.svelte     # Custom
-│   │   └── utils.ts         # cn() utility
-│   └── routes/              # SvelteKit routes
-├── src-tauri/src/           # Rust backend
-│   ├── main.rs              # Entry, IPC registration
-│   ├── config.rs            # Persistence
-│   ├── commands.rs          # IPC handlers
-│   ├── clipboard.rs         # Double-copy detection
-│   ├── audio.rs             # Playback
-│   ├── tts/                 # TTS backend abstraction
-│   ├── config/              # Config modules (directory-based)
-│   ├── commands/            # Command modules (directory-based)
-│   ├── sanitize/            # Text normalization modules
-│   └── ...
-├── index.html               # Main window
-└── hud.html                 # HUD overlay
+src/                     # Svelte 5 frontend
+├── lib/
+│   ├── components/      # UI components
+│   │   ├── effects-page.svelte
+│   │   ├── engine/      # Engine settings
+│   │   ├── history/     # History components
+│   │   ├── hud/         # HUD overlay
+│   │   ├── landing/     # Marketing landing page
+│   │   ├── settings/    # Settings tabs
+│   │   ├── ui/          # shadcn-svelte
+│   │   ├── profiles-page.svelte
+│   │   ├── play-page.svelte
+│   │   └── ...
+│   └── utils.ts         # Utilities (cn, portal action)
+└── routes/              # SvelteKit routes
+    ├── settings/        # Settings page
+    ├── effects/         # Effects page
+    ├── engine/          # Engine page
+    ├── history/         # History page
+    ├── profiles/        # Profiles page
+    ├── onboarding/      # First-run setup
+    └── hud/             # HUD overlay
+
+src-tauri/src/           # Rust backend
+├── main.rs              # Entry point, IPC registration
+├── config/              # Persistence modules
+│   └── tts.rs           # TTS config types & engine enum
+├── commands/            # IPC handlers
+│   └── tts/             # Synthesis commands
+├── tts/                 # TTS backend implementations
+│   ├── edge.rs          # Edge TTS
+│   ├── openai.rs        # OpenAI
+│   ├── elevenlabs.rs    # ElevenLabs
+│   ├── cartesia.rs      # Cartesia
+│   ├── google.rs        # Google
+│   ├── microsoft.rs     # Microsoft
+│   ├── http.rs          # Generic HTTP
+│   ├── cli.rs           # Local CLI engines
+│   └── catalog.rs       # Engine catalog types
+├── clipboard.rs         # Double-copy detection
+├── audio.rs             # Playback
+├── post_process.rs      # LLM post-processing
+└── sanitize/            # Text normalization
 ```
 
-## Additional Directories and Files (Updated)
+## Additional Files
 
 - **plans/**: Contains plan files for various implementation tasks (e.g., auto-updater, Hud synthesis, etc.).
 - **scripts/**: PowerShell and JavaScript scripts for automation, including install scripts for various TTS engines, chatterbox, kitten, lib, piper, etc.
 - **src-tauri/src/commands/**: Rust command modules for TTS, audio, playback, post-processing, etc.
 - **src-tauri/src/sanitize/**: Text normalization modules for cleanup, markdown, TTS normalization.
 - **src/lib/components/**: Additional UI components for settings, effects, playback, etc.
+
+## Documentation
+
+- **docs/ (Public Docs)**: **CONTRIBUTING.md** (contribution guidelines).
+
+- **docs_internal/ (Internal Docs)**: **project-overview.md** (project context and key decisions), **requirements.md** (feature requirements and traceability), **architecture.md** (system architecture and design), **development_guide.md** (setup and development workflow), **tts_backends.md** (TTS engine integration guide), **brutalist_design.md** (UI design system and aesthetics), **roadmap.md** (development roadmap and phases), **code-patterns-reference.md** (Svelte 5, Rust, and Tauri IPC code examples).
 
 <!-- rtk-instructions v2 -->
 ## RTK (Rust Token Killer) - Token-Optimized Commands
