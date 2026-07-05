@@ -888,20 +888,34 @@ impl TtsConfig {
     pub fn validate(&self) -> Vec<ValidationError> {
         let mut errors = Vec::new();
 
-        match self
+        let active_profile = self
             .profiles
             .iter()
-            .find(|profile| profile.id == self.active_profile_id)
+            .find(|profile| profile.id == self.active_profile_id);
+        let active_engine = active_profile
             .map(|profile| &profile.engine)
-            .unwrap_or(&self.active_backend)
-        {
+            .unwrap_or(&self.active_backend);
+
+        match active_engine {
             TtsEngine::Local => {
-                if self.command.trim().is_empty() {
+                // Read command/args_template from the active profile's engine_options
+                // (the real source of truth). Fall back to legacy global fields for
+                // configs that haven't been migrated yet — those still hold the
+                // pre-profile values until v2 migration runs.
+                let local_opts = active_profile.and_then(|p| p.engine_options.local());
+                let command = local_opts
+                    .and_then(|o| o.command.clone())
+                    .unwrap_or_else(|| self.command.clone());
+                let args_template = local_opts
+                    .and_then(|o| o.args_template.clone())
+                    .unwrap_or_else(|| self.args_template.clone());
+
+                if command.trim().is_empty() {
                     errors.push(ValidationError::CommandEmpty);
                 }
 
                 // Accept {input}, {text} (legacy), or {raw_text} (inline text) placeholder
-                let has_input_placeholder = self.args_template.iter().any(|arg| {
+                let has_input_placeholder = args_template.iter().any(|arg| {
                     arg.contains("{input}") || arg.contains("{text}") || arg.contains("{raw_text}")
                 });
                 if !has_input_placeholder {
@@ -910,10 +924,8 @@ impl TtsConfig {
                     });
                 }
 
-                let has_output_placeholder = self
-                    .args_template
-                    .iter()
-                    .any(|arg| arg.contains("{output}"));
+                let has_output_placeholder =
+                    args_template.iter().any(|arg| arg.contains("{output}"));
                 if !has_output_placeholder {
                     errors.push(ValidationError::ArgsTemplateMissingPlaceholder {
                         placeholder: "{output}".into(),
