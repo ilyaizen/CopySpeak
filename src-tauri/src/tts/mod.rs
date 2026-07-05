@@ -52,7 +52,11 @@ pub trait TtsBackend: Send + Sync {
 
     /// Synthesize text into WAV audio bytes.
     /// Blocks until synthesis is complete (called from async context via spawn_blocking).
-    fn synthesize(&self, text: &str, voice: &str, speed: f32) -> Result<Vec<u8>, TtsError>;
+    ///
+    /// Speed is intentionally NOT a parameter: playback speed is a frontend-only
+    /// concern (applied via `audioEl.playbackRate`), mirroring how pitch is handled.
+    /// Synthesis always runs at native speed; saved files do not bake in speed.
+    fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError>;
 
     /// Check if the engine binary/server is reachable.
     fn health_check(&self) -> Result<(), TtsError>;

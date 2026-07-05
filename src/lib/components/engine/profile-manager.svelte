@@ -5,7 +5,15 @@
   import { Slider } from "$lib/components/ui/slider/index.js";
   import { SettingRow } from "$lib/components/ui/setting-row/index.js";
   import { invoke } from "@tauri-apps/api/core";
-  import { Copy, Trash2, Download, Upload, RefreshCw, ExternalLink, AlertTriangle } from "@lucide/svelte";
+  import {
+    Copy,
+    Trash2,
+    Download,
+    Upload,
+    RefreshCw,
+    ExternalLink,
+    AlertTriangle
+  } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
   import ProfileExportDialog from "./profile-export-dialog.svelte";
   import { findSetupEntry } from "./engine-meta";
@@ -138,8 +146,7 @@
   function setOptionValue(index: number, key: string, value: unknown) {
     const profile = localConfig.tts.profiles[index];
     const current = profile.engine_options;
-    const base =
-      current && typeof current === "object" && !Array.isArray(current) ? current : {};
+    const base = current && typeof current === "object" && !Array.isArray(current) ? current : {};
     profile.engine_options = {
       ...base,
       engine: profile.engine,
@@ -302,7 +309,7 @@
             {#if credentialMissing()}
               <a
                 href="/engines"
-                class="text-amber-600 dark:text-amber-400 inline-flex items-center gap-1 text-xs hover:underline"
+                class="inline-flex items-center gap-1 text-xs text-amber-600 hover:underline dark:text-amber-400"
               >
                 <AlertTriangle size={12} />
                 Set up engine credentials →
@@ -312,10 +319,7 @@
         </SettingRow>
 
         {#if activeVoiceOptions.length > 0}
-          <SettingRow
-            label="Voice"
-            tooltip="Known voices from the engine catalog or provider API."
-          >
+          <SettingRow label="Voice" tooltip="Known voices from the engine catalog or provider API.">
             <div class="flex w-56 gap-1.5">
               <Select
                 options={activeVoiceOptions}
@@ -347,7 +351,10 @@
           </SettingRow>
         {/if}
 
-        <SettingRow label="Manual Voice" tooltip="Override the catalog voice id. Blank = provider default.">
+        <SettingRow
+          label="Manual Voice"
+          tooltip="Override the catalog voice id. Blank = provider default."
+        >
           <Input
             value={localConfig.tts.profiles[activeIndex].voice}
             placeholder="provider default"
@@ -362,9 +369,7 @@
         <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Sound</p>
         <SettingRow label="Speed">
           <div class="flex w-56 items-center gap-2">
-            <span
-              class="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums"
-            >
+            <span class="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
               {active.speed.toFixed(2)}x
             </span>
             <Slider
@@ -378,9 +383,7 @@
         </SettingRow>
         <SettingRow label="Pitch">
           <div class="flex w-56 items-center gap-2">
-            <span
-              class="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums"
-            >
+            <span class="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
               {active.pitch.toFixed(2)}x
             </span>
             <Slider
@@ -432,11 +435,7 @@
                     value={String(optionValue(active, option) ?? "")}
                     onchange={(e) => {
                       const raw = (e.target as HTMLInputElement).value;
-                      setOptionValue(
-                        activeIndex,
-                        option.key,
-                        raw === "" ? null : Number(raw)
-                      );
+                      setOptionValue(activeIndex, option.key, raw === "" ? null : Number(raw));
                     }}
                     class="w-56"
                   />
@@ -475,12 +474,7 @@
                   <Input
                     value={optionInputValue(active, option)}
                     onchange={(e) =>
-                      setOptionValue(
-                        activeIndex,
-                        option.key,
-                        (e.target as HTMLInputElement).value
-                      )
-                    }
+                      setOptionValue(activeIndex, option.key, (e.target as HTMLInputElement).value)}
                     class="w-56"
                   />
                 {/if}
@@ -492,8 +486,8 @@
 
       {#if active.id === "default"}
         <p class="text-muted-foreground text-xs">
-          The Default profile is now a real profile. Duplicate it to create a named profile
-          with independent engine, catalog voice, engine settings, speed, pitch and effect.
+          The Default profile is now a real profile. Duplicate it to create a named profile with
+          independent engine, catalog voice, engine settings, speed, pitch and effect.
         </p>
       {/if}
     </div>

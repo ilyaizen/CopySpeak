@@ -50,7 +50,12 @@
 
   $effect(() => {
     if (hasChanges) {
-      showSaveBar(saveConfig, cancelChanges, $_("settings.actions.save"), $_("settings.actions.cancel"));
+      showSaveBar(
+        saveConfig,
+        cancelChanges,
+        $_("settings.actions.save"),
+        $_("settings.actions.cancel")
+      );
     } else {
       hideSaveBar();
     }

@@ -13,18 +13,41 @@
     Object.assign(localConfig.sanitization, updates);
   }
 
-  function updateMarkdown(field: keyof import("$lib/types").MarkdownSanitizationConfig, value: boolean) {
+  function updateMarkdown(
+    field: keyof import("$lib/types").MarkdownSanitizationConfig,
+    value: boolean
+  ) {
     localConfig.sanitization.markdown[field] = value;
   }
 
-  const markdownToggles: { key: keyof import("$lib/types").MarkdownSanitizationConfig; labelKey: string; tooltipKey: string }[] = [
-    { key: "strip_code_blocks", labelKey: "stripCodeBlocks", tooltipKey: "stripCodeBlocksDescription" },
-    { key: "strip_inline_code", labelKey: "stripInlineCode", tooltipKey: "stripInlineCodeDescription" },
+  const markdownToggles: {
+    key: keyof import("$lib/types").MarkdownSanitizationConfig;
+    labelKey: string;
+    tooltipKey: string;
+  }[] = [
+    {
+      key: "strip_code_blocks",
+      labelKey: "stripCodeBlocks",
+      tooltipKey: "stripCodeBlocksDescription"
+    },
+    {
+      key: "strip_inline_code",
+      labelKey: "stripInlineCode",
+      tooltipKey: "stripInlineCodeDescription"
+    },
     { key: "strip_headers", labelKey: "stripHeaders", tooltipKey: "stripHeadersDescription" },
     { key: "strip_links", labelKey: "stripLinks", tooltipKey: "stripLinksDescription" },
-    { key: "strip_bold_italic", labelKey: "stripBoldItalic", tooltipKey: "stripBoldItalicDescription" },
+    {
+      key: "strip_bold_italic",
+      labelKey: "stripBoldItalic",
+      tooltipKey: "stripBoldItalicDescription"
+    },
     { key: "strip_lists", labelKey: "stripLists", tooltipKey: "stripListsDescription" },
-    { key: "strip_blockquotes", labelKey: "stripBlockquotes", tooltipKey: "stripBlockquotesDescription" },
+    {
+      key: "strip_blockquotes",
+      labelKey: "stripBlockquotes",
+      tooltipKey: "stripBlockquotesDescription"
+    }
   ];
 </script>
 

@@ -75,7 +75,7 @@ impl TtsBackend for GoogleTtsBackend {
         "Google Gemini"
     }
 
-    fn synthesize(&self, text: &str, voice: &str, _speed: f32) -> Result<Vec<u8>, TtsError> {
+    fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
         let url = format!("{}/{}:generateContent", GEMINI_BASE, self.config.model);
         let body = json!({
             "contents": [{ "parts": [{ "text": text }] }],

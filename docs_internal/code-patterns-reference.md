@@ -36,8 +36,7 @@
   }
 </script>
 
-<button onclick={handleClick}>{title}</button>
-<p>Doubled: {doubled()}</p>
+<button onclick={handleClick}>{title}</button><p>Doubled: {doubled()}</p>
 ```
 
 ## Slider Bindings with Optional Config Values

@@ -143,8 +143,6 @@ export type TranslationKeys =
   | "engine.piper.description"
   | "engine.kokoro.title"
   | "engine.kokoro.description"
-  | "engine.pocket.title"
-  | "engine.pocket.description"
   | "engine.elevenlabs.title"
   | "engine.elevenlabs.description"
   | "engine.elevenlabs.apiKey"

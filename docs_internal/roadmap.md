@@ -76,8 +76,8 @@ This document tracks the implementation progress of CopySpeak, organized by deve
 
 ## Phase Status Legend
 
-| Status        | Description                            |
-| ------------- | -------------------------------------- |
+| Status         | Description                            |
+| -------------- | -------------------------------------- |
 | ✅ Completed   | Feature fully implemented and tested   |
 | 🚧 In Progress | Active development, partially complete |
 | 📋 Pending     | Not yet started                        |
@@ -537,12 +537,12 @@ git checkout features-extras
 
 | Milestone                     | Target | Status |
 | ----------------------------- | ------ | ------ |
-| Backend Core Complete         | -      | ✅      |
-| End-to-End Speech Flow        | -      | ✅      |
-| v0.1 Release (Stable Core)    | Apr24  | ✅      |
-| v0.1.x Patch Releases         | TBD    | 📋      |
-| v0.2 (with Deferred Features) | TBD    | 📋      |
-| v1.0 Production Ready         | TBD    | 📋      |
+| Backend Core Complete         | -      | ✅     |
+| End-to-End Speech Flow        | -      | ✅     |
+| v0.1 Release (Stable Core)    | Apr24  | ✅     |
+| v0.1.x Patch Releases         | TBD    | 📋     |
+| v0.2 (with Deferred Features) | TBD    | 📋     |
+| v1.0 Production Ready         | TBD    | 📋     |
 
 ---
 

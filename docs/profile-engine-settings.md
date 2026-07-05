@@ -30,15 +30,15 @@ Exported profiles must be safe to share. If a field can leak a secret, it does n
 
 ## Engine matrix
 
-| Engine | Docs | Profile settings | Global settings |
-| --- | --- | --- | --- |
-| Local CLI | Existing wrappers and `src-tauri/src/tts/cli.rs` | preset, command, args template, voice, speed where wrapper supports it | machine-specific install paths if not portable |
-| HTTP | `src-tauri/src/tts/http.rs` and target server docs | URL template, method, non-secret headers, body template, response format, timeout, voice, speed | secret headers/API keys |
-| OpenAI | <https://platform.openai.com/docs/guides/text-to-speech> | model, voice, speed, response format, optional instructions | API key |
-| ElevenLabs | <https://elevenlabs.io/docs/api-reference/text-to-speech/convert> | voice id/name, model id, output format, stability, similarity, style, speaker boost | API key |
-| Cartesia | <https://docs.cartesia.ai/api-reference/tts/bytes> | model id, voice id/name, output format, encoding, sample rate | API key |
-| Google Gemini TTS | <https://ai.google.dev/gemini-api/docs/speech-generation> | model, voice name, output format | API key |
-| Microsoft / Azure | <https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech> | endpoint, model, voice name, output format | API key; endpoint if deployment-global |
+| Engine            | Docs                                                                                | Profile settings                                                                                | Global settings                                |
+| ----------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Local CLI         | Existing wrappers and `src-tauri/src/tts/cli.rs`                                    | preset, command, args template, voice, speed where wrapper supports it                          | machine-specific install paths if not portable |
+| HTTP              | `src-tauri/src/tts/http.rs` and target server docs                                  | URL template, method, non-secret headers, body template, response format, timeout, voice, speed | secret headers/API keys                        |
+| OpenAI            | <https://platform.openai.com/docs/guides/text-to-speech>                            | model, voice, speed, response format, optional instructions                                     | API key                                        |
+| ElevenLabs        | <https://elevenlabs.io/docs/api-reference/text-to-speech/convert>                   | voice id/name, model id, output format, stability, similarity, style, speaker boost             | API key                                        |
+| Cartesia          | <https://docs.cartesia.ai/api-reference/tts/bytes>                                  | model id, voice id/name, output format, encoding, sample rate                                   | API key                                        |
+| Google Gemini TTS | <https://ai.google.dev/gemini-api/docs/speech-generation>                           | model, voice name, output format                                                                | API key                                        |
+| Microsoft / Azure | <https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech> | endpoint, model, voice name, output format                                                      | API key; endpoint if deployment-global         |
 
 ## Documentation verification
 

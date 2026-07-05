@@ -40,8 +40,15 @@ Write-Host ""
 
 Require-Uv
 
+# Interactive force prompt: -Force bypasses; a blank Enter keeps the install.
+$effectiveForce = if ($Force) {
+    $true
+} else {
+    Get-Confirmation -Prompt "Reinstall Chatterbox from scratch? (deletes the existing engine dir)" -DefaultYes:$false
+}
+
 $EngineDir = Join-Path (Get-CopySpeakEngineRoot) "chatterbox"
-New-EngineProject -EngineDir $EngineDir -Force:$Force
+New-EngineProject -EngineDir $EngineDir -Force:$effectiveForce
 
 # Install Chatterbox. Upstream is published on PyPI as `chatterbox-tts`.
 Write-Host ""

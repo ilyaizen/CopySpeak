@@ -8,7 +8,6 @@ pub struct EngineCatalogEntry {
     pub description: String,
     pub docs_url: String,
     pub supports_voice_refresh: bool,
-    pub supports_speed: bool,
     pub supports_pitch: bool,
     pub supports_bracket_emotes: bool,
     pub options: Vec<EngineOptionDescriptor>,
@@ -83,7 +82,6 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             description: "Run a local command-line TTS wrapper.".into(),
             docs_url: "docs/profile-engine-settings.md#engine-matrix".into(),
             supports_voice_refresh: false,
-            supports_speed: true,
             supports_pitch: false,
             supports_bracket_emotes: false,
             options: vec![
@@ -119,10 +117,9 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
         EngineCatalogEntry {
             engine: TtsEngine::Http,
             label: "HTTP".into(),
-            description: "Call a local or remote HTTP TTS endpoint.".into(),
+            description: "Generic HTTP-serving TTS backend (OpenAI-compatible, Chatterbox server, etc.).".into(),
             docs_url: "docs/profile-engine-settings.md#engine-matrix".into(),
             supports_voice_refresh: false,
-            supports_speed: true,
             supports_pitch: false,
             supports_bracket_emotes: false,
             options: vec![
@@ -170,7 +167,6 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             description: "OpenAI speech synthesis API.".into(),
             docs_url: "https://platform.openai.com/docs/guides/text-to-speech".into(),
             supports_voice_refresh: false,
-            supports_speed: true,
             supports_pitch: false,
             supports_bracket_emotes: true,
             options: vec![
@@ -210,7 +206,6 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             description: "ElevenLabs text-to-speech.".into(),
             docs_url: "https://elevenlabs.io/docs/api-reference/text-to-speech/convert".into(),
             supports_voice_refresh: true,
-            supports_speed: false,
             supports_pitch: false,
             supports_bracket_emotes: false,
             options: vec![
@@ -270,7 +265,6 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             description: "Cartesia Sonic TTS.".into(),
             docs_url: "https://docs.cartesia.ai/api-reference/tts/bytes".into(),
             supports_voice_refresh: false,
-            supports_speed: false,
             supports_pitch: false,
             supports_bracket_emotes: false,
             options: vec![
@@ -324,7 +318,6 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             description: "Gemini native audio generation.".into(),
             docs_url: "https://ai.google.dev/gemini-api/docs/speech-generation".into(),
             supports_voice_refresh: false,
-            supports_speed: false,
             supports_pitch: false,
             supports_bracket_emotes: true,
             options: vec![
@@ -386,7 +379,6 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                 "https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech"
                     .into(),
             supports_voice_refresh: false,
-            supports_speed: false,
             supports_pitch: false,
             supports_bracket_emotes: true,
             options: vec![
@@ -421,7 +413,6 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                 .into(),
             docs_url: "https://github.com/rany2/edge-tts".into(),
             supports_voice_refresh: false,
-            supports_speed: true,
             supports_pitch: false,
             supports_bracket_emotes: false,
             options: vec![],

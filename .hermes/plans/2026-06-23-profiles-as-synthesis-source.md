@@ -64,7 +64,7 @@ Files: `src/lib/components/layout/app-footer.svelte`, `src/lib/types.ts` (no new
 Files: `src/lib/components/engine/engine-page.svelte`, child engine components under `src/lib/components/engine/*`, `src/routes/engine/+page.svelte`
 
 - Remove "active engine" semantics: no `active_backend` writes, no "active" badge, no tab-switch-sets-active. Tabs become pure navigation between engine config panels.
-- Each engine panel keeps/owns: **API key** + credential check, **model** + **output format** + other account/global knobs (these are the documented *fallback defaults* when a profile omits them), a **Test this engine** button (uses the engine's own global config, independent of the active profile — a true engine smoke test), and a **docs/guides** link from `tts/catalog.rs` `docs_url`.
+- Each engine panel keeps/owns: **API key** + credential check, **model** + **output format** + other account/global knobs (these are the documented _fallback defaults_ when a profile omits them), a **Test this engine** button (uses the engine's own global config, independent of the active profile — a true engine smoke test), and a **docs/guides** link from `tts/catalog.rs` `docs_url`.
 - Remove per-engine **voice** selection from this page (voice belongs to profiles). If a quick "browse voices" affordance is wanted it can link to profiles; not required here.
 - Reserve a placeholder section/anchor for future **installers** (local engines) — copy only, no logic this pass.
 
@@ -108,6 +108,7 @@ Frontend: `bun run test app-footer && bun run test profile-manager`
 Type/svelte: `bun run check`
 
 Manual (running app):
+
 1. Footer shows active profile as `Engine - Voice`; switching profiles changes synthesis voice.
 2. Engine page: set OpenAI key + model, hit "Test this engine" — speaks regardless of active profile; no "active engine" badge; docs link opens.
 3. Switch active profile in footer → engine page does **not** change active state (decoupled).

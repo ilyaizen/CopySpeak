@@ -12,7 +12,7 @@ export function isRtlLocale(locale: SupportedLocale): boolean {
 // Get display name for a locale
 export function getLocaleDisplayName(locale: SupportedLocale): string {
   const names: Partial<Record<SupportedLocale, string>> = {
-    en: "English",
+    en: "English"
     // es: "Español",
     // ar: "العربية",
     // he: "עברית"
@@ -25,7 +25,7 @@ export function getLocaleDisplayName(locale: SupportedLocale): string {
 // During pre-production, only English is available - other locales will be enabled when keys stabilize
 export function getSupportedLocales(): Array<{ value: SupportedLocale; label: string }> {
   return [
-    { value: "en", label: "English" },
+    { value: "en", label: "English" }
     // { value: "es", label: "Español" },
     // { value: "ar", label: "العربية" },
     // { value: "he", label: "עברית" }

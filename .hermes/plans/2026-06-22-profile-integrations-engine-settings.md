@@ -44,6 +44,7 @@
 ### Existing profile model
 
 Files:
+
 - `src-tauri/src/config/tts.rs`
 - `src-tauri/src/commands/tts/helpers.rs`
 - `src/lib/components/engine/profile-manager.svelte`
@@ -65,6 +66,7 @@ pub struct VoiceProfile {
 ```
 
 Current behavior:
+
 - `migrate_tts_config()` creates one `default` profile from old global engine config.
 - `resolve_effective()` treats `default` as legacy passthrough.
 - Named profiles only resolve `engine`, `voice`, `speed`, `pitch`, `effects`.
@@ -75,6 +77,7 @@ Current behavior:
 ### Existing engines
 
 Files:
+
 - `src-tauri/src/tts/mod.rs`
 - `src-tauri/src/tts/cli.rs`
 - `src-tauri/src/tts/http.rs`
@@ -85,6 +88,7 @@ Files:
 - `src-tauri/src/tts/microsoft.rs`
 
 Existing `TtsEngine` values:
+
 - `local`
 - `http`
 - `openai`
@@ -94,6 +98,7 @@ Existing `TtsEngine` values:
 - `microsoft`
 
 Current notable limitations:
+
 - OpenAI `synthesize()` ignores the `voice` argument and uses `self.config.voice` instead. That means a profile voice may not actually affect OpenAI.
 - Cartesia uses the `voice` argument, but model/output format come from global config.
 - Google uses the `voice` argument, but model/output format come from global config.
@@ -124,6 +129,7 @@ Content-Type: application/json
 ```
 
 Problem:
+
 - If `profile`, `engine`, or `effect` is present, server mutates `cfg.tts.active_profile_id`, `cfg.tts.active_backend`, or global `cfg.effects`, then saves config.
 - That is bad for automations. A Pi extension saying the last agent message should not silently change the user’s active desktop profile forever unless asked.
 
@@ -144,6 +150,7 @@ Use these as starting documentation links. During implementation, verify each ag
 | Microsoft MAI / Azure | `https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech` and Azure AI Foundry MAI docs | Deployment-specific; may be user-entered                                                                                                  | `endpoint`, `model`, `voice_name`, `output_format`, auth mode if needed                                                                                                              | `api_key`; possibly endpoint if considered machine/deployment global |
 
 Important: do not fake “human-readable voice names”. Build a mechanism:
+
 - provider API when available,
 - checked-in static fallback catalog for known built-ins,
 - manual label field for local/http/custom voices.
@@ -155,10 +162,12 @@ Important: do not fake “human-readable voice names”. Build a mechanism:
 ### Profiles page
 
 Route/component:
+
 - Existing route: `src/routes/profiles/+page.svelte`
 - Existing component: `src/lib/components/engine/profile-manager.svelte`
 
 Target behavior:
+
 - Left/select: list profiles by friendly name.
 - Main editor sections:
   1. Profile identity: name, id/slug, description optional.
@@ -299,6 +308,7 @@ pub enum BracketedEmoteStrategy {
 ```
 
 Why this shape:
+
 - `mode` avoids copying global post-processing config into every profile.
 - bracket handling covers “emoted TTS text with brackets” without baking provider-specific fantasy into every engine.
 - `ConvertToSsmlOrInstruction` should only be active for engines whose catalog says they support it; otherwise degrade to `Strip` or show a validation warning.
@@ -380,6 +390,7 @@ Note: some fields may already exist globally. In v2, synthesis should prefer pro
 Create: `src-tauri/src/tts/catalog.rs`
 
 Purpose:
+
 - centralize engine display names,
 - expose docs URLs,
 - expose supported fields,
@@ -424,6 +435,7 @@ pub struct VoiceCatalogEntry {
 ```
 
 Expose IPC:
+
 - `list_tts_engines() -> Vec<EngineCatalogEntry>`
 - `list_tts_voices(engine: TtsEngine) -> Result<Vec<VoiceCatalogEntry>, String>`
 - `refresh_tts_voices(engine: TtsEngine) -> Result<Vec<VoiceCatalogEntry>, String>` if credentials are needed.
@@ -465,6 +477,7 @@ pub(crate) fn resolve_effective_for_profile(
 ```
 
 Rules:
+
 - `None` means active profile.
 - `Some(id)` means request-local profile resolution.
 - Unknown profile returns `Err("unknown profile: {id}")`.
@@ -476,6 +489,7 @@ Rules:
 ## Backend construction target
 
 Modify:
+
 - `src-tauri/src/commands/tts/helpers.rs`
 - `src-tauri/src/tts/openai.rs`
 - `src-tauri/src/tts/elevenlabs.rs`
@@ -495,10 +509,12 @@ pub(crate) fn create_backend_from_effective(
 ```
 
 This function should merge:
+
 - global secrets/account defaults from `tts_config.openai.api_key`, `tts_config.elevenlabs.api_key`, etc.
 - profile non-secret synthesis options from `eff.engine_options`.
 
 Specific fixes:
+
 - OpenAI backend must use the `voice` parameter passed to `synthesize()` or the effective config, not always `self.config.voice`.
 - OpenAI backend should support profile `response_format`; default `wav` for playback.
 - OpenAI backend should include `instructions` only when set and only after docs confirm support for the selected model.
@@ -516,6 +532,7 @@ Do not change the `TtsBackend` trait unless forced. Current trait is small and g
 ## Text processing / bracketed emotes
 
 Files:
+
 - `src-tauri/src/post_processing.rs`
 - `src-tauri/src/config/post_processing.rs`
 - `src-tauri/src/sanitize/tts_normalize.rs`
@@ -529,12 +546,14 @@ let text = crate::post_processing::process_text(&post_processing_config, &text).
 ```
 
 Target flow:
+
 1. Resolve effective profile before post-processing.
 2. Apply profile text processing policy.
 3. Apply global post-processing only if profile says `InheritGlobal` or `Enabled`.
 4. Apply bracket handling before synthesis.
 
 Add tests for:
+
 - `[laughs] hello` with `KeepLiteral` remains unchanged.
 - `[laughs] hello` with `Strip` becomes `hello` or `hello` with clean whitespace.
 - `[laughs] hello` with unsupported `ConvertToSsmlOrInstruction` falls back predictably.
@@ -560,12 +579,14 @@ struct SpeakRequest {
 ```
 
 Behavior:
+
 - If `profile` is set and `persist_selection != Some(true)`, speak with that profile for this request only.
 - If `persist_selection == Some(true)`, update `active_profile_id` and save config.
 - Keep `engine`/`effect` backward-compatible, but mark them as debug shorthands in comments and docs.
 - Do not mutate global config for one-off `engine`/`effect` unless `persist_selection` is true.
 
 Add endpoints:
+
 - `GET /profiles`
 - `GET /profiles/{id}`
 - `POST /profiles/active`
@@ -573,6 +594,7 @@ Add endpoints:
 - `GET /engines/{engine}/voices`
 
 KISS parser note:
+
 - The current server manually parses HTTP. Keep it if endpoints remain simple.
 - If route parsing gets ugly, add tiny helper functions in the same file. Do not bring in Axum just for five localhost endpoints unless manual parsing becomes unmaintainable.
 
@@ -583,10 +605,12 @@ KISS parser note:
 Create one thin CLI first. Do not overbuild.
 
 Recommended first implementation:
+
 - Create: `scripts/copyspeak.mjs`
 - Optional Windows shim later: `scripts/copyspeak.ps1`
 
 Why script first:
+
 - It talks to the already-running localhost control server.
 - It avoids fighting Tauri single-instance process args.
 - It can be packaged later as a sidecar if the UX proves worth it.
@@ -605,6 +629,7 @@ node scripts/copyspeak.mjs voices list --engine elevenlabs
 ```
 
 Implementation details:
+
 - Read `COPYSPEAK_CONTROL_ADDR`, default `http://127.0.0.1:43117`.
 - Use Node 18+ global `fetch`.
 - For `--stdin`, read all stdin.
@@ -622,9 +647,11 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 **Objective:** Create a checked-in source of truth before touching schema.
 
 **Files:**
+
 - Create: `docs/profile-engine-settings.md`
 
 **Content to include:**
+
 - Motivation: profiles replace long custom CLI parameter lists.
 - Safety: profiles export without secrets.
 - Engine matrix from this plan.
@@ -632,6 +659,7 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 - Non-mutating HTTP/CLI semantics.
 
 **Validation:**
+
 - Read the doc and verify it answers: “what belongs in a profile vs global config?”
 
 ### Task 2: Add engine catalog types and static entries
@@ -639,18 +667,21 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 **Objective:** Create shared backend metadata for engines, docs, options, and static voices.
 
 **Files:**
+
 - Create: `src-tauri/src/tts/catalog.rs`
 - Modify: `src-tauri/src/tts/mod.rs`
 - Modify: `src-tauri/src/main.rs`
 - Modify: `src/lib/types.ts`
 
 **Implementation notes:**
+
 - Include all seven existing engines.
 - Add docs URLs.
 - Add static voice fallbacks for OpenAI, Google, Cartesia defaults, ElevenLabs defaults.
 - Mark refresh support true only where implemented or easy to add now: ElevenLabs first.
 
 **Tests:**
+
 - Add Rust unit test in `catalog.rs` verifying every `TtsEngine` has exactly one catalog entry.
 - Add Rust unit test verifying no catalog entry has an empty label or docs URL.
 
@@ -659,15 +690,18 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 **Objective:** Let frontend/CLI/control server query engine metadata without duplicating constants.
 
 **Files:**
+
 - Modify: `src-tauri/src/commands/tts/voices.rs`
 - Modify: `src-tauri/src/commands/tts/mod.rs`
 - Modify: `src-tauri/src/main.rs`
 
 **Commands:**
+
 - `list_tts_engines() -> Vec<EngineCatalogEntry>`
 - `list_tts_voices(engine: TtsEngine) -> Result<Vec<VoiceCatalogEntry>, String>`
 
 **Notes:**
+
 - For ElevenLabs, adapt current `list_elevenlabs_voices()` response into `VoiceCatalogEntry`.
 - Keep `list_elevenlabs_voices()` for backward compatibility until UI is migrated.
 
@@ -676,11 +710,13 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 **Objective:** Replace loose profile `engine_options` behavior with typed options while keeping deserialization compatible.
 
 **Files:**
+
 - Modify: `src-tauri/src/config/tts.rs`
 - Modify: `src/lib/types.ts`
 - Modify: `src-tauri/src/config/tests.rs`
 
 **Steps:**
+
 1. Add `ProfileTextProcessing`, enums, and defaults.
 2. Add `ProfileEngineOptions` enum and per-engine option structs.
 3. Add defaults for every option struct from current global config defaults.
@@ -689,6 +725,7 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 6. Preserve old JSON with `engine_options: {}` by converting it based on `profile.engine`.
 
 **Tests:**
+
 - Legacy v0 no profiles → v2 default profile.
 - Existing v1 profile with empty `engine_options` → v2 typed defaults for its engine.
 - Existing named profile voice survives migration.
@@ -699,16 +736,19 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 **Objective:** Remove the special behavior where `default` silently means “read legacy globals”.
 
 **Files:**
+
 - Modify: `src-tauri/src/commands/tts/helpers.rs`
 - Modify: `src-tauri/src/config/tts.rs`
 - Modify: `src-tauri/src/config/tests.rs`
 
 **Rules:**
+
 - `default` can remain undeletable in UI, but it should be a normal `VoiceProfile` after migration.
 - Synthesis should use `resolve_effective_for_profile(config, None)` for active profile.
 - No profile resolution should mutate config.
 
 **Tests:**
+
 - Active `default` profile with OpenAI voice `nova` resolves to OpenAI/nova.
 - Active named profile with Cartesia resolves to Cartesia profile options.
 - Unknown profile ID returns clear error.
@@ -718,13 +758,16 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 **Objective:** Ensure profiles actually control engine-specific settings.
 
 **Files:**
+
 - Modify: `src-tauri/src/commands/tts/helpers.rs`
 - Modify: every backend file listed in “Backend construction target”.
 
 **High-priority bug fix:**
+
 - Fix `src-tauri/src/tts/openai.rs` so `synthesize(&self, text, voice, speed)` uses the `voice` argument or effective config, not `self.config.voice` unconditionally.
 
 **Tests:**
+
 - Unit-test config merging where possible without network.
 - For HTTP backend, existing placeholder test should be extended with profile URL/body/speed.
 - For OpenAI, add a request-body construction helper and unit-test model/voice/speed/format/instructions without sending network requests.
@@ -734,16 +777,19 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 **Objective:** Make bracketed emote handling and global post-processing predictable per profile.
 
 **Files:**
+
 - Modify: `src-tauri/src/commands/tts/synthesis.rs`
 - Modify: `src-tauri/src/post_processing.rs` or create helper in `src-tauri/src/sanitize/tts_normalize.rs`
 - Modify: `src-tauri/src/config/tests.rs` or relevant sanitize tests
 
 **Implementation:**
+
 - Resolve effective profile before `process_text()`.
 - Add deterministic bracket handling helper.
 - Honor profile `text_processing.mode`.
 
 **Tests:**
+
 - Bracket strip.
 - Bracket keep.
 - Global post-processing inherited.
@@ -754,6 +800,7 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 **Objective:** Stop the UI from hardcoding lowercase engine names and raw voice IDs only.
 
 **Files:**
+
 - Modify: `src/lib/components/engine/profile-manager.svelte`
 - Possibly create: `src/lib/components/profiles/engine-options-editor.svelte`
 - Possibly create: `src/lib/components/profiles/voice-picker.svelte`
@@ -761,6 +808,7 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 - Modify tests under `src/lib/components/engine/*.test.ts` or move tests with new components.
 
 **UI requirements:**
+
 - Engine select uses catalog labels.
 - Voice field becomes picker + manual fallback.
 - Engine settings render based on selected engine.
@@ -769,6 +817,7 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 - Show docs link for selected engine.
 
 **Svelte 5 rules:**
+
 - Use `$state`, `$derived`, `$props`, `$effect`.
 - Use `onclick`, not `on:click`.
 - Avoid `$effect` to write user slider changes back to config; use explicit `onchange` to avoid cancel/reset race.
@@ -778,15 +827,18 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 **Objective:** Make integrations like Pi voice safe and sane.
 
 **Files:**
+
 - Modify: `src-tauri/src/control_server.rs`
 - Modify: `src-tauri/src/commands/tts/synthesis.rs` if `speak_now` needs profile override param
 
 **Implementation approach:**
+
 - Add an internal `speak_with_options(app, text, profile_id_override)` or extend `speak_now` carefully.
 - Avoid saving config for one-off profile speaks.
 - Add JSON endpoints listed above.
 
 **Tests:**
+
 - Add parser tests if current file has test module or create one.
 - Verify `POST /speak` with profile does not call config save unless `persist_selection` is true. If hard to unit-test save calls, factor mutation into pure function and test that.
 
@@ -795,11 +847,13 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 **Objective:** Give CopySpeak CLI abilities without long custom parameter lists.
 
 **Files:**
+
 - Create: `scripts/copyspeak.mjs`
 - Optional: `scripts/copyspeak.ps1`
 - Modify: `README.md` or `docs/profile-engine-settings.md`
 
 **Commands:**
+
 - `health`
 - `speak --profile/-p <id> [text]`
 - `speak --stdin --profile/-p <id>`
@@ -810,6 +864,7 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 - `voices list --engine <engine>`
 
 **Tests:**
+
 - If no HTTP server is running, CLI exits non-zero with “CopySpeak control server is not reachable at ...”.
 - Use a tiny mocked HTTP server in a Node test only if existing test infra makes that cheap. Otherwise keep CLI simple and manually verify with running app after user approval.
 
@@ -818,6 +873,7 @@ Do **not** add a dependency like `commander` unless argument parsing becomes pai
 **Objective:** Make Pi/Hermes/skill speech integrations obvious.
 
 **Files:**
+
 - Modify: `README.md`
 - Modify or create: `docs/integrations.md`
 - Update existing: `COPYSPEAK_PI_VOICE.md`, `COPYSPEAK_PI_VOICE_2.md` if still current.
@@ -836,6 +892,7 @@ Content-Type: application/json
 ```
 
 Warn clearly:
+
 - server is localhost trusted automation, not a public network API,
 - do not bind to `0.0.0.0` unless you add auth first.
 
@@ -844,11 +901,13 @@ Warn clearly:
 **Objective:** Reduce duplication without breaking users.
 
 **Files:**
+
 - `src-tauri/src/config/tts.rs`
 - `src/lib/components/engine/engine-page.svelte`
 - old engine-specific UI components if profiles page supersedes them
 
 **Rule:**
+
 - Do this only after profile synthesis and UI pass tests.
 - Keep old global config fields in serialized config for at least one release if removing them risks user data loss.
 - Prefer hiding old UI fields over deleting persisted fields immediately.
@@ -877,6 +936,7 @@ bun run check
 ```
 
 Manual verification with running app:
+
 1. Create profile `pi` using HTTP/local engine.
 2. Create profile `narrator` using a cloud engine.
 3. Switch active profile in UI; speak clipboard.

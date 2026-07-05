@@ -112,9 +112,7 @@
       }
 
       const { volume } = config.playback;
-      const activeProfile = config.tts.profiles.find(
-        (p) => p.id === config.tts.active_profile_id
-      );
+      const activeProfile = config.tts.profiles.find((p) => p.id === config.tts.active_profile_id);
       const activeEffect = activeProfile?.effects?.enabled
         ? activeProfile.effects.active_effect
         : "none";

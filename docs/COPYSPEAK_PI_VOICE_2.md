@@ -29,8 +29,18 @@ The repo-local Claude hook is configured in `.claude/settings.json`; `.claude/se
 ```json
 {
   "hooks": {
-    "Stop": [{ "matcher": "", "hooks": [{ "type": "command", "command": "node scripts/claude-copyspeak-hook.mjs" }] }],
-    "SubagentStop": [{ "matcher": "", "hooks": [{ "type": "command", "command": "node scripts/claude-copyspeak-hook.mjs" }] }]
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [{ "type": "command", "command": "node scripts/claude-copyspeak-hook.mjs" }]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [{ "type": "command", "command": "node scripts/claude-copyspeak-hook.mjs" }]
+      }
+    ]
   }
 }
 ```

@@ -223,7 +223,7 @@ pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> S
 }
 
 /// Get the engine string identifier for a backend (used in history filenames).
-/// Returns preset name for local engines (piper, kokoro, pocket), or engine name for cloud.
+/// Returns preset name for local engines (piper, kokoro), or engine name for cloud.
 pub(crate) fn engine_identifier(active: &TtsEngine, tts_config: &TtsConfig) -> String {
     match active {
         TtsEngine::Local => {
@@ -324,7 +324,6 @@ pub(crate) struct EffectiveTtsRequest {
     pub engine: TtsEngine,
     pub voice: String,
     pub voice_label: Option<String>,
-    pub speed: f32,
     pub pitch: f32,
     pub effects: crate::config::ProfileEffects,
     pub text_processing: ProfileTextProcessing,
@@ -353,7 +352,6 @@ pub(crate) fn resolve_effective_for_profile(
         engine: profile.engine.clone(),
         voice,
         voice_label: profile.voice_label.clone(),
-        speed: profile.speed,
         pitch: profile.pitch,
         effects: profile.effects.clone(),
         text_processing: profile.text_processing.clone(),
@@ -375,7 +373,6 @@ pub(crate) fn resolve_effective(tts_config: &TtsConfig) -> EffectiveTtsRequest {
             voice: voice_for_backend(&engine, tts_config),
             voice_label: None,
             engine,
-            speed: 1.0,
             pitch: 1.0,
             effects: crate::config::ProfileEffects::default(),
             text_processing: ProfileTextProcessing::default(),

@@ -47,7 +47,8 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("agent_start", async (_event, ctx) => {
     spokenThinkingBlocks = new Set();
-    if (state.enabled && state.speakActivity) await speakSafe("CopySpeak TTS: agent thinking.", ctx);
+    if (state.enabled && state.speakActivity)
+      await speakSafe("CopySpeak TTS: agent thinking.", ctx);
   });
 
   pi.on("message_update", async (event, ctx) => {

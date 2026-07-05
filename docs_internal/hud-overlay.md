@@ -56,20 +56,20 @@ The HUD operates on a push-based event system where the Rust backend emits event
 
 ### Event Types
 
-| Event                                                                         | Direction       | Payload                                                     | Description                                 |
-| ----------------------------------------------------------------------------- | --------------- | ----------------------------------------------------------- | ------------------------------------------- |
-| [`hud:start`](../../src-tauri/src/hud.rs:220)                                 | Rust → Frontend | [`HudStartPayload`](../../src/lib/types/hud.ts:7)           | HUD should become visible with initial data |
-| [`hud:stop`](../../src-tauri/src/hud.rs:423)                                  | Rust → Frontend | None                                                        | Hide HUD                                    |
-| [`hud:synthesizing`](../../src-tauri/src/hud.rs:254)                          | Rust → Frontend | [`HudSynthesizingPayload`](../../src/lib/types/hud.ts:14)   | TTS generation started                      |
-| [`hud:playback_start`](../../src-tauri/src/hud.rs:294)                        | Rust → Frontend | [`HudPlaybackStartPayload`](../../src/lib/types/hud.ts:21)  | Audio playback started                      |
-| [`hud:amplitude`](../../src-tauri/src/commands/playback.rs:100)               | Rust → Frontend | [`AmplitudePayload`](../../src/lib/types/hud.ts:50)         | Real-time amplitude data for waveform       |
-| [`hud:synthesis-progress`](../../src-tauri/src/commands/tts/synthesis.rs:547) | Rust → Frontend | [`SynthesisProgressPayload`](../../src/lib/types/hud.ts:28) | Progress updates during synthesis           |
-| [`hud:clipboard-copied`](../../src-tauri/src/hud.rs:395)                      | Rust → Frontend | [`ClipboardCopiedPayload`](../../src/lib/types/hud.ts:46)   | Double-copy detected                        |
-| `hud:audio-duration`                                                          | Frontend → Frontend | `{ duration_ms: number }`                                | Accurate audio duration from Web Audio decode |
-| `pagination:started`                                                          | Rust → Frontend | [`PaginationPayload`](../../src/lib/types/hud.ts:40)        | Text pagination started                     |
-| `pagination:fragment-started`                                                 | Rust → Frontend | [`PaginationPayload`](../../src/lib/types/hud.ts:40)        | New fragment being processed                |
-| `pagination:fragment-ready`                                                   | Rust → Frontend | [`PaginationPayload`](../../src/lib/types/hud.ts:40)        | Fragment ready for playback                 |
-| `playback-toggle-pause`                                                       | Rust → Frontend | None                                                        | Pause/resume toggle                         |
+| Event                                                                         | Direction           | Payload                                                     | Description                                   |
+| ----------------------------------------------------------------------------- | ------------------- | ----------------------------------------------------------- | --------------------------------------------- |
+| [`hud:start`](../../src-tauri/src/hud.rs:220)                                 | Rust → Frontend     | [`HudStartPayload`](../../src/lib/types/hud.ts:7)           | HUD should become visible with initial data   |
+| [`hud:stop`](../../src-tauri/src/hud.rs:423)                                  | Rust → Frontend     | None                                                        | Hide HUD                                      |
+| [`hud:synthesizing`](../../src-tauri/src/hud.rs:254)                          | Rust → Frontend     | [`HudSynthesizingPayload`](../../src/lib/types/hud.ts:14)   | TTS generation started                        |
+| [`hud:playback_start`](../../src-tauri/src/hud.rs:294)                        | Rust → Frontend     | [`HudPlaybackStartPayload`](../../src/lib/types/hud.ts:21)  | Audio playback started                        |
+| [`hud:amplitude`](../../src-tauri/src/commands/playback.rs:100)               | Rust → Frontend     | [`AmplitudePayload`](../../src/lib/types/hud.ts:50)         | Real-time amplitude data for waveform         |
+| [`hud:synthesis-progress`](../../src-tauri/src/commands/tts/synthesis.rs:547) | Rust → Frontend     | [`SynthesisProgressPayload`](../../src/lib/types/hud.ts:28) | Progress updates during synthesis             |
+| [`hud:clipboard-copied`](../../src-tauri/src/hud.rs:395)                      | Rust → Frontend     | [`ClipboardCopiedPayload`](../../src/lib/types/hud.ts:46)   | Double-copy detected                          |
+| `hud:audio-duration`                                                          | Frontend → Frontend | `{ duration_ms: number }`                                   | Accurate audio duration from Web Audio decode |
+| `pagination:started`                                                          | Rust → Frontend     | [`PaginationPayload`](../../src/lib/types/hud.ts:40)        | Text pagination started                       |
+| `pagination:fragment-started`                                                 | Rust → Frontend     | [`PaginationPayload`](../../src/lib/types/hud.ts:40)        | New fragment being processed                  |
+| `pagination:fragment-ready`                                                   | Rust → Frontend     | [`PaginationPayload`](../../src/lib/types/hud.ts:40)        | Fragment ready for playback                   |
+| `playback-toggle-pause`                                                       | Rust → Frontend     | None                                                        | Pause/resume toggle                           |
 
 ## Cross-Window Communication
 
@@ -118,12 +118,11 @@ The HUD uses `isPlaybackReady` to prevent showing wrong progress:
 
 ```typescript
 isPlaybackReady = accurateDurationMs !== null && accurateDurationMs > 0;
-playbackProgressPercent = isPlaybackReady
-  ? (playbackElapsedMs / adjustedDurationMs) * 100
-  : 0;
+playbackProgressPercent = isPlaybackReady ? (playbackElapsedMs / adjustedDurationMs) * 100 : 0;
 ```
 
 This ensures:
+
 - Progress bar stays at 0% until accurate duration is known
 - Marquee text centers (no animation) until `isPlaybackReady`
 - Animation timing matches actual audio clip duration
@@ -170,22 +169,22 @@ clipboardDurationMs: number
 
 ```typescript
 // Combined provider/voice label for display
-providerVoiceLabel: string | null  // "ElevenLabs · Rachel"
+providerVoiceLabel: string | null; // "ElevenLabs · Rachel"
 
 // Status text based on current state
-statusLabel: string  // "Processing...", "Paused", or "Playing"
+statusLabel: string; // "Processing...", "Paused", or "Playing"
 
 // Progress calculation with fallbacks
-progressPercent: number  // Character-based or time-based progress
+progressPercent: number; // Character-based or time-based progress
 
 // Animation state
-hasEstimate: boolean     // Whether we have progress data
-dotPulsing: boolean     // Whether status dot should pulse
+hasEstimate: boolean; // Whether we have progress data
+dotPulsing: boolean; // Whether status dot should pulse
 
 // Playback timing (requires accurateDurationMs)
-isPlaybackReady: boolean         // True when accurate duration available
-adjustedDurationMs: number        // accurateDurationMs / (pitch * speed)
-playbackProgressPercent: number   // playbackElapsedMs / adjustedDurationMs * 100
+isPlaybackReady: boolean; // True when accurate duration available
+adjustedDurationMs: number; // accurateDurationMs / (pitch * speed)
+playbackProgressPercent: number; // playbackElapsedMs / adjustedDurationMs * 100
 ```
 
 ### Handler Methods
@@ -193,16 +192,16 @@ playbackProgressPercent: number   // playbackElapsedMs / adjustedDurationMs * 10
 The store provides compound handler methods that update multiple state values:
 
 ```typescript
-handleStart(payload)        // Initialize on hud:start
-handleSynthesizing(payload) // Set synthesizing state
-handlePlaybackStart(payload, durationMs) // Set playback state
-handleStop()               // Reset all state
-handleSynthesisProgress(payload) // Update progress
-handlePagination(payload, fragmentReady) // Update pagination
-handleClipboardCopied(payload) // Show clipboard notification
-handleAmplitude(payload)  // Update waveform bars
-togglePause()             // Toggle pause state
-clearClipboardCopied()   // Clear notification
+handleStart(payload); // Initialize on hud:start
+handleSynthesizing(payload); // Set synthesizing state
+handlePlaybackStart(payload, durationMs); // Set playback state
+handleStop(); // Reset all state
+handleSynthesisProgress(payload); // Update progress
+handlePagination(payload, fragmentReady); // Update pagination
+handleClipboardCopied(payload); // Show clipboard notification
+handleAmplitude(payload); // Update waveform bars
+togglePause(); // Toggle pause state
+clearClipboardCopied(); // Clear notification
 ```
 
 ## Timer System
@@ -265,6 +264,7 @@ When double-copy detected but not speaking:
 ```
 
 Shows a pill-shaped notification with:
+
 - "Clipboard Copied" text
 - Progress fill animation that fills over `durationMs`
 - Scale-in animation (0.4s cubic-bezier)
@@ -283,6 +283,7 @@ During TTS generation:
 ```
 
 Shows:
+
 - Pill-shaped progress indicator
 - Progress fill based on character count or time estimate
 - Scale-in animation
@@ -303,6 +304,7 @@ During audio playback:
 ```
 
 Shows:
+
 - **Waveform** - Animated bars showing amplitude (10+ bars with attack/decay smoothing)
 - **Marquee text** - Scrolling text that animates horizontally when text is wider than container
 - **Progress fill** - Background gradient that fills left-to-right based on playback position
@@ -418,6 +420,7 @@ The HUD window is defined in [`tauri.conf.json`](../../src-tauri/tauri.conf.json
 ```
 
 Key properties:
+
 - **transparent**: Enables transparent background
 - **alwaysOnTop**: Keeps HUD above other windows
 - **decorations**: false - Removes title bar

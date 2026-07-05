@@ -56,7 +56,7 @@ impl TtsBackend for MicrosoftTtsBackend {
         "Microsoft MAI-Voice-2"
     }
 
-    fn synthesize(&self, text: &str, voice: &str, _speed: f32) -> Result<Vec<u8>, TtsError> {
+    fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
         if self.config.endpoint.trim().is_empty() {
             return Err(TtsError::Unavailable(
                 "Microsoft endpoint is not configured".into(),

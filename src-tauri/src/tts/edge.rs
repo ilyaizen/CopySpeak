@@ -24,13 +24,6 @@ impl EdgeTtsBackend {
         Self { config }
     }
 
-    /// Convert a playback speed multiplier (1.0 = normal) to an edge-tts
-    /// rate string like "+35%" or "-10%".
-    fn speed_to_rate(speed: f32) -> String {
-        let pct = (speed - 1.0) * 100.0;
-        format!("{pct:+.0}%")
-    }
-
     fn input_path() -> String {
         let tmp = std::env::temp_dir();
         tmp.join("copyspeak_edge_input.txt")
@@ -51,7 +44,7 @@ impl TtsBackend for EdgeTtsBackend {
         "Edge-TTS"
     }
 
-    fn synthesize(&self, text: &str, voice: &str, speed: f32) -> Result<Vec<u8>, TtsError> {
+    fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
         let input_path = Self::input_path();
         let output_path = Self::output_path();
 
@@ -59,13 +52,10 @@ impl TtsBackend for EdgeTtsBackend {
         std::fs::write(&input_path, text).map_err(TtsError::Io)?;
         let _ = std::fs::remove_file(&output_path);
 
-        let rate = Self::speed_to_rate(speed);
-
         log::info!(
-            "[Edge-TTS] Synthesizing {} chars, voice: {}, rate: {}",
+            "[Edge-TTS] Synthesizing {} chars, voice: {}",
             text.len(),
-            voice,
-            rate
+            voice
         );
 
         let exec_start = std::time::Instant::now();
@@ -76,8 +66,6 @@ impl TtsBackend for EdgeTtsBackend {
             .arg(&input_path)
             .arg("--voice")
             .arg(voice)
-            .arg("--rate")
-            .arg(&rate)
             .arg("--write-media")
             .arg(&output_path)
             .stdout(Stdio::piped())
@@ -153,7 +141,7 @@ impl TtsBackend for EdgeTtsBackend {
         // the binary exists, Python deps are intact, and the network endpoint
         // is reachable. Cheaper than a voice-list API call and catches more
         // failure modes.
-        self.synthesize("test", voice, 1.0).map(|_| ())
+        self.synthesize("test", voice).map(|_| ())
     }
 
     fn file_extension(&self) -> &str {
@@ -174,14 +162,6 @@ impl TtsBackend for EdgeTtsBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_speed_to_rate() {
-        assert_eq!(EdgeTtsBackend::speed_to_rate(1.0), "+0%");
-        assert_eq!(EdgeTtsBackend::speed_to_rate(1.35), "+35%");
-        assert_eq!(EdgeTtsBackend::speed_to_rate(0.5), "-50%");
-        assert_eq!(EdgeTtsBackend::speed_to_rate(2.0), "+100%");
-    }
 
     #[test]
     fn test_voice_display_name() {

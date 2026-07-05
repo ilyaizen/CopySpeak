@@ -4,7 +4,7 @@ A modern Windows desktop app that reads clipboard text aloud using AI Text-to-Sp
 
 ## [Download Latest](https://github.com/ilyaizen/CopySpeak/releases)
 
-![CopySpeak v0.1.7](static/screen-v0.1.7.png)
+![CopySpeak v0.1.8](static/screen-v0.1.8.png)
 
 ## Quick Start
 
@@ -18,8 +18,8 @@ bun run tauri dev
 ### Core
 
 - **Multiple trigger modes**: Double-copy (1.5s window), hotkey, or manual paste/play
-- **9 TTS engines**:
-  - **Local CLI** — Runs Piper, Kokoro, Kitten, or any CLI TTS tool via local subprocess
+- **11 TTS engines**:
+  - **Local CLI** — Piper, Kokoro, Kitten, Chatterbox, or any CLI TTS tool via local subprocess
   - **Edge TTS** — Free Microsoft Edge Read Aloud backend (default)
   - **OpenAI TTS** — Cloud API with 9 voices
   - **ElevenLabs TTS** — Cloud API with voice library support
@@ -32,6 +32,7 @@ bun run tauri dev
 - **Voice profiles** — Create, edit, and switch between named voice profiles with engine, voice, speed, pitch, and effects settings
 - **Audio effects** — Walkie-talkie, 8-bit Game Boy, and more via OfflineAudioContext post-processing
 - **LLM post-processing** — Optional Groq/AI rewrite pass that turns copied text into concise, listener-friendly speech
+- **Engines page** — Dedicated per-engine setup with API key entry, local-engine installers, and test buttons
 
 ### Settings
 

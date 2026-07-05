@@ -61,8 +61,8 @@ Use running dev server. Test scroll, theme toggle, cursor.
 
 ### Naming Conventions
 
-- Files (kebab-case) & Svelte components (kebab-case.svelte)  
-- Variables/functions (camelCase) & Types/interfaces (PascalCase)  
+- Files (kebab-case) & Svelte components (kebab-case.svelte)
+- Variables/functions (camelCase) & Types/interfaces (PascalCase)
 - Constants (UPPER_SNAKE_CASE) & Rust modules (snake_case)
 
 ### Formatting
@@ -195,6 +195,7 @@ src-tauri/src/           # Rust backend
 - **docs_internal/ (Internal Docs)**: **project-overview.md** (project context and key decisions), **requirements.md** (feature requirements and traceability), **architecture.md** (system architecture and design), **development_guide.md** (setup and development workflow), **tts_backends.md** (TTS engine integration guide), **brutalist_design.md** (UI design system and aesthetics), **roadmap.md** (development roadmap and phases), **code-patterns-reference.md** (Svelte 5, Rust, and Tauri IPC code examples).
 
 <!-- rtk-instructions v2 -->
+
 ## RTK (Rust Token Killer) - Token-Optimized Commands
 
 ## Golden Rule
@@ -311,4 +312,5 @@ rtk kubectl logs        # Deduplicated pod logs
 rtk curl <url>          # Compact HTTP responses (70%)
 rtk wget <url>          # Compact download output (65%)
 ```
+
 <!-- /rtk-instructions -->

@@ -686,6 +686,7 @@ fn main() {
             commands::list_tts_voices,
             commands::install_engine,
             commands::test_tts_engine_config,
+            commands::test_local_engine,
             // Post-processing models
             commands::list_post_processing_models,
         ])

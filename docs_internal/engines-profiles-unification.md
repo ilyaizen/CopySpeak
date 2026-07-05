@@ -21,7 +21,7 @@ Separately, engine install was half-built:
   (which manages system Python) via `include_str!`, contradicting the
   `uv`-based installer plan.
 - Only `scripts/install-chatterbox.ps1` existed as a real uv installer.
-- The Engine page had a placeholder: *"Guided installers … future release."*
+- The Engine page had a placeholder: _"Guided installers … future release."_
 
 ## Decisions (locked with user, 2026-07-04)
 
@@ -110,20 +110,20 @@ Separately, engine install was half-built:
 
 ## Engine → installer → profile mapping
 
-| Engine tab   | Installer                | Profile engine | Profile preset | Verify            |
-| ------------ | ------------------------ | -------------- | -------------- | ----------------- |
-| Edge-TTS     | install-edge-tts.ps1     | edge           | —              | test_tts_engine_config("edge") |
-| Cartesia     | — (API key)              | cartesia       | —              | test_tts_engine_config("cartesia") |
-| ElevenLabs   | — (API key)              | elevenlabs     | —              | test_tts_engine_config("elevenlabs") |
-| OpenAI       | — (API key)              | openai         | —              | test_tts_engine_config("openai") |
-| Google       | — (API key)              | google         | —              | test_tts_engine_config("google") |
-| Microsoft    | — (API key + endpoint)   | microsoft      | —              | test_tts_engine_config("microsoft") |
-| Kitten TTS   | install-kittentts.ps1    | local          | kitten-tts     | installer smoke test |
-| Piper TTS    | install-piper.ps1        | local          | piper          | installer smoke test |
-| Kokoro TTS   | install-kokoro.ps1       | local          | kokoro-tts     | installer smoke test |
-| Pocket TTS   | install-pocket.ps1       | local          | pocket-tts     | installer smoke test |
-| Chatterbox   | install-chatterbox.ps1   | local          | chatterbox     | installer smoke test |
-| HTTP         | — (configure in profile) | http           | —              | —                 |
+| Engine tab | Installer                | Profile engine | Profile preset | Verify                               |
+| ---------- | ------------------------ | -------------- | -------------- | ------------------------------------ |
+| Edge-TTS   | install-edge-tts.ps1     | edge           | —              | test_tts_engine_config("edge")       |
+| Cartesia   | — (API key)              | cartesia       | —              | test_tts_engine_config("cartesia")   |
+| ElevenLabs | — (API key)              | elevenlabs     | —              | test_tts_engine_config("elevenlabs") |
+| OpenAI     | — (API key)              | openai         | —              | test_tts_engine_config("openai")     |
+| Google     | — (API key)              | google         | —              | test_tts_engine_config("google")     |
+| Microsoft  | — (API key + endpoint)   | microsoft      | —              | test_tts_engine_config("microsoft")  |
+| Kitten TTS | install-kittentts.ps1    | local          | kitten-tts     | installer smoke test                 |
+| Piper TTS  | install-piper.ps1        | local          | piper          | installer smoke test                 |
+| Kokoro TTS | install-kokoro.ps1       | local          | kokoro-tts     | installer smoke test                 |
+| Pocket TTS | install-pocket.ps1       | local          | pocket-tts     | installer smoke test                 |
+| Chatterbox | install-chatterbox.ps1   | local          | chatterbox     | installer smoke test                 |
+| HTTP       | — (configure in profile) | http           | —              | —                                    |
 
 ## Verification (manual; per repo rules, ask before running)
 

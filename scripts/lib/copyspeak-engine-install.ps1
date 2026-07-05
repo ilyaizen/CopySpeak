@@ -44,8 +44,12 @@ function New-EngineProject {
         Write-Host "  Created: $EngineDir" -ForegroundColor Gray
     }
     if (-not (Test-Path (Join-Path $EngineDir "pyproject.toml"))) {
-        Write-Host "  Running: uv init --bare ($EngineDir)" -ForegroundColor Gray
-        & uv --project $EngineDir init --bare
+        # ponytail: --name avoids a collision when the directory basename equals
+        # a PyPI package name (e.g. engines\piper + `uv add piper` → "self-
+        # dependencies are not permitted"). Prefix keeps the project name unique.
+        $projectName = "copyspeak-$(Split-Path $EngineDir -Leaf)"
+        Write-Host "  Running: uv init --bare --name $projectName ($EngineDir)" -ForegroundColor Gray
+        & uv --project $EngineDir init --bare --name $projectName
     }
 }
 
@@ -88,17 +92,48 @@ function Write-EngineBanner {
 }
 
 # Ask the user before doing something destructive or network-heavy.
-# Defaults to Yes. Returns $true for yes.
-function Confirm-Install {
+# Defaults to No (so a blind Enter keeps the safe path). Returns $true for yes.
+function Get-Confirmation {
     param(
         [Parameter(Mandatory)][string]$Prompt,
-        [switch]$DefaultNo
+        [switch]$DefaultYes
     )
-    $default = if ($DefaultNo) { "N" } else { "Y" }
+    $default = if ($DefaultYes) { "Y" } else { "N" }
     Write-Host "  $Prompt" -ForegroundColor Yellow
-    $answer = Read-Host "  Proceed? (Y/n) [$default]"
+    $answer = Read-Host "  Proceed? (y/N) [$default]"
     if ([string]::IsNullOrWhiteSpace($answer)) { $answer = $default }
     return $answer.Trim().ToUpperInvariant() -eq "Y"
+}
+
+# Print a numbered menu of voices and return the chosen Id.
+#
+# Voices is an array of hashtables: @{ Id = "..."; Label = "..." }.
+# Defaults to the entry marked Default (or the first) on a blank Enter.
+function Select-VoiceFromMenu {
+    param(
+        [Parameter(Mandatory)][string]$Title,
+        [Parameter(Mandatory)]$Voices,
+        [string]$Default
+    )
+    if ($Voices.Count -eq 1) { return $Voices[0].Id }
+
+    $defaultId = if ($Default) { $Default } else { $Voices[0].Id }
+    Write-Host ""
+    Write-Host "  $Title" -ForegroundColor Cyan
+    for ($i = 0; $i -lt $Voices.Count; $i++) {
+        $v = $Voices[$i]
+        $marker = if ($v.Id -eq $defaultId) { " (default)" } else { "" }
+        Write-Host ("    {0,2}. {1} - {2}{3}" -f ($i + 1), $v.Id, $v.Label, $marker) -ForegroundColor Gray
+    }
+    do {
+        $choice = Read-Host "  Pick a voice [1-$($Voices.Count)]"
+        if ([string]::IsNullOrWhiteSpace($choice)) { return $defaultId }
+        $idx = 0
+        if ([int]::TryParse($choice.Trim(), [ref]$idx) -and $idx -ge 1 -and $idx -le $Voices.Count) {
+            return $Voices[$idx - 1].Id
+        }
+        Write-Host "  Invalid choice; try again." -ForegroundColor Red
+    } while ($true)
 }
 
 # Print a ready-to-paste CopySpeak profile snippet. Does NOT edit config (v1).

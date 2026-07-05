@@ -577,10 +577,7 @@ impl TtsBackend for ElevenLabsTtsBackend {
         }
     }
 
-    fn synthesize(&self, text: &str, _voice: &str, _speed: f32) -> Result<Vec<u8>, TtsError> {
-        // Note: _speed parameter is ignored as ElevenLabs API doesn't support direct speed control
-        // Speed adjustment should be done at playback level via audio player
-
+    fn synthesize(&self, text: &str, _voice: &str) -> Result<Vec<u8>, TtsError> {
         log::info!(
             "ElevenLabs TTS request - voice: {}, model: {}, format: {}, text length: {} chars",
             self.config.voice_id,

@@ -15,5 +15,9 @@ if (cargoCheck.status !== 0) {
 }
 
 const args = process.argv.slice(2);
-const result = spawnSync("bun", ["x", "tauri", ...args], { stdio: "inherit", shell: true, windowsHide: true });
+const result = spawnSync("bun", ["x", "tauri", ...args], {
+  stdio: "inherit",
+  shell: true,
+  windowsHide: true
+});
 process.exit(result.status ?? 1);

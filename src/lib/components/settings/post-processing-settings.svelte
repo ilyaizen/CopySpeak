@@ -47,7 +47,8 @@
   );
 
   function handleProviderChange(e: Event) {
-    localConfig.post_processing.provider = (e.target as HTMLSelectElement).value as PostProcessingProvider;
+    localConfig.post_processing.provider = (e.target as HTMLSelectElement)
+      .value as PostProcessingProvider;
     modelOptions = [];
     modelRefreshError = "";
   }
@@ -112,7 +113,10 @@
 </script>
 
 <div class="space-y-4">
-  <SettingRow label="LLM Post-Processing" tooltip="Optimize copied text with an LLM before TTS generation.">
+  <SettingRow
+    label="LLM Post-Processing"
+    tooltip="Optimize copied text with an LLM before TTS generation."
+  >
     <Switch bind:checked={localConfig.post_processing.enabled} />
   </SettingRow>
 
@@ -157,7 +161,10 @@
       <Input bind:value={providerConfig.endpoint} class="w-72" />
     </SettingRow>
 
-    <SettingRow label="Prompt label" tooltip="Select, rename, add, update, or delete saved prompt labels.">
+    <SettingRow
+      label="Prompt label"
+      tooltip="Select, rename, add, update, or delete saved prompt labels."
+    >
       <div class="flex items-center gap-2">
         <Select
           options={promptOptions}

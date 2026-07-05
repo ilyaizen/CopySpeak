@@ -260,6 +260,26 @@
         "title": "Pocket TTS",
         "description": "Compact offline CLI TTS",
         "detail": "Local CLI engine with straightforward voice selection."
+      },
+      "edge": {
+        "title": "Edge-TTS",
+        "description": "Microsoft Edge neural TTS (free)",
+        "detail": "Free, high-quality neural voices from Microsoft Edge's online TTS service. No API key required."
+      },
+      "google": {
+        "title": "Google Gemini TTS",
+        "description": "Google's Gemini-based cloud TTS",
+        "detail": "Cloud TTS powered by Google's Gemini models. Requires a Google AI API key."
+      },
+      "microsoft": {
+        "title": "Microsoft Azure AI",
+        "description": "Enterprise cloud TTS via Azure",
+        "detail": "Enterprise-grade neural voices via Azure Cognitive Services. Requires an Azure API key and endpoint."
+      },
+      "http": {
+        "title": "Custom HTTP Engine",
+        "description": "Generic HTTP/REST TTS backend",
+        "detail": "Bring-your-own-backend engine that calls any HTTP endpoint with configurable URL templates and auth."
       }
     }
   },
@@ -457,7 +477,7 @@
     "local": "Local",
     "docs": "Docs",
     "noCredentialNeeded": "No API key required.",
-    "installerSmokeTestHint": "The installer runs a smoke test when it finishes.",
+    "installerSmokeTestHint": "Install, then press Test to verify the engine synthesizes audio.",
     "installerLaunched": "Installer launched",
     "installFailed": "Install failed",
     "saveBeforeTestFailed": "Save your changes before testing."
@@ -617,7 +637,7 @@
     "screenshots": {
       "title": "Screenshots",
       "subtitle": "See CopySpeak in action",
-      "caption": "CopySpeak v0.1.7 — Main interface with Play tab"
+      "caption": "CopySpeak v0.1.8 — Main interface with Play tab"
     },
     "footer": {
       "github": "GitHub",

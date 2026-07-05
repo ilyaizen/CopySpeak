@@ -22,7 +22,14 @@
   } = $props();
 
   const ENGINES: TtsEngine[] = [
-    "local", "http", "openai", "elevenlabs", "cartesia", "google", "microsoft", "edge"
+    "local",
+    "http",
+    "openai",
+    "elevenlabs",
+    "cartesia",
+    "google",
+    "microsoft",
+    "edge"
   ];
   const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy"];
 
@@ -99,7 +106,8 @@
     try {
       const parsed = JSON.parse(importJson);
       if (!isValidProfile(parsed)) {
-        importError = "Invalid profile: missing required fields (id, name, engine, voice, speed, pitch, effects)";
+        importError =
+          "Invalid profile: missing required fields (id, name, engine, voice, speed, pitch, effects)";
         return;
       }
       onImport(parsed as VoiceProfile);

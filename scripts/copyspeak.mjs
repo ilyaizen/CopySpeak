@@ -46,7 +46,9 @@ async function readStdin() {
 function printProfiles(profiles) {
   for (const profile of profiles) {
     const active = profile.active ? "*" : " ";
-    console.log(`${active} ${profile.id}\t${profile.name}\t${profile.engine}\t${profile.voice || ""}`);
+    console.log(
+      `${active} ${profile.id}\t${profile.name}\t${profile.engine}\t${profile.voice || ""}`
+    );
   }
 }
 
@@ -71,10 +73,14 @@ if (cmd === "health") {
   const persist = has(args, ["--persist", "--set-active"]);
   const text = stdin
     ? await readStdin()
-    : args.filter((arg, index) => {
-        const previous = args[index - 1];
-        return !["--profile", "-p"].includes(previous) && !arg.startsWith("--") && arg !== profile;
-      }).join(" ");
+    : args
+        .filter((arg, index) => {
+          const previous = args[index - 1];
+          return (
+            !["--profile", "-p"].includes(previous) && !arg.startsWith("--") && arg !== profile
+          );
+        })
+        .join(" ");
   if (!text.trim()) die("text is required");
   await request("/speak", {
     method: "POST",
@@ -101,7 +107,9 @@ if (cmd === "health") {
 } else if (cmd === "voices" && subcmd === "list") {
   const engine = argValue(rest, ["--engine", "-e"]);
   if (!engine) die("--engine is required");
-  console.log(JSON.stringify(await request(`/engines/${encodeURIComponent(engine)}/voices`), null, 2));
+  console.log(
+    JSON.stringify(await request(`/engines/${encodeURIComponent(engine)}/voices`), null, 2)
+  );
 } else {
   die("unknown command");
 }

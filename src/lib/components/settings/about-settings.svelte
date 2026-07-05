@@ -175,17 +175,6 @@
         </p>
       </div>
 
-      <!-- Pocket -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.pocket.title")}</Label>
-          <InfoTooltip text={$_("settings.about.pocket.description")} />
-        </div>
-        <p class="text-muted-foreground mt-1 text-xs">
-          {$_("settings.about.pocket.detail")}
-        </p>
-      </div>
-
       <!-- Kokoro -->
       <div>
         <div class="flex items-center gap-1.5">
@@ -205,6 +194,50 @@
         </div>
         <p class="text-muted-foreground mt-1 text-xs">
           {$_("settings.about.piper.detail")}
+        </p>
+      </div>
+
+      <!-- Edge-TTS -->
+      <div>
+        <div class="flex items-center gap-1.5">
+          <Label class="text-sm">{$_("settings.about.edge.title")}</Label>
+          <InfoTooltip text={$_("settings.about.edge.description")} />
+        </div>
+        <p class="text-muted-foreground mt-1 text-xs">
+          {$_("settings.about.edge.detail")}
+        </p>
+      </div>
+
+      <!-- Google Gemini TTS -->
+      <div>
+        <div class="flex items-center gap-1.5">
+          <Label class="text-sm">{$_("settings.about.google.title")}</Label>
+          <InfoTooltip text={$_("settings.about.google.description")} />
+        </div>
+        <p class="text-muted-foreground mt-1 text-xs">
+          {$_("settings.about.google.detail")}
+        </p>
+      </div>
+
+      <!-- Microsoft Azure AI -->
+      <div>
+        <div class="flex items-center gap-1.5">
+          <Label class="text-sm">{$_("settings.about.microsoft.title")}</Label>
+          <InfoTooltip text={$_("settings.about.microsoft.description")} />
+        </div>
+        <p class="text-muted-foreground mt-1 text-xs">
+          {$_("settings.about.microsoft.detail")}
+        </p>
+      </div>
+
+      <!-- Custom HTTP Engine -->
+      <div>
+        <div class="flex items-center gap-1.5">
+          <Label class="text-sm">{$_("settings.about.http.title")}</Label>
+          <InfoTooltip text={$_("settings.about.http.description")} />
+        </div>
+        <p class="text-muted-foreground mt-1 text-xs">
+          {$_("settings.about.http.detail")}
         </p>
       </div>
     </div>

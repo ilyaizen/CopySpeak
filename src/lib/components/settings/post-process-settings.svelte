@@ -107,16 +107,13 @@ Text:
           id="groq-model"
           options={MODEL_OPTIONS}
           value={localConfig.post_process.model}
-          onchange={(e) =>
-            (localConfig.post_process.model = (e.target as HTMLSelectElement).value)}
+          onchange={(e) => (localConfig.post_process.model = (e.target as HTMLSelectElement).value)}
         />
       </div>
 
       <div class="space-y-2">
         <div class="flex items-center justify-between">
-          <Label for="groq-prompt" class="text-sm"
-            >{$_("settings.postProcess.prompt")}</Label
-          >
+          <Label for="groq-prompt" class="text-sm">{$_("settings.postProcess.prompt")}</Label>
           <Button variant="ghost" size="sm" onclick={restoreDefaultPrompt}>
             {$_("settings.postProcess.restoreDefault")}
           </Button>

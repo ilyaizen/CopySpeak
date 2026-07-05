@@ -72,8 +72,7 @@ export const CLOUD_ENGINES: EngineSetupEntry[] = [
     credential: "api_key_endpoint",
     credentialTarget: "microsoft",
     placeholderKey: "placeholderMicrosoft",
-    docsUrl:
-      "https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech"
+    docsUrl: "https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech"
   }
 ];
 
@@ -102,13 +101,6 @@ export const LOCAL_PRESETS: EngineSetupEntry[] = [
     docsUrl: "https://github.com/hexgrad/kokoro"
   },
   {
-    id: "pocket",
-    kind: "local",
-    installerId: "pocket",
-    credential: "none",
-    docsUrl: "https://github.com/pocket-tts/pocket-tts"
-  },
-  {
     id: "chatterbox",
     kind: "local",
     installerId: "chatterbox",
@@ -127,11 +119,7 @@ export const UV_ENTRY: EngineSetupEntry = {
   docsUrl: "https://docs.astral.sh/uv/"
 };
 
-export const ALL_SETUP_ENTRIES: EngineSetupEntry[] = [
-  ...CLOUD_ENGINES,
-  ...LOCAL_PRESETS,
-  UV_ENTRY
-];
+export const ALL_SETUP_ENTRIES: EngineSetupEntry[] = [...CLOUD_ENGINES, ...LOCAL_PRESETS, UV_ENTRY];
 
 export function findSetupEntry(id: string): EngineSetupEntry | undefined {
   return ALL_SETUP_ENTRIES.find((e) => e.id === id);

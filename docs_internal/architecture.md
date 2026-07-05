@@ -607,7 +607,16 @@ let isPlaying = $derived(config?.playback.is_playing ?? false);
     "active_backend": "local",
     "preset": "kokoro",
     "command": "kokoro-tts",
-    "args_template": ["--text", "{text}", "--output", "{output}", "--voice", "{voice}", "--speed", "{speed}"],
+    "args_template": [
+      "--text",
+      "{text}",
+      "--output",
+      "{output}",
+      "--voice",
+      "{voice}",
+      "--speed",
+      "{speed}"
+    ],
     "voice": "af_nicole",
     "speed": 1.0,
     "openai": {
@@ -721,6 +730,7 @@ pub struct HotkeyConfig {
 ```
 
 Validation ensures:
+
 - At least one modifier (Ctrl, Alt, Shift, or Super/Win)
 - Non-empty shortcut string when enabled
 

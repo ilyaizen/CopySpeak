@@ -13,14 +13,15 @@
     class?: string;
   }
 
-  let { children, disableMotion = false, class: className = "", ...rest }:
-    MotionWrapperProps = $props();
-
+  let {
+    children,
+    disableMotion = false,
+    class: className = "",
+    ...rest
+  }: MotionWrapperProps = $props();
 
   const motionDisabled = $derived(disableMotion);
-  const resolvedClassName = $derived(
-    `motion-wrapper${className ? ` ${className}` : ""}`
-  );
+  const resolvedClassName = $derived(`motion-wrapper${className ? ` ${className}` : ""}`);
 </script>
 
 {#key key}

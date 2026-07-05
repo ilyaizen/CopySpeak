@@ -6,6 +6,8 @@
 .DESCRIPTION
     Creates a uv-managed project under %LOCALAPPDATA%\CopySpeak\engines\kitten,
     installs the KittenTTS wheel + soundfile, and drops the stable CLI wrapper.
+    The model auto-downloads on first synthesis. Prompts the user to pick one
+    of the 8 built-in voices, which is baked into the profile snippet.
 
 .PARAMETER Force
     Recreate the engine project from scratch.
@@ -31,8 +33,15 @@ Write-EngineBanner -Title "Kitten TTS Installer"
 
 Require-Uv
 
+# Interactive force prompt: -Force bypasses; a blank Enter keeps the install.
+$effectiveForce = if ($Force) {
+    $true
+} else {
+    Get-Confirmation -Prompt "Reinstall KittenTTS from scratch? (deletes the existing engine dir)" -DefaultYes:$false
+}
+
 $EngineDir = Join-Path (Get-CopySpeakEngineRoot) "kitten"
-New-EngineProject -EngineDir $EngineDir -Force:$Force
+New-EngineProject -EngineDir $EngineDir -Force:$effectiveForce
 
 # KittenTTS is published as a GitHub release wheel (not on PyPI).
 # ponytail: pin the URL; bump here when KittenML cuts a new release.
@@ -54,11 +63,25 @@ $dstWrapper = Join-Path $scriptsDir "copyspeak-kitten.py"
 Copy-Item $srcWrapper $dstWrapper -Force
 Write-Host "  Wrapper installed: $dstWrapper" -ForegroundColor Gray
 
+# KittenTTS ships 8 built-in English voices; the model auto-downloads on
+# first synth. Voice ids are case-sensitive (capitalized first letter).
+$kittenVoices = @(
+    @{ Id = "Rosie";  Label = "Rosie (female)" },
+    @{ Id = "Bella";  Label = "Bella (female)" },
+    @{ Id = "Luna";   Label = "Luna (female)" },
+    @{ Id = "Kiki";   Label = "Kiki (female)" },
+    @{ Id = "Jasper"; Label = "Jasper (male)" },
+    @{ Id = "Bruno";  Label = "Bruno (male)" },
+    @{ Id = "Hugo";   Label = "Hugo (male)" },
+    @{ Id = "Leo";    Label = "Leo (male)" }
+)
+$chosenVoice = Select-VoiceFromMenu -Title "Pick a default KittenTTS voice" -Voices $kittenVoices -Default "Rosie"
+
 if ($SmokeTest) {
     Write-Host ""
     Write-Host "  Running smoke test (first run downloads the model)..." -ForegroundColor Yellow
     $testOut = Join-Path $outputDir "test.wav"
-    Invoke-Uv run --project $EngineDir python "$dstWrapper" --text "Hello from Kitten TTS" --voice Rosie --output "$testOut"
+    Invoke-Uv run --project $EngineDir python "$dstWrapper" --text "Hello from Kitten TTS" --voice $chosenVoice --output "$testOut"
     if (-not (Test-AudioFile -Path $testOut)) { Write-Host "  Smoke test FAILED." -ForegroundColor Red; exit 1 }
 }
 
@@ -68,7 +91,7 @@ $profileJson = @"
   "id": "kitten-local",
   "name": "Kitten TTS (Local)",
   "engine": "local",
-  "voice": "Rosie",
+  "voice": "$chosenVoice",
   "speed": 1.0,
   "pitch": 1.0,
   "effects": { "enabled": false, "active_effect": "none" },

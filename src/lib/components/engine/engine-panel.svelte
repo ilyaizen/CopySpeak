@@ -125,24 +125,28 @@
       </div>
     {/if}
 
-    {#if entry.kind === "cloud"}
+    {#if entry.kind === "cloud" || (entry.kind === "local" && entry.id !== "uv")}
       <div class="border-border flex flex-wrap items-center gap-3 border-t pt-3">
         <Button size="sm" disabled={testState === "testing"} onclick={() => onTest?.()}>
           {#if testState === "testing"}
             <Loader2 size={14} class="mr-2 animate-spin" />
             {$_("engine.testing")}
+          {:else if entry.kind === "local"}
+            {$_("engine.localEngine.testEngine")}
           {:else}
             {$_("engine.apiSetup.testButton")}
           {/if}
         </Button>
 
         {#if testState === "success"}
-          <span class="inline-flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400">
+          <span
+            class="inline-flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400"
+          >
             <CheckCircle2 size={14} />
             {$_("engine.apiSetup.testPassed")}
           </span>
         {:else if testState === "fail"}
-          <span class="inline-flex items-center gap-1 text-sm text-destructive">
+          <span class="text-destructive inline-flex items-center gap-1 text-sm">
             <XCircle size={14} />
             {testMessage || $_("engine.apiSetup.testFailed")}
           </span>

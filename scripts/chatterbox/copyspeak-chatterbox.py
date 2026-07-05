@@ -49,8 +49,9 @@ def main() -> None:
     try:
         model = ChatterboxTTS.from_pretrained(device="cpu")
 
-        # Optional voice cloning: voices/<voice>.wav next to this script.
-        prompt = Path(__file__).resolve().parent / "voices" / f"{args.voice}.wav"
+        # Optional voice cloning: wrapper lives in <engine_dir>/scripts/,
+        # voice prompts live in <engine_dir>/voices/.
+        prompt = Path(__file__).resolve().parent.parent / "voices" / f"{args.voice}.wav"
         if prompt.exists():
             wav = model.generate(text, audio_prompt_path=str(prompt))
         else:

@@ -71,7 +71,10 @@ if (!config.enabled) {
 if (config.launch) launchCopySpeak();
 
 const transcriptPath = hookInput?.transcript_path;
-const text = truncateAtBoundary(cleanForSpeech(findLastAssistantText(transcriptPath)), config.max_chars);
+const text = truncateAtBoundary(
+  cleanForSpeech(findLastAssistantText(transcriptPath)),
+  config.max_chars
+);
 
 if (!text) process.exit(0);
 

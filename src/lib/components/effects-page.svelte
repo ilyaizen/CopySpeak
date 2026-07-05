@@ -27,10 +27,11 @@
     if (!isTauri) return;
     try {
       config = await invoke<AppConfig>("get_config");
-      const activeProfile = config.tts.profiles.find(
-        (p) => p.id === config.tts.active_profile_id
-      );
-      activeEffect = activeProfile?.effects?.active_effect ?? "none";
+      if (config) {
+        const c = config;
+        const activeProfile = c.tts.profiles.find((p) => p.id === c.tts.active_profile_id);
+        activeEffect = activeProfile?.effects?.active_effect ?? "none";
+      }
     } catch (e) {
       toast.error(`Failed to load effects: ${e}`);
     }
@@ -38,11 +39,10 @@
 
   async function handleEffectChange(value: string) {
     if (!config) return;
+    const c = config;
     const next = value as EffectId;
     activeEffect = next;
-    const activeProfile = config.tts.profiles.find(
-      (p) => p.id === config.tts.active_profile_id
-    );
+    const activeProfile = c.tts.profiles.find((p) => p.id === c.tts.active_profile_id);
     if (activeProfile) {
       activeProfile.effects.active_effect = next;
       activeProfile.effects.enabled = next !== "none";

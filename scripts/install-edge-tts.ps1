@@ -34,9 +34,19 @@ Write-EngineBanner -Title "Edge-TTS Installer"
 
 Require-Uv
 
-if (-not $Force -and (Get-Command edge-tts -ErrorAction SilentlyContinue)) {
+# Interactive force prompt: -Force bypasses; a blank Enter keeps the install.
+$alreadyInstalled = [bool](Get-Command edge-tts -ErrorAction SilentlyContinue)
+$effectiveForce = if ($Force) {
+    $true
+} elseif (-not $alreadyInstalled) {
+    $false
+} else {
+    Get-Confirmation -Prompt "edge-tts is already installed. Reinstall from scratch?" -DefaultYes:$false
+}
+
+if (-not $effectiveForce -and $alreadyInstalled) {
     Write-Host "  edge-tts already installed: $(edge-tts --version)" -ForegroundColor Green
-    Write-Host "  Use -Force to reinstall." -ForegroundColor Yellow
+    Write-Host "  Use -Force or answer Yes to reinstall." -ForegroundColor Yellow
 } else {
     Write-Host "  Installing edge-tts via uv tool..." -ForegroundColor Gray
     Invoke-Uv tool install edge-tts --force

@@ -340,7 +340,7 @@ impl TtsBackend for CliTtsBackend {
         &self.command
     }
 
-    fn synthesize(&self, text: &str, voice: &str, _speed: f32) -> Result<Vec<u8>, TtsError> {
+    fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
         let input_path = Self::input_path();
         let output_path = Self::output_path();
 

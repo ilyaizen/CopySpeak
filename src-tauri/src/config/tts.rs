@@ -725,14 +725,13 @@ impl Default for VoiceProfile {
     fn default() -> Self {
         let engine = TtsEngine::Edge;
         let voice = "en-US-AvaMultilingualNeural".to_string();
-        let voice_label = Some("Ava, Multilingual".to_string());
         Self {
             id: "default".into(),
-            name: profile_display_name(&engine, voice_label.as_deref(), &voice),
+            name: "Edge-TTS".into(),
             description: None,
             engine,
             voice,
-            voice_label,
+            voice_label: None,
             speed: 1.0,
             pitch: 1.0,
             effects: ProfileEffects::default(),

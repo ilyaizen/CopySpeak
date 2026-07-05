@@ -61,9 +61,8 @@ async fn synthesize_async(
     backend: Arc<Box<dyn TtsBackend>>,
     text: String,
     voice: String,
-    speed: f32,
 ) -> Result<Vec<u8>, String> {
-    tokio::task::spawn_blocking(move || backend.synthesize(&text, &voice, speed))
+    tokio::task::spawn_blocking(move || backend.synthesize(&text, &voice))
         .await
         .map_err(|e| format!("Task join error: {e}"))?
         .map_err(|e| e.to_string())
@@ -317,7 +316,7 @@ async fn speak_now_internal(
                     "[TTS] Found cached history entry but failed to read audio file: {}. Re-synthesizing.",
                     e
                 );
-                synthesize_async(backend_arc.clone(), text.clone(), voice.clone(), eff.speed)
+                synthesize_async(backend_arc.clone(), text.clone(), voice.clone())
                     .await?
             }
         }
@@ -328,7 +327,6 @@ async fn speak_now_internal(
             backend_arc.clone(),
             &text,
             &voice,
-            eff.speed,
             &active_backend,
             &telemetry_state,
             &synthesis_start,
@@ -338,7 +336,7 @@ async fn speak_now_internal(
         .await?
     } else {
         // Simple synthesis
-        synthesize_async(backend_arc.clone(), text.clone(), voice.clone(), eff.speed).await?
+        synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?
     };
 
     let synthesis_duration = synthesis_start.elapsed();
@@ -394,7 +392,6 @@ async fn synthesize_paginated(
     backend_arc: Arc<Box<dyn TtsBackend>>,
     text: &str,
     voice: &str,
-    speed: f32,
     active_backend: &crate::config::TtsEngine,
     telemetry_state: &State<'_, Mutex<telemetry::TelemetryLog>>,
     synthesis_start: &Instant,
@@ -406,13 +403,7 @@ async fn synthesize_paginated(
 
     if fragments.len() <= 1 {
         // Only one fragment — fall back to normal synthesis
-        return synthesize_async(
-            backend_arc.clone(),
-            text.to_string(),
-            voice.to_string(),
-            speed,
-        )
-        .await;
+        return synthesize_async(backend_arc.clone(), text.to_string(), voice.to_string()).await;
     }
 
     log::info!(
@@ -464,7 +455,6 @@ async fn synthesize_paginated(
             backend_arc.clone(),
             fragment.text.clone(),
             voice.to_string(),
-            speed,
         )
         .await
         .map_err(|e| format!("Fragment {} synthesis failed: {}", i + 1, e))?;
@@ -761,7 +751,6 @@ pub async fn speak_queued(
             backend_arc.clone(),
             fragment.text.clone(),
             voice.clone(),
-            eff.speed,
         )
         .await?;
         let fragment_duration = fragment_start.elapsed();
@@ -932,7 +921,7 @@ pub async fn speak_history_entry(
     let synthesis_start = Instant::now();
 
     // Synthesize
-    let wav_bytes = synthesize_async(backend_arc.clone(), text.clone(), voice.clone(), 1.0).await?;
+    let wav_bytes = synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?;
     let synthesis_ms = synthesis_start.elapsed().as_millis() as u64;
 
     // Record telemetry

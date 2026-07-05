@@ -6,7 +6,7 @@
 // request-templating language: a server with an exotic contract should expose a
 // normalizing wrapper instead of growing this backend.
 //
-// Supported placeholders: {text}, {raw_text}, {voice}, {speed}.
+// Supported placeholders: {text}, {raw_text}, {voice}.
 
 use super::{TtsBackend, TtsError};
 use crate::config::HttpTtsConfig;
@@ -35,12 +35,11 @@ impl HttpTtsBackend {
         }
     }
 
-    fn fill(template: &str, text: &str, voice: &str, speed: f32) -> String {
+    fn fill(template: &str, text: &str, voice: &str) -> String {
         template
             .replace("{text}", text)
             .replace("{raw_text}", text)
             .replace("{voice}", voice)
-            .replace("{speed}", &speed.to_string())
     }
 }
 
@@ -49,19 +48,19 @@ impl TtsBackend for HttpTtsBackend {
         "HTTP"
     }
 
-    fn synthesize(&self, text: &str, voice: &str, speed: f32) -> Result<Vec<u8>, TtsError> {
+    fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
         if self.config.url_template.trim().is_empty() {
             return Err(TtsError::Unavailable(
                 "HTTP TTS url is not configured".into(),
             ));
         }
 
-        let url = Self::fill(&self.config.url_template, text, voice, speed);
+        let url = Self::fill(&self.config.url_template, text, voice);
         let body = self
             .config
             .body_template
             .as_ref()
-            .map(|b| Self::fill(b, text, voice, speed));
+            .map(|b| Self::fill(b, text, voice));
 
         log::info!(
             "HTTP TTS request - {} {}, text length: {} chars",
@@ -149,11 +148,10 @@ mod tests {
     #[test]
     fn test_fill_placeholders() {
         let out = HttpTtsBackend::fill(
-            r#"{"input":"{text}","voice":"{voice}","speed":{speed}}"#,
+            r#"{"input":"{text}","voice":"{voice}"}"#,
             "hello",
             "amy",
-            1.25,
         );
-        assert_eq!(out, r#"{"input":"hello","voice":"amy","speed":1.25}"#);
+        assert_eq!(out, r#"{"input":"hello","voice":"amy"}"#);
     }
 }

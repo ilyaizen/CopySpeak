@@ -11,20 +11,20 @@ pitch + effect as one swappable unit.
 
 ## Engine matrix
 
-| Engine              | Type   | API key | Offline | Installer                       | Setup test                  |
-| ------------------- | ------ | ------- | ------- | ------------------------------- | --------------------------- |
-| Edge-TTS            | cloud  | no      | no      | `install-edge-tts.ps1`          | `test_tts_engine_config`    |
-| Cartesia (Sonic)    | cloud  | yes     | no      | —                               | `test_tts_engine_config`    |
-| ElevenLabs          | cloud  | yes     | no      | —                               | `test_tts_engine_config`    |
-| OpenAI              | cloud  | yes     | no      | —                               | `test_tts_engine_config`    |
-| Google Gemini TTS   | cloud  | yes     | no      | —                               | `test_tts_engine_config`    |
-| Microsoft / Azure   | cloud  | yes + endpoint | no | —                              | `test_tts_engine_config`    |
-| Kitten TTS          | local  | no      | yes     | `install-kittentts.ps1`         | installer smoke test        |
-| Piper (piper1-gpl)  | local  | no      | yes     | `install-piper.ps1`             | installer smoke test        |
-| Kokoro TTS          | local  | no      | yes     | `install-kokoro.ps1`            | installer smoke test        |
-| Pocket TTS          | local  | no      | yes     | `install-pocket.ps1`            | installer smoke test        |
-| Chatterbox          | local  | no      | yes     | `install-chatterbox.ps1`        | installer smoke test        |
-| HTTP server         | either | varies  | varies  | — (configure in profile)        | —                           |
+| Engine             | Type   | API key        | Offline | Installer                | Setup test               |
+| ------------------ | ------ | -------------- | ------- | ------------------------ | ------------------------ |
+| Edge-TTS           | cloud  | no             | no      | `install-edge-tts.ps1`   | `test_tts_engine_config` |
+| Cartesia (Sonic)   | cloud  | yes            | no      | —                        | `test_tts_engine_config` |
+| ElevenLabs         | cloud  | yes            | no      | —                        | `test_tts_engine_config` |
+| OpenAI             | cloud  | yes            | no      | —                        | `test_tts_engine_config` |
+| Google Gemini TTS  | cloud  | yes            | no      | —                        | `test_tts_engine_config` |
+| Microsoft / Azure  | cloud  | yes + endpoint | no      | —                        | `test_tts_engine_config` |
+| Kitten TTS         | local  | no             | yes     | `install-kittentts.ps1`  | installer smoke test     |
+| Piper (piper1-gpl) | local  | no             | yes     | `install-piper.ps1`      | installer smoke test     |
+| Kokoro TTS         | local  | no             | yes     | `install-kokoro.ps1`     | installer smoke test     |
+| Pocket TTS         | local  | no             | yes     | `install-pocket.ps1`     | installer smoke test     |
+| Chatterbox         | local  | no             | yes     | `install-chatterbox.ps1` | installer smoke test     |
+| HTTP server        | either | varies         | varies  | — (configure in profile) | —                        |
 
 ## Cloud engines
 
@@ -32,13 +32,13 @@ Each cloud tab on the Engine page takes an API key (Microsoft also takes an
 endpoint). Click **Test Setup** to synthesize a short clip with the engine's
 default voice and confirm the credential works.
 
-| Engine            | Where to get credentials                                                                 |
-| ----------------- | --------------------------------------------------------------------------------------- |
-| OpenAI            | <https://platform.openai.com/api-keys>                                                  |
-| ElevenLabs        | <https://elevenlabs.io/app/settings/api-keys>                                           |
-| Cartesia          | <https://cartesia.ai/console>                                                           |
-| Google Gemini TTS | <https://aistudio.google.com/app/apikey>                                                |
-| Microsoft / Azure | Azure AI Foundry deployment key + endpoint                                              |
+| Engine            | Where to get credentials                      |
+| ----------------- | --------------------------------------------- |
+| OpenAI            | <https://platform.openai.com/api-keys>        |
+| ElevenLabs        | <https://elevenlabs.io/app/settings/api-keys> |
+| Cartesia          | <https://cartesia.ai/console>                 |
+| Google Gemini TTS | <https://aistudio.google.com/app/apikey>      |
+| Microsoft / Azure | Azure AI Foundry deployment key + endpoint    |
 
 Voices, models, formats, and provider knobs (stability, similarity, etc.) are
 chosen per profile — they are not set on the Engine page.
@@ -60,14 +60,14 @@ Engines install into `%LOCALAPPDATA%\CopySpeak\engines\<engine>`. Each installer
 
 Common flags: `-Force` (reinstall), `-SmokeTest` (synthesize one clip).
 
-| Engine        | Installer                | Size     | Notes                                                       |
-| ------------- | ------------------------ | -------- | ----------------------------------------------------------- |
-| Edge-TTS      | `install-edge-tts.ps1`   | tiny     | Free Microsoft Read Aloud; no model download.               |
-| Kitten TTS    | `install-kittentts.ps1`  | 25-80MB  | 8 voices, CPU ONNX. Model downloads on first use.           |
-| Piper         | `install-piper.ps1`      | ~60MB/voice | Drop `.onnx` + `.onnx.json` into `engines/piper/voices/`. |
-| Kokoro TTS    | `install-kokoro.ps1`     | ~500MB   | Natural voices, broad accent coverage.                      |
-| Pocket TTS    | `install-pocket.ps1`     | compact  | Straightforward CLI voice selection.                        |
-| Chatterbox    | `install-chatterbox.ps1` | ~2GB     | Zero-shot + emotion control; optional voice clone wavs.     |
+| Engine     | Installer                | Size        | Notes                                                     |
+| ---------- | ------------------------ | ----------- | --------------------------------------------------------- |
+| Edge-TTS   | `install-edge-tts.ps1`   | tiny        | Free Microsoft Read Aloud; no model download.             |
+| Kitten TTS | `install-kittentts.ps1`  | 25-80MB     | 8 voices, CPU ONNX. Model downloads on first use.         |
+| Piper      | `install-piper.ps1`      | ~60MB/voice | Drop `.onnx` + `.onnx.json` into `engines/piper/voices/`. |
+| Kokoro TTS | `install-kokoro.ps1`     | ~500MB      | Natural voices, broad accent coverage.                    |
+| Pocket TTS | `install-pocket.ps1`     | compact     | Straightforward CLI voice selection.                      |
+| Chatterbox | `install-chatterbox.ps1` | ~2GB        | Zero-shot + emotion control; optional voice clone wavs.   |
 
 Manual run (if you prefer the terminal):
 

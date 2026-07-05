@@ -107,10 +107,10 @@ export interface TtsConfig {
   openai: OpenAIConfig;
   elevenlabs: ElevenLabsConfig;
   cartesia: CartesiaConfig;
-  edge: EdgeTtsConfig;
+  edge?: EdgeTtsConfig;
   google: GoogleTtsConfig;
   microsoft: MicrosoftTtsConfig;
-  http: HttpTtsConfig;
+  http?: HttpTtsConfig;
 }
 
 // ── Edge-TTS ──────────────────────────────────────────────────────────────────
@@ -195,7 +195,6 @@ export interface EngineCatalogEntry {
   description: string;
   docs_url: string;
   supports_voice_refresh: boolean;
-  supports_speed: boolean;
   supports_pitch: boolean;
   supports_bracket_emotes: boolean;
   options: EngineOptionDescriptor[];

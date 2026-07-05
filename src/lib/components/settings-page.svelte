@@ -162,7 +162,12 @@
 
   $effect(() => {
     if (hasChanges) {
-      showSaveBar(saveConfig, cancelChanges, $_("settings.actions.save"), $_("settings.actions.cancel"));
+      showSaveBar(
+        saveConfig,
+        cancelChanges,
+        $_("settings.actions.save"),
+        $_("settings.actions.cancel")
+      );
     } else {
       hideSaveBar();
     }
@@ -290,7 +295,6 @@
                 </h3>
                 <PlaybackSettings bind:localConfig {retriggerModeOptions} />
               </div>
-
             </div>
           </div>
         </section>
@@ -369,7 +373,6 @@
         </section>
       </main>
     </div>
-
   {:else}
     <div class="flex min-h-[60vh] items-center justify-center px-6">
       <div class="mx-auto w-full max-w-sm text-center">

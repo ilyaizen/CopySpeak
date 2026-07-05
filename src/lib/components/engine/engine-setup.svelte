@@ -33,9 +33,7 @@
 
   // Default to the active profile's cloud engine when possible, else first cloud.
   const initialId = (() => {
-    const active = localConfig.tts.profiles.find(
-      (p) => p.id === localConfig.tts.active_profile_id
-    );
+    const active = localConfig.tts.profiles.find((p) => p.id === localConfig.tts.active_profile_id);
     if (active && CLOUD_ENGINES.some((e) => e.id === active.engine)) {
       return active.engine as string;
     }
@@ -67,7 +65,13 @@
   }
 
   async function runTest(entry: EngineSetupEntry) {
-    // test_tts_engine_config reads from persisted State — flush unsaved creds first.
+    // Local engines are tested by real synthesis (test_local_engine); they
+    // have no credentials, so skip the save-before-test flush. Cloud tests
+    // read from persisted state, so unsaved creds must be flushed first.
+    if (entry.kind === "local") {
+      await runLocalTest(entry);
+      return;
+    }
     if (isDirty) {
       try {
         await onSave();
@@ -78,10 +82,9 @@
     }
     testStates = { ...testStates, [entry.id]: "testing" };
     try {
-      const result = await invoke<{ success: boolean; message: string }>(
-        "test_tts_engine_config",
-        { engine: entry.id }
-      );
+      const result = await invoke<{ success: boolean; message: string }>("test_tts_engine_config", {
+        engine: entry.id
+      });
       testStates = { ...testStates, [entry.id]: result.success ? "success" : "fail" };
       testMessages = { ...testMessages, [entry.id]: result.message };
       if (result.success) toast.success($_("engine.apiSetup.testPassed"));
@@ -89,6 +92,25 @@
       testStates = { ...testStates, [entry.id]: "fail" };
       testMessages = { ...testMessages, [entry.id]: String(e) };
       toast.error(`${$_("engine.apiSetup.testFailed")}: ${e}`);
+    }
+  }
+
+  // Real-synthesis test for a uv-installed local engine. The preset id (piper,
+  // kokoro, kitten, chatterbox) maps to a stable CLI spec in Rust.
+  async function runLocalTest(entry: EngineSetupEntry) {
+    testStates = { ...testStates, [entry.id]: "testing" };
+    try {
+      const result = await invoke<{ success: boolean; message: string }>("test_local_engine", {
+        engine: entry.installerId ?? entry.id
+      });
+      testStates = { ...testStates, [entry.id]: result.success ? "success" : "fail" };
+      testMessages = { ...testMessages, [entry.id]: result.message };
+      if (result.success) toast.success($_("engine.localEngine.engineWorking"));
+      else toast.error($_("engine.localEngine.engineFailed"));
+    } catch (e) {
+      testStates = { ...testStates, [entry.id]: "fail" };
+      testMessages = { ...testMessages, [entry.id]: String(e) };
+      toast.error(`${$_("engine.localEngine.engineFailed")}: ${e}`);
     }
   }
 
@@ -115,7 +137,7 @@
   <aside class="w-36 shrink-0 self-stretch">
     <nav class="space-y-0.5">
       <p
-        class="text-muted-foreground px-2 pb-1 pt-1 text-[11px] font-semibold tracking-wide uppercase"
+        class="text-muted-foreground px-2 pt-1 pb-1 text-[11px] font-semibold tracking-wide uppercase"
       >
         {$_("engines.cloud")}
       </p>
@@ -123,15 +145,15 @@
         <button
           class="block w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {selectedId ===
           entry.id
-            ? "border-primary bg-primary/10 text-primary border-l-2 font-medium"
-            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}"
+            ? 'border-primary bg-primary/10 text-primary border-l-2 font-medium'
+            : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
           onclick={() => (selectedId = entry.id)}
         >
           {$_(`engine.${entry.id}.title`)}
         </button>
       {/each}
       <p
-        class="text-muted-foreground px-2 pb-1 pt-3 text-[11px] font-semibold tracking-wide uppercase"
+        class="text-muted-foreground px-2 pt-3 pb-1 text-[11px] font-semibold tracking-wide uppercase"
       >
         {$_("engines.local")}
       </p>
@@ -139,8 +161,8 @@
         <button
           class="block w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {selectedId ===
           entry.id
-            ? "border-primary bg-primary/10 text-primary border-l-2 font-medium"
-            : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}"
+            ? 'border-primary bg-primary/10 text-primary border-l-2 font-medium'
+            : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
           onclick={() => (selectedId = entry.id)}
         >
           {$_(`engine.${entry.id}.title`)}
@@ -149,8 +171,8 @@
       <button
         class="block w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {selectedId ===
         UV_ENTRY.id
-          ? "border-primary bg-primary/10 text-primary border-l-2 font-medium"
-          : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}"
+          ? 'border-primary bg-primary/10 text-primary border-l-2 font-medium'
+          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
         onclick={() => (selectedId = UV_ENTRY.id)}
       >
         {$_("engine.setup.installUv")}
@@ -161,7 +183,7 @@
   <main class="min-w-0 flex-1 space-y-6 pb-20">
     {#if uvAvailable === false && selected.id !== "uv"}
       <div
-        class="border-amber-500/30 bg-amber-500/10 flex items-center justify-between gap-3 rounded-md border p-3"
+        class="flex items-center justify-between gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 p-3"
       >
         <p class="text-sm text-amber-700 dark:text-amber-400">{$_("engine.setup.uvMissing")}</p>
         <Button variant="outline" size="sm" onclick={() => (selectedId = UV_ENTRY.id)}>

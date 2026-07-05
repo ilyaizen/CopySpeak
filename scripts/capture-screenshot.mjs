@@ -24,10 +24,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = resolve(__dirname, "..");
 
 const TAURI_CONF = resolve(projectRoot, "src-tauri/tauri.conf.json");
-const SCREENSHOTS_SVELTE = resolve(
-  projectRoot,
-  "src/lib/components/landing/screenshots.svelte"
-);
+const SCREENSHOTS_SVELTE = resolve(projectRoot, "src/lib/components/landing/screenshots.svelte");
 const SCREENSHOT_SCRIPT = resolve(projectRoot, "scripts/screenshot-window.ps1");
 const STATIC_DIR = resolve(projectRoot, "static");
 
@@ -41,15 +38,7 @@ function getVersion() {
 function captureScreenshot(outPath) {
   const result = spawnSync(
     "pwsh",
-    [
-      "-NoProfile",
-      "-File",
-      SCREENSHOT_SCRIPT,
-      "-WindowTitle",
-      "CopySpeak",
-      "-OutPath",
-      outPath,
-    ],
+    ["-NoProfile", "-File", SCREENSHOT_SCRIPT, "-WindowTitle", "CopySpeak", "-OutPath", outPath],
     { stdio: "inherit", shell: false }
   );
 
@@ -71,10 +60,7 @@ function updateSvelteReference(filename) {
   }
 
   const content = readFileSync(SCREENSHOTS_SVELTE, "utf-8");
-  const updated = content.replace(
-    /src="\/screen-v[^"]+\.png"/,
-    `src="/${filename}"`
-  );
+  const updated = content.replace(/src="\/screen-v[^"]+\.png"/, `src="/${filename}"`);
 
   if (updated === content) {
     console.log("Svelte reference already up to date or pattern not found.");

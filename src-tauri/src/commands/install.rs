@@ -21,7 +21,6 @@ fn installer_script_for(engine: &str) -> Result<&'static str, String> {
         "kitten" | "kittentts" | "kitten-tts" => Ok("install-kittentts.ps1"),
         "piper" => Ok("install-piper.ps1"),
         "kokoro" | "kokoro-tts" => Ok("install-kokoro.ps1"),
-        "pocket" | "pocket-tts" => Ok("install-pocket.ps1"),
         "edge" | "edge-tts" => Ok("install-edge-tts.ps1"),
         other => Err(format!("unknown engine installer: {other}")),
     }
@@ -66,17 +65,19 @@ pub fn install_engine(engine: String) -> Result<(), String> {
 
     #[cfg(target_os = "windows")]
     {
-        // Wrapper runs the script, captures the exit code, prints a colored
-        // result line, and waits for a keypress so the window doesn't close
-        // before the user reads the output.
+        // Wrapper runs the script in try/catch so a terminating error inside
+        // the installer (e.g. `throw`) is captured instead of escaping past the
+        // pause — without this, failed installers auto-close the window before
+        // the user can read what went wrong. The "Press any key" prompt always
+        // runs whether the installer threw or exited non-zero.
         let wrapper = format!(
-            r#"$ErrorActionPreference = 'Continue'; & '{script}'; $code = $LASTEXITCODE; Write-Host ''; if ($code -eq 0) {{ Write-Host 'Installer finished successfully.' -ForegroundColor Green }} else {{ Write-Host 'Installer finished with exit code:' $code -ForegroundColor Red }}; Write-Host ''; Write-Host 'Press any key to close...' -ForegroundColor Cyan; $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); exit $code"#,
+            r#"$ErrorActionPreference = 'Continue'; $code = 0; try {{ & '{script}' }} catch {{ $code = -1; Write-Host ''; Write-Host "ERROR: $_" -ForegroundColor Red }}; if ($LASTEXITCODE -ne 0 -and $code -eq 0) {{ $code = $LASTEXITCODE }}; Write-Host ''; if ($code -eq 0) {{ Write-Host 'Installer finished successfully.' -ForegroundColor Green }} else {{ Write-Host 'Installer finished with exit code:' $code -ForegroundColor Red }}; Write-Host ''; Write-Host 'Press any key to close...' -ForegroundColor Cyan; $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown'); exit $code"#,
             script = script_str
         );
 
         // ponytail: CREATE_NEW_CONSOLE gives the installer its own window so
-        // it doesn't share the parent's (dev terminal) stdout. Wrapper pauses
-        // for a keypress before exit, so -NoExit is redundant — dropped.
+        // it doesn't share the parent's (dev terminal) stdout. The wrapper
+        // above pauses for a keypress on both success and failure.
         let spawn = |exe: &str| {
             Command::new(exe)
                 .args([

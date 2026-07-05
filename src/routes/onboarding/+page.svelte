@@ -15,13 +15,14 @@
   let testing = $state(false);
   let installing = $state(false);
 
-
   async function loadDefaultConfig() {
     isLoading = true;
     try {
       const config = await invoke<AppConfig>("get_config");
       config.tts.active_backend = "edge";
-      config.tts.edge.voice = "en-US-AvaMultilingualNeural";
+      if (config.tts.edge) {
+        config.tts.edge.voice = "en-US-AvaMultilingualNeural";
+      }
       config.pagination.fragment_size = 500;
       localConfig = config;
     } catch (e) {
@@ -32,15 +33,13 @@
     }
   }
 
-
-
   async function testEdgeTts() {
     testing = true;
     try {
-      const result = await invoke<{ success: boolean; message: string }>(
-        "test_tts_engine_config",
-        { engine: "edge", preset: null }
-      );
+      const result = await invoke<{ success: boolean; message: string }>("test_tts_engine_config", {
+        engine: "edge",
+        preset: null
+      });
       if (result.success) toast.success(result.message || "Edge-TTS is working.");
       else toast.error(result.message || "Edge-TTS test failed.");
     } catch (e) {

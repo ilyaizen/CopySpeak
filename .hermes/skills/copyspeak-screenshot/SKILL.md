@@ -23,6 +23,7 @@ node scripts/capture-screenshot.mjs
 ```
 
 This script:
+
 1. Reads version from `src-tauri/tauri.conf.json`
 2. Captures the window via `scripts/screenshot-window.ps1`
 3. Saves to `static/screen-v{version}.png`
@@ -61,10 +62,10 @@ rm screen-v0.1.6.png   # old version
 
 ## Troubleshooting
 
-| Problem | Fix |
-|---------|-----|
+| Problem                                        | Fix                                                                                                       |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | "No visible window title contains 'CopySpeak'" | Tauri dev not running, or window minimized to tray. Run `bun run tauri dev`, make sure window is visible. |
-| Screenshot shows wrong page | Navigate to Play page (default route `/`) in the app before capturing. |
-| Screenshot captures VS Code or another window | Multiple windows match "CopySpeak" substring. Close other matching windows or use a more specific title. |
-| Play page looks broken/empty | You're seeing the browser dev server, not Tauri. The Play page needs Tauri IPC. Run `bun run tauri dev`. |
-| pwsh not found | Use `powershell.exe` instead, or install PowerShell 7: `winget install Microsoft.PowerShell` |
+| Screenshot shows wrong page                    | Navigate to Play page (default route `/`) in the app before capturing.                                    |
+| Screenshot captures VS Code or another window  | Multiple windows match "CopySpeak" substring. Close other matching windows or use a more specific title.  |
+| Play page looks broken/empty                   | You're seeing the browser dev server, not Tauri. The Play page needs Tauri IPC. Run `bun run tauri dev`.  |
+| pwsh not found                                 | Use `powershell.exe` instead, or install PowerShell 7: `winget install Microsoft.PowerShell`              |

@@ -34,7 +34,7 @@ impl TtsBackend for CartesiaTtsBackend {
         "Cartesia"
     }
 
-    fn synthesize(&self, text: &str, voice: &str, _speed: f32) -> Result<Vec<u8>, TtsError> {
+    fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
         let body = json!({
             "model_id": self.config.model_id,
             "transcript": text,

@@ -48,15 +48,22 @@ if ($List) {
   return
 }
 
-$matches = $all | Where-Object { $_.Value -like "*$WindowTitle*" }
-if ($matches.Count -eq 0) {
-  Write-Host "Visible windows (debug):"
-  $all | ForEach-Object { Write-Host ("  '" + $_.Value + "'") }
-  throw "No visible window title contains '$WindowTitle'."
+# Prefer exact title match over substring match (avoids e.g. VS Code "CopySpeak - Visual Studio Code")
+$exact = $all | Where-Object { $_.Value -eq $WindowTitle }
+if ($exact.Count -gt 0) {
+  $target = $exact[0]
+} else {
+  $substr = $all | Where-Object { $_.Value -like "*$WindowTitle*" }
+  if ($substr.Count -eq 0) {
+    Write-Host "Visible windows (debug):"
+    $all | ForEach-Object { Write-Host ("  '" + $_.Value + "'") }
+    throw "No visible window title contains '$WindowTitle'."
+  }
+  $target = $substr[0]
 }
 
-$handle = $matches[0].Key
-Write-Host ("Capturing window: '" + $matches[0].Value + "' (handle " + $handle + ")")
+$handle = $target.Key
+Write-Host ("Capturing window: '" + $target.Value + "' (handle " + $handle + ")")
 
 # SW_RESTORE = 9
 [Win]::ShowWindow($handle, 9) | Out-Null

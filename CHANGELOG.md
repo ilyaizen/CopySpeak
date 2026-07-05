@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.8] - 2026-07-05
 
 ### Added
 
@@ -13,7 +13,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New `routes/engines/+page.svelte`, `components/engine/engine-setup.svelte` (orchestrator), `components/engine/engine-panel.svelte` (presentational card), and `components/engine/engine-meta.ts` (single source of truth for setup metadata — credentials, installer ids, docs).
   - "Engines" nav item restored in `app-header.svelte`.
 
+- **Test buttons for local engines** — every local engine panel (piper, kokoro, kitten, chatterbox, pocket) now shows a Test button that runs a real synthesis ("Hello.") through the engine's CLI wrapper and verifies the bytes are a valid audio file. New `test_local_engine` Tauri command (`commands::tts::health`) builds a `CliTtsBackend` from each installer's stable `{command, args_template}` and calls `synthesize()`. `engine-panel.svelte` Test block no longer gated on `kind === "cloud"`; `engine-setup.svelte::runTest` branches to `runLocalTest` for local entries.
+  - Reuses the legacy `engine.localEngine.testEngine/engineWorking/engineFailed` i18n keys.
+
+- **Interactive English voice selection in installers** — every local-engine installer now prompts (in its console window) to pick an English voice and bakes it into the smoke test and emitted profile snippet:
+  - `install-piper.ps1`: numbered menu of en_US voices (amy, lessac, ryan, joe, libritts); downloads the chosen `.onnx` + `.onnx.json` pair from `huggingface.co/rhasspy/piper-voices` into `voices\` if missing. New `-SkipVoiceDownload` switch.
+  - `install-kokoro.ps1`: menu of built-in English voices (af_heart, af_bella, af_nicole, af_sarah, am_adam, am_michael, bf_emma, bm_george); default `af_heart`.
+  - `install-kittentts.ps1`: menu of the 8 built-in voices (Rosie, Bella, Luna, Kiki, Jasper, Bruno, Hugo, Leo); default `Rosie`.
+  - New shared helpers `Select-VoiceFromMenu` and `Get-Confirmation` in `scripts/lib/copyspeak-engine-install.ps1`; the latter replaces the unused `Confirm-Install`.
+  - All installers now prompt interactively for reinstall (force) when not passed `-Force`; default is No (no forced reinstall).
+
+### Fixed
+
+- **Piper installer `uv` self-dependency collision** — `New-EngineProject` in `scripts/lib/copyspeak-engine-install.ps1` ran `uv init --bare` with no `--name`, so the project was named after the directory basename. For piper this collided with the PyPI package name (`piper`), making `uv add piper` fail with _"Requirement name `piper` matches project name `piper`, but self-dependencies are not permitted"_ (exit code 2). Fixed by passing `--name copyspeak-<dir>` to `uv init`. Harmless for chatterbox/kitten whose dir names already differ from their PyPI package names.
+
+- **Piper voice model not found** — `scripts/piper/copyspeak-piper.py` resolved `voices_dir` as `Path(__file__).parent / "voices"`, but the wrapper lives in `<engine_dir>/scripts/` while `install-piper.ps1` downloads `*.onnx` into `<engine_dir>/voices/`. So the wrapper looked in `<engine_dir>/scripts/voices/` (always empty) and reported _voice model not found … Available: []_ even though the installer had downloaded the model correctly. Fixed by going up one level: `Path(__file__).parent.parent / "voices"`. Updated the docstring hint to point at `<engine_dir>/voices/`.
+
+- **Piper PyPI package-name collision (`piper` vs `piper-tts`)** — `install-piper.ps1` ran `uv add piper`, but PyPI's `piper` is an unrelated bioinformatics toolkit (_databio/pypiper_, module `pypiper`). The actual TTS engine ships as `piper-tts` (module `piper`). So `from piper import PiperVoice` failed with _No module named 'piper'_ even though `uv add` reported success. Fixed by depending on `piper-tts`. (The earlier `--name copyspeak-<dir>` fix unmasked this: previously the project self-named `piper`, colliding with the package `piper` and failing `uv add` outright.)
+
+- **Piper wrapper using removed 0.x `synthesize(wf, text)` API** — `piper-tts` 1.x dropped the `PiperVoice.synthesize(wave_file, text)` signature and the WAV header is no longer auto-set by the caller; the wrapper hit `# channels not specified`. Switched to `synthesize_wav(text, wf)`, which owns WAV format setup via `set_wav_format=True`.
+
+- **Chatterbox voice-prompt path** — `scripts/chatterbox/copyspeak-chatterbox.py` resolved voice prompts as `Path(__file__).parent / "voices"`, but the wrapper lives in `<engine_dir>/scripts/` while `install-chatterbox.ps1` creates `voices/` at the engine root. Same root cause as the piper path bug. Fixed by going up one level: `Path(__file__).parent.parent / "voices"`.
+
+- **Kokoro installer missing model files** — `install-kokoro.ps1` ran `uv tool install kokoro-tts` and stopped, but the `kokoro-tts` binary requires `kokoro-v1.0.onnx` (~310 MB) and `voices-v1.0.bin` (~25 MB) that it neither bundles nor auto-downloads. Every synthesis failed with _"Required model files are missing"_. The installer now downloads both into `<engine_dir>/kokoro/models/`, and the args_template (installer snippet + `local_engine_spec` kokoro entry in `commands/tts/health.rs`) injects `--model`/`--voices` pointing at them. New `-SkipModelDownload` switch for offline/reuse.
+
+- **Installer window auto-closing on failure** — the launcher wrapper in `commands/install.rs` ran the script inline, so a terminating error inside the installer (`throw`) escaped past the `ReadKey` pause and the console window closed before the user could read the error. Wrapped the script call in `try/catch`; the "Press any key to close" prompt now runs on both success and failure.
+
+- **`install-chatterbox.ps1` interactive reinstall prompt** — added the same `Get-Confirmation` force prompt as the other installers for consistency.
+
+- **Edge-TTS synthesis crash on `--rate`** — `edge-tts --rate -10%` failed with `argument --rate: expected one argument` (exit code 2): argparse parsed the leading `-` on `-10%` as a flag. Speed was being threaded backend→synthesis for Edge (`--rate`), OpenAI (`"speed"` in JSON body), and HTTP (`{speed}` placeholder), but the frontend **already** applies playback speed itself via `audioEl.playbackRate` (`playback-store.svelte.ts`), so speed was either applied twice (cloud) or crashed (Edge). Fixed by making speed a frontend-only concern mirroring pitch: removed the `speed` parameter from `TtsBackend::synthesize` and all 8 backends, dropped Edge's `speed_to_rate` helper + `--rate` arg, dropped OpenAI's `"speed"` body field, and dropped the HTTP `{speed}` placeholder. The persisted `profile.speed` field and `set_playback_speed` IPC are unchanged (frontend reads `activeProfile.speed` → `playbackRate`); saved audio files no longer bake in profile speed.
+
+- **Local CLI engine wrapper paths** — pre-v0.1.8 local profiles (kitten, piper, chatterbox) stored the engine wrapper as a CWD-relative path (`scripts/
+
+- copyspeak-<engine>.py`), which broke because the Tauri process CWD is `src-tauri/`(dev) or the install dir (packaged), not the engine install dir. Migration in`config/tts.rs::migrate_tts_config`now rewrites bare legacy wrapper paths to`{engine_dir}/<engine>/scripts/...`on every load (idempotent).`install-chatterbox.ps1`'s emitted `profileJson`was also missing`command`/`args_template`, so the printed snippet was non-functional — now baked in with the correct absolute path.
+
+- **Screenshot script window title** — `screenshot-window.ps1` defaulted to `"CopySpeak TTS"` but the actual Tauri window title is `"CopySpeak"`. Capture would always fail unless the title was passed manually. Fixed default.
+
 - **Screenshot capture script** — `scripts/capture-screenshot.mjs` reads version from `tauri.conf.json`, captures the Tauri window via `screenshot-window.ps1`, saves to `static/screen-v{version}.png`, and patches `screenshots.svelte` to reference the new file. One-command screenshot refresh: `node scripts/capture-screenshot.mjs`.
+
+### Removed
+
+- **`supports_speed` catalog flag** — `EngineCatalogEntry.supports_speed` (Rust + `EngineCatalogEntry` TS type) removed; it was unused in the UI and became dishonest once speed stopped being a synthesis parameter. HTTP `{speed}` template placeholder no longer substituted (always emitted `1` at synthesis; user templates should drop it).
+
+- **Pocket engine** — dropped from the Engines page, About page, `local_engine_spec`, `installer_script_for`, `engine-meta.ts::LOCAL_PRESETS`, `i18n/types.ts`, and `scripts/install-pocket.ps1` deleted. The PyPI `pocket-tts` CLI is voice-cloning-first: `--voice` takes a path to a conditioning audio file (not a voice name), the installer-baked `--voice default` was always invalid, and the package pulls in PyTorch (~hundreds of MB). Runtime filename normalization (`pocket-tts → pocket` in `helpers.rs::engine_identifier`) and the `hud.rs` display-name branch are kept as defensive code for any legacy profile still referencing pocket.
+
+- **`voice-credentials.svelte` deleted** — its contextual-credential UX is replaced by the Engines page. Setup metadata consolidated into `engine-meta.ts` (DRY).
+
+- **Empty `/engine` and `/profiles` route directories removed** (left behind by the prior consolidation).
 
 ### Changed
 
@@ -22,17 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Credential persistence fixed** — the per-engine config structs (`OpenAIConfig`, `ElevenLabsConfig`, `CartesiaConfig`, `GoogleTtsConfig`, `MicrosoftTtsConfig`) were `#[serde(skip_serializing)]` at the field level in `TtsConfig`, so API keys vanished on restart. Now only `api_key`/`endpoint` persist; profile-owned knobs (model, voice, format, etc.) remain skip-serialized per the profile/global boundary in `docs/profile-engine-settings.md`.
 
 - **Landing screenshot updated** — `screenshots.svelte` now references `screen-v0.1.7.png` (was stale `screen-v0.1.4.png`). Fresh screenshot captured from the v0.1.7 Play page.
-
-### Removed
-
-- **`voice-credentials.svelte` deleted** — its contextual-credential UX is replaced by the Engines page. Setup metadata consolidated into `engine-meta.ts` (DRY).
-- **Empty `/engine` and `/profiles` route directories removed** (left behind by the prior consolidation).
-
-### Fixed
-
-- **Screenshot script window title** — `screenshot-window.ps1` defaulted to `"CopySpeak TTS"` but the actual Tauri window title is `"CopySpeak"`. Capture would always fail unless the title was passed manually. Fixed default.
-
-- **Local CLI engine wrapper paths** — pre-v0.1.8 local profiles (kitten, piper, chatterbox) stored the engine wrapper as a CWD-relative path (`scripts/copyspeak-<engine>.py`), which broke because the Tauri process CWD is `src-tauri/` (dev) or the install dir (packaged), not the engine install dir. Migration in `config/tts.rs::migrate_tts_config` now rewrites bare legacy wrapper paths to `{engine_dir}/<engine>/scripts/...` on every load (idempotent). `install-chatterbox.ps1`'s emitted `profileJson` was also missing `command`/`args_template`, so the printed snippet was non-functional — now baked in with the correct absolute path.
 
 ## [0.1.7] - 2026-07-05
 
@@ -81,6 +116,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Locale strings in `en.json` updated (`landing.hero.title`, `screenshots.*`, onboarding/welcome, about, app title, OpenAI engine detail).
   - `scripts/claude-copyspeak-hook.mjs` running-exe matcher updated for the new `CopySpeak.exe` bundle name.
 - **Tagline now visible** — `Modern AI TTS Orchestrator` (`header.tagline`) is rendered under the in-app header title (was commented out) and added as the landing hero subtitle.
+- **Engine page refactor** — Consolidated `engine-page.svelte` from per-engine subcomponents into a single data-driven panel driven by `ENGINE_TABS`. Removed the cloud-TTS API-key dialog, credential check/test helpers, and unused category metadata; engine settings are now edited inline with a single save flow.
+  - Added `placeholderKey` per engine tab and `install_engine`/`check_command_exists` (uv) wiring for local engines.
+  - Added English locale strings for engine API-key placeholders.
 
 ### Fixed
 
@@ -89,15 +127,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed 4 dead command registrations in `main.rs` (`get_data_dir`, `get_home_dir`, `get_installer_script_path`, `run_kittentts_installer`) — no definitions, no frontend callers.
   - Added missing `let eff = resolve_effective(&tts_config)` + `voice` bindings in `speak_now` and `speak_queued` (`commands/tts/synthesis.rs`) where `eff`/`voice` were referenced but never bound.
 
-### Fixed
-
 - **CI release build** — Removed stale `bundle.resources` entries in `tauri.conf.json` (`../install-kittentts.ps1`, `../kittentts-cli.py`) that referenced non-existent repo-root files and aborted the bundler. Engine installer scripts are resolved at runtime under `scripts/` via `install_engine`.
-
-### Changed
-
-- **Engine page refactor** — Consolidated `engine-page.svelte` from per-engine subcomponents into a single data-driven panel driven by `ENGINE_TABS`. Removed the cloud-TTS API-key dialog, credential check/test helpers, and unused category metadata; engine settings are now edited inline with a single save flow.
-  - Added `placeholderKey` per engine tab and `install_engine`/`check_command_exists` (uv) wiring for local engines.
-  - Added English locale strings for engine API-key placeholders.
 
 ## [0.1.5] - 2026-05-20
 
@@ -205,7 +235,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added Vercel environment detection via `import.meta.env.VITE_IS_VERCEL`
   - Route layout now renders the marketing landing page on Vercel and the Tauri app shell locally/in desktop builds
   - Removed the redundant `src-web` SvelteKit project
-
 - **Default TTS engine** — New configs now default to Cartesia Sonic 3.5 with the Katie voice
 - **Default pagination fragment size** — New configs now use `fragment_size: 500`
 - **Engine picker order** — Cartesia now appears first in engine settings and footer selector
@@ -251,17 +280,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed staggered loading (WebView2 crash workaround no longer needed)
   - HUD settings moved to General section as dropdown
   - Pagination/Sanitization moved to Advanced tab
-
 - **Window size increased** — 675x540 → 775x640 for better content visibility
-
 - **Hotkey capture redesign** — Cleaner UI with Kbd components and arrow key symbols (↑↓←→)
-
 - **Quick-settings redesign** — Larger controls with clearer labels (Volume, Speed, Pitch)
-
 - **App shell refactor** — Grid-based layout for better content distribution
-
 - **Removed `show_notifications`** config field — Unused setting cleaned up
-
 - **Default hotkey shortcut** — Changed from `Super+Shift+A` to `Win+Shift+A` for Windows clarity
 - **Hotkey error messages** — Updated to use "Win" instead of "Win/Super" for consistency
 - **Hotkey logging** — Added structured logging with `[Hotkey]` prefix for registration attempts and config changes
@@ -371,7 +394,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.7...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.8...HEAD
+[0.1.8]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.4...v0.1.5
