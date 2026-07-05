@@ -729,26 +729,37 @@ pub struct TtsConfig {
     #[serde(default)]
     pub profiles: Vec<VoiceProfile>,
 
-    // Local Config
+    // Legacy fields — kept for deserialization of old configs, skipped on serialize.
+    // Migration (v0→v2) copies what's needed into profiles.
+    #[serde(default, skip_serializing)]
     pub preset: String,
+    #[serde(default, skip_serializing)]
     pub command: String,
+    #[serde(default, skip_serializing)]
     pub args_template: Vec<String>,
+    #[serde(default, skip_serializing)]
     pub voice: String,
 
-    // Cloud Configs
+    #[serde(default, skip_serializing)]
     pub openai: OpenAIConfig,
+    #[serde(default, skip_serializing)]
     pub elevenlabs: ElevenLabsConfig,
+    #[serde(default, skip_serializing)]
     pub cartesia: CartesiaConfig,
+    #[serde(default, skip_serializing)]
     pub google: GoogleTtsConfig,
+    #[serde(default, skip_serializing)]
     pub microsoft: MicrosoftTtsConfig,
+    #[serde(default, skip_serializing)]
     pub edge: EdgeTtsConfig,
+    #[serde(default, skip_serializing)]
     pub http: HttpTtsConfig,
 }
 
 impl Default for TtsConfig {
     fn default() -> Self {
         Self {
-            schema_version: 2,
+            schema_version: 3,
             active_backend: TtsEngine::Edge,
             active_profile_id: "default".into(),
             profiles: vec![VoiceProfile::default()],

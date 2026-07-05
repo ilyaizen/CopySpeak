@@ -17,6 +17,14 @@
   let isListening = $derived(listeningStore.isListening);
   let error = $derived(listeningStore.error);
 
+  // Derive speed/pitch/effects from the active profile (sole source of truth)
+  const activeProfile = $derived(
+    config?.tts.profiles.find((p) => p.id === config.tts.active_profile_id) ?? null
+  );
+  const profileSpeed = $derived(activeProfile?.speed ?? 1.0);
+  const profilePitch = $derived(activeProfile?.pitch ?? 1.0);
+  const profileEffectsEnabled = $derived(activeProfile?.effects.enabled ?? false);
+
   // Toggle clipboard listener on/off — delegates to the store which manages the Tauri backend
   async function handleToggle() {
     await listeningStore.toggle();
@@ -50,7 +58,7 @@
       </div>
       <Switch id="qs-hotkey" bind:checked={config.hotkey.enabled} />
     </div>
-    <!-- Effects toggle — binds to config; active_effect preserved when disabled -->
+    <!-- Effects toggle — binds to active profile's effects -->
     <div
       class="border-border bg-muted/30 flex items-center justify-between gap-2 rounded-lg border px-3 py-4"
     >
@@ -58,7 +66,18 @@
         <Label for="qs-effects" class="text-xs">Effects</Label>
         <InfoTooltip text="Apply audio effect to TTS playback" />
       </div>
-      <Switch id="qs-effects" bind:checked={config.effects.enabled} />
+      <Switch
+        id="qs-effects"
+        checked={profileEffectsEnabled}
+        onchange={() => {
+          if (activeProfile) {
+            activeProfile.effects.enabled = !activeProfile.effects.enabled;
+            if (!activeProfile.effects.enabled) {
+              activeProfile.effects.active_effect = "none";
+            }
+          }
+        }}
+      />
     </div>
     <!-- Volume slider — 0–100% range with integer steps for precise control -->
     <div class="border-border bg-muted/30 space-y-1 rounded-lg border px-3 py-4">
@@ -68,27 +87,39 @@
       </div>
       <Slider id="qs-volume" min={0} max={100} step={1} bind:value={config.playback.volume} />
     </div>
-    <!-- Playback speed slider — 0.5x–2x range for slow reading to fast skimming -->
+    <!-- Speed slider — reads from active profile -->
     <div class="border-border bg-muted/30 space-y-1 rounded-lg border px-3 py-4">
       <div class="flex items-center justify-between">
         <Label for="qs-speed" class="text-xs">Speed</Label>
-        <span class="text-muted-foreground text-xs">{config.playback.playback_speed}x</span>
+        <span class="text-muted-foreground text-xs">{profileSpeed.toFixed(2)}x</span>
       </div>
       <Slider
         id="qs-speed"
         min={0.5}
         max={2}
         step={0.05}
-        bind:value={config.playback.playback_speed}
+        value={profileSpeed}
+        onchange={(v) => {
+          if (activeProfile) activeProfile.speed = v;
+        }}
       />
     </div>
-    <!-- Pitch slider — 0.5x–2x range to adjust voice frequency -->
+    <!-- Pitch slider — reads from active profile -->
     <div class="border-border bg-muted/30 space-y-1 rounded-lg border px-3 py-4">
       <div class="flex items-center justify-between">
         <Label for="qs-pitch" class="text-xs">Pitch</Label>
-        <span class="text-muted-foreground text-xs">{config.playback.pitch}x</span>
+        <span class="text-muted-foreground text-xs">{profilePitch.toFixed(2)}x</span>
       </div>
-      <Slider id="qs-pitch" min={0.5} max={2} step={0.05} bind:value={config.playback.pitch} />
+      <Slider
+        id="qs-pitch"
+        min={0.5}
+        max={2}
+        step={0.05}
+        value={profilePitch}
+        onchange={(v) => {
+          if (activeProfile) activeProfile.pitch = v;
+        }}
+      />
     </div>
   {/if}
 </div>

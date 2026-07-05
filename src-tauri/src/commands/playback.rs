@@ -109,7 +109,8 @@ pub fn skip_backward(
     Ok(())
 }
 
-/// Set the playback speed (0.25–4.0). Saved to config; applied by frontend audio element.
+/// Set the playback speed (0.25–4.0) on the active profile.
+/// Saved to config; applied by frontend audio element.
 #[tauri::command]
 pub fn set_playback_speed(config: State<'_, Mutex<AppConfig>>, speed: f32) -> Result<(), String> {
     if crate::logging::is_debug_mode() {
@@ -117,9 +118,17 @@ pub fn set_playback_speed(config: State<'_, Mutex<AppConfig>>, speed: f32) -> Re
     }
     let clamped = speed.clamp(0.25, 4.0);
     let mut cfg = config.lock().unwrap();
-    cfg.playback.playback_speed = clamped;
+    let active_id = cfg.tts.active_profile_id.clone();
+    if let Some(profile) = cfg
+        .tts
+        .profiles
+        .iter_mut()
+        .find(|p| p.id == active_id)
+    {
+        profile.speed = clamped;
+    }
     crate::config::save(&cfg)?;
-    log::info!("Playback speed set to: {}", clamped);
+    log::info!("Profile speed set to: {}", clamped);
     Ok(())
 }
 

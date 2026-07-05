@@ -26,6 +26,7 @@ use std::sync::{Mutex, OnceLock};
 
 // Re-export all public types so external code can use `crate::config::*` unchanged.
 pub use effects::*;
+// EffectsConfig removed from AppConfig — effects are now per-profile (VoiceProfile.effects).
 pub use general::*;
 pub use hotkey::*;
 pub use hud::*;
@@ -180,8 +181,7 @@ pub struct AppConfig {
     pub history: HistoryConfig,
     #[serde(default)]
     pub hotkey: HotkeyConfig,
-    #[serde(default)]
-    pub effects: EffectsConfig,
+    // effects removed — now per-profile on VoiceProfile.effects
     #[serde(default)]
     pub post_process: PostProcessConfig,
 }
@@ -212,8 +212,8 @@ impl Default for AppConfig {
             playback: PlaybackConfig {
                 on_retrigger: RetriggerMode::Queue,
                 volume: 100,
-                playback_speed: 1.35,
-                pitch: 1.15,
+                playback_speed: 1.0,
+                pitch: 1.0,
             },
             hud: HudConfig {
                 enabled: true,
@@ -227,7 +227,7 @@ impl Default for AppConfig {
             pagination: PaginationConfig::default(),
             history: HistoryConfig::default(),
             hotkey: HotkeyConfig::default(),
-            effects: EffectsConfig::default(),
+            // effects removed from AppConfig
             post_process: PostProcessConfig::default(),
         }
     }
@@ -254,6 +254,36 @@ impl AppConfig {
     }
 }
 
+/// Migrate v2 → v3: copy playback speed/pitch and global effects into
+/// the active profile. These become the sole source of truth; the legacy
+/// playback fields are deserialized but skipped on serialize.
+fn migrate_playback_to_profiles_v3(cfg: &mut AppConfig) {
+    let speed = cfg.playback.playback_speed;
+    let pitch = cfg.playback.pitch;
+
+    // Only migrate non-default values to avoid overwriting intentional profile settings.
+    // Default playback_speed was 1.35 and pitch was 1.15 in older defaults.
+    let speed_non_default = (speed - 1.0).abs() > 0.001;
+    let pitch_non_default = (pitch - 1.0).abs() > 0.001;
+
+    if let Some(profile) = cfg
+        .tts
+        .profiles
+        .iter_mut()
+        .find(|p| p.id == cfg.tts.active_profile_id)
+    {
+        if speed_non_default && (profile.speed - 1.0).abs() < 0.001 {
+            profile.speed = speed;
+        }
+        if pitch_non_default && (profile.pitch - 1.0).abs() < 0.001 {
+            profile.pitch = pitch;
+        }
+    }
+
+    cfg.tts.schema_version = 3;
+    log::info!("Config migrated to schema v3 (playback→profile)");
+}
+
 /// Returns the config file path: %APPDATA%/CopySpeak TTS/config.json
 pub fn config_path() -> PathBuf {
     let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
@@ -272,6 +302,12 @@ pub fn load_or_default() -> AppConfig {
 
             // Migrate legacy single-engine TTS config into the profile model.
             cfg.tts = migrate_tts_config(cfg.tts);
+
+            // Migrate v2 → v3: move playback speed/pitch and global effects
+            // into the active profile (sole source of truth going forward).
+            if cfg.tts.schema_version < 3 {
+                migrate_playback_to_profiles_v3(&mut cfg);
+            }
 
             cfg
         }

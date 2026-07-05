@@ -36,10 +36,10 @@
     try {
       await invoke("set_config", { newConfig: localConfig });
       originalConfig = JSON.parse(JSON.stringify(localConfig));
-      toast.success("Profiles saved successfully");
+      toast.success("Voices saved successfully");
     } catch (e) {
       console.error("Failed to save config:", e);
-      toast.error(`Failed to save profiles: ${e}`);
+      toast.error(`Failed to save: ${e}`);
     }
   }
 
@@ -76,12 +76,11 @@
     <main class="mx-auto max-w-3xl pb-20">
       <ProfileManager bind:localConfig />
     </main>
-
   {:else}
     <div class="flex min-h-[60vh] items-center justify-center px-6">
       <div class="mx-auto w-full max-w-sm text-center">
-        <h2 class="mb-2 text-xl font-semibold">{$_("engine.error.loadFailed")}</h2>
-        <Button onclick={loadConfig}>{$_("settings.actions.tryAgain")}</Button>
+        <h2 class="mb-2 text-xl font-semibold">Failed to load</h2>
+        <Button onclick={loadConfig}>Try again</Button>
       </div>
     </div>
   {/if}

@@ -7,7 +7,6 @@
   import SanitizationSettings from "$lib/components/settings/sanitization-settings.svelte";
   import PostProcessSettings from "$lib/components/settings/post-process-settings.svelte";
   import HistorySettings from "$lib/components/settings/history-settings.svelte";
-  import EffectsSettings from "$lib/components/settings/effects-settings.svelte";
   import ImportExportSettings from "$lib/components/settings/import-export-settings.svelte";
   import AboutSettings from "$lib/components/settings/about-settings.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
@@ -26,7 +25,7 @@
   let localConfig = $state<AppConfig | null>(null);
   let originalConfig = $state<AppConfig | null>(null);
   let isLoading = $state(true);
-  type SettingsTab = "general" | "history" | "effects" | "advanced" | "about";
+  type SettingsTab = "general" | "history" | "advanced" | "about";
 
   let activeTab = $state<SettingsTab>("general");
 
@@ -72,12 +71,11 @@
   const tabs = [
     { id: "general" as const, labelKey: "settings.tabs.general" },
     { id: "history" as const, labelKey: "settings.tabs.history" },
-    { id: "effects" as const, labelKey: "settings.tabs.effects" },
     { id: "advanced" as const, labelKey: "settings.tabs.advanced" },
     { id: "about" as const, labelKey: "settings.tabs.about" }
   ];
 
-  const TAB_ORDER: SettingsTab[] = ["general", "history", "effects", "advanced", "about"];
+  const TAB_ORDER: SettingsTab[] = ["general", "history", "advanced", "about"];
 
   const hasChanges = $derived(
     originalConfig !== null &&
@@ -306,20 +304,6 @@
                   {$_("settings.sections.history")}
                 </h3>
                 <HistorySettings bind:localConfig onRunCleanup={handleRunCleanup} />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Effects Section -->
-        <section id="effects" class="scroll-mt-4">
-          <div class="border-border overflow-hidden rounded-lg border">
-            <div class="space-y-0">
-              <div class="p-4">
-                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                  {$_("settings.sections.effects")}
-                </h3>
-                <EffectsSettings bind:localConfig />
               </div>
             </div>
           </div>

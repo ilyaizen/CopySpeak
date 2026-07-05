@@ -48,42 +48,4 @@
       />
     </div>
   </SettingRow>
-
-  <SettingRow
-    label={$_("settings.playback.playbackSpeed")}
-    tooltip={$_("settings.playback.playbackSpeedDescription")}
-  >
-    <div class="flex items-center gap-3">
-      <span class="text-muted-foreground w-14 text-right text-sm tabular-nums">
-        {localConfig.playback.playback_speed.toFixed(2)}x
-      </span>
-      <Slider
-        id="playback-speed"
-        min={0.5}
-        max={2}
-        step={0.05}
-        bind:value={localConfig.playback.playback_speed}
-        class="w-32"
-      />
-    </div>
-  </SettingRow>
-
-  <SettingRow
-    label={$_("settings.playback.pitch")}
-    tooltip={$_("settings.playback.pitchDescription")}
-  >
-    <div class="flex items-center gap-3">
-      <span class="text-muted-foreground w-14 text-right text-sm tabular-nums">
-        {localConfig.playback.pitch.toFixed(2)}x
-      </span>
-      <Slider
-        id="playback-pitch"
-        min={0.5}
-        max={2}
-        step={0.05}
-        bind:value={localConfig.playback.pitch}
-        class="w-32"
-      />
-    </div>
-  </SettingRow>
 </div>

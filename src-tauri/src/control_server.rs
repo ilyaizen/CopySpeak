@@ -166,8 +166,17 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
         }
         if let Some(effect) = request.effect.as_deref() {
             let effect_id = parse_effect(effect)?;
-            cfg.effects.enabled = effect_id != EffectId::None;
-            cfg.effects.active_effect = effect_id;
+            // Apply effect to the active profile
+            let active_id = cfg.tts.active_profile_id.clone();
+            if let Some(profile) = cfg
+                .tts
+                .profiles
+                .iter_mut()
+                .find(|p| p.id == active_id)
+            {
+                profile.effects.enabled = effect_id != EffectId::None;
+                profile.effects.active_effect = effect_id;
+            }
         }
         config::save(&cfg)?;
     }

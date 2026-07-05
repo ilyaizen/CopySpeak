@@ -111,9 +111,16 @@
         setLocale("en");
       }
 
-      const { volume, playback_speed, pitch } = config.playback;
-      const activeEffect = config.effects?.enabled ? config.effects.active_effect : "none";
-      playbackStore.syncPlaybackConfig(volume, playback_speed, pitch, activeEffect);
+      const { volume } = config.playback;
+      const activeProfile = config.tts.profiles.find(
+        (p) => p.id === config.tts.active_profile_id
+      );
+      const activeEffect = activeProfile?.effects?.enabled
+        ? activeProfile.effects.active_effect
+        : "none";
+      const speed = activeProfile?.speed ?? 1.0;
+      const pitchVal = activeProfile?.pitch ?? 1.0;
+      playbackStore.syncPlaybackConfig(volume, speed, pitchVal, activeEffect);
     } catch (e) {
       console.error("Failed to sync appearance/locale:", e);
     }

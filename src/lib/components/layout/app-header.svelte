@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { page } from "$app/state";
   // import { Play, Settings, Cpu, Clock, WandSparkles } from "@lucide/svelte";
-  import { Play, Settings, Cpu, Clock, AudioLines } from "@lucide/svelte";
+  import { Play, Settings, Clock, AudioLines } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
   import { invoke } from "@tauri-apps/api/core";
   import { isTauri } from "$lib/services/tauri.js";
@@ -52,15 +52,9 @@
     //     ]
     //   : []),
     {
-      id: "engine",
-      label: $_("header.engine"),
-      href: "/engine",
-      icon: Cpu
-    },
-    {
-      id: "profiles",
-      label: $_("header.profiles"),
-      href: "/profiles",
+      id: "voices",
+      label: $_("header.voices"),
+      href: "/voices",
       icon: AudioLines
     },
     {
