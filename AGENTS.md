@@ -2,6 +2,10 @@
 
 > For AI coding agents (Hermes-Agent, Pi, OpenCode, KiloCode, Claude Code, Cursor, etc.)
 
+## Project
+
+CopySpeak - A modern AI text-to-speech orchestrator for Windows that reads clipboard text aloud when double-copied, Svelte 5, Tauri 2.
+
 ## Core Development Rules
 
 ### 1. Think Before Code
@@ -53,36 +57,6 @@ DO NOT commit changes without explicit user confirmation. Before ending a task, 
 
 Use running dev server. Test scroll, theme toggle, cursor.
 
-## Commands
-
-```bash
-# Development
-bun run tauri dev           # Full app with hot-reload
-bun run dev                 # Frontend only (port 5173)
-
-# Build
-bun run tauri build         # Production build
-
-bun run check               # TypeScript/Svelte type checking
-bun run check:watch         # Watch mode for type checking
-
-# Testing (Frontend)
-bun run test                # Run all frontend tests (vitest)
-bun run test <name>         # Run single frontend test
-bun run test:watch          # Watch mode
-
-# Testing (Rust)
-cd src-tauri && cargo test             # Run all Rust tests
-cd src-tauri && cargo test <name>      # Run single Rust test (e.g., cargo test double_copy)
-cd src-tauri && cargo check            # Type check Rust
-cd src-tauri && cargo clippy           # Lint Rust
-
-# Version Bumping
-bun run bump                # Patch version bump (0.0.x)
-bun run bump:minor          # Minor version bump (0.x.0)
-bun run bump:major          # Major version bump (x.0.0)
-```
-
 ## Code Style
 
 ### Naming Conventions
@@ -99,26 +73,12 @@ bun run bump:major          # Major version bump (x.0.0)
 - Semicolons: Always
 - Trailing commas: None (ES5 compatibility)
 
-**Key rules:**
+### Svelte Rules
 
 - Use `$state`, `$derived`, `$props`, `$effect` (not `$:`)
 - Use `onclick` NOT `on:click`
 - Call derived signals in templates: `doubled()` not `doubled`
 - Import from `$app/state` not `$app/stores`
-
-### Imports
-
-- Frontend: `$lib/` local imports
-- Backend: `crate::module` relative imports
-- Group order: external → internal aliases → relative
-- **Lucide Icons**: Always use `@lucide/svelte` (NOT `lucide-svelte`)
-  - Correct: `import { Upload } from "@lucide/svelte";`
-  - Wrong: `import { Upload } from "lucide-svelte";`
-
-### Error Handling
-
-- Rust: `Result<T, String>` for IPC, `?` with `map_err`
-- TypeScript: Discriminated unions `{ ok: true; value: T } | { ok: false; error: string }`
 
 ### TypeScript Rules
 

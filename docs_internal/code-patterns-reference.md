@@ -3,6 +3,20 @@
 > Copy-paste reference for Svelte 5, Rust, and Tauri IPC patterns used in CopySpeak.
 > Trimmed from AGENTS.md to keep agent instructions compact.
 
+## Imports
+
+- Frontend: `$lib/` local imports
+- Backend: `crate::module` relative imports
+- Group order: external → internal aliases → relative
+- **Lucide Icons**: Always use `@lucide/svelte` (NOT `lucide-svelte`)
+  - Correct: `import { Upload } from "@lucide/svelte";`
+  - Wrong: `import { Upload } from "lucide-svelte";`
+
+## Error Handling
+
+- Rust: `Result<T, String>` for IPC, `?` with `map_err`
+- TypeScript: Discriminated unions `{ ok: true; value: T } | { ok: false; error: string }`
+
 ## Svelte 5 Component Skeleton
 
 ```svelte
