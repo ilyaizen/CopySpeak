@@ -11,6 +11,7 @@
   "header": {
     "play": "Play",
     "voices": "Voices",
+    "engines": "Engines",
     "history": "History",
     "settings": "Settings",
     "tagline": "AI text-to-speech for your clipboard"
@@ -329,6 +330,10 @@
       "title": "HTTP",
       "description": "Cloud: Send synthesis requests to a custom HTTP endpoint configured per profile."
     },
+    "uv": {
+      "title": "uv",
+      "description": "Prerequisite for every local engine. The installers use uv to fetch and run Python TTS packages."
+    },
     "setup": {
       "uvMissing": "uv is not installed. Local engines need it to run.",
       "installUv": "Install uv",
@@ -445,6 +450,18 @@
       "loadDescription": "An error occurred while loading your engine configuration."
     }
   },
+  "engines": {
+    "title": "Engines",
+    "subtitle": "Set up API keys, install local engines, and test that each engine works. Voice settings live on the Voices page.",
+    "cloud": "Cloud",
+    "local": "Local",
+    "docs": "Docs",
+    "noCredentialNeeded": "No API key required.",
+    "installerSmokeTestHint": "The installer runs a smoke test when it finishes.",
+    "installerLaunched": "Installer launched",
+    "installFailed": "Install failed",
+    "saveBeforeTestFailed": "Save your changes before testing."
+  },
   "play": {
     "title": "Play",
     "placeholder": "Type or paste text to generate.",
@@ -553,15 +570,6 @@
     "openTerminal": "Open PowerShell terminal",
     "checkingEngine": "Checking engine...",
     "helpText": "You can always configure your engine later from the Engine tab."
-  },
-  "header": {
-    "play": "Play",
-    "history": "History",
-    "effects": "Effects",
-    "engine": "Engine",
-    "profiles": "Profiles",
-    "settings": "Settings",
-    "tagline": "Modern AI TTS Orchestrator"
   },
   "effects": {
     "title": "Audio Effects",

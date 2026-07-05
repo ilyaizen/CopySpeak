@@ -24,6 +24,10 @@
     "shortDescription": "Clipboard text-to-speech tool",
     "longDescription": "A lightweight tool for quick AI text-to-speech generation.",
     "category": "Productivity",
+    "resources": {
+      "../scripts/install-*.ps1": "scripts/",
+      "../scripts/lib/*.ps1": "scripts/lib/"
+    },
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",

@@ -9,15 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Engines page restored (`/engines`)** — dedicated surface for per-engine setup, decoupled from voice profiles. Hosts API key entry (+ endpoint for Microsoft), local-engine installers (kitten, piper, kokoro, pocket, chatterbox, uv), engine **Test** buttons (via `test_tts_engine_config`), and docs links. Sidebar groups Cloud and Local engines; uv-missing banner shown when the local prerequisite is absent.
+  - New `routes/engines/+page.svelte`, `components/engine/engine-setup.svelte` (orchestrator), `components/engine/engine-panel.svelte` (presentational card), and `components/engine/engine-meta.ts` (single source of truth for setup metadata — credentials, installer ids, docs).
+  - "Engines" nav item restored in `app-header.svelte`.
+
 - **Screenshot capture script** — `scripts/capture-screenshot.mjs` reads version from `tauri.conf.json`, captures the Tauri window via `screenshot-window.ps1`, saves to `static/screen-v{version}.png`, and patches `screenshots.svelte` to reference the new file. One-command screenshot refresh: `node scripts/capture-screenshot.mjs`.
+
+### Changed
+
+- **Voices page (`/voices`) redesigned** — `profile-manager.svelte` restructured from a flat list into grouped cards (Identity, Engine & Voice, Sound, Advanced). Credentials no longer live here; the Engine row shows a passive "Set up engine credentials" hint linking to `/engines` when the active profile's engine key is missing.
+
+- **Credential persistence fixed** — the per-engine config structs (`OpenAIConfig`, `ElevenLabsConfig`, `CartesiaConfig`, `GoogleTtsConfig`, `MicrosoftTtsConfig`) were `#[serde(skip_serializing)]` at the field level in `TtsConfig`, so API keys vanished on restart. Now only `api_key`/`endpoint` persist; profile-owned knobs (model, voice, format, etc.) remain skip-serialized per the profile/global boundary in `docs/profile-engine-settings.md`.
+
+- **Landing screenshot updated** — `screenshots.svelte` now references `screen-v0.1.7.png` (was stale `screen-v0.1.4.png`). Fresh screenshot captured from the v0.1.7 Play page.
+
+### Removed
+
+- **`voice-credentials.svelte` deleted** — its contextual-credential UX is replaced by the Engines page. Setup metadata consolidated into `engine-meta.ts` (DRY).
+- **Empty `/engine` and `/profiles` route directories removed** (left behind by the prior consolidation).
 
 ### Fixed
 
 - **Screenshot script window title** — `screenshot-window.ps1` defaulted to `"CopySpeak TTS"` but the actual Tauri window title is `"CopySpeak"`. Capture would always fail unless the title was passed manually. Fixed default.
-
-### Changed
-
-- **Landing screenshot updated** — `screenshots.svelte` now references `screen-v0.1.7.png` (was stale `screen-v0.1.4.png`). Fresh screenshot captured from the v0.1.7 Play page.
 
 ## [0.1.7] - 2026-07-05
 

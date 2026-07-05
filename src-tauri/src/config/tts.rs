@@ -26,13 +26,21 @@ impl Default for TtsEngine {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OpenAIConfig {
+    // Credential — persisted. Profile owns model/voice/format/instructions.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub api_key: String,
+    #[serde(skip_serializing, default = "default_openai_model")]
     pub model: String,
+    #[serde(skip_serializing, default)]
     pub voice: String,
-    #[serde(default = "default_openai_response_format")]
+    #[serde(skip_serializing, default = "default_openai_response_format")]
     pub response_format: String,
-    #[serde(default)]
+    #[serde(skip_serializing, default)]
     pub instructions: Option<String>,
+}
+
+fn default_openai_model() -> String {
+    "tts-1".into()
 }
 
 fn default_openai_response_format() -> String {
@@ -60,29 +68,34 @@ impl OpenAIConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ElevenLabsConfig {
+    // Credential — persisted. Profile owns voice/model/format/knobs.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub api_key: String,
+    #[serde(skip_serializing, default)]
     pub voice_id: String,
     /// Cached voice name for display (resolved from API or default voices)
-    #[serde(default)]
+    #[serde(skip_serializing, default)]
     pub voice_name: Option<String>,
+    #[serde(skip_serializing, default)]
     pub model_id: String,
     /// Output format for audio generation
-    #[serde(default)]
+    #[serde(skip_serializing, default)]
     pub output_format: crate::tts::elevenlabs::ElevenLabsOutputFormat,
     /// Voice stability (0.0 - 1.0, default: 0.5)
-    #[serde(default = "default_elevenlabs_stability")]
+    #[serde(skip_serializing, default = "default_elevenlabs_stability")]
     pub voice_stability: f32,
     /// Voice similarity boost (0.0 - 1.0, default: 0.75)
-    #[serde(default = "default_elevenlabs_similarity")]
+    #[serde(skip_serializing, default = "default_elevenlabs_similarity")]
     pub voice_similarity_boost: f32,
     /// Voice style exaggeration (0.0 - 1.0, default: None)
-    #[serde(default)]
+    #[serde(skip_serializing, default)]
     pub voice_style: Option<f32>,
     /// Use speaker boost (default: None)
-    #[serde(default)]
+    #[serde(skip_serializing, default)]
     pub use_speaker_boost: Option<bool>,
     /// Whether to use manual voice ID input instead of the API voice list
-    #[serde(default)]
+    #[serde(skip_serializing, default)]
+    #[allow(dead_code)]
     pub use_manual_voice_id: bool,
 }
 
@@ -120,15 +133,23 @@ impl ElevenLabsConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CartesiaConfig {
+    // Credential — persisted. Profile owns model/voice/format/knobs.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub api_key: String,
+    #[serde(skip_serializing, default)]
     pub model_id: String,
+    #[serde(skip_serializing, default)]
     pub voice_id: String,
+    #[serde(skip_serializing, default)]
     pub voice_name: Option<String>,
+    #[serde(skip_serializing, default)]
     pub output_format: String,
-    #[serde(default)]
+    #[serde(skip_serializing, default)]
     pub encoding: Option<String>,
-    #[serde(default)]
+    #[serde(skip_serializing, default)]
     pub sample_rate: Option<u32>,
+    #[serde(skip_serializing, default)]
+    #[allow(dead_code)]
     pub use_manual_voice_id: bool,
 }
 
@@ -159,9 +180,14 @@ impl CartesiaConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GoogleTtsConfig {
+    // Credential — persisted. Profile owns model/voice/format.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub api_key: String,
+    #[serde(skip_serializing)]
     pub model: String,
+    #[serde(skip_serializing)]
     pub voice_name: String,
+    #[serde(skip_serializing)]
     pub output_format: String,
 }
 
@@ -187,10 +213,16 @@ impl GoogleTtsConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct MicrosoftTtsConfig {
+    // Credentials — persisted. Profile owns model/voice/format.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub api_key: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub endpoint: String,
+    #[serde(skip_serializing)]
     pub model: String,
+    #[serde(skip_serializing)]
     pub voice_name: String,
+    #[serde(skip_serializing)]
     pub output_format: String,
 }
 
@@ -740,15 +772,19 @@ pub struct TtsConfig {
     #[serde(default, skip_serializing)]
     pub voice: String,
 
-    #[serde(default, skip_serializing)]
+    // Per-engine global structs persist ONLY their credential fields
+    // (api_key, endpoint); all profile-owned knobs are skip_serializing at
+    // the field level. This keeps secrets on disk (engines page relies on it)
+    // without duplicating profile-owned data into the global config.
+    #[serde(default)]
     pub openai: OpenAIConfig,
-    #[serde(default, skip_serializing)]
+    #[serde(default)]
     pub elevenlabs: ElevenLabsConfig,
-    #[serde(default, skip_serializing)]
+    #[serde(default)]
     pub cartesia: CartesiaConfig,
-    #[serde(default, skip_serializing)]
+    #[serde(default)]
     pub google: GoogleTtsConfig,
-    #[serde(default, skip_serializing)]
+    #[serde(default)]
     pub microsoft: MicrosoftTtsConfig,
     #[serde(default, skip_serializing)]
     pub edge: EdgeTtsConfig,
