@@ -26,7 +26,6 @@ use std::sync::{Mutex, OnceLock};
 
 // Re-export all public types so external code can use `crate::config::*` unchanged.
 pub use effects::*;
-// EffectsConfig removed from AppConfig — effects are now per-profile (VoiceProfile.effects).
 pub use general::*;
 pub use hotkey::*;
 pub use hud::*;

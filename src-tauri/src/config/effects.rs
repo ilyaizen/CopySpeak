@@ -1,5 +1,4 @@
-// Effects configuration: gates the Effects feature tab and selects the
-// active audio post-processing effect applied to TTS playback.
+// Effect identifier used by VoiceProfile.effects.
 
 use serde::{Deserialize, Serialize};
 
@@ -17,10 +16,3 @@ impl Default for EffectId {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct EffectsConfig {
-    #[serde(default)]
-    pub enabled: bool,
-    #[serde(default)]
-    pub active_effect: EffectId,
-}
