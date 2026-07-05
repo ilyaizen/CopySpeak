@@ -2,6 +2,10 @@
 ├── .github
 │   └── workflows
 │       └── build-windows.yml
+├── .hermes
+│   └── plans
+│       ├── 2026-06-22-profile-integrations-engine-settings.md
+│       └── 2026-06-23-profiles-as-synthesis-source.md
 ├── .pi
 │   └── extensions
 │       └── copyspeak
@@ -35,25 +39,32 @@
 ├── docs
 │   ├── CONTRIBUTING.md
 │   ├── COPYSPEAK_PI_VOICE.md
-│   └── COPYSPEAK_PI_VOICE_2.md
+│   ├── COPYSPEAK_PI_VOICE_2.md
+│   ├── engines.md
+│   └── profile-engine-settings.md
 ├── docs_internal
 │   ├── CARTESIA_TTS_PLAN.md
 │   ├── README.md
+│   ├── README_BAD.md
 │   ├── add-comments.md
 │   ├── app-logo.png
 │   ├── architecture.md
 │   ├── brutalist_design.md
 │   ├── build_workflow.md
+│   ├── code-patterns-reference.md
 │   ├── development_guide.md
+│   ├── engines-profiles-unification.md
 │   ├── event-system.md
 │   ├── hud-overlay.md
 │   ├── implemented_features.md
 │   ├── kittentts-cli.py
+│   ├── major-rename.md
 │   ├── project-overview.md
 │   ├── requirements.md
 │   ├── roadmap.md
 │   ├── security_hardening_plan.md
-│   └── tts_backends.md
+│   ├── tts_backends.md
+│   └── tts_engines_profiles_installers_plan.md
 ├── plans
 │   ├── about-settings-implementation.md
 │   ├── auto-updater-debugging-plan.md
@@ -68,10 +79,29 @@
 │   ├── update-checker-production-fix.md
 │   └── waveform-improvements.md
 ├── scripts
+│   ├── chatterbox
+│   │   └── copyspeak-chatterbox.py
+│   ├── kitten
+│   │   └── copyspeak-kitten.py
+│   ├── lib
+│   │   └── copyspeak-engine-install.ps1
+│   ├── piper
+│   │   └── copyspeak-piper.py
 │   ├── claude-copyspeak-hook.mjs
+│   ├── claude-copyspeak-status.mjs
+│   ├── copyspeak.mjs
 │   ├── fix-ports.ps1
 │   ├── generate-i18n-types.js
+│   ├── install-chatterbox.ps1
+│   ├── install-edge-tts.ps1
+│   ├── install-kittentts.ps1
+│   ├── install-kokoro.ps1
+│   ├── install-piper.ps1
+│   ├── install-pocket.ps1
+│   ├── install-uv.ps1
 │   ├── screenshot-window.ps1
+│   ├── tauri-dev.mjs
+│   ├── test-engine.ps1
 │   └── version-bumper.mjs
 ├── src
 │   ├── lib
@@ -79,16 +109,9 @@
 │   │   │   └── app-logo.png
 │   │   ├── components
 │   │   │   ├── engine
-│   │   │   │   ├── cartesia-engine.svelte
-│   │   │   │   ├── elevenlabs-engine.svelte
-│   │   │   │   ├── elevenlabs-engine.test.ts
-│   │   │   │   ├── eng02-minimal.test.ts
 │   │   │   │   ├── engine-page.svelte
 │   │   │   │   ├── engine-page.test.ts
-│   │   │   │   ├── local-engine.svelte
-│   │   │   │   ├── local-engine.test.ts
-│   │   │   │   ├── openai-engine.svelte
-│   │   │   │   └── openai-engine.test.ts
+│   │   │   │   └── profile-manager.svelte
 │   │   │   ├── history
 │   │   │   │   ├── export-dialog.svelte
 │   │   │   │   ├── history-bulk-actions.svelte
@@ -108,7 +131,8 @@
 │   │   │   │   └── screenshots.svelte
 │   │   │   ├── layout
 │   │   │   │   ├── app-footer.svelte
-│   │   │   │   └── app-header.svelte
+│   │   │   │   ├── app-header.svelte
+│   │   │   │   └── motion-wrapper.svelte
 │   │   │   ├── settings
 │   │   │   │   ├── about-settings.svelte
 │   │   │   │   ├── appearance-settings.svelte
@@ -120,6 +144,7 @@
 │   │   │   │   ├── import-export-settings.svelte
 │   │   │   │   ├── pagination-settings.svelte
 │   │   │   │   ├── playback-settings.svelte
+│   │   │   │   ├── post-process-settings.svelte
 │   │   │   │   ├── post-processing-settings.svelte
 │   │   │   │   └── sanitization-settings.svelte
 │   │   │   ├── effects-page.svelte
@@ -129,6 +154,7 @@
 │   │   │   ├── hud-overlay.svelte
 │   │   │   ├── play-page.svelte
 │   │   │   ├── playback-controls.svelte
+│   │   │   ├── profiles-page.svelte
 │   │   │   ├── quick-settings.svelte
 │   │   │   ├── recent-history.svelte
 │   │   │   ├── settings-page.svelte
@@ -173,6 +199,7 @@
 │   │   │   ├── index.ts
 │   │   │   ├── listening-store.svelte.ts
 │   │   │   ├── playback-store.svelte.ts
+│   │   │   ├── save-bar.svelte.ts
 │   │   │   └── synthesis-store.svelte.ts
 │   │   ├── types
 │   │   │   └── hud.ts
@@ -200,6 +227,8 @@
 │   │   │   └── +page.ts
 │   │   ├── onboarding
 │   │   │   └── +page.svelte
+│   │   ├── profiles
+│   │   │   └── +page.svelte
 │   │   ├── settings
 │   │   │   └── +page.svelte
 │   │   ├── +layout.css
@@ -226,6 +255,7 @@
 │   │   │   │   ├── health.rs
 │   │   │   │   ├── helpers.rs
 │   │   │   │   ├── mod.rs
+│   │   │   │   ├── profiles.rs
 │   │   │   │   ├── selection.rs
 │   │   │   │   ├── synthesis.rs
 │   │   │   │   └── voices.rs
@@ -235,6 +265,7 @@
 │   │   │   ├── logging.rs
 │   │   │   ├── mod.rs
 │   │   │   ├── playback.rs
+│   │   │   ├── post_process.rs
 │   │   │   ├── queue.rs
 │   │   │   └── update.rs
 │   │   ├── config
@@ -245,11 +276,14 @@
 │   │   │   ├── mod.rs
 │   │   │   ├── output.rs
 │   │   │   ├── playback.rs
+│   │   │   ├── post_process.rs
 │   │   │   ├── post_processing.rs
 │   │   │   ├── sanitization.rs
 │   │   │   ├── tests.rs
 │   │   │   ├── trigger.rs
 │   │   │   └── tts.rs
+│   │   ├── post_process
+│   │   │   └── mod.rs
 │   │   ├── sanitize
 │   │   │   ├── cleanup.rs
 │   │   │   ├── markdown.rs
@@ -257,11 +291,17 @@
 │   │   │   └── tts_normalize.rs
 │   │   ├── tts
 │   │   │   ├── cartesia.rs
+│   │   │   ├── catalog.rs
 │   │   │   ├── cli.rs
+│   │   │   ├── edge.rs
 │   │   │   ├── elevenlabs.rs
+│   │   │   ├── google.rs
+│   │   │   ├── http.rs
+│   │   │   ├── microsoft.rs
 │   │   │   ├── mod.rs
 │   │   │   └── openai.rs
 │   │   ├── autostart.rs
+│   │   ├── cli.rs
 │   │   ├── clipboard.rs
 │   │   ├── control_server.rs
 │   │   ├── fragment_queue.rs
@@ -293,12 +333,10 @@
 ├── AGENTS.md
 ├── CHANGELOG.md
 ├── CLAUDE.md
-├── LICENCE.txt
+├── LICENSE
 ├── README.md
 ├── components.json
 ├── file-structure.txt
-├── install-kittentts.ps1
-├── kittentts-cli.py
 ├── package.json
 ├── skills-lock.json
 ├── svelte.config.js

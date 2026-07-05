@@ -1,54 +1,55 @@
-# CopySpeak TTS Agent Guide
+# AGENTS.md
 
-> For AI coding agents (OpenCode, KiloCode, Claude Code, Cursor, etc.)
+> For AI coding agents (Hermes-Agent, Pi, OpenCode, KiloCode, Claude Code, Cursor, etc.)
 
 ## Core Development Rules
 
 ### 1. Think Before Code
 
-No assume. No hide confusion. Surface tradeoffs.
-State assumptions. Uncertain → ask.
-Multiple interpretations → present, no silent pick.
-Simpler path exist → say so. Push back when warranted.
-Unclear → stop. Name confusion. Ask.
+- No assume. No hide confusion. Surface tradeoffs.
+- State assumptions. Uncertain → ask.
+- Multiple interpretations → present, no silent pick.
+- Simpler path exist → say so. Push back when warranted.
+- Unclear → stop. Name confusion. Ask.
 
 ### 2. Simplicity First
 
-Min code that solve problem. Nothing speculative.
-No features beyond ask.
-No abstractions for single-use code.
-No "flexibility"/"configurability" not requested.
-No error handling for impossible cases.
-200 lines could be 50 → rewrite.
-Test: senior eng call this overcomplicated? Yes → simplify.
+- Min code that solve problem. Nothing speculative.
+- No features beyond ask.
+- No abstractions for single-use code.
+- No "flexibility"/"configurability" not requested.
+- No error handling for impossible cases.
+- 200 lines could be 50 → rewrite.
+- Test: senior eng call this overcomplicated? Yes → simplify.
 
 ### 3. Surgical Changes
 
-Touch only what must. Clean only own mess.
-No "improve" adjacent code/comments/format.
-No refactor things not broken.
-Match existing style even if disagree.
-Unrelated dead code → mention, no delete.
-Own changes orphan imports/vars → remove.
-Pre-existing dead code → leave unless asked.
-Test: every changed line trace to user request.
+- Touch only what must. Clean only own mess.
+- No "improve" adjacent code/comments/format.
+- No refactor things not broken.
+- Match existing style even if disagree.
+- Unrelated dead code → mention, no delete.
+- Own changes orphan imports/vars → remove.
+- Pre-existing dead code → leave unless asked.
+- Test: every changed line trace to user request.
 
 ### 4. Goal-Driven Execution
 
-Define success. Loop until verified.
-"Add validation" → write failing tests, make pass.
-"Fix bug" → write reproducing test, make pass.
-"Refactor X" → tests pass before and after.
-Multi-step → state plan: [step] → verify: [check].
+- Define success. Loop until verified.
+- "Add validation" → write failing tests, make pass.
+- "Fix bug" → write reproducing test, make pass.
+- "Refactor X" → tests pass before and after.
+- Multi-step → state plan: [step] → verify: [check].
 
 ### 5. Testing / Committing
 
 DO NOT run checks. ALWAYS ASK USER for explicit confirmation before running any verification, linting, type-check, or build commands.
+
 DO NOT commit changes without explicit user confirmation. Before ending a task, ask whether to run checks and commit. If the user confirms committing, generate a suitable Conventional Commits message that summarizes the diff concisely.
 
-bun format — biome + prettier hybrid format.
-bun check — types + svelte-check.
-bun build — production build.
+- `bun format` - biome + prettier hybrid format.
+- `bun check` - types + svelte-check.
+- `bun build` - production build.
 
 Use running dev server. Test scroll, theme toggle, cursor.
 
@@ -86,14 +87,9 @@ bun run bump:major          # Major version bump (x.0.0)
 
 ### Naming Conventions
 
-| Type                | Convention        | Example               |
-| ------------------- | ----------------- | --------------------- |
-| Files               | kebab-case        | `audio-player.ts`     |
-| Svelte Components   | kebab-case.svelte | `user-profile.svelte` |
-| Variables/Functions | camelCase         | `playbackState`       |
-| Types/Interfaces    | PascalCase        | `AppConfig`           |
-| Constants           | UPPER_SNAKE_CASE  | `DEFAULT_WINDOW_MS`   |
-| Rust modules        | snake_case        | `clipboard_listener`  |
+- Files (kebab-case) & Svelte components (kebab-case.svelte)  
+- Variables/functions (camelCase) & Types/interfaces (PascalCase)  
+- Constants (UPPER_SNAKE_CASE) & Rust modules (snake_case)
 
 ### Formatting
 
@@ -103,75 +99,12 @@ bun run bump:major          # Major version bump (x.0.0)
 - Semicolons: Always
 - Trailing commas: None (ES5 compatibility)
 
-### Svelte 5
-
-```svelte
-<script lang="ts">
-  import { page } from "$app/state";
-
-  let count = $state(0);
-  let doubled = $derived(count * 2);
-  let { title, onClick } = $props<{ title: string; onClick: () => void }>();
-
-  $effect(() => {
-    console.log("Count changed:", count);
-  });
-
-  function handleClick() {
-    count++;
-  }
-</script>
-
-<button onclick={handleClick}>{title}</button><p>Doubled: {doubled()}</p>
-```
-
 **Key rules:**
 
 - Use `$state`, `$derived`, `$props`, `$effect` (not `$:`)
 - Use `onclick` NOT `on:click`
 - Call derived signals in templates: `doubled()` not `doubled`
 - Import from `$app/state` not `$app/stores`
-
-**Slider bindings with optional config values:**
-
-For optional config sliders (e.g., `voice_style?: number`), use local `$state` + `$effect` for cancel support, `onchange` for user changes:
-
-```ts
-let styleValue = $state(localConfig.tts.elevenlabs.voice_style ?? 0);
-
-// Sync FROM config when parent cancels/resets localConfig
-$effect(() => {
-  const cfg = localConfig;
-  const configValue = cfg.tts.elevenlabs.voice_style ?? 0;
-  if (styleValue !== configValue) {
-    styleValue = configValue;
-  }
-});
-```
-
-```svelte
-<!-- Sync TO config via onchange (NOT $effect - avoids race condition with cancel) -->
-<Slider
-  bind:value={styleValue}
-  onchange={(v) => {
-    localConfig.tts.elevenlabs.voice_style = v;
-  }}
-/>
-```
-
-**Why this pattern?** `$effect` sync TO config can race: parent cancel replaces `localConfig`, effect runs old `styleValue`, overwrites reset. `onchange` syncs only explicit user interaction.
-
-### Rust
-
-```rust
-#[tauri::command]
-pub async fn speak_now(
-    config: State<'_, Mutex<AppConfig>>,
-) -> Result<(), String> {
-    let cfg = config.lock().map_err(|e| e.to_string())?;
-    Ok(())
-}
-```
 
 ### Imports
 
@@ -195,56 +128,6 @@ pub async fn speak_now(
 - Prefer `interface` over `type` for object shapes
 - Use `satisfies` instead of type assertions
 - Never use `!` non-null assertion
-
-## Project Structure
-
-```
-copyspeak/
-├── src/                     # Svelte 5 frontend
-│   ├── lib/
-│   │   ├── components/      # UI components
-│   │   │   ├── ui/          # shadcn-svelte
-│   │   │   └── *.svelte     # Custom
-│   │   └── utils.ts         # cn() utility
-│   └── routes/              # SvelteKit routes
-├── src-tauri/src/           # Rust backend
-│   ├── main.rs              # Entry, IPC registration
-│   ├── config.rs            # Persistence
-│   ├── commands.rs          # IPC handlers
-│   ├── clipboard.rs         # Double-copy detection
-│   ├── audio.rs             # Playback
-│   ├── tts/                 # TTS backend abstraction
-│   ├── config/              # Config modules (directory-based)
-│   ├── commands/            # Command modules (directory-based)
-│   ├── sanitize/            # Text normalization modules
-│   └── ...
-├── index.html               # Main window
-└── hud.html                 # HUD overlay
-```
-
-## Tauri IPC Pattern
-
-1. Define in `commands.rs`:
-
-```rust
-#[tauri::command]
-pub async fn my_command(state: State<'_, Mutex<MyState>>) -> Result<T, String> {
-    // implementation
-}
-```
-
-2. Register in `main.rs`:
-
-```rust
-.invoke_handler(tauri::generate_handler![commands::my_command])
-```
-
-3. Call from frontend:
-
-```typescript
-import { invoke } from "@tauri-apps/api/core";
-await invoke("my_command");
-```
 
 ## Git Workflow
 
@@ -291,37 +174,45 @@ Example:
 
 ## Documentation
 
-### Internal Docs (`docs_internal/`)
+- Internal Docs: project-overview.md (project context and key decisions), requirements.md (feature requirements and traceability), architecture.md (system architecture and design), development_guide.md (setup and development workflow), tts_backends.md (TTS engine integration guide), brutalist_design.md (UI design system and aesthetics), roadmap.md (development roadmap and phases), code-patterns-reference.md (Svelte 5, Rust, and Tauri IPC code examples).
 
-| Document                                                     | Purpose                               |
-| ------------------------------------------------------------ | ------------------------------------- |
-| [project-overview.md](./docs_internal/project-overview.md)   | Project context and key decisions     |
-| [requirements.md](./docs_internal/requirements.md)           | Feature requirements and traceability |
-| [architecture.md](./docs_internal/architecture.md)           | System architecture and design        |
-| [development_guide.md](./docs_internal/development_guide.md) | Setup and development workflow        |
-| [tts_backends.md](./docs_internal/tts_backends.md)           | TTS engine integration guide          |
-| [brutalist_design.md](./docs_internal/brutalist_design.md)   | UI design system and aesthetics       |
-| [roadmap.md](./docs_internal/roadmap.md)                     | Development roadmap and phases        |
+- Public Docs: CONTRIBUTING.md (contribution guidelines).
 
-### Public Docs (`docs/`)
+## Project Structure
 
-| Document                                  | Purpose                 |
-| ----------------------------------------- | ----------------------- |
-| [CONTRIBUTING.md](./docs/CONTRIBUTING.md) | Contribution guidelines |
+```
+CopySpeak/
+├── src/                     # Svelte 5 frontend
+│   ├── lib/
+│   │   ├── components/      # UI components
+│   │   │   ├── ui/          # shadcn-svelte
+│   │   │   └── *.svelte     # Custom
+│   │   └── utils.ts         # cn() utility
+│   └── routes/              # SvelteKit routes
+├── src-tauri/src/           # Rust backend
+│   ├── main.rs              # Entry, IPC registration
+│   ├── config.rs            # Persistence
+│   ├── commands.rs          # IPC handlers
+│   ├── clipboard.rs         # Double-copy detection
+│   ├── audio.rs             # Playback
+│   ├── tts/                 # TTS backend abstraction
+│   ├── config/              # Config modules (directory-based)
+│   ├── commands/            # Command modules (directory-based)
+│   ├── sanitize/            # Text normalization modules
+│   └── ...
+├── index.html               # Main window
+└── hud.html                 # HUD overlay
+```
 
-## ⚠️ DO NOT TOUCH - Translation Files
+## Additional Directories and Files (Updated)
 
-**AI Agents: Do NOT modify or touch files in `src-web/src/lib/locales/DO_NOT_TOUCH/`**
-
-Directory contains non-English translations (Arabic, Spanish, Hebrew), externally managed. Pre-production translation keys change often.
-
-- Translation keys unstable during development
-- External translators handle these files
-- Manual edits overwritten
-- Only modify English locale file (`en.json`) if needed
+- **plans/**: Contains plan files for various implementation tasks (e.g., auto-updater, Hud synthesis, etc.).
+- **scripts/**: PowerShell and JavaScript scripts for automation, including install scripts for various TTS engines, chatterbox, kitten, lib, piper, etc.
+- **src-tauri/src/commands/**: Rust command modules for TTS, audio, playback, post-processing, etc.
+- **src-tauri/src/sanitize/**: Text normalization modules for cleanup, markdown, TTS normalization.
+- **src/lib/components/**: Additional UI components for settings, effects, playback, etc.
 
 <!-- rtk-instructions v2 -->
-
 ## RTK (Rust Token Killer) - Token-Optimized Commands
 
 ## Golden Rule
