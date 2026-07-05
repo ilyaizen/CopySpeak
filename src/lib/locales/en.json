@@ -579,8 +579,8 @@
         "description": "Copy text twice within 1.5 seconds to trigger speech instantly. No hotkeys needed."
       },
       "engines": {
-        "title": "5 TTS Engines",
-        "description": "Choose from Kitten TTS, Piper, Kokoro, OpenAI, or ElevenLabs. Local and cloud options."
+        "title": "9 TTS Engines",
+        "description": "Edge TTS, OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP, and local CLI engines (Piper, Kokoro, Kitten)."
       },
       "hud": {
         "title": "HUD Overlay",
@@ -602,7 +602,7 @@
     "screenshots": {
       "title": "Screenshots",
       "subtitle": "See CopySpeak in action",
-      "caption": "CopySpeak v0.1.4 — Main interface with Play tab"
+      "caption": "CopySpeak v0.1.7 — Main interface with Play tab"
     },
     "footer": {
       "github": "GitHub",
