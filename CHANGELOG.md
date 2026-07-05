@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Screenshot capture script** — `scripts/capture-screenshot.mjs` reads version from `tauri.conf.json`, captures the Tauri window via `screenshot-window.ps1`, saves to `static/screen-v{version}.png`, and patches `screenshots.svelte` to reference the new file. One-command screenshot refresh: `node scripts/capture-screenshot.mjs`.
+
+### Fixed
+
+- **Screenshot script window title** — `screenshot-window.ps1` defaulted to `"CopySpeak TTS"` but the actual Tauri window title is `"CopySpeak"`. Capture would always fail unless the title was passed manually. Fixed default.
+
+### Changed
+
+- **Landing screenshot updated** — `screenshots.svelte` now references `screen-v0.1.7.png` (was stale `screen-v0.1.4.png`). Fresh screenshot captured from the v0.1.7 Play page.
+
 ## [0.1.7] - 2026-07-05
 
 ### Added
