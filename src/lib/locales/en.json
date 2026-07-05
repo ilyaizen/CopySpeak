@@ -8,6 +8,13 @@
     "engine": "Engine",
     "settings": "Settings"
   },
+  "header": {
+    "play": "Play",
+    "voices": "Voices",
+    "history": "History",
+    "settings": "Settings",
+    "tagline": "AI text-to-speech for your clipboard"
+  },
   "common": {
     "loading": "Loading...",
     "save": "Save",
