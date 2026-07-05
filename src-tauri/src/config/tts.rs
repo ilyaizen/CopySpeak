@@ -806,7 +806,7 @@ impl Default for TtsConfig {
                 "--project".into(),
                 "{engine_dir}/kitten".into(),
                 "python".into(),
-                "scripts/copyspeak-kitten.py".into(),
+                "{engine_dir}/kitten/scripts/copyspeak-kitten.py".into(),
                 "--text-file".into(),
                 "{input}".into(),
                 "--voice".into(),
@@ -878,10 +878,43 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
         let opts = std::mem::take(&mut profile.engine_options);
         profile.engine_options = opts.normalized_for(&engine);
     }
+    // One-time fix-up: pre-v0.1.8 local profiles stored the engine wrapper as a
+    // CWD-relative path (e.g. `scripts/copyspeak-kitten.py`), which broke once
+    // the Tauri process CWD stopped being the engine install dir. Rewrite any
+    // bare legacy wrapper path to its absolute `{engine_dir}/<engine>/...` form.
+    // Idempotent: only matches args lacking `{engine_dir}` already.
+    for profile in &mut tts.profiles {
+        if let ProfileEngineOptions::Local(local) = &mut profile.engine_options {
+            if let Some(args) = local.args_template.as_mut() {
+                for arg in args.iter_mut() {
+                    if let Some(fixed) = absolutize_wrapper_path(arg) {
+                        *arg = fixed;
+                    }
+                }
+            }
+        }
+    }
     tts.schema_version = 2;
     sync_active_backend_mirror(&mut tts);
 
     tts
+}
+
+/// Rewrite a bare `scripts/copyspeak-<engine>.py` path to its absolute
+/// `{engine_dir}/<engine>/scripts/...` form. Returns `None` for anything else.
+fn absolutize_wrapper_path(arg: &str) -> Option<String> {
+    // ponytail: lookup-driven; add a (wrapper_name, subdir) pair per engine.
+    const WRAPPERS: &[(&str, &str)] = &[
+        ("copyspeak-kitten.py", "kitten"),
+        ("copyspeak-piper.py", "piper"),
+        ("copyspeak-chatterbox.py", "chatterbox"),
+    ];
+    for (name, subdir) in WRAPPERS {
+        if arg == &format!("scripts/{name}") {
+            return Some(format!("{{engine_dir}}/{subdir}/scripts/{name}"));
+        }
+    }
+    None
 }
 
 impl TtsConfig {

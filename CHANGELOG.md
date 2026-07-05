@@ -32,6 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Screenshot script window title** — `screenshot-window.ps1` defaulted to `"CopySpeak TTS"` but the actual Tauri window title is `"CopySpeak"`. Capture would always fail unless the title was passed manually. Fixed default.
 
+- **Local CLI engine wrapper paths** — pre-v0.1.8 local profiles (kitten, piper, chatterbox) stored the engine wrapper as a CWD-relative path (`scripts/copyspeak-<engine>.py`), which broke because the Tauri process CWD is `src-tauri/` (dev) or the install dir (packaged), not the engine install dir. Migration in `config/tts.rs::migrate_tts_config` now rewrites bare legacy wrapper paths to `{engine_dir}/<engine>/scripts/...` on every load (idempotent). `install-chatterbox.ps1`'s emitted `profileJson` was also missing `command`/`args_template`, so the printed snippet was non-functional — now baked in with the correct absolute path.
+
 ## [0.1.7] - 2026-07-05
 
 ### Added

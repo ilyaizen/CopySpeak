@@ -86,7 +86,7 @@ $profileJson = @"
     "engine": "local",
     "preset": "piper",
     "command": "uv",
-    "args_template": ["run", "--project", "{engine_dir}/piper", "python", "scripts/copyspeak-piper.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"]
+    "args_template": ["run", "--project", "{engine_dir}/piper", "python", "{engine_dir}/piper/scripts/copyspeak-piper.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"]
   }
 }
 "@

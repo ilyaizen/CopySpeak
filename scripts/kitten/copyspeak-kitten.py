@@ -6,7 +6,7 @@ Reads text (inline or from a file), synthesizes with KittenTTS, and writes a
 upstream shifts.
 
 Invoked by CopySpeak via:
-    uv run --project {engine_dir}/kitten python scripts/copyspeak-kitten.py \
+    uv run --project {engine_dir}/kitten python {engine_dir}/kitten/scripts/copyspeak-kitten.py \
         --text-file {input} --voice {voice} --output {output}
 """
 
