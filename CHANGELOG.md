@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Searchable voice picker** — the flat per-engine voice `<Select>` in the profile editor is replaced by `voice-picker.svelte`: a portaled popover with a live search box, automatic grouping (by gender for OpenAI/Google/Cartesia/ElevenLabs, by BCP-47 locale for Edge), inline metadata (`gender · language`) and a check mark on the active voice. Escape / outside-click closes it; the panel flips above the trigger when space below is tight. The manual Voice ID input remains below it as the escape hatch.
+
+- **Cartesia voice refresh** — `supports_voice_refresh` is now `true` for Cartesia. New `CartesiaTtsBackend::list_voices()` calls `GET https://api.cartesia.ai/voices` (`X-API-Key` + `Cartesia-Version`) and maps results into `VoiceCatalogEntry`; on API failure `list_tts_voices` falls back to the static catalog list (mirroring the ElevenLabs pattern). The picker's Refresh button covers both ElevenLabs and Cartesia.
+
+- **`.env` secret loading** — CopySpeak now reads a `.env` file placed next to `copyspeak.exe` (in dev: `src-tauri/target/debug/`). Keys defined there override the values typed in the Engines UI; UI-typed keys in `config.json` remain the fallback. Env values are never written back to disk. See `.env.example` for the full variable list (`OPENAI_API_KEY`, `ELEVENLABS_API_KEY`, `CARTESIA_API_KEY`, `GEMINI_API_KEY`/`GOOGLE_API_KEY`, `MICROSOFT_API_KEY`/`AZURE_API_KEY` + `MICROSOFT_ENDPOINT`, `POST_PROCESS_API_KEY`).
+  - New `secrets.rs`: `load_dotenv()` (naive `KEY=VALUE` parser, called once after logging init in `main.rs`) and `resolve(config_val, env_names)` (env-wins resolution with alias support, e.g. Gemini accepts both `GEMINI_API_KEY` and `GOOGLE_API_KEY`).
+  - All credential read-sites now route through `secrets::resolve`: the five TTS backends (`openai`, `elevenlabs`, `cartesia`, `google`, `microsoft`), the three cloud credential-check commands, and the live Groq post-processing path (`post_process::process`).
+
+### Changed
+
+- **`VoiceCatalogEntry` gains a `gender` field** (`Option<String>`, serialized as `gender`) surfaced in `src/lib/types.ts`. `catalog.rs::voice()` helper now takes a `gender` argument.
+- **Enriched static voice metadata:**
+  - OpenAI (11 voices) — labels capitalized, gender + concise style description per voice.
+  - Google Gemini (29 voices) — gender + Google's documented style descriptor per voice; grouped Female/Male in the picker.
+  - Cartesia (2 static voices) — gender + description; language set to `None` (multilingual).
+  - Edge (30 voices) — `language` carries the BCP-47 locale parsed from the voice id (`en-US`, `en-GB`, …) and `gender` is now populated from the live `edge-tts --list-voices` metadata (Microsoft's published genders). The picker groups Edge by **locale** (region is the more useful cluster) with gender shown as per-row meta; cloud engines still group by gender. `en-US-DavisNeural` and `en-US-AmberNeural` are absent from the current live list (likely deprecated) and keep `gender: None`.
+  - ElevenLabs — static catalog expanded from 1 (Rachel) to **21 real premade voices**. IDs/names/genders fetched from `GET /v1/voices` (2026-07-06), each with an `"{accent} · {gender} · {style}"` description; `language` set to `None` since gender is the picker group key (avoids a redundant per-row `en`). Rachel was rotated out of the premade set and is dropped — still usable via the manual Voice ID escape hatch.
+
+### Fixed
+
+- **ElevenLabs voice metadata** — `list_tts_voices` now propagates the `gender` label from the ElevenLabs API into the catalog entry (previously dropped).
+
 ## [0.1.8] - 2026-07-05
 
 ### Added
