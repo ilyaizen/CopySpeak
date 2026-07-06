@@ -41,7 +41,8 @@ struct ResponseMessage {
 /// success. Caller is responsible for the fallback — this never silently
 /// returns the original.
 pub async fn process(text: &str, cfg: &PostProcessConfig) -> Result<String, String> {
-    if cfg.api_key.trim().is_empty() {
+    let api_key = crate::secrets::resolve(&cfg.api_key, &["POST_PROCESS_API_KEY"]);
+    if api_key.trim().is_empty() {
         return Err("Groq API key is empty".into());
     }
     if cfg.model.trim().is_empty() {
@@ -65,7 +66,7 @@ pub async fn process(text: &str, cfg: &PostProcessConfig) -> Result<String, Stri
     let url = format!("{}/chat/completions", GROQ_BASE_URL);
     let resp = client
         .post(&url)
-        .bearer_auth(&cfg.api_key)
+        .bearer_auth(&api_key)
         .json(&req)
         .send()
         .await

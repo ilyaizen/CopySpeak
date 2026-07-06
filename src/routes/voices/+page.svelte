@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { Button } from "$lib/components/ui/button/index.js";
-  import { invoke } from "$lib/services/tauri";
+  import { invoke, isTauri } from "$lib/services/tauri";
   import { toast } from "svelte-sonner";
   import { _ } from "svelte-i18n";
   import { showSaveBar, hideSaveBar } from "$lib/stores/save-bar.svelte";
@@ -62,8 +62,22 @@
     return () => hideSaveBar();
   });
 
-  onMount(() => {
-    loadConfig();
+  let unlistenConfig: (() => void) | null = null;
+
+  onMount(async () => {
+    await loadConfig();
+    if (isTauri) {
+      try {
+        const { listen } = await import("@tauri-apps/api/event");
+        unlistenConfig = await listen("config-changed", async () => {
+          await loadConfig();
+        });
+      } catch {}
+    }
+  });
+
+  onDestroy(() => {
+    if (unlistenConfig) unlistenConfig();
   });
 </script>
 

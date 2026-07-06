@@ -17,6 +17,7 @@ mod logging;
 mod pagination;
 mod post_process;
 mod sanitize;
+mod secrets;
 mod telemetry;
 mod tts;
 
@@ -269,6 +270,9 @@ fn main() {
         eprintln!("Failed to initialize logging: {}", e);
     }
 
+    // Load .env (next to copyspeak.exe) before any backend reads credentials.
+    secrets::load_dotenv();
+
     tauri::Builder::default()
         .setup(|app| {
             // --- Load config ---
@@ -484,13 +488,19 @@ fn main() {
             }
 
             // --- Position HUD window and make it click-through at startup ---
+            // ponytail: HUD stays visible but parked off-screen; show_* repositions on-screen.
+            // Avoids the WebView2 transparent-window hidden→visible repaint bug.
             if let Some(hud_window) = app.get_webview_window("hud") {
-                let cfg_state = app.state::<std::sync::Mutex<config::AppConfig>>();
-                let cfg = cfg_state.lock().unwrap();
-                hud::position_hud_window(&hud_window, &cfg.hud);
-                drop(cfg);
+                // DON'T move off-screen here — WebView2 controller init is async and fails
+                // if the window is off-screen when the controller finishes creating.
+                // The window is visually invisible anyway (transparent + opacity:0).
                 let _ = hud_window.set_ignore_cursor_events(true);
+                // Refocus main window (HUD no longer has focus:false so it briefly stole focus)
+                if let Some(main_window) = app.get_webview_window("main") {
+                    let _ = main_window.set_focus();
+                }
             }
+
 
             // --- Start local control server for trusted localhost integrations (Pi, etc.) ---
             control_server::start(app.handle().clone());
@@ -639,6 +649,7 @@ fn main() {
             commands::check_elevenlabs_credentials,
             commands::check_cartesia_credentials,
             commands::check_openai_credentials,
+            commands::has_engine_credentials,
             commands::check_groq_credentials,
             commands::list_elevenlabs_voices,
             commands::get_elevenlabs_voice_by_id,

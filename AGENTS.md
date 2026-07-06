@@ -55,7 +55,17 @@ DO NOT commit changes without explicit user confirmation. Before ending a task, 
 - `bun check` - types + svelte-check.
 - `bun build` - production build.
 
-Use running dev server. Test scroll, theme toggle, cursor.
+Use running Tauri dev server.
+
+## Efficiency
+
+- Read before write. Each file once.
+- Edit over rewrite. No write-delete-rewrite cycles.
+- Test once, fix, verify once.
+- Budget: 50 tool calls.
+- Stuck → ask. No dead ends.
+- No sycophantic openers/fluff.
+- Never guess paths.
 
 ## Code Style
 

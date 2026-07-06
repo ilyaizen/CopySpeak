@@ -97,7 +97,8 @@ impl TtsBackend for GoogleTtsBackend {
         );
 
         let start_time = std::time::Instant::now();
-        let api_key = self.config.api_key.clone();
+        let api_key =
+            crate::secrets::resolve(&self.config.api_key, &["GEMINI_API_KEY", "GOOGLE_API_KEY"]);
 
         let response = Self::block_on_async(async {
             let client = Client::new();
@@ -159,7 +160,10 @@ impl TtsBackend for GoogleTtsBackend {
     }
 
     fn health_check(&self) -> Result<(), TtsError> {
-        if self.config.api_key.trim().is_empty() {
+        if crate::secrets::resolve(&self.config.api_key, &["GEMINI_API_KEY", "GOOGLE_API_KEY"])
+            .trim()
+            .is_empty()
+        {
             return Err(TtsError::Unavailable("Google API key is missing".into()));
         }
         Ok(())

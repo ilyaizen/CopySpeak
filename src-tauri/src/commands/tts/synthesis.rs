@@ -383,6 +383,7 @@ async fn speak_now_internal(
         &tts_config,
         backend_arc,
         synthesis_ms,
+        eff.voice_label.as_deref(),
     )
 }
 
@@ -542,11 +543,12 @@ fn handle_playback_output(
     tts_config: &crate::config::TtsConfig,
     backend_arc: Arc<Box<dyn TtsBackend>>,
     synthesis_ms: u64,
+    voice_label: Option<&str>,
 ) -> Result<(), String> {
     let envelope = extract_envelope_or_default(wav_bytes);
 
     let engine_id = engine_identifier(active_backend, tts_config);
-    let voice_name = voice_display_name(active_backend, tts_config, voice);
+    let voice_name = voice_display_name(active_backend, tts_config, voice, voice_label);
     let audio_ext = backend_arc.file_extension().to_string();
 
     let history_path =
@@ -786,7 +788,7 @@ pub async fn speak_queued(
 
         // Save to history
         let audio_ext = backend_arc.file_extension().to_string();
-        let voice_name = voice_display_name(&active_backend, &tts_config, &voice);
+        let voice_name = voice_display_name(&active_backend, &tts_config, &voice, eff.voice_label.as_deref());
         let history_path =
             save_to_history_storage(&config, &wav_bytes, &engine_id_val, &voice_name, &audio_ext);
 
@@ -893,7 +895,7 @@ pub async fn speak_history_entry(
     let voice = original_voice;
     let engine_str_val = engine_str(&active_backend);
     let engine_id = engine_identifier(&active_backend, &tts_config);
-    let voice_name = voice_display_name(&active_backend, &tts_config, &voice);
+    let voice_name = voice_display_name(&active_backend, &tts_config, &voice, None);
     let audio_ext = backend.file_extension().to_string();
 
     // Get telemetry estimate

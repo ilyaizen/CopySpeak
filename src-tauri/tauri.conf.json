@@ -1,7 +1,6 @@
 {
-  "$schema": "https://schema.tauri.app/config/2",
-  "productName": "CopySpeak",
-  "version": "0.1.8",
+  "productName": "copyspeak",
+  "version": "0.1.9",
   "identifier": "com.copyspeak.tts",
   "build": {
     "frontendDist": "../dist",
@@ -48,9 +47,7 @@
         "resizable": false,
         "center": true,
         "visible": true,
-        "devtools": true,
-        "additionalBrowserArgs": "--force-prefers-no-reduced-motion --enable-smooth-scrolling --allow-file-access-from-files --allow-universal-access-from-files --disable-features=VizDisplayCompositor"
-
+        "devtools": true
       },
       {
         "label": "hud",
@@ -65,8 +62,7 @@
         "alwaysOnTop": true,
         "resizable": false,
         "skipTaskbar": true,
-        "visible": false,
-        "focus": false
+        "visible": false
       }
     ]
   },

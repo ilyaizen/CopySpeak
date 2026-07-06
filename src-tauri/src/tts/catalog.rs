@@ -40,6 +40,7 @@ pub struct VoiceCatalogEntry {
     pub label: String,
     pub language: Option<String>,
     pub description: Option<String>,
+    pub gender: Option<String>,
     pub preview_url: Option<String>,
 }
 
@@ -64,12 +65,14 @@ fn voice(
     label: &str,
     language: Option<&str>,
     description: Option<&str>,
+    gender: Option<&str>,
 ) -> VoiceCatalogEntry {
     VoiceCatalogEntry {
         id: id.into(),
         label: label.into(),
         language: language.map(str::to_string),
         description: description.map(str::to_string),
+        gender: gender.map(str::to_string),
         preview_url: None,
     }
 }
@@ -112,6 +115,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                 "Rosie",
                 Some("en"),
                 Some("KittenTTS fallback voice"),
+                None,
             )],
         },
         EngineCatalogEntry {
@@ -192,13 +196,19 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                     serde_json::json!(null),
                 ),
             ],
-            voices: [
-                "alloy", "ash", "ballad", "coral", "echo", "fable", "nova", "onyx", "sage",
-                "shimmer", "verse",
-            ]
-            .iter()
-            .map(|v| voice(v, v, Some("en"), None))
-            .collect(),
+            voices: vec![
+                voice("alloy", "Alloy", Some("en"), Some("Warm, neutral all-rounder"), Some("female")),
+                voice("ash", "Ash", Some("en"), Some("Calm and conversational"), Some("male")),
+                voice("ballad", "Ballad", Some("en"), Some("Singing-leaning, expressive"), Some("male")),
+                voice("coral", "Coral", Some("en"), Some("Warm and confident"), Some("female")),
+                voice("echo", "Echo", Some("en"), Some("Calm and measured"), Some("male")),
+                voice("fable", "Fable", Some("en"), Some("British and expressive"), Some("male")),
+                voice("nova", "Nova", Some("en"), Some("Bright and energetic"), Some("female")),
+                voice("onyx", "Onyx", Some("en"), Some("Deep and authoritative"), Some("male")),
+                voice("sage", "Sage", Some("en"), Some("Calm and introspective"), Some("female")),
+                voice("shimmer", "Shimmer", Some("en"), Some("Soft and airy"), Some("female")),
+                voice("verse", "Verse", Some("en"), Some("Neutral and steady"), Some("male")),
+            ],
         },
         EngineCatalogEntry {
             engine: TtsEngine::ElevenLabs,
@@ -252,19 +262,38 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                     serde_json::json!(null),
                 ),
             ],
-            voices: vec![voice(
-                "21m00Tcm4TlvDq8ikWAM",
-                "Rachel",
-                Some("en"),
-                Some("Premade fallback voice"),
-            )],
+            voices: vec![
+                // 21 premade voices — fetched from GET /v1/voices (2026-07-06).
+                // ponytail: static snapshot; refresh button hits the live API for the full set.
+                voice("pNInz6obpgDQGcFmaJgB", "Adam", None, Some("American · male · Dominant, Firm"), Some("male")),
+                voice("Xb7hH8MSUJpSbSDYk0k2", "Alice", None, Some("British · female · Clear, Engaging Educator"), Some("female")),
+                voice("hpp4J3VqNfWAUOO0d1Us", "Bella", None, Some("American · female · Professional, Bright, Warm"), Some("female")),
+                voice("pqHfZKP75CvOlQylNhV4", "Bill", None, Some("American · male · Wise, Mature, Balanced"), Some("male")),
+                voice("nPczCjzI2devNBz1zQrb", "Brian", None, Some("American · male · Deep, Resonant and Comforting"), Some("male")),
+                voice("N2lVS1w4EtoT3dr4eOWO", "Callum", None, Some("American · male · Husky Trickster"), Some("male")),
+                voice("IKne3meq5aSn9XLyUdCD", "Charlie", None, Some("Australian · male · Deep, Confident, Energetic"), Some("male")),
+                voice("iP95p4xoKVk53GoZ742B", "Chris", None, Some("American · male · Charming, Down-to-Earth"), Some("male")),
+                voice("onwK4e9ZLuTAKqWW03F9", "Daniel", None, Some("British · male · Steady Broadcaster"), Some("male")),
+                voice("cjVigY5qzO86Huf0OWal", "Eric", None, Some("American · male · Smooth, Trustworthy"), Some("male")),
+                voice("JBFqnCBsd6RMkjVDRZzb", "George", None, Some("British · male · Warm, Captivating Storyteller"), Some("male")),
+                voice("SOYHLrjzK2X1ezoPC6cr", "Harry", None, Some("American · male · Fierce Warrior"), Some("male")),
+                voice("cgSgspJ2msm6clMCkdW9", "Jessica", None, Some("American · female · Playful, Bright, Warm"), Some("female")),
+                voice("FGY2WhTYpPnrIDTdsKH5", "Laura", None, Some("American · female · Enthusiast, Quirky Attitude"), Some("female")),
+                voice("TX3LPaxmHKxFdv7VOQHJ", "Liam", None, Some("American · male · Energetic, Social Media Creator"), Some("male")),
+                voice("pFZP5JQG7iQjIQuC4Bku", "Lily", None, Some("British · female · Velvety Actress"), Some("female")),
+                voice("XrExE9yKIg1WjnnlVkGX", "Matilda", None, Some("American · female · Knowledgable, Professional"), Some("female")),
+                voice("SAz9YHcvj6GT2YYXdXww", "River", None, Some("American · neutral · Relaxed, Neutral, Informative"), Some("neutral")),
+                voice("CwhRBWXzGAHq8TQ4Fs17", "Roger", None, Some("American · male · Laid-Back, Casual, Resonant"), Some("male")),
+                voice("EXAVITQu4vr4xnSDxMaL", "Sarah", None, Some("American · female · Mature, Reassuring, Confident"), Some("female")),
+                voice("bIHbv24MWmeRgasZH58o", "Will", None, Some("American · male · Relaxed Optimist"), Some("male")),
+            ],
         },
         EngineCatalogEntry {
             engine: TtsEngine::Cartesia,
             label: "Cartesia".into(),
             description: "Cartesia Sonic TTS.".into(),
             docs_url: "https://docs.cartesia.ai/api-reference/tts/bytes".into(),
-            supports_voice_refresh: false,
+            supports_voice_refresh: true,
             supports_pitch: false,
             supports_bracket_emotes: false,
             options: vec![
@@ -301,14 +330,16 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                 voice(
                     "f786b574-daa5-4673-aa0c-cbe3e8534c02",
                     "Katie",
-                    Some("en"),
                     None,
+                    Some("Warm, friendly default"),
+                    Some("female"),
                 ),
                 voice(
                     "a5136bf9-224c-4d76-b823-52bd5efcffcc",
                     "Jameson",
-                    Some("en"),
                     None,
+                    Some("Calm, deep default"),
+                    Some("male"),
                 ),
             ],
         },
@@ -336,40 +367,37 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                     serde_json::json!("wav"),
                 ),
             ],
-            voices: [
-                "Kore",
-                "Puck",
-                "Charon",
-                "Fenrir",
-                "Leda",
-                "Orus",
-                "Aoede",
-                "Callirrhoe",
-                "Autonoe",
-                "Enceladus",
-                "Iapetus",
-                "Umbriel",
-                "Algieba",
-                "Despina",
-                "Erinome",
-                "Algenib",
-                "Rasalgethi",
-                "Laomedeia",
-                "Achernar",
-                "Alnilam",
-                "Schedar",
-                "Gacrux",
-                "Pulcherrima",
-                "Achird",
-                "Zubenelgenubi",
-                "Vindemiatrix",
-                "Sadachbia",
-                "Sadaltager",
-                "Sulafat",
-            ]
-            .iter()
-            .map(|v| voice(v, v, None, None))
-            .collect(),
+            voices: vec![
+                voice("Kore", "Kore", None, Some("Upbeat"), Some("female")),
+                voice("Puck", "Puck", None, Some("Upbeat"), Some("male")),
+                voice("Charon", "Charon", None, Some("Informative"), Some("male")),
+                voice("Fenrir", "Fenrir", None, Some("Breezy, casual"), Some("male")),
+                voice("Leda", "Leda", None, Some("Youthful"), Some("female")),
+                voice("Orus", "Orus", None, Some("Firm, industrial"), Some("male")),
+                voice("Aoede", "Aoede", None, Some("Soft, dreamy"), Some("female")),
+                voice("Callirrhoe", "Callirrhoe", None, Some("Girl, youthful"), Some("female")),
+                voice("Autonoe", "Autonoe", None, Some("Breezy"), Some("female")),
+                voice("Enceladus", "Enceladus", None, Some("Breezy"), Some("male")),
+                voice("Iapetus", "Iapetus", None, Some("Clear, professional"), Some("male")),
+                voice("Umbriel", "Umbriel", None, Some("Easygoing"), Some("male")),
+                voice("Algieba", "Algieba", None, Some("Casual, relaxed"), Some("female")),
+                voice("Despina", "Despina", None, Some("Youthful"), Some("female")),
+                voice("Erinome", "Erinome", None, Some("Calm"), Some("female")),
+                voice("Algenib", "Algenib", None, Some("Sturdy"), Some("male")),
+                voice("Rasalgethi", "Rasalgethi", None, Some("Informative"), Some("male")),
+                voice("Laomedeia", "Laomedeia", None, Some("Upbeat"), Some("female")),
+                voice("Achernar", "Achernar", None, Some("Soft, low"), Some("male")),
+                voice("Alnilam", "Alnilam", None, Some("Firm"), Some("male")),
+                voice("Schedar", "Schedar", None, Some("Casual"), Some("female")),
+                voice("Gacrux", "Gacrux", None, Some("Maternal"), Some("female")),
+                voice("Pulcherrima", "Pulcherrima", None, Some("Soft, forward"), Some("female")),
+                voice("Achird", "Achird", None, Some("Relaxed, easygoing"), Some("male")),
+                voice("Zubenelgenubi", "Zubenelgenubi", None, Some("Casual, laid-back"), Some("male")),
+                voice("Vindemiatrix", "Vindemiatrix", None, Some("Gentle"), Some("female")),
+                voice("Sadachbia", "Sadachbia", None, Some("Lively, breezy"), Some("male")),
+                voice("Sadaltager", "Sadaltager", None, Some("Knowledgeable, warm"), Some("male")),
+                voice("Sulafat", "Sulafat", None, Some("Warm"), Some("female")),
+            ],
         },
         EngineCatalogEntry {
             engine: TtsEngine::Microsoft,
@@ -417,44 +445,54 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             supports_bracket_emotes: false,
             options: vec![],
             voices: [
+                // Genders sourced from `edge-tts --list-voices` (Microsoft's own
+                // readaloud metadata), lowercased to match the cloud engines.
                 // ── US ──────────────────────────────────────────
-                ("en-US-AvaMultilingualNeural", "Ava, Multilingual"),
-                ("en-US-EmmaMultilingualNeural", "Emma, Multilingual"),
-                ("en-US-AndrewMultilingualNeural", "Andrew, Multilingual"),
-                ("en-US-BrianMultilingualNeural", "Brian, Multilingual"),
-                ("en-US-AriaNeural", "Aria"),
-                ("en-US-JennyNeural", "Jenny"),
-                ("en-US-GuyNeural", "Guy"),
-                ("en-US-DavisNeural", "Davis"),
-                ("en-US-AmberNeural", "Amber"),
-                ("en-US-AnaNeural", "Ana"),
-                ("en-US-AndrewNeural", "Andrew"),
-                ("en-US-AvaNeural", "Ava"),
-                ("en-US-BrianNeural", "Brian"),
-                ("en-US-ChristopherNeural", "Christopher"),
-                ("en-US-EmmaNeural", "Emma"),
-                ("en-US-EricNeural", "Eric"),
-                ("en-US-MichelleNeural", "Michelle"),
-                ("en-US-RogerNeural", "Roger"),
-                ("en-US-SteffanNeural", "Steffan"),
+                ("en-US-AvaMultilingualNeural", "Ava, Multilingual", Some("female")),
+                ("en-US-EmmaMultilingualNeural", "Emma, Multilingual", Some("female")),
+                ("en-US-AndrewMultilingualNeural", "Andrew, Multilingual", Some("male")),
+                ("en-US-BrianMultilingualNeural", "Brian, Multilingual", Some("male")),
+                ("en-US-AriaNeural", "Aria", Some("female")),
+                ("en-US-JennyNeural", "Jenny", Some("female")),
+                ("en-US-GuyNeural", "Guy", Some("male")),
+                // ponytail: Davis & Amber are absent from the live edge-tts list
+                // (likely deprecated by Microsoft); gender unknown → None.
+                ("en-US-DavisNeural", "Davis", None),
+                ("en-US-AmberNeural", "Amber", None),
+                ("en-US-AnaNeural", "Ana", Some("female")),
+                ("en-US-AndrewNeural", "Andrew", Some("male")),
+                ("en-US-AvaNeural", "Ava", Some("female")),
+                ("en-US-BrianNeural", "Brian", Some("male")),
+                ("en-US-ChristopherNeural", "Christopher", Some("male")),
+                ("en-US-EmmaNeural", "Emma", Some("female")),
+                ("en-US-EricNeural", "Eric", Some("male")),
+                ("en-US-MichelleNeural", "Michelle", Some("female")),
+                ("en-US-RogerNeural", "Roger", Some("male")),
+                ("en-US-SteffanNeural", "Steffan", Some("male")),
                 // ── GB ──────────────────────────────────────────
-                ("en-GB-SoniaNeural", "Sonia, United Kingdom"),
-                ("en-GB-RyanNeural", "Ryan, United Kingdom"),
-                ("en-GB-LibbyNeural", "Libby, United Kingdom"),
-                ("en-GB-MaisieNeural", "Maisie, United Kingdom"),
-                ("en-GB-ThomasNeural", "Thomas, United Kingdom"),
+                ("en-GB-SoniaNeural", "Sonia", Some("female")),
+                ("en-GB-RyanNeural", "Ryan", Some("male")),
+                ("en-GB-LibbyNeural", "Libby", Some("female")),
+                ("en-GB-MaisieNeural", "Maisie", Some("female")),
+                ("en-GB-ThomasNeural", "Thomas", Some("male")),
                 // ── AU ──────────────────────────────────────────
-                ("en-AU-NatashaNeural", "Natasha, Australia"),
-                ("en-AU-WilliamMultilingualNeural", "William, Australia, Multilingual"),
+                ("en-AU-NatashaNeural", "Natasha", Some("female")),
+                ("en-AU-WilliamMultilingualNeural", "William, Multilingual", Some("male")),
                 // ── CA ──────────────────────────────────────────
-                ("en-CA-ClaraNeural", "Clara, Canada"),
-                ("en-CA-LiamNeural", "Liam, Canada"),
+                ("en-CA-ClaraNeural", "Clara", Some("female")),
+                ("en-CA-LiamNeural", "Liam", Some("male")),
                 // ── IE ──────────────────────────────────────────
-                ("en-IE-ConnorNeural", "Connor, Ireland"),
-                ("en-IE-EmilyNeural", "Emily, Ireland"),
+                ("en-IE-ConnorNeural", "Connor", Some("male")),
+                ("en-IE-EmilyNeural", "Emily", Some("female")),
             ]
             .iter()
-            .map(|(id, label)| voice(id, label, Some("en"), None))
+            .map(|(id, label, gender)| {
+                // Edge ids encode the BCP-47 locale (en-US, en-GB, …); keep it as
+                // the grouping key so the picker clusters by region, with gender
+                // surfaced as per-row meta (see voice-picker.svelte::useLocale).
+                let locale: String = id.split('-').take(2).collect::<Vec<_>>().join("-");
+                voice(id, label, Some(locale.as_str()), None, *gender)
+            })
             .collect(),
         },
     ]

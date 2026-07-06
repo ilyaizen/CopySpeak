@@ -186,6 +186,7 @@ export interface VoiceCatalogEntry {
   label: string;
   language: string | null;
   description: string | null;
+  gender: string | null;
   preview_url: string | null;
 }
 

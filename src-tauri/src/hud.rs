@@ -78,12 +78,12 @@ pub struct HudPlaybackStartPayload {
     pub audio_duration_ms: Option<u64>,
 }
 
-pub fn get_available_monitors(window: &WebviewWindow) -> Vec<MonitorInfo> {
-    let primary_monitor = window.primary_monitor().ok().flatten();
+pub fn get_available_monitors(app: &AppHandle) -> Vec<MonitorInfo> {
+    let primary_monitor = app.primary_monitor().ok().flatten();
 
     let primary_name = primary_monitor.as_ref().and_then(|m| m.name().cloned());
 
-    match window.available_monitors() {
+    match app.available_monitors() {
         Ok(monitors) => monitors
             .into_iter()
             .map(|m| monitor_to_info(&m, &primary_name))
@@ -115,8 +115,8 @@ fn monitor_to_info(monitor: &Monitor, primary_name: &Option<String>) -> MonitorI
 }
 
 /// Position the HUD window according to config.
-pub fn position_hud_window(hud_window: &WebviewWindow, config: &HudConfig) {
-    let available_monitors = get_available_monitors(hud_window);
+pub fn position_hud_window(app: &AppHandle, hud_window: &WebviewWindow, config: &HudConfig) {
+    let available_monitors = get_available_monitors(app);
 
     let target_monitor = available_monitors
         .iter()
@@ -147,13 +147,21 @@ pub fn position_hud_window(hud_window: &WebviewWindow, config: &HudConfig) {
         monitor_size,
         monitor_offset,
     ) {
-        log::debug!("Setting HUD position to ({}, {})", position.x, position.y);
+        log::info!("[HUD] positioning to ({}, {})", position.x, position.y);
         if let Err(e) = hud_window.set_position(position) {
             log::error!("Failed to set HUD position: {}", e);
+        } else if let Ok(actual) = hud_window.outer_position() {
+            log::info!("[HUD] actual outer position: ({}, {})", actual.x, actual.y);
         }
     } else {
         log::warn!("Failed to compute HUD position, using default");
     }
+}
+
+// ponytail: HUD stays visible always; "hidden" = parked off-screen. Avoids the WebView2
+// transparent-window hidden→visible repaint bug; show_* repositions on-screen.
+pub fn move_hud_offscreen(window: &WebviewWindow) {
+    let _ = window.set_position(PhysicalPosition::new(-10_000, -10_000));
 }
 
 pub fn show_hud(app: &AppHandle, envelope: AmplitudeEnvelope, text: Option<String>) {
@@ -171,11 +179,9 @@ pub fn show_hud(app: &AppHandle, envelope: AmplitudeEnvelope, text: Option<Strin
 
     log::info!("Showing HUD for playback");
 
-    // Show window before emitting event
     if let Some(window) = app.get_webview_window("hud") {
-        if let Err(e) = window.show() {
-            log::error!("Failed to show HUD window: {}", e);
-        }
+        position_hud_window(app, &window, &config);
+        let _ = window.set_ignore_cursor_events(true);
     } else {
         log::warn!("HUD window not found");
     }
@@ -223,11 +229,9 @@ pub fn show_hud_synthesizing(app: &AppHandle, text: Option<String>) {
 
     log::info!("Showing HUD for synthesizing");
 
-    // Show window before emitting event
     if let Some(window) = app.get_webview_window("hud") {
-        if let Err(e) = window.show() {
-            log::error!("Failed to show HUD window: {}", e);
-        }
+        position_hud_window(app, &window, &config);
+        let _ = window.set_ignore_cursor_events(true);
     } else {
         log::warn!("HUD window not found");
     }
@@ -270,11 +274,9 @@ pub fn show_hud_playback(app: &AppHandle, text: Option<String>, audio_duration_m
 
     log::info!("Showing HUD for playback");
 
-    // Show window before emitting event
     if let Some(window) = app.get_webview_window("hud") {
-        if let Err(e) = window.show() {
-            log::error!("Failed to show HUD window: {}", e);
-        }
+        position_hud_window(app, &window, &config);
+        let _ = window.set_ignore_cursor_events(true);
     } else {
         log::warn!("HUD window not found");
     }
@@ -368,11 +370,9 @@ pub fn show_hud_clipboard_copied(app: &AppHandle, trigger_window_ms: u64) {
         return;
     }
 
-    // Show window before emitting event
     if let Some(window) = app.get_webview_window("hud") {
-        if let Err(e) = window.show() {
-            log::error!("Failed to show HUD window: {}", e);
-        }
+        position_hud_window(app, &window, &config);
+        let _ = window.set_ignore_cursor_events(true);
     } else {
         log::warn!("HUD window not found");
     }
@@ -389,11 +389,8 @@ pub fn hide_hud(app: &AppHandle) {
     log::debug!("Hiding HUD");
     let _ = app.emit("hud:stop", ());
 
-    // Hide the window
     if let Some(window) = app.get_webview_window("hud") {
-        if let Err(e) = window.hide() {
-            log::error!("Failed to hide HUD window: {}", e);
-        }
+        move_hud_offscreen(&window);
     }
 }
 
@@ -445,3 +442,5 @@ fn compute_hud_position(
 
     Some(PhysicalPosition::new(x, y))
 }
+
+

@@ -56,7 +56,7 @@ impl TtsBackend for OpenAiTtsBackend {
             body["instructions"] = json!(instructions);
         }
 
-        let api_key = self.config.api_key.clone();
+        let api_key = crate::secrets::resolve(&self.config.api_key, &["OPENAI_API_KEY"]);
 
         // Log request details
         log::info!(
@@ -128,7 +128,10 @@ impl TtsBackend for OpenAiTtsBackend {
     fn health_check(&self) -> Result<(), TtsError> {
         log::debug!("OpenAI TTS health check - validating API key");
 
-        if self.config.api_key.trim().is_empty() {
+        if crate::secrets::resolve(&self.config.api_key, &["OPENAI_API_KEY"])
+            .trim()
+            .is_empty()
+        {
             log::error!("OpenAI TTS health check failed - API key is missing");
             return Err(TtsError::Unavailable("OpenAI API key is missing".into()));
         }

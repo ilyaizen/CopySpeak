@@ -2,26 +2,19 @@
   import { onMount } from "svelte";
   import HudOverlay from "$lib/components/hud-overlay.svelte";
 
-  onMount(() => {
-    console.log("[HUD PAGE] onMount firing");
+  onMount(async () => {
     // Mark body so the Tailwind base layer skips bg-background for this window
     document.body.setAttribute("data-hud", "");
-
-    // Belt-and-suspenders: force transparent background on html+body
     document.documentElement.style.background = "transparent";
     document.body.style.background = "transparent";
 
-    console.log("[HUD PAGE] data-hud attribute set, background transparent");
+    // Show the window now that transparent CSS is applied.
+    // We only show once; from here on, HUD is hidden by moving off-screen.
+    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      await getCurrentWindow().show();
+    }
   });
-
-  // Catch any errors
-  window.onerror = (msg, _src, line, _col, err) => {
-    console.error("[HUD PAGE] Global error:", msg, "at line", line, err);
-  };
-
-  window.onunhandledrejection = (e) => {
-    console.error("[HUD PAGE] Unhandled rejection:", e.reason);
-  };
 </script>
 
 <svelte:head>
