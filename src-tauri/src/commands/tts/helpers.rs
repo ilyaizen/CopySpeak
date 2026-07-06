@@ -270,17 +270,19 @@ pub(crate) fn voice_display_name(
     active: &TtsEngine,
     tts_config: &TtsConfig,
     voice_id: &str,
+    voice_label: Option<&str>,
 ) -> String {
     match active {
         TtsEngine::ElevenLabs => {
-            // Use cached voice_name from config if available
-            tts_config
-                .elevenlabs
-                .voice_name
-                .as_ref()
-                .map(|n| {
-                    // Clean up: extract just the name before " -" or take first word
-                    slugify_filename_part(n)
+            // voice_label from profile catalog takes priority over config/lookup
+            voice_label
+                .map(slugify_filename_part)
+                .or_else(|| {
+                    tts_config
+                        .elevenlabs
+                        .voice_name
+                        .as_ref()
+                        .map(|n| slugify_filename_part(n))
                 })
                 .unwrap_or_else(|| {
                     crate::tts::elevenlabs::ElevenLabsTtsBackend::resolve_voice_name_static(
@@ -289,11 +291,15 @@ pub(crate) fn voice_display_name(
                 })
         }
         TtsEngine::OpenAI => voice_id.to_lowercase(),
-        TtsEngine::Cartesia => tts_config
-            .cartesia
-            .voice_name
-            .as_deref()
+        TtsEngine::Cartesia => voice_label
             .map(slugify_filename_part)
+            .or_else(|| {
+                tts_config
+                    .cartesia
+                    .voice_name
+                    .as_deref()
+                    .map(slugify_filename_part)
+            })
             .unwrap_or_else(|| match voice_id {
                 "f786b574-daa5-4673-aa0c-cbe3e8534c02" => "katie".to_string(),
                 "a5136bf9-224c-4d76-b823-52bd5efcffcc" => "jameson".to_string(),

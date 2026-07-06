@@ -34,7 +34,7 @@
   );
 
   function profileVoiceLabel(profile: VoiceProfile | null): string | null {
-    return profile?.voice_label || profile?.voice || null;
+    return profile?.voice_label ?? null;
   }
 
   async function loadProfileInfo() {

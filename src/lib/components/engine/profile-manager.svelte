@@ -73,14 +73,26 @@
     active ? catalogVoicesFor(active.engine as TtsEngine) : []
   );
 
-  // Passive hint: the active profile's engine needs a credential that isn't set.
-  // Cheap local check (no IPC) — points the user to /engines rather than blocking.
+  // Passive hint: checks backend (config.json + .env) for credential presence.
+  let credentialsResolved = $state<Record<string, boolean>>({});
+
+  $effect(() => {
+    if (!active) return;
+    const entry = findSetupEntry(active.engine);
+    if (!entry || !entry.credentialTarget) return;
+    const engine = active.engine;
+    // Skip if already checked
+    if (engine in credentialsResolved) return;
+    invoke<boolean>("has_engine_credentials", { engine }).then((ok) => {
+      credentialsResolved[engine] = ok;
+    });
+  });
+
   const credentialMissing = $derived(() => {
     if (!active) return false;
     const entry = findSetupEntry(active.engine);
     if (!entry || !entry.credentialTarget) return false;
-    const fields = localConfig.tts as unknown as Record<string, { api_key?: string }>;
-    return !fields[entry.credentialTarget]?.api_key;
+    return credentialsResolved[active.engine] === false;
   });
 
   $effect(() => {

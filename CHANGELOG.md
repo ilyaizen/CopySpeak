@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.9] - 2026-07-06
+
+### Added
+
+- **`has_engine_credentials` command** — New IPC command checks whether an engine has credentials available (config.json or .env) without making HTTP requests. Used by the profile manager to show/hide the "Set up engine credentials" hint accurately.
+
+- **Config-changed event listeners** — Play page and Voices page now listen for the `config-changed` Tauri event and reload config automatically when it changes externally.
+
+### Changed
+
+- **Voice label priority** — `voice_display_name` now prioritizes the profile's `voice_label` from the catalog over the raw `voice_name` from config, giving cleaner filenames in history.
+
+- **Voice label backfill** — Default profile and migration (`migrate_tts_config`) now populate `voice_label` from the voice catalog for profiles that have none.
+
+- **HUD window deferred show** — HUD window starts with `visible: false` in `tauri.conf.json` and explicitly calls `window.show()` in `onMount` after transparent CSS is applied, preventing a white flash.
+
+- **Credential hint uses backend check** — Profile-manager now calls `has_engine_credentials` (covers config + .env) instead of only checking the raw `config.json` api_key field.
+
+### Fixed
+
+- **Play-page reload→save→emit loop** — Added `externalLoad` guard in the config `$effect` to skip auto-save when config was loaded via the `config-changed` event, breaking the infinite reload→save→emit→reload cycle.
+
+- **Footer voice label rendering** — Switched from `||` to `?? null` so legitimately empty-string `voice_label` values are preserved instead of falling through to `voice`.
+
 ### Added
 
 - **Searchable voice picker** — the flat per-engine voice `<Select>` in the profile editor is replaced by `voice-picker.svelte`: a portaled popover with a live search box, automatic grouping (by gender for OpenAI/Google/Cartesia/ElevenLabs, by BCP-47 locale for Edge), inline metadata (`gender · language`) and a check mark on the active voice. Escape / outside-click closes it; the panel flips above the trigger when space below is tight. The manual Voice ID input remains below it as the escape hatch.
@@ -420,7 +444,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.8...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.9...HEAD
+[0.1.9]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.5...v0.1.6

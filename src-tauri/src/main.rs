@@ -649,6 +649,7 @@ fn main() {
             commands::check_elevenlabs_credentials,
             commands::check_cartesia_credentials,
             commands::check_openai_credentials,
+            commands::has_engine_credentials,
             commands::check_groq_credentials,
             commands::list_elevenlabs_voices,
             commands::get_elevenlabs_voice_by_id,

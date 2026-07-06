@@ -141,6 +141,7 @@
   };
 
   let config = $state<AppConfig | null>(null);
+  let externalLoad = false;
   let manualText = $state("");
   let lastPlayedContent = $state<string | null>(null);
   let abortRequested = $state(false);
@@ -152,6 +153,7 @@
   } | null>(null);
 
   let unlistenTruncated: (() => void) | null = null;
+  let unlistenConfig: (() => void) | null = null;
 
   // Proxy store state for template readability
   let isPlaying = $derived(playbackStore.isPlaying);
@@ -171,13 +173,15 @@
       const speed = activeProfile?.speed ?? 1.0;
       const pitch = activeProfile?.pitch ?? 1.0;
 
-      console.log("[PlayPage] Config effect triggered - hotkey:", {
-        hotkeyEnabled,
-        hotkeyShortcut
-      });
-
       // Keep playback store in sync so audio plays at correct settings
       playbackStore.syncPlaybackConfig(volume, speed, pitch, activeEffect);
+
+      // ponytail: skip auto-save when config was loaded externally (config-changed event)
+      // to break the reload → save → emit → reload loop
+      if (externalLoad) {
+        externalLoad = false;
+        return;
+      }
 
       const timeout = setTimeout(async () => {
         if (isTauri) {
@@ -192,11 +196,12 @@
     }
   });
 
-  async function loadConfig() {
+  async function loadConfig(external = false) {
     if (!isTauri) {
       config = mockConfig;
       return;
     }
+    if (external) externalLoad = true;
     try {
       config = await invoke<AppConfig>("get_config");
     } catch (e) {
@@ -302,6 +307,14 @@
 
     if (isTauri) {
       try {
+        unlistenConfig = await listen("config-changed", async () => {
+          await loadConfig(true);
+        });
+      } catch {}
+    }
+
+    if (isTauri) {
+      try {
         unlistenTruncated = await listen<{
           original_length: number;
           truncated_length: number;
@@ -320,6 +333,7 @@
 
   onDestroy(() => {
     if (unlistenTruncated) unlistenTruncated();
+    if (unlistenConfig) unlistenConfig();
   });
 </script>
 

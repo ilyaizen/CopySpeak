@@ -725,13 +725,14 @@ impl Default for VoiceProfile {
     fn default() -> Self {
         let engine = TtsEngine::Edge;
         let voice = "en-US-AvaMultilingualNeural".to_string();
+        let voice_label = catalog_voice_label(&engine, &voice);
         Self {
             id: "default".into(),
             name: "Edge-TTS".into(),
             description: None,
             engine,
             voice,
-            voice_label: None,
+            voice_label,
             speed: 1.0,
             pitch: 1.0,
             effects: ProfileEffects::default(),
@@ -891,6 +892,12 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
                     }
                 }
             }
+        }
+    }
+    // Backfill voice_label from catalog for any profile that has none.
+    for profile in &mut tts.profiles {
+        if profile.voice_label.is_none() {
+            profile.voice_label = catalog_voice_label(&profile.engine, &profile.voice);
         }
     }
     tts.schema_version = 2;
