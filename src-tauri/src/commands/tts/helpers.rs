@@ -227,10 +227,18 @@ pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> S
 pub(crate) fn engine_identifier(active: &TtsEngine, tts_config: &TtsConfig) -> String {
     match active {
         TtsEngine::Local => {
-            // Normalize preset names for filenames
-            match tts_config.preset.as_str() {
+            // Preset lives on the active profile's local options now; the
+            // top-level tts_config.preset is a legacy field that's empty for
+            // profile-based configs (would yield a leading-dash filename).
+            let preset = resolve_effective(tts_config)
+                .engine_options
+                .local()
+                .and_then(|o| o.preset.clone())
+                .unwrap_or_else(|| tts_config.preset.trim().to_string());
+            match preset.as_str() {
                 "kokoro-tts" => "kokoro".to_string(),
                 "pocket-tts" => "pocket".to_string(),
+                "" => "local".to_string(),
                 p => p.to_string(),
             }
         }

@@ -35,6 +35,7 @@ export function useHudEvents() {
       const eventApi = await import("@tauri-apps/api/event");
 
       unlisteners.start = await eventApi.listen<HudStartPayload>("hud:start", (event) => {
+        eventApi.emit("hud:diag:start-received");
         hudStore.handleStart(event.payload);
       });
 
@@ -102,6 +103,10 @@ export function useHudEvents() {
       unlisteners.audioDuration = await eventApi.listen<number>("hud:audio-duration", (event) => {
         hudStore.setAccurateDurationMs(event.payload);
       });
+
+      // Diagnostic: confirm all listeners registered and IPC works
+      await eventApi.emit("hud:diag:listeners-ready");
+      console.log("[HUD] diagnostic listeners-ready event emitted");
     } catch (e) {
       console.error("[HUD] Failed to set up Tauri event listeners:", e);
     }

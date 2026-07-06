@@ -21,7 +21,10 @@ pub fn check_elevenlabs_credentials(
         log::debug!("[IPC] check_elevenlabs_credentials called");
     }
 
-    let api_key = config.lock().unwrap().tts.elevenlabs.api_key.clone();
+    let api_key = crate::secrets::resolve(
+        &config.lock().unwrap().tts.elevenlabs.api_key,
+        &["ELEVENLABS_API_KEY"],
+    );
 
     if api_key.trim().is_empty() {
         return Ok(CredentialCheckResult {
@@ -71,7 +74,10 @@ pub fn check_cartesia_credentials(
         log::debug!("[IPC] check_cartesia_credentials called");
     }
 
-    let api_key = config.lock().unwrap().tts.cartesia.api_key.clone();
+    let api_key = crate::secrets::resolve(
+        &config.lock().unwrap().tts.cartesia.api_key,
+        &["CARTESIA_API_KEY"],
+    );
 
     if api_key.trim().is_empty() {
         return Ok(CredentialCheckResult {
@@ -122,7 +128,10 @@ pub fn check_openai_credentials(
         log::debug!("[IPC] check_openai_credentials called");
     }
 
-    let api_key = config.lock().unwrap().tts.openai.api_key.clone();
+    let api_key = crate::secrets::resolve(
+        &config.lock().unwrap().tts.openai.api_key,
+        &["OPENAI_API_KEY"],
+    );
 
     if api_key.trim().is_empty() {
         return Ok(CredentialCheckResult {

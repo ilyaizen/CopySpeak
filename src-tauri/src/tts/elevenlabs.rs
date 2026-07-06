@@ -222,7 +222,10 @@ impl ElevenLabsTtsBackend {
     pub fn list_voices(&self) -> Result<Vec<ElevenLabsVoice>, TtsError> {
         log::debug!("ElevenLabs - fetching available voices");
 
-        if self.config.api_key.trim().is_empty() {
+        if crate::secrets::resolve(&self.config.api_key, &["ELEVENLABS_API_KEY"])
+            .trim()
+            .is_empty()
+        {
             log::error!("ElevenLabs - API key is missing");
             return Err(TtsError::Unavailable(
                 "ElevenLabs API key is missing".into(),
@@ -245,7 +248,7 @@ impl ElevenLabsTtsBackend {
     /// Internal method to fetch voices from API
     fn list_voices_internal(&self) -> Result<Vec<ElevenLabsVoice>, TtsError> {
         let url = "https://api.elevenlabs.io/v1/voices";
-        let api_key = self.config.api_key.clone();
+        let api_key = crate::secrets::resolve(&self.config.api_key, &["ELEVENLABS_API_KEY"]);
 
         let start_time = std::time::Instant::now();
 
@@ -434,7 +437,10 @@ impl ElevenLabsTtsBackend {
             return Ok(voice.clone());
         }
 
-        if self.config.api_key.trim().is_empty() {
+        if crate::secrets::resolve(&self.config.api_key, &["ELEVENLABS_API_KEY"])
+            .trim()
+            .is_empty()
+        {
             log::error!("ElevenLabs - API key is missing");
             return Err(TtsError::Unavailable(
                 "ElevenLabs API key is missing".into(),
@@ -459,7 +465,7 @@ impl ElevenLabsTtsBackend {
     /// Internal method to fetch a single voice by ID from API
     fn get_voice_by_id_internal(&self, voice_id: &str) -> Result<ElevenLabsVoice, TtsError> {
         let url = format!("https://api.elevenlabs.io/v1/voices/{}", voice_id);
-        let api_key = self.config.api_key.clone();
+        let api_key = crate::secrets::resolve(&self.config.api_key, &["ELEVENLABS_API_KEY"]);
         let voice_id_owned = voice_id.to_string();
 
         let start_time = std::time::Instant::now();
@@ -609,7 +615,7 @@ impl TtsBackend for ElevenLabsTtsBackend {
             );
         }
 
-        let api_key = self.config.api_key.clone();
+        let api_key = crate::secrets::resolve(&self.config.api_key, &["ELEVENLABS_API_KEY"]);
         let mime_type = self.config.output_format.mime_type();
         let output_format = self.config.output_format.as_str();
 
@@ -681,7 +687,10 @@ impl TtsBackend for ElevenLabsTtsBackend {
     fn health_check(&self) -> Result<(), TtsError> {
         log::debug!("ElevenLabs TTS health check - validating API key");
 
-        if self.config.api_key.trim().is_empty() {
+        if crate::secrets::resolve(&self.config.api_key, &["ELEVENLABS_API_KEY"])
+            .trim()
+            .is_empty()
+        {
             log::error!("ElevenLabs TTS health check failed - API key is missing");
             return Err(TtsError::Unavailable(
                 "ElevenLabs API key is missing".into(),

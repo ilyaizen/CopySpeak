@@ -57,7 +57,13 @@ impl TtsBackend for MicrosoftTtsBackend {
     }
 
     fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
-        if self.config.endpoint.trim().is_empty() {
+        let api_key = crate::secrets::resolve(
+            &self.config.api_key,
+            &["MICROSOFT_API_KEY", "AZURE_API_KEY"],
+        );
+        let endpoint = crate::secrets::resolve(&self.config.endpoint, &["MICROSOFT_ENDPOINT"]);
+
+        if endpoint.trim().is_empty() {
             return Err(TtsError::Unavailable(
                 "Microsoft endpoint is not configured".into(),
             ));
@@ -78,8 +84,6 @@ impl TtsBackend for MicrosoftTtsBackend {
         );
 
         let start_time = std::time::Instant::now();
-        let api_key = self.config.api_key.clone();
-        let endpoint = self.config.endpoint.clone();
 
         let response = Self::block_on_async(async {
             let client = Client::new();
@@ -140,10 +144,16 @@ impl TtsBackend for MicrosoftTtsBackend {
     }
 
     fn health_check(&self) -> Result<(), TtsError> {
-        if self.config.api_key.trim().is_empty() {
+        if crate::secrets::resolve(&self.config.api_key, &["MICROSOFT_API_KEY", "AZURE_API_KEY"])
+            .trim()
+            .is_empty()
+        {
             return Err(TtsError::Unavailable("Microsoft API key is missing".into()));
         }
-        if self.config.endpoint.trim().is_empty() {
+        if crate::secrets::resolve(&self.config.endpoint, &["MICROSOFT_ENDPOINT"])
+            .trim()
+            .is_empty()
+        {
             return Err(TtsError::Unavailable(
                 "Microsoft endpoint is missing".into(),
             ));

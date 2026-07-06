@@ -10,12 +10,12 @@
     Trash2,
     Download,
     Upload,
-    RefreshCw,
     ExternalLink,
     AlertTriangle
   } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
   import ProfileExportDialog from "./profile-export-dialog.svelte";
+  import VoicePicker from "./voice-picker.svelte";
   import { findSetupEntry } from "./engine-meta";
   import type {
     AppConfig,
@@ -71,12 +71,6 @@
   );
   const activeVoiceCatalog = $derived<VoiceCatalogEntry[]>(
     active ? catalogVoicesFor(active.engine as TtsEngine) : []
-  );
-  const activeVoiceOptions = $derived(
-    activeVoiceCatalog.map((voice: VoiceCatalogEntry) => ({
-      value: voice.id,
-      label: voice.label
-    }))
   );
 
   // Passive hint: the active profile's engine needs a credential that isn't set.
@@ -318,36 +312,19 @@
           </div>
         </SettingRow>
 
-        {#if activeVoiceOptions.length > 0}
-          <SettingRow label="Voice" tooltip="Known voices from the engine catalog or provider API.">
-            <div class="flex w-56 gap-1.5">
-              <Select
-                options={activeVoiceOptions}
-                value={active.voice}
-                onchange={(e) => setVoice(activeIndex, (e.target as HTMLSelectElement).value)}
-                class="min-w-0 flex-1"
-              />
-              <Button
-                variant="outline"
-                size="sm"
-                onclick={() => refreshVoices(active.engine)}
-                disabled={voicesLoadingFor === active.engine}
-                title="Refresh voices"
-              >
-                <RefreshCw size={14} />
-              </Button>
-            </div>
-          </SettingRow>
-        {:else if activeCatalogEntry?.supports_voice_refresh}
-          <SettingRow label="Voice">
-            <Button
-              variant="outline"
-              size="sm"
-              onclick={() => refreshVoices(active.engine)}
-              disabled={voicesLoadingFor === active.engine}
-            >
-              {voicesLoadingFor === active.engine ? "Loading voices…" : "Load voices"}
-            </Button>
+        {#if activeVoiceCatalog.length > 0 || activeCatalogEntry?.supports_voice_refresh}
+          <SettingRow
+            label="Voice"
+            tooltip="Known voices from the engine catalog or provider API."
+          >
+            <VoicePicker
+              voices={activeVoiceCatalog}
+              value={active.voice}
+              loading={voicesLoadingFor === active.engine}
+              supportsRefresh={!!activeCatalogEntry?.supports_voice_refresh}
+              onselect={(id) => setVoice(activeIndex, id)}
+              onrefresh={() => refreshVoices(active.engine)}
+            />
           </SettingRow>
         {/if}
 

@@ -1,10 +1,30 @@
 use super::{TtsBackend, TtsError};
 use crate::config::CartesiaConfig;
 use reqwest::Client;
+use serde::Deserialize;
 use serde_json::json;
 
 const CARTESIA_TTS_URL: &str = "https://api.cartesia.ai/tts/bytes";
 const CARTESIA_VERSION: &str = "2024-06-10";
+
+/// Voice metadata from the Cartesia `/voices` API.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(default)]
+pub struct CartesiaVoice {
+    pub id: String,
+    pub name: Option<String>,
+    pub description: Option<String>,
+}
+
+impl Default for CartesiaVoice {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            name: None,
+            description: None,
+        }
+    }
+}
 
 pub struct CartesiaTtsBackend {
     config: CartesiaConfig,
@@ -26,6 +46,44 @@ impl CartesiaTtsBackend {
                 rt.block_on(f)
             }
         }
+    }
+
+    /// Fetch available voices from the Cartesia API.
+    /// GET https://api.cartesia.ai/voices — returns the account's voice library.
+    /// On failure the caller falls back to the static catalog list.
+    pub fn list_voices(&self) -> Result<Vec<CartesiaVoice>, TtsError> {
+        let api_key = crate::secrets::resolve(&self.config.api_key, &["CARTESIA_API_KEY"]);
+        if api_key.trim().is_empty() {
+            return Err(TtsError::Unavailable("Cartesia API key is missing".into()));
+        }
+        let (status, body) = Self::block_on_async(async move {
+            let client = Client::new();
+            let response = client
+                .get("https://api.cartesia.ai/voices")
+                .header("X-API-Key", api_key)
+                .header("Cartesia-Version", CARTESIA_VERSION)
+                .header("Accept", "application/json")
+                .send()
+                .await
+                .map_err(|e| TtsError::Http(format!("Failed to fetch voices: {}", e)))?;
+            let status = response.status();
+            let body = response
+                .text()
+                .await
+                .map_err(|e| TtsError::Http(format!("Failed to read voices response: {}", e)))?;
+            Ok::<_, TtsError>((status, body))
+        })?;
+
+        if !status.is_success() {
+            return Err(TtsError::Http(format!(
+                "Cartesia API error {}: {}",
+                status,
+                body.chars().take(300).collect::<String>()
+            )));
+        }
+
+        serde_json::from_str::<Vec<CartesiaVoice>>(&body)
+            .map_err(|e| TtsError::Http(format!("Failed to parse voices response: {}", e)))
     }
 }
 
@@ -57,7 +115,7 @@ impl TtsBackend for CartesiaTtsBackend {
         );
 
         let start_time = std::time::Instant::now();
-        let api_key = self.config.api_key.clone();
+        let api_key = crate::secrets::resolve(&self.config.api_key, &["CARTESIA_API_KEY"]);
 
         let response = Self::block_on_async(async {
             let client = Client::new();
@@ -110,7 +168,10 @@ impl TtsBackend for CartesiaTtsBackend {
     }
 
     fn health_check(&self) -> Result<(), TtsError> {
-        if self.config.api_key.trim().is_empty() {
+        if crate::secrets::resolve(&self.config.api_key, &["CARTESIA_API_KEY"])
+            .trim()
+            .is_empty()
+        {
             return Err(TtsError::Unavailable("Cartesia API key is missing".into()));
         }
         Ok(())

@@ -12,6 +12,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { Switch } from "$lib/components/ui/switch/index.js";
   import { SettingRow } from "$lib/components/ui/setting-row/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
   import { Select } from "$lib/components/ui/select/index.js";
   import { invoke } from "$lib/services/tauri";
   import { toast } from "svelte-sonner";
@@ -255,6 +256,23 @@
                       bind:checked={localConfig.trigger.listen_enabled}
                     />
                   </SettingRow>
+                  {#if localConfig.trigger.listen_enabled}
+                    <SettingRow
+                      label={$_("settings.triggers.doubleCopyWindow")}
+                      tooltip={$_("settings.triggers.doubleCopyWindowDescription")}
+                    >
+                      <Input
+                        type="number"
+                        value={String(localConfig.trigger.double_copy_window_ms)}
+                        onchange={(e) => {
+                          const raw = (e.target as HTMLInputElement).value;
+                          localConfig.trigger.double_copy_window_ms =
+                            raw === "" ? 1500 : Math.max(100, Number(raw));
+                        }}
+                        class="w-24"
+                      />
+                    </SettingRow>
+                  {/if}
                   <HotkeySettings bind:localConfig {errors} />
                   {#if localConfig.hud}
                     <SettingRow

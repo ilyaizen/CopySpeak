@@ -32,11 +32,39 @@ pub fn list_tts_voices(
                                 .and_then(|language| language.as_str().map(str::to_string))
                         }),
                         description: voice.description,
+                        gender: voice.labels.as_ref().and_then(|labels| {
+                            labels
+                                .get("gender")
+                                .and_then(|gender| gender.as_str().map(str::to_string))
+                        }),
                         preview_url: voice.preview_url,
                     })
                     .collect()
             })
             .map_err(|e| format!("Failed to fetch voices: {}", e));
+    }
+
+    if engine == TtsEngine::Cartesia {
+        let cfg = config.lock().unwrap();
+        let backend =
+            crate::tts::cartesia::CartesiaTtsBackend::new(cfg.tts.cartesia.clone());
+        return match backend.list_voices() {
+            Ok(voices) => Ok(voices
+                .into_iter()
+                .map(|v| crate::tts::catalog::VoiceCatalogEntry {
+                    id: v.id,
+                    label: v.name.unwrap_or_else(|| "Unnamed voice".into()),
+                    language: None,
+                    description: v.description,
+                    gender: None,
+                    preview_url: None,
+                })
+                .collect()),
+            Err(e) => {
+                log::warn!("Cartesia voice refresh failed, using static list: {}", e);
+                Ok(crate::tts::catalog::list_static_voices(&engine))
+            }
+        };
     }
 
     Ok(crate::tts::catalog::list_static_voices(&engine))
