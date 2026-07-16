@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Select Dropdown for Local CLI Presets**: Replaced the free-text `Preset` field for local CLI engine profiles with a select dropdown listing supported presets (`kitten-tts`, `piper`, `kokoro`, `chatterbox`, `custom`).
+- **Default Presets Auto-population**: Changing the preset automatically populates the default command executable, argument templates, and fallback/default voice for that preset.
+- **Dynamic Voice Catalog Filtering**: The local CLI voice catalog now contains static entries for all supported local engine voices (KittenTTS, Piper, Kokoro, Chatterbox). Selecting a local preset dynamically filters the Voice Picker dropdown to only show the voices belonging to the selected preset.
+
+### Changed
+
+- **Engine catalog options**: Updated `EngineOptionDescriptor` in both Rust backend and TypeScript frontend to support optional `choices`, allowing `select` option kinds.
+
 ## [0.1.10] - 2026-07-07
 
 ### Changed

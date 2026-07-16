@@ -179,6 +179,7 @@ export interface EngineOptionDescriptor {
   kind: string;
   help: string;
   default_value: unknown;
+  choices?: string[];
 }
 
 export interface VoiceCatalogEntry {

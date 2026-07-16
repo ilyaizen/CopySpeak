@@ -21,6 +21,8 @@ pub struct EngineOptionDescriptor {
     pub kind: EngineOptionKind,
     pub help: String,
     pub default_value: serde_json::Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub choices: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -57,6 +59,25 @@ fn option(
         kind,
         help: help.into(),
         default_value,
+        choices: None,
+    }
+}
+
+fn option_with_choices(
+    key: &str,
+    label: &str,
+    kind: EngineOptionKind,
+    help: &str,
+    default_value: serde_json::Value,
+    choices: Vec<String>,
+) -> EngineOptionDescriptor {
+    EngineOptionDescriptor {
+        key: key.into(),
+        label: label.into(),
+        kind,
+        help: help.into(),
+        default_value,
+        choices: Some(choices),
     }
 }
 
@@ -88,12 +109,19 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             supports_pitch: false,
             supports_bracket_emotes: false,
             options: vec![
-                option(
+                option_with_choices(
                     "preset",
                     "Preset",
-                    EngineOptionKind::Text,
-                    "Local engine preset label.",
+                    EngineOptionKind::Select,
+                    "Local engine preset.",
                     serde_json::json!("kitten-tts"),
+                    vec![
+                        "kitten-tts".into(),
+                        "piper".into(),
+                        "kokoro".into(),
+                        "chatterbox".into(),
+                        "custom".into(),
+                    ],
                 ),
                 option(
                     "command",
@@ -110,13 +138,30 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                     serde_json::json!([]),
                 ),
             ],
-            voices: vec![voice(
-                "Rosie",
-                "Rosie",
-                Some("en"),
-                Some("KittenTTS fallback voice"),
-                None,
-            )],
+            voices: vec![
+                // KittenTTS
+                voice("Rosie", "Rosie", Some("KittenTTS"), Some("KittenTTS voice (female)"), Some("female")),
+                voice("Clio", "Clio", Some("KittenTTS"), Some("KittenTTS voice (female)"), Some("female")),
+                voice("Hugo", "Hugo", Some("KittenTTS"), Some("KittenTTS voice (male)"), Some("male")),
+                voice("Leo", "Leo", Some("KittenTTS"), Some("KittenTTS voice (male)"), Some("male")),
+                // Piper
+                voice("en_US-amy-medium", "Amy", Some("Piper"), Some("Piper voice (female)"), Some("female")),
+                voice("en_US-lessac-medium", "Lessac", Some("Piper"), Some("Piper voice (female)"), Some("female")),
+                voice("en_US-ryan-medium", "Ryan", Some("Piper"), Some("Piper voice (male)"), Some("male")),
+                voice("en_US-joe-medium", "Joe", Some("Piper"), Some("Piper voice (male)"), Some("male")),
+                voice("en_US-libritts-medium", "LibriTTS", Some("Piper"), Some("Piper voice (mixed)"), Some("neutral")),
+                // Kokoro
+                voice("af_heart", "Heart", Some("Kokoro"), Some("Kokoro voice (American female, flagship)"), Some("female")),
+                voice("af_bella", "Bella", Some("Kokoro"), Some("Kokoro voice (American female)"), Some("female")),
+                voice("af_nicole", "Nicole", Some("Kokoro"), Some("Kokoro voice (American female)"), Some("female")),
+                voice("af_sarah", "Sarah", Some("Kokoro"), Some("Kokoro voice (American female)"), Some("female")),
+                voice("am_adam", "Adam", Some("Kokoro"), Some("Kokoro voice (American male)"), Some("male")),
+                voice("am_michael", "Michael", Some("Kokoro"), Some("Kokoro voice (American male)"), Some("male")),
+                voice("bf_emma", "Emma", Some("Kokoro"), Some("Kokoro voice (British female)"), Some("female")),
+                voice("bm_george", "George", Some("Kokoro"), Some("Kokoro voice (British male)"), Some("male")),
+                // Chatterbox
+                voice("default", "Default", Some("Chatterbox"), Some("Chatterbox default voice"), Some("neutral")),
+            ],
         },
         EngineCatalogEntry {
             engine: TtsEngine::Http,

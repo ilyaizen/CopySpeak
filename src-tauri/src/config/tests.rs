@@ -214,6 +214,9 @@ mod tests {
     fn test_validation_command_empty() {
         let mut config = AppConfig::default();
         config.tts.active_backend = TtsEngine::Local;
+        if let Some(profile) = config.tts.profiles.iter_mut().find(|p| p.id == config.tts.active_profile_id) {
+            profile.engine = TtsEngine::Local;
+        }
         config.tts.command = "".into();
         let result = config.validate();
         assert!(result.is_err());
@@ -227,6 +230,9 @@ mod tests {
     fn test_validation_args_template_missing_placeholders() {
         let mut config = AppConfig::default();
         config.tts.active_backend = TtsEngine::Local;
+        if let Some(profile) = config.tts.profiles.iter_mut().find(|p| p.id == config.tts.active_profile_id) {
+            profile.engine = TtsEngine::Local;
+        }
         config.tts.args_template = vec!["-v".into(), "{voice}".into()];
         let result = config.validate();
         assert!(result.is_err());
@@ -241,9 +247,9 @@ mod tests {
     #[test]
     fn test_default_tts_config_has_one_default_profile() {
         let tts = TtsConfig::default();
-        assert_eq!(tts.schema_version, 2);
+        assert_eq!(tts.schema_version, 3);
         assert_eq!(tts.active_profile_id, "default");
-        assert_eq!(tts.profiles.len(), 1);
+        assert_eq!(tts.profiles.len(), 4);
         assert_eq!(tts.profiles[0].id, "default");
         assert_eq!(tts.profiles[0].engine, TtsEngine::Edge);
     }
