@@ -265,8 +265,10 @@
                         type="number"
                         value={String(localConfig.trigger.double_copy_window_ms)}
                         onchange={(e) => {
+                          if (!localConfig) return;
                           const raw = (e.target as HTMLInputElement).value;
-                          localConfig.trigger.double_copy_window_ms =
+                          const lc = localConfig!;
+                          lc.trigger.double_copy_window_ms =
                             raw === "" ? 1500 : Math.max(100, Number(raw));
                         }}
                         class="w-24"

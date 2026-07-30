@@ -69,9 +69,20 @@
   const activeCatalogEntry = $derived(
     active ? catalog.find((entry) => entry.engine === active.engine) : undefined
   );
-  const activeVoiceCatalog = $derived<VoiceCatalogEntry[]>(
-    active ? catalogVoicesFor(active.engine as TtsEngine) : []
-  );
+  const activeVoiceCatalog = $derived.by<VoiceCatalogEntry[]>(() => {
+    if (!active) return [];
+    const rawVoices = catalogVoicesFor(active.engine as TtsEngine);
+    if (active.engine === "local") {
+      const preset = (active.engine_options as Record<string, unknown> | undefined)?.preset as string | undefined;
+      if (preset === "piper") return rawVoices.filter((v) => v.language === "Piper");
+      if (preset === "kokoro") return rawVoices.filter((v) => v.language === "Kokoro");
+      if (preset === "kitten-tts") return rawVoices.filter((v) => v.language === "KittenTTS");
+      if (preset === "chatterbox") return rawVoices.filter((v) => v.language === "Chatterbox");
+      if (preset === "custom") return rawVoices;
+      return [];
+    }
+    return rawVoices;
+  });
 
   // Passive hint: checks backend (config.json + .env) for credential presence.
   let credentialsResolved = $state<Record<string, boolean>>({});
@@ -149,15 +160,60 @@
     return voicesByEngine[engine] ?? [];
   }
 
+  function applyPresetDefaults(index: number, preset: string) {
+    const profile = localConfig.tts.profiles[index];
+    if (profile.engine !== "local") return;
+    if (preset === "piper") {
+      profile.engine_options = {
+        ...profile.engine_options,
+        command: "uv",
+        args_template: ["run", "--project", "{engine_dir}/piper", "python", "{engine_dir}/piper/scripts/copyspeak-piper.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"]
+      } as VoiceProfile["engine_options"];
+      profile.voice = "en_US-amy-medium";
+      profile.voice_label = "Amy";
+    } else if (preset === "kitten-tts") {
+      profile.engine_options = {
+        ...profile.engine_options,
+        command: "uv",
+        args_template: ["run", "--project", "{engine_dir}/kitten", "python", "{engine_dir}/kitten/scripts/copyspeak-kitten.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"]
+      } as VoiceProfile["engine_options"];
+      profile.voice = "Rosie";
+      profile.voice_label = "Rosie";
+    } else if (preset === "chatterbox") {
+      profile.engine_options = {
+        ...profile.engine_options,
+        command: "uv",
+        args_template: ["run", "--project", "{engine_dir}/chatterbox", "python", "{engine_dir}/chatterbox/scripts/copyspeak-chatterbox.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"]
+      } as VoiceProfile["engine_options"];
+      profile.voice = "default";
+      profile.voice_label = "Default";
+    } else if (preset === "kokoro") {
+      profile.engine_options = {
+        ...profile.engine_options,
+        command: "kokoro-tts",
+        args_template: ["{input}", "{output}", "--voice", "{voice}", "--model", "{engine_dir}/kokoro/models/kokoro-v1.0.onnx", "--voices", "{engine_dir}/kokoro/models/voices-v1.0.bin"]
+      } as VoiceProfile["engine_options"];
+      profile.voice = "af_heart";
+      profile.voice_label = "Heart";
+    }
+  }
+
   function setOptionValue(index: number, key: string, value: unknown) {
     const profile = localConfig.tts.profiles[index];
     const current = profile.engine_options;
     const base = current && typeof current === "object" && !Array.isArray(current) ? current : {};
-    profile.engine_options = {
+    
+    let updatedOptions = {
       ...base,
       engine: profile.engine,
       [key]: value
-    } as VoiceProfile["engine_options"];
+    };
+
+    profile.engine_options = updatedOptions as VoiceProfile["engine_options"];
+
+    if (profile.engine === "local" && key === "preset") {
+      applyPresetDefaults(index, value as string);
+    }
   }
 
   function setVoice(index: number, voiceId: string) {
@@ -189,6 +245,14 @@
     if (activeIndex < 0) return;
     localConfig.tts.profiles[activeIndex].engine = engine;
     resetEngineOptions(activeIndex, engine);
+    // Auto-populate default preset's command/args/voice for local engine
+    if (engine === "local") {
+      const entry = catalog.find((item) => item.engine === engine);
+      const defaultPreset = entry?.options.find((o) => o.key === "preset")?.default_value as string | undefined;
+      if (defaultPreset && defaultPreset !== "custom") {
+        applyPresetDefaults(activeIndex, defaultPreset);
+      }
+    }
     const firstVoice = catalogVoicesFor(engine)[0];
     if (firstVoice && !localConfig.tts.profiles[activeIndex].voice) {
       setVoice(activeIndex, firstVoice.id);
@@ -441,6 +505,16 @@
                         option.key,
                         (e.target as HTMLSelectElement).value === "true"
                       )}
+                    class="w-56"
+                  />
+                {:else if option.kind === "select"}
+                  <Select
+                    options={(option.choices ?? []).map((c) => ({ value: c, label: c }))}
+                    value={String(optionValue(active, option) ?? "")}
+                    onchange={(e) => {
+                      const val = (e.target as HTMLSelectElement).value;
+                      setOptionValue(activeIndex, option.key, val);
+                    }}
                     class="w-56"
                   />
                 {:else if option.kind === "textarea"}

@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-07-30
+
+### Added
+
+- **Select Dropdown for Local CLI Presets**: Replaced the free-text `Preset` field for local CLI engine profiles with a select dropdown listing supported presets (`kitten-tts`, `piper`, `kokoro`, `chatterbox`, `custom`).
+- **Default Presets Auto-population**: Changing the preset automatically populates the default command executable, argument templates, and fallback/default voice for that preset.
+- **Dynamic Voice Catalog Filtering**: The local CLI voice catalog now contains static entries for all supported local engine voices (KittenTTS, Piper, Kokoro, Chatterbox). Selecting a local preset dynamically filters the Voice Picker dropdown to only show the voices belonging to the selected preset.
+- **Persistent Piper daemon** — the Piper voice model now stays loaded in RAM between utterances instead of being re-read from disk on every synthesis.
+  - `scripts/piper/copyspeak-piper.py` gained a `--serve` mode: it loads the model once, prints `READY`, then answers one JSON request per stdin line (`{"text", "output"}`) with `{"ok"}` / `{"ok", "error"}`. Stdin EOF ends the process, so the daemon exits with CopySpeak.
+  - New `src-tauri/src/tts/piper_server.rs` owns the daemon: `prewarm()` starts it on a background thread, `try_synthesize()` does the stdin round-trip, `shutdown()` kills it on quit.
+  - `CliTtsBackend::synthesize` routes Piper through the daemon and falls back to the existing one-shot command whenever it isn't available — engine dirs with a pre-daemon wrapper keep working until `install-piper.ps1 -Force` is rerun.
+  - The fallback is self-healing: a failed daemon request (dead pipe, crashed interpreter) serves that utterance one-shot and respawns the daemon in the background, so the next utterance is back on the fast path without a restart.
+  - Known limitation: `abort_synthesis` does not interrupt synthesis on the daemon path (`ACTIVE_CLI_PID` is only set for one-shot subprocesses). Stop still cuts playback; it just can't cancel an in-flight daemon synthesis, which is ~0.3 s for normal utterances but scales with text length.
+  - `CliTtsBackend::serve_args` derives the daemon argument list from the configured `args_template` by dropping the per-utterance `{input}`/`{output}` flags.
+
+### Changed
+
+- **Engine catalog options**: Updated `EngineOptionDescriptor` in both Rust backend and TypeScript frontend to support optional `choices`, allowing `select` option kinds.
+- **Piper pre-warms at app startup** — `prewarm_piper()` runs from the Tauri `setup` hook when the active profile is a local Piper engine, so the first utterance no longer waits for the model load. A voice or profile switch re-warms after the next utterance.
+- **`--output` is no longer required** by `copyspeak-piper.py` when `--serve` is given.
+
+### Fixed
+
+- **`bun check` type errors** — removed the unused `hotkeyEnabled`/`hotkeyShortcut` bindings in `play-page.svelte`, and guarded the possibly-null `localConfig` in the double-copy-window `onchange` handler in `settings-page.svelte`.
+
 ## [0.1.10] - 2026-07-07
 
 ### Changed
@@ -455,7 +480,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.10...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.11...HEAD
+[0.1.11]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.7...v0.1.8
