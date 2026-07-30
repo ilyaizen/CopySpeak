@@ -3,6 +3,7 @@
 
 use crate::audio::AudioPlayer;
 use crate::config::{self, AppConfig, LlmProviderConfig, PostProcessingProvider};
+use crate::secrets;
 use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -64,7 +65,22 @@ pub fn get_config(config: State<'_, Mutex<AppConfig>>) -> AppConfig {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] get_config called");
     }
-    config.lock().unwrap().clone()
+    let mut cfg = config.lock().unwrap().clone();
+    // Hydrate API keys from .env so the frontend shows them as masked values.
+    // Env vars are loaded by secrets::load_dotenv() at startup and never
+    // written back to config.json — the UI still saves to config.json only.
+    cfg.tts.openai.api_key = secrets::resolve(&cfg.tts.openai.api_key, &["OPENAI_API_KEY"]);
+    cfg.tts.elevenlabs.api_key =
+        secrets::resolve(&cfg.tts.elevenlabs.api_key, &["ELEVENLABS_API_KEY"]);
+    cfg.tts.cartesia.api_key =
+        secrets::resolve(&cfg.tts.cartesia.api_key, &["CARTESIA_API_KEY"]);
+    cfg.tts.google.api_key =
+        secrets::resolve(&cfg.tts.google.api_key, &["GEMINI_API_KEY", "GOOGLE_API_KEY"]);
+    cfg.tts.microsoft.api_key =
+        secrets::resolve(&cfg.tts.microsoft.api_key, &["MICROSOFT_API_KEY", "AZURE_API_KEY"]);
+    cfg.tts.microsoft.endpoint =
+        secrets::resolve(&cfg.tts.microsoft.endpoint, &["MICROSOFT_ENDPOINT"]);
+    cfg
 }
 
 #[tauri::command]
@@ -145,6 +161,30 @@ pub fn set_config(
         let error_messages: Vec<String> = errors.iter().map(|e| e.to_string()).collect();
         return Err(format!("Validation failed: {}", error_messages.join("; ")));
     }
+
+    // Strip API keys that match env vars so they aren't persisted to disk.
+    // Env values are loaded via secrets::load_dotenv() and injected at read
+    // time; saving them would leak secrets and override the env-first contract.
+    fn strip_env(ui_val: &str, env_names: &[&str]) -> String {
+        let env_val = secrets::resolve(&String::new(), env_names);
+        if !env_val.is_empty() && ui_val.trim() == env_val {
+            String::new()
+        } else {
+            ui_val.to_string()
+        }
+    }
+    new_config.tts.openai.api_key =
+        strip_env(&new_config.tts.openai.api_key, &["OPENAI_API_KEY"]);
+    new_config.tts.elevenlabs.api_key =
+        strip_env(&new_config.tts.elevenlabs.api_key, &["ELEVENLABS_API_KEY"]);
+    new_config.tts.cartesia.api_key =
+        strip_env(&new_config.tts.cartesia.api_key, &["CARTESIA_API_KEY"]);
+    new_config.tts.google.api_key =
+        strip_env(&new_config.tts.google.api_key, &["GEMINI_API_KEY", "GOOGLE_API_KEY"]);
+    new_config.tts.microsoft.api_key =
+        strip_env(&new_config.tts.microsoft.api_key, &["MICROSOFT_API_KEY", "AZURE_API_KEY"]);
+    new_config.tts.microsoft.endpoint =
+        strip_env(&new_config.tts.microsoft.endpoint, &["MICROSOFT_ENDPOINT"]);
 
     let (old_mode, old_volume, old_autostart, old_debug_mode, old_listen_enabled, old_hotkey) = {
         let cfg = config.lock().unwrap();

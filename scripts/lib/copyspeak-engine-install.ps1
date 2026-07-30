@@ -3,6 +3,15 @@
 .SYNOPSIS
     Shared helpers for CopySpeak uv-based engine installers.
 
+.PROGRESS-MARKERS
+    Installers emit three machine-parseable line prefixes on stdout so the
+    CopySpeak frontend can track state transitions through the streamed event
+    pipe (everything else is free-form log noise):
+        [STEP] <name>   - a phase started (name = 'voice:<id>' for per-voice
+                          Piper downloads, or 'engine'/'model' for shared steps)
+        [DONE] <name>   - a phase completed
+        [ERROR] <name>  - a phase failed (trailing ': <detail>' optional)
+
 .DESCRIPTION
     Dot-source this file from an engine installer:
         . "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
@@ -77,6 +86,27 @@ function Test-AudioFile {
     }
     Write-Host "  OK: audio file $Path ($size bytes)" -ForegroundColor Green
     return $true
+}
+
+# Write %LOCALAPPDATA%\CopySpeak\engines\<engine>\manifest.json recording which
+# voices are installed. The frontend reads it to pre-check the "add a voice
+# later" dialog. Call once at the end of a successful install / voice re-run;
+# the caller is the source of truth for the voice list (Piper: present .onnx
+# basenames; Kitten/Kokoro: all catalog voices since the model is shared).
+function Write-EngineManifest {
+    param(
+        [Parameter(Mandatory)][string]$EngineDir,
+        [Parameter(Mandatory)][string[]]$VoicesInstalled,
+        [string]$Version = "1.0"
+    )
+    $manifest = [ordered]@{
+        version          = $Version
+        voices_installed = @($VoicesInstalled)
+        installed_at     = (Get-Date).ToString("o")
+    }
+    $manifestPath = Join-Path $EngineDir "manifest.json"
+    $manifest | ConvertTo-Json -Depth 5 | Set-Content -Path $manifestPath -Encoding utf8
+    Write-Host "  [DONE] manifest ($($manifest.voices_installed.Count) voices)" -ForegroundColor Green
 }
 
 # ── CLI chrome (shared banner + permission prompt) ──────────────────────────

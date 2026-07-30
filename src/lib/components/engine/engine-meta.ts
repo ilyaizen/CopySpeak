@@ -77,8 +77,8 @@ export const CLOUD_ENGINES: EngineSetupEntry[] = [
 ];
 
 // Local engines: installed via a PowerShell installer (uv-based). The installer's
-// own smoke test is the verification path — there is no runtime per-preset test.
-export const LOCAL_PRESETS: EngineSetupEntry[] = [
+// own smoke test is the verification path — there is no runtime per-engine test.
+export const LOCAL_ENGINES: EngineSetupEntry[] = [
   {
     id: "kitten",
     kind: "local",
@@ -99,13 +99,6 @@ export const LOCAL_PRESETS: EngineSetupEntry[] = [
     installerId: "kokoro",
     credential: "none",
     docsUrl: "https://github.com/hexgrad/kokoro"
-  },
-  {
-    id: "chatterbox",
-    kind: "local",
-    installerId: "chatterbox",
-    credential: "none",
-    docsUrl: "https://github.com/resemble-ai/chatterbox"
   }
 ];
 
@@ -119,7 +112,7 @@ export const UV_ENTRY: EngineSetupEntry = {
   docsUrl: "https://docs.astral.sh/uv/"
 };
 
-export const ALL_SETUP_ENTRIES: EngineSetupEntry[] = [...CLOUD_ENGINES, ...LOCAL_PRESETS, UV_ENTRY];
+export const ALL_SETUP_ENTRIES: EngineSetupEntry[] = [...CLOUD_ENGINES, ...LOCAL_ENGINES, UV_ENTRY];
 
 export function findSetupEntry(id: string): EngineSetupEntry | undefined {
   return ALL_SETUP_ENTRIES.find((e) => e.id === id);

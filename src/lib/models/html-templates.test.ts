@@ -39,7 +39,10 @@ describe("HTML Template Backend", () => {
       cartesia: 0,
       google: 0,
       microsoft: 0,
-      edge: 0
+      edge: 0,
+      kitten: 0,
+      piper: 0,
+      kokoro: 0
     },
     by_format: { mp3: 1, wav: 0, ogg: 0, flac: 0 },
     by_hour: { 12: 1 },

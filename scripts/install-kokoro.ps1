@@ -33,7 +33,10 @@
 param(
     [switch]$Force,
     [switch]$SmokeTest,
-    [switch]$SkipModelDownload
+    [switch]$SkipModelDownload,
+    # App-driven voice selection: bypasses the interactive menu. The first id
+    # is the profile-snippet default; all Kokoro voices share the one model.
+    [string[]]$Voices
 )
 
 $ErrorActionPreference = "Stop"
@@ -46,14 +49,19 @@ Require-Uv
 
 # Interactive force prompt: -Force bypasses; a blank Enter keeps the install.
 $alreadyInstalled = [bool](Get-Command kokoro-tts -ErrorAction SilentlyContinue)
+# -Voices (app-driven) is non-interactive: never destructively reinstall.
 $effectiveForce = if ($Force) {
     $true
+} elseif ($Voices) {
+    $false
 } elseif (-not $alreadyInstalled) {
     $false
 } else {
     Get-Confirmation -Prompt "kokoro-tts is already installed. Reinstall from scratch?" -DefaultYes:$false
 }
 
+Write-Host ""
+Write-Host "  [STEP] engine" -ForegroundColor Yellow
 if (-not $effectiveForce -and $alreadyInstalled) {
     Write-Host "  kokoro-tts already installed." -ForegroundColor Green
     Write-Host "  Use -Force or answer Yes to reinstall." -ForegroundColor Yellow
@@ -75,6 +83,7 @@ $modelUrl = "https://github.com/nazdridoy/kokoro-tts/releases/download/v1.0.0/ko
 $voicesUrl = "https://github.com/nazdridoy/kokoro-tts/releases/download/v1.0.0/voices-v1.0.bin"
 
 if (-not $SkipModelDownload) {
+    Write-Host "  [STEP] model" -ForegroundColor Yellow
     if (-not (Test-Path $modelFile)) {
         Write-Host ""
         Write-Host "  Downloading kokoro-v1.0.onnx (~310 MB, full quality)..." -ForegroundColor Yellow
@@ -115,7 +124,9 @@ $kokoroVoices = @(
     @{ Id = "bf_emma";     Label = "Emma (British female)" },
     @{ Id = "bm_george";   Label = "George (British male)" }
 )
-$chosenVoice = Select-VoiceFromMenu -Title "Pick a default Kokoro voice" -Voices $kokoroVoices -Default "af_heart"
+# All listed voices share the one model file; the default is just the
+# profile-snippet pick.
+$chosenVoice = if ($Voices -and $Voices.Count -gt 0) { $Voices[0] } else { Select-VoiceFromMenu -Title "Pick a default Kokoro voice" -Voices $kokoroVoices -Default "af_heart" }
 
 $profileJson = @"
 {
@@ -146,6 +157,11 @@ if ($SmokeTest -and (Get-Command kokoro-tts -ErrorAction SilentlyContinue) -and 
     if (-not (Test-AudioFile -Path $out)) { Write-Host "  Smoke test FAILED." -ForegroundColor Red; exit 1 }
 }
 
+if ((Test-Path $modelFile) -and (Test-Path $voicesFile)) {
+    Write-EngineManifest -EngineDir $EngineDir -VoicesInstalled ($kokoroVoices.Id)
+}
+
 Write-Host ""
+Write-Host "  [DONE] engine" -ForegroundColor Green
 Write-Host "  Kokoro installed." -ForegroundColor Green
 Write-ProfileSnippet -Json $profileJson

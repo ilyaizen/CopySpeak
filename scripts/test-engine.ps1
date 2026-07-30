@@ -4,7 +4,7 @@
     Smoke-tests an installed CopySpeak uv engine by synthesizing one WAV.
 
 .PARAMETER Engine
-    Engine name under %LOCALAPPDATA%\CopySpeak\engines (e.g. chatterbox).
+    Engine name under %LOCALAPPDATA%\CopySpeak\engines (e.g. piper).
 
 .PARAMETER Text
     Text to synthesize. Default: "CopySpeak engine test".
@@ -13,7 +13,7 @@
     Voice name. Default: default.
 
 .EXAMPLE
-    ./scripts/test-engine.ps1 -Engine chatterbox
+    ./scripts/test-engine.ps1 -Engine piper
 #>
 
 param(

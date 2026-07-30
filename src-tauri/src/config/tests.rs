@@ -247,9 +247,9 @@ mod tests {
     #[test]
     fn test_default_tts_config_has_one_default_profile() {
         let tts = TtsConfig::default();
-        assert_eq!(tts.schema_version, 3);
+        assert_eq!(tts.schema_version, 4);
         assert_eq!(tts.active_profile_id, "default");
-        assert_eq!(tts.profiles.len(), 4);
+        assert_eq!(tts.profiles.len(), 5);
         assert_eq!(tts.profiles[0].id, "default");
         assert_eq!(tts.profiles[0].engine, TtsEngine::Edge);
     }
@@ -297,7 +297,7 @@ mod tests {
             },
             text_processing: crate::config::ProfileTextProcessing::default(),
             engine_options: ProfileEngineOptions::Http(HttpEngineOptions {
-                body_template: Some(r#"{"model":"chatterbox"}"#.into()),
+                body_template: Some(r#"{"model":"tts"}"#.into()),
                 ..HttpEngineOptions::default()
             }),
         };
