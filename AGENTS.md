@@ -94,9 +94,11 @@ Use running Tauri dev server.
 ## Git Workflow
 
 - **NEVER commit directly to `main`** - all changes via PRs
+- **Always create a new branch** before starting any new feature, fix, refactor, or version work. Never work on an existing branch that isn't yours.
 - Work on feature branches: `feature/`, `fix/`, `refactor/`, `docs/`
 - Use versioned dev branches for releases: `develop/0.1.0`, `develop/0.2.0`, etc.
 - Open PRs targeting `main` (or `develop/*` for larger efforts)
+- **Bump version when finishing a task**: after completing work and before opening a PR, run `bun run bump` (patch), `bun run bump:minor`, or `bun run bump:major` to bump all version files (package.json, Cargo.toml, tauri.conf.json, version.ts, README.md). Choose the bump type based on the scope of changes. Commit the version bump as part of the PR.
 
 ## Best Practices
 
