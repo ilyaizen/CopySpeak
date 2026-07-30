@@ -20,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Piper pre-warms at app startup** — `prewarm_piper()` runs from the Tauri `setup` hook when the active profile is a local Piper engine, so the first utterance no longer waits for the model load. A voice or profile switch re-warms after the next utterance.
 - **`--output` is no longer required** by `copyspeak-piper.py` when `--serve` is given.
 
+### Fixed
+
+- **`bun check` type errors** — removed the unused `hotkeyEnabled`/`hotkeyShortcut` bindings in `play-page.svelte`, and guarded the possibly-null `localConfig` in the double-copy-window `onchange` handler in `settings-page.svelte`.
+
 ## [0.1.10] - 2026-07-07
 
 ### Changed
