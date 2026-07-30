@@ -279,6 +279,19 @@ fn local_engine_spec(engine: &str) -> Option<LocalEngineSpec> {
             ],
             voice: "af_heart".into(),
         },
+        "pocket" => LocalEngineSpec {
+            command: "pocket-tts".into(),
+            args_template: vec![
+                "generate".into(),
+                "--voice".into(),
+                "{voice}".into(),
+                "--text".into(),
+                "{raw_text}".into(),
+                "--output-path".into(),
+                "{output}".into(),
+            ],
+            voice: "default".into(),
+        },
         _ => return None,
     };
     Some(spec)

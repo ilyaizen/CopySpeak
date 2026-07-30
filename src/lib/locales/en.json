@@ -384,6 +384,7 @@
     "localEngine": {
       "voice": "Voice",
       "kittenInstall": "Run ./install-kittentts.ps1 from the project root to install Kitten TTS. Models are downloaded automatically on first use (~25-80MB depending on variant).",
+      "pocketInstall": "Run ./install-pocket.ps1 from the project root to install Pocket TTS. Installs the pocket-tts CLI tool via uv.",
       "piperModels": "Model files (.onnx + .onnx.json) must be placed in {dataDir}. Download from",
       "commandPreview": "Command Preview",
       "tempDirectory": "resolves to your system temp directory at runtime.",
