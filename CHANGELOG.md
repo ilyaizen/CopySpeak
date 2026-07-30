@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Select Dropdown for Local CLI Presets**: Replaced the free-text `Preset` field for local CLI engine profiles with a select dropdown listing supported presets (`kitten-tts`, `piper`, `kokoro`, `chatterbox`, `custom`).
+- **Default Presets Auto-population**: Changing the preset automatically populates the default command executable, argument templates, and fallback/default voice for that preset.
+- **Dynamic Voice Catalog Filtering**: The local CLI voice catalog now contains static entries for all supported local engine voices (KittenTTS, Piper, Kokoro, Chatterbox). Selecting a local preset dynamically filters the Voice Picker dropdown to only show the voices belonging to the selected preset.
 - **Persistent Piper daemon** — the Piper voice model now stays loaded in RAM between utterances instead of being re-read from disk on every synthesis.
   - `scripts/piper/copyspeak-piper.py` gained a `--serve` mode: it loads the model once, prints `READY`, then answers one JSON request per stdin line (`{"text", "output"}`) with `{"ok"}` / `{"ok", "error"}`. Stdin EOF ends the process, so the daemon exits with CopySpeak.
   - New `src-tauri/src/tts/piper_server.rs` owns the daemon: `prewarm()` starts it on a background thread, `try_synthesize()` does the stdin round-trip, `shutdown()` kills it on quit.
@@ -19,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Engine catalog options**: Updated `EngineOptionDescriptor` in both Rust backend and TypeScript frontend to support optional `choices`, allowing `select` option kinds.
 - **Piper pre-warms at app startup** — `prewarm_piper()` runs from the Tauri `setup` hook when the active profile is a local Piper engine, so the first utterance no longer waits for the model load. A voice or profile switch re-warms after the next utterance.
 - **`--output` is no longer required** by `copyspeak-piper.py` when `--serve` is given.
 
