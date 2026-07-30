@@ -11,6 +11,7 @@ pub mod google;
 pub mod http;
 pub mod microsoft;
 pub mod openai;
+pub mod piper_server;
 
 use thiserror::Error;
 

@@ -265,6 +265,7 @@
                         type="number"
                         value={String(localConfig.trigger.double_copy_window_ms)}
                         onchange={(e) => {
+                          if (!localConfig) return;
                           const raw = (e.target as HTMLInputElement).value;
                           const lc = localConfig!;
                           lc.trigger.double_copy_window_ms =
