@@ -37,6 +37,7 @@ fn installer_script_for(engine: &str) -> Result<&'static str, String> {
         "piper" => Ok("install-piper.ps1"),
         "kokoro" | "kokoro-tts" => Ok("install-kokoro.ps1"),
         "edge" | "edge-tts" => Ok("install-edge-tts.ps1"),
+        "pocket" | "pocket-tts" => Ok("install-pocket.ps1"),
         other => Err(format!("unknown engine installer: {other}")),
     }
 }

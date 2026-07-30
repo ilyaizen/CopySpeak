@@ -99,6 +99,13 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
     installerId: "kokoro",
     credential: "none",
     docsUrl: "https://github.com/hexgrad/kokoro"
+  },
+  {
+    id: "pocket",
+    kind: "local",
+    installerId: "pocket",
+    credential: "none",
+    docsUrl: "https://github.com/nickolas777/pocket-tts"
   }
 ];
 
