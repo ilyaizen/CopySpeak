@@ -4,13 +4,16 @@
   // component renders; the page/engine-setup orchestrates.
 
   import { _ } from "svelte-i18n";
-  import { Key, Download, Loader2, ExternalLink, CheckCircle2, XCircle } from "@lucide/svelte";
+  import { Key, Download, Loader2, ExternalLink, CheckCircle2, XCircle, Eye, EyeOff } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import { openExternal } from "$lib/utils/external-link";
   import type { AppConfig } from "$lib/types";
   import type { EngineSetupEntry, TestState, InstallState } from "./engine-meta";
+
+  // Track which fields are revealed (per credential target, keyed by field name)
+  let revealedFields = $state<Record<string, boolean>>({});
 
   let {
     entry,
@@ -68,7 +71,7 @@
             <Key size={14} class="text-muted-foreground shrink-0" />
             <Input
               id="api-key"
-              type="password"
+              type={revealedFields[entry.credentialTarget! + "-api_key"] ? "text" : "password"}
               placeholder={entry.placeholderKey
                 ? $_(`engine.apiSetup.${entry.placeholderKey}`)
                 : ""}
@@ -80,6 +83,21 @@
                 }
               }}
             />
+            <button
+              type="button"
+              class="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer transition-colors"
+              onclick={() => {
+                const key = entry.credentialTarget! + "-api_key";
+                revealedFields = { ...revealedFields, [key]: !revealedFields[key] };
+              }}
+              aria-label={revealedFields[entry.credentialTarget! + "-api_key"] ? "Hide API key" : "Show API key"}
+            >
+              {#if revealedFields[entry.credentialTarget! + "-api_key"]}
+                <EyeOff size={14} />
+              {:else}
+                <Eye size={14} />
+              {/if}
+            </button>
           </div>
         </div>
       {/if}

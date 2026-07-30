@@ -1,7 +1,7 @@
 // Generic HTTP-serving TTS backend.
 //
 // Points at any local or remote TTS server (e.g. an OpenAI-compatible
-// /audio/speech endpoint, or a Chatterbox HTTP server). The URL, method,
+// /audio/speech endpoint). The URL, method,
 // headers, and JSON body are templated from config. Intentionally NOT a full
 // request-templating language: a server with an exotic contract should expose a
 // normalizing wrapper instead of growing this backend.

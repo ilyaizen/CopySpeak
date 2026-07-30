@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **First-class local TTS engines** — Kitten, Piper, and Kokoro are now dedicated `TtsEngine` variants instead of `Local` presets, each with its own hard-coded CLI contract, per-engine options struct, and catalog entry (voices, labels, docs).
+  - `TtsEngine` gains `Kitten`/`Piper`/`Kokoro` (serde `"kitten"`/`"piper"`/`"kokoro"`); new `KittenEngineOptions`/`PiperEngineOptions`/`KokoroEngineOptions` and matching `ProfileEngineOptions` arms (matches_engine/from_engine_map/Serialize/Deserialize/accessors).
+  - Synthesis dispatch (`helpers.rs`) shells out each via its verified installer wrapper contract (Kitten/Piper via `uv run … copyspeak-*.py --text-file`; Kokoro via `kokoro-tts … --model/--voices`). Per-engine knobs (`model`/`length_scale`/`speed`) are exposed but not yet threaded to the CLI (`ponytail:`-marked).
+  - Bundled first-class Kitten profile (`default_kitten_profile`) seeded into fresh installs and added to existing configs by the v3→v4 migration.
+- **Built-in profile templates** — a "New profile from template" picker in the profile manager copies a fresh `VoiceProfile` seed (Kitten-Rosie, Piper-Amy, Kokoro-Heart) into profiles; a one-time copy, never a live reference.
+- **Local CLI "Start from" template** — the custom-CLI escape hatch gains a Kitten/Piper/Kokoro-style prefill select for command/arguments/voice.
+- **In-app engine installer dialog** — Kitten/Piper/Kokoro installs now run streamed in a dismissible dialog: per-voice selection (Piper per-voice downloads; Kitten/Kokoro shared model), live log, per-voice status (pending/installing/done/failed), and per-voice Retry. Reopens to add voices later, pre-checking already-installed voices.
+  - New `install-dialog.svelte` + `install-store.svelte.ts` (persistent `install-progress` listener that survives the dialog being dismissed); `-Voices` param and `[STEP]`/`[DONE]`/`[ERROR]` markers on the three install scripts; shared `Write-EngineManifest` helper writes `%LOCALAPPDATA%\CopySpeak\engines\<engine>\manifest.json`.
+  - New `installed_voices` Rust command reads the manifest for the pre-check.
+
+### Changed
+
+- **"Preset" vocabulary split** — `LOCAL_PRESETS` (the setup/installer registry) renamed `LOCAL_ENGINES`; the `preset` field on `LocalEngineOptions` and its catalog option are deleted. "Preset" now means a built-in profile template.
+- **Config schema v4** — `TtsConfig::default().schema_version` → 4; new idempotent `migrate_add_kitten_profile_v4` staged migration adds the bundled Kitten profile (user profiles untouched, no remapping). Legacy top-level `preset`/`command`/`args_template`/`voice` fields retained for pre-v2 deserialization.
+- The Local catalog entry is reduced to `command`/`args_template` only (voice is free text).
+- **Installer no longer opens a detached console** — `install_engine` spawns the PowerShell script with piped stdout/stderr + `CREATE_NO_WINDOW`, streaming lines as `install-progress` Tauri events (terminal event carries `done`/`exit_code`). uv stays a fire-and-forget launch (no voice concept).
+
+### Removed
+
+- **Chatterbox** — removed entirely (voice-cloning shape doesn't fit the generic voice model): catalog voice, `LOCAL_ENGINES` entry, `install.rs` script mapping, `scripts/install-chatterbox.ps1`, `scripts/chatterbox/`, the `copyspeak-chatterbox.py` path rewrite in `WRAPPERS`, i18n keys, and doc references.
+
+### Breaking Changes
+
+- `TtsEngine` enum/union gains three variants; any exhaustive match (Rust) or `Record<TtsEngine, _>` (TS) must cover them.
+- `LocalEngineOptions.preset` field removed; configs carrying it deserialize with the field ignored.
+
 ## [0.1.11] - 2026-07-30
 
 ### Added

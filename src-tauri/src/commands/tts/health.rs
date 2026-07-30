@@ -30,12 +30,19 @@ pub fn check_command_exists(command: String) -> Result<CommandExistsResult, Stri
         log::debug!("[IPC] check_command_exists called for: {}", command);
     }
 
-    // Try to find the command in PATH using `which` on Unix or `where` on Windows
-    let result = if cfg!(target_os = "windows") {
-        std::process::Command::new("where").arg(&command).output()
-    } else {
-        std::process::Command::new("which").arg(&command).output()
+    // Try to find the command in PATH using `which` on Unix or `where` on Windows.
+    // CREATE_NO_WINDOW prevents a flash of terminal window on Windows.
+    #[cfg(target_os = "windows")]
+    let result = {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        std::process::Command::new("where")
+            .arg(&command)
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
     };
+    #[cfg(not(target_os = "windows"))]
+    let result = std::process::Command::new("which").arg(&command).output();
 
     match result {
         Ok(output) => {
@@ -62,6 +69,9 @@ fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
         "google" => Ok(TtsEngine::Google),
         "microsoft" => Ok(TtsEngine::Microsoft),
         "edge" => Ok(TtsEngine::Edge),
+        "kitten" => Ok(TtsEngine::Kitten),
+        "piper" => Ok(TtsEngine::Piper),
+        "kokoro" => Ok(TtsEngine::Kokoro),
         _ => Err(format!("unknown engine: {}", engine)),
     }
 }
@@ -95,6 +105,9 @@ pub fn test_tts_engine(config: State<'_, Mutex<AppConfig>>) -> Result<TtsHealthR
         crate::config::TtsEngine::Microsoft => {
             format!("Microsoft ({})", tts_config.microsoft.model)
         }
+        crate::config::TtsEngine::Kitten => "Kitten TTS".to_string(),
+        crate::config::TtsEngine::Piper => "Piper".to_string(),
+        crate::config::TtsEngine::Kokoro => "Kokoro".to_string(),
         crate::config::TtsEngine::Edge => {
             format!("Edge-TTS ({})", tts_config.edge.voice)
         }
@@ -123,6 +136,9 @@ pub fn test_tts_engine_config(
         TtsEngine::Http => format!("HTTP ({})", tts_config.http.url_template),
         TtsEngine::Google => format!("Google ({})", tts_config.google.model),
         TtsEngine::Microsoft => format!("Microsoft ({})", tts_config.microsoft.model),
+        TtsEngine::Kitten => "Kitten TTS".to_string(),
+        TtsEngine::Piper => "Piper".to_string(),
+        TtsEngine::Kokoro => "Kokoro".to_string(),
         TtsEngine::Edge => format!("Edge-TTS ({})", tts_config.edge.voice),
     };
     health_result(backend, backend_name)
@@ -134,8 +150,7 @@ pub fn test_tts_engine_config(
 /// UI verbatim. Unlike `health_check` (which only probes binary/path presence
 /// for local engines), this proves the engine actually produces audio.
 ///
-/// `engine` is the preset id from the Engines page: piper | kokoro | kitten |
-/// chatterbox.
+/// `engine` is the preset id from the Engines page: piper | kokoro | kitten.
 #[tauri::command]
 pub fn test_local_engine(engine: String) -> Result<TtsHealthResult, String> {
     let spec = match local_engine_spec(&engine) {
@@ -246,11 +261,6 @@ fn local_engine_spec(engine: &str) -> Option<LocalEngineSpec> {
             command: "uv".into(),
             args_template: uv_run("kitten", "copyspeak-kitten.py"),
             voice: "Rosie".into(),
-        },
-        "chatterbox" => LocalEngineSpec {
-            command: "uv".into(),
-            args_template: uv_run("chatterbox", "copyspeak-chatterbox.py"),
-            voice: "default".into(),
         },
         "kokoro" => LocalEngineSpec {
             command: "kokoro-tts".into(),

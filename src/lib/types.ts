@@ -53,7 +53,10 @@ export type TtsEngine =
   | "cartesia"
   | "google"
   | "microsoft"
-  | "edge";
+  | "edge"
+  | "kitten"
+  | "piper"
+  | "kokoro";
 
 export interface OpenAIConfig {
   api_key: string;

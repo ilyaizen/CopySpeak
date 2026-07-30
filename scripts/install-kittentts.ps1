@@ -22,7 +22,11 @@
 
 param(
     [switch]$Force,
-    [switch]$SmokeTest
+    [switch]$SmokeTest,
+    # App-driven voice selection: bypasses the interactive menu. The first id
+    # is the profile-snippet default; all KittenTTS voices ship with the one
+    # shared model, so -Voices only selects the default here.
+    [string[]]$Voices
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,8 +38,11 @@ Write-EngineBanner -Title "Kitten TTS Installer"
 Require-Uv
 
 # Interactive force prompt: -Force bypasses; a blank Enter keeps the install.
+# -Voices (app-driven) is non-interactive: never destructively reinstall.
 $effectiveForce = if ($Force) {
     $true
+} elseif ($Voices) {
+    $false
 } else {
     Get-Confirmation -Prompt "Reinstall KittenTTS from scratch? (deletes the existing engine dir)" -DefaultYes:$false
 }
@@ -48,6 +55,7 @@ New-EngineProject -EngineDir $EngineDir -Force:$effectiveForce
 $WheelUrl = "https://github.com/KittenML/KittenTTS/releases/download/0.8.1/kittentts-0.8.1-py3-none-any.whl"
 
 Write-Host ""
+Write-Host "  [STEP] engine" -ForegroundColor Yellow
 Write-Host "  Installing KittenTTS + soundfile..." -ForegroundColor Gray
 Invoke-Uv add --project $EngineDir $WheelUrl "soundfile"
 
@@ -62,6 +70,7 @@ $srcWrapper = Join-Path $PSScriptRoot "kitten/copyspeak-kitten.py"
 $dstWrapper = Join-Path $scriptsDir "copyspeak-kitten.py"
 Copy-Item $srcWrapper $dstWrapper -Force
 Write-Host "  Wrapper installed: $dstWrapper" -ForegroundColor Gray
+Write-Host "  [DONE] engine" -ForegroundColor Green
 
 # KittenTTS ships 8 built-in English voices; the model auto-downloads on
 # first synth. Voice ids are case-sensitive (capitalized first letter).
@@ -75,7 +84,9 @@ $kittenVoices = @(
     @{ Id = "Hugo";   Label = "Hugo (male)" },
     @{ Id = "Leo";    Label = "Leo (male)" }
 )
-$chosenVoice = Select-VoiceFromMenu -Title "Pick a default KittenTTS voice" -Voices $kittenVoices -Default "Rosie"
+# All 8 voices ship with the shared model, so the manifest lists every voice
+# once the package is installed (the model auto-downloads on first synth).
+$chosenVoice = if ($Voices -and $Voices.Count -gt 0) { $Voices[0] } else { Select-VoiceFromMenu -Title "Pick a default KittenTTS voice" -Voices $kittenVoices -Default "Rosie" }
 
 if ($SmokeTest) {
     Write-Host ""
@@ -103,6 +114,8 @@ $profileJson = @"
   }
 }
 "@
+
+Write-EngineManifest -EngineDir $EngineDir -VoicesInstalled ($kittenVoices.Id)
 
 Write-Host ""
 Write-Host "  Kitten TTS installed at: $EngineDir" -ForegroundColor Green

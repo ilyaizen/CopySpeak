@@ -342,10 +342,6 @@
       "apiKey": "API Key",
       "endpoint": "Endpoint"
     },
-    "chatterbox": {
-      "title": "Chatterbox",
-      "description": "Local: Open-source conversational TTS. Requires the chatterbox CLI."
-    },
     "http": {
       "title": "HTTP",
       "description": "Cloud: Send synthesis requests to a custom HTTP endpoint configured per profile."
@@ -480,7 +476,14 @@
     "installerSmokeTestHint": "Install, then press Test to verify the engine synthesizes audio.",
     "installerLaunched": "Installer launched",
     "installFailed": "Install failed",
-    "saveBeforeTestFailed": "Save your changes before testing."
+    "saveBeforeTestFailed": "Save your changes before testing.",
+    "installDone": "Install complete",
+    "retry": "Retry",
+    "reinstall": "Reinstall",
+    "voiceInstalled": "Installed",
+    "sharedModelHint": "One shared model download; every listed voice is included.",
+    "installedAllVoices": "Installed \u2014 all voices available.",
+    "piperPerVoiceHint": "Select voices to download (each is a separate model)."
   },
   "play": {
     "title": "Play",

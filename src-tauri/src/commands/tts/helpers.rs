@@ -45,6 +45,42 @@ impl Drop for SynthesisGuard {
 
 // ── Backend / voice / engine helpers ────────────────────────────────────────
 
+/// Hard-coded CLI invocation for a first-class local engine (Kitten/Piper/Kokoro).
+/// Unlike `Local`, the command and args are fixed by the installer's wrapper
+/// contract — not user-editable. Returns `None` for non-local engines and for
+/// `Local` itself. `{engine_dir}`/`{input}`/`{voice}`/`{output}` are resolved by
+/// `CliTtsBackend::build_args` at run time.
+fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
+    let (cmd, args): (&str, Vec<&str>) = match engine {
+        TtsEngine::Kitten => (
+            "uv",
+            vec![
+                "run", "--project", "{engine_dir}/kitten", "python",
+                "{engine_dir}/kitten/scripts/copyspeak-kitten.py",
+                "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}",
+            ],
+        ),
+        TtsEngine::Piper => (
+            "uv",
+            vec![
+                "run", "--project", "{engine_dir}/piper", "python",
+                "{engine_dir}/piper/scripts/copyspeak-piper.py",
+                "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}",
+            ],
+        ),
+        TtsEngine::Kokoro => (
+            "kokoro-tts",
+            vec![
+                "{input}", "{output}", "--voice", "{voice}",
+                "--model", "{engine_dir}/kokoro/models/kokoro-v1.0.onnx",
+                "--voices", "{engine_dir}/kokoro/models/voices-v1.0.bin",
+            ],
+        ),
+        _ => return None,
+    };
+    Some((cmd.into(), args.into_iter().map(String::from).collect()))
+}
+
 /// Create a TTS backend instance based on the active backend config.
 pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<dyn TtsBackend> {
     match active {
@@ -52,6 +88,11 @@ pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<
             tts_config.command.clone(),
             tts_config.args_template.clone(),
         )),
+        TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro => {
+            // Command/args are fixed by the installer wrapper contract.
+            let (command, args) = first_class_local_cli(active).unwrap();
+            Box::new(CliTtsBackend::new(command, args))
+        }
         TtsEngine::OpenAI => Box::new(crate::tts::openai::OpenAiTtsBackend::new(
             tts_config.openai.clone(),
         )),
@@ -91,6 +132,11 @@ pub(crate) fn create_backend_from_effective(
                 .filter(|items| !items.is_empty())
                 .unwrap_or_else(|| tts_config.args_template.clone());
             Box::new(CliTtsBackend::new(command, args_template))
+        }
+        TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro => {
+            // Voice comes from eff.voice (profile-owned); CLI is fixed.
+            let (command, args) = first_class_local_cli(&eff.engine).unwrap();
+            Box::new(CliTtsBackend::new(command, args))
         }
         TtsEngine::OpenAI => {
             let mut config = tts_config.openai.clone();
@@ -219,29 +265,19 @@ pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> S
         TtsEngine::Google => tts_config.google.voice_name.clone(),
         TtsEngine::Microsoft => tts_config.microsoft.voice_name.clone(),
         TtsEngine::Edge => tts_config.edge.voice.clone(),
+        // First-class local engines have no global config; voice is profile-owned.
+        TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro => String::new(),
     }
 }
 
 /// Get the engine string identifier for a backend (used in history filenames).
 /// Returns preset name for local engines (piper, kokoro), or engine name for cloud.
-pub(crate) fn engine_identifier(active: &TtsEngine, tts_config: &TtsConfig) -> String {
+pub(crate) fn engine_identifier(active: &TtsEngine) -> String {
     match active {
-        TtsEngine::Local => {
-            // Preset lives on the active profile's local options now; the
-            // top-level tts_config.preset is a legacy field that's empty for
-            // profile-based configs (would yield a leading-dash filename).
-            let preset = resolve_effective(tts_config)
-                .engine_options
-                .local()
-                .and_then(|o| o.preset.clone())
-                .unwrap_or_else(|| tts_config.preset.trim().to_string());
-            match preset.as_str() {
-                "kokoro-tts" => "kokoro".to_string(),
-                "pocket-tts" => "pocket".to_string(),
-                "" => "local".to_string(),
-                p => p.to_string(),
-            }
-        }
+        TtsEngine::Local => "local".to_string(),
+        TtsEngine::Kitten => "kitten".to_string(),
+        TtsEngine::Piper => "piper".to_string(),
+        TtsEngine::Kokoro => "kokoro".to_string(),
         TtsEngine::OpenAI => "openai".to_string(),
         TtsEngine::ElevenLabs => "elevenlabs".to_string(),
         TtsEngine::Cartesia => "cartesia".to_string(),
@@ -313,6 +349,17 @@ pub(crate) fn voice_display_name(
                 .unwrap_or(voice_id)
                 .to_lowercase()
         }
+        TtsEngine::Kitten => voice_id.to_lowercase(),
+        TtsEngine::Piper => voice_id
+            .split('-')
+            .nth(1)
+            .unwrap_or(voice_id)
+            .to_lowercase(),
+        TtsEngine::Kokoro => voice_id
+            .split('_')
+            .nth(1)
+            .unwrap_or(voice_id)
+            .to_lowercase(),
         TtsEngine::Http | TtsEngine::Google | TtsEngine::Microsoft => {
             slugify_filename_part(voice_id)
         }
@@ -406,5 +453,8 @@ pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
         TtsEngine::Google => "google",
         TtsEngine::Microsoft => "microsoft",
         TtsEngine::Edge => "edge",
+        TtsEngine::Kitten => "kitten",
+        TtsEngine::Piper => "piper",
+        TtsEngine::Kokoro => "kokoro",
     }
 }

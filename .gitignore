@@ -39,3 +39,4 @@ DO_NOT_TOUCH/
 .tokensave
 .claude/.headroom_wrap_marker.json
 .firecrawl
+/.scratch

@@ -16,6 +16,11 @@ pub enum TtsEngine {
     Google,
     Microsoft,
     Edge,
+    // First-class local engines (§1): own hard-coded CLI contract, not
+    // user-editable like `Local`. Voice id lives on VoiceProfile.voice.
+    Kitten,
+    Piper,
+    Kokoro,
 }
 
 impl Default for TtsEngine {
@@ -379,8 +384,6 @@ impl Default for ProfileTextProcessing {
 #[serde(default)]
 pub struct LocalEngineOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub preset: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub command: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub args_template: Option<Vec<String>>,
@@ -469,6 +472,33 @@ pub struct EdgeEngineOptions {
     pub voice: Option<String>,
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct KittenEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    // ponytail: HF model id exposed per spec; not yet threaded to the wrapper's
+    // --model flag (proven-working default omits it). Wire when a use case needs it.
+    pub model: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PiperEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    // ponytail: speed knob exposed per spec; wrapper (copyspeak-piper.py) has no
+    // length_scale flag yet, so not threaded. Wire when the wrapper grows it.
+    pub length_scale: Option<f32>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct KokoroEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    // ponytail: speed knob exposed per spec; kokoro-tts binary (install-kokoro.ps1
+    // smoke test) takes no --speed flag, so not threaded. Wire when it does.
+    pub speed: Option<f32>,
+}
+
 /// Engine-specific, non-secret synthesis knobs carried by a voice profile.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ProfileEngineOptions {
@@ -480,6 +510,9 @@ pub enum ProfileEngineOptions {
     Google(GoogleEngineOptions),
     Microsoft(MicrosoftEngineOptions),
     Edge(EdgeEngineOptions),
+    Kitten(KittenEngineOptions),
+    Piper(PiperEngineOptions),
+    Kokoro(KokoroEngineOptions),
     /// Untagged legacy bag captured at load; resolved during migration.
     Legacy(serde_json::Map<String, serde_json::Value>),
 }
@@ -507,6 +540,9 @@ impl ProfileEngineOptions {
                 | (Self::Google(_), TtsEngine::Google)
                 | (Self::Microsoft(_), TtsEngine::Microsoft)
                 | (Self::Edge(_), TtsEngine::Edge)
+                | (Self::Kitten(_), TtsEngine::Kitten)
+                | (Self::Piper(_), TtsEngine::Piper)
+                | (Self::Kokoro(_), TtsEngine::Kokoro)
         )
     }
 
@@ -543,6 +579,9 @@ impl ProfileEngineOptions {
                 Self::Microsoft(serde_json::from_value(value).unwrap_or_default())
             }
             TtsEngine::Edge => Self::Edge(serde_json::from_value(value).unwrap_or_default()),
+            TtsEngine::Kitten => Self::Kitten(serde_json::from_value(value).unwrap_or_default()),
+            TtsEngine::Piper => Self::Piper(serde_json::from_value(value).unwrap_or_default()),
+            TtsEngine::Kokoro => Self::Kokoro(serde_json::from_value(value).unwrap_or_default()),
         }
     }
 
@@ -621,6 +660,9 @@ impl Serialize for ProfileEngineOptions {
             Self::Google(o) => ("google", serde_json::to_value(o)),
             Self::Microsoft(o) => ("microsoft", serde_json::to_value(o)),
             Self::Edge(o) => ("edge", serde_json::to_value(o)),
+            Self::Kitten(o) => ("kitten", serde_json::to_value(o)),
+            Self::Piper(o) => ("piper", serde_json::to_value(o)),
+            Self::Kokoro(o) => ("kokoro", serde_json::to_value(o)),
             // Legacy bags serialize back as their raw untagged object.
             Self::Legacy(map) => {
                 return serde_json::Value::Object(map.clone()).serialize(serializer);
@@ -664,6 +706,9 @@ impl<'de> Deserialize<'de> for ProfileEngineOptions {
             Some("google") => Ok(Self::from_engine_map(&TtsEngine::Google, map)),
             Some("microsoft") => Ok(Self::from_engine_map(&TtsEngine::Microsoft, map)),
             Some("edge") => Ok(Self::from_engine_map(&TtsEngine::Edge, map)),
+            Some("kitten") => Ok(Self::from_engine_map(&TtsEngine::Kitten, map)),
+            Some("piper") => Ok(Self::from_engine_map(&TtsEngine::Piper, map)),
+            Some("kokoro") => Ok(Self::from_engine_map(&TtsEngine::Kokoro, map)),
             _ => Ok(Self::Legacy(map)),
         }
     }
@@ -854,14 +899,48 @@ fn default_google_profile() -> VoiceProfile {
     }
 }
 
+/// Stable id for the bundled first-class Kitten profile (v4 migration marker).
+pub(crate) const KITTEN_DEFAULT_PROFILE_ID: &str = "profile-kitten-default";
+
+fn default_kitten_profile() -> VoiceProfile {
+    VoiceProfile {
+        id: KITTEN_DEFAULT_PROFILE_ID.into(),
+        name: "Kitten TTS".into(),
+        description: None,
+        engine: TtsEngine::Kitten,
+        voice: "Rosie".into(),
+        voice_label: Some("Rosie".into()),
+        speed: 1.0,
+        pitch: 1.0,
+        effects: ProfileEffects::default(),
+        text_processing: ProfileTextProcessing::default(),
+        engine_options: ProfileEngineOptions::Kitten(KittenEngineOptions::default()),
+    }
+}
+
+/// v3 → v4: add the bundled first-class Kitten profile so the new engine is
+/// reachable out-of-box. Idempotent by profile id; no existing profile data is
+/// touched (ticket 07: user profiles left untouched).
+pub(crate) fn migrate_add_kitten_profile_v4(tts: &mut TtsConfig) {
+    let has_kitten = tts
+        .profiles
+        .iter()
+        .any(|p| p.id == KITTEN_DEFAULT_PROFILE_ID);
+    if !has_kitten {
+        tts.profiles.push(default_kitten_profile());
+    }
+    tts.schema_version = 4;
+}
+
 impl Default for TtsConfig {
     fn default() -> Self {
         Self {
-            schema_version: 3,
+            schema_version: 4,
             active_backend: TtsEngine::Edge,
             active_profile_id: "default".into(),
             profiles: vec![
                 VoiceProfile::default(),
+                default_kitten_profile(),
                 default_elevenlabs_profile(),
                 default_cartesia_profile(),
                 default_google_profile(),
@@ -912,6 +991,9 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             TtsEngine::Google => tts.google.voice_name.clone(),
             TtsEngine::Microsoft => tts.microsoft.voice_name.clone(),
             TtsEngine::Edge => tts.edge.voice.clone(),
+            // First-class local engines can't appear in a legacy (schema_version
+            // 0) config; defensive empty string only.
+            TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro => String::new(),
         };
 
         let voice_label = catalog_voice_label(&tts.active_backend, &voice).or_else(|| match tts.active_backend {
@@ -980,7 +1062,6 @@ fn absolutize_wrapper_path(arg: &str) -> Option<String> {
     const WRAPPERS: &[(&str, &str)] = &[
         ("copyspeak-kitten.py", "kitten"),
         ("copyspeak-piper.py", "piper"),
-        ("copyspeak-chatterbox.py", "chatterbox"),
     ];
     for (name, subdir) in WRAPPERS {
         if arg == &format!("scripts/{name}") {
@@ -1059,6 +1140,9 @@ impl TtsConfig {
             TtsEngine::Edge => {
                 errors.extend(self.edge.validate());
             }
+            // First-class local engines have no credential/global config to
+            // validate; command/voice come from the installer contract + catalog.
+            TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro => {}
         }
 
         errors

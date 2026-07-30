@@ -547,7 +547,7 @@ fn handle_playback_output(
 ) -> Result<(), String> {
     let envelope = extract_envelope_or_default(wav_bytes);
 
-    let engine_id = engine_identifier(active_backend, tts_config);
+    let engine_id = engine_identifier(active_backend);
     let voice_name = voice_display_name(active_backend, tts_config, voice, voice_label);
     let audio_ext = backend_arc.file_extension().to_string();
 
@@ -686,7 +686,7 @@ pub async fn speak_queued(
     };
 
     let engine_str_val = engine_str(&active_backend);
-    let engine_id_val = engine_identifier(&active_backend, &tts_config);
+    let engine_id_val = engine_identifier(&active_backend);
 
     // Synthesize and play each fragment
     for (index, fragment) in fragments.iter().enumerate() {
@@ -894,7 +894,7 @@ pub async fn speak_history_entry(
     let backend: Box<dyn TtsBackend> = create_backend(&active_backend, &tts_config);
     let voice = original_voice;
     let engine_str_val = engine_str(&active_backend);
-    let engine_id = engine_identifier(&active_backend, &tts_config);
+    let engine_id = engine_identifier(&active_backend);
     let voice_name = voice_display_name(&active_backend, &tts_config, &voice, None);
     let audio_ext = backend.file_extension().to_string();
 

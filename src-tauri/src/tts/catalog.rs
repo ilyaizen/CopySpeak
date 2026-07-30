@@ -63,24 +63,6 @@ fn option(
     }
 }
 
-fn option_with_choices(
-    key: &str,
-    label: &str,
-    kind: EngineOptionKind,
-    help: &str,
-    default_value: serde_json::Value,
-    choices: Vec<String>,
-) -> EngineOptionDescriptor {
-    EngineOptionDescriptor {
-        key: key.into(),
-        label: label.into(),
-        kind,
-        help: help.into(),
-        default_value,
-        choices: Some(choices),
-    }
-}
-
 fn voice(
     id: &str,
     label: &str,
@@ -103,26 +85,12 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
         EngineCatalogEntry {
             engine: TtsEngine::Local,
             label: "Local CLI".into(),
-            description: "Run a local command-line TTS wrapper.".into(),
+            description: "Run any local command-line TTS wrapper. Bring your own script or binary.".into(),
             docs_url: "docs/profile-engine-settings.md#engine-matrix".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
             supports_bracket_emotes: false,
             options: vec![
-                option_with_choices(
-                    "preset",
-                    "Preset",
-                    EngineOptionKind::Select,
-                    "Local engine preset.",
-                    serde_json::json!("kitten-tts"),
-                    vec![
-                        "kitten-tts".into(),
-                        "piper".into(),
-                        "kokoro".into(),
-                        "chatterbox".into(),
-                        "custom".into(),
-                    ],
-                ),
                 option(
                     "command",
                     "Command",
@@ -138,35 +106,76 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                     serde_json::json!([]),
                 ),
             ],
+            // Voice is free text on the Local CLI card, not catalog-driven.
+            voices: vec![],
+        },
+        EngineCatalogEntry {
+            engine: TtsEngine::Kitten,
+            label: "Kitten TTS".into(),
+            description: "Free local TTS via KittenTTS — one shared 25MB model, 8 built-in voices.".into(),
+            docs_url: "https://github.com/KittenML/KittenTTS".into(),
+            supports_voice_refresh: false,
+            supports_pitch: false,
+            supports_bracket_emotes: false,
+            options: vec![option(
+                "model",
+                "Model",
+                EngineOptionKind::Text,
+                "Hugging Face model id.",
+                serde_json::json!("KittenML/kitten-tts-nano-0.8"),
+            )],
             voices: vec![
-                // KittenTTS
-                voice("Rosie", "Rosie", Some("KittenTTS"), Some("KittenTTS voice (female)"), Some("female")),
-                voice("Clio", "Clio", Some("KittenTTS"), Some("KittenTTS voice (female)"), Some("female")),
-                voice("Hugo", "Hugo", Some("KittenTTS"), Some("KittenTTS voice (male)"), Some("male")),
-                voice("Leo", "Leo", Some("KittenTTS"), Some("KittenTTS voice (male)"), Some("male")),
-                // Piper
-                voice("en_US-amy-medium", "Amy", Some("Piper"), Some("Piper voice (female)"), Some("female")),
-                voice("en_US-lessac-medium", "Lessac", Some("Piper"), Some("Piper voice (female)"), Some("female")),
-                voice("en_US-ryan-medium", "Ryan", Some("Piper"), Some("Piper voice (male)"), Some("male")),
-                voice("en_US-joe-medium", "Joe", Some("Piper"), Some("Piper voice (male)"), Some("male")),
-                voice("en_US-libritts-medium", "LibriTTS", Some("Piper"), Some("Piper voice (mixed)"), Some("neutral")),
-                // Kokoro
-                voice("af_heart", "Heart", Some("Kokoro"), Some("Kokoro voice (American female, flagship)"), Some("female")),
-                voice("af_bella", "Bella", Some("Kokoro"), Some("Kokoro voice (American female)"), Some("female")),
-                voice("af_nicole", "Nicole", Some("Kokoro"), Some("Kokoro voice (American female)"), Some("female")),
-                voice("af_sarah", "Sarah", Some("Kokoro"), Some("Kokoro voice (American female)"), Some("female")),
-                voice("am_adam", "Adam", Some("Kokoro"), Some("Kokoro voice (American male)"), Some("male")),
-                voice("am_michael", "Michael", Some("Kokoro"), Some("Kokoro voice (American male)"), Some("male")),
-                voice("bf_emma", "Emma", Some("Kokoro"), Some("Kokoro voice (British female)"), Some("female")),
-                voice("bm_george", "George", Some("Kokoro"), Some("Kokoro voice (British male)"), Some("male")),
-                // Chatterbox
-                voice("default", "Default", Some("Chatterbox"), Some("Chatterbox default voice"), Some("neutral")),
+                voice("Rosie", "Rosie", Some("en"), None, Some("female")),
+                voice("Bella", "Bella", Some("en"), None, Some("female")),
+                voice("Luna", "Luna", Some("en"), None, Some("female")),
+                voice("Kiki", "Kiki", Some("en"), None, Some("female")),
+                voice("Jasper", "Jasper", Some("en"), None, Some("male")),
+                voice("Bruno", "Bruno", Some("en"), None, Some("male")),
+                voice("Hugo", "Hugo", Some("en"), None, Some("male")),
+                voice("Leo", "Leo", Some("en"), None, Some("male")),
+            ],
+        },
+        EngineCatalogEntry {
+            engine: TtsEngine::Piper,
+            label: "Piper".into(),
+            description: "Free local TTS via Piper — per-voice download, ~20-100MB each.".into(),
+            docs_url: "https://github.com/OHF-Voice/piper1-gpl".into(),
+            supports_voice_refresh: false,
+            supports_pitch: false,
+            supports_bracket_emotes: false,
+            options: vec![],
+            voices: vec![
+                voice("en_US-amy-medium", "Amy", Some("en-US"), None, Some("female")),
+                voice("en_US-lessac-medium", "Lessac", Some("en-US"), None, Some("female")),
+                voice("en_US-ryan-medium", "Ryan", Some("en-US"), None, Some("male")),
+                voice("en_US-joe-medium", "Joe", Some("en-US"), None, Some("male")),
+                voice("en_US-libritts-medium", "LibriTTS", Some("en-US"), None, Some("neutral")),
+            ],
+        },
+        EngineCatalogEntry {
+            engine: TtsEngine::Kokoro,
+            label: "Kokoro".into(),
+            description: "Free local TTS via Kokoro — one shared model, curated voice set.".into(),
+            docs_url: "https://github.com/hexgrad/kokoro".into(),
+            supports_voice_refresh: false,
+            supports_pitch: false,
+            supports_bracket_emotes: false,
+            options: vec![],
+            voices: vec![
+                voice("af_heart", "Heart", Some("en-US"), None, Some("female")),
+                voice("af_bella", "Bella", Some("en-US"), None, Some("female")),
+                voice("af_nicole", "Nicole", Some("en-US"), None, Some("female")),
+                voice("af_sarah", "Sarah", Some("en-US"), None, Some("female")),
+                voice("am_adam", "Adam", Some("en-US"), None, Some("male")),
+                voice("am_michael", "Michael", Some("en-US"), None, Some("male")),
+                voice("bf_emma", "Emma", Some("en-GB"), None, Some("female")),
+                voice("bm_george", "George", Some("en-GB"), None, Some("male")),
             ],
         },
         EngineCatalogEntry {
             engine: TtsEngine::Http,
             label: "HTTP".into(),
-            description: "Generic HTTP-serving TTS backend (OpenAI-compatible, Chatterbox server, etc.).".into(),
+            description: "Generic HTTP-serving TTS backend (OpenAI-compatible, etc.).".into(),
             docs_url: "docs/profile-engine-settings.md#engine-matrix".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
@@ -567,6 +576,9 @@ mod tests {
             TtsEngine::Google,
             TtsEngine::Microsoft,
             TtsEngine::Edge,
+            TtsEngine::Kitten,
+            TtsEngine::Piper,
+            TtsEngine::Kokoro,
         ] {
             assert_eq!(
                 entries
@@ -576,7 +588,7 @@ mod tests {
                 1
             );
         }
-        assert_eq!(entries.len(), 8);
+        assert_eq!(entries.len(), 11);
     }
 
     #[test]

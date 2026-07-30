@@ -31,7 +31,11 @@
 param(
     [switch]$Force,
     [switch]$SmokeTest,
-    [switch]$SkipVoiceDownload
+    [switch]$SkipVoiceDownload,
+    # App-driven voice selection: bypasses the interactive menu. The first id
+    # is the profile-snippet default; all ids are downloaded. Manual runs omit
+    # -Voices and get the numbered menu instead.
+    [string[]]$Voices
 )
 
 $ErrorActionPreference = "Stop"
@@ -43,8 +47,11 @@ Write-EngineBanner -Title "Piper TTS Installer"
 Require-Uv
 
 # Interactive force prompt: -Force bypasses; a blank Enter keeps the install.
+# -Voices (app-driven) is non-interactive: never destructively reinstall.
 $effectiveForce = if ($Force) {
     $true
+} elseif ($Voices) {
+    $false
 } else {
     Get-Confirmation -Prompt "Reinstall Piper from scratch? (deletes the existing engine dir)" -DefaultYes:$false
 }
@@ -81,28 +88,39 @@ $piperVoices = @(
 )
 $voiceBaseUrl = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US"
 
-# Resolve which voice to use. Skip the menu only when the caller explicitly
-# opted out of voice download AND a model already exists.
+# Resolve the set of voices to install. -Voices (app-driven) bypasses the
+# interactive menu; otherwise the manual menu picks one. The first id is the
+# profile-snippet default.
 $existingModel = Get-ChildItem -Path $voicesDir -Filter "*.onnx" -ErrorAction SilentlyContinue | Select-Object -First 1
-$chosenVoice = if ($SkipVoiceDownload -and $existingModel) {
-    [IO.Path]::GetFileNameWithoutExtension($existingModel.Name)
+$wantedVoices = if ($Voices -and $Voices.Count -gt 0) {
+    @($Voices)
+} elseif ($SkipVoiceDownload -and $existingModel) {
+    @([IO.Path]::GetFileNameWithoutExtension($existingModel.Name))
 } else {
-    Select-VoiceFromMenu -Title "Pick an English Piper voice" -Voices $piperVoices -Default "en_US-amy-medium"
+    @(Select-VoiceFromMenu -Title "Pick an English Piper voice" -Voices $piperVoices -Default "en_US-amy-medium")
 }
+$chosenVoice = $wantedVoices[0]
 
-# Download the chosen model pair if missing (and not opted out).
-$modelPath = Join-Path $voicesDir "$chosenVoice.onnx"
-$configPath = Join-Path $voicesDir "$chosenVoice.onnx.json"
-if (-not $SkipVoiceDownload -and (-not (Test-Path $modelPath) -or -not (Test-Path $configPath))) {
-    # Derive <voice>/<quality> from "en_US-<voice>-<quality>" for the URL.
-    $parts = $chosenVoice -split "-"
+# Download each wanted model pair if missing. Per-voice [STEP]/[DONE]/[ERROR]
+# markers let the frontend track per-voice status through the event stream.
+foreach ($v in $wantedVoices) {
+    $modelPath = Join-Path $voicesDir "$v.onnx"
+    $configPath = Join-Path $voicesDir "$v.onnx.json"
+    if ((Test-Path $modelPath) -and (Test-Path $configPath)) {
+        Write-Host "  [DONE] voice:$v (already present)" -ForegroundColor Green
+        continue
+    }
+    if ($SkipVoiceDownload) {
+        Write-Host "  [ERROR] voice:$v (skipped, -SkipVoiceDownload)" -ForegroundColor Red
+        continue
+    }
+    Write-Host "  [STEP] voice:$v" -ForegroundColor Yellow
+    $parts = $v -split "-"
     if ($parts.Count -ge 3) {
         $voiceName = $parts[1]
         $quality = $parts[2]
-        $onnxUrl = "$voiceBaseUrl/$voiceName/$quality/$chosenVoice.onnx"
-        $jsonUrl = "$voiceBaseUrl/$voiceName/$quality/$chosenVoice.onnx.json"
-        Write-Host ""
-        Write-Host "  Downloading voice model: $chosenVoice" -ForegroundColor Yellow
+        $onnxUrl = "$voiceBaseUrl/$voiceName/$quality/$v.onnx"
+        $jsonUrl = "$voiceBaseUrl/$voiceName/$quality/$v.onnx.json"
         Write-Host "    -> $modelPath" -ForegroundColor Gray
         try {
             if (-not (Test-Path $modelPath)) {
@@ -111,14 +129,13 @@ if (-not $SkipVoiceDownload -and (-not (Test-Path $modelPath) -or -not (Test-Pat
             if (-not (Test-Path $configPath)) {
                 Invoke-WebRequest -Uri $jsonUrl -OutFile $configPath -UseBasicParsing
             }
-            Write-Host "  Voice downloaded." -ForegroundColor Green
+            Write-Host "  [DONE] voice:$v" -ForegroundColor Green
         } catch {
-            Write-Host "  WARNING: voice download failed: $_" -ForegroundColor Red
-            Write-Host "  You can download $chosenVoice manually from https://huggingface.co/rhasspy/piper-voices" -ForegroundColor Gray
+            Write-Host "  [ERROR] voice:$v : $_" -ForegroundColor Red
         }
+    } else {
+        Write-Host "  [ERROR] voice:$v (unrecognized id shape)" -ForegroundColor Red
     }
-} else {
-    Write-Host "  Voice model already present: $chosenVoice" -ForegroundColor Green
 }
 
 Write-Host ""
@@ -126,7 +143,8 @@ Write-Host "  Voices directory: $voicesDir" -ForegroundColor Gray
 Write-Host "  More voices:      https://github.com/OHF-Voice/piper1-gpl#voices" -ForegroundColor Gray
 
 if ($SmokeTest) {
-    if (-not (Test-Path $modelPath)) {
+    $smokeModel = Join-Path $voicesDir "$chosenVoice.onnx"
+    if (-not (Test-Path $smokeModel)) {
         Write-Host "  Smoke test skipped: no .onnx model in $voicesDir" -ForegroundColor Yellow
     } else {
         $testOut = Join-Path $outputDir "test.wav"
@@ -155,6 +173,12 @@ $profileJson = @"
 }
 "@
 
+# Record installed voices (source of truth = present .onnx basenames) so the
+# frontend can pre-check the "add a voice later" dialog.
+$installedVoices = @(Get-ChildItem -Path $voicesDir -Filter "*.onnx" -ErrorAction SilentlyContinue | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension($_.Name) })
+Write-EngineManifest -EngineDir $EngineDir -VoicesInstalled $installedVoices
+
 Write-Host ""
+Write-Host "  [DONE] engine" -ForegroundColor Green
 Write-Host "  Piper installed at: $EngineDir" -ForegroundColor Green
 Write-ProfileSnippet -Json $profileJson
