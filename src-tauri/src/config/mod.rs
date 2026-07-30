@@ -215,7 +215,7 @@ impl Default for AppConfig {
                 pitch: 1.0,
             },
             hud: HudConfig {
-                enabled: true,
+                enabled: false,
                 position: HudPosition::Preset(HudPresetPosition::BottomLeft),
                 width: 300,
                 height: 100,

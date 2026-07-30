@@ -165,7 +165,14 @@ pub fn install_engine(
 /// Resolve the shell: pwsh if available, else Windows PowerShell.
 #[cfg(target_os = "windows")]
 fn which_shell() -> &'static str {
-    if Command::new("pwsh.exe").arg("--version").output().is_ok() {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    if Command::new("pwsh.exe")
+        .arg("--version")
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .is_ok()
+    {
         "pwsh.exe"
     } else {
         "powershell.exe"

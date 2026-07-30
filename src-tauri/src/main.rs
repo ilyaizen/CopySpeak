@@ -489,23 +489,14 @@ fn main() {
             }
 
             // --- Position HUD window and make it click-through at startup ---
-            // ponytail: HUD stays visible but parked off-screen; show_* repositions on-screen.
-            // Avoids the WebView2 transparent-window hidden→visible repaint bug.
+            // HUD starts off-screen (configured via tauri.conf.json x/y) to avoid
+            // flashing on-screen before the page renders transparent. show_*
+            // functions reposition it on-screen when content needs to display.
             if let Some(hud_window) = app.get_webview_window("hud") {
                 let _ = hud_window.set_ignore_cursor_events(true);
-                // Refocus main window (HUD briefly steals focus)
                 if let Some(main_window) = app.get_webview_window("main") {
                     let _ = main_window.set_focus();
                 }
-                // ponytail: Park HUD off-screen after a delay so WebView2 controller
-                // finishes init while the window is still on-screen. show_* repositions.
-                let app_h = app.handle().clone();
-                std::thread::spawn(move || {
-                    std::thread::sleep(std::time::Duration::from_millis(500));
-                    if let Some(w) = app_h.get_webview_window("hud") {
-                        hud::move_hud_offscreen(&w);
-                    }
-                });
             }
 
 

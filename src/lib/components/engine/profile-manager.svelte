@@ -259,11 +259,17 @@
     localConfig.tts.profiles[index].engine_options = defaults as VoiceProfile["engine_options"];
   }
 
-  function selectProfile(id: string) {
+  async function selectProfile(id: string) {
     localConfig.tts.active_profile_id = id;
     const p = profiles.find((x: VoiceProfile) => x.id === id);
     if (p && p.id !== "default") {
       localConfig.tts.active_backend = p.engine;
+    }
+    // Persist immediately — stateful like the footer profile selector
+    try {
+      await invoke("set_active_profile", { id });
+    } catch (e) {
+      console.error("Failed to set active profile:", e);
     }
   }
 

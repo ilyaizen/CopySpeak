@@ -55,6 +55,8 @@
         "url": "/hud",
         "width": 300,
         "height": 140,
+        "x": 10000,
+        "y": 10000,
         "decorations": false,
         "transparent": true,
         "shadow": false,

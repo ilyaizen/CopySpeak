@@ -30,12 +30,19 @@ pub fn check_command_exists(command: String) -> Result<CommandExistsResult, Stri
         log::debug!("[IPC] check_command_exists called for: {}", command);
     }
 
-    // Try to find the command in PATH using `which` on Unix or `where` on Windows
-    let result = if cfg!(target_os = "windows") {
-        std::process::Command::new("where").arg(&command).output()
-    } else {
-        std::process::Command::new("which").arg(&command).output()
+    // Try to find the command in PATH using `which` on Unix or `where` on Windows.
+    // CREATE_NO_WINDOW prevents a flash of terminal window on Windows.
+    #[cfg(target_os = "windows")]
+    let result = {
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        std::process::Command::new("where")
+            .arg(&command)
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
     };
+    #[cfg(not(target_os = "windows"))]
+    let result = std::process::Command::new("which").arg(&command).output();
 
     match result {
         Ok(output) => {
