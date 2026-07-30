@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.11] - 2026-07-30
+
 ### Added
 
 - **Select Dropdown for Local CLI Presets**: Replaced the free-text `Preset` field for local CLI engine profiles with a select dropdown listing supported presets (`kitten-tts`, `piper`, `kokoro`, `chatterbox`, `custom`).
@@ -478,7 +480,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.10...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.11...HEAD
+[0.1.11]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.7...v0.1.8
