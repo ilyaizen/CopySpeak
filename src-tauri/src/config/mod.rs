@@ -283,6 +283,14 @@ fn migrate_playback_to_profiles_v3(cfg: &mut AppConfig) {
     log::info!("Config migrated to schema v3 (playback→profile)");
 }
 
+/// Migrate v3 → v4: add the bundled first-class Kitten profile so the new
+/// engine is reachable out-of-box. One-time and idempotent — no existing
+/// profile data is modified.
+fn migrate_add_kitten_profile_v4(cfg: &mut AppConfig) {
+    tts::migrate_add_kitten_profile_v4(&mut cfg.tts);
+    log::info!("Config migrated to schema v4 (add bundled Kitten profile)");
+}
+
 /// Returns the config file path: %APPDATA%/CopySpeak/config.json
 pub fn config_path() -> PathBuf {
     let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
@@ -306,6 +314,11 @@ pub fn load_or_default() -> AppConfig {
             // into the active profile (sole source of truth going forward).
             if cfg.tts.schema_version < 3 {
                 migrate_playback_to_profiles_v3(&mut cfg);
+            }
+
+            // Migrate v3 → v4: add the bundled first-class Kitten profile.
+            if cfg.tts.schema_version < 4 {
+                migrate_add_kitten_profile_v4(&mut cfg);
             }
 
             cfg

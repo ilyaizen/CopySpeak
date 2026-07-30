@@ -9,7 +9,7 @@
 // the HUD component registers handlers for `hud:*` events.
 
 use crate::audio::AmplitudeEnvelope;
-use crate::commands::helpers::{engine_identifier, resolve_effective};
+use crate::commands::helpers::resolve_effective;
 use crate::config::{AppConfig, HudConfig, HudPosition, HudPresetPosition, TtsEngine};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Monitor, PhysicalPosition, WebviewWindow};
@@ -41,12 +41,10 @@ fn title_case(value: &str) -> String {
 fn get_provider_voice(cfg: &AppConfig) -> (Option<String>, Option<String>) {
     let eff = resolve_effective(&cfg.tts);
     let provider = match eff.engine {
-        TtsEngine::Local => match engine_identifier(&eff.engine, &cfg.tts).as_str() {
-            "piper" => "Piper".to_string(),
-            "kokoro" => "Kokoro".to_string(),
-            "pocket" => "Pocket".to_string(),
-            _ => "Local".to_string(),
-        },
+        TtsEngine::Local => "Local".to_string(),
+        TtsEngine::Kitten => "Kitten TTS".to_string(),
+        TtsEngine::Piper => "Piper".to_string(),
+        TtsEngine::Kokoro => "Kokoro".to_string(),
         TtsEngine::OpenAI => "OpenAI".to_string(),
         TtsEngine::ElevenLabs => "ElevenLabs".to_string(),
         TtsEngine::Cartesia => "Cartesia".to_string(),

@@ -710,6 +710,7 @@ fn main() {
             commands::list_tts_engines,
             commands::list_tts_voices,
             commands::install_engine,
+            commands::installed_voices,
             commands::test_tts_engine_config,
             commands::test_local_engine,
             // Post-processing models

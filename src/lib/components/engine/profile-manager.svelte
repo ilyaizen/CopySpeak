@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
+  import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "$lib/components/ui/dropdown-menu/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Select } from "$lib/components/ui/select/index.js";
   import { Slider } from "$lib/components/ui/slider/index.js";
@@ -11,7 +12,8 @@
     Download,
     Upload,
     ExternalLink,
-    AlertTriangle
+    AlertTriangle,
+    Plus
   } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
   import ProfileExportDialog from "./profile-export-dialog.svelte";
@@ -37,7 +39,10 @@
     "cartesia",
     "google",
     "microsoft",
-    "edge"
+    "edge",
+    "kitten",
+    "piper",
+    "kokoro"
   ];
   const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy"];
 
@@ -51,6 +56,36 @@
 
   type DialogMode = "export" | "import" | "delete";
   let dialogMode = $state<DialogMode | null>(null);
+
+  // §5: built-in profile templates — selecting one copies a fresh VoiceProfile
+  // seed into profiles (new id), never a live reference. Mirrors the Rust
+  // default_*_profile() pattern generalized to an on-demand list.
+  const BUILTIN_PROFILE_PRESETS: {
+    name: string;
+    engine: TtsEngine;
+    voice: string;
+    voiceLabel: string;
+    engineOptions: Record<string, unknown>;
+  }[] = [
+    { name: "Kitten TTS — Rosie", engine: "kitten", voice: "Rosie", voiceLabel: "Rosie", engineOptions: { engine: "kitten" } },
+    { name: "Piper — Amy", engine: "piper", voice: "en_US-amy-medium", voiceLabel: "Amy", engineOptions: { engine: "piper" } },
+    { name: "Kokoro — Heart", engine: "kokoro", voice: "af_heart", voiceLabel: "Heart", engineOptions: { engine: "kokoro" } }
+  ];
+
+  // §6: "Start from" prefill for the Local CLI escape hatch — copies
+  // command/args/voice into the profile; editing never touches the template.
+  const LOCAL_TEMPLATES: {
+    id: string;
+    label: string;
+    command: string;
+    args_template: string[];
+    voice: string;
+  }[] = [
+    { id: "blank", label: "Custom (blank)", command: "", args_template: [], voice: "" },
+    { id: "kitten", label: "Kitten-style", command: "uv", args_template: ["run", "--project", "{engine_dir}/kitten", "python", "{engine_dir}/kitten/scripts/copyspeak-kitten.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"], voice: "Rosie" },
+    { id: "piper", label: "Piper-style", command: "uv", args_template: ["run", "--project", "{engine_dir}/piper", "python", "{engine_dir}/piper/scripts/copyspeak-piper.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"], voice: "en_US-amy-medium" },
+    { id: "kokoro", label: "Kokoro-style", command: "kokoro-tts", args_template: ["{input}", "{output}", "--voice", "{voice}", "--model", "{engine_dir}/kokoro/models/kokoro-v1.0.onnx", "--voices", "{engine_dir}/kokoro/models/voices-v1.0.bin"], voice: "af_heart" }
+  ];
 
   const engineOptions = $derived(
     catalog.length
@@ -77,7 +112,6 @@
       if (preset === "piper") return rawVoices.filter((v) => v.language === "Piper");
       if (preset === "kokoro") return rawVoices.filter((v) => v.language === "Kokoro");
       if (preset === "kitten-tts") return rawVoices.filter((v) => v.language === "KittenTTS");
-      if (preset === "chatterbox") return rawVoices.filter((v) => v.language === "Chatterbox");
       if (preset === "custom") return rawVoices;
       return [];
     }
@@ -179,14 +213,6 @@
       } as VoiceProfile["engine_options"];
       profile.voice = "Rosie";
       profile.voice_label = "Rosie";
-    } else if (preset === "chatterbox") {
-      profile.engine_options = {
-        ...profile.engine_options,
-        command: "uv",
-        args_template: ["run", "--project", "{engine_dir}/chatterbox", "python", "{engine_dir}/chatterbox/scripts/copyspeak-chatterbox.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"]
-      } as VoiceProfile["engine_options"];
-      profile.voice = "default";
-      profile.voice_label = "Default";
     } else if (preset === "kokoro") {
       profile.engine_options = {
         ...profile.engine_options,
@@ -307,6 +333,40 @@
     dialogMode = null;
     toast.success(`Imported "${imported.name}"`);
   }
+
+  function newFromPreset(preset: (typeof BUILTIN_PROFILE_PRESETS)[number]) {
+    const profile: VoiceProfile = {
+      id: makeId(),
+      name: preset.name,
+      description: null,
+      engine: preset.engine,
+      voice: preset.voice,
+      voice_label: preset.voiceLabel,
+      speed: 1.0,
+      pitch: 1.0,
+      effects: { enabled: true, active_effect: "walkie_talkie" },
+      engine_options: preset.engineOptions
+    };
+    localConfig.tts.profiles = [...profiles, profile];
+    selectProfile(profile.id);
+    toast.success(`Created "${profile.name}"`);
+  }
+
+  function applyLocalTemplate(id: string) {
+    if (activeIndex < 0) return;
+    const profile = localConfig.tts.profiles[activeIndex];
+    if (profile.engine !== "local") return;
+    const t = LOCAL_TEMPLATES.find((x) => x.id === id);
+    if (!t) return;
+    profile.engine_options = {
+      ...profile.engine_options,
+      engine: "local",
+      command: t.command,
+      args_template: t.args_template
+    };
+    profile.voice = t.voice;
+    profile.voice_label = t.voice || null;
+  }
 </script>
 
 <div class="border-border overflow-hidden rounded-lg border">
@@ -319,6 +379,22 @@
       </p>
     </div>
     <div class="flex gap-1.5">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          class="border-input bg-background hover:bg-accent inline-flex h-8 items-center justify-center rounded-md border px-2"
+          title="New profile from template"
+          aria-label="New profile from template"
+        >
+          <Plus size={14} />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" class="min-w-48">
+          {#each BUILTIN_PROFILE_PRESETS as preset (preset.name)}
+            <DropdownMenuItem onclick={() => newFromPreset(preset)}>
+              {preset.name}
+            </DropdownMenuItem>
+          {/each}
+        </DropdownMenuContent>
+      </DropdownMenu>
       <Button variant="outline" size="sm" onclick={duplicateActive} title="Duplicate">
         <Copy size={14} />
       </Button>
@@ -387,6 +463,20 @@
             {/if}
           </div>
         </SettingRow>
+
+        {#if active.engine === "local"}
+          <SettingRow
+            label="Start from"
+            tooltip="Prefill command/arguments/voice from a known engine. Editing afterward never changes the template."
+          >
+            <Select
+              options={LOCAL_TEMPLATES.map((t) => ({ value: t.id, label: t.label }))}
+              value="blank"
+              onchange={(e) => applyLocalTemplate((e.target as HTMLSelectElement).value)}
+              class="w-56"
+            />
+          </SettingRow>
+        {/if}
 
         {#if activeVoiceCatalog.length > 0 || activeCatalogEntry?.supports_voice_refresh}
           <SettingRow

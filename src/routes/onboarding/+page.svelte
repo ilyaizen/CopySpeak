@@ -53,7 +53,7 @@
     installing = true;
     try {
       await invoke("install_engine", { engine: "edge" });
-      toast.success("Installer launched in a new window. Follow the prompts there.");
+      toast.success("Edge-TTS is installing in the background. Press Test when ready.");
     } catch (e) {
       toast.error(`Failed to launch installer: ${e}`);
     } finally {

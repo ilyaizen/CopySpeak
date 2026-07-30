@@ -9,9 +9,10 @@
   import { _ } from "svelte-i18n";
   import { Button } from "$lib/components/ui/button/index.js";
   import EnginePanel from "./engine-panel.svelte";
+  import InstallDialog from "./install-dialog.svelte";
   import {
     CLOUD_ENGINES,
-    LOCAL_PRESETS,
+    LOCAL_ENGINES,
     UV_ENTRY,
     type EngineSetupEntry,
     type TestState,
@@ -29,7 +30,7 @@
     onSave: () => Promise<void>;
   } = $props();
 
-  const ALL = [...CLOUD_ENGINES, ...LOCAL_PRESETS, UV_ENTRY];
+  const ALL = [...CLOUD_ENGINES, ...LOCAL_ENGINES, UV_ENTRY];
 
   // Default to the active profile's cloud engine when possible, else first cloud.
   const initialId = (() => {
@@ -45,6 +46,8 @@
   let testMessages = $state<Record<string, string>>({});
   let installStates = $state<Record<string, InstallState>>({});
   let uvAvailable = $state<boolean | null>(null);
+  // Non-null opens the streamed install dialog for that engine id.
+  let installDialogEngine = $state<string | null>(null);
 
   const selected = $derived(ALL.find((e) => e.id === selectedId) ?? CLOUD_ENGINES[0]);
 
@@ -95,8 +98,8 @@
     }
   }
 
-  // Real-synthesis test for a uv-installed local engine. The preset id (piper,
-  // kokoro, kitten, chatterbox) maps to a stable CLI spec in Rust.
+  // Real-synthesis test for a uv-installed local engine. The engine id (piper,
+  // kokoro, kitten) maps to a stable CLI spec in Rust.
   async function runLocalTest(entry: EngineSetupEntry) {
     testStates = { ...testStates, [entry.id]: "testing" };
     try {
@@ -114,8 +117,14 @@
     }
   }
 
+  // Voice-bearing local engines open the install dialog (streamed progress +
+  // per-voice selection); uv stays a fire-and-forget launch.
   async function runInstall(entry: EngineSetupEntry) {
     if (!entry.installerId) return;
+    if (entry.kind === "local" && entry.id !== "uv") {
+      installDialogEngine = entry.installerId;
+      return;
+    }
     installStates = { ...installStates, [entry.id]: "installing" };
     try {
       await invoke("install_engine", { engine: entry.installerId });
@@ -157,7 +166,7 @@
       >
         {$_("engines.local")}
       </p>
-      {#each LOCAL_PRESETS as entry (entry.id)}
+      {#each LOCAL_ENGINES as entry (entry.id)}
         <button
           class="block w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {selectedId ===
           entry.id
@@ -202,4 +211,11 @@
       onInstall={() => runInstall(selected)}
     />
   </main>
+
+  {#if installDialogEngine}
+    <InstallDialog
+      engineId={installDialogEngine}
+      onclose={() => (installDialogEngine = null)}
+    />
+  {/if}
 </div>
