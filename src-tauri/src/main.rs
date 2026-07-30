@@ -411,6 +411,7 @@ fn main() {
                             }
                         }
                         "quit" => {
+                            tts::piper_server::shutdown();
                             app.exit(0);
                         }
                         _ => {}
@@ -507,6 +508,13 @@ fn main() {
                 });
             }
 
+
+            // --- Warm the Piper daemon so the first utterance skips the model load ---
+            {
+                let cfg = app.state::<std::sync::Mutex<config::AppConfig>>();
+                let cfg = cfg.lock().unwrap();
+                tts::cli::prewarm_piper(&cfg.tts);
+            }
 
             // --- Start local control server for trusted localhost integrations (Pi, etc.) ---
             control_server::start(app.handle().clone());
