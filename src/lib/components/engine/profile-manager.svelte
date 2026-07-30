@@ -160,6 +160,44 @@
     return voicesByEngine[engine] ?? [];
   }
 
+  function applyPresetDefaults(index: number, preset: string) {
+    const profile = localConfig.tts.profiles[index];
+    if (profile.engine !== "local") return;
+    if (preset === "piper") {
+      profile.engine_options = {
+        ...profile.engine_options,
+        command: "uv",
+        args_template: ["run", "--project", "{engine_dir}/piper", "python", "{engine_dir}/piper/scripts/copyspeak-piper.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"]
+      } as VoiceProfile["engine_options"];
+      profile.voice = "en_US-amy-medium";
+      profile.voice_label = "Amy";
+    } else if (preset === "kitten-tts") {
+      profile.engine_options = {
+        ...profile.engine_options,
+        command: "uv",
+        args_template: ["run", "--project", "{engine_dir}/kitten", "python", "{engine_dir}/kitten/scripts/copyspeak-kitten.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"]
+      } as VoiceProfile["engine_options"];
+      profile.voice = "Rosie";
+      profile.voice_label = "Rosie";
+    } else if (preset === "chatterbox") {
+      profile.engine_options = {
+        ...profile.engine_options,
+        command: "uv",
+        args_template: ["run", "--project", "{engine_dir}/chatterbox", "python", "{engine_dir}/chatterbox/scripts/copyspeak-chatterbox.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"]
+      } as VoiceProfile["engine_options"];
+      profile.voice = "default";
+      profile.voice_label = "Default";
+    } else if (preset === "kokoro") {
+      profile.engine_options = {
+        ...profile.engine_options,
+        command: "kokoro-tts",
+        args_template: ["{input}", "{output}", "--voice", "{voice}", "--model", "{engine_dir}/kokoro/models/kokoro-v1.0.onnx", "--voices", "{engine_dir}/kokoro/models/voices-v1.0.bin"]
+      } as VoiceProfile["engine_options"];
+      profile.voice = "af_heart";
+      profile.voice_label = "Heart";
+    }
+  }
+
   function setOptionValue(index: number, key: string, value: unknown) {
     const profile = localConfig.tts.profiles[index];
     const current = profile.engine_options;
@@ -171,32 +209,11 @@
       [key]: value
     };
 
-    if (profile.engine === "local" && key === "preset") {
-      const preset = value as string;
-      if (preset === "piper") {
-        updatedOptions.command = "uv";
-        updatedOptions.args_template = ["run", "--project", "{engine_dir}/piper", "python", "{engine_dir}/piper/scripts/copyspeak-piper.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"];
-        profile.voice = "en_US-amy-medium";
-        profile.voice_label = "Amy";
-      } else if (preset === "kitten-tts") {
-        updatedOptions.command = "uv";
-        updatedOptions.args_template = ["run", "--project", "{engine_dir}/kitten", "python", "{engine_dir}/kitten/scripts/copyspeak-kitten.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"];
-        profile.voice = "Rosie";
-        profile.voice_label = "Rosie";
-      } else if (preset === "chatterbox") {
-        updatedOptions.command = "uv";
-        updatedOptions.args_template = ["run", "--project", "{engine_dir}/chatterbox", "python", "{engine_dir}/chatterbox/scripts/copyspeak-chatterbox.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"];
-        profile.voice = "default";
-        profile.voice_label = "Default";
-      } else if (preset === "kokoro") {
-        updatedOptions.command = "kokoro-tts";
-        updatedOptions.args_template = ["{input}", "{output}", "--voice", "{voice}", "--model", "{engine_dir}/kokoro/models/kokoro-v1.0.onnx", "--voices", "{engine_dir}/kokoro/models/voices-v1.0.bin"];
-        profile.voice = "af_heart";
-        profile.voice_label = "Heart";
-      }
-    }
-
     profile.engine_options = updatedOptions as VoiceProfile["engine_options"];
+
+    if (profile.engine === "local" && key === "preset") {
+      applyPresetDefaults(index, value as string);
+    }
   }
 
   function setVoice(index: number, voiceId: string) {
@@ -228,6 +245,14 @@
     if (activeIndex < 0) return;
     localConfig.tts.profiles[activeIndex].engine = engine;
     resetEngineOptions(activeIndex, engine);
+    // Auto-populate default preset's command/args/voice for local engine
+    if (engine === "local") {
+      const entry = catalog.find((item) => item.engine === engine);
+      const defaultPreset = entry?.options.find((o) => o.key === "preset")?.default_value as string | undefined;
+      if (defaultPreset && defaultPreset !== "custom") {
+        applyPresetDefaults(activeIndex, defaultPreset);
+      }
+    }
     const firstVoice = catalogVoicesFor(engine)[0];
     if (firstVoice && !localConfig.tts.profiles[activeIndex].voice) {
       setVoice(activeIndex, firstVoice.id);

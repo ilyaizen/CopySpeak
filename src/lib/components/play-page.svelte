@@ -164,8 +164,6 @@
     if (config) {
       const c = config;
       const { volume } = c.playback;
-      const hotkeyEnabled = c.hotkey.enabled;
-      const hotkeyShortcut = c.hotkey.shortcut;
       const activeProfile = c.tts.profiles.find((p) => p.id === c.tts.active_profile_id);
       const activeEffect = activeProfile?.effects?.enabled
         ? activeProfile.effects.active_effect
