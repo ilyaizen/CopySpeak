@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.12] - 2026-07-31
+
 ### Added
 
 - **First-class local TTS engines** — Kitten, Piper, and Kokoro are now dedicated `TtsEngine` variants instead of `Local` presets, each with its own hard-coded CLI contract, per-engine options struct, and catalog entry (voices, labels, docs).
@@ -18,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **In-app engine installer dialog** — Kitten/Piper/Kokoro installs now run streamed in a dismissible dialog: per-voice selection (Piper per-voice downloads; Kitten/Kokoro shared model), live log, per-voice status (pending/installing/done/failed), and per-voice Retry. Reopens to add voices later, pre-checking already-installed voices.
   - New `install-dialog.svelte` + `install-store.svelte.ts` (persistent `install-progress` listener that survives the dialog being dismissed); `-Voices` param and `[STEP]`/`[DONE]`/`[ERROR]` markers on the three install scripts; shared `Write-EngineManifest` helper writes `%LOCALAPPDATA%\CopySpeak\engines\<engine>\manifest.json`.
   - New `installed_voices` Rust command reads the manifest for the pre-check.
+- **Pocket TTS installer** — re-added as a local engine option: `install-pocket.ps1` installs `pocket-tts` as a uv tool, accepts `-Force`/`-SmokeTest`, and emits a CopySpeak profile snippet. Registered in Rust `installer_script_for()`/`local_engine_spec()`, frontend `LOCAL_ENGINES`, and locale strings.
 
 ### Changed
 
@@ -508,7 +511,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.11...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.12...HEAD
+[0.1.12]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.9...v0.1.10
 [0.1.9]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.8...v0.1.9
