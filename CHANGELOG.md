@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `scripts/piper/copyspeak-piper.py` gained a `--serve` mode: it loads the model once, prints `READY`, then answers one JSON request per stdin line (`{"text", "output"}`) with `{"ok"}` / `{"ok", "error"}`. Stdin EOF ends the process, so the daemon exits with CopySpeak.
   - New `src-tauri/src/tts/piper_server.rs` owns the daemon: `prewarm()` starts it on a background thread, `try_synthesize()` does the stdin round-trip, `shutdown()` kills it on quit.
   - `CliTtsBackend::synthesize` routes Piper through the daemon and falls back to the existing one-shot command whenever it isn't available — engine dirs with a pre-daemon wrapper keep working until `install-piper.ps1 -Force` is rerun.
+  - The fallback is self-healing: a failed daemon request (dead pipe, crashed interpreter) serves that utterance one-shot and respawns the daemon in the background, so the next utterance is back on the fast path without a restart.
+  - Known limitation: `abort_synthesis` does not interrupt synthesis on the daemon path (`ACTIVE_CLI_PID` is only set for one-shot subprocesses). Stop still cuts playback; it just can't cancel an in-flight daemon synthesis, which is ~0.3 s for normal utterances but scales with text length.
   - `CliTtsBackend::serve_args` derives the daemon argument list from the configured `args_template` by dropping the per-utterance `{input}`/`{output}` flags.
 
 ### Changed
