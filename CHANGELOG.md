@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Persistent Piper daemon** — the Piper voice model now stays loaded in RAM between utterances instead of being re-read from disk on every synthesis.
+  - `scripts/piper/copyspeak-piper.py` gained a `--serve` mode: it loads the model once, prints `READY`, then answers one JSON request per stdin line (`{"text", "output"}`) with `{"ok"}` / `{"ok", "error"}`. Stdin EOF ends the process, so the daemon exits with CopySpeak.
+  - New `src-tauri/src/tts/piper_server.rs` owns the daemon: `prewarm()` starts it on a background thread, `try_synthesize()` does the stdin round-trip, `shutdown()` kills it on quit.
+  - `CliTtsBackend::synthesize` routes Piper through the daemon and falls back to the existing one-shot command whenever it isn't available — engine dirs with a pre-daemon wrapper keep working until `install-piper.ps1 -Force` is rerun.
+  - `CliTtsBackend::serve_args` derives the daemon argument list from the configured `args_template` by dropping the per-utterance `{input}`/`{output}` flags.
+
+### Changed
+
+- **Piper pre-warms at app startup** — `prewarm_piper()` runs from the Tauri `setup` hook when the active profile is a local Piper engine, so the first utterance no longer waits for the model load. A voice or profile switch re-warms after the next utterance.
+- **`--output` is no longer required** by `copyspeak-piper.py` when `--serve` is given.
+
 ## [0.1.10] - 2026-07-07
 
 ### Changed

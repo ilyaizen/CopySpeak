@@ -288,6 +288,22 @@ impl CliTtsBackend {
         args
     }
 
+    /// Argument list for the wrapper's persistent `--serve` mode: the template
+    /// minus its per-utterance {input}/{output} pair, which travels in the request
+    /// instead. `build_args` leaves those placeholders behind as empty strings.
+    fn serve_args(&self, voice: &str) -> Vec<String> {
+        let mut args: Vec<String> = Vec::new();
+        for arg in self.build_args("", "", voice, "") {
+            if arg.is_empty() {
+                args.pop(); // the flag this empty value belonged to
+            } else {
+                args.push(arg);
+            }
+        }
+        args.push("--serve".into());
+        args
+    }
+
     fn input_path() -> String {
         let tmp = std::env::temp_dir();
         tmp.join("copyspeak_tts_input.txt")
@@ -335,12 +351,54 @@ impl CliTtsBackend {
     }
 }
 
+/// Warm the Piper daemon for the active profile so the first utterance doesn't
+/// pay the model load. No-op unless that profile runs a local Piper engine.
+pub fn prewarm_piper(tts: &crate::config::TtsConfig) {
+    let Some(profile) = tts.profiles.iter().find(|p| p.id == tts.active_profile_id) else {
+        return;
+    };
+    let crate::config::ProfileEngineOptions::Local(opts) = &profile.engine_options else {
+        return;
+    };
+
+    // Same resolution as create_backend_from_effective: profile options win,
+    // legacy top-level fields are the fallback for unmigrated configs.
+    let command = opts.command.clone().unwrap_or_else(|| tts.command.clone());
+    let args_template = opts
+        .args_template
+        .clone()
+        .filter(|items| !items.is_empty())
+        .unwrap_or_else(|| tts.args_template.clone());
+
+    let backend = CliTtsBackend::new(command, args_template);
+    if !backend.is_piper() {
+        return;
+    }
+    let serve_args = backend.serve_args(&profile.voice);
+    crate::tts::piper_server::prewarm(backend.command, serve_args);
+}
+
 impl TtsBackend for CliTtsBackend {
     fn name(&self) -> &str {
         &self.command
     }
 
     fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
+        // Piper keeps its voice model resident in a daemon; fall through to the
+        // one-shot command only when that daemon can't serve this request.
+        if self.is_piper() {
+            let serve_args = self.serve_args(voice);
+            if let Some(bytes) =
+                crate::tts::piper_server::try_synthesize(&self.command, &serve_args, text)
+            {
+                log::info!(
+                    "[CLI TTS] Synthesized via Piper daemon — {} bytes",
+                    bytes.len()
+                );
+                return Ok(bytes);
+            }
+        }
+
         let input_path = Self::input_path();
         let output_path = Self::output_path();
 
@@ -728,6 +786,36 @@ mod tests {
         assert_eq!(
             args,
             vec!["/tmp/input.txt", "/tmp/out.wav", "--voice", "af_heart"]
+        );
+    }
+
+    #[test]
+    fn test_serve_args_drops_per_utterance_flags() {
+        // The real Piper preset template, minus {engine_dir} expansion.
+        let backend = CliTtsBackend::new(
+            "uv".into(),
+            vec![
+                "run".into(),
+                "python".into(),
+                "copyspeak-piper.py".into(),
+                "--text-file".into(),
+                "{input}".into(),
+                "--voice".into(),
+                "{voice}".into(),
+                "--output".into(),
+                "{output}".into(),
+            ],
+        );
+        assert_eq!(
+            backend.serve_args("en_US-amy-medium"),
+            vec![
+                "run",
+                "python",
+                "copyspeak-piper.py",
+                "--voice",
+                "en_US-amy-medium",
+                "--serve"
+            ]
         );
     }
 
