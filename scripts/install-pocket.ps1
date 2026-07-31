@@ -18,7 +18,10 @@
 
 param(
     [switch]$Force,
-    [switch]$SmokeTest
+    [switch]$SmokeTest,
+    # App-driven invocation passes -Voices; pocket-tts has one built-in
+    # voice (default), so the arg is silently accepted and ignored.
+    [string[]]$Voices
 )
 
 $ErrorActionPreference = "Stop"
@@ -39,6 +42,7 @@ $effectiveForce = if ($Force) {
     Get-Confirmation -Prompt "pocket-tts is already installed. Reinstall from scratch?" -DefaultYes:$false
 }
 
+Write-Host "  [STEP] engine" -ForegroundColor Yellow
 if (-not $effectiveForce -and $alreadyInstalled) {
     Write-Host "  pocket-tts already installed." -ForegroundColor Green
     Write-Host "  Use -Force or answer Yes to reinstall." -ForegroundColor Yellow
@@ -46,6 +50,7 @@ if (-not $effectiveForce -and $alreadyInstalled) {
     Write-Host "  Installing pocket-tts via uv tool..." -ForegroundColor Gray
     Invoke-Uv tool install pocket-tts --force
 }
+Write-Host "  [DONE] engine" -ForegroundColor Green
 
 $profileJson = @"
 {

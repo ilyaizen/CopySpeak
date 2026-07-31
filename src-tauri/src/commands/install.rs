@@ -8,7 +8,9 @@
 use std::io::BufRead;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::sync::OnceLock;
 
+use regex::Regex;
 use serde::Serialize;
 use tauri::Emitter;
 
@@ -27,6 +29,15 @@ struct InstallProgress {
     line: Option<String>,
     done: bool,
     exit_code: Option<i32>,
+}
+
+/// Strip ANSI CSI escape sequences (colors, cursor movement, etc.) from
+/// PowerShell output so the frontend renders clean text. Only SGR (color)
+/// codes appear in practice, but the regex covers all CSI sequences.
+fn strip_ansi(line: &str) -> String {
+    static ANSI_RE: OnceLock<Regex> = OnceLock::new();
+    let re = ANSI_RE.get_or_init(|| Regex::new("\x1b\\[[0-9;]*[a-zA-Z]").unwrap());
+    re.replace_all(line, "").to_string()
 }
 
 /// Map a CopySpeak engine id to its installer script filename under `scripts/`.
@@ -125,7 +136,7 @@ pub fn install_engine(
                     "install-progress",
                     InstallProgress {
                         engine: engine_err.clone(),
-                        line: Some(line),
+                        line: Some(strip_ansi(&line)),
                         done: false,
                         exit_code: None,
                     },
@@ -141,7 +152,7 @@ pub fn install_engine(
                     "install-progress",
                     InstallProgress {
                         engine: engine_out.clone(),
-                        line: Some(line),
+                        line: Some(strip_ansi(&line)),
                         done: false,
                         exit_code: None,
                     },

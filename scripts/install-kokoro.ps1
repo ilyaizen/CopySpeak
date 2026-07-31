@@ -62,13 +62,20 @@ $effectiveForce = if ($Force) {
 
 Write-Host ""
 Write-Host "  [STEP] engine" -ForegroundColor Yellow
+$engineOk = $true
 if (-not $effectiveForce -and $alreadyInstalled) {
     Write-Host "  kokoro-tts already installed." -ForegroundColor Green
     Write-Host "  Use -Force or answer Yes to reinstall." -ForegroundColor Yellow
 } else {
     Write-Host "  Installing kokoro-tts via uv tool..." -ForegroundColor Gray
-    Invoke-Uv tool install kokoro-tts --force
+    try {
+        Invoke-Uv tool install kokoro-tts --force
+    } catch {
+        Write-Host "  [ERROR] engine (uv tool install failed)" -ForegroundColor Red
+        $engineOk = $false
+    }
 }
+if ($engineOk) { Write-Host "  [DONE] engine" -ForegroundColor Green }
 
 # Model files. kokoro-tts requires these and does not auto-download them.
 # Stable home is <engine_dir>/kokoro/models/ so {engine_dir} resolves them
@@ -84,6 +91,7 @@ $voicesUrl = "https://github.com/nazdridoy/kokoro-tts/releases/download/v1.0.0/v
 
 if (-not $SkipModelDownload) {
     Write-Host "  [STEP] model" -ForegroundColor Yellow
+    $modelOk = $true
     if (-not (Test-Path $modelFile)) {
         Write-Host ""
         Write-Host "  Downloading kokoro-v1.0.onnx (~310 MB, full quality)..." -ForegroundColor Yellow
@@ -93,6 +101,7 @@ if (-not $SkipModelDownload) {
         } catch {
             Write-Host "  WARNING: model download failed: $_" -ForegroundColor Red
             Write-Host "  Re-run with -Force, or download manually from $modelUrl" -ForegroundColor Gray
+            $modelOk = $false
         }
     } else {
         Write-Host "  Model already present: $modelFile" -ForegroundColor Green
@@ -106,9 +115,15 @@ if (-not $SkipModelDownload) {
         } catch {
             Write-Host "  WARNING: voices download failed: $_" -ForegroundColor Red
             Write-Host "  Re-run with -Force, or download manually from $voicesUrl" -ForegroundColor Gray
+            $modelOk = $false
         }
     } else {
         Write-Host "  Voices already present: $voicesFile" -ForegroundColor Green
+    }
+    if ($modelOk -and (Test-Path $modelFile) -and (Test-Path $voicesFile)) {
+        Write-Host "  [DONE] model" -ForegroundColor Green
+    } else {
+        Write-Host "  [ERROR] model (one or more files missing)" -ForegroundColor Red
     }
 }
 
@@ -152,16 +167,22 @@ if ($SmokeTest -and (Get-Command kokoro-tts -ErrorAction SilentlyContinue) -and 
     $txt = Join-Path $env:TEMP "copyspeak-kokoro-test.txt"
     "Hello from Kokoro" | Set-Content -Path $txt -Encoding utf8
     Write-Host ""
+    Write-Host "  [STEP] smoke" -ForegroundColor Yellow
     Write-Host "  Smoke test..." -ForegroundColor Yellow
     kokoro-tts $txt $out --voice $chosenVoice --model $modelFile --voices $voicesFile
-    if (-not (Test-AudioFile -Path $out)) { Write-Host "  Smoke test FAILED." -ForegroundColor Red; exit 1 }
+    if (-not (Test-AudioFile -Path $out)) { Write-Host "  [ERROR] smoke" -ForegroundColor Red; Write-Host "  Smoke test FAILED." -ForegroundColor Red; exit 1 }
+    Write-Host "  [DONE] smoke" -ForegroundColor Green
 }
 
-if ((Test-Path $modelFile) -and (Test-Path $voicesFile)) {
+$kokoroOk = $engineOk -and (Test-Path $modelFile) -and (Test-Path $voicesFile)
+if ($kokoroOk) {
     Write-EngineManifest -EngineDir $EngineDir -VoicesInstalled ($kokoroVoices.Id)
 }
 
 Write-Host ""
-Write-Host "  [DONE] engine" -ForegroundColor Green
-Write-Host "  Kokoro installed." -ForegroundColor Green
-Write-ProfileSnippet -Json $profileJson
+if ($kokoroOk) {
+    Write-Host "  Kokoro installed." -ForegroundColor Green
+    Write-ProfileSnippet -Json $profileJson
+} else {
+    Write-Host "  [ERROR] engine (kokoro-tts binary or model files missing — re-run without -SkipModelDownload)" -ForegroundColor Red
+}

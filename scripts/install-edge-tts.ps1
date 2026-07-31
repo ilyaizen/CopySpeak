@@ -23,7 +23,10 @@
 
 param(
     [switch]$Force,
-    [switch]$SmokeTest
+    [switch]$SmokeTest,
+    # App-driven invocation passes -Voices; edge-tts has no downloadable
+    # voice models, so the arg is silently accepted and ignored.
+    [string[]]$Voices
 )
 
 $ErrorActionPreference = "Stop"
@@ -44,6 +47,7 @@ $effectiveForce = if ($Force) {
     Get-Confirmation -Prompt "edge-tts is already installed. Reinstall from scratch?" -DefaultYes:$false
 }
 
+Write-Host "  [STEP] engine" -ForegroundColor Yellow
 if (-not $effectiveForce -and $alreadyInstalled) {
     Write-Host "  edge-tts already installed: $(edge-tts --version)" -ForegroundColor Green
     Write-Host "  Use -Force or answer Yes to reinstall." -ForegroundColor Yellow
@@ -51,6 +55,7 @@ if (-not $effectiveForce -and $alreadyInstalled) {
     Write-Host "  Installing edge-tts via uv tool..." -ForegroundColor Gray
     Invoke-Uv tool install edge-tts --force
 }
+Write-Host "  [DONE] engine" -ForegroundColor Green
 
 if ($SmokeTest) {
     $out = Join-Path $env:TEMP "copyspeak-edge-test.mp3"
