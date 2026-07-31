@@ -1,6 +1,6 @@
 <script lang="ts">
   import { cn, portal } from "$lib/utils.js";
-  import { Check, ChevronDown, RefreshCw, Search } from "@lucide/svelte";
+  import { Check, ChevronDown, Pencil, RefreshCw, Search } from "@lucide/svelte";
   import type { VoiceCatalogEntry } from "$lib/types";
 
   let {
@@ -9,7 +9,8 @@
     loading = false,
     supportsRefresh = false,
     onselect,
-    onrefresh
+    onrefresh,
+    onmanual
   }: {
     voices: VoiceCatalogEntry[];
     value: string;
@@ -17,6 +18,7 @@
     supportsRefresh?: boolean;
     onselect: (id: string) => void;
     onrefresh?: () => void;
+    onmanual?: () => void;
   } = $props();
 
   let open = $state(false);
@@ -151,9 +153,7 @@
 
 {#if open}
   <div bind:this={panelRef} use:portal class="fixed z-50" role="listbox">
-    <div
-      class="border-border bg-background text-foreground rounded-md border shadow-lg"
-    >
+    <div class="border-border bg-background text-foreground rounded-md border shadow-lg">
       <div class="border-border relative border-b">
         <Search
           size={14}
@@ -168,6 +168,20 @@
       </div>
 
       <div class="max-h-72 overflow-auto py-1">
+        {#if onmanual}
+          <button
+            type="button"
+            onclick={() => {
+              onmanual();
+              open = false;
+              query = "";
+            }}
+            class="text-muted-foreground hover:bg-muted hover:text-foreground flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
+          >
+            <Pencil size={14} class="shrink-0" />
+            <span class="flex-1 truncate">Custom / manual id…</span>
+          </button>
+        {/if}
         {#if filtered.length === 0}
           <p class="text-muted-foreground px-3 py-2 text-sm">No voices match “{query}”.</p>
         {:else if groups.length === 0}

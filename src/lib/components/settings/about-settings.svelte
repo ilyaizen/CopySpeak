@@ -219,7 +219,7 @@
         </p>
       </div>
 
-      <!-- Microsoft Azure AI -->
+      <!-- Microsoft Foundry AI -->
       <div>
         <div class="flex items-center gap-1.5">
           <Label class="text-sm">{$_("settings.about.microsoft.title")}</Label>

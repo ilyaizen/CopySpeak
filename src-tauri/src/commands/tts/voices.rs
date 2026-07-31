@@ -54,7 +54,7 @@ pub fn list_tts_voices(
                 .map(|v| crate::tts::catalog::VoiceCatalogEntry {
                     id: v.id,
                     label: v.name.unwrap_or_else(|| "Unnamed voice".into()),
-                    language: None,
+                    language: v.language,
                     description: v.description,
                     gender: None,
                     preview_url: None,

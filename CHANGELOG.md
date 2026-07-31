@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **27 English Cartesia voices** in the static engine catalog (was 2), ids taken verbatim from the account's `GET /voices` dump. All are tagged `language: "en"` — the Cartesia API has no region field, so no `en-US`/`en-GB` locale is claimed; the accent, where the provider states one, stays in the description. The picker groups them by gender.
+  - New test `cartesia_voice_ids_are_unique_uuids` guards the hand-copied id table (UUID shape + no duplicates).
+  - `CartesiaTtsBackend::voice_display_name` now resolves labels from the catalog instead of a second hard-coded id/name map.
+
+### Changed
+
+- **Voice picker is now primary over manual entry** — in the voices route, the Manual Voice input is disabled while the profile's voice matches a catalog id. The picker gains a "Custom / manual id…" row (`onmanual` prop) that unlocks and focuses the input; picking a real voice re-locks it. The unlock (`manualOverride`) is component-local state, reset on profile/engine change — no config schema change.
+  - When no picker is rendered (engines without a catalog or refresh support), the input is always enabled and relabeled "Voice".
+- **Cartesia voice refresh keeps language metadata** — `CartesiaVoice` gains a `language` field, mapped through to `VoiceCatalogEntry.language` in `list_tts_voices`, so a refresh no longer strips the language off every voice.
+- **Renamed "Microsoft Azure" to "Microsoft Foundry"** — engine catalog label/description and the `en.json` engine + setup strings. Microsoft Learn docs URLs left unchanged (still `learn.microsoft.com/.../azure/ai-services/speech-service/`).
+
 ## [0.1.12] - 2026-07-31
 
 ### Added

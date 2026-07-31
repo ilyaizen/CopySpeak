@@ -145,11 +145,11 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             supports_bracket_emotes: false,
             options: vec![],
             voices: vec![
-                voice("en_US-amy-medium", "Amy", Some("en-US"), None, Some("female")),
-                voice("en_US-lessac-medium", "Lessac", Some("en-US"), None, Some("female")),
-                voice("en_US-ryan-medium", "Ryan", Some("en-US"), None, Some("male")),
-                voice("en_US-joe-medium", "Joe", Some("en-US"), None, Some("male")),
-                voice("en_US-libritts-medium", "LibriTTS", Some("en-US"), None, Some("neutral")),
+                voice("en_US-amy-medium", "Amy", Some("en"), None, Some("female")),
+                voice("en_US-lessac-medium", "Lessac", Some("en"), None, Some("female")),
+                voice("en_US-ryan-medium", "Ryan", Some("en"), None, Some("male")),
+                voice("en_US-joe-medium", "Joe", Some("en"), None, Some("male")),
+                voice("en_US-libritts-medium", "LibriTTS", Some("en"), None, Some("neutral")),
             ],
         },
         EngineCatalogEntry {
@@ -162,14 +162,14 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             supports_bracket_emotes: false,
             options: vec![],
             voices: vec![
-                voice("af_heart", "Heart", Some("en-US"), None, Some("female")),
-                voice("af_bella", "Bella", Some("en-US"), None, Some("female")),
-                voice("af_nicole", "Nicole", Some("en-US"), None, Some("female")),
-                voice("af_sarah", "Sarah", Some("en-US"), None, Some("female")),
-                voice("am_adam", "Adam", Some("en-US"), None, Some("male")),
-                voice("am_michael", "Michael", Some("en-US"), None, Some("male")),
-                voice("bf_emma", "Emma", Some("en-GB"), None, Some("female")),
-                voice("bm_george", "George", Some("en-GB"), None, Some("male")),
+                voice("af_heart", "Heart", Some("en"), None, Some("female")),
+                voice("af_bella", "Bella", Some("en"), None, Some("female")),
+                voice("af_nicole", "Nicole", Some("en"), None, Some("female")),
+                voice("af_sarah", "Sarah", Some("en"), None, Some("female")),
+                voice("am_adam", "Adam", Some("en"), None, Some("male")),
+                voice("am_michael", "Michael", Some("en"), None, Some("male")),
+                voice("bf_emma", "Emma", Some("en"), None, Some("female")),
+                voice("bm_george", "George", Some("en"), None, Some("male")),
             ],
         },
         EngineCatalogEntry {
@@ -384,15 +384,208 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                 voice(
                     "f786b574-daa5-4673-aa0c-cbe3e8534c02",
                     "Katie",
-                    None,
+                    Some("en"),
                     Some("Warm, friendly default"),
                     Some("female"),
                 ),
                 voice(
                     "a5136bf9-224c-4d76-b823-52bd5efcffcc",
                     "Jameson",
-                    None,
+                    Some("en"),
                     Some("Calm, deep default"),
+                    Some("male"),
+                ),
+                // English voices from the Cartesia public voice library. The API
+                // has no region field (every one of these reports language "en"),
+                // so no locale is claimed here — the accent, where the provider
+                // states one, stays in the description.
+                voice(
+                    "01eaafa9-308a-4276-a017-6ab0cf061b1f",
+                    "Clara",
+                    Some("en"),
+                    Some("Middle-aged American female, clear tone and precise enunciation"),
+                    Some("female"),
+                ),
+                voice(
+                    "03b1c65d-4b7f-4c09-91a8-e2f6f78cb2c9",
+                    "Molly",
+                    Some("en"),
+                    Some("Bright, cheerful American female for upbeat conversation"),
+                    Some("female"),
+                ),
+                voice(
+                    "09ed0318-2f4a-41b1-abe5-d11da7537c31",
+                    "Daphne",
+                    Some("en"),
+                    Some("Expressive, upbeat American female with an excited tone"),
+                    Some("female"),
+                ),
+                voice(
+                    "0ee8beaa-db49-4024-940d-c7ea09b590b3",
+                    "Morgan",
+                    Some("en"),
+                    Some("Polished American female for highly professional interactions"),
+                    Some("female"),
+                ),
+                voice(
+                    "1a0c6bb2-bc1b-476e-8d45-56a66300362b",
+                    "Esther",
+                    Some("en"),
+                    Some("Steady, gentle Southern American female"),
+                    Some("female"),
+                ),
+                voice(
+                    "46788d8e-cdf9-4d5c-9125-094eb2e4d44c",
+                    "Brittany",
+                    Some("en"),
+                    Some("Strong, aggressive American female for intense delivery"),
+                    Some("female"),
+                ),
+                voice(
+                    "4e41a434-85fc-4614-b203-af79ba44d473",
+                    "Sienna",
+                    Some("en"),
+                    Some("Soft-spoken, motivating American female"),
+                    Some("female"),
+                ),
+                voice(
+                    "c894559e-d529-4d70-a6fb-3330ecf7ef6b",
+                    "Iris",
+                    Some("en"),
+                    Some("Warm, conversational American female with a relatable tone"),
+                    Some("female"),
+                ),
+                voice(
+                    "db6b0ed5-d5d3-463d-ae85-518a07d3c2b4",
+                    "Skylar",
+                    Some("en"),
+                    Some("Approachable American female for customer care and support"),
+                    Some("female"),
+                ),
+                voice(
+                    "2f22b9bc-b0eb-4cb6-b5ae-0c099a0fdfad",
+                    "Scott",
+                    Some("en"),
+                    Some("Energetic American male with sportscaster excitement"),
+                    Some("male"),
+                ),
+                voice(
+                    "5fc5c797-12c5-4f2b-ac9b-d4e53c08098f",
+                    "Wyatt",
+                    Some("en"),
+                    Some("Friendly, clear American male with a subtle Southern drawl"),
+                    Some("male"),
+                ),
+                voice(
+                    "9287676d-f0cc-423f-ac03-3b3c7242f091",
+                    "Allen",
+                    Some("en"),
+                    Some("Confident young adult male, neutral American accent"),
+                    Some("male"),
+                ),
+                voice(
+                    "92c41dd4-04aa-45de-8504-a92b40cb8818",
+                    "Connor",
+                    Some("en"),
+                    Some("Expressive American male with a grateful yet firm tone"),
+                    Some("male"),
+                ),
+                voice(
+                    "d46abd1d-2d02-43e8-819f-51fb652c1c61",
+                    "Grant",
+                    Some("en"),
+                    Some("Reliable, clear male with a neutral American accent"),
+                    Some("male"),
+                ),
+                voice(
+                    "e2d48e7b-cd73-4c4c-bc1e-f232580e8709",
+                    "Adrian",
+                    Some("en"),
+                    Some("Deep American male with a curious, engaging tone"),
+                    Some("male"),
+                ),
+                voice(
+                    "2f251ac3-89a9-4a77-a452-704b474ccd01",
+                    "Lucy",
+                    Some("en"),
+                    Some("Reassuring British female for customer assistance"),
+                    Some("female"),
+                ),
+                voice(
+                    "62ae83ad-4f6a-430b-af41-a9bede9286ca",
+                    "Gemma",
+                    Some("en"),
+                    Some("Confident, emotive British female for professional assistance"),
+                    Some("female"),
+                ),
+                voice(
+                    "a01c369f-6d2d-4185-bc20-b32c225eab70",
+                    "Fiona",
+                    Some("en"),
+                    Some("Chirpy, energetic British female with a bright tone"),
+                    Some("female"),
+                ),
+                voice(
+                    "dc30854e-e398-4579-9dc8-16f6cb2c19b9",
+                    "Victoria",
+                    Some("en"),
+                    Some("Crisp, professional British female"),
+                    Some("female"),
+                ),
+                voice(
+                    "e5d4c33a-d8f6-46e8-a10f-b5afecc35648",
+                    "Evie",
+                    Some("en"),
+                    Some("Formal British female for high-level corporate interactions"),
+                    Some("female"),
+                ),
+                voice(
+                    "17044048-bfab-44b2-9532-9c1b65e9c217",
+                    "Alec",
+                    Some("en"),
+                    Some("Lively, warm British male with upbeat, welcoming energy"),
+                    Some("male"),
+                ),
+                voice(
+                    "3c0f09d6-e0d7-499c-a594-70c5b7b93048",
+                    "Benedict",
+                    Some("en"),
+                    Some("Polished, formal British male"),
+                    Some("male"),
+                ),
+                voice(
+                    "3d5ce2fb-e56c-42f0-9ed9-4662484063b4",
+                    "Toby",
+                    Some("en"),
+                    Some("Warm, conversational British male with a polished tone"),
+                    Some("male"),
+                ),
+                voice(
+                    "4bc3cb8c-adb9-4bb8-b5d5-cbbef950b991",
+                    "George",
+                    Some("en"),
+                    Some("Steady British male for capable assistance"),
+                    Some("male"),
+                ),
+                voice(
+                    "c8f7835e-28a3-4f0c-80d7-c1302ac62aae",
+                    "Alistair",
+                    Some("en"),
+                    Some("Sophisticated, steady British male for customer interactions"),
+                    Some("male"),
+                ),
+                voice(
+                    "df89f42f-f285-4613-adbf-14eedcec4c9e",
+                    "Harrison",
+                    Some("en"),
+                    Some("Crisp, professional British male"),
+                    Some("male"),
+                ),
+                voice(
+                    "ef191366-f52f-447a-a398-ed8c0f2943a1",
+                    "Archie",
+                    Some("en"),
+                    Some("Warm, conversational British male for casual dialogue"),
                     Some("male"),
                 ),
             ],
@@ -455,8 +648,8 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
         },
         EngineCatalogEntry {
             engine: TtsEngine::Microsoft,
-            label: "Microsoft AI".into(),
-            description: "Microsoft MAI/Azure speech endpoint.".into(),
+            label: "Microsoft Foundry".into(),
+            description: "Microsoft MAI/Foundry speech endpoint.".into(),
             docs_url:
                 "https://learn.microsoft.com/en-us/azure/ai-services/speech-service/text-to-speech"
                     .into(),
@@ -596,6 +789,24 @@ mod tests {
         for entry in list_engines() {
             assert!(!entry.label.trim().is_empty());
             assert!(!entry.docs_url.trim().is_empty());
+        }
+    }
+
+    #[test]
+    fn cartesia_voice_ids_are_unique_uuids() {
+        let voices = list_static_voices(&TtsEngine::Cartesia);
+        assert!(voices.len() > 2, "expected the curated en-US/en-GB list");
+        let mut seen = std::collections::HashSet::new();
+        for v in &voices {
+            assert_eq!(v.id.len(), 36, "not a UUID: {} ({})", v.id, v.label);
+            assert_eq!(
+                v.id.matches('-').count(),
+                4,
+                "not a UUID: {} ({})",
+                v.id,
+                v.label
+            );
+            assert!(seen.insert(v.id.clone()), "duplicate voice id: {}", v.id);
         }
     }
 }

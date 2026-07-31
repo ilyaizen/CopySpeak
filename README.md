@@ -1,6 +1,6 @@
 # CopySpeak
 
-**Current Version:** 0.1.12
+**Current Version:** 0.1.13
 
 A modern Windows desktop app that reads clipboard text aloud using AI Text-to-Speech engines. Trigger speech by quickly copying the same text twice in a row.
 

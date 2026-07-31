@@ -272,9 +272,9 @@
         "detail": "Cloud TTS powered by Google's Gemini models. Requires a Google AI API key."
       },
       "microsoft": {
-        "title": "Microsoft Azure AI",
-        "description": "Enterprise cloud TTS via Azure",
-        "detail": "Enterprise-grade neural voices via Azure Cognitive Services. Requires an Azure API key and endpoint."
+        "title": "Microsoft Foundry AI",
+        "description": "Enterprise cloud TTS via Microsoft Foundry",
+        "detail": "Enterprise-grade neural voices via Microsoft Foundry speech services. Requires an API key and endpoint."
       },
       "http": {
         "title": "Custom HTTP Engine",
@@ -337,8 +337,8 @@
       "apiKey": "API Key"
     },
     "microsoft": {
-      "title": "Microsoft Azure",
-      "description": "Cloud: Azure Cognitive Services Speech. Requires a region endpoint and API key.",
+      "title": "Microsoft Foundry",
+      "description": "Cloud: Microsoft Foundry Speech. Requires a region endpoint and API key.",
       "apiKey": "API Key",
       "endpoint": "Endpoint"
     },
