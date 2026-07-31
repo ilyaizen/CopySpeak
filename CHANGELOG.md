@@ -38,6 +38,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TtsEngine` enum/union gains three variants; any exhaustive match (Rust) or `Record<TtsEngine, _>` (TS) must cover them.
 - `LocalEngineOptions.preset` field removed; configs carrying it deserialize with the field ignored.
 
+### Fixed
+
+- Removed 1.2s Windows audio preroll hack that delayed playback start.
+  - Replaced with a 10ms linear fade-in (`applyFadeIn` in `audio-utils.ts`) that prevents clipping without a perceptible delay.
+
 ## [0.1.11] - 2026-07-30
 
 ### Added

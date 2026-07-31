@@ -46,25 +46,19 @@ export function buildBarValues(dataArray: Uint8Array, numBars: number): number[]
   return bars;
 }
 
-export function prependLowLevelPreroll(buffer: AudioBuffer, durationMs: number): AudioBuffer {
-  const prerollLength = Math.round((buffer.sampleRate * durationMs) / 1000);
-  if (prerollLength <= 0) return buffer;
-
-  const output = new AudioBuffer({
-    length: prerollLength + buffer.length,
-    numberOfChannels: buffer.numberOfChannels,
-    sampleRate: buffer.sampleRate
-  });
-
+/**
+ * Apply a short linear fade-in to prevent clipping when playback starts.
+ * Mutates the buffer in place — pass a copy if the original must be preserved.
+ */
+export function applyFadeIn(buffer: AudioBuffer, durationMs: number = 10): void {
+  const fadeSamples = Math.round((buffer.sampleRate * durationMs) / 1000);
+  if (fadeSamples <= 0 || fadeSamples > buffer.length) return;
   for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
-    const data = output.getChannelData(channel);
-    for (let i = 0; i < prerollLength; i++) {
-      data[i] = Math.sin((2 * Math.PI * 60 * i) / buffer.sampleRate) * 0.00002;
+    const data = buffer.getChannelData(channel);
+    for (let i = 0; i < fadeSamples; i++) {
+      data[i] *= i / fadeSamples;
     }
-    data.set(buffer.getChannelData(channel), prerollLength);
   }
-
-  return output;
 }
 
 /**

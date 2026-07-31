@@ -12,16 +12,14 @@
 import { isTauri } from "$lib/services/tauri.js";
 import type { EffectId } from "$lib/types";
 import {
+  applyFadeIn,
   audioBufferToWavBlob,
-  detectAudioMimeType,
-  prependLowLevelPreroll
+  detectAudioMimeType
 } from "./playback/audio-utils.js";
 import { AudioAnalyser } from "./playback/analyser.js";
 import { getEffect } from "./playback/effects/registry.js";
 import { FragmentQueue, type QueuedFragment } from "./playback/fragment-queue.js";
 import { hudStore } from "./hud-store.svelte.js";
-
-const WINDOWS_AUDIO_PREROLL_MS = 1200;
 
 class PlaybackStore {
   isPlaying = $state(false);
@@ -114,13 +112,21 @@ class PlaybackStore {
     }
     const effect = getEffect(effectId);
     let blob: Blob;
-    if (!this.shouldApplyWindowsPreroll() && pitchRatio === 1.0 && !effect && this._originalBytes) {
+    if (pitchRatio === 1.0 && !effect && this._originalBytes) {
       const mimeType = detectAudioMimeType(this._originalBytes);
       blob = new Blob([this._originalBytes], { type: mimeType });
     } else if (this._decodedBuffer && this._audioCtx) {
       let buffer: AudioBuffer;
       if (pitchRatio === 1.0) {
-        buffer = this._decodedBuffer;
+        // Copy to avoid mutating cached decoded buffer when applying fade-in
+        buffer = new AudioBuffer({
+          length: this._decodedBuffer.length,
+          numberOfChannels: this._decodedBuffer.numberOfChannels,
+          sampleRate: this._decodedBuffer.sampleRate
+        });
+        for (let c = 0; c < this._decodedBuffer.numberOfChannels; c++) {
+          buffer.copyToChannel(this._decodedBuffer.getChannelData(c), c);
+        }
       } else {
         const outputLen = Math.max(1, Math.round(this._decodedBuffer.length / pitchRatio));
         const offline = new OfflineAudioContext(
@@ -138,9 +144,7 @@ class PlaybackStore {
       if (effect) {
         buffer = await effect.process(buffer, this._audioCtx);
       }
-      if (this.shouldApplyWindowsPreroll()) {
-        buffer = prependLowLevelPreroll(buffer, WINDOWS_AUDIO_PREROLL_MS);
-      }
+      applyFadeIn(buffer, 10);
       blob = audioBufferToWavBlob(buffer);
     } else {
       return "";
@@ -148,10 +152,6 @@ class PlaybackStore {
     const url = URL.createObjectURL(blob);
     this._cachedPitchUrl = { ratio: pitchRatio, effectId, url };
     return url;
-  }
-
-  private shouldApplyWindowsPreroll(): boolean {
-    return isTauri && navigator.userAgent.includes("Windows");
   }
 
   async handleAudioReady(base64: string): Promise<void> {
