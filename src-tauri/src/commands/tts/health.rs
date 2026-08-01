@@ -1,12 +1,14 @@
 // TTS engine health check commands.
 
-use crate::config::{AppConfig, TtsEngine};
+use crate::config::{AppConfig, TtsConfig, TtsEngine};
 use crate::tts::cli::CliTtsBackend;
 use crate::tts::{TtsBackend, TtsError};
 use std::sync::Mutex;
 use tauri::State;
 
-use super::helpers::{create_backend, create_backend_from_effective, resolve_effective};
+use super::helpers::{
+    create_backend, create_backend_from_effective, resolve_effective, EffectiveTtsRequest,
+};
 
 /// Result of a TTS engine health check.
 #[derive(Debug, Clone, serde::Serialize)]
@@ -59,6 +61,70 @@ pub fn check_command_exists(command: String) -> Result<CommandExistsResult, Stri
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{CartesiaEngineOptions, ProfileEngineOptions};
+
+    /// A config as it comes back off disk: the `cartesia` object exists (it holds
+    /// the persisted api_key), so `model_id`'s *field-level* `#[serde(default)]`
+    /// wins over the container default and yields `""`. Omitting the object
+    /// entirely would instead give `CartesiaConfig::default()` — not what a real
+    /// install looks like.
+    fn loaded_config() -> TtsConfig {
+        serde_json::from_str(r#"{ "cartesia": { "api_key": "sk-test" } }"#).expect("deserializes")
+    }
+
+    fn cartesia_effective(model_id: Option<&str>) -> EffectiveTtsRequest {
+        EffectiveTtsRequest {
+            profile_id: None,
+            profile_name: None,
+            engine: TtsEngine::Cartesia,
+            voice: String::new(),
+            voice_label: None,
+            pitch: 1.0,
+            effects: Default::default(),
+            text_processing: Default::default(),
+            engine_options: ProfileEngineOptions::Cartesia(CartesiaEngineOptions {
+                model_id: model_id.map(String::from),
+                ..Default::default()
+            }),
+        }
+    }
+
+    /// A config round-tripped through serde loses model/voice fields (they are
+    /// `skip_serializing` — the profile owns them). The label must come from the
+    /// profile, not the blanked global config. Regression for `Cartesia ()`.
+    #[test]
+    fn label_prefers_profile_options_over_blanked_config() {
+        let loaded = loaded_config();
+        assert!(
+            loaded.cartesia.model_id.is_empty(),
+            "precondition: global model_id deserializes blank"
+        );
+
+        let eff = cartesia_effective(Some("sonic-3.5"));
+        assert_eq!(
+            effective_backend_name(&eff, &loaded),
+            "Cartesia (sonic-3.5)"
+        );
+    }
+
+    #[test]
+    fn label_says_unset_when_nothing_is_configured() {
+        let loaded = loaded_config();
+        let eff = cartesia_effective(None);
+        assert_eq!(effective_backend_name(&eff, &loaded), "Cartesia (unset)");
+    }
+
+    #[test]
+    fn first_set_skips_blank_and_whitespace() {
+        assert_eq!(first_set(&["", "  ", "b"]), "b");
+        assert_eq!(first_set(&["a", "b"]), "a");
+        assert_eq!(first_set(&[""]), "unset");
+    }
+}
+
 fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
     match engine {
         "local" => Ok(TtsEngine::Local),
@@ -91,29 +157,79 @@ pub fn test_tts_engine(config: State<'_, Mutex<AppConfig>>) -> Result<TtsHealthR
     let backend: Box<dyn crate::tts::TtsBackend> =
         create_backend_from_effective(&effective, &tts_config);
 
-    let backend_name = match effective.engine {
-        crate::config::TtsEngine::Local => tts_config.command.clone(),
-        crate::config::TtsEngine::OpenAI => format!("OpenAI ({})", tts_config.openai.model),
-        crate::config::TtsEngine::ElevenLabs => {
-            format!("ElevenLabs ({})", tts_config.elevenlabs.model_id)
-        }
-        crate::config::TtsEngine::Cartesia => {
-            format!("Cartesia ({})", tts_config.cartesia.model_id)
-        }
-        crate::config::TtsEngine::Http => format!("HTTP ({})", tts_config.http.url_template),
-        crate::config::TtsEngine::Google => format!("Google ({})", tts_config.google.model),
-        crate::config::TtsEngine::Microsoft => {
-            format!("Microsoft ({})", tts_config.microsoft.model)
-        }
-        crate::config::TtsEngine::Kitten => "Kitten TTS".to_string(),
-        crate::config::TtsEngine::Piper => "Piper".to_string(),
-        crate::config::TtsEngine::Kokoro => "Kokoro".to_string(),
-        crate::config::TtsEngine::Edge => {
-            format!("Edge-TTS ({})", tts_config.edge.voice)
-        }
-    };
+    let backend_name = effective_backend_name(&effective, &tts_config);
 
     health_result(backend, backend_name)
+}
+
+/// First non-blank candidate, or "unset".
+fn first_set<'a>(candidates: &[&'a str]) -> &'a str {
+    candidates
+        .iter()
+        .copied()
+        .find(|s| !s.trim().is_empty())
+        .unwrap_or("unset")
+}
+
+/// Label for the backend `create_backend_from_effective` actually built.
+///
+/// The profile's engine options win over the global `TtsConfig`, mirroring the
+/// override order in `create_backend_from_effective`. Reading the global config
+/// alone is wrong: model/voice/format fields there are `skip_serializing` (the
+/// profile owns them), so a loaded config deserializes them blank — which is
+/// where the `Cartesia ()` in the logs came from.
+fn effective_backend_name(eff: &EffectiveTtsRequest, tts: &TtsConfig) -> String {
+    let opts = &eff.engine_options;
+    // Bind the profile-side Strings so the &str candidates can borrow them.
+    let (openai, elevenlabs, cartesia, http, google, microsoft, edge, local) = (
+        opts.openai()
+            .and_then(|o| o.model.clone())
+            .unwrap_or_default(),
+        opts.elevenlabs()
+            .and_then(|o| o.model_id.clone())
+            .unwrap_or_default(),
+        opts.cartesia()
+            .and_then(|o| o.model_id.clone())
+            .unwrap_or_default(),
+        opts.http()
+            .and_then(|o| o.url_template.clone())
+            .unwrap_or_default(),
+        opts.google()
+            .and_then(|o| o.model.clone())
+            .unwrap_or_default(),
+        opts.microsoft()
+            .and_then(|o| o.model.clone())
+            .unwrap_or_default(),
+        opts.edge()
+            .and_then(|o| o.voice.clone())
+            .unwrap_or_default(),
+        opts.local()
+            .and_then(|o| o.command.clone())
+            .unwrap_or_default(),
+    );
+
+    match eff.engine {
+        TtsEngine::Local => first_set(&[&local, &tts.command]).to_string(),
+        TtsEngine::OpenAI => format!("OpenAI ({})", first_set(&[&openai, &tts.openai.model])),
+        TtsEngine::ElevenLabs => format!(
+            "ElevenLabs ({})",
+            first_set(&[&elevenlabs, &tts.elevenlabs.model_id])
+        ),
+        TtsEngine::Cartesia => format!(
+            "Cartesia ({})",
+            first_set(&[&cartesia, &tts.cartesia.model_id])
+        ),
+        TtsEngine::Http => format!("HTTP ({})", first_set(&[&http, &tts.http.url_template])),
+        TtsEngine::Google => format!("Google ({})", first_set(&[&google, &tts.google.model])),
+        TtsEngine::Microsoft => format!(
+            "Microsoft ({})",
+            first_set(&[&microsoft, &tts.microsoft.model])
+        ),
+        TtsEngine::Edge => format!("Edge-TTS ({})", first_set(&[&edge, &tts.edge.voice])),
+        TtsEngine::Kitten => "Kitten TTS".to_string(),
+        TtsEngine::Piper => "Piper".to_string(),
+        TtsEngine::Kokoro => "Kokoro".to_string(),
+    }
 }
 
 #[tauri::command]
@@ -128,18 +244,28 @@ pub fn test_tts_engine_config(
         tts_config.preset = preset;
     }
     let backend = create_backend(&engine, &tts_config);
+    // No profile here — this tests an explicit engine against the global config.
+    // Those model fields are `skip_serializing`, so guard the blanks; the label
+    // reaches a user-facing toast.
     let backend_name = match engine {
-        TtsEngine::Local => tts_config.command.clone(),
-        TtsEngine::OpenAI => format!("OpenAI ({})", tts_config.openai.model),
-        TtsEngine::ElevenLabs => format!("ElevenLabs ({})", tts_config.elevenlabs.model_id),
-        TtsEngine::Cartesia => format!("Cartesia ({})", tts_config.cartesia.model_id),
-        TtsEngine::Http => format!("HTTP ({})", tts_config.http.url_template),
-        TtsEngine::Google => format!("Google ({})", tts_config.google.model),
-        TtsEngine::Microsoft => format!("Microsoft ({})", tts_config.microsoft.model),
+        TtsEngine::Local => first_set(&[&tts_config.command]).to_string(),
+        TtsEngine::OpenAI => format!("OpenAI ({})", first_set(&[&tts_config.openai.model])),
+        TtsEngine::ElevenLabs => format!(
+            "ElevenLabs ({})",
+            first_set(&[&tts_config.elevenlabs.model_id])
+        ),
+        TtsEngine::Cartesia => {
+            format!("Cartesia ({})", first_set(&[&tts_config.cartesia.model_id]))
+        }
+        TtsEngine::Http => format!("HTTP ({})", first_set(&[&tts_config.http.url_template])),
+        TtsEngine::Google => format!("Google ({})", first_set(&[&tts_config.google.model])),
+        TtsEngine::Microsoft => {
+            format!("Microsoft ({})", first_set(&[&tts_config.microsoft.model]))
+        }
         TtsEngine::Kitten => "Kitten TTS".to_string(),
         TtsEngine::Piper => "Piper".to_string(),
         TtsEngine::Kokoro => "Kokoro".to_string(),
-        TtsEngine::Edge => format!("Edge-TTS ({})", tts_config.edge.voice),
+        TtsEngine::Edge => format!("Edge-TTS ({})", first_set(&[&tts_config.edge.voice])),
     };
     health_result(backend, backend_name)
 }
@@ -195,7 +321,11 @@ pub fn test_local_engine(engine: String) -> Result<TtsHealthResult, String> {
                 );
                 Ok(TtsHealthResult {
                     success: true,
-                    message: format!("{} synthesized a test clip successfully ({} bytes).", backend_name, bytes.len()),
+                    message: format!(
+                        "{} synthesized a test clip successfully ({} bytes).",
+                        backend_name,
+                        bytes.len()
+                    ),
                     error_type: None,
                 })
             } else {
@@ -311,7 +441,10 @@ fn synthesize_health_failure(backend_name: &str, e: &TtsError) -> Result<TtsHeal
                     "not_found",
                 )
             } else {
-                (format!("{} unavailable: {}", backend_name, msg), "unavailable")
+                (
+                    format!("{} unavailable: {}", backend_name, msg),
+                    "unavailable",
+                )
             }
         }
         TtsError::Io(io_err) => {
