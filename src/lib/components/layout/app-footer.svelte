@@ -48,7 +48,16 @@
     }
   }
 
-  async function checkActiveProfileAvailability() {
+  // Health checks hit a live TTS API. `config-changed` is emitted globally by any
+  // page that saves config, so throttle those; explicit profile switches force.
+  const AVAILABILITY_TTL_MS = 30_000;
+  let lastAvailabilityCheck = 0;
+
+  async function checkActiveProfileAvailability(force = false) {
+    if (availability === "checking") return;
+    if (!force && Date.now() - lastAvailabilityCheck < AVAILABILITY_TTL_MS) return;
+
+    lastAvailabilityCheck = Date.now();
     availability = "checking";
     try {
       const { invoke } = await import("@tauri-apps/api/core");
@@ -67,7 +76,7 @@
       const { invoke } = await import("@tauri-apps/api/core");
       await invoke("set_active_profile", { id: profile.id });
       await loadProfileInfo();
-      await checkActiveProfileAvailability();
+      await checkActiveProfileAvailability(true);
     } catch (e) {
       console.error("Failed to switch profile:", e);
       toast.error(`Failed to switch profile: ${e}`);
@@ -79,7 +88,7 @@
     if (isHudRoute || !isTauri) return;
 
     await loadProfileInfo();
-    await checkActiveProfileAvailability();
+    await checkActiveProfileAvailability(true);
 
     try {
       const { listen } = await import("@tauri-apps/api/event");

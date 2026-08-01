@@ -19,6 +19,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - When no picker is rendered (engines without a catalog or refresh support), the input is always enabled and relabeled "Voice".
 - **Cartesia voice refresh keeps language metadata** — `CartesiaVoice` gains a `language` field, mapped through to `VoiceCatalogEntry.language` in `list_tts_voices`, so a refresh no longer strips the language off every voice.
 - **Renamed "Microsoft Azure" to "Microsoft Foundry"** — engine catalog label/description and the `en.json` engine + setup strings. Microsoft Learn docs URLs left unchanged (still `learn.microsoft.com/.../azure/ai-services/speech-service/`).
+- **Piper daemon prewarm moved off the setup thread** — `prewarm_piper` ran inline in `setup()` while holding the config mutex, delaying the control server and clipboard listener. It now runs on its own thread with a cloned `TtsConfig`.
+
+### Fixed
+
+- **Redundant TTS health checks at startup** — `app-footer.svelte` fired `test_tts_engine` (a live API call) on mount and again on every global `config-changed` event, producing five Cartesia round-trips on launch. Checks are now throttled to one per 30s with an in-flight guard; explicit profile switches and initial mount bypass the throttle.
+- **HUD window flashed white on launch** — the HUD was created with `visible: true`, so WebView2 painted its default white surface at the OS-chosen position for a frame before Tauri applied the off-screen coordinates. It is now created hidden and shown only after being parked off-screen. The stale `x`/`y: 10000` in `tauri.conf.json` (which disagreed with `move_hud_offscreen`'s `-10000`) were removed, leaving one source of truth for the park position.
 
 ## [0.1.12] - 2026-07-31
 

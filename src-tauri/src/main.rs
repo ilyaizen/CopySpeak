@@ -488,23 +488,29 @@ fn main() {
                 });
             }
 
-            // --- Position HUD window and make it click-through at startup ---
-            // HUD starts off-screen (configured via tauri.conf.json x/y) to avoid
-            // flashing on-screen before the page renders transparent. show_*
-            // functions reposition it on-screen when content needs to display.
+            // --- Park HUD off-screen and make it click-through at startup ---
+            // The window is created hidden (tauri.conf.json `visible: false`) because
+            // WebView2 paints its default white surface at the OS-chosen position for a
+            // frame before Tauri applies ours — a visible flash. Park first, then show.
+            // From here on it stays shown; show_* reposition it on-screen.
             if let Some(hud_window) = app.get_webview_window("hud") {
                 let _ = hud_window.set_ignore_cursor_events(true);
+                hud::move_hud_offscreen(&hud_window);
+                let _ = hud_window.show();
                 if let Some(main_window) = app.get_webview_window("main") {
                     let _ = main_window.set_focus();
                 }
             }
 
-
             // --- Warm the Piper daemon so the first utterance skips the model load ---
+            // Off-thread: nothing below depends on it, and it holds the config mutex.
             {
-                let cfg = app.state::<std::sync::Mutex<config::AppConfig>>();
-                let cfg = cfg.lock().unwrap();
-                tts::cli::prewarm_piper(&cfg.tts);
+                let app_handle = app.handle().clone();
+                std::thread::spawn(move || {
+                    let cfg = app_handle.state::<std::sync::Mutex<config::AppConfig>>();
+                    let tts = cfg.lock().unwrap().tts.clone();
+                    tts::cli::prewarm_piper(&tts);
+                });
             }
 
             // --- Start local control server for trusted localhost integrations (Pi, etc.) ---
