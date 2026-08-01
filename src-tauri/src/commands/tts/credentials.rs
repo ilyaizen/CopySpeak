@@ -126,9 +126,12 @@ pub fn check_cartesia_credentials(
 pub fn has_engine_credentials(engine: String, config: State<'_, Mutex<AppConfig>>) -> bool {
     let cfg = config.lock().unwrap();
     match engine.as_str() {
-        "openai" => !crate::secrets::resolve(&cfg.tts.openai.api_key, &["OPENAI_API_KEY"]).is_empty(),
+        "openai" => {
+            !crate::secrets::resolve(&cfg.tts.openai.api_key, &["OPENAI_API_KEY"]).is_empty()
+        }
         "elevenlabs" => {
-            !crate::secrets::resolve(&cfg.tts.elevenlabs.api_key, &["ELEVENLABS_API_KEY"]).is_empty()
+            !crate::secrets::resolve(&cfg.tts.elevenlabs.api_key, &["ELEVENLABS_API_KEY"])
+                .is_empty()
         }
         "cartesia" => {
             !crate::secrets::resolve(&cfg.tts.cartesia.api_key, &["CARTESIA_API_KEY"]).is_empty()
@@ -138,13 +141,11 @@ pub fn has_engine_credentials(engine: String, config: State<'_, Mutex<AppConfig>
             &["GEMINI_API_KEY", "GOOGLE_API_KEY"],
         )
         .is_empty(),
-        "microsoft" => {
-            !crate::secrets::resolve(
-                &cfg.tts.microsoft.api_key,
-                &["MICROSOFT_API_KEY", "AZURE_API_KEY"],
-            )
-            .is_empty()
-        }
+        "microsoft" => !crate::secrets::resolve(
+            &cfg.tts.microsoft.api_key,
+            &["MICROSOFT_API_KEY", "AZURE_API_KEY"],
+        )
+        .is_empty(),
         _ => true,
     }
 }

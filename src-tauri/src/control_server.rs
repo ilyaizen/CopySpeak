@@ -168,12 +168,7 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
             let effect_id = parse_effect(effect)?;
             // Apply effect to the active profile
             let active_id = cfg.tts.active_profile_id.clone();
-            if let Some(profile) = cfg
-                .tts
-                .profiles
-                .iter_mut()
-                .find(|p| p.id == active_id)
-            {
+            if let Some(profile) = cfg.tts.profiles.iter_mut().find(|p| p.id == active_id) {
                 profile.effects.enabled = effect_id != EffectId::None;
                 profile.effects.active_effect = effect_id;
             }
@@ -190,7 +185,9 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
             request.text
         };
         if text.chars().count() > cfg.trigger.max_text_length as usize {
-            text.chars().take(cfg.trigger.max_text_length as usize).collect()
+            text.chars()
+                .take(cfg.trigger.max_text_length as usize)
+                .collect()
         } else {
             text
         }

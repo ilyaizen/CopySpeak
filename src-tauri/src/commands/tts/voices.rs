@@ -46,8 +46,7 @@ pub fn list_tts_voices(
 
     if engine == TtsEngine::Cartesia {
         let cfg = config.lock().unwrap();
-        let backend =
-            crate::tts::cartesia::CartesiaTtsBackend::new(cfg.tts.cartesia.clone());
+        let backend = crate::tts::cartesia::CartesiaTtsBackend::new(cfg.tts.cartesia.clone());
         return match backend.list_voices() {
             Ok(voices) => Ok(voices
                 .into_iter()

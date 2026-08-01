@@ -184,17 +184,14 @@ impl TtsBackend for CartesiaTtsBackend {
     }
 
     fn voice_display_name(&self, voice_id: &str) -> String {
-        self.config
-            .voice_name
-            .clone()
-            .unwrap_or_else(|| {
-                // Voice ids are opaque UUIDs — resolve the label from the catalog
-                // rather than keeping a second copy of the id/name mapping here.
-                crate::tts::catalog::list_static_voices(&crate::config::TtsEngine::Cartesia)
-                    .into_iter()
-                    .find(|v| v.id == voice_id)
-                    .map(|v| v.label)
-                    .unwrap_or_else(|| "Voice".to_string())
-            })
+        self.config.voice_name.clone().unwrap_or_else(|| {
+            // Voice ids are opaque UUIDs — resolve the label from the catalog
+            // rather than keeping a second copy of the id/name mapping here.
+            crate::tts::catalog::list_static_voices(&crate::config::TtsEngine::Cartesia)
+                .into_iter()
+                .find(|v| v.id == voice_id)
+                .map(|v| v.label)
+                .unwrap_or_else(|| "Voice".to_string())
+        })
     }
 }

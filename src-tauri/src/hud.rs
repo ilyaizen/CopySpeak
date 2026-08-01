@@ -440,5 +440,3 @@ fn compute_hud_position(
 
     Some(PhysicalPosition::new(x, y))
 }
-
-

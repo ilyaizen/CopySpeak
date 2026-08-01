@@ -120,7 +120,9 @@ fn start(key: String, command: &str, serve_args: &[String]) -> Result<Daemon, St
     let handshake = {
         let mut line = String::new();
         match stdout.read_line(&mut line) {
-            Ok(0) => Err("wrapper exited without READY (rerun install-piper.ps1 -Force)".to_string()),
+            Ok(0) => {
+                Err("wrapper exited without READY (rerun install-piper.ps1 -Force)".to_string())
+            }
             Ok(_) if line.trim() == "READY" => Ok(()),
             Ok(_) => Err(format!("unexpected handshake: {:?}", line.trim())),
             Err(e) => Err(e.to_string()),

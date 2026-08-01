@@ -144,9 +144,12 @@ impl TtsBackend for MicrosoftTtsBackend {
     }
 
     fn health_check(&self) -> Result<(), TtsError> {
-        if crate::secrets::resolve(&self.config.api_key, &["MICROSOFT_API_KEY", "AZURE_API_KEY"])
-            .trim()
-            .is_empty()
+        if crate::secrets::resolve(
+            &self.config.api_key,
+            &["MICROSOFT_API_KEY", "AZURE_API_KEY"],
+        )
+        .trim()
+        .is_empty()
         {
             return Err(TtsError::Unavailable("Microsoft API key is missing".into()));
         }

@@ -133,9 +133,7 @@ impl TtsBackend for EdgeTtsBackend {
             self.config.voice.trim()
         };
 
-        log::debug!(
-            "[Edge-TTS] Health check — attempting short synthesis with voice: {voice}"
-        );
+        log::debug!("[Edge-TTS] Health check — attempting short synthesis with voice: {voice}");
 
         // A real one-word synthesis is the most reliable check: it verifies
         // the binary exists, Python deps are intact, and the network endpoint
@@ -172,13 +170,7 @@ mod tests {
             backend.voice_display_name("en-US-EmmaMultilingualNeural"),
             "emmamultilingual"
         );
-        assert_eq!(
-            backend.voice_display_name("en-GB-SoniaNeural"),
-            "sonia"
-        );
-        assert_eq!(
-            backend.voice_display_name("en-US-AriaNeural"),
-            "aria"
-        );
+        assert_eq!(backend.voice_display_name("en-GB-SoniaNeural"), "sonia");
+        assert_eq!(backend.voice_display_name("en-US-AriaNeural"), "aria");
     }
 }

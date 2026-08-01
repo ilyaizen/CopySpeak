@@ -118,7 +118,9 @@ pub fn install_engine(
                 cmd.args(["-Voices", v]);
             }
         }
-        cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).stdin(Stdio::null());
+        cmd.stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .stdin(Stdio::null());
         cmd.creation_flags(CREATE_NO_WINDOW);
 
         let mut child = cmd
@@ -226,7 +228,8 @@ pub fn installed_voices(engine: String) -> Result<Vec<String>, String> {
     struct Manifest {
         voices_installed: Vec<String>,
     }
-    let parsed: Manifest =
-        serde_json::from_str(&content).unwrap_or(Manifest { voices_installed: Vec::new() });
+    let parsed: Manifest = serde_json::from_str(&content).unwrap_or(Manifest {
+        voices_installed: Vec::new(),
+    });
     Ok(parsed.voices_installed)
 }

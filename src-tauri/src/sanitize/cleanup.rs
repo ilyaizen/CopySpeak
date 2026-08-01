@@ -210,7 +210,10 @@ The project is valued at **100M** with 5k users. Cost is €50 per unit & ~10% p
             "Should not contain blockquote markers"
         );
         // Inline code is preserved by default (strip_inline_code=false)
-        assert!(result.contains('`'), "Inline code should be preserved by default");
+        assert!(
+            result.contains('`'),
+            "Inline code should be preserved by default"
+        );
         assert!(!result.contains("https://"), "Should not contain URLs");
         assert!(result.contains("for example"), "Should expand 'e.g.'");
         assert!(result.contains("approximately"), "Should expand '~'");
