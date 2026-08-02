@@ -7,7 +7,7 @@
     Installs kokoro-tts as a uv tool so the `kokoro-tts` binary is on PATH,
     then downloads the required model files (kokoro-v1.0.onnx + voices-v1.0.bin)
     into <engine_dir>/kokoro/models/. The kokoro-tts binary does NOT bundle or
-    auto-download these — synthesis fails without them — so the installer
+    auto-download these - synthesis fails without them - so the installer
     fetches them up front (~335 MB total) and the args_template points at them
     via --model/--voices.
 
@@ -99,6 +99,8 @@ if (-not $SkipModelDownload) {
         try {
             Invoke-WebRequest -Uri $modelUrl -OutFile $modelFile -UseBasicParsing
         } catch {
+            # Drop the partial file; otherwise the next run sees it as present.
+            Remove-Item -Force -ErrorAction SilentlyContinue $modelFile
             Write-Host "  WARNING: model download failed: $_" -ForegroundColor Red
             Write-Host "  Re-run with -Force, or download manually from $modelUrl" -ForegroundColor Gray
             $modelOk = $false
@@ -113,6 +115,7 @@ if (-not $SkipModelDownload) {
         try {
             Invoke-WebRequest -Uri $voicesUrl -OutFile $voicesFile -UseBasicParsing
         } catch {
+            Remove-Item -Force -ErrorAction SilentlyContinue $voicesFile
             Write-Host "  WARNING: voices download failed: $_" -ForegroundColor Red
             Write-Host "  Re-run with -Force, or download manually from $voicesUrl" -ForegroundColor Gray
             $modelOk = $false
@@ -184,5 +187,6 @@ if ($kokoroOk) {
     Write-Host "  Kokoro installed." -ForegroundColor Green
     Write-ProfileSnippet -Json $profileJson
 } else {
-    Write-Host "  [ERROR] engine (kokoro-tts binary or model files missing — re-run without -SkipModelDownload)" -ForegroundColor Red
+    Write-Host "  [ERROR] engine (kokoro-tts binary or model files missing - re-run without -SkipModelDownload)" -ForegroundColor Red
+    exit 1
 }

@@ -11,7 +11,14 @@ export type CredentialTarget = "openai" | "elevenlabs" | "cartesia" | "google" |
 
 // Panel state machines shared between engine-setup (orchestrator) and engine-panel (view).
 export type TestState = "idle" | "testing" | "success" | "fail";
-export type InstallState = "idle" | "installing";
+
+/**
+ * How the install dialog presents voices for an installable engine:
+ * - `per-voice`: each voice is a separate model download (piper)
+ * - `shared`: one model download covers every listed voice (kitten, kokoro)
+ * - `none`: nothing to pick — a binary install only (uv, edge, pocket)
+ */
+export type VoiceMode = "per-voice" | "shared" | "none";
 
 export interface EngineSetupEntry {
   /** Unique id; also the i18n key suffix under `engine.<id>.title/description`. */
@@ -19,6 +26,10 @@ export interface EngineSetupEntry {
   kind: "cloud" | "local";
   /** Passed to `install_engine`. Omitted for pure API-key engines. */
   installerId?: string;
+  /** Required whenever `installerId` is set. */
+  voiceMode?: VoiceMode;
+  /** Approximate download size, shown in the install dialog header. */
+  downloadSize?: string;
   credential: CredentialKind;
   credentialTarget?: CredentialTarget;
   /** i18n key under `engine.apiSetup.<placeholderKey>` for the API key placeholder. */
@@ -31,6 +42,11 @@ export const CLOUD_ENGINES: EngineSetupEntry[] = [
   {
     id: "edge",
     kind: "cloud",
+    // Cloud endpoint, but it is reached through the local `edge-tts` CLI, so
+    // it still needs installing (and can be uninstalled).
+    installerId: "edge",
+    voiceMode: "none",
+    downloadSize: "~2 MB CLI, no model",
     credential: "none",
     docsUrl: "https://github.com/rany2/edge-tts"
   },
@@ -83,6 +99,8 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
     id: "kitten",
     kind: "local",
     installerId: "kitten",
+    voiceMode: "shared",
+    downloadSize: "~25 MB shared model",
     credential: "none",
     docsUrl: "https://github.com/KittenML/KittenTTS"
   },
@@ -90,6 +108,8 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
     id: "piper",
     kind: "local",
     installerId: "piper",
+    voiceMode: "per-voice",
+    downloadSize: "~20-100 MB / voice",
     credential: "none",
     docsUrl: "https://github.com/OHF-Voice/piper1-gpl"
   },
@@ -97,6 +117,8 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
     id: "kokoro",
     kind: "local",
     installerId: "kokoro",
+    voiceMode: "shared",
+    downloadSize: "~335 MB shared model",
     credential: "none",
     docsUrl: "https://github.com/hexgrad/kokoro"
   },
@@ -104,6 +126,9 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
     id: "pocket",
     kind: "local",
     installerId: "pocket",
+    // One built-in voice; nothing to choose.
+    voiceMode: "none",
+    downloadSize: "~10 MB CLI",
     credential: "none",
     docsUrl: "https://github.com/nickolas777/pocket-tts"
   }
@@ -115,6 +140,8 @@ export const UV_ENTRY: EngineSetupEntry = {
   id: "uv",
   kind: "local",
   installerId: "uv",
+  voiceMode: "none",
+  downloadSize: "~30 MB",
   credential: "none",
   docsUrl: "https://docs.astral.sh/uv/"
 };

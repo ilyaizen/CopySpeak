@@ -273,6 +273,12 @@ fn main() {
     // Load .env (next to copyspeak.exe) before any backend reads credentials.
     secrets::load_dotenv();
 
+    // uv and its tool shims (edge-tts, kokoro-tts, pocket-tts) install into
+    // ~/.local/bin, which uv adds to the *user* PATH. A running process keeps
+    // the PATH it launched with, so without this every local engine would look
+    // missing until the app is restarted.
+    commands::augment_path_for_local_engines();
+
     tauri::Builder::default()
         .setup(|app| {
             // --- Load config ---
@@ -707,7 +713,8 @@ fn main() {
             commands::list_tts_engines,
             commands::list_tts_voices,
             commands::install_engine,
-            commands::installed_voices,
+            commands::uninstall_engine,
+            commands::engine_status,
             commands::test_tts_engine_config,
             commands::test_local_engine,
             // Post-processing models

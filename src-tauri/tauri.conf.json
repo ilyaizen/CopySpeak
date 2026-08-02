@@ -1,6 +1,6 @@
 {
   "productName": "CopySpeak",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "identifier": "com.copyspeak.tts",
   "build": {
     "frontendDist": "../dist",
@@ -25,7 +25,10 @@
     "category": "Productivity",
     "resources": {
       "../scripts/install-*.ps1": "scripts/",
-      "../scripts/lib/*.ps1": "scripts/lib/"
+      "../scripts/uninstall-*.ps1": "scripts/",
+      "../scripts/lib/*.ps1": "scripts/lib/",
+      "../scripts/piper/*.py": "scripts/piper/",
+      "../scripts/kitten/*.py": "scripts/kitten/"
     },
     "windows": {
       "certificateThumbprint": null,
