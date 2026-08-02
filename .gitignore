@@ -42,3 +42,5 @@ DO_NOT_TOUCH/
 /.scratch
 /.pi-subagents
 nul
+/.hermes
+target-verify.ps1
