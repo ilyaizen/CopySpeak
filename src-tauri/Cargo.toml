@@ -1,6 +1,6 @@
 [package]
 name = "copyspeak"
-version = "0.1.14"
+version = "0.1.13"
 edition = "2021"
 description = "CopySpeak - AI text-to-speech orchestrator"
 
