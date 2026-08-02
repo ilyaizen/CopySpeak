@@ -42,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Regression test pins the serde subtlety: the blank appears only when the `cartesia` object is _present_ (carrying the persisted `api_key`), because the field-level `#[serde(default)]` then beats the container-level one.
 - **HUD window flashed white on launch** — the HUD was created with `visible: true`, so WebView2 painted its default white surface at the OS-chosen position for a frame before Tauri applied the off-screen coordinates. It is now created hidden and shown only after being parked off-screen. The stale `x`/`y: 10000` in `tauri.conf.json` (which disagreed with `move_hud_offscreen`'s `-10000`) were removed, leaving one source of truth for the park position.
 
+## [0.1.13] - 2026-08-02
+
 ## [0.1.12] - 2026-07-31
 
 ### Added
@@ -551,7 +553,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.12...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.13...HEAD
+[0.1.13]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.9...v0.1.10
