@@ -72,12 +72,15 @@ pub fn get_config(config: State<'_, Mutex<AppConfig>>) -> AppConfig {
     cfg.tts.openai.api_key = secrets::resolve(&cfg.tts.openai.api_key, &["OPENAI_API_KEY"]);
     cfg.tts.elevenlabs.api_key =
         secrets::resolve(&cfg.tts.elevenlabs.api_key, &["ELEVENLABS_API_KEY"]);
-    cfg.tts.cartesia.api_key =
-        secrets::resolve(&cfg.tts.cartesia.api_key, &["CARTESIA_API_KEY"]);
-    cfg.tts.google.api_key =
-        secrets::resolve(&cfg.tts.google.api_key, &["GEMINI_API_KEY", "GOOGLE_API_KEY"]);
-    cfg.tts.microsoft.api_key =
-        secrets::resolve(&cfg.tts.microsoft.api_key, &["MICROSOFT_API_KEY", "AZURE_API_KEY"]);
+    cfg.tts.cartesia.api_key = secrets::resolve(&cfg.tts.cartesia.api_key, &["CARTESIA_API_KEY"]);
+    cfg.tts.google.api_key = secrets::resolve(
+        &cfg.tts.google.api_key,
+        &["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+    );
+    cfg.tts.microsoft.api_key = secrets::resolve(
+        &cfg.tts.microsoft.api_key,
+        &["MICROSOFT_API_KEY", "AZURE_API_KEY"],
+    );
     cfg.tts.microsoft.endpoint =
         secrets::resolve(&cfg.tts.microsoft.endpoint, &["MICROSOFT_ENDPOINT"]);
     cfg
@@ -173,16 +176,19 @@ pub fn set_config(
             ui_val.to_string()
         }
     }
-    new_config.tts.openai.api_key =
-        strip_env(&new_config.tts.openai.api_key, &["OPENAI_API_KEY"]);
+    new_config.tts.openai.api_key = strip_env(&new_config.tts.openai.api_key, &["OPENAI_API_KEY"]);
     new_config.tts.elevenlabs.api_key =
         strip_env(&new_config.tts.elevenlabs.api_key, &["ELEVENLABS_API_KEY"]);
     new_config.tts.cartesia.api_key =
         strip_env(&new_config.tts.cartesia.api_key, &["CARTESIA_API_KEY"]);
-    new_config.tts.google.api_key =
-        strip_env(&new_config.tts.google.api_key, &["GEMINI_API_KEY", "GOOGLE_API_KEY"]);
-    new_config.tts.microsoft.api_key =
-        strip_env(&new_config.tts.microsoft.api_key, &["MICROSOFT_API_KEY", "AZURE_API_KEY"]);
+    new_config.tts.google.api_key = strip_env(
+        &new_config.tts.google.api_key,
+        &["GEMINI_API_KEY", "GOOGLE_API_KEY"],
+    );
+    new_config.tts.microsoft.api_key = strip_env(
+        &new_config.tts.microsoft.api_key,
+        &["MICROSOFT_API_KEY", "AZURE_API_KEY"],
+    );
     new_config.tts.microsoft.endpoint =
         strip_env(&new_config.tts.microsoft.endpoint, &["MICROSOFT_ENDPOINT"]);
 

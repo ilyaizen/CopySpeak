@@ -4,13 +4,22 @@
   // component renders; the page/engine-setup orchestrates.
 
   import { _ } from "svelte-i18n";
-  import { Key, Download, Loader2, ExternalLink, CheckCircle2, XCircle, Eye, EyeOff } from "@lucide/svelte";
+  import {
+    Key,
+    Download,
+    Loader2,
+    ExternalLink,
+    CheckCircle2,
+    XCircle,
+    Eye,
+    EyeOff
+  } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import { openExternal } from "$lib/utils/external-link";
   import type { AppConfig } from "$lib/types";
-  import type { EngineSetupEntry, TestState, InstallState } from "./engine-meta";
+  import type { EngineSetupEntry, TestState } from "./engine-meta";
 
   // Track which fields are revealed (per credential target, keyed by field name)
   let revealedFields = $state<Record<string, boolean>>({});
@@ -21,7 +30,6 @@
     testState = "idle",
     testMessage = "",
     onTest,
-    installState = "idle",
     onInstall
   }: {
     entry: EngineSetupEntry;
@@ -29,7 +37,6 @@
     testState?: TestState;
     testMessage?: string;
     onTest?: () => void;
-    installState?: InstallState;
     onInstall?: () => void;
   } = $props();
 
@@ -90,7 +97,9 @@
                 const key = entry.credentialTarget! + "-api_key";
                 revealedFields = { ...revealedFields, [key]: !revealedFields[key] };
               }}
-              aria-label={revealedFields[entry.credentialTarget! + "-api_key"] ? "Hide API key" : "Show API key"}
+              aria-label={revealedFields[entry.credentialTarget! + "-api_key"]
+                ? "Hide API key"
+                : "Show API key"}
             >
               {#if revealedFields[entry.credentialTarget! + "-api_key"]}
                 <EyeOff size={14} />
@@ -125,19 +134,9 @@
 
     {#if entry.installerId}
       <div class="flex flex-wrap items-center gap-3">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={installState === "installing"}
-          onclick={() => onInstall?.()}
-        >
-          {#if installState === "installing"}
-            <Loader2 size={14} class="mr-2 animate-spin" />
-            {$_("engine.setup.installing")}
-          {:else}
-            <Download size={14} class="mr-2" />
-            {$_("engine.setup.install")}
-          {/if}
+        <Button variant="outline" size="sm" onclick={() => onInstall?.()}>
+          <Download size={14} class="mr-2" />
+          {$_("engine.setup.installManage")}
         </Button>
         <span class="text-muted-foreground text-xs">{$_("engines.installerSmokeTestHint")}</span>
       </div>

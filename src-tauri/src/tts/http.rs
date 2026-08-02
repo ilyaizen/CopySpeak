@@ -147,11 +147,7 @@ mod tests {
 
     #[test]
     fn test_fill_placeholders() {
-        let out = HttpTtsBackend::fill(
-            r#"{"input":"{text}","voice":"{voice}"}"#,
-            "hello",
-            "amy",
-        );
+        let out = HttpTtsBackend::fill(r#"{"input":"{text}","voice":"{voice}"}"#, "hello", "amy");
         assert_eq!(out, r#"{"input":"hello","voice":"amy"}"#);
     }
 }

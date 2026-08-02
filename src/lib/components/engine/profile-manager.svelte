@@ -1,6 +1,11 @@
 <script lang="ts">
   import { Button } from "$lib/components/ui/button/index.js";
-  import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "$lib/components/ui/dropdown-menu/index.js";
+  import {
+    DropdownMenu,
+    DropdownMenuTrigger,
+    DropdownMenuContent,
+    DropdownMenuItem
+  } from "$lib/components/ui/dropdown-menu/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
   import { Select } from "$lib/components/ui/select/index.js";
   import { Slider } from "$lib/components/ui/slider/index.js";
@@ -67,9 +72,27 @@
     voiceLabel: string;
     engineOptions: Record<string, unknown>;
   }[] = [
-    { name: "Kitten TTS — Rosie", engine: "kitten", voice: "Rosie", voiceLabel: "Rosie", engineOptions: { engine: "kitten" } },
-    { name: "Piper — Amy", engine: "piper", voice: "en_US-amy-medium", voiceLabel: "Amy", engineOptions: { engine: "piper" } },
-    { name: "Kokoro — Heart", engine: "kokoro", voice: "af_heart", voiceLabel: "Heart", engineOptions: { engine: "kokoro" } }
+    {
+      name: "Kitten TTS — Rosie",
+      engine: "kitten",
+      voice: "Rosie",
+      voiceLabel: "Rosie",
+      engineOptions: { engine: "kitten" }
+    },
+    {
+      name: "Piper — Amy",
+      engine: "piper",
+      voice: "en_US-amy-medium",
+      voiceLabel: "Amy",
+      engineOptions: { engine: "piper" }
+    },
+    {
+      name: "Kokoro — Heart",
+      engine: "kokoro",
+      voice: "af_heart",
+      voiceLabel: "Heart",
+      engineOptions: { engine: "kokoro" }
+    }
   ];
 
   // §6: "Start from" prefill for the Local CLI escape hatch — copies
@@ -82,9 +105,60 @@
     voice: string;
   }[] = [
     { id: "blank", label: "Custom (blank)", command: "", args_template: [], voice: "" },
-    { id: "kitten", label: "Kitten-style", command: "uv", args_template: ["run", "--project", "{engine_dir}/kitten", "python", "{engine_dir}/kitten/scripts/copyspeak-kitten.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"], voice: "Rosie" },
-    { id: "piper", label: "Piper-style", command: "uv", args_template: ["run", "--project", "{engine_dir}/piper", "python", "{engine_dir}/piper/scripts/copyspeak-piper.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"], voice: "en_US-amy-medium" },
-    { id: "kokoro", label: "Kokoro-style", command: "kokoro-tts", args_template: ["{input}", "{output}", "--voice", "{voice}", "--model", "{engine_dir}/kokoro/models/kokoro-v1.0.onnx", "--voices", "{engine_dir}/kokoro/models/voices-v1.0.bin"], voice: "af_heart" }
+    {
+      id: "kitten",
+      label: "Kitten-style",
+      command: "uv",
+      args_template: [
+        "run",
+        "--project",
+        "{engine_dir}/kitten",
+        "python",
+        "{engine_dir}/kitten/scripts/copyspeak-kitten.py",
+        "--text-file",
+        "{input}",
+        "--voice",
+        "{voice}",
+        "--output",
+        "{output}"
+      ],
+      voice: "Rosie"
+    },
+    {
+      id: "piper",
+      label: "Piper-style",
+      command: "uv",
+      args_template: [
+        "run",
+        "--project",
+        "{engine_dir}/piper",
+        "python",
+        "{engine_dir}/piper/scripts/copyspeak-piper.py",
+        "--text-file",
+        "{input}",
+        "--voice",
+        "{voice}",
+        "--output",
+        "{output}"
+      ],
+      voice: "en_US-amy-medium"
+    },
+    {
+      id: "kokoro",
+      label: "Kokoro-style",
+      command: "kokoro-tts",
+      args_template: [
+        "{input}",
+        "{output}",
+        "--voice",
+        "{voice}",
+        "--model",
+        "{engine_dir}/kokoro/models/kokoro-v1.0.onnx",
+        "--voices",
+        "{engine_dir}/kokoro/models/voices-v1.0.bin"
+      ],
+      voice: "af_heart"
+    }
   ];
 
   const engineOptions = $derived(
@@ -108,7 +182,8 @@
     if (!active) return [];
     const rawVoices = catalogVoicesFor(active.engine as TtsEngine);
     if (active.engine === "local") {
-      const preset = (active.engine_options as Record<string, unknown> | undefined)?.preset as string | undefined;
+      const preset = (active.engine_options as Record<string, unknown> | undefined)?.preset as
+        string | undefined;
       if (preset === "piper") return rawVoices.filter((v) => v.language === "Piper");
       if (preset === "kokoro") return rawVoices.filter((v) => v.language === "Kokoro");
       if (preset === "kitten-tts") return rawVoices.filter((v) => v.language === "KittenTTS");
@@ -117,6 +192,26 @@
     }
     return rawVoices;
   });
+
+  const showPicker = $derived(
+    activeVoiceCatalog.length > 0 || !!activeCatalogEntry?.supports_voice_refresh
+  );
+
+  // Picker is primary: the manual input stays locked while the current voice is
+  // a catalog id. "Custom / manual id…" in the picker unlocks it for this
+  // profile/engine only — ephemeral, never persisted to config.
+  let manualOverride = $state(false);
+  let manualRef = $state<HTMLInputElement | null>(null);
+
+  $effect(() => {
+    activeId;
+    active?.engine;
+    manualOverride = false;
+  });
+
+  const manualLocked = $derived(
+    showPicker && !manualOverride && activeVoiceCatalog.some((v) => v.id === (active?.voice ?? ""))
+  );
 
   // Passive hint: checks backend (config.json + .env) for credential presence.
   let credentialsResolved = $state<Record<string, boolean>>({});
@@ -201,7 +296,19 @@
       profile.engine_options = {
         ...profile.engine_options,
         command: "uv",
-        args_template: ["run", "--project", "{engine_dir}/piper", "python", "{engine_dir}/piper/scripts/copyspeak-piper.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"]
+        args_template: [
+          "run",
+          "--project",
+          "{engine_dir}/piper",
+          "python",
+          "{engine_dir}/piper/scripts/copyspeak-piper.py",
+          "--text-file",
+          "{input}",
+          "--voice",
+          "{voice}",
+          "--output",
+          "{output}"
+        ]
       } as VoiceProfile["engine_options"];
       profile.voice = "en_US-amy-medium";
       profile.voice_label = "Amy";
@@ -209,7 +316,19 @@
       profile.engine_options = {
         ...profile.engine_options,
         command: "uv",
-        args_template: ["run", "--project", "{engine_dir}/kitten", "python", "{engine_dir}/kitten/scripts/copyspeak-kitten.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"]
+        args_template: [
+          "run",
+          "--project",
+          "{engine_dir}/kitten",
+          "python",
+          "{engine_dir}/kitten/scripts/copyspeak-kitten.py",
+          "--text-file",
+          "{input}",
+          "--voice",
+          "{voice}",
+          "--output",
+          "{output}"
+        ]
       } as VoiceProfile["engine_options"];
       profile.voice = "Rosie";
       profile.voice_label = "Rosie";
@@ -217,7 +336,16 @@
       profile.engine_options = {
         ...profile.engine_options,
         command: "kokoro-tts",
-        args_template: ["{input}", "{output}", "--voice", "{voice}", "--model", "{engine_dir}/kokoro/models/kokoro-v1.0.onnx", "--voices", "{engine_dir}/kokoro/models/voices-v1.0.bin"]
+        args_template: [
+          "{input}",
+          "{output}",
+          "--voice",
+          "{voice}",
+          "--model",
+          "{engine_dir}/kokoro/models/kokoro-v1.0.onnx",
+          "--voices",
+          "{engine_dir}/kokoro/models/voices-v1.0.bin"
+        ]
       } as VoiceProfile["engine_options"];
       profile.voice = "af_heart";
       profile.voice_label = "Heart";
@@ -228,7 +356,7 @@
     const profile = localConfig.tts.profiles[index];
     const current = profile.engine_options;
     const base = current && typeof current === "object" && !Array.isArray(current) ? current : {};
-    
+
     let updatedOptions = {
       ...base,
       engine: profile.engine,
@@ -280,7 +408,8 @@
     // Auto-populate default preset's command/args/voice for local engine
     if (engine === "local") {
       const entry = catalog.find((item) => item.engine === engine);
-      const defaultPreset = entry?.options.find((o) => o.key === "preset")?.default_value as string | undefined;
+      const defaultPreset = entry?.options.find((o) => o.key === "preset")?.default_value as
+        string | undefined;
       if (defaultPreset && defaultPreset !== "custom") {
         applyPresetDefaults(activeIndex, defaultPreset);
       }
@@ -484,29 +613,37 @@
           </SettingRow>
         {/if}
 
-        {#if activeVoiceCatalog.length > 0 || activeCatalogEntry?.supports_voice_refresh}
-          <SettingRow
-            label="Voice"
-            tooltip="Known voices from the engine catalog or provider API."
-          >
+        {#if showPicker}
+          <SettingRow label="Voice" tooltip="Known voices from the engine catalog or provider API.">
             <VoicePicker
               voices={activeVoiceCatalog}
               value={active.voice}
               loading={voicesLoadingFor === active.engine}
               supportsRefresh={!!activeCatalogEntry?.supports_voice_refresh}
-              onselect={(id) => setVoice(activeIndex, id)}
+              onselect={(id) => {
+                manualOverride = false;
+                setVoice(activeIndex, id);
+              }}
               onrefresh={() => refreshVoices(active.engine)}
+              onmanual={() => {
+                manualOverride = true;
+                manualRef?.focus();
+              }}
             />
           </SettingRow>
         {/if}
 
         <SettingRow
-          label="Manual Voice"
-          tooltip="Override the catalog voice id. Blank = provider default."
+          label={showPicker ? "Manual Voice" : "Voice"}
+          tooltip={showPicker
+            ? "Override the catalog voice id. Blank = provider default."
+            : "Voice id for this engine. Blank = provider default."}
         >
           <Input
+            bind:ref={manualRef}
             value={localConfig.tts.profiles[activeIndex].voice}
             placeholder="provider default"
+            disabled={manualLocked}
             onchange={(e) => setVoice(activeIndex, (e.target as HTMLInputElement).value)}
             class="w-56"
           />

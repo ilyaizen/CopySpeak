@@ -14,6 +14,7 @@ pub struct CartesiaVoice {
     pub id: String,
     pub name: Option<String>,
     pub description: Option<String>,
+    pub language: Option<String>,
 }
 
 impl Default for CartesiaVoice {
@@ -22,6 +23,7 @@ impl Default for CartesiaVoice {
             id: String::new(),
             name: None,
             description: None,
+            language: None,
         }
     }
 }
@@ -182,13 +184,14 @@ impl TtsBackend for CartesiaTtsBackend {
     }
 
     fn voice_display_name(&self, voice_id: &str) -> String {
-        self.config
-            .voice_name
-            .clone()
-            .unwrap_or_else(|| match voice_id {
-                "f786b574-daa5-4673-aa0c-cbe3e8534c02" => "Katie".to_string(),
-                "a5136bf9-224c-4d76-b823-52bd5efcffcc" => "Jameson".to_string(),
-                _ => "Voice".to_string(),
-            })
+        self.config.voice_name.clone().unwrap_or_else(|| {
+            // Voice ids are opaque UUIDs — resolve the label from the catalog
+            // rather than keeping a second copy of the id/name mapping here.
+            crate::tts::catalog::list_static_voices(&crate::config::TtsEngine::Cartesia)
+                .into_iter()
+                .find(|v| v.id == voice_id)
+                .map(|v| v.label)
+                .unwrap_or_else(|| "Voice".to_string())
+        })
     }
 }

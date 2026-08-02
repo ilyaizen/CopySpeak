@@ -3,7 +3,10 @@
 use regex::Regex;
 
 /// Strip markdown syntax from text, respecting per-feature config toggles.
-pub(super) fn strip_markdown(text: &str, config: &crate::config::MarkdownSanitizationConfig) -> String {
+pub(super) fn strip_markdown(
+    text: &str,
+    config: &crate::config::MarkdownSanitizationConfig,
+) -> String {
     let mut result = text.to_string();
     if config.strip_code_blocks {
         result = strip_code_blocks(&result);
@@ -180,12 +183,18 @@ mod tests {
         config.strip_inline_code = false;
         let input = "Use `sudo` command";
         let result = strip_markdown(input, &config);
-        assert!(result.contains('`'), "Inline code should be preserved when strip_inline_code=false");
+        assert!(
+            result.contains('`'),
+            "Inline code should be preserved when strip_inline_code=false"
+        );
 
         // With inline code stripping enabled
         config.strip_inline_code = true;
         let result = strip_markdown(input, &config);
-        assert!(!result.contains('`'), "Inline code should be removed when strip_inline_code=true");
+        assert!(
+            !result.contains('`'),
+            "Inline code should be removed when strip_inline_code=true"
+        );
     }
 
     #[test]
@@ -194,10 +203,16 @@ mod tests {
         config.strip_code_blocks = true;
         let input = "Text\n```code```\nMore";
         let result = strip_markdown(input, &config);
-        assert!(!result.contains("```"), "Code blocks should be removed when strip_code_blocks=true");
+        assert!(
+            !result.contains("```"),
+            "Code blocks should be removed when strip_code_blocks=true"
+        );
 
         config.strip_code_blocks = false;
         let result = strip_markdown(input, &config);
-        assert!(result.contains("```"), "Code blocks should be preserved when strip_code_blocks=false");
+        assert!(
+            result.contains("```"),
+            "Code blocks should be preserved when strip_code_blocks=false"
+        );
     }
 }

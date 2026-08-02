@@ -46,15 +46,14 @@ pub fn list_tts_voices(
 
     if engine == TtsEngine::Cartesia {
         let cfg = config.lock().unwrap();
-        let backend =
-            crate::tts::cartesia::CartesiaTtsBackend::new(cfg.tts.cartesia.clone());
+        let backend = crate::tts::cartesia::CartesiaTtsBackend::new(cfg.tts.cartesia.clone());
         return match backend.list_voices() {
             Ok(voices) => Ok(voices
                 .into_iter()
                 .map(|v| crate::tts::catalog::VoiceCatalogEntry {
                     id: v.id,
                     label: v.name.unwrap_or_else(|| "Unnamed voice".into()),
-                    language: None,
+                    language: v.language,
                     description: v.description,
                     gender: None,
                     preview_url: None,

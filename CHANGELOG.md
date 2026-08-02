@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Uninstall for every local TTS engine** — new `scripts/uninstall-engine.ps1 -Engine <kitten|piper|kokoro|pocket|edge>` removes the uv-managed engine directory and/or runs `uv tool uninstall`, streaming the same `[STEP]/[DONE]/[ERROR]` markers as the installers. Exposed as the `uninstall_engine` Tauri command and an Uninstall button (with confirmation) in the install dialog.
+  - `-KeepModels` drops the venv/wrapper/manifest but keeps expensive model downloads.
+  - uv itself is refused in both the script's `ValidateSet` and `uninstall_engine`: it is a shared prerequisite for every other local engine.
+- **`engine_status` command** — probes each engine the way it is _used_ rather than trusting a manifest: `kokoro` requires its binary **and** both model files, the uv-tool engines require their binary on PATH, and `kitten`/`piper` require both `manifest.json` and `pyproject.toml`. Replaces `installed_voices`, whose result is now the `voices` field.
+- **`scripts/test-installer-lib.ps1`** — runnable self-check for the installer helpers: asserts every interactive helper returns its default under `COPYSPEAK_NONINTERACTIVE=1` (run it with `< NUL`, so a hang _is_ the failure), parses every `scripts/**/*.ps1` and asserts it is ASCII-only, and runs `uninstall-engine.ps1` against a throwaway `LOCALAPPDATA` to prove the never-installed path is a clean exit-0 no-op.
+- **`Add-UvToPath` / `augment_path_for_local_engines`** — uv and its tool shims install into `~/.local/bin`, which uv adds to the _user_ PATH. A running process keeps its launch-time PATH, so engines installed during a session used to look missing until an app restart. Both the shared installer lib and CopySpeak startup now prepend the known uv locations.
+- **27 English Cartesia voices** in the static engine catalog (was 2), ids taken verbatim from the account's `GET /voices` dump. All are tagged `language: "en"` — the Cartesia API has no region field, so no `en-US`/`en-GB` locale is claimed; the accent, where the provider states one, stays in the description. The picker groups them by gender.
+  - New test `cartesia_voice_ids_are_unique_uuids` guards the hand-copied id table (UUID shape + no duplicates).
+  - `CartesiaTtsBackend::voice_display_name` now resolves labels from the catalog instead of a second hard-coded id/name map.
+
+### Changed
+
+- **`edge` is installable and uninstallable** — it reaches a cloud endpoint but does so through the local `edge-tts` CLI, so it now carries an `installerId` instead of silently requiring a manual `pip install`.
+- **Install dialog is driven by engine metadata** — the hard-coded `SHARED`/`ENGINE_SIZE` maps moved into `engine-meta.ts` as `voiceMode` (`per-voice` | `shared` | `none`) and `downloadSize`. `none` engines (uv, edge, pocket) no longer render a meaningless voice checklist.
+- **Voice picker is now primary over manual entry** — in the voices route, the Manual Voice input is disabled while the profile's voice matches a catalog id. The picker gains a "Custom / manual id…" row (`onmanual` prop) that unlocks and focuses the input; picking a real voice re-locks it. The unlock (`manualOverride`) is component-local state, reset on profile/engine change — no config schema change.
+  - When no picker is rendered (engines without a catalog or refresh support), the input is always enabled and relabeled "Voice".
+- **Cartesia voice refresh keeps language metadata** — `CartesiaVoice` gains a `language` field, mapped through to `VoiceCatalogEntry.language` in `list_tts_voices`, so a refresh no longer strips the language off every voice.
+- **Renamed "Microsoft Azure" to "Microsoft Foundry"** — engine catalog label/description and the `en.json` engine + setup strings. Microsoft Learn docs URLs left unchanged (still `learn.microsoft.com/.../azure/ai-services/speech-service/`).
+- **Piper daemon prewarm moved off the setup thread** — `prewarm_piper` ran inline in `setup()` while holding the config mutex, delaying the control server and clipboard listener. It now runs on its own thread with a cloned `TtsConfig`.
+
+### Fixed
+
+- **Engine installers failed when launched from the app** — tauri's `resource_dir()` is built from a canonicalized exe path; on Windows `std::fs::canonicalize` returns `\\?\` verbatim paths, which leaked into `powershell -File` and `$PSScriptRoot`, breaking the `lib/copyspeak-engine-install.ps1` dot-source in every installer. `resolve_script` now strips the prefix once at the source, so installers work in dev and packaged builds; the per-script `$PSScriptRoot -replace` workarounds were removed.
+- **`install-kokoro.ps1` did not parse under Windows PowerShell 5.1** — the file is BOM-less UTF-8, which 5.1 reads as ANSI, so an em dash inside a `Write-Host` string decoded to bytes containing a `"` and terminated the literal early. The script failed before running a single line on any machine without `pwsh`. All installer scripts are now ASCII-only, and the new self-check enforces it.
+- **Installers hung forever when launched from the app** — `install_engine` spawns PowerShell with stdin closed, but the shared `Get-Confirmation` and `Select-VoiceFromMenu` helpers still called `Read-Host`. Reinstalling `edge` or `pocket` (whose force prompts did not check `-Voices`) blocked with no output. Both helpers now return their default when `COPYSPEAK_NONINTERACTIVE=1`, which the Rust spawner sets; the child also gets `-NonInteractive`.
+- **Failed installs reported success** — `install-piper.ps1` caught per-voice download errors and still exited 0, and `install-kokoro.ps1` exited 0 with its model files missing, so the UI showed a green "Install complete" for an engine that could not synthesize. Both now exit 1, and partial `.onnx`/`.bin` downloads are deleted so the next run does not mistake them for a finished file.
+- **Packaged builds could not install piper or kitten** — `tauri.conf.json` bundled the `.ps1` scripts but not the `scripts/piper/*.py` and `scripts/kitten/*.py` wrappers they copy, nor the new uninstaller. `resolve_script` also never looked in the Tauri resource directory; it now checks `resource_dir()` first, then the dev repo path. (The uninstaller is registered as `uninstall-*.ps1`: Tauri's resource copier fails with `Access is denied` when a non-glob source is paired with a directory destination.)
+- **Engine installs could not be observed or retried** — `uv` and `edge` bypassed the streamed install dialog for a fire-and-forget launch that toasted "Installer launched" regardless of outcome. Every engine with an `installerId` now opens the dialog with its live log.
+- **Redundant TTS health checks at startup** — `app-footer.svelte` fired `test_tts_engine` (a live API call) on mount and again on every global `config-changed` event, producing five Cartesia round-trips on launch. Checks are now throttled to one per 30s with an in-flight guard; explicit profile switches and initial mount bypass the throttle.
+- **Health-check logs and toasts reported a blank model** (`Cartesia ()`) — the label was built from the global `TtsConfig` while the backend came from the active profile's engine options. Those global model/voice/format fields are `skip_serializing` (the profile owns them), so a config loaded from disk deserializes them empty. New `effective_backend_name` mirrors the override order in `create_backend_from_effective` — profile options, then global config, then `"unset"` — and covers OpenAI, ElevenLabs, Google, Microsoft and Edge, which read the same blanked fields. `test_tts_engine_config` has no profile to consult but reaches a user-facing toast, so it gets the same blank guard.
+  - Regression test pins the serde subtlety: the blank appears only when the `cartesia` object is _present_ (carrying the persisted `api_key`), because the field-level `#[serde(default)]` then beats the container-level one.
+- **HUD window flashed white on launch** — the HUD was created with `visible: true`, so WebView2 painted its default white surface at the OS-chosen position for a frame before Tauri applied the off-screen coordinates. It is now created hidden and shown only after being parked off-screen. The stale `x`/`y: 10000` in `tauri.conf.json` (which disagreed with `move_hud_offscreen`'s `-10000`) were removed, leaving one source of truth for the park position.
+
+## [0.1.13] - 2026-08-02
+
 ## [0.1.12] - 2026-07-31
 
 ### Added
@@ -516,7 +553,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.12...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.13...HEAD
+[0.1.13]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.10...v0.1.11
 [0.1.10]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.9...v0.1.10

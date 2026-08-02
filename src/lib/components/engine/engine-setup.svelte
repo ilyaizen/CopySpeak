@@ -15,8 +15,7 @@
     LOCAL_ENGINES,
     UV_ENTRY,
     type EngineSetupEntry,
-    type TestState,
-    type InstallState
+    type TestState
   } from "./engine-meta";
   import type { AppConfig } from "$lib/types";
 
@@ -44,18 +43,14 @@
 
   let testStates = $state<Record<string, TestState>>({});
   let testMessages = $state<Record<string, string>>({});
-  let installStates = $state<Record<string, InstallState>>({});
   let uvAvailable = $state<boolean | null>(null);
-  // Non-null opens the streamed install dialog for that engine id.
-  let installDialogEngine = $state<string | null>(null);
+  // Non-null opens the streamed install/uninstall dialog for that engine.
+  let installDialogEntry = $state<EngineSetupEntry | null>(null);
 
   const selected = $derived(ALL.find((e) => e.id === selectedId) ?? CLOUD_ENGINES[0]);
 
   function testState(id: string): TestState {
     return testStates[id] ?? "idle";
-  }
-  function installState(id: string): InstallState {
-    return installStates[id] ?? "idle";
   }
 
   async function checkUv() {
@@ -117,24 +112,12 @@
     }
   }
 
-  // Voice-bearing local engines open the install dialog (streamed progress +
-  // per-voice selection); uv stays a fire-and-forget launch.
-  async function runInstall(entry: EngineSetupEntry) {
+  // Every installable engine goes through the dialog: it owns the streamed
+  // log, the voice picker, and uninstall. Nothing installs fire-and-forget,
+  // so a failure can no longer look like a success.
+  function runInstall(entry: EngineSetupEntry) {
     if (!entry.installerId) return;
-    if (entry.kind === "local" && entry.id !== "uv") {
-      installDialogEngine = entry.installerId;
-      return;
-    }
-    installStates = { ...installStates, [entry.id]: "installing" };
-    try {
-      await invoke("install_engine", { engine: entry.installerId });
-      if (entry.id === "uv") await checkUv();
-      toast.success(`${$_("engines.installerLaunched")}: ${entry.id}`);
-    } catch (e) {
-      toast.error(`${$_("engines.installFailed")}: ${e}`);
-    } finally {
-      installStates = { ...installStates, [entry.id]: "idle" };
-    }
+    installDialogEntry = entry;
   }
 
   onMount(() => {
@@ -207,15 +190,20 @@
       testState={testState(selected.id)}
       testMessage={testMessages[selected.id] ?? ""}
       onTest={() => runTest(selected)}
-      installState={installState(selected.id)}
       onInstall={() => runInstall(selected)}
     />
   </main>
 
-  {#if installDialogEngine}
+  {#if installDialogEntry}
     <InstallDialog
-      engineId={installDialogEngine}
-      onclose={() => (installDialogEngine = null)}
+      entry={installDialogEntry}
+      onclose={() => (installDialogEntry = null)}
+      onchange={() => {
+        // A uv install/uninstall flips the prerequisite banner; a stale test
+        // verdict from before the change would be misleading.
+        void checkUv();
+        testStates = {};
+      }}
     />
   {/if}
 </div>

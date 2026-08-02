@@ -272,9 +272,9 @@
         "detail": "Cloud TTS powered by Google's Gemini models. Requires a Google AI API key."
       },
       "microsoft": {
-        "title": "Microsoft Azure AI",
-        "description": "Enterprise cloud TTS via Azure",
-        "detail": "Enterprise-grade neural voices via Azure Cognitive Services. Requires an Azure API key and endpoint."
+        "title": "Microsoft Foundry AI",
+        "description": "Enterprise cloud TTS via Microsoft Foundry",
+        "detail": "Enterprise-grade neural voices via Microsoft Foundry speech services. Requires an API key and endpoint."
       },
       "http": {
         "title": "Custom HTTP Engine",
@@ -337,8 +337,8 @@
       "apiKey": "API Key"
     },
     "microsoft": {
-      "title": "Microsoft Azure",
-      "description": "Cloud: Azure Cognitive Services Speech. Requires a region endpoint and API key.",
+      "title": "Microsoft Foundry",
+      "description": "Cloud: Microsoft Foundry Speech. Requires a region endpoint and API key.",
       "apiKey": "API Key",
       "endpoint": "Endpoint"
     },
@@ -356,7 +356,8 @@
       "install": "Install",
       "installing": "Installing...",
       "tryAgain": "Try Again",
-      "openInstaller": "Run installer"
+      "openInstaller": "Run installer",
+      "installManage": "Install / Manage"
     },
     "badges": {
       "active": "Active",
@@ -475,7 +476,6 @@
     "docs": "Docs",
     "noCredentialNeeded": "No API key required.",
     "installerSmokeTestHint": "Install, then press Test to verify the engine synthesizes audio.",
-    "installerLaunched": "Installer launched",
     "installFailed": "Install failed",
     "saveBeforeTestFailed": "Save your changes before testing.",
     "installDone": "Install complete",
@@ -483,8 +483,14 @@
     "reinstall": "Reinstall",
     "voiceInstalled": "Installed",
     "sharedModelHint": "One shared model download; every listed voice is included.",
-    "installedAllVoices": "Installed \u2014 all voices available.",
-    "piperPerVoiceHint": "Select voices to download (each is a separate model)."
+    "installedAllVoices": "Installed — all voices available.",
+    "piperPerVoiceHint": "Select voices to download (each is a separate model).",
+    "uninstall": "Uninstall",
+    "uninstallDone": "Uninstalled",
+    "uninstallFailed": "Uninstall failed",
+    "uninstallConfirm": "Remove this engine's files and binaries? Downloaded models are deleted. Profiles using it will stop working until you reinstall.",
+    "binaryHint": "Installs a command-line binary. No model download.",
+    "binaryInstalled": "Installed and ready."
   },
   "play": {
     "title": "Play",

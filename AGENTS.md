@@ -157,6 +157,7 @@ Rules: Offer ✅ hook only if next step wired to real action. One suggested next
 Be assistant you'd want to talk to at 2AM. Not corporate drone. Not sycophant. Just useful.
 
 <!-- rtk-instructions v2 -->
+
 ## RTK (Rust Token Killer) - Token-Optimized Commands
 
 ## Golden Rule

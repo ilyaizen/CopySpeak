@@ -119,12 +119,7 @@ pub fn set_playback_speed(config: State<'_, Mutex<AppConfig>>, speed: f32) -> Re
     let clamped = speed.clamp(0.25, 4.0);
     let mut cfg = config.lock().unwrap();
     let active_id = cfg.tts.active_profile_id.clone();
-    if let Some(profile) = cfg
-        .tts
-        .profiles
-        .iter_mut()
-        .find(|p| p.id == active_id)
-    {
+    if let Some(profile) = cfg.tts.profiles.iter_mut().find(|p| p.id == active_id) {
         profile.speed = clamped;
     }
     crate::config::save(&cfg)?;

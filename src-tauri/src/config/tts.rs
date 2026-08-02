@@ -996,11 +996,12 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro => String::new(),
         };
 
-        let voice_label = catalog_voice_label(&tts.active_backend, &voice).or_else(|| match tts.active_backend {
-            TtsEngine::ElevenLabs => tts.elevenlabs.voice_name.clone(),
-            TtsEngine::Cartesia => tts.cartesia.voice_name.clone(),
-            _ => None,
-        });
+        let voice_label =
+            catalog_voice_label(&tts.active_backend, &voice).or_else(|| match tts.active_backend {
+                TtsEngine::ElevenLabs => tts.elevenlabs.voice_name.clone(),
+                TtsEngine::Cartesia => tts.cartesia.voice_name.clone(),
+                _ => None,
+            });
         tts.active_profile_id = "default".into();
         tts.profiles = vec![VoiceProfile {
             id: "default".into(),

@@ -214,7 +214,12 @@ mod tests {
     fn test_validation_command_empty() {
         let mut config = AppConfig::default();
         config.tts.active_backend = TtsEngine::Local;
-        if let Some(profile) = config.tts.profiles.iter_mut().find(|p| p.id == config.tts.active_profile_id) {
+        if let Some(profile) = config
+            .tts
+            .profiles
+            .iter_mut()
+            .find(|p| p.id == config.tts.active_profile_id)
+        {
             profile.engine = TtsEngine::Local;
         }
         config.tts.command = "".into();
@@ -230,7 +235,12 @@ mod tests {
     fn test_validation_args_template_missing_placeholders() {
         let mut config = AppConfig::default();
         config.tts.active_backend = TtsEngine::Local;
-        if let Some(profile) = config.tts.profiles.iter_mut().find(|p| p.id == config.tts.active_profile_id) {
+        if let Some(profile) = config
+            .tts
+            .profiles
+            .iter_mut()
+            .find(|p| p.id == config.tts.active_profile_id)
+        {
             profile.engine = TtsEngine::Local;
         }
         config.tts.args_template = vec!["-v".into(), "{voice}".into()];

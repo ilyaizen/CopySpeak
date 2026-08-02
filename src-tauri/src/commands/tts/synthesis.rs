@@ -15,8 +15,8 @@ use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
-    create_backend, create_backend_from_effective, engine_identifier, engine_str,
-    active_engine, resolve_effective, voice_display_name, SynthesisGuard,
+    active_engine, create_backend, create_backend_from_effective, engine_identifier, engine_str,
+    resolve_effective, voice_display_name, SynthesisGuard,
 };
 use crate::commands::{AudioFragmentEvent, CachedAudio, PaginationEvent};
 
@@ -316,8 +316,7 @@ async fn speak_now_internal(
                     "[TTS] Found cached history entry but failed to read audio file: {}. Re-synthesizing.",
                     e
                 );
-                synthesize_async(backend_arc.clone(), text.clone(), voice.clone())
-                    .await?
+                synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?
             }
         }
     } else if pagination::should_paginate(&text, &pagination_config) && !output_config.enabled {
@@ -749,12 +748,8 @@ pub async fn speak_queued(
 
         // Synthesize fragment
         let fragment_start = Instant::now();
-        let wav_bytes = synthesize_async(
-            backend_arc.clone(),
-            fragment.text.clone(),
-            voice.clone(),
-        )
-        .await?;
+        let wav_bytes =
+            synthesize_async(backend_arc.clone(), fragment.text.clone(), voice.clone()).await?;
         let fragment_duration = fragment_start.elapsed();
 
         // Record telemetry
@@ -788,7 +783,12 @@ pub async fn speak_queued(
 
         // Save to history
         let audio_ext = backend_arc.file_extension().to_string();
-        let voice_name = voice_display_name(&active_backend, &tts_config, &voice, eff.voice_label.as_deref());
+        let voice_name = voice_display_name(
+            &active_backend,
+            &tts_config,
+            &voice,
+            eff.voice_label.as_deref(),
+        );
         let history_path =
             save_to_history_storage(&config, &wav_bytes, &engine_id_val, &voice_name, &audio_ext);
 

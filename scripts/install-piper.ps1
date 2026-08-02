@@ -14,7 +14,7 @@
 
 .PARAMETER Force
     Recreate the engine project from scratch. When omitted, the installer
-    still prompts interactively ("Reinstall from scratch?") — answering yes
+    still prompts interactively ("Reinstall from scratch?") - answering yes
     is equivalent to passing -Force.
 
 .PARAMETER SmokeTest
@@ -103,6 +103,9 @@ $chosenVoice = $wantedVoices[0]
 
 # Download each wanted model pair if missing. Per-voice [STEP]/[DONE]/[ERROR]
 # markers let the frontend track per-voice status through the event stream.
+# A failed voice must fail the whole run, or the app reports a green install
+# for an engine that cannot synthesize.
+$voiceFailures = 0
 foreach ($v in $wantedVoices) {
     $modelPath = Join-Path $voicesDir "$v.onnx"
     $configPath = Join-Path $voicesDir "$v.onnx.json"
@@ -112,6 +115,7 @@ foreach ($v in $wantedVoices) {
     }
     if ($SkipVoiceDownload) {
         Write-Host "  [ERROR] voice:$v (skipped, -SkipVoiceDownload)" -ForegroundColor Red
+        $voiceFailures++
         continue
     }
     Write-Host "  [STEP] voice:$v" -ForegroundColor Yellow
@@ -131,10 +135,15 @@ foreach ($v in $wantedVoices) {
             }
             Write-Host "  [DONE] voice:$v" -ForegroundColor Green
         } catch {
+            # A half-written .onnx would look "present" on the next run and
+            # then fail at synthesis time, so clear the partial download.
+            Remove-Item -Force -ErrorAction SilentlyContinue $modelPath, $configPath
             Write-Host "  [ERROR] voice:$v : $_" -ForegroundColor Red
+            $voiceFailures++
         }
     } else {
         Write-Host "  [ERROR] voice:$v (unrecognized id shape)" -ForegroundColor Red
+        $voiceFailures++
     }
 }
 
@@ -179,6 +188,11 @@ $installedVoices = @(Get-ChildItem -Path $voicesDir -Filter "*.onnx" -ErrorActio
 Write-EngineManifest -EngineDir $EngineDir -VoicesInstalled $installedVoices
 
 Write-Host ""
+if ($voiceFailures -gt 0) {
+    Write-Host "  [ERROR] engine ($voiceFailures voice download(s) failed)" -ForegroundColor Red
+    Write-Host "  Piper package is installed at $EngineDir, but retry the failed voices." -ForegroundColor Yellow
+    exit 1
+}
 Write-Host "  [DONE] engine" -ForegroundColor Green
 Write-Host "  Piper installed at: $EngineDir" -ForegroundColor Green
 Write-ProfileSnippet -Json $profileJson
