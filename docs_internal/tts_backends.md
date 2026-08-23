@@ -387,7 +387,7 @@ pip install TTS
 **Installation:**
 
 ```bash
-pip install edge-tts
+uv tool install edge-tts
 ```
 
 **Configuration:**

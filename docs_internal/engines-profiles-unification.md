@@ -112,7 +112,7 @@ Separately, engine install was half-built:
 
 | Engine tab | Installer                | Profile engine | Profile preset | Verify                               |
 | ---------- | ------------------------ | -------------- | -------------- | ------------------------------------ |
-| Edge-TTS   | install-edge-tts.ps1     | edge           | —              | test_tts_engine_config("edge")       |
+| Edge-TTS   | — (`uv tool install edge-tts`) | edge | —              | test_tts_engine_config("edge")       |
 | Cartesia   | — (API key)              | cartesia       | —              | test_tts_engine_config("cartesia")   |
 | ElevenLabs | — (API key)              | elevenlabs     | —              | test_tts_engine_config("elevenlabs") |
 | OpenAI     | — (API key)              | openai         | —              | test_tts_engine_config("openai")     |

@@ -120,7 +120,9 @@
         "--voice",
         "{voice}",
         "--output",
-        "{output}"
+        "{output}",
+        "--model",
+        "{model}"
       ],
       voice: "Rosie"
     },
@@ -327,7 +329,9 @@
           "--voice",
           "{voice}",
           "--output",
-          "{output}"
+          "{output}",
+          "--model",
+          "{model}"
         ]
       } as VoiceProfile["engine_options"];
       profile.voice = "Rosie";

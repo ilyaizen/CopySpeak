@@ -13,7 +13,6 @@
   let isLoading = $state(true);
   let isSaving = $state(false);
   let testing = $state(false);
-  let installing = $state(false);
 
   async function loadDefaultConfig() {
     isLoading = true;
@@ -46,18 +45,6 @@
       toast.error(`Edge-TTS test failed: ${e}`);
     } finally {
       testing = false;
-    }
-  }
-
-  async function installEdgeTts() {
-    installing = true;
-    try {
-      await invoke("install_engine", { engine: "edge" });
-      toast.success("Edge-TTS is installing in the background. Press Test when ready.");
-    } catch (e) {
-      toast.error(`Failed to launch installer: ${e}`);
-    } finally {
-      setTimeout(() => (installing = false), 1200);
     }
   }
 
@@ -135,17 +122,8 @@
           </div>
         </div>
 
-        <!-- Install / Test -->
+        <!-- Test -->
         <div class="flex flex-col gap-3 pt-2 sm:flex-row">
-          <Button
-            variant="outline"
-            size="lg"
-            onclick={installEdgeTts}
-            disabled={installing}
-            class="flex-1"
-          >
-            {installing ? "Launching…" : "Install edge-tts"}
-          </Button>
           <Button
             variant="outline"
             size="lg"

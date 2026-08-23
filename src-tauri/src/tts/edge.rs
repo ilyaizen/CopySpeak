@@ -1,9 +1,10 @@
 // Edge-TTS backend (subprocess via Python edge-tts CLI).
 //
 // Edge-TTS (rany2/edge-tts) connects to Microsoft's free Read Aloud
-// WebSocket endpoint. No API key required. The CLI is pip-installed
-// (`pip install edge-tts`) and invoked as a subprocess: text is written
-// to a temp file (`-f`) and audio is written to a temp MP3 (`--write-media`).
+// WebSocket endpoint. No API key required. The CLI is installed as a uv tool
+// (`uv tool install edge-tts`, no app installer — see the not-found error
+// below) and invoked as a subprocess: text is written to a temp file (`-f`)
+// and audio is written to a temp MP3 (`--write-media`).
 
 use super::{TtsBackend, TtsError};
 use crate::config::EdgeTtsConfig;
@@ -79,7 +80,7 @@ impl TtsBackend for EdgeTtsBackend {
 
         let child = cmd.spawn().map_err(|e| {
             TtsError::Unavailable(format!(
-                "edge-tts not found. Install with: pip install edge-tts\n\nError: {e}"
+                "edge-tts not found. Install with: uv tool install edge-tts\n\nError: {e}"
             ))
         })?;
 

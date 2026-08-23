@@ -13,7 +13,7 @@ pitch + effect as one swappable unit.
 
 | Engine             | Type   | API key        | Offline | Installer                | Setup test               |
 | ------------------ | ------ | -------------- | ------- | ------------------------ | ------------------------ |
-| Edge-TTS           | cloud  | no             | no      | `install-edge-tts.ps1`   | `test_tts_engine_config` |
+| Edge-TTS           | cloud  | no             | no      | — (`uv tool install edge-tts`) | `test_tts_engine_config` |
 | Cartesia (Sonic)   | cloud  | yes            | no      | —                        | `test_tts_engine_config` |
 | ElevenLabs         | cloud  | yes            | no      | —                        | `test_tts_engine_config` |
 | OpenAI             | cloud  | yes            | no      | —                        | `test_tts_engine_config` |
@@ -30,7 +30,9 @@ pitch + effect as one swappable unit.
 
 Each cloud tab on the Engine page takes an API key (Microsoft also takes an
 endpoint). Click **Test Setup** to synthesize a short clip with the engine's
-default voice and confirm the credential works.
+default voice and confirm the credential works. Edge-TTS is the exception:
+it needs no key, but its CLI must be on PATH first
+(`uv tool install edge-tts`).
 
 | Engine            | Where to get credentials                      |
 | ----------------- | --------------------------------------------- |
@@ -62,18 +64,20 @@ Common flags: `-Force` (reinstall), `-SmokeTest` (synthesize one clip).
 
 | Engine     | Installer                | Size        | Notes                                                     |
 | ---------- | ------------------------ | ----------- | --------------------------------------------------------- |
-| Edge-TTS   | `install-edge-tts.ps1`   | tiny        | Free Microsoft Read Aloud; no model download.             |
 | Kitten TTS | `install-kittentts.ps1`  | 25-80MB     | 8 voices, CPU ONNX. Model downloads on first use.         |
 | Piper      | `install-piper.ps1`      | ~60MB/voice | Drop `.onnx` + `.onnx.json` into `engines/piper/voices/`. |
 | Kokoro TTS | `install-kokoro.ps1`     | ~500MB      | Natural voices, broad accent coverage.                    |
 | Pocket TTS | `install-pocket.ps1`     | compact     | Straightforward CLI voice selection.                      |
 | Chatterbox | `install-chatterbox.ps1` | ~2GB        | Zero-shot + emotion control; optional voice clone wavs.   |
 
+(Edge-TTS is uv-managed too but has no installer script — install its CLI
+with `uv tool install edge-tts`.)
+
 Manual run (if you prefer the terminal):
 
 ```powershell
 ./scripts/install-uv.ps1            # one-time uv bootstrap
-./scripts/install-edge-tts.ps1 -SmokeTest
+uv tool install edge-tts            # edge-tts CLI (no app installer)
 ./scripts/test-engine.ps1 -Engine chatterbox   # verify any installed engine
 ```
 

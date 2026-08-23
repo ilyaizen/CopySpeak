@@ -3,7 +3,8 @@
 use super::AmplitudeEnvelope;
 
 /// WAV file format information extracted from the header
-pub(super) struct WavInfo {
+/// `pub(crate)`: the TTS streaming default wraps batch WAV output and needs the format metadata.
+pub(crate) struct WavInfo {
     pub sample_rate: u32,
     pub channels: u16,
     pub bits_per_sample: u16,
@@ -12,7 +13,7 @@ pub(super) struct WavInfo {
 }
 
 /// Parse WAV header to extract format information
-pub(super) fn parse_wav_header(bytes: &[u8]) -> Result<WavInfo, String> {
+pub(crate) fn parse_wav_header(bytes: &[u8]) -> Result<WavInfo, String> {
     if bytes.is_empty() {
         return Err("Audio file is empty".to_string());
     }

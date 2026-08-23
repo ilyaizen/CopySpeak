@@ -8,6 +8,7 @@ use crate::hud;
 use crate::pagination;
 use crate::telemetry;
 use crate::tts::TtsBackend;
+use crate::tts::stream::{pcm_to_wav, AudioFormatMeta, ChunkItem, ChunkStream};
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
@@ -18,7 +19,7 @@ use super::helpers::{
     active_engine, create_backend, create_backend_from_effective, engine_identifier, engine_str,
     resolve_effective, voice_display_name, SynthesisGuard,
 };
-use crate::commands::{AudioFragmentEvent, CachedAudio, PaginationEvent};
+use crate::commands::{AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent};
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
 
@@ -145,6 +146,131 @@ fn emit_audio_fragment(
     ) {
         log::warn!("Failed to emit audio-fragment-ready: {}", e);
     }
+}
+
+/// Emit one PCM chunk of streaming synthesis audio to the frontend.
+/// A terminal zero-byte chunk with `is_final: true` marks end-of-stream.
+fn emit_audio_stream_chunk(
+    app: &AppHandle,
+    meta: &AudioFormatMeta,
+    pcm: &[u8],
+    fragment_index: usize,
+    is_final: bool,
+) {
+    use base64::{engine::general_purpose, Engine as _};
+    let encoded = general_purpose::STANDARD.encode(pcm);
+    let event = AudioStreamChunkEvent {
+        audio_base64: encoded,
+        sample_rate: meta.sample_rate,
+        channels: meta.channels,
+        bits_per_sample: meta.bits_per_sample,
+        fragment_index,
+        is_final,
+    };
+    if let Err(e) = app.emit("audio-stream-chunk", event) {
+        log::warn!("Failed to emit audio-stream-chunk: {}", e);
+    }
+}
+
+/// Drain a [`ChunkStream`], forwarding each PCM chunk to `on_chunk` while
+/// accumulating them into a single WAV container (for history/cache/HUD).
+///
+/// `on_chunk(chunk_index, pcm, is_final)` fires once per received chunk plus a
+/// terminal `(n, &[], true)` end-of-stream marker. Returns the wrapped WAV
+/// bytes and time-to-first-audio in milliseconds.
+fn drain_chunk_stream(
+    stream: ChunkStream,
+    mut on_chunk: impl FnMut(usize, &[u8], bool),
+) -> Result<(Vec<u8>, u64), String> {
+    let start = Instant::now();
+    let meta = stream.meta.clone();
+    let mut accumulated: Vec<u8> = Vec::new();
+    let mut chunk_index = 0usize;
+    let mut ttfa_ms: Option<u64> = None;
+
+    loop {
+        match stream.recv() {
+            Some(ChunkItem::Pcm(bytes)) => {
+                if ttfa_ms.is_none() {
+                    ttfa_ms = Some(start.elapsed().as_millis() as u64);
+                }
+                accumulated.extend_from_slice(&bytes);
+                on_chunk(chunk_index, &bytes, false);
+                chunk_index += 1;
+            }
+            Some(ChunkItem::Failed(reason)) => {
+                log::error!(
+                    "[TTS][stream] failed during receive: {} ({} bytes received)",
+                    reason,
+                    accumulated.len()
+                );
+                return Err(format!("Streaming synthesis failed mid-stream: {reason}"));
+            }
+            None => break,
+        }
+    }
+
+    if accumulated.is_empty() {
+        log::error!("[TTS][stream] failed during receive: stream ended with no audio");
+        return Err("Streaming synthesis produced no audio".to_string());
+    }
+
+    // Terminal end-of-stream marker so the frontend knows no more chunks follow.
+    on_chunk(chunk_index, &[], true);
+
+    let total_ms = start.elapsed().as_millis() as u64;
+    log::info!(
+        "[TTS][stream] ended: {} PCM bytes in {} chunks, {}ms total, TTFA {}ms",
+        accumulated.len(),
+        chunk_index,
+        total_ms,
+        ttfa_ms.unwrap_or(0)
+    );
+    Ok((pcm_to_wav(&accumulated, &meta), ttfa_ms.unwrap_or(0)))
+}
+
+/// Synthesize via the backend's streaming path, forwarding each PCM chunk to
+/// the frontend as an `audio-stream-chunk` event while accumulating the full
+/// payload into a WAV container for history/cache/envelope handling.
+async fn synthesize_streaming_and_emit(
+    app: &AppHandle,
+    backend: Arc<Box<dyn TtsBackend>>,
+    text: String,
+    voice: String,
+    fragment_index: usize,
+) -> Result<Vec<u8>, String> {
+    let app = app.clone();
+    tokio::task::spawn_blocking(move || {
+        let opened_at = Instant::now();
+        log::info!(
+            "[TTS][stream] opening streaming synthesis ({} chars, voice '{}', fragment {})",
+            text.len(),
+            voice,
+            fragment_index
+        );
+
+        let stream = match backend.synthesize_streaming(&text, &voice) {
+            Ok(s) => s,
+            Err(e) => {
+                log::error!("[TTS][stream] failed during opening: {} (0 bytes received)", e);
+                return Err(e.to_string());
+            }
+        };
+
+        let meta = stream.meta.clone();
+        drain_chunk_stream(stream, |chunk_idx, pcm, is_final| {
+            if !is_final && chunk_idx == 0 {
+                log::info!(
+                    "[TTS][stream] first chunk playing after {}ms",
+                    opened_at.elapsed().as_millis()
+                );
+            }
+            emit_audio_stream_chunk(&app, &meta, pcm, fragment_index, is_final);
+        })
+    })
+    .await
+    .map_err(|e| format!("Task join error: {e}"))?
+    .map(|(wav, _ttfa_ms)| wav)
 }
 
 /// Save audio to history storage and return path
@@ -304,24 +430,36 @@ async fn speak_now_internal(
     // Wrap backend in Arc for sharing across pagination calls
     let backend_arc = Arc::new(backend);
 
-    let wav_bytes = if let Some(ref path) = cached_path {
+    // Streaming backends forward PCM chunks during synthesis in playback mode;
+    // batch backends (and cache hits / file output / pagination) take the
+    // untouched existing branches.
+    let streaming_playback =
+        backend_arc.supports_streaming() && cached_path.is_none() && !output_config.enabled;
+    let (wav_bytes, already_streamed) = if let Some(ref path) = cached_path {
         // Try to read cached audio
         match std::fs::read(path) {
             Ok(bytes) => {
                 log::info!("[TTS] Reusing cached audio from history: {}", path);
-                bytes
+                (bytes, false)
             }
             Err(e) => {
                 log::warn!(
                     "[TTS] Found cached history entry but failed to read audio file: {}. Re-synthesizing.",
                     e
                 );
-                synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?
+                let bytes =
+                    synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?;
+                (bytes, false)
             }
         }
+    } else if streaming_playback {
+        let wav =
+            synthesize_streaming_and_emit(&app, backend_arc.clone(), text.clone(), voice.clone(), 0)
+                .await?;
+        (wav, true)
     } else if pagination::should_paginate(&text, &pagination_config) && !output_config.enabled {
         // Paginated synthesis for long text
-        synthesize_paginated(
+        let wav = synthesize_paginated(
             &app,
             backend_arc.clone(),
             &text,
@@ -332,10 +470,12 @@ async fn speak_now_internal(
             estimated_ms,
             confidence,
         )
-        .await?
+        .await?;
+        (wav, false)
     } else {
         // Simple synthesis
-        synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?
+        let wav = synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?;
+        (wav, false)
     };
 
     let synthesis_duration = synthesis_start.elapsed();
@@ -382,6 +522,7 @@ async fn speak_now_internal(
         &tts_config,
         backend_arc,
         synthesis_ms,
+        already_streamed,
         eff.voice_label.as_deref(),
     )
 }
@@ -542,6 +683,7 @@ fn handle_playback_output(
     tts_config: &crate::config::TtsConfig,
     backend_arc: Arc<Box<dyn TtsBackend>>,
     synthesis_ms: u64,
+    already_streamed: bool,
     voice_label: Option<&str>,
 ) -> Result<(), String> {
     let envelope = extract_envelope_or_default(wav_bytes);
@@ -572,8 +714,11 @@ fn handle_playback_output(
     // Show HUD with waveform visualization
     hud::show_hud(app, envelope, Some(text.to_string()));
 
-    // Emit audio to frontend for browser-native playback
-    emit_audio_ready(app, wav_bytes);
+    // Emit audio to frontend for browser-native playback. Skipped when PCM
+    // chunks were already forwarded by the streaming synthesis path.
+    if !already_streamed {
+        emit_audio_ready(app, wav_bytes);
+    }
 
     Ok(())
 }
@@ -746,10 +891,22 @@ pub async fn speak_queued(
         let backend: Box<dyn TtsBackend> = create_backend_from_effective(&eff, &tts_config);
         let backend_arc = Arc::new(backend);
 
-        // Synthesize fragment
+        // Synthesize fragment — streaming-capable backends forward PCM chunks
+        // as they arrive; batch backends take the untouched synthesize path.
         let fragment_start = Instant::now();
-        let wav_bytes =
-            synthesize_async(backend_arc.clone(), fragment.text.clone(), voice.clone()).await?;
+        let streamed = backend_arc.supports_streaming();
+        let wav_bytes = if streamed {
+            synthesize_streaming_and_emit(
+                &app,
+                backend_arc.clone(),
+                fragment.text.clone(),
+                voice.clone(),
+                index,
+            )
+            .await?
+        } else {
+            synthesize_async(backend_arc.clone(), fragment.text.clone(), voice.clone()).await?
+        };
         let fragment_duration = fragment_start.elapsed();
 
         // Record telemetry
@@ -812,8 +969,11 @@ pub async fn speak_queued(
         );
         let _ = app.emit("history-updated", ());
 
-        // Emit audio fragment for streaming playback
-        emit_audio_fragment(&app, &wav_bytes, index, total, fragment.text.clone());
+        // Emit audio fragment for streaming playback. Skipped when the PCM
+        // chunks were already forwarded by the streaming path above.
+        if !streamed {
+            emit_audio_fragment(&app, &wav_bytes, index, total, fragment.text.clone());
+        }
 
         // Emit fragment events
         let _ = app.emit(
@@ -963,4 +1123,91 @@ pub async fn speak_history_entry(
 
     log::info!("Re-spoke history entry: {}", entry_id);
     Ok(())
+}
+
+#[cfg(test)]
+mod streaming_tests {
+    use super::*;
+    use std::sync::mpsc;
+
+    fn meta(sample_rate: u32) -> AudioFormatMeta {
+        AudioFormatMeta {
+            sample_rate,
+            channels: 1,
+            bits_per_sample: 16,
+        }
+    }
+
+    fn stream_from_items(items: Vec<ChunkItem>, sample_rate: u32) -> ChunkStream {
+        let (tx, rx) = mpsc::channel();
+        for item in items {
+            tx.send(item).unwrap();
+        }
+        drop(tx);
+        ChunkStream::new(meta(sample_rate), rx)
+    }
+
+    #[test]
+    fn multi_chunk_order_preserved_and_pcm_wrapped_into_valid_wav() {
+        let a = vec![1u8, 2, 3, 4];
+        let b = vec![5u8, 6, 7, 8];
+        let stream = stream_from_items(
+            vec![ChunkItem::Pcm(a.clone()), ChunkItem::Pcm(b.clone())],
+            44100,
+        );
+
+        let mut seen: Vec<(usize, Vec<u8>, bool)> = Vec::new();
+        let (wav, _ttfa) =
+            drain_chunk_stream(stream, |idx, pcm, is_final| {
+                seen.push((idx, pcm.to_vec(), is_final));
+            })
+            .expect("healthy stream drains");
+
+        assert_eq!(seen.len(), 3, "two data chunks plus the terminal marker");
+        assert_eq!(seen[0], (0, a.clone(), false));
+        assert_eq!(seen[1], (1, b.clone(), false));
+        assert!(seen[2].2, "terminal event must be marked final");
+        assert!(seen[2].1.is_empty());
+
+        // Wrapped WAV parses back to the concatenated PCM with the stream meta.
+        let info = crate::audio::wav::parse_wav_header(&wav).expect("wrapped WAV valid");
+        assert_eq!(info.sample_rate, 44100);
+        assert_eq!(info.data_size, 8);
+        let expected = [a, b].concat();
+        assert_eq!(&wav[info.data_offset..info.data_offset + info.data_size], &expected);
+    }
+
+    #[test]
+    fn failed_item_mid_stream_is_an_error() {
+        let stream = stream_from_items(
+            vec![
+                ChunkItem::Pcm(vec![1, 2]),
+                ChunkItem::Failed("upstream connection reset".into()),
+            ],
+            16000,
+        );
+        let result = drain_chunk_stream(stream, |_, _, _| {});
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("connection reset"));
+    }
+
+    #[test]
+    fn empty_stream_is_an_error_not_silence() {
+        let stream = stream_from_items(Vec::new(), 22050);
+        assert!(drain_chunk_stream(stream, |_, _, _| {}).is_err());
+    }
+
+    #[test]
+    fn terminal_marker_always_emitted_even_for_single_chunk() {
+        let stream = stream_from_items(vec![ChunkItem::Pcm(vec![9, 9, 9])], 8000);
+        let mut finals = 0;
+        let (wav, _) = drain_chunk_stream(stream, |_, _, is_final| {
+            if is_final {
+                finals += 1;
+            }
+        })
+        .unwrap();
+        assert_eq!(finals, 1);
+        assert_eq!(wav.len(), 44 + 3);
+    }
 }

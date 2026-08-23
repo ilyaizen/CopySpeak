@@ -12,6 +12,9 @@ pub mod http;
 pub mod microsoft;
 pub mod openai;
 pub mod piper_server;
+pub mod stream;
+
+use stream::ChunkStream;
 
 use thiserror::Error;
 
@@ -61,6 +64,30 @@ pub trait TtsBackend: Send + Sync {
 
     /// Check if the engine binary/server is reachable.
     fn health_check(&self) -> Result<(), TtsError>;
+
+    /// Whether this backend can produce audio incrementally via
+    /// [`TtsBackend::synthesize_streaming`]. Defaults to false for batch-only
+    /// backends; the command layer uses this to pick the streaming path.
+    #[allow(dead_code)]
+    fn supports_streaming(&self) -> bool {
+        false
+    }
+
+    /// Stream synthesized audio as PCM chunks.
+    ///
+    /// Default wraps the batch `synthesize` output: the returned WAV container
+    /// is parsed and its data section is delivered as exactly one `Pcm` chunk.
+    /// Backends with native intra-request streaming override both this and
+    /// [`TtsBackend::supports_streaming`].
+    #[allow(dead_code)]
+    fn synthesize_streaming(&self, text: &str, voice: &str) -> Result<ChunkStream, TtsError> {
+        log::debug!(
+            "[TTS] {} has no native streaming, falling back to batch wrap",
+            self.name()
+        );
+        let wav = self.synthesize(text, voice)?;
+        stream::chunk_stream_from_wav(wav)
+    }
 
     /// File extension for the audio bytes returned by `synthesize` (e.g. "wav", "mp3").
     /// Defaults to "wav" — only override when the backend returns a non-WAV format.

@@ -8,7 +8,7 @@
 mod format;
 mod player;
 pub(crate) mod stream;
-mod wav;
+pub(crate) mod wav;
 
 // Re-export all public types so external code can use `crate::audio::*` unchanged.
 pub use format::convert_audio_format;

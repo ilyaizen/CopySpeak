@@ -53,6 +53,20 @@ pub struct AudioFragmentEvent {
     pub text: String,
 }
 
+/// Event carrying one PCM chunk of streaming synthesis audio.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct AudioStreamChunkEvent {
+    /// Base64-encoded raw PCM data (empty on the terminal end-of-stream event)
+    pub audio_base64: String,
+    pub sample_rate: u32,
+    pub channels: u16,
+    pub bits_per_sample: u16,
+    /// Zero-based index of the fragment this chunk belongs to
+    pub fragment_index: usize,
+    /// True only on the terminal zero-byte end-of-stream event
+    pub is_final: bool,
+}
+
 /// Event emitted during synthesis to show progress with ETA.
 #[derive(Debug, Clone, serde::Serialize)]
 #[allow(dead_code)]

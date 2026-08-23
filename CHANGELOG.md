@@ -21,8 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **`edge` is installable and uninstallable** — it reaches a cloud endpoint but does so through the local `edge-tts` CLI, so it now carries an `installerId` instead of silently requiring a manual `pip install`.
-- **Install dialog is driven by engine metadata** — the hard-coded `SHARED`/`ENGINE_SIZE` maps moved into `engine-meta.ts` as `voiceMode` (`per-voice` | `shared` | `none`) and `downloadSize`. `none` engines (uv, edge, pocket) no longer render a meaningless voice checklist.
+- **`edge` no longer has an installer** — `scripts/install-edge-tts.ps1` is gone and the Engines page no longer offers an Install dialog for it (no `installerId`). `engine_status` still probes `edge-tts` on PATH, and a missing binary surfaces `uv tool install edge-tts` in the synthesis error instead of a `pip install` hint.
+- **Install dialog is driven by engine metadata** — the hard-coded `SHARED`/`ENGINE_SIZE` maps moved into `engine-meta.ts` as `voiceMode` (`per-voice` | `shared` | `none`) and `downloadSize`. `none` engines (uv, pocket) no longer render a meaningless voice checklist.
 - **Voice picker is now primary over manual entry** — in the voices route, the Manual Voice input is disabled while the profile's voice matches a catalog id. The picker gains a "Custom / manual id…" row (`onmanual` prop) that unlocks and focuses the input; picking a real voice re-locks it. The unlock (`manualOverride`) is component-local state, reset on profile/engine change — no config schema change.
   - When no picker is rendered (engines without a catalog or refresh support), the input is always enabled and relabeled "Voice".
 - **Cartesia voice refresh keeps language metadata** — `CartesiaVoice` gains a `language` field, mapped through to `VoiceCatalogEntry.language` in `list_tts_voices`, so a refresh no longer strips the language off every voice.
@@ -41,6 +41,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Health-check logs and toasts reported a blank model** (`Cartesia ()`) — the label was built from the global `TtsConfig` while the backend came from the active profile's engine options. Those global model/voice/format fields are `skip_serializing` (the profile owns them), so a config loaded from disk deserializes them empty. New `effective_backend_name` mirrors the override order in `create_backend_from_effective` — profile options, then global config, then `"unset"` — and covers OpenAI, ElevenLabs, Google, Microsoft and Edge, which read the same blanked fields. `test_tts_engine_config` has no profile to consult but reaches a user-facing toast, so it gets the same blank guard.
   - Regression test pins the serde subtlety: the blank appears only when the `cartesia` object is _present_ (carrying the persisted `api_key`), because the field-level `#[serde(default)]` then beats the container-level one.
 - **HUD window flashed white on launch** — the HUD was created with `visible: true`, so WebView2 painted its default white surface at the OS-chosen position for a frame before Tauri applied the off-screen coordinates. It is now created hidden and shown only after being parked off-screen. The stale `x`/`y: 10000` in `tauri.conf.json` (which disagreed with `move_hud_offscreen`'s `-10000`) were removed, leaving one source of truth for the park position.
+- **Kitten `model` option is wired end-to-end** — `KittenEngineOptions.model` now reaches the wrapper: `first_class_local_cli()` passes `--model {model}`, `CliTtsBackend::build_args` resolves the new `{model}` placeholder (dropping the flag when unset, so the nano default applies), and `create_backend_from_effective` threads the profile's model through the new `ProfileEngineOptions::kitten()` accessor. The installer's profile JSON and both frontend Kitten templates include `--model {model}`, keeping all three sources of truth in sync; the `ponytail:` dead-code marker on the field is removed.
+
+### Removed
+
+- **`scripts/install-edge-tts.ps1`** — deleted; `installer_script_for()` no longer maps `edge`, Edge's `engine-meta.ts` entry lost its `installerId`/`voiceMode`/`downloadSize`, and the onboarding page no longer offers an "Install edge-tts" button (a missing binary now explains `uv tool install edge-tts` in the synthesis error).
+
+### Fixed
+
+- **Edge-TTS install hint named `pip`** — the not-found error text now matches the uv-based install used everywhere: `uv tool install edge-tts`.
 
 ## [0.1.13] - 2026-08-02
 

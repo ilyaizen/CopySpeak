@@ -37,6 +37,11 @@ base64 = "0.22"
 regex = "1"
 lazy_static = "1"
 
+[dev-dependencies]
+wiremock = "0.6"
+# Features are additive with the main tokio dependency; these enable #[tokio::test].
+tokio = { version = "1", features = ["macros", "rt"] }
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 

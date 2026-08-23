@@ -48,8 +48,8 @@ impl Drop for SynthesisGuard {
 /// Hard-coded CLI invocation for a first-class local engine (Kitten/Piper/Kokoro).
 /// Unlike `Local`, the command and args are fixed by the installer's wrapper
 /// contract — not user-editable. Returns `None` for non-local engines and for
-/// `Local` itself. `{engine_dir}`/`{input}`/`{voice}`/`{output}` are resolved by
-/// `CliTtsBackend::build_args` at run time.
+/// `Local` itself. `{engine_dir}`/`{input}`/`{voice}`/`{output}`/`{model}` are
+/// resolved by `CliTtsBackend::build_args` at run time.
 fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
     let (cmd, args): (&str, Vec<&str>) = match engine {
         TtsEngine::Kitten => (
@@ -66,6 +66,8 @@ fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
                 "{voice}",
                 "--output",
                 "{output}",
+                "--model",
+                "{model}",
             ],
         ),
         TtsEngine::Piper => (
@@ -157,7 +159,16 @@ pub(crate) fn create_backend_from_effective(
         TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro => {
             // Voice comes from eff.voice (profile-owned); CLI is fixed.
             let (command, args) = first_class_local_cli(&eff.engine).unwrap();
-            Box::new(CliTtsBackend::new(command, args))
+            let mut backend = CliTtsBackend::new(command, args);
+            if let Some(model) = eff
+                .engine_options
+                .kitten()
+                .and_then(|o| o.model.clone())
+                .filter(|m| !m.trim().is_empty())
+            {
+                backend.model = Some(model);
+            }
+            Box::new(backend)
         }
         TtsEngine::OpenAI => {
             let mut config = tts_config.openai.clone();

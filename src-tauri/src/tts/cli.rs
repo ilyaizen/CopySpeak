@@ -160,6 +160,9 @@ pub(crate) fn get_expanded_path() -> String {
 pub struct CliTtsBackend {
     pub command: String,
     pub args_template: Vec<String>,
+    /// Optional model id for the `{model}` placeholder; when unset the
+    /// `--model` flag is dropped so the engine uses its built-in default.
+    pub model: Option<String>,
 }
 
 impl CliTtsBackend {
@@ -167,6 +170,7 @@ impl CliTtsBackend {
         Self {
             command,
             args_template,
+            model: None,
         }
     }
 
@@ -237,6 +241,7 @@ impl CliTtsBackend {
     /// accept inline text via --text.
     /// {home_dir} resolves to the user's home directory.
     /// {data_dir} resolves to ~/piper-voices for Piper model storage.
+    /// {model} resolves to `self.model`; when unset the flag is dropped below.
     fn build_args(
         &self,
         input_path: &str,
@@ -257,6 +262,7 @@ impl CliTtsBackend {
                     .replace("{raw_text}", raw_text)
                     .replace("{output}", output_path)
                     .replace("{voice}", voice)
+                    .replace("{model}", self.model.as_deref().unwrap_or(""))
                     .replace("{data_dir}", &data_dir)
                     .replace("{home_dir}", &home_dir)
                     .replace("{engine_dir}", &engine_dir);
@@ -269,6 +275,24 @@ impl CliTtsBackend {
                 }
             })
             .collect();
+
+        // {model} is optional: without a model value drop the `--model` flag
+        // (and its empty value) so the engine falls back to its built-in
+        // default. Only this exact pair is touched — other empty args (e.g.
+        // serve mode's {input}/{output}) keep their pre-existing handling.
+        if self.model.is_none() {
+            let mut kept: Vec<String> = Vec::with_capacity(args.len());
+            let mut i = 0;
+            while i < args.len() {
+                if args[i] == "--model" && args.get(i + 1).is_some_and(|v| v.is_empty()) {
+                    i += 2; // drop "--model" and its empty value
+                } else {
+                    kept.push(args[i].clone());
+                    i += 1;
+                }
+            }
+            args = kept;
+        }
 
         // Auto-inject kokoro-tts model paths if missing
         if self.is_kokoro_missing_models() {

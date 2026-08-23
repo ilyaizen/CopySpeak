@@ -16,7 +16,7 @@ export type TestState = "idle" | "testing" | "success" | "fail";
  * How the install dialog presents voices for an installable engine:
  * - `per-voice`: each voice is a separate model download (piper)
  * - `shared`: one model download covers every listed voice (kitten, kokoro)
- * - `none`: nothing to pick — a binary install only (uv, edge, pocket)
+ * - `none`: nothing to pick — a binary install only (uv, pocket)
  */
 export type VoiceMode = "per-voice" | "shared" | "none";
 
@@ -43,10 +43,8 @@ export const CLOUD_ENGINES: EngineSetupEntry[] = [
     id: "edge",
     kind: "cloud",
     // Cloud endpoint, but it is reached through the local `edge-tts` CLI, so
-    // it still needs installing (and can be uninstalled).
-    installerId: "edge",
-    voiceMode: "none",
-    downloadSize: "~2 MB CLI, no model",
+    // it still needs `uv tool install edge-tts` on PATH (no app installer;
+    // a missing binary surfaces the command in the synthesis error).
     credential: "none",
     docsUrl: "https://github.com/rany2/edge-tts"
   },

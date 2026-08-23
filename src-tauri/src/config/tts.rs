@@ -476,8 +476,8 @@ pub struct EdgeEngineOptions {
 #[serde(default)]
 pub struct KittenEngineOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
-    // ponytail: HF model id exposed per spec; not yet threaded to the wrapper's
-    // --model flag (proven-working default omits it). Wire when a use case needs it.
+    /// HF model id (e.g. `KittenML/kitten-tts-nano-0.8`); threaded to the
+    /// wrapper's `--model` flag via the `{model}` placeholder.
     pub model: Option<String>,
 }
 
@@ -598,6 +598,12 @@ impl ProfileEngineOptions {
     pub fn local(&self) -> Option<&LocalEngineOptions> {
         match self {
             Self::Local(o) => Some(o),
+            _ => None,
+        }
+    }
+    pub fn kitten(&self) -> Option<&KittenEngineOptions> {
+        match self {
+            Self::Kitten(o) => Some(o),
             _ => None,
         }
     }
