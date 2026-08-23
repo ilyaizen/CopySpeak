@@ -286,6 +286,7 @@ class PlaybackStore {
       this._pcmScheduler.setVolume(this.volume);
       this._pcmScheduler.setRate(this.speed, this.pitch);
       this.currentFragmentIndex = payload.fragment_index;
+      this.totalFragments = payload.fragment_total;
       this.isPlaying = true;
       this.isPaused = false;
     }

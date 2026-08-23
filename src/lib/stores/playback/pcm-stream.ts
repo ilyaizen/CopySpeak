@@ -16,6 +16,8 @@ export interface StreamChunkPayload {
   bits_per_sample: number;
   /** Zero-based index of the fragment this chunk belongs to */
   fragment_index: number;
+  /** Total number of fragments in this synthesis run */
+  fragment_total: number;
   /** True only on the terminal zero-byte end-of-stream event */
   is_final: boolean;
 }
@@ -56,10 +58,10 @@ function base64ToBytes(base64: string): Uint8Array {
 export function pcm16LeToFloat32Channels(
   bytes: Uint8Array,
   channels: number
-): Float32Array[] {
+): Float32Array<ArrayBuffer>[] {
   const bytesPerFrame = 2 * channels;
   const frames = Math.floor(bytes.length / bytesPerFrame);
-  const result: Float32Array[] = [];
+  const result: Float32Array<ArrayBuffer>[] = [];
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   for (let c = 0; c < channels; c++) {
     result.push(new Float32Array(frames));
