@@ -17,6 +17,10 @@ import {
   detectAudioMimeType
 } from "./playback/audio-utils.js";
 import { AudioAnalyser } from "./playback/analyser.js";
+import {
+  PcmStreamScheduler,
+  type StreamChunkPayload
+} from "./playback/pcm-stream.js";
 import { getEffect } from "./playback/effects/registry.js";
 import { FragmentQueue, type QueuedFragment } from "./playback/fragment-queue.js";
 import { hudStore } from "./hud-store.svelte.js";
@@ -52,6 +56,7 @@ class PlaybackStore {
   // Modular components
   private _analyser = new AudioAnalyser();
   private _fragmentQueue: FragmentQueue;
+  private _pcmScheduler: PcmStreamScheduler | null = null;
 
   constructor() {
     // Initialize fragment queue with handlers
@@ -69,12 +74,7 @@ class PlaybackStore {
       },
       onQueueComplete: () => {
         console.log("[PlaybackStore] onQueueComplete");
-        this._analyser.stop();
-        this.isPlaying = false;
-        this.isPaused = false;
-        this.currentFragmentIndex = null;
-        this.totalFragments = null;
-        void this._emit?.("hud:stop", null);
+        this.finishPlayback();
       }
     });
   }
@@ -242,6 +242,56 @@ class PlaybackStore {
     }
   }
 
+  /**
+   * Shared queue-completion path for batch fragments and streamed PCM chunks:
+   * stops the analyser, resets playback state, hides the HUD.
+   */
+  private finishPlayback(): void {
+    this._analyser.stop();
+    this.isPlaying = false;
+    this.isPaused = false;
+    this.currentFragmentIndex = null;
+    this.totalFragments = null;
+    this._pcmScheduler = null;
+    void this._emit?.("hud:stop", null);
+  }
+
+  /**
+   * Handle one PCM chunk of streaming synthesis audio. Lazily creates the
+   * scheduler (which prebuffers ~250ms before starting gap-free playback) and
+   * feeds it the chunk.
+   */
+  handleStreamChunk(payload: StreamChunkPayload): void {
+    if (!this._audioCtx) {
+      this._audioCtx = new AudioContext();
+    }
+    const ctx = this._audioCtx;
+    // Resume AudioContext if suspended (autoplay policies, or a paused stream)
+    if (ctx.state === "suspended") {
+      void ctx.resume();
+    }
+    if (!this._pcmScheduler) {
+      console.log(
+        "[PlaybackStore] creating PCM scheduler for fragment",
+        payload.fragment_index
+      );
+      this._pcmScheduler = new PcmStreamScheduler({
+        ctx,
+        destination: ctx.destination,
+        onComplete: () => {
+          console.log("[PlaybackStore] stream playback complete");
+          this.finishPlayback();
+        }
+      });
+      this._pcmScheduler.setVolume(this.volume);
+      this._pcmScheduler.setRate(this.speed, this.pitch);
+      this.currentFragmentIndex = payload.fragment_index;
+      this.isPlaying = true;
+      this.isPaused = false;
+    }
+    this._pcmScheduler.handleChunk(payload);
+  }
+
   playAudio() {
     if (!this._audioEl) {
       console.error("[PlaybackStore] playAudio: no audio element");
@@ -276,8 +326,10 @@ class PlaybackStore {
     this._analyser.stop();
     this._stopping = true;
 
-    // Clear the fragment queue
+    // Clear the fragment queue and any active PCM stream
     this._fragmentQueue.clear();
+    this._pcmScheduler?.stop();
+    this._pcmScheduler = null;
     this.currentFragmentIndex = null;
     this.totalFragments = null;
 
@@ -294,6 +346,16 @@ class PlaybackStore {
   }
 
   handleTogglePause() {
+    if (this._pcmScheduler?.isActive()) {
+      if (this.isPaused) {
+        this._pcmScheduler.resume();
+        this.isPaused = false;
+      } else {
+        this._pcmScheduler.pause();
+        this.isPaused = true;
+      }
+      return;
+    }
     if (!this._audioEl) return;
     if (this._audioEl.paused) {
       this._audioEl.play().catch(() => {});
@@ -319,6 +381,11 @@ class PlaybackStore {
     if (this._audioEl) {
       this._audioEl.volume = volume / 100;
       this._audioEl.playbackRate = speed;
+    }
+    // Keep the streaming scheduler in sync while it owns playback
+    if (this._pcmScheduler?.isActive()) {
+      this._pcmScheduler.setVolume(volume);
+      this._pcmScheduler.setRate(speed, pitch);
     }
     // Sync pitch and speed to HUD store for progress bar timing
     hudStore.setPitch(pitch);
@@ -368,6 +435,20 @@ class PlaybackStore {
         await this.handleFragmentReady(e.payload);
       });
 
+      // Streaming PCM chunks from streaming-capable backends (ElevenLabs)
+      const unStreamChunk = await listen<StreamChunkPayload>(
+        "audio-stream-chunk",
+        (e) => {
+          this.handleStreamChunk(e.payload);
+        }
+      );
+
+      // Authoritative end-of-synthesis signal for the streamed queue; the
+      // scheduler completes once all scheduled sources have drained.
+      const unPaginationComplete = await listen("pagination:complete", () => {
+        this._pcmScheduler?.markQueueComplete();
+      });
+
       console.log("[PlaybackStore] All listeners registered");
 
       const unPlaybackStop = await listen("playback-stop", () => {
@@ -390,6 +471,8 @@ class PlaybackStore {
       this._unlistenFns = [
         unAudioReady,
         unFragmentReady,
+        unStreamChunk,
+        unPaginationComplete,
         unPlaybackStop,
         unTogglePause,
         unSynthesis,
@@ -403,6 +486,8 @@ class PlaybackStore {
   teardownListeners() {
     this._analyser.stop();
     this._analyser.destroy();
+    this._pcmScheduler?.stop();
+    this._pcmScheduler = null;
     for (const fn of this._unlistenFns) fn();
     this._unlistenFns = [];
     if (this._cachedPitchUrl) {
