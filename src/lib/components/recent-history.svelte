@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { Button } from "$lib/components/ui/button/index.js";
-  import { Badge } from "$lib/components/ui/badge/index.js";
   import {
     AlertDialog,
     AlertDialogAction,
@@ -12,16 +12,20 @@
     AlertDialogTitle
   } from "$lib/components/ui/alert-dialog/index.js";
   import {
-    Play,
-    RotateCcw,
-    Trash2,
-    Clock,
-    ChevronDown,
-    ChevronUp,
-    ChevronRight
-  } from "@lucide/svelte";
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle
+  } from "$lib/components/ui/dialog/index.js";
+  import { Play, Square, Layers, Trash2, Clock } from "@lucide/svelte";
+  import { invoke } from "@tauri-apps/api/core";
+  import { Spinner } from "$lib/components/ui/spinner/index.js";
   import { historyStore } from "$lib/stores/history-store.svelte.js";
-  import type { HistoryItem } from "$lib/types";
+  import { playbackStore } from "$lib/stores/playback-store.svelte";
+  import { groupHistoryReadings, historyVoiceLabel } from "$lib/models/history";
+  import type { AppConfig, EngineCatalogEntry, VoiceProfile } from "$lib/types";
+  import { isTauri } from "$lib/services/tauri";
   import { _ } from "svelte-i18n";
 
   interface Props {
@@ -31,446 +35,222 @@
   }
 
   let { limit = 5, onSuccess, onError }: Props = $props();
-
+  type Reading = ReturnType<typeof groupHistoryReadings>[number];
   let actionInProgress = $state<string | null>(null);
-  let itemToDelete = $state<HistoryItem | null>(null);
-  let batchToDelete = $state<string | null>(null);
-  let expandedItems = $state<Set<string>>(new Set());
-  let expandedBatches = $state<Set<string>>(new Set());
+  let readingToDelete = $state<Reading | null>(null);
+  let selectedReading = $state<Reading | null>(null);
+  let actionError = $state<string | null>(null);
+  let profiles = $state<VoiceProfile[]>([]);
+  let engines = $state<EngineCatalogEntry[]>([]);
 
-  function toggleExpand(itemId: string) {
-    if (expandedItems.has(itemId)) {
-      expandedItems.delete(itemId);
-      expandedItems = new Set(expandedItems);
-    } else {
-      expandedItems = new Set(expandedItems.add(itemId));
-    }
-  }
-
-  function toggleBatchExpand(batchId: string) {
-    if (expandedBatches.has(batchId)) {
-      expandedBatches.delete(batchId);
-      expandedBatches = new Set(expandedBatches);
-    } else {
-      expandedBatches = new Set(expandedBatches.add(batchId));
-    }
-  }
-
-  interface GroupedItem {
-    type: "single";
-    item: HistoryItem;
-    timestamp: number;
-  }
-
-  interface GroupedBatch {
-    type: "batch";
-    batchId: string;
-    items: HistoryItem[];
-    timestamp: number;
-    tts_engine: string;
-    voice: string;
-    success: boolean;
-    totalFragments: number;
-  }
-
-  // Get recent items sorted descending by timestamp, grouped by batch_id
-  const recentGrouped = $derived(() => {
-    const sortedItems = [...historyStore.items].sort((a, b) => b.timestamp - a.timestamp);
-    const seenBatchIds = new Set<string>();
-    const result: Array<GroupedItem | GroupedBatch> = [];
-
-    for (const item of sortedItems) {
-      if (item.batch_id && !seenBatchIds.has(item.batch_id)) {
-        seenBatchIds.add(item.batch_id);
-        const batchItems = sortedItems.filter((i) => i.batch_id === item.batch_id);
-        const totalFragments = batchItems.length;
-        const firstItem = batchItems.reduce((a, b) => (a.timestamp < b.timestamp ? a : b));
-
-        result.push({
-          type: "batch",
-          batchId: item.batch_id,
-          items: batchItems.sort((a, b) => {
-            const idxA = (a.metadata?.fragment_index as number) ?? 0;
-            const idxB = (b.metadata?.fragment_index as number) ?? 0;
-            return idxA - idxB;
-          }),
-          timestamp: firstItem.timestamp,
-          tts_engine: item.tts_engine,
-          voice: item.voice,
-          success: batchItems.every((i) => i.success),
-          totalFragments
-        });
-      } else if (!item.batch_id) {
-        result.push({
-          type: "single",
-          item,
-          timestamp: item.timestamp
-        });
-      }
-    }
-
-    return result.sort((a, b) => b.timestamp - a.timestamp).slice(0, limit);
+  onMount(async () => {
+    if (!isTauri) return;
+    const [config, catalog] = await Promise.allSettled([
+      invoke<AppConfig>("get_config"),
+      invoke<EngineCatalogEntry[]>("list_tts_engines")
+    ]);
+    if (config.status === "fulfilled") profiles = config.value.tts.profiles;
+    else console.error("Failed to load history voice labels:", config.reason);
+    if (catalog.status === "fulfilled") engines = catalog.value;
+    else console.error("Failed to load history voice catalog:", catalog.reason);
   });
+  const readings = $derived(groupHistoryReadings(historyStore.items).slice(0, limit));
+  const playbackBusy = $derived(playbackStore.isPlaying || playbackStore.isSynthesizing);
 
-  async function handlePlay(item: HistoryItem) {
-    if (!item.output_path) {
-      await handleReSpeak(item);
-      return;
-    }
-
-    actionInProgress = item.id;
+  async function handlePlay(reading: Reading) {
+    actionInProgress = reading.id;
+    actionError = null;
     try {
-      await historyStore.playEntry(item.id);
+      if (playbackStore.historyReadingId === reading.id && playbackStore.isPlaying) {
+        playbackStore.handleStop();
+        await invoke("stop_speaking");
+        return;
+      }
+      if (playbackStore.isPlaying) {
+        playbackStore.handleStop();
+        await invoke("stop_speaking");
+      }
+      if (reading.batchId) await historyStore.playBatch(reading.batchId);
+      else await historyStore.playEntry(reading.items[0].id);
       onSuccess?.("Playing audio from history");
     } catch (e) {
-      onError?.(`Failed to play: ${e}`);
-    } finally {
-      actionInProgress = null;
-    }
-  }
-
-  async function handlePlayBatch(batchId: string) {
-    actionInProgress = batchId;
-    try {
-      await historyStore.playBatch(batchId);
-      onSuccess?.("Playing all fragments");
-    } catch (e) {
-      onError?.(`Failed to play batch: ${e}`);
-    } finally {
-      actionInProgress = null;
-    }
-  }
-
-  async function handleReSpeak(item: HistoryItem) {
-    actionInProgress = item.id;
-    try {
-      await historyStore.reSpeakEntry(item.id);
-      onSuccess?.("Re-synthesizing and playing");
-    } catch (e) {
-      onError?.(`Failed to re-speak: ${e}`);
+      actionError = `Failed to play: ${e}`;
+      onError?.(actionError);
     } finally {
       actionInProgress = null;
     }
   }
 
   async function confirmDelete() {
-    if (batchToDelete) {
-      actionInProgress = batchToDelete;
-      const bid = batchToDelete;
-      batchToDelete = null;
-      itemToDelete = null;
-      try {
-        await historyStore.deleteBatch(bid);
-        onSuccess?.("Deleted batch from history");
-      } catch (e) {
-        onError?.(`Failed to delete batch: ${e}`);
-      } finally {
-        actionInProgress = null;
-      }
-    } else if (itemToDelete) {
-      const item = itemToDelete;
-      itemToDelete = null;
-      actionInProgress = item.id;
-      try {
-        await historyStore.deleteItem(item.id);
-        onSuccess?.("Deleted from history");
-      } catch (e) {
-        onError?.(`Failed to delete: ${e}`);
-      } finally {
-        actionInProgress = null;
-      }
+    const reading = readingToDelete;
+    if (!reading) return;
+    readingToDelete = null;
+    actionInProgress = reading.id;
+    actionError = null;
+    try {
+      if (reading.batchId) await historyStore.deleteBatch(reading.batchId);
+      else await historyStore.deleteItem(reading.items[0].id);
+      onSuccess?.("Deleted from history");
+    } catch (e) {
+      actionError = `Failed to delete: ${e}`;
+      onError?.(actionError);
+    } finally {
+      actionInProgress = null;
     }
   }
 
-  function extractBatchInfo(item: HistoryItem): { position: number; total: number } | null {
-    if (
-      item.metadata &&
-      typeof item.metadata.fragment_index === "number" &&
-      typeof item.metadata.fragment_total === "number"
-    ) {
-      return {
-        position: (item.metadata.fragment_index as number) + 1,
-        total: item.metadata.fragment_total as number
-      };
-    }
-    const match = item.text.match(/\((\d+) of (\d+)\)\s*$/);
-    if (match) {
-      return { position: parseInt(match[1], 10), total: parseInt(match[2], 10) };
-    }
-    return null;
-  }
-
-  function formatSynthesisDuration(ms: number): string {
-    if (ms < 1000) return `${ms}ms`;
-    const seconds = ms / 1000;
-    if (seconds < 60) return `${seconds.toFixed(1)}s`;
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = (seconds % 60).toFixed(1);
-    return `${minutes}m ${remainingSeconds}s`;
-  }
-
-  function getSynthesisMs(item: HistoryItem): number | null {
-    if (item.metadata && typeof item.metadata.synthesis_ms === "number") {
-      return item.metadata.synthesis_ms as number;
-    }
-    return null;
-  }
-
-  function truncateText(text: string, maxLen: number): string {
-    if (text.length <= maxLen) return text;
-    return text.substring(0, maxLen - 3) + "...";
+  function formatDuration(ms: number) {
+    const seconds = Math.round(ms / 1000);
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
   }
 </script>
 
-<div class="space-y-3">
-  <div class="flex items-center justify-between">
-    <h2 class="text-card-foreground flex items-center gap-2 font-medium">
-      <Clock class="h-4 w-4" />
-      {$_("history.title")}
-    </h2>
+<section class="flex min-w-0 flex-col gap-4" aria-labelledby="history-heading">
+  <div class="flex flex-wrap items-baseline justify-between gap-2">
+    <div>
+      <h2 id="history-heading" class="text-lg font-bold tracking-tight">{$_("history.title")}</h2>
+      <p class="text-muted-foreground text-sm">Your readings, ready to listen again.</p>
+    </div>
     {#if historyStore.isLoading}
-      <span class="text-muted-foreground text-xs">{$_("history.loading")}</span>
+      <span class="text-muted-foreground text-xs" role="status">{$_("history.loading")}</span>
     {/if}
   </div>
 
-  {#if recentGrouped().length === 0}
-    <p class="text-muted-foreground py-4 text-center text-sm italic">{$_("history.empty")}</p>
-  {:else}
-    <div class="space-y-2">
-      {#each recentGrouped() as grouped (grouped.type === "batch" ? grouped.batchId : grouped.item.id)}
-        {#if grouped.type === "single"}
-          {@const item = grouped.item}
-          <div
-            class="border-border bg-card hover:bg-accent/20 overflow-hidden rounded-lg border transition-colors"
-          >
-            <div
-              class="bg-muted/30 border-border/50 flex items-center justify-between gap-2 border-b px-3 py-2"
-            >
-              <div
-                class="text-muted-foreground flex min-w-0 items-center gap-1.5 overflow-hidden text-xs"
-              >
-                <span
-                  class="h-1.5 w-1.5 shrink-0 rounded-full {item.success
-                    ? 'bg-green-500'
-                    : 'bg-red-500'}"
-                ></span>
-                <span class="text-foreground shrink-0 font-medium">
-                  {item.output_path ? item.output_path.split(/[/\\]/).pop() : item.tts_engine}
-                </span>
-              </div>
-              <div class="flex shrink-0 items-center gap-0.5">
-                {#if getSynthesisMs(item)}
-                  <span class="text-muted-foreground mr-1 text-xs whitespace-nowrap">
-                    {formatSynthesisDuration(getSynthesisMs(item)!)}
-                  </span>
-                {/if}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="h-6 w-6"
-                  onclick={() => handlePlay(item)}
-                  disabled={actionInProgress === item.id}
-                  title={item.output_path ? $_("history.playSaved") : $_("history.reSynthesize")}
-                >
-                  <Play class="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="h-6 w-6"
-                  onclick={() => handleReSpeak(item)}
-                  disabled={actionInProgress === item.id}
-                  title={$_("history.reSynthesizeTooltip")}
-                >
-                  <RotateCcw class="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  class="h-6 w-6"
-                  onclick={() => (itemToDelete = item)}
-                  disabled={actionInProgress === item.id}
-                  title={$_("history.delete")}
-                >
-                  <Trash2 class="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-            <button
-              type="button"
-              class="relative w-full cursor-pointer text-left"
-              onclick={() => toggleExpand(item.id)}
-              title={expandedItems.has(item.id) ? "Click to collapse" : "Click to expand"}
-            >
-              <pre
-                class="text-card-foreground overflow-hidden px-3 py-2 pr-8 font-mono text-xs leading-relaxed whitespace-pre-wrap {expandedItems.has(
-                  item.id
-                )
-                  ? ''
-                  : 'line-clamp-1'}">
-{item.text}</pre>
-              <span
-                class="text-muted-foreground hover:text-foreground absolute right-2 bottom-1 rounded p-0.5 transition-colors"
-              >
-                {#if expandedItems.has(item.id)}
-                  <ChevronUp class="h-3 w-3" />
-                {:else}
-                  <ChevronDown class="h-3 w-3" />
-                {/if}
-              </span>
-            </button>
-          </div>
-        {:else}
-          {@const batch = grouped}
-          <div class="border-border bg-card overflow-hidden rounded-lg border transition-colors">
-            <button
-              type="button"
-              class="bg-muted/30 border-border/50 hover:bg-accent/10 flex w-full items-center justify-between gap-2 border-b px-3 py-2 text-left"
-              onclick={() => toggleBatchExpand(batch.batchId)}
-            >
-              <div class="flex min-w-0 items-center gap-1.5">
-                <ChevronRight
-                  class="h-3 w-3 shrink-0 transition-transform {expandedBatches.has(batch.batchId)
-                    ? 'rotate-90'
-                    : ''}"
-                />
-                <span
-                  class="h-1.5 w-1.5 shrink-0 rounded-full {batch.success
-                    ? 'bg-green-500'
-                    : 'bg-red-500'}"
-                ></span>
-                <span class="text-foreground shrink-0 text-xs font-medium">{batch.tts_engine}</span>
-                <Badge variant="secondary" class="h-4 shrink-0 px-1.5 py-0 text-[10px]">
-                  {$_("history.fragments", { values: { count: batch.totalFragments } })}
-                </Badge>
-              </div>
-              <div class="flex shrink-0 items-center gap-1">
-                <span class="text-muted-foreground text-xs">
-                  {new Date(batch.timestamp).toLocaleTimeString()}
-                </span>
-              </div>
-            </button>
-
-            {#if expandedBatches.has(batch.batchId)}
-              <div class="border-border/50 border-t">
-                <!-- Batch actions -->
-                <div
-                  class="bg-muted/10 border-border/30 flex items-center justify-between gap-2 border-b px-3 py-2"
-                >
-                  <span class="text-muted-foreground text-xs">
-                    {batch.voice}
-                  </span>
-                  <div class="flex shrink-0 items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      class="h-6 px-2 text-xs"
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        handlePlayBatch(batch.batchId);
-                      }}
-                      disabled={actionInProgress === batch.batchId}
-                      title={$_("history.playAllTooltip")}
-                    >
-                      <Play class="mr-1 h-3 w-3" />
-                      {$_("history.playAll")}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      class="h-6 w-6"
-                      onclick={(e) => {
-                        e.stopPropagation();
-                        batchToDelete = batch.batchId;
-                      }}
-                      disabled={actionInProgress === batch.batchId}
-                      title={$_("history.deleteAllFragments")}
-                    >
-                      <Trash2 class="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                <!-- Fragment list -->
-                <div class="max-h-64 overflow-y-auto">
-                  {#each batch.items as fragment (fragment.id)}
-                    {@const batchInfo = extractBatchInfo(fragment)}
-                    <div
-                      class="hover:bg-accent/10 border-border/30 flex items-center justify-between gap-2 border-b px-3 py-1.5 last:border-b-0"
-                    >
-                      <div class="flex min-w-0 flex-1 items-center gap-1.5">
-                        {#if batchInfo}
-                          <Badge variant="outline" class="h-4 shrink-0 px-1 text-[9px]">
-                            {batchInfo.position}/{batchInfo.total}
-                          </Badge>
-                        {/if}
-                        <span class="truncate text-xs">
-                          {truncateText(fragment.text, 60)}
-                        </span>
-                      </div>
-                      <div class="flex shrink-0 items-center gap-0.5">
-                        {#if getSynthesisMs(fragment)}
-                          <span class="text-muted-foreground mr-1 text-[10px]">
-                            {formatSynthesisDuration(getSynthesisMs(fragment)!)}
-                          </span>
-                        {/if}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          class="h-5 w-5"
-                          onclick={(e) => {
-                            e.stopPropagation();
-                            handlePlay(fragment);
-                          }}
-                          disabled={actionInProgress === fragment.id || !fragment.output_path}
-                          title={fragment.output_path
-                            ? $_("history.playThisFragment")
-                            : $_("history.noAudioFile")}
-                        >
-                          <Play class="h-2.5 w-2.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  {/each}
-                </div>
-              </div>
-            {/if}
-          </div>
-        {/if}
-      {/each}
+  {#if readings.length === 0 && !historyStore.isLoading}
+    <div class="text-muted-foreground flex flex-col items-center gap-3 py-12">
+      <Clock class="size-6" />
+      <p class="text-sm">{$_("history.empty")}</p>
     </div>
+  {:else}
+    <ul class="border-border divide-border divide-y border-y">
+      {#each readings as reading (reading.id)}
+        {@const item = reading.items[0]}
+        {@const isCurrent = playbackStore.historyReadingId === reading.id}
+        {@const isActive = isCurrent && playbackStore.isPlaying}
+        {@const actionLabel = isActive
+          ? $_("play.stop")
+          : isCurrent
+            ? $_("play.replay")
+            : $_("play.play")}
+        <li class="hover:bg-muted/40 flex min-w-0 items-start gap-3 px-2 py-4 transition-colors sm:px-3">
+          <Button
+            variant={isActive ? "secondary" : "outline"}
+            size="icon"
+            class="shrink-0"
+            onclick={() => handlePlay(reading)}
+            disabled={actionInProgress !== null || playbackStore.isSynthesizing || !reading.hasAudio}
+            aria-label={actionLabel}
+            title={isActive
+              ? actionLabel
+              : !reading.hasAudio
+                ? $_("history.noAudioFile")
+                : actionLabel}
+          >
+            {#if actionInProgress === reading.id}
+              <Spinner />
+            {:else if isActive}
+              <Square />
+            {:else}
+              <Play />
+            {/if}
+          </Button>
+          <div class="flex min-w-0 flex-1 flex-col gap-2">
+            <button
+              type="button"
+              class="focus-visible:ring-ring min-w-0 cursor-pointer rounded-sm text-left text-sm leading-relaxed focus-visible:ring-2 focus-visible:outline-none"
+              onclick={() => (selectedReading = reading)}
+              aria-label="Read full text"
+              aria-haspopup="dialog"
+              title="Read full text"
+            >
+              <span class="line-clamp-2 min-h-10 whitespace-pre-wrap wrap-anywhere"
+                >{reading.text}</span
+              >
+            </button>
+            <div class="text-muted-foreground flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              <time datetime={new Date(reading.timestamp).toISOString()}>
+                {new Date(reading.timestamp).toLocaleString(undefined, {
+                  dateStyle: "medium",
+                  timeStyle: "short"
+                })}
+              </time>
+              <span class="max-w-full truncate" title={`${item.tts_engine} · ${item.voice}`}
+                >{engines.find((engine) => engine.engine === item.tts_engine)?.label ??
+                  item.tts_engine} · {historyVoiceLabel(item, profiles, engines)}</span
+              >
+              {#if reading.durationMs > 0}
+                <span class="tabular-nums">{formatDuration(reading.durationMs)}</span>
+              {/if}
+              {#if reading.partCount > 1}
+                <span
+                  class="inline-flex items-center gap-1 whitespace-nowrap"
+                  title="Paginated reading; plays all saved parts in order"
+                >
+                  <Layers class="size-3" />
+                  {reading.partCount} parts
+                </span>
+              {/if}
+              {#if !reading.success}
+                <span class="text-destructive">Generation failed</span>
+              {:else if !reading.hasAudio}
+                <span>{$_("history.noAudioFile")}</span>
+              {/if}
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            class="shrink-0"
+            onclick={() => (readingToDelete = reading)}
+            disabled={actionInProgress !== null || playbackBusy}
+            aria-label={$_("history.delete")}
+            title={$_("history.delete")}
+          >
+            <Trash2 />
+          </Button>
+        </li>
+      {/each}
+    </ul>
   {/if}
 
-  {#if historyStore.error}
-    <p class="text-destructive text-sm">
-      {historyStore.error}
+  {#if actionError || historyStore.error || playbackStore.error}
+    <p class="text-destructive text-sm wrap-anywhere" role="alert">
+      {actionError || historyStore.error || playbackStore.error}
     </p>
   {/if}
-</div>
+</section>
+
+<Dialog
+  open={selectedReading !== null}
+  onOpenChange={(open) => {
+    if (!open) selectedReading = null;
+  }}
+>
+  <DialogContent class="flex max-h-[85dvh] min-w-0 flex-col sm:max-w-2xl">
+    <DialogHeader>
+      <DialogTitle>Reading text</DialogTitle>
+      <DialogDescription>
+        {selectedReading ? new Date(selectedReading.timestamp).toLocaleString() : ""}
+      </DialogDescription>
+    </DialogHeader>
+    <div class="min-h-0 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap wrap-anywhere">
+      {selectedReading?.text}
+    </div>
+  </DialogContent>
+</Dialog>
 
 <AlertDialog
-  open={!!(itemToDelete || batchToDelete)}
+  open={readingToDelete !== null}
   onOpenChange={(open) => {
-    if (!open) {
-      itemToDelete = null;
-      batchToDelete = null;
-    }
+    if (!open) readingToDelete = null;
   }}
 >
   <AlertDialogContent>
     <AlertDialogHeader>
-      <AlertDialogTitle
-        >{batchToDelete ? $_("history.deleteBatch") : $_("history.deleteEntry")}</AlertDialogTitle
+      <AlertDialogTitle>{$_("history.deleteEntry")}</AlertDialogTitle>
+      <AlertDialogDescription
+        >Delete this reading and all its saved audio? This cannot be undone.</AlertDialogDescription
       >
-      <AlertDialogDescription>
-        {#if batchToDelete}
-          {$_("history.deleteBatchDescription")}
-        {:else if itemToDelete?.output_path}
-          {$_("history.deleteEntryWithFile")}
-        {:else}
-          {$_("history.deleteEntryOnly")}
-        {/if}
-      </AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
       <AlertDialogCancel>{$_("history.cancel")}</AlertDialogCancel>

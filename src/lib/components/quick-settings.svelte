@@ -32,42 +32,37 @@
 </script>
 
 <!-- Compact settings panel for quick access to the most-used playback and listening controls -->
-<div class="border-border bg-card flex h-full flex-col gap-2 rounded-lg border p-3 shadow-sm">
+<div class="grid min-w-0 grid-cols-1 gap-x-6 sm:grid-cols-2 md:grid-cols-1">
   <!-- Show clipboard listener errors (e.g. permission denied, backend failure) -->
   {#if error}
     <p class="text-destructive text-xs">{error}</p>
   {/if}
   {#if config}
     <!-- Double-copy listener toggle — uses onchange (not bind) because state lives in the store, not config -->
-    <div
-      class="border-border bg-muted/30 flex items-center justify-between gap-2 rounded-lg border px-3 py-4"
-    >
+    <div class="border-border flex min-w-0 items-center justify-between gap-3 border-b py-3">
       <div class="flex items-center gap-1">
-        <Label for="listen-double-copy" class="text-xs">Listen</Label>
+        <Label for="listen-double-copy" class="text-sm">Double-copy</Label>
         <InfoTooltip text="Monitor clipboard for double-copy" />
       </div>
       <Switch id="listen-double-copy" checked={isListening} onchange={handleToggle} />
     </div>
     <!-- Global hotkey toggle — binds directly to config since it's a persistent preference -->
-    <div
-      class="border-border bg-muted/30 flex items-center justify-between gap-2 rounded-lg border px-3 py-4"
-    >
+    <div class="border-border flex min-w-0 items-center justify-between gap-3 border-b py-3">
       <div class="flex items-center gap-1">
-        <Label for="qs-hotkey" class="text-xs">Hotkey</Label>
-        <InfoTooltip text="Global hotkey to speak clipboard (default: Win+Shift+A)" />
+        <Label for="qs-hotkey" class="text-sm">Hotkey</Label>
+        <InfoTooltip text={config.hotkey.shortcut || "Speak clipboard with a keyboard shortcut"} />
       </div>
       <Switch id="qs-hotkey" bind:checked={config.hotkey.enabled} />
     </div>
     <!-- Effects toggle — binds to active profile's effects -->
-    <div
-      class="border-border bg-muted/30 flex items-center justify-between gap-2 rounded-lg border px-3 py-4"
-    >
+    <div class="border-border flex min-w-0 items-center justify-between gap-3 border-b py-3">
       <div class="flex items-center gap-1">
-        <Label for="qs-effects" class="text-xs">Effects</Label>
+        <Label for="qs-effects" class="text-sm">Effects</Label>
         <InfoTooltip text="Apply audio effect to TTS playback" />
       </div>
       <Switch
         id="qs-effects"
+        disabled={!activeProfile}
         checked={profileEffectsEnabled}
         onchange={() => {
           if (activeProfile) {
@@ -80,21 +75,22 @@
       />
     </div>
     <!-- Volume slider — 0–100% range with integer steps for precise control -->
-    <div class="border-border bg-muted/30 space-y-1 rounded-lg border px-3 py-4">
+    <div class="flex min-w-0 flex-col gap-3 py-3">
       <div class="flex items-center justify-between">
-        <Label for="qs-volume" class="text-xs">Volume</Label>
+        <Label for="qs-volume" class="text-sm">Volume</Label>
         <span class="text-muted-foreground text-xs">{config.playback.volume}%</span>
       </div>
       <Slider id="qs-volume" min={0} max={100} step={1} bind:value={config.playback.volume} />
     </div>
     <!-- Speed slider — reads from active profile -->
-    <div class="border-border bg-muted/30 space-y-1 rounded-lg border px-3 py-4">
+    <div class="flex min-w-0 flex-col gap-3 py-3">
       <div class="flex items-center justify-between">
-        <Label for="qs-speed" class="text-xs">Speed</Label>
+        <Label for="qs-speed" class="text-sm">Speed</Label>
         <span class="text-muted-foreground text-xs">{profileSpeed.toFixed(2)}x</span>
       </div>
       <Slider
         id="qs-speed"
+        disabled={!activeProfile}
         min={0.5}
         max={2}
         step={0.05}
@@ -105,13 +101,14 @@
       />
     </div>
     <!-- Pitch slider — reads from active profile -->
-    <div class="border-border bg-muted/30 space-y-1 rounded-lg border px-3 py-4">
+    <div class="flex min-w-0 flex-col gap-3 py-3">
       <div class="flex items-center justify-between">
-        <Label for="qs-pitch" class="text-xs">Pitch</Label>
+        <Label for="qs-pitch" class="text-sm">Pitch</Label>
         <span class="text-muted-foreground text-xs">{profilePitch.toFixed(2)}x</span>
       </div>
       <Slider
         id="qs-pitch"
+        disabled={!activeProfile}
         min={0.5}
         max={2}
         step={0.05}

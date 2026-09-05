@@ -12,7 +12,7 @@
   <Screenshots />
   <Footer />
 {:else}
-  <div class="mx-auto flex min-h-0 max-w-6xl flex-1 flex-col">
+  <div class="mx-auto flex w-full min-w-0 max-w-6xl flex-1 flex-col">
     <PlayPage />
   </div>
 {/if}

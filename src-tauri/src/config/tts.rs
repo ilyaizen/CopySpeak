@@ -25,7 +25,7 @@ pub enum TtsEngine {
 
 impl Default for TtsEngine {
     fn default() -> Self {
-        TtsEngine::Edge
+        TtsEngine::Cartesia
     }
 }
 
@@ -940,15 +940,16 @@ pub(crate) fn migrate_add_kitten_profile_v4(tts: &mut TtsConfig) {
 
 impl Default for TtsConfig {
     fn default() -> Self {
+        let cartesia_profile = default_cartesia_profile();
         Self {
             schema_version: 4,
-            active_backend: TtsEngine::Edge,
-            active_profile_id: "default".into(),
+            active_backend: TtsEngine::Cartesia,
+            active_profile_id: cartesia_profile.id.clone(),
             profiles: vec![
                 VoiceProfile::default(),
                 default_kitten_profile(),
                 default_elevenlabs_profile(),
-                default_cartesia_profile(),
+                cartesia_profile,
                 default_google_profile(),
             ],
             preset: "kitten-tts".into(),

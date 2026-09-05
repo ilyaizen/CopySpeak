@@ -255,13 +255,21 @@ mod tests {
     // ========== TTS Profile / Migration Tests ==========
 
     #[test]
-    fn test_default_tts_config_has_one_default_profile() {
+    fn test_default_tts_config_uses_cartesia_profile() {
         let tts = TtsConfig::default();
+        assert_eq!(TtsEngine::default(), TtsEngine::Cartesia);
         assert_eq!(tts.schema_version, 4);
-        assert_eq!(tts.active_profile_id, "default");
+        assert_eq!(tts.active_backend, TtsEngine::Cartesia);
         assert_eq!(tts.profiles.len(), 5);
         assert_eq!(tts.profiles[0].id, "default");
         assert_eq!(tts.profiles[0].engine, TtsEngine::Edge);
+        assert_eq!(
+            tts.profiles
+                .iter()
+                .find(|profile| profile.id == tts.active_profile_id)
+                .map(|profile| &profile.engine),
+            Some(&TtsEngine::Cartesia)
+        );
     }
 
     #[test]

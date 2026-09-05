@@ -125,7 +125,7 @@
 
           <DropdownMenu bind:open={dropdownOpen}>
             <DropdownMenuTrigger
-              class="hover:bg-muted/50 focus:ring-ring cursor-pointer rounded px-1 py-0.5 text-xs transition-colors focus:ring-2 focus:ring-offset-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              class="hover:bg-muted/50 focus:ring-ring min-w-0 cursor-pointer truncate rounded px-1 py-0.5 text-xs transition-colors focus:ring-2 focus:ring-offset-1 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               aria-label={`Switch profile: ${activeProfile.name}`}
             >
               <span class="text-card-foreground truncate">{activeProfile.name}</span>
@@ -177,7 +177,7 @@
         {/if}
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex shrink-0 items-center gap-2">
         <UpdateChecker />
         <span class="bg-border mx-2 h-3 w-px"></span>
         <span class="text-muted-foreground shrink-0 text-xs">v{VERSION}</span>

@@ -215,14 +215,14 @@
       </div>
     </div>
   {:else if localConfig}
-    <div class="flex flex-row items-start gap-2">
+    <div class="flex min-w-0 flex-col items-stretch gap-4 md:flex-row md:items-start">
       <!-- Left Sidebar - Scroll Spy Navigation -->
-      <aside class="w-28 shrink-0 self-stretch">
+      <aside class="min-w-0 shrink-0 self-stretch md:w-28">
         <nav class="sticky top-0">
-          <div class="space-y-0.5">
+          <div class="flex flex-wrap gap-1 md:flex-col">
             {#each tabs as tab}
               <button
-                class="w-full rounded-md px-2 py-1.5 text-left text-sm font-medium transition-colors {activeTab ===
+                class="rounded-md px-2 py-1.5 text-left text-sm font-medium whitespace-nowrap transition-colors md:w-full {activeTab ===
                 tab.id
                   ? 'bg-primary/10 text-primary border-primary border-l-2'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
@@ -236,13 +236,13 @@
       </aside>
 
       <!-- Main Content - Continuous Scroll -->
-      <main class="flex-1 space-y-6 pb-20">
+      <main class="min-w-0 flex-1 space-y-8 pb-20">
         <!-- General Section -->
         <section id="general" class="scroll-mt-4">
-          <div class="border-border overflow-hidden rounded-lg border">
+          <div class="border-border border-y">
             <div class="space-y-0">
               <!-- General -->
-              <div class="border-border border-b p-4">
+              <div class="border-border border-b py-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.general")}
                 </h3>
@@ -293,7 +293,7 @@
               </div>
 
               <!-- Startup -->
-              <div class="border-border border-b p-4">
+              <div class="border-border border-b py-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.startup")}
                 </h3>
@@ -301,7 +301,7 @@
               </div>
 
               <!-- Appearance -->
-              <div class="border-border border-b p-4">
+              <div class="border-border border-b py-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.appearance")}
                 </h3>
@@ -309,7 +309,7 @@
               </div>
 
               <!-- Playback -->
-              <div class="border-border border-b p-4">
+              <div class="py-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.playback")}
                 </h3>
@@ -321,9 +321,9 @@
 
         <!-- History Section -->
         <section id="history" class="scroll-mt-4">
-          <div class="border-border overflow-hidden rounded-lg border">
+          <div class="border-border border-y">
             <div class="space-y-0">
-              <div class="p-4">
+              <div class="py-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.history")}
                 </h3>
@@ -335,10 +335,10 @@
 
         <!-- Advanced Section -->
         <section id="advanced" class="scroll-mt-4">
-          <div class="border-border overflow-hidden rounded-lg border">
+          <div class="border-border border-y">
             <div class="space-y-0">
               <!-- Advanced -->
-              <div class="border-border border-b p-4">
+              <div class="border-border border-b py-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.pagination")}
                 </h3>
@@ -347,7 +347,7 @@
               </div>
 
               <!-- Sanitization -->
-              <div class="border-border border-b p-4">
+              <div class="border-border border-b py-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.sanitization")}
                 </h3>
@@ -355,7 +355,7 @@
               </div>
 
               <!-- LLM Post-Processing -->
-              <div class="p-4">
+              <div class="py-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.postProcess")}
                 </h3>
@@ -367,10 +367,10 @@
 
         <!-- About Section -->
         <section id="about" class="scroll-mt-4">
-          <div class="border-border overflow-hidden rounded-lg border">
+          <div class="border-border border-y">
             <div class="space-y-0">
               <!-- App Info -->
-              <div class="border-border border-b p-4">
+              <div class="border-border border-b py-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.appInfo")}
                 </h3>
@@ -378,7 +378,7 @@
               </div>
 
               <!-- Import / Export -->
-              <div class="p-4">
+              <div class="py-4">
                 <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                   {$_("settings.sections.importExport")}
                 </h3>

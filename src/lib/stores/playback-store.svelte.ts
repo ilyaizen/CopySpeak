@@ -11,16 +11,9 @@
 
 import { isTauri } from "$lib/services/tauri.js";
 import type { EffectId } from "$lib/types";
-import {
-  applyFadeIn,
-  audioBufferToWavBlob,
-  detectAudioMimeType
-} from "./playback/audio-utils.js";
+import { applyFadeIn, audioBufferToWavBlob, detectAudioMimeType } from "./playback/audio-utils.js";
 import { AudioAnalyser } from "./playback/analyser.js";
-import {
-  PcmStreamScheduler,
-  type StreamChunkPayload
-} from "./playback/pcm-stream.js";
+import { PcmStreamScheduler, type StreamChunkPayload } from "./playback/pcm-stream.js";
 import { getEffect } from "./playback/effects/registry.js";
 import { FragmentQueue, type QueuedFragment } from "./playback/fragment-queue.js";
 import { hudStore } from "./hud-store.svelte.js";
@@ -31,6 +24,8 @@ class PlaybackStore {
   isSynthesizing = $state(false);
   error = $state<string | null>(null);
   hasCachedAudio = $state(false);
+  // Retained after stop/completion so the owning history row can offer Replay.
+  historyReadingId = $state<string | null>(null);
 
   // Pagination state for HUD display
   currentFragmentIndex = $state<number | null>(null);
@@ -271,10 +266,7 @@ class PlaybackStore {
       void ctx.resume();
     }
     if (!this._pcmScheduler) {
-      console.log(
-        "[PlaybackStore] creating PCM scheduler for fragment",
-        payload.fragment_index
-      );
+      console.log("[PlaybackStore] creating PCM scheduler for fragment", payload.fragment_index);
       this._pcmScheduler = new PcmStreamScheduler({
         ctx,
         destination: ctx.destination,
@@ -314,6 +306,7 @@ class PlaybackStore {
   }
 
   async handleReplay(): Promise<void> {
+    this.historyReadingId = null;
     if (!this._audioEl) return;
     const url = await this.buildPlaybackUrl(this.pitch);
     if (url) {
@@ -437,12 +430,9 @@ class PlaybackStore {
       });
 
       // Streaming PCM chunks from streaming-capable backends (ElevenLabs)
-      const unStreamChunk = await listen<StreamChunkPayload>(
-        "audio-stream-chunk",
-        (e) => {
-          this.handleStreamChunk(e.payload);
-        }
-      );
+      const unStreamChunk = await listen<StreamChunkPayload>("audio-stream-chunk", (e) => {
+        this.handleStreamChunk(e.payload);
+      });
 
       // Authoritative end-of-synthesis signal for the streamed queue; the
       // scheduler completes once all scheduled sources have drained.
@@ -461,6 +451,7 @@ class PlaybackStore {
       });
 
       const unSynthesis = await listen<boolean>("synthesis-state-change", (e) => {
+        if (e.payload) this.historyReadingId = null;
         this.isSynthesizing = e.payload;
       });
 

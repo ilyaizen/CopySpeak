@@ -15,6 +15,60 @@ import type {
   AudioFormat,
   TtsEngine
 } from "$lib/types";
+import type { EngineCatalogEntry, VoiceProfile } from "$lib/types";
+
+export function historyVoiceLabel(
+  item: HistoryItem,
+  profiles: VoiceProfile[],
+  engines: EngineCatalogEntry[]
+): string {
+  const profile = profiles.find(
+    (profile) =>
+      profile.engine === item.tts_engine &&
+      profile.voice === item.voice &&
+      profile.voice_label?.trim()
+  );
+  const catalogVoice = engines
+    .find((engine) => engine.engine === item.tts_engine)
+    ?.voices.find((voice) => voice.id === item.voice);
+  return profile?.voice_label?.trim() || catalogVoice?.label.trim() || "Saved voice";
+}
+
+/** One reading per row, regardless of how many audio files synthesis produced. */
+export function groupHistoryReadings(items: HistoryItem[]) {
+  const groups = new Map<string, HistoryItem[]>();
+  for (const item of items) {
+    const key = item.batch_id ? `batch:${item.batch_id}` : `entry:${item.id}`;
+    const group = groups.get(key);
+    if (group) group.push(item);
+    else groups.set(key, [item]);
+  }
+  return [...groups.entries()]
+    .map(([id, entries]) => {
+      entries.sort((a, b) => {
+        const aIndex = a.metadata?.fragment_index;
+        const bIndex = b.metadata?.fragment_index;
+        return typeof aIndex === "number" && typeof bIndex === "number"
+          ? aIndex - bIndex
+          : a.timestamp - b.timestamp;
+      });
+      return {
+        id,
+        items: entries,
+        batchId: entries[0].batch_id,
+        partCount: entries.reduce((total, item) => {
+          const expected = item.metadata?.fragment_total;
+          return typeof expected === "number" ? Math.max(total, expected) : total;
+        }, entries.length),
+        text: entries.map((item) => item.text).join("\n\n"),
+        timestamp: entries.reduce((earliest, item) => Math.min(earliest, item.timestamp), Infinity),
+        success: entries.every((item) => item.success),
+        hasAudio: entries.every((item) => !!item.output_path),
+        durationMs: entries.reduce((total, item) => total + (item.duration_ms ?? 0), 0)
+      };
+    })
+    .sort((a, b) => b.timestamp - a.timestamp);
+}
 
 /**
  * Creates a new history item with default values

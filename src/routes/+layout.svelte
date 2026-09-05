@@ -216,7 +216,9 @@
 
   <TooltipProvider delayDuration={300}>
     <div
-      class="bg-background grid h-screen grid-rows-[auto_1fr_auto] overflow-hidden"
+      class="bg-background grid h-dvh min-w-0 overflow-hidden {isOnboarding
+        ? 'grid-rows-[minmax(0,1fr)]'
+        : 'grid-rows-[auto_minmax(0,1fr)_auto]'}"
       dir={$isRtl ? "rtl" : "ltr"}
     >
       {#if !isOnboarding}
@@ -224,9 +226,11 @@
       {/if}
 
       <main
-        class={isOnboarding ? "w-full overflow-y-auto" : "w-full overflow-y-auto px-4 py-6 sm:px-6"}
+        class={isOnboarding
+          ? "min-h-0 min-w-0 overflow-auto"
+          : "min-h-0 min-w-0 overflow-auto px-4 py-4 sm:px-6"}
       >
-        <MotionWrapper>
+        <MotionWrapper class="min-h-full min-w-0 flex flex-col">
           {@render children()}
         </MotionWrapper>
       </main>

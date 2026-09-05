@@ -47,7 +47,9 @@
         "title": "CopySpeak",
         "width": 775,
         "height": 580,
-        "resizable": false,
+        "resizable": true,
+        "minWidth": 360,
+        "minHeight": 400,
         "center": true,
         "visible": true,
         "devtools": true

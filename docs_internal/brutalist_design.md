@@ -1,5 +1,34 @@
 # Brutalist Redesign Spec
 
+## Current implementation — 0.1.14
+
+The historical specification below is not an exact description of today's UI.
+Use `src/routes/+layout.css` as the source of truth for the existing Lato typography,
+teal-gray semantic colors, light/dark themes, and small corner radii.
+
+- The main window is resizable from 360 × 400, initially 775 × 580. The HUD remains fixed-size.
+- Play uses a labeled text editor and flat quick-control rows. At widths below 768px,
+  controls follow the editor; wider windows place them alongside it. The content area scrolls
+  when the window is short, with navigation and footer outside that scroll area.
+- History presents each reading as one row, joining audio fragments in playback order.
+  Rows share a two-line preview, timestamp, engine/voice, duration, playback and Delete.
+  Paginated readings carry a small part count, including the expected total when recorded.
+  Voice names come from a matching profile or the engine catalog; unknown voices show
+  “Saved voice”, with the original identifier available in the metadata tooltip.
+  Full text opens in a dialog. There are no fragment accordions or resynthesis controls.
+- Playback requires saved audio for every recorded part. A single button offers Play,
+  Stop while playing, and Replay afterward, both on the front page and on the owning
+  history row. There is no lower playback bar. Replay starts the reading from the beginning.
+  Deleting a reading removes all its recorded parts.
+- Navigation and settings rows wrap at narrow widths; long text must not force wider content.
+
+Validation (2026-09-06): `bun run check` passed with 0 errors and 0 warnings;
+`bun run test` passed all 32 tests. Visual review in the running app remains pending.
+The separate Svelte analyzer reports existing route-resolution and unkeyed-loop
+issues in the surrounding shell/settings code; these are outside this UI change.
+
+## Historical specification
+
 > **Date:** 2026-03-25
 > **Version:** v0.2.2
 > **Reference:** shadcn-svelte Dark Mode Documentation
