@@ -1,15 +1,20 @@
 {
-  "i18n-ally.localesPaths": ["src/lib/i18n", "src/lib/locales"],
+  "i18n-ally.localesPaths": [
+    "src/lib/i18n",
+    "src/lib/locales"
+  ],
   "i18n-ally.keystyle": "nested",
-  "rust-analyzer.linkedProjects": ["src-tauri/Cargo.toml"],
+  // "rust-analyzer.linkedProjects": [
+  //   "src-tauri/Cargo.toml"
+  // ],
   // "window.titleBarStyle": "custom",
   // Custom title bar and status bar colors
-  "workbench.colorCustomizations": {
-    "titleBar.activeBackground": "#0a2e2c",
-    "titleBar.activeForeground": "#fcfcfc",
-    "titleBar.inactiveBackground": "#191f1e",
-    "titleBar.inactiveForeground": "#b0b8c1",
-    "statusBar.background": "#0a2e2c",
-    "statusBar.foreground": "#fcfcfc"
-  }
+  // "workbench.colorCustomizations": {
+  //   "titleBar.activeBackground": "#0a2e2c",
+  //   "titleBar.activeForeground": "#fcfcfc",
+  //   "titleBar.inactiveBackground": "#191f1e",
+  //   "titleBar.inactiveForeground": "#b0b8c1",
+  //   "statusBar.background": "#0a2e2c",
+  //   "statusBar.foreground": "#fcfcfc"
+  // }
 }
