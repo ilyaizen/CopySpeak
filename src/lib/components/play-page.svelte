@@ -157,7 +157,6 @@
 
   // Proxy store state for template readability
   let isPlaying = $derived(playbackStore.isPlaying);
-  let isPaused = $derived(playbackStore.isPaused);
 
   // Sync playback config to store and auto-save (debounced)
   $effect(() => {
@@ -215,7 +214,9 @@
   type PlayMode = "play" | "replay" | "disabled";
   let playMode: PlayMode = $derived(
     currentContent
-      ? playbackStore.hasCachedAudio && currentContent === lastPlayedContent
+      ? playbackStore.hasCachedAudio &&
+        !playbackStore.historyReadingId &&
+        currentContent === lastPlayedContent
         ? "replay"
         : "play"
       : "disabled"
@@ -246,20 +247,6 @@
         await invoke("stop_speaking");
       } catch (error) {
         console.error("Failed to stop speaking:", error);
-      }
-    }
-  }
-
-  async function handleTogglePause() {
-    // Toggle pause in frontend
-    playbackStore.handleTogglePause();
-
-    // Also notify backend for consistency
-    if (isTauri) {
-      try {
-        await invoke("toggle_pause");
-      } catch (error) {
-        console.error("Failed to toggle pause:", error);
       }
     }
   }
@@ -335,30 +322,30 @@
   });
 </script>
 
-<div class="flex min-h-0 flex-1 flex-col gap-4">
-  <div class="grid min-h-0 flex-1 grid-cols-3 gap-4">
-    {#if config}
-      <div class="min-h-0">
-        <QuickSettings bind:config />
+<div class="flex min-w-0 flex-1 flex-col gap-4">
+  <div class="grid min-w-0 flex-1 grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_13rem]">
+    <section aria-labelledby="reader-heading" class="flex min-w-0 flex-col gap-3">
+      <div>
+        <h2 id="reader-heading" class="text-lg font-bold tracking-tight">Read aloud</h2>
+        <p id="reader-hint" class="text-muted-foreground text-sm">
+          Paste text here, or copy it twice anywhere.
+        </p>
       </div>
-    {/if}
-    <div
-      class="border-border bg-card col-span-2 flex min-h-0 flex-1 flex-col rounded-lg border p-3 shadow-sm"
-    >
+      <label for="reading-text" class="sr-only">Text to read aloud</label>
       <Textarea
-        class="min-h-0 flex-1 resize-none"
+        id="reading-text"
+        aria-describedby="reader-hint"
+        class="min-h-48 flex-1 resize-none field-sizing-fixed p-4 text-base leading-relaxed"
         placeholder={$_("play.placeholder")}
         bind:value={manualText}
       />
-      <div class="mt-2 flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <PlaybackControls
           {isPlaying}
-          {isPaused}
           isSynthesizing={playbackStore.isSynthesizing}
           {playMode}
           onPlay={handlePlay}
           onStop={handleStop}
-          onTogglePause={handleTogglePause}
           onAbort={handleAbort}
         />
         {#if manualText}
@@ -366,11 +353,19 @@
             >{$_("play.clear")}</Button
           >
         {/if}
-        <span class="text-muted-foreground ml-auto text-xs">
+        <span class="text-muted-foreground ml-auto text-xs whitespace-nowrap tabular-nums">
           {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
         </span>
       </div>
-    </div>
+    </section>
+    {#if config}
+      <aside
+        aria-label="Reading controls"
+        class="border-border min-w-0 border-t pt-4 md:border-t-0 md:border-l md:pt-0 md:pl-5"
+      >
+        <QuickSettings bind:config />
+      </aside>
+    {/if}
   </div>
 
   {#if error}

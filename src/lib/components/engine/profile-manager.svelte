@@ -508,9 +508,11 @@
   }
 </script>
 
-<div class="border-border overflow-hidden rounded-lg border">
+<div>
   <!-- Header: title + actions -->
-  <div class="bg-muted/50 border-border flex items-center justify-between border-b p-4">
+  <div
+    class="border-border flex flex-wrap items-center justify-between gap-3 border-b pb-4"
+  >
     <div>
       <h2 class="text-lg font-semibold">Voice Profiles</h2>
       <p class="text-muted-foreground mt-1 text-sm">
@@ -555,7 +557,7 @@
     </div>
   </div>
 
-  <div class="space-y-1 p-4">
+  <div class="space-y-1 border-b py-4">
     <SettingRow label="Active Profile">
       <Select
         options={profileOptions}
@@ -567,9 +569,9 @@
   </div>
 
   {#if active}
-    <div class="border-border space-y-4 border-t p-4">
+    <div class="space-y-5 py-5">
       <!-- Identity -->
-      <section class="border-border bg-muted/30 rounded-lg border p-3">
+      <section class="border-border border-b pb-5">
         <p class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
           Identity
         </p>
@@ -579,7 +581,7 @@
       </section>
 
       <!-- Engine & Voice -->
-      <section class="border-border bg-muted/30 space-y-3 rounded-lg border p-3">
+      <section class="border-border space-y-3 border-b pb-5">
         <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
           Engine & Voice
         </p>
@@ -655,7 +657,7 @@
       </section>
 
       <!-- Sound -->
-      <section class="border-border bg-muted/30 space-y-3 rounded-lg border p-3">
+      <section class="border-border space-y-3 border-b pb-5">
         <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Sound</p>
         <SettingRow label="Speed">
           <div class="flex w-56 items-center gap-2">
@@ -701,7 +703,7 @@
 
       <!-- Advanced: engine-specific options + docs -->
       {#if activeCatalogEntry}
-        <section class="border-border bg-muted/30 space-y-3 rounded-lg border p-3">
+        <section class="border-border space-y-3 border-b pb-5">
           <div class="flex items-center justify-between gap-2">
             <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
               {activeCatalogEntry.label}

@@ -54,8 +54,8 @@
   }
 </script>
 
-<section class="border-border overflow-hidden rounded-lg border">
-  <header class="bg-muted/50 border-border flex items-start justify-between gap-3 border-b p-4">
+<section>
+  <header class="border-border flex items-start justify-between gap-3 border-b pb-4">
     <div class="min-w-0">
       <h2 class="text-lg font-semibold">{$_(`engine.${entry.id}.title`)}</h2>
       <p class="text-muted-foreground mt-1 text-sm">{$_(`engine.${entry.id}.description`)}</p>
@@ -69,7 +69,7 @@
     </button>
   </header>
 
-  <div class="space-y-4 p-4">
+  <div class="space-y-4 py-4">
     {#if entry.credential === "api_key" || entry.credential === "api_key_endpoint"}
       {#if entry.credentialTarget}
         <div class="space-y-2">

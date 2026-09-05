@@ -4,6 +4,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
 
   import type { AppConfig } from "$lib/types";
   import { Volume2 } from "@lucide/svelte";
@@ -18,10 +19,9 @@
     isLoading = true;
     try {
       const config = await invoke<AppConfig>("get_config");
-      config.tts.active_backend = "edge";
-      if (config.tts.edge) {
-        config.tts.edge.voice = "en-US-AvaMultilingualNeural";
-      }
+      const cartesiaProfile = config.tts.profiles.find((profile) => profile.engine === "cartesia");
+      config.tts.active_backend = "cartesia";
+      if (cartesiaProfile) config.tts.active_profile_id = cartesiaProfile.id;
       config.pagination.fragment_size = 500;
       localConfig = config;
     } catch (e) {
@@ -32,17 +32,18 @@
     }
   }
 
-  async function testEdgeTts() {
+  async function testCartesia() {
+    if (!localConfig) return;
     testing = true;
     try {
-      const result = await invoke<{ success: boolean; message: string }>("test_tts_engine_config", {
-        engine: "edge",
-        preset: null
-      });
-      if (result.success) toast.success(result.message || "Edge-TTS is working.");
-      else toast.error(result.message || "Edge-TTS test failed.");
+      await invoke("set_config", { newConfig: localConfig });
+      const result = await invoke<{ success: boolean; message: string }>(
+        "check_cartesia_credentials"
+      );
+      if (result.success) toast.success(result.message || "Cartesia is ready.");
+      else toast.error(result.message || "Cartesia API key check failed.");
     } catch (e) {
-      toast.error(`Edge-TTS test failed: ${e}`);
+      toast.error(`Cartesia API key check failed: ${e}`);
     } finally {
       testing = false;
     }
@@ -81,17 +82,12 @@
   onMount(loadDefaultConfig);
 </script>
 
-<div
-  class="from-background to-muted/30 flex min-h-screen items-center justify-center bg-linear-to-br p-4 sm:p-6"
->
+<div class="bg-background flex min-h-screen items-center justify-center p-4 sm:p-8">
   <div class="w-full max-w-2xl">
-    <!-- Main Card -->
-    <div class="border-border bg-card space-y-6 rounded-lg border p-6 shadow-lg sm:p-8">
+    <div class="space-y-6">
       <!-- Header -->
-      <div class="space-y-2 text-center">
-        <h1
-          class="from-foreground to-foreground/70 bg-linear-to-r bg-clip-text font-mono text-3xl font-bold tracking-tight sm:text-4xl"
-        >
+      <div class="space-y-2">
+        <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">
           {$_("onboarding.welcome.title")}
         </h1>
         <p class="text-muted-foreground text-sm sm:text-base">
@@ -105,20 +101,30 @@
           <div class="text-muted-foreground">{$_("onboarding.loading")}</div>
         </div>
       {:else if localConfig}
-        <div class="border-border space-y-5 border-t border-b py-6">
-          <div class="rounded-lg border border-sky-500/30 bg-sky-500/8 p-5">
+        <div class="border-border space-y-5 border-y py-6">
+          <div class="p-1">
             <div class="flex items-start gap-3">
-              <div class="rounded-md bg-sky-500/15 p-2 text-sky-700 dark:text-sky-300">
+              <div class="bg-primary/10 text-primary rounded-sm p-2">
                 <Volume2 class="h-5 w-5" />
               </div>
               <div class="space-y-1">
-                <h2 class="font-mono text-lg font-semibold">Ready to go with Edge-TTS</h2>
+                <h2 class="text-lg font-semibold">Set up Cartesia</h2>
                 <p class="text-muted-foreground text-sm leading-relaxed">
                   CopySpeak is set to Cartesia by default for fast, high-quality speech. Paste your
                   API key, verify it without spending synthesis credits, then start listening.
                 </p>
               </div>
             </div>
+            <label for="cartesia-api-key" class="mt-5 block text-sm font-medium">
+              Cartesia API key
+            </label>
+            <Input
+              id="cartesia-api-key"
+              type="password"
+              bind:value={localConfig.tts.cartesia.api_key}
+              placeholder="sk_car_…"
+              class="mt-2"
+            />
           </div>
         </div>
 
@@ -127,8 +133,8 @@
           <Button
             variant="outline"
             size="lg"
-            onclick={testEdgeTts}
-            disabled={testing}
+            onclick={testCartesia}
+            disabled={testing || !localConfig.tts.cartesia.api_key.trim()}
             class="flex-1"
           >
             {testing ? "Testing…" : "Test"}

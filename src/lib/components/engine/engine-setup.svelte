@@ -125,11 +125,11 @@
   });
 </script>
 
-<div class="flex flex-row items-start gap-2">
-  <aside class="w-36 shrink-0 self-stretch">
-    <nav class="space-y-0.5">
+<div class="flex min-w-0 flex-col items-stretch gap-4 sm:flex-row sm:items-start sm:gap-5">
+  <aside class="min-w-0 shrink-0 self-stretch sm:w-36">
+    <nav class="grid grid-cols-2 gap-0.5 sm:block sm:space-y-0.5">
       <p
-        class="text-muted-foreground px-2 pt-1 pb-1 text-[11px] font-semibold tracking-wide uppercase"
+        class="text-muted-foreground col-span-2 px-2 pt-1 pb-1 text-[11px] font-semibold tracking-wide uppercase sm:block"
       >
         {$_("engines.cloud")}
       </p>
@@ -145,7 +145,7 @@
         </button>
       {/each}
       <p
-        class="text-muted-foreground px-2 pt-3 pb-1 text-[11px] font-semibold tracking-wide uppercase"
+        class="text-muted-foreground col-span-2 px-2 pt-3 pb-1 text-[11px] font-semibold tracking-wide uppercase sm:block"
       >
         {$_("engines.local")}
       </p>

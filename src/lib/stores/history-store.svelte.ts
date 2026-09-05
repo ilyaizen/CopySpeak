@@ -56,6 +56,7 @@ function backendToHistoryItem(entry: BackendHistoryEntry): HistoryItem {
  */
 
 import type { HistoryItem, HistoryState, HistoryFilters, HistorySortOptions } from "$lib/types";
+import { playbackStore } from "./playback-store.svelte";
 import {
   createEmptyHistoryState,
   filterHistoryItems,
@@ -295,8 +296,10 @@ function createHistoryStore() {
           audioDurationMs: item.duration_ms ?? null
         }).catch(() => {});
       }
+      playbackStore.historyReadingId = `entry:${id}`;
       await invoke("play_history_entry", { entryId: id });
     } catch (e) {
+      playbackStore.historyReadingId = null;
       throw new Error(`Failed to play entry: ${e}`);
     }
   }
@@ -360,8 +363,10 @@ function createHistoryStore() {
     }
 
     try {
+      playbackStore.historyReadingId = `batch:${batchId}`;
       await invoke("play_history_batch", { batchId });
     } catch (e) {
+      playbackStore.historyReadingId = null;
       throw new Error(`Failed to play batch: ${e}`);
     }
   }

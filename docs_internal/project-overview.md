@@ -1,6 +1,6 @@
 # CopySpeak Project Overview
 
-**Last Updated:** 2026-03-25
+**Last Updated:** 2026-09-05
 
 ## What This Is
 
@@ -12,9 +12,9 @@ CopySpeak is a lightweight Windows desktop application that wraps AI Text-to-Spe
 
 ## Stack
 
-- **Frontend**: Svelte 5 + SvelteKit + Tailwind CSS v4.2 + shadcn-svelte
+- **Frontend**: Svelte 5 + SvelteKit + Tailwind CSS v4 + shadcn-svelte
 - **Backend**: Rust (Tauri v2)
-- **IPC**: `commands.rs` → `main.rs` → frontend via `@tauri-apps/api`
+- **IPC**: `src-tauri/src/commands/` modules registered in `main.rs`; frontend calls via `@tauri-apps/api`
 - **State**: `Mutex<T>` via Tauri's `app.manage()`
 
 ## Constraints
@@ -25,7 +25,15 @@ CopySpeak is a lightweight Windows desktop application that wraps AI Text-to-Spe
 
 ## Current State
 
-The app is at a pre-production v0.0.x state — core clipboard-to-speech flow is complete and working. Phase 9 (TTS Engine Overhaul) was recently completed, consolidating engines and removing HTTP backend.
+The working version is **0.1.14**, as recorded in `package.json`, `src-tauri/Cargo.toml`,
+and `src-tauri/tauri.conf.json`. The main routes are Play, History, Voices, Engines,
+and Settings, with separate onboarding and HUD routes. Voice profiles supply speed,
+pitch, and effects; volume is global. Shared Svelte stores own playback, listening,
+and history state. Saved batches replay through the existing fragment queue.
+
+The current UI work adds window resizing, responsive controls, and a unified history
+reading layout. See [Current design implementation](brutalist_design.md#current-implementation--0114).
+Older decisions and deferred-feature lists below are historical and need a separate audit.
 
 ## Key Decisions
 

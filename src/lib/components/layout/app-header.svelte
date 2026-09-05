@@ -73,7 +73,7 @@
 </script>
 
 <header class="border-border bg-background z-50 border-b" data-testid="app-header">
-  <div class="flex items-center justify-between px-6 py-3">
+  <div class="flex min-w-0 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
     <div class="flex items-center gap-3">
       <a href="/" class="flex items-center gap-3">
         <img src="/app-logo.png" alt="CopySpeak Logo" class="h-10 w-10" />
@@ -83,8 +83,8 @@
         </div>
       </a>
     </div>
-    <div class="flex items-center gap-4">
-      <nav class="flex items-center gap-1">
+    <div class="min-w-0 max-w-full">
+      <nav aria-label="Main navigation" class="flex flex-wrap items-center gap-1">
         {#each navItems as item}
           {@const isActive =
             item.href === "/" ? page.url.pathname === "/" : page.url.pathname.startsWith(item.href)}
@@ -92,7 +92,7 @@
           <a
             href={item.href}
             data-testid="nav-{item.id}"
-            class="focus-visible:ring-ring inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 {isActive
+            class="focus-visible:ring-ring inline-flex items-center justify-center rounded-md px-2 py-2 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 {isActive
               ? 'bg-muted text-foreground'
               : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
             aria-current={isActive ? "page" : undefined}

@@ -1,142 +1,22 @@
 # AGENTS.md
 
-> For AI coding agents (Hermes-Agent, Pi, OpenCode, KiloCode, Claude Code, Cursor, etc.)
+CopySpeak: A lightwieight and modern AI text-to-speech orchestrator for Windows that reads clipboard text aloud when double-copied. Stack: Svelte 5, Tauri 2.
 
-## Project
+## Rules
 
-CopySpeak - A modern AI text-to-speech orchestrator for Windows that reads clipboard text aloud when double-copied. Stack: Svelte 5, Tauri 2.
+- Fix causes, not symptoms. Report adjacent problems, don't fix them.
+- Never stub, loosen, or comment out check to get green. Broken and loud beats silent and wrong.
+- Unsure or blocked: ask. State assumptions, surface tradeoffs, push back on over-engineering.
 
-## Core Development Rules
+## Workflow
 
-### 1. Think Before Code
-
-- No assume. No hide confusion. Surface tradeoffs.
-- State assumptions. Uncertain → ask.
-- Multiple interpretations → present, no silent pick.
-- Simpler path exist → say so. Push back when warranted.
-- Unclear → stop. Name confusion. Ask.
-
-### 2. Simplicity First
-
-- Min code that solve problem. Nothing speculative.
-- No features beyond ask.
-- No abstractions for single-use code.
-- No "flexibility"/"configurability" not requested.
-- No error handling for impossible cases.
-- 200 lines could be 50 → rewrite.
-- Test: senior eng call this overcomplicated? Yes → simplify.
-
-### 3. Surgical Changes
-
-- Touch only what must. Clean only own mess.
-- No "improve" adjacent code/comments/format.
-- No refactor things not broken.
-- Match existing style even if disagree.
-- Unrelated dead code → mention, no delete.
-- Own changes orphan imports/vars → remove.
-- Pre-existing dead code → leave unless asked.
-- Test: every changed line trace to user request.
-
-### 4. Goal-Driven Execution
-
-- Define success. Loop until verified.
-- "Add validation" → write failing tests, make pass.
-- "Fix bug" → write reproducing test, make pass.
-- "Refactor X" → tests pass before and after.
-- Multi-step → state plan: [step] → verify: [check].
-
-### 5. Testing / Committing
-
-DO NOT run checks. ALWAYS ASK USER for explicit confirmation before running any verification, linting, type-check, or build commands.
-
-DO NOT commit changes without explicit user confirmation. Before ending a task, ask whether to run checks and commit. If the user confirms committing, generate a suitable Conventional Commits message that summarizes the diff concisely.
-
-- `bun format` - prettier format.
-- `bun check` - types + svelte-check.
-- `bun build` - production build.
-
-Use running Tauri dev server.
-
-## Efficiency
-
-- Read before write. Each file once.
-- Edit over rewrite. No write-delete-rewrite cycles.
-- Test once, fix, verify once.
-- Budget: 50 tool calls.
-- Stuck → ask. No dead ends.
-- No sycophantic openers/fluff.
-- Never guess paths.
-
-## Code Style
-
-### Naming Conventions
-
-- Files (kebab-case) & Svelte components (kebab-case.svelte)
-- Variables/functions (camelCase) & Types/interfaces (PascalCase)
-- Constants (UPPER_SNAKE_CASE) & Rust modules (snake_case)
-
-### Svelte Rules
-
-- Use `$state`, `$derived`, `$props`, `$effect` (not `$:`)
-- Use `onclick` NOT `on:click`
-- Call derived signals in templates: `doubled()` not `doubled`
-- Import from `$app/state` not `$app/stores`
-
-### TypeScript Rules
-
-- Strict mode enabled
-- No unused variables
-- Explicit return types for public functions
-- Prefer `interface` over `type` for object shapes
-- Use `satisfies` instead of type assertions
-- Never use `!` non-null assertion
-
-## Git Workflow
-
-- **NEVER commit directly to `main`** - all changes via PRs
-- **Always create a new branch** before starting any new feature, fix, refactor, or version work. Never work on an existing branch that isn't yours.
-- Work on feature branches: `feature/`, `fix/`, `refactor/`, `docs/`
-- Use versioned dev branches for releases: `develop/0.1.0`, `develop/0.2.0`, etc.
-- Open PRs targeting `main` (or `develop/*` for larger efforts)
-- **Bump version when finishing a task**: after completing work and before opening a PR, run `bun run bump` (patch), `bun run bump:minor`, or `bun run bump:major` to bump all version files (package.json, Cargo.toml, tauri.conf.json, version.ts, README.md). Choose the bump type based on the scope of changes. Commit the version bump as part of the PR.
-
-## Best Practices
-
-- Follow existing code patterns
-- Keep responses concise (1-3 sentences)
-- Comments explain "why" not "what"
-- Update CHANGELOG.md for notable changes (features, fixes, breaking changes). Follow [Keep a Changelog](https://keepachangelog.com/) sections: Added, Changed, Deprecated, Removed, Fixed, Security
-
-## Reasoning Discipline
-
-- Prefer sharp model over pretty one.
-- If uncertain, say what known/inferred/open.
-
-## Changelog Maintenance
-
-**For all PRs and commits affecting functionality:**
-
-- Update `CHANGELOG.md` under `[Unreleased]`
-- Use categories: `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`, `Breaking Changes`
-- List specific changes with implementation details (functions, structs, features added)
-- Include `BREAKING CHANGE:` prefix for incompatible API changes
-
-Example:
-
-```markdown
-### Added
-
-- Feature description with implementation details
-  - Specific component/function details
-
-### Changed
-
-- Modified existing functionality description
-
-### Breaking Changes
-
-- `OldClass::method()` now requires `newParam` parameter
-```
+- Use `i-have-adhd` skill: next action first, numbered steps, no preamble.
+- Never run `bun run tauri dev` to verify change; already running. Use `bun run check && bun run test`.
+- Never run checks or commit without explicit confirmation. Ask before concluding task.
+- End with one concrete next step; user approves. Use shape: `If you want, I can do X next. React with ✅ to run it.` Several viable: list up to 3, one line each, best first.
+- Hand-off prompts only include what next session can't access: decisions made, dead ends, ongoing states, next steps. Don't repeat AGENTS.md.
+- Avoid image-previewing. Only user verifies/approves visually.
+- Commits: [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## Documentation
 
@@ -144,20 +24,25 @@ Example:
 
 - **docs_internal/ (Internal Docs)**: **project-overview.md** (project context and key decisions), **requirements.md** (feature requirements and traceability), **architecture.md** (system architecture and design), **development_guide.md** (setup and development workflow), **tts_backends.md** (TTS engine integration guide), **brutalist_design.md** (UI design system and aesthetics), **roadmap.md** (development roadmap and phases), **code-patterns-reference.md** (Svelte 5, Rust, and Tauri IPC code examples).
 
-## Final Reply Tails
+## Keeping this file current
 
-When answer suggests next step, end with compact executable tail, not vague fluff.
+File logs failures, not wishlist. Every line below exists because it went wrong at least once. On mistake, correction, or undocumented discovery about codebase:
 
-Use shape: `If you want, I can do X next. React with ✅ to run it.`
+1. Add one line to active failure log below, imperative, describing correct behaviour.
+2. Keep specific to this repo. General advice belongs nowhere.
+3. Fix is workflow not rule: put in `.agents/skills/` and link from here.
+4. Include change in same commit, mention in summary.
 
-Rules: Offer ✅ hook only if next step wired to real action. One suggested next step. Don't use tail for pure facts, refusals, one-off answers with no real follow-up.
+Keep active failure log short: entries for work not in `## Active work` move to [`.agents/failure-log.md`](.agents/failure-log.md). Loaded every session; long context makes you less reliable, not more. Architecture detail outgrows usefulness: move to `.agents/architecture.md` or a skill.
 
-## Final Rule
+## Active failure log
 
-Be assistant you'd want to talk to at 2AM. Not corporate drone. Not sycophant. Just useful.
+- Present history batches as one reading in `recent-history.svelte`; preserve fragment order for full text, playback, and whole-reading deletion.
+- Show pagination as a part count on history rows; keep Play/Stop/Replay on the reading's button instead of adding a lower playback bar.
+- Resolve history voice labels by both engine and voice ID using profiles/catalog; retain raw IDs for playback and tooltips.
+- Hide the playback button's decorative spinner from accessibility naming so synthesis keeps the action named “Stop”.
 
 <!-- rtk-instructions v2 -->
-
 ## RTK (Rust Token Killer) - Token-Optimized Commands
 
 ## Golden Rule
@@ -173,6 +58,5 @@ git add . && git commit -m "msg" && git push
 # ✅ Correct
 rtk git add . && rtk git commit -m "msg" && rtk git push
 ```
-
 Full command reference (which tools have dedicated filters, and their savings): the `rtk-commands` skill in `.agents/skills/rtk-commands/`.
 <!-- /rtk-instructions -->

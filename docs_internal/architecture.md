@@ -343,7 +343,7 @@ GET /health ─► liveness probe
 ```json
 {
   "trigger":     { "listen_enabled": true, "double_copy_window_ms": 1500, "max_text_length": 100000 },
-  "tts":         { "active_backend": "edge", "...per-engine blocks": "api_key, voice, model" },
+  "tts":         { "active_backend": "cartesia", "...per-engine blocks": "api_key, voice, model" },
   "playback":    { "on_retrigger": "queue", "volume": 100, "playback_speed": 1.35, "pitch": 1.15 },
   "hud":         { "enabled": true, "position": "bottom-center", "width": 300, "height": 140, "opacity": 0.85 },
   "hotkey":      { "enabled": false, "shortcut": "Super+Shift+A" },
