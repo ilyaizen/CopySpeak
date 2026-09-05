@@ -198,8 +198,10 @@ pub struct ElevenLabsTtsBackend {
 const ELEVENLABS_API_BASE: &str = "https://api.elevenlabs.io";
 
 /// The /stream endpoint is always requested with raw 16-bit LE mono PCM at
-/// 44.1 kHz so chunks can be scheduled directly by the frontend AudioContext.
-const STREAM_OUTPUT_FORMAT: &str = "pcm_44100";
+/// 24 kHz so chunks can be scheduled directly by the frontend AudioContext.
+/// 24 kHz (not 44.1 kHz) because ElevenLabs gates pcm_44100 behind their Pro
+/// tier; lower PCM rates are available on all tiers.
+const STREAM_OUTPUT_FORMAT: &str = "pcm_24000";
 
 impl ElevenLabsTtsBackend {
     pub fn new(config: ElevenLabsConfig) -> Self {
@@ -208,8 +210,8 @@ impl ElevenLabsTtsBackend {
 
     /// Stream synthesis from an explicit API base URL (wiremock tests override it).
     ///
-    /// Returns immediately with a [`ChunkStream`] whose meta describes pcm_44100
-    /// (44.1 kHz, mono, 16-bit); a background thread pumps response bytes into
+    /// Returns immediately with a [`ChunkStream`] whose meta describes pcm_24000
+    /// (24 kHz, mono, 16-bit); a background thread pumps response bytes into
     /// the channel as they arrive. Errors before headers arrive as a single
     /// [`ChunkItem::Failed`] followed by end-of-stream; mid-body read errors do
     /// the same, annotated with how many bytes were received first.
@@ -245,7 +247,7 @@ impl ElevenLabsTtsBackend {
 
         let (tx, rx) = std::sync::mpsc::channel();
         let meta = AudioFormatMeta {
-            sample_rate: 44100,
+            sample_rate: 24000,
             channels: 1,
             bits_per_sample: 16,
         };
@@ -922,7 +924,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn streams_pcm_chunks_in_order_with_pcm_44100_meta_and_request_shape() {
+    async fn streams_pcm_chunks_in_order_with_pcm_24000_meta_and_request_shape() {
         let server = wiremock::MockServer::start().await;
 
         // Distinct halves so ordering across whatever TCP segmentation occurs
@@ -953,7 +955,7 @@ mod tests {
             .synthesize_streaming_from(&server.uri(), "hello streaming world")
             .expect("valid api key must not fail synchronously");
 
-        assert_eq!(stream.meta.sample_rate, 44100);
+        assert_eq!(stream.meta.sample_rate, 24000);
         assert_eq!(stream.meta.channels, 1);
         assert_eq!(stream.meta.bits_per_sample, 16);
 
@@ -979,8 +981,8 @@ mod tests {
         );
         assert_eq!(
             request.url.query(),
-            Some("output_format=pcm_44100"),
-            "stream endpoint must pin pcm_44100"
+            Some("output_format=pcm_24000"),
+            "stream endpoint must pin pcm_24000"
         );
         assert_eq!(
             request.headers.get("xi-api-key").and_then(|v| v.to_str().ok()),

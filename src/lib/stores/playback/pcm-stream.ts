@@ -41,11 +41,13 @@ const START_DELAY_SECONDS = 0.03;
 const IDLE_COMPLETE_MS = 2000;
 
 /** Decode standard base64 into bytes (mirrors the browser atob path). */
-function base64ToBytes(base64: string): Uint8Array {
+function base64ToBytes(base64: string, prefix: Uint8Array | null): Uint8Array {
   const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
+  const offset = prefix?.length ?? 0;
+  const bytes = new Uint8Array(offset + binary.length);
+  if (prefix) bytes.set(prefix);
   for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
+    bytes[offset + i] = binary.charCodeAt(i);
   }
   return bytes;
 }
@@ -96,6 +98,9 @@ export class PcmStreamScheduler {
   private _started = false;
   private _nextStartTime = 0;
   private _firstChunkAt: number | null = null;
+  private _lastChunkAt: number | null = null;
+  /** Transport boundaries need not coincide with a complete interleaved frame. */
+  private _remainder: Uint8Array | null = null;
 
   private _volumePercent = 100;
   private _speed = 1.0;
@@ -147,38 +152,47 @@ export class PcmStreamScheduler {
       return;
     }
     if (payload.bits_per_sample !== 16) {
-      console.warn(
-        "[PcmStream] unsupported bits_per_sample:",
-        payload.bits_per_sample
-      );
+      console.warn("[PcmStream] unsupported bits_per_sample:", payload.bits_per_sample);
       return;
     }
+    if (!payload.audio_base64) return;
+    const carriedBytes = this._remainder?.length ?? 0;
     let bytes: Uint8Array;
     try {
-      bytes = base64ToBytes(payload.audio_base64);
+      bytes = base64ToBytes(payload.audio_base64, this._remainder);
     } catch {
       console.warn("[PcmStream] dropping chunk with malformed base64");
       return;
     }
     if (bytes.length === 0) return;
-
-    const channels =
-      payload.channels > 0 ? Math.min(payload.channels, 2) : 1;
-    const channelData = pcm16LeToFloat32Channels(bytes, channels);
-    if (channelData[0].length === 0) return;
-
-    const buffer = this._ctx.createBuffer(
-      channels,
-      channelData[0].length,
-      payload.sample_rate
-    );
-    for (let c = 0; c < channels; c++) {
-      buffer.copyToChannel(channelData[c], c);
-    }
-
     this._clearIdleTimer();
     if (this._firstChunkAt === null) {
       this._firstChunkAt = performance.now();
+    }
+
+    const channels = payload.channels > 0 ? Math.min(payload.channels, 2) : 1;
+    const remainderLength = bytes.length % (2 * channels);
+    this._remainder = remainderLength === 0 ? null : bytes.slice(bytes.length - remainderLength);
+    if (import.meta.env.DEV) {
+      const now = performance.now();
+      console.debug("[PcmStream] chunk", {
+        bytes: bytes.length - carriedBytes,
+        arrivalGapMs: this._lastChunkAt === null ? null : Math.round(now - this._lastChunkAt),
+        bufferedMs: Math.round(
+          1000 *
+            (this._pendingDuration / this._combinedRate() +
+              Math.max(0, this._nextStartTime - this._ctx.currentTime))
+        ),
+        carriedBytes: remainderLength
+      });
+      this._lastChunkAt = now;
+    }
+    const channelData = pcm16LeToFloat32Channels(bytes, channels);
+    if (channelData[0].length === 0) return;
+
+    const buffer = this._ctx.createBuffer(channels, channelData[0].length, payload.sample_rate);
+    for (let c = 0; c < channels; c++) {
+      buffer.copyToChannel(channelData[c], c);
     }
 
     this._pending.push(buffer);
@@ -193,6 +207,14 @@ export class PcmStreamScheduler {
 
   /** Terminal marker for one fragment: flush whatever is still buffered. */
   handleFragmentEnd(): void {
+    if (this._remainder) {
+      console.warn(
+        "[PcmStream] discarding incomplete PCM frame at fragment end:",
+        this._remainder.length,
+        "bytes"
+      );
+      this._remainder = null;
+    }
     if (!this._started && this._pending.length > 0) {
       this._startPlayback();
     } else {
@@ -255,6 +277,8 @@ export class PcmStreamScheduler {
     this._started = false;
     this._nextStartTime = 0;
     this._firstChunkAt = null;
+    this._lastChunkAt = null;
+    this._remainder = null;
     this._pausedByUser = false;
     try {
       this._gain.disconnect();
@@ -288,6 +312,11 @@ export class PcmStreamScheduler {
       this._pendingDuration -= buffer.duration;
       // Underrun tolerance: continue from currentTime if the cursor fell behind.
       const at = Math.max(this._nextStartTime, this._ctx.currentTime + 0.005);
+      if (import.meta.env.DEV && at > this._nextStartTime) {
+        console.debug("[PcmStream] underrun", {
+          gapMs: Math.round(1000 * (at - this._nextStartTime))
+        });
+      }
       const source = this._ctx.createBufferSource();
       source.buffer = buffer;
       source.playbackRate.value = rate;
