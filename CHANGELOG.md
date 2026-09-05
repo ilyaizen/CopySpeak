@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.14] - 2026-09-06
+
 ### Added
 
 - **Uninstall for every local TTS engine** — new `scripts/uninstall-engine.ps1 -Engine <kitten|piper|kokoro|pocket|edge>` removes the uv-managed engine directory and/or runs `uv tool uninstall`, streaming the same `[STEP]/[DONE]/[ERROR]` markers as the installers. Exposed as the `uninstall_engine` Tauri command and an Uninstall button (with confirmation) in the install dialog.
@@ -21,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Responsive desktop UI** — the main window now starts at 775×580, resizes down to 360×400, and keeps navigation, content, controls, and settings usable at narrow widths.
+- **Flatter app layout** — Play, History, Voices, Engines, Settings, and Onboarding now share the same divider-led visual language without nested cards. The Play page uses a larger labeled editor and responsive quick settings.
+- **Reading-level history** — paginated fragments now render as one reading with ordered full text, one playback/delete row, resolved engine and voice labels, duration, and a compact part count.
+- **Cartesia is the fresh-install default** — new configs select the bundled Cartesia profile, and onboarding accepts and validates a Cartesia API key without spending synthesis credits.
 - **ElevenLabs streaming pins `pcm_24000` instead of `pcm_44100`** — ElevenLabs gates `pcm_44100` output behind its Pro tier, so every streamed fragment failed at `phase=headers` with 403 `output_format_not_allowed` on non-Pro accounts. `STREAM_OUTPUT_FORMAT` and the `ChunkStream` meta now use 24 kHz / mono / 16-bit; the end-of-stream WAV wrap inherits the rate from the stream meta (no hardcoded rate), and the wiremock request-shape test asserts the new pin.
 - **`edge` no longer has an installer** — `scripts/install-edge-tts.ps1` is gone and the Engines page no longer offers an Install dialog for it (no `installerId`). `engine_status` still probes `edge-tts` on PATH, and a missing binary surfaces `uv tool install edge-tts` in the synthesis error instead of a `pip install` hint.
 - **Install dialog is driven by engine metadata** — the hard-coded `SHARED`/`ENGINE_SIZE` maps moved into `engine-meta.ts` as `voiceMode` (`per-voice` | `shared` | `none`) and `downloadSize`. `none` engines (uv, pocket) no longer render a meaningless voice checklist.
@@ -32,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **History playback controls** — each reading now uses one Play/Stop button, retains Play for replay, starts replay from the beginning, and lets another history row take over active playback. Loading decoration no longer changes the accessible action name.
+- **History voice names** — saved readings resolve labels by engine and voice ID through profiles and the engine catalog; unknown IDs show “Saved voice” while preserving the raw ID in the tooltip.
 - **ElevenLabs live PCM playback corrupted samples at network chunk boundaries** — `PcmStreamScheduler` now carries incomplete 16-bit interleaved frames into the next chunk instead of dropping their bytes before `pcm16LeToFloat32Channels`. Carry state is cleared at fragment end and stop; empty terminal events remain control-only. Development-only chunk size, arrival-gap, buffered-duration, and underrun diagnostics distinguish byte-alignment corruption from network starvation without increasing the 250 ms prebuffer.
 - **Engine installers failed when launched from the app** — tauri's `resource_dir()` is built from a canonicalized exe path; on Windows `std::fs::canonicalize` returns `\\?\` verbatim paths, which leaked into `powershell -File` and `$PSScriptRoot`, breaking the `lib/copyspeak-engine-install.ps1` dot-source in every installer. `resolve_script` now strips the prefix once at the source, so installers work in dev and packaged builds; the per-script `$PSScriptRoot -replace` workarounds were removed.
 - **`install-kokoro.ps1` did not parse under Windows PowerShell 5.1** — the file is BOM-less UTF-8, which 5.1 reads as ANSI, so an em dash inside a `Write-Host` string decoded to bytes containing a `"` and terminated the literal early. The script failed before running a single line on any machine without `pwsh`. All installer scripts are now ASCII-only, and the new self-check enforces it.
@@ -564,7 +572,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.13...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.14...HEAD
+[0.1.14]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.13...v0.1.14
 [0.1.13]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.11...v0.1.12
 [0.1.11]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.10...v0.1.11
