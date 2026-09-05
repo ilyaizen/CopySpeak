@@ -31,7 +31,7 @@ src-tauri/Cargo.lock
 # AGENTS.md
 # CLAUDE.md
 # GEMINI.md
-/plans
+/docs_internal
 # file-structure.txt
 DO_NOT_TOUCH/
 /.claude/skills
@@ -45,43 +45,3 @@ nul
 /.hermes
 target-verify.ps1
 /.reasonix
-
-# ── GSD baseline (auto-generated) ──
-.gsd
-.gsd-worktrees/
-.gsd-backups/
-.gsd-id
-.mcp.json
-.bg-shell/
-Thumbs.db
-nul.*
-con
-con.*
-prn
-prn.*
-aux
-aux.*
-com[1-9]
-com[1-9].*
-lpt[1-9]
-lpt[1-9].*
-*.swp
-*.swo
-*~
-.idea/
-.vscode/
-*.code-workspace
-node_modules/
-.next/
-dist/
-build/
-__pycache__/
-*.pyc
-.venv/
-venv/
-target/
-vendor/
-*.log
-coverage/
-.cache/
-tmp/
