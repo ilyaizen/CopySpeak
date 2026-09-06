@@ -92,7 +92,7 @@
       </div>
     </div>
   {:else if localConfig}
-    <main class="mx-auto max-w-3xl pb-20">
+    <main class="w-full min-w-0 pb-20">
       <ProfileManager bind:localConfig />
     </main>
   {:else}

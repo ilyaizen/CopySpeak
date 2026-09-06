@@ -32,14 +32,14 @@
 </script>
 
 <!-- Compact settings panel for quick access to the most-used playback and listening controls -->
-<div class="grid min-w-0 grid-cols-1 gap-x-6 sm:grid-cols-2 md:grid-cols-1">
+<div class="grid min-w-0 grid-cols-1 gap-x-4 sm:grid-cols-2 md:grid-cols-1">
   <!-- Show clipboard listener errors (e.g. permission denied, backend failure) -->
   {#if error}
     <p class="text-destructive text-xs">{error}</p>
   {/if}
   {#if config}
     <!-- Double-copy listener toggle — uses onchange (not bind) because state lives in the store, not config -->
-    <div class="border-border flex min-w-0 items-center justify-between gap-3 border-b py-3">
+    <div class="border-border flex min-w-0 items-center justify-between gap-2 border-b py-2">
       <div class="flex items-center gap-1">
         <Label for="listen-double-copy" class="text-sm">Double-copy</Label>
         <InfoTooltip text="Monitor clipboard for double-copy" />
@@ -47,7 +47,7 @@
       <Switch id="listen-double-copy" checked={isListening} onchange={handleToggle} />
     </div>
     <!-- Global hotkey toggle — binds directly to config since it's a persistent preference -->
-    <div class="border-border flex min-w-0 items-center justify-between gap-3 border-b py-3">
+    <div class="border-border flex min-w-0 items-center justify-between gap-2 border-b py-2">
       <div class="flex items-center gap-1">
         <Label for="qs-hotkey" class="text-sm">Hotkey</Label>
         <InfoTooltip text={config.hotkey.shortcut || "Speak clipboard with a keyboard shortcut"} />
@@ -55,7 +55,7 @@
       <Switch id="qs-hotkey" bind:checked={config.hotkey.enabled} />
     </div>
     <!-- Effects toggle — binds to active profile's effects -->
-    <div class="border-border flex min-w-0 items-center justify-between gap-3 border-b py-3">
+    <div class="border-border flex min-w-0 items-center justify-between gap-2 border-b py-2">
       <div class="flex items-center gap-1">
         <Label for="qs-effects" class="text-sm">Effects</Label>
         <InfoTooltip text="Apply audio effect to TTS playback" />
@@ -75,7 +75,7 @@
       />
     </div>
     <!-- Volume slider — 0–100% range with integer steps for precise control -->
-    <div class="flex min-w-0 flex-col gap-3 py-3">
+    <div class="flex min-w-0 flex-col gap-2 py-2">
       <div class="flex items-center justify-between">
         <Label for="qs-volume" class="text-sm">Volume</Label>
         <span class="text-muted-foreground text-xs">{config.playback.volume}%</span>
@@ -83,7 +83,7 @@
       <Slider id="qs-volume" min={0} max={100} step={1} bind:value={config.playback.volume} />
     </div>
     <!-- Speed slider — reads from active profile -->
-    <div class="flex min-w-0 flex-col gap-3 py-3">
+    <div class="flex min-w-0 flex-col gap-2 py-2">
       <div class="flex items-center justify-between">
         <Label for="qs-speed" class="text-sm">Speed</Label>
         <span class="text-muted-foreground text-xs">{profileSpeed.toFixed(2)}x</span>
@@ -101,7 +101,7 @@
       />
     </div>
     <!-- Pitch slider — reads from active profile -->
-    <div class="flex min-w-0 flex-col gap-3 py-3">
+    <div class="flex min-w-0 flex-col gap-2 py-2">
       <div class="flex items-center justify-between">
         <Label for="qs-pitch" class="text-sm">Pitch</Label>
         <span class="text-muted-foreground text-xs">{profilePitch.toFixed(2)}x</span>

@@ -1,6 +1,16 @@
 import { expect, it } from "vitest";
-import { createHistoryItem, groupHistoryReadings, historyVoiceLabel } from "./history";
+import { createHistoryItem, groupHistoryReadings, historyVoiceLabel, historyTimeAgo } from "./history";
 import type { EngineCatalogEntry, VoiceProfile } from "$lib/types";
+
+it("shows elapsed time at minute, hour, and day boundaries", () => {
+  const now = 200_000_000;
+  const formatter = new Intl.RelativeTimeFormat(undefined, { style: "short" });
+  expect(historyTimeAgo(now + 60_000, now)).toBe("Just now");
+  expect(historyTimeAgo(now - 59_999, now)).toBe("Just now");
+  expect(historyTimeAgo(now - 60_000, now)).toBe(formatter.format(-1, "minute"));
+  expect(historyTimeAgo(now - 3_600_000, now)).toBe(formatter.format(-1, "hour"));
+  expect(historyTimeAgo(now - 86_400_000, now)).toBe(formatter.format(-1, "day"));
+});
 
 it("uses matching voice labels without confusing engine IDs or exposing unknown IDs", () => {
   const item = createHistoryItem("Hello", "cartesia", "voice-id", 1);

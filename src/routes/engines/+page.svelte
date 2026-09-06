@@ -79,7 +79,7 @@
       </div>
     </div>
   {:else if localConfig}
-    <main class="mx-auto max-w-3xl pb-4">
+    <main class="w-full min-w-0 pb-4">
       <div class="mb-4">
         <h1 class="text-xl font-semibold">{$_("engines.title")}</h1>
         <p class="text-muted-foreground mt-1 text-sm">{$_("engines.subtitle")}</p>
