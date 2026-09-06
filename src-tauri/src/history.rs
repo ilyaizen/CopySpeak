@@ -962,7 +962,7 @@ pub fn save_audio_to_storage(
     let _ = std::fs::create_dir_all(&dir);
 
     let now = chrono::Local::now();
-    let minute_key = now.format("%Y-%m-%d-%H-%M").to_string();
+    let minute_key = now.format("%y%m%d-%H%M").to_string();
     let count = config::get_and_increment_minute_counter(&minute_key);
     let filename = if count == 1 {
         format!(

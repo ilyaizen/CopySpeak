@@ -250,6 +250,7 @@ export interface PostProcessingConfig {
 export interface PlaybackConfig {
   on_retrigger: RetriggerMode;
   volume: number;
+  streaming_enabled: boolean;
 }
 
 export type HudThemePreset = "dark" | "light" | "custom";

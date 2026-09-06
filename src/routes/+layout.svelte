@@ -230,7 +230,11 @@
           ? "min-h-0 min-w-0 overflow-auto"
           : "min-h-0 min-w-0 overflow-auto px-4 py-4 sm:px-6"}
       >
-        <MotionWrapper class="min-h-full min-w-0 flex flex-col">
+        <MotionWrapper
+          class={isOnboarding
+            ? "min-h-full min-w-0 flex flex-col"
+            : "mx-auto flex min-h-full w-full min-w-0 max-w-6xl flex-col"}
+        >
           {@render children()}
         </MotionWrapper>
       </main>

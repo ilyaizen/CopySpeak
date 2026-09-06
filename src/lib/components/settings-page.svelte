@@ -204,7 +204,7 @@
   });
 </script>
 
-<div class="w-full">
+<div class="w-full min-w-0">
   {#if isLoading}
     <div class="flex min-h-[60vh] items-center justify-center">
       <div class="text-center">

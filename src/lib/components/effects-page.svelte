@@ -67,7 +67,7 @@
   }
 </script>
 
-<div class="mx-auto w-full max-w-2xl px-6 py-8">
+<div class="w-full min-w-0 py-8">
   <header class="mb-6 flex items-center gap-3">
     <Wand2 class="text-primary" size={24} />
     <h1 class="text-2xl font-semibold tracking-tight">{$_("effects.title")}</h1>

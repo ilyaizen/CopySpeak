@@ -103,6 +103,8 @@
       "onRetriggerDescription": "What happens when TTS is triggered while already speaking",
       "volume": "Volume",
       "volumeDescription": "Audio playback volume (0-100%)",
+      "streaming": "Stream audio",
+      "streamingDescription": "Start playback as audio arrives. Supported cloud engines: ElevenLabs and Cartesia. When disabled, use batch synthesis and wait for each request to finish before playback.",
       "playbackSpeed": "Speed",
       "playbackSpeedDescription": "Playback speed (0.5x - 2x)",
       "pitch": "Pitch",

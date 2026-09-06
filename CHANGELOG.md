@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.15] - 2026-09-06
+
+### Added
+
+- **Recent history on the Play page** — a compact history rail below the reader shows the five most recent readings (when history is enabled), with a link to full History. Vertical mouse-wheel input scrolls the rail horizontally; the five-reading preview ends with a "View all in History" link.
+- **Relative time labels in history** — readings show "Just now", "15 min ago", etc. via a locale-aware `historyTimeAgo` formatter.
+- **Reading pagination count on history rows** — multi-part readings show a part count so a batched reading is distinguishable at a glance.
+- **History-only Delete action** — delete a single reading from its History row (with confirmation), without touching playback controls.
+- New tests for the recent history component and the playback store.
+
+### Changed
+
+- **Tighter Play page layout** — smaller side rail, visually hidden reader heading, denser spacing.
+
+### Fixed
+
+- **Audio queue recovery** — clear the shared audio queue on decode/play failure and invalidate pending decoding on Stop, so failed readings can be retried and stopped readings cannot restart.
+- **History recording filenames** — more compact minute-key naming for saved audio files.
+
 ## [0.1.14] - 2026-09-06
 
 ### Added

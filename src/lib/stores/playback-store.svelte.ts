@@ -22,6 +22,7 @@ class PlaybackStore {
   isPlaying = $state(false);
   isPaused = $state(false);
   isSynthesizing = $state(false);
+  isLoadingAudio = $state(false);
   error = $state<string | null>(null);
   hasCachedAudio = $state(false);
   // Retained after stop/completion so the owning history row can offer Replay.
@@ -47,6 +48,7 @@ class PlaybackStore {
   private _emitTo: ((target: string, name: string, payload: unknown) => Promise<void>) | null =
     null;
   private _stopping = false;
+  private _playbackGeneration = 0;
 
   // Modular components
   private _analyser = new AudioAnalyser();
@@ -93,6 +95,7 @@ class PlaybackStore {
   }
 
   async buildPlaybackUrl(pitchRatio: number): Promise<string> {
+    const generation = this._playbackGeneration;
     const effectId = this.activeEffect;
     if (
       this._cachedPitchUrl &&
@@ -144,44 +147,52 @@ class PlaybackStore {
     } else {
       return "";
     }
+    if (generation !== this._playbackGeneration) return "";
     const url = URL.createObjectURL(blob);
     this._cachedPitchUrl = { ratio: pitchRatio, effectId, url };
     return url;
   }
 
   async handleAudioReady(base64: string): Promise<void> {
-    console.log("[PlaybackStore] handleAudioReady called, base64 length:", base64.length);
-    const binary = atob(base64);
-    const arrayBuffer = new ArrayBuffer(binary.length);
-    const bytes = new Uint8Array(arrayBuffer);
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
-    }
-
-    this._originalBytes = arrayBuffer.slice(0);
-    if (this._cachedPitchUrl) {
-      URL.revokeObjectURL(this._cachedPitchUrl.url);
-      this._cachedPitchUrl = null;
-    }
-
-    if (!this._audioCtx) {
-      this._audioCtx = new AudioContext();
-    }
-
-    // Resume AudioContext if suspended (required on clean Windows 11 / strict autoplay policies)
-    if (this._audioCtx.state === "suspended") {
-      await this._audioCtx.resume();
-    }
-
-    // Wire AnalyserNode once per audio element (guard prevents double-wiring)
-    if (this._audioEl && this._audioCtx && !this._analyser.getAnalyser()) {
-      this._analyser.setup(this._audioEl, this._audioCtx, {
-        emitTo: this._emitTo
-      });
-    }
-
+    const generation = this._playbackGeneration;
+    this.isLoadingAudio = true;
+    this.error = null;
+    this.hasCachedAudio = false;
     try {
-      this._decodedBuffer = await this._audioCtx.decodeAudioData(arrayBuffer.slice(0));
+      console.log("[PlaybackStore] handleAudioReady called, base64 length:", base64.length);
+      const binary = atob(base64);
+      const arrayBuffer = new ArrayBuffer(binary.length);
+      const bytes = new Uint8Array(arrayBuffer);
+      for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+
+      this._originalBytes = arrayBuffer.slice(0);
+      if (this._cachedPitchUrl) {
+        URL.revokeObjectURL(this._cachedPitchUrl.url);
+        this._cachedPitchUrl = null;
+      }
+
+      if (!this._audioCtx) {
+        this._audioCtx = new AudioContext();
+      }
+
+      // Resume AudioContext if suspended (required on clean Windows 11 / strict autoplay policies)
+      if (this._audioCtx.state === "suspended") {
+        await this._audioCtx.resume();
+      }
+      if (generation !== this._playbackGeneration) return;
+
+      // Wire AnalyserNode once per audio element (guard prevents double-wiring)
+      if (this._audioEl && !this._analyser.getAnalyser()) {
+        this._analyser.setup(this._audioEl, this._audioCtx, {
+          emitTo: this._emitTo
+        });
+      }
+
+      const decoded = await this._audioCtx.decodeAudioData(arrayBuffer.slice(0));
+      if (generation !== this._playbackGeneration) return;
+      this._decodedBuffer = decoded;
       if (this._decodedBuffer) {
         const accurateDurationMs = Math.round(this._decodedBuffer.duration * 1000);
         hudStore.setAccurateDurationMs(accurateDurationMs);
@@ -189,14 +200,19 @@ class PlaybackStore {
         this._emit?.("hud:audio-duration", accurateDurationMs);
       }
       const url = await this.buildPlaybackUrl(this.pitch);
-      if (this._audioEl && url) {
-        this._audioEl.src = url;
-        this._analyser.start(); // Start amplitude capture BEFORE audio plays
-        this.playAudio();
-      }
+      if (generation !== this._playbackGeneration) return;
+      if (!this._audioEl || !url) throw new Error("Audio player is not ready");
+      this._audioEl.src = url;
+      this._analyser.start(); // Start amplitude capture BEFORE audio plays
+      await this.playAudio();
+      if (generation !== this._playbackGeneration) return;
       this.hasCachedAudio = true;
     } catch (e) {
-      this.error = `Audio decode error: ${e}`;
+      if (generation !== this._playbackGeneration) return;
+      this.handleStop();
+      this.error = `Audio playback failed: ${e}`;
+    } finally {
+      if (generation === this._playbackGeneration) this.isLoadingAudio = false;
     }
   }
 
@@ -285,10 +301,9 @@ class PlaybackStore {
     this._pcmScheduler.handleChunk(payload);
   }
 
-  playAudio() {
+  async playAudio() {
     if (!this._audioEl) {
-      console.error("[PlaybackStore] playAudio: no audio element");
-      return;
+      throw new Error("Audio player is not ready");
     }
     this._audioEl.volume = this.volume / 100;
     this._audioEl.playbackRate = this.speed;
@@ -300,9 +315,7 @@ class PlaybackStore {
       "src",
       this._audioEl.src?.substring(0, 50)
     );
-    this._audioEl.play().catch((err) => {
-      console.error("[PlaybackStore] play() failed:", err);
-    });
+    await this._audioEl.play();
   }
 
   async handleReplay(): Promise<void> {
@@ -312,11 +325,18 @@ class PlaybackStore {
     if (url) {
       this._audioEl.src = url;
       this._audioEl.currentTime = 0;
-      this.playAudio();
+      try {
+        await this.playAudio();
+      } catch (e) {
+        this.handleStop();
+        this.error = `Audio playback failed: ${e}`;
+      }
     }
   }
 
   handleStop() {
+    this._playbackGeneration += 1;
+    this.isLoadingAudio = false;
     this._analyser.stop();
     this._stopping = true;
 
@@ -476,6 +496,7 @@ class PlaybackStore {
   }
 
   teardownListeners() {
+    this.handleStop();
     this._analyser.stop();
     this._analyser.destroy();
     this._pcmScheduler?.stop();

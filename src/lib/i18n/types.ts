@@ -100,6 +100,8 @@ export type TranslationKeys =
   | "settings.playback.onRetriggerDescription"
   | "settings.playback.volume"
   | "settings.playback.volumeDescription"
+  | "settings.playback.streaming"
+  | "settings.playback.streamingDescription"
   | "settings.playback.playbackSpeed"
   | "settings.playback.playbackSpeedDescription"
   | "settings.playback.pitch"

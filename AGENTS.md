@@ -37,10 +37,16 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 
 ## Active failure log
 
+- Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
+- Treat `git diff --check` as a check; do not run it before explicit confirmation.
 - Present history batches as one reading in `recent-history.svelte`; preserve fragment order for full text, playback, and whole-reading deletion.
 - Show pagination as a part count on history rows; keep Play/Stop/Replay on the reading's button instead of adding a lower playback bar.
 - Resolve history voice labels by both engine and voice ID using profiles/catalog; retain raw IDs for playback and tooltips.
 - Hide the playback button's decorative spinner from accessibility naming so synthesis keeps the action named “Stop”.
+- Clear the shared audio queue on decode/play failure and invalidate pending decoding on Stop so history retries work and stopped readings cannot restart.
+- Translate vertical mouse-wheel input into horizontal scrolling on the Play history rail, and end its five-reading preview with a link to full History.
+- Keep the wheel-driven history rail free of scroll snapping and reverse wheel deltas in RTL; DOM-only tests cannot verify browser snapping behavior.
+- Close the History-only Delete conditional inside its reading row, before `</li>`; do not place its closing block in the View more card.
 
 <!-- rtk-instructions v2 -->
 ## RTK (Rust Token Killer) - Token-Optimized Commands

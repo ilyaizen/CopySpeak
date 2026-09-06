@@ -2,9 +2,11 @@
   import { onMount, onDestroy } from "svelte";
   import PlaybackControls from "$lib/components/playback-controls.svelte";
   import QuickSettings from "$lib/components/quick-settings.svelte";
+  import RecentHistory from "$lib/components/recent-history.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Textarea } from "$lib/components/ui/textarea/index.js";
   import { playbackStore } from "$lib/stores/playback-store.svelte";
+  import { historyStore } from "$lib/stores/history-store.svelte";
   import { toast } from "svelte-sonner";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
@@ -65,7 +67,8 @@
     },
     playback: {
       on_retrigger: "interrupt",
-      volume: 100
+      volume: 100,
+      streaming_enabled: true
     },
     hud: {
       enabled: false,
@@ -289,6 +292,7 @@
 
   onMount(async () => {
     await loadConfig();
+    if (isTauri && historyStore.items.length === 0) await historyStore.loadHistory();
 
     if (isTauri) {
       try {
@@ -323,10 +327,10 @@
 </script>
 
 <div class="flex min-w-0 flex-1 flex-col gap-4">
-  <div class="grid min-w-0 flex-1 grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_13rem]">
+  <div class="grid min-w-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_11.5rem]">
     <section aria-labelledby="reader-heading" class="flex min-w-0 flex-col gap-3">
       <div>
-        <h2 id="reader-heading" class="text-lg font-bold tracking-tight">Read aloud</h2>
+        <h2 id="reader-heading" class="sr-only">Read aloud</h2>
         <p id="reader-hint" class="text-muted-foreground text-sm">
           Paste text here, or copy it twice anywhere.
         </p>
@@ -361,7 +365,7 @@
     {#if config}
       <aside
         aria-label="Reading controls"
-        class="border-border min-w-0 border-t pt-4 md:border-t-0 md:border-l md:pt-0 md:pl-5"
+        class="border-border min-w-0 border-t pt-3 md:border-t-0 md:border-l md:pt-0 md:pl-4"
       >
         <QuickSettings bind:config />
       </aside>
@@ -388,5 +392,9 @@
         })}
       </p>
     </div>
+  {/if}
+
+  {#if config?.history.enabled}
+    <RecentHistory compact limit={5} />
   {/if}
 </div>

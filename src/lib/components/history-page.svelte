@@ -12,6 +12,6 @@
   });
 </script>
 
-<div class="mx-auto w-full min-w-0 max-w-4xl">
+<div class="w-full min-w-0">
   <RecentHistory limit={Infinity} />
 </div>

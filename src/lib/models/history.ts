@@ -133,6 +133,15 @@ export function formatHistoryDate(timestamp: number): string {
   return date.toLocaleString();
 }
 
+export function historyTimeAgo(timestamp: number, now: number): string {
+  const minutes = Math.max(0, Math.floor((now - timestamp) / 60_000));
+  if (minutes === 0) return "Just now";
+  const formatter = new Intl.RelativeTimeFormat(undefined, { style: "short" });
+  if (minutes < 60) return formatter.format(-minutes, "minute");
+  if (minutes < 1440) return formatter.format(-Math.floor(minutes / 60), "hour");
+  return formatter.format(-Math.floor(minutes / 1440), "day");
+}
+
 /**
  * Formats a timestamp to ISO date string (YYYY-MM-DD)
  */
