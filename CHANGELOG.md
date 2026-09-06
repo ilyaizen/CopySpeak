@@ -71,14 +71,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Regression test pins the serde subtlety: the blank appears only when the `cartesia` object is _present_ (carrying the persisted `api_key`), because the field-level `#[serde(default)]` then beats the container-level one.
 - **HUD window flashed white on launch** — the HUD was created with `visible: true`, so WebView2 painted its default white surface at the OS-chosen position for a frame before Tauri applied the off-screen coordinates. It is now created hidden and shown only after being parked off-screen. The stale `x`/`y: 10000` in `tauri.conf.json` (which disagreed with `move_hud_offscreen`'s `-10000`) were removed, leaving one source of truth for the park position.
 - **Kitten `model` option is wired end-to-end** — `KittenEngineOptions.model` now reaches the wrapper: `first_class_local_cli()` passes `--model {model}`, `CliTtsBackend::build_args` resolves the new `{model}` placeholder (dropping the flag when unset, so the nano default applies), and `create_backend_from_effective` threads the profile's model through the new `ProfileEngineOptions::kitten()` accessor. The installer's profile JSON and both frontend Kitten templates include `--model {model}`, keeping all three sources of truth in sync; the `ponytail:` dead-code marker on the field is removed.
+- **Edge-TTS install hint named `pip`** — the not-found error text now matches the uv-based install used everywhere: `uv tool install edge-tts`.
 
 ### Removed
 
 - **`scripts/install-edge-tts.ps1`** — deleted; `installer_script_for()` no longer maps `edge`, Edge's `engine-meta.ts` entry lost its `installerId`/`voiceMode`/`downloadSize`, and the onboarding page no longer offers an "Install edge-tts" button (a missing binary now explains `uv tool install edge-tts` in the synthesis error).
-
-### Fixed
-
-- **Edge-TTS install hint named `pip`** — the not-found error text now matches the uv-based install used everywhere: `uv tool install edge-tts`.
 
 ## [0.1.13] - 2026-08-02
 
