@@ -15,6 +15,8 @@ pub struct PlaybackConfig {
     pub on_retrigger: RetriggerMode,
     #[serde(default = "default_volume")]
     pub volume: u8,
+    #[serde(default = "default_streaming_enabled")]
+    pub streaming_enabled: bool,
     // Legacy fields — kept for deserialization during v2→v3 migration,
     // then skipped on serialize.
     #[serde(default = "default_playback_speed", skip_serializing)]
@@ -25,6 +27,10 @@ pub struct PlaybackConfig {
 
 fn default_volume() -> u8 {
     100
+}
+
+fn default_streaming_enabled() -> bool {
+    true
 }
 
 fn default_playback_speed() -> f32 {

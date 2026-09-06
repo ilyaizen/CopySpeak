@@ -3,6 +3,22 @@ mod tests {
     use crate::config::*;
 
     #[test]
+    fn streaming_setting_defaults_on_and_persists_when_disabled() {
+        let mut config = serde_json::to_value(AppConfig::default()).unwrap();
+        assert_eq!(config["playback"]["streaming_enabled"], true);
+        config["playback"]
+            .as_object_mut()
+            .unwrap()
+            .remove("streaming_enabled");
+        let mut restored: AppConfig = serde_json::from_value(config).unwrap();
+        assert!(restored.playback.streaming_enabled);
+        restored.playback.streaming_enabled = false;
+        let saved = serde_json::to_string(&restored).unwrap();
+        let restored: AppConfig = serde_json::from_str(&saved).unwrap();
+        assert!(!restored.playback.streaming_enabled);
+    }
+
+    #[test]
     fn test_expand_filename_pattern_timestamp() {
         let result = expand_filename_pattern("output_{timestamp}.wav", "af_heart", "hello");
         assert!(result.starts_with("output_"));

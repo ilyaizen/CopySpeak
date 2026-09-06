@@ -65,7 +65,8 @@
     },
     playback: {
       on_retrigger: "interrupt",
-      volume: 100
+      volume: 100,
+      streaming_enabled: true
     },
     hud: {
       enabled: false,

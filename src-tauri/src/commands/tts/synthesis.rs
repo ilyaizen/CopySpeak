@@ -359,7 +359,14 @@ async fn speak_now_internal(
     // Enter critical section for TTS synthesis
     let _synthesis_guard = SynthesisGuard::new(&app);
 
-    let (active_backend, tts_config, output_config, pagination_config, post_process_config) = {
+    let (
+        active_backend,
+        tts_config,
+        output_config,
+        pagination_config,
+        post_process_config,
+        streaming_enabled,
+    ) = {
         let cfg = config.lock().unwrap();
         (
             cfg.tts.active_backend.clone(),
@@ -367,6 +374,7 @@ async fn speak_now_internal(
             cfg.output.clone(),
             cfg.pagination.clone(),
             cfg.post_process.clone(),
+            cfg.playback.streaming_enabled,
         )
     };
 
@@ -433,8 +441,10 @@ async fn speak_now_internal(
     // Streaming backends forward PCM chunks during synthesis in playback mode;
     // batch backends (and cache hits / file output / pagination) take the
     // untouched existing branches.
-    let streaming_playback =
-        backend_arc.supports_streaming() && cached_path.is_none() && !output_config.enabled;
+    let streaming_playback = streaming_enabled
+        && backend_arc.supports_streaming()
+        && cached_path.is_none()
+        && !output_config.enabled;
     let (wav_bytes, already_streamed) = if let Some(ref path) = cached_path {
         // Try to read cached audio
         match std::fs::read(path) {
@@ -742,13 +752,14 @@ pub async fn speak_queued(
         return Err("Nothing to speak".into());
     }
 
-    let (active_backend, tts_config, pagination_config, post_process_config) = {
+    let (active_backend, tts_config, pagination_config, post_process_config, streaming_enabled) = {
         let cfg = config.lock().unwrap();
         (
             cfg.tts.active_backend.clone(),
             cfg.tts.clone(),
             cfg.pagination.clone(),
             cfg.post_process.clone(),
+            cfg.playback.streaming_enabled,
         )
     };
 
@@ -894,7 +905,7 @@ pub async fn speak_queued(
         // Synthesize fragment — streaming-capable backends forward PCM chunks
         // as they arrive; batch backends take the untouched synthesize path.
         let fragment_start = Instant::now();
-        let streamed = backend_arc.supports_streaming();
+        let streamed = streaming_enabled && backend_arc.supports_streaming();
         let wav_bytes = if streamed {
             synthesize_streaming_and_emit(
                 &app,

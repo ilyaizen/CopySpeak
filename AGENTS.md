@@ -37,6 +37,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 
 ## Active failure log
 
+- Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
 - Present history batches as one reading in `recent-history.svelte`; preserve fragment order for full text, playback, and whole-reading deletion.
 - Show pagination as a part count on history rows; keep Play/Stop/Replay on the reading's button instead of adding a lower playback bar.
 - Resolve history voice labels by both engine and voice ID using profiles/catalog; retain raw IDs for playback and tooltips.

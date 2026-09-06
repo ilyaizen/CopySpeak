@@ -211,6 +211,7 @@ impl Default for AppConfig {
             playback: PlaybackConfig {
                 on_retrigger: RetriggerMode::Queue,
                 volume: 100,
+                streaming_enabled: true,
                 playback_speed: 1.0,
                 pitch: 1.0,
             },

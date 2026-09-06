@@ -2,6 +2,7 @@
   import { SettingRow } from "$lib/components/ui/setting-row/index.js";
   import { Select } from "$lib/components/ui/select/index.js";
   import { Slider } from "$lib/components/ui/slider/index.js";
+  import { Switch } from "$lib/components/ui/switch/index.js";
   import type { AppConfig } from "$lib/types";
   import { _ } from "svelte-i18n";
 
@@ -15,6 +16,20 @@
 </script>
 
 <div class="space-y-4">
+  <div>
+    <SettingRow label={$_("settings.playback.streaming")}>
+      <Switch
+        id="playback-streaming"
+        aria-label={$_("settings.playback.streaming")}
+        aria-describedby="playback-streaming-description"
+        bind:checked={localConfig.playback.streaming_enabled}
+      />
+    </SettingRow>
+    <p id="playback-streaming-description" class="text-muted-foreground text-sm">
+      {$_("settings.playback.streamingDescription")}
+    </p>
+  </div>
+
   <SettingRow
     label={$_("settings.playback.onRetrigger")}
     tooltip={$_("settings.playback.onRetriggerDescription")}
