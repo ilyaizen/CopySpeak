@@ -189,6 +189,16 @@ fn drain_chunk_stream(
     let mut ttfa_ms: Option<u64> = None;
 
     loop {
+        // Dropping the receiver is what actually cancels a streaming request:
+        // every producer stops pulling its source once its send fails.
+        if crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
+            log::info!(
+                "[TTS][stream] aborted by user after {} bytes",
+                accumulated.len()
+            );
+            drop(stream);
+            return Ok((Vec::new(), ttfa_ms.unwrap_or(0)));
+        }
         match stream.recv() {
             Some(ChunkItem::Pcm(bytes)) => {
                 if ttfa_ms.is_none() {
@@ -238,6 +248,7 @@ async fn synthesize_streaming_and_emit(
     text: String,
     voice: String,
     fragment_index: usize,
+    emit_final: bool,
 ) -> Result<Vec<u8>, String> {
     let app = app.clone();
     tokio::task::spawn_blocking(move || {
@@ -264,6 +275,11 @@ async fn synthesize_streaming_and_emit(
                     "[TTS][stream] first chunk playing after {}ms",
                     opened_at.elapsed().as_millis()
                 );
+            }
+            // The player treats a final marker as "no more audio is coming" and
+            // arms its completion timer, so only the last fragment sends one.
+            if is_final && !emit_final {
+                return;
             }
             emit_audio_stream_chunk(&app, &meta, pcm, fragment_index, is_final);
         })
@@ -462,13 +478,11 @@ async fn speak_now_internal(
                 (bytes, false)
             }
         }
-    } else if streaming_playback {
-        let wav =
-            synthesize_streaming_and_emit(&app, backend_arc.clone(), text.clone(), voice.clone(), 0)
-                .await?;
-        (wav, true)
     } else if pagination::should_paginate(&text, &pagination_config) && !output_config.enabled {
-        // Paginated synthesis for long text
+        // Pagination comes first even for streaming engines: bounded fragments
+        // keep each request under the provider's input limit (OpenAI rejects
+        // anything past 4096 characters). Each fragment then streams on its own,
+        // so long text is both accepted and low-latency.
         let wav = synthesize_paginated(
             &app,
             backend_arc.clone(),
@@ -479,14 +493,34 @@ async fn speak_now_internal(
             &synthesis_start,
             estimated_ms,
             confidence,
+            streaming_playback,
         )
         .await?;
-        (wav, false)
+        (wav, streaming_playback)
+    } else if streaming_playback {
+        let wav = synthesize_streaming_and_emit(
+            &app,
+            backend_arc.clone(),
+            text.clone(),
+            voice.clone(),
+            0,
+            true,
+        )
+        .await?;
+        (wav, true)
     } else {
         // Simple synthesis
         let wav = synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?;
         (wav, false)
     };
+
+    // Both the paginated and streaming paths return empty bytes when the user
+    // aborts mid-synthesis. do_abort_synthesis has already stopped playback and
+    // emitted synthesis-aborted, so there is nothing to save or play here.
+    if wav_bytes.is_empty() && crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
+        log::info!("[TTS] Synthesis aborted; nothing to play or save");
+        return Ok(());
+    }
 
     let synthesis_duration = synthesis_start.elapsed();
     let synthesis_ms = synthesis_duration.as_millis() as u64;
@@ -548,13 +582,26 @@ async fn synthesize_paginated(
     synthesis_start: &Instant,
     _total_estimate: Option<u64>,
     _avg_confidence: f32,
+    streaming: bool,
 ) -> Result<Vec<u8>, String> {
     let pagination_config = crate::config::PaginationConfig::default();
     let fragments = pagination::paginate_text(text, &pagination_config);
 
     if fragments.len() <= 1 {
         // Only one fragment — fall back to normal synthesis
-        return synthesize_async(backend_arc.clone(), text.to_string(), voice.to_string()).await;
+        return if streaming {
+            synthesize_streaming_and_emit(
+                app,
+                backend_arc.clone(),
+                text.to_string(),
+                voice.to_string(),
+                0,
+                true,
+            )
+            .await
+        } else {
+            synthesize_async(backend_arc.clone(), text.to_string(), voice.to_string()).await
+        };
     }
 
     log::info!(
@@ -602,12 +649,24 @@ async fn synthesize_paginated(
             fragment.text.len()
         );
 
-        let frag_wav = synthesize_async(
-            backend_arc.clone(),
-            fragment.text.clone(),
-            voice.to_string(),
-        )
-        .await
+        let frag_wav = if streaming {
+            synthesize_streaming_and_emit(
+                app,
+                backend_arc.clone(),
+                fragment.text.clone(),
+                voice.to_string(),
+                i,
+                i + 1 == fragments.len(),
+            )
+            .await
+        } else {
+            synthesize_async(
+                backend_arc.clone(),
+                fragment.text.clone(),
+                voice.to_string(),
+            )
+            .await
+        }
         .map_err(|e| format!("Fragment {} synthesis failed: {}", i + 1, e))?;
 
         fragment_wavs.push(frag_wav);
@@ -763,6 +822,11 @@ pub async fn speak_queued(
         )
     };
 
+    // Clear any previous abort request, the same way speak_now_internal does.
+    // Both commands feed drain_chunk_stream, which now honours the flag, so a
+    // stale `true` from an earlier abort would kill this run's first stream.
+    crate::ABORT_REQUESTED.store(false, Ordering::Relaxed);
+
     // Optional LLM post-processing — best-effort; falls back on failure.
     let text = crate::post_process::try_process(text, &post_process_config).await;
 
@@ -913,6 +977,7 @@ pub async fn speak_queued(
                 fragment.text.clone(),
                 voice.clone(),
                 index,
+                index + 1 == total,
             )
             .await?
         } else {

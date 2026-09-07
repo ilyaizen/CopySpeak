@@ -417,7 +417,7 @@ fn main() {
                             }
                         }
                         "quit" => {
-                            tts::piper_server::shutdown();
+                            tts::local_daemon::shutdown();
                             app.exit(0);
                         }
                         _ => {}
@@ -508,14 +508,14 @@ fn main() {
                 }
             }
 
-            // --- Warm the Piper daemon so the first utterance skips the model load ---
+            // --- Warm the active local engine so the first utterance skips the model load ---
             // Off-thread: nothing below depends on it, and it holds the config mutex.
             {
                 let app_handle = app.handle().clone();
                 std::thread::spawn(move || {
                     let cfg = app_handle.state::<std::sync::Mutex<config::AppConfig>>();
                     let tts = cfg.lock().unwrap().tts.clone();
-                    tts::cli::prewarm_piper(&tts);
+                    commands::prewarm_active_profile(&tts);
                 });
             }
 

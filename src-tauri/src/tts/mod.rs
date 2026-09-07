@@ -11,7 +11,7 @@ pub mod google;
 pub mod http;
 pub mod microsoft;
 pub mod openai;
-pub mod piper_server;
+pub mod local_daemon;
 pub mod stream;
 
 use stream::ChunkStream;
@@ -69,6 +69,10 @@ pub trait TtsBackend: Send + Sync {
     /// [`TtsBackend::synthesize_streaming`]. Defaults to false for batch-only
     /// backends; the command layer uses this to pick the streaming path.
     #[allow(dead_code)]
+    /// Load this engine's model ahead of the first utterance. Only local
+    /// engines with a resident daemon do anything; everyone else is a no-op.
+    fn prewarm(&self, _voice: &str) {}
+
     fn supports_streaming(&self) -> bool {
         false
     }

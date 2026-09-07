@@ -45,6 +45,7 @@ fn get_provider_voice(cfg: &AppConfig) -> (Option<String>, Option<String>) {
         TtsEngine::Kitten => "Kitten TTS".to_string(),
         TtsEngine::Piper => "Piper".to_string(),
         TtsEngine::Kokoro => "Kokoro".to_string(),
+        TtsEngine::Pocket => "Pocket".to_string(),
         TtsEngine::OpenAI => "OpenAI".to_string(),
         TtsEngine::ElevenLabs => "ElevenLabs".to_string(),
         TtsEngine::Cartesia => "Cartesia".to_string(),

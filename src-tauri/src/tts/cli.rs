@@ -6,6 +6,7 @@
 // Note: kokoro-tts reads from a FILE, not a command-line text argument, so we write
 // the text to a temp file and pass its path via {input}.
 
+use super::stream::{ChunkItem, ChunkStream};
 use super::{TtsBackend, TtsError};
 use std::process::{Command, Stdio};
 
@@ -163,6 +164,9 @@ pub struct CliTtsBackend {
     /// Optional model id for the `{model}` placeholder; when unset the
     /// `--model` flag is dropped so the engine uses its built-in default.
     pub model: Option<String>,
+    /// Run inference on the GPU. Adds `--device cuda` for our own wrappers and
+    /// puts the NVIDIA wheel DLL directories on the child's PATH.
+    pub cuda: bool,
 }
 
 impl CliTtsBackend {
@@ -171,8 +175,28 @@ impl CliTtsBackend {
             command,
             args_template,
             model: None,
+            cuda: false,
         }
     }
+
+    /// Which daemon-capable engine this backend runs, identified by the
+    /// CopySpeak wrapper script in its args template. Third-party CLIs return
+    /// `None` — they have no `--serve` mode, so attempting a daemon would only
+    /// burn a process start per session.
+    fn engine_kind(&self) -> Option<&'static str> {
+        let haystack = self.args_template.join(" ").to_lowercase();
+        crate::tts::local_daemon::DAEMON_ENGINES
+            .into_iter()
+            .find(|engine| haystack.contains(&format!("copyspeak-{engine}.py")))
+    }
+
+    /// Stream from this engine's resident daemon, or `None` when it cannot
+    /// serve this configuration (cold, busy, or a different voice/device).
+    fn daemon_stream(&self, text: &str, voice: &str) -> Option<ChunkStream> {
+        let engine = self.engine_kind()?;
+        crate::tts::local_daemon::try_stream(engine, &self.command, &self.serve_args(voice), text)
+    }
+
 
     /// Check if this is kokoro-tts and model paths are missing
     fn is_kokoro_missing_models(&self) -> bool {
@@ -294,6 +318,15 @@ impl CliTtsBackend {
             args = kept;
         }
 
+        // Our own wrappers understand --device; third-party CLIs do not, so the
+        // flag is only added for engines we ship a wrapper for. When cuda is off
+        // the arg list is byte-identical to before, which keeps existing daemon
+        // keys (and therefore warm daemons) valid.
+        if self.cuda && self.engine_kind().is_some() {
+            args.push("--device".to_string());
+            args.push("cuda".to_string());
+        }
+
         // Auto-inject kokoro-tts model paths if missing
         if self.is_kokoro_missing_models() {
             if let Some((model_path, voices_path)) = self.find_kokoro_models() {
@@ -375,31 +408,20 @@ impl CliTtsBackend {
     }
 }
 
-/// Warm the Piper daemon for the active profile so the first utterance doesn't
-/// pay the model load. No-op unless that profile runs a local Piper engine.
-pub fn prewarm_piper(tts: &crate::config::TtsConfig) {
-    let Some(profile) = tts.profiles.iter().find(|p| p.id == tts.active_profile_id) else {
-        return;
-    };
-    let crate::config::ProfileEngineOptions::Local(opts) = &profile.engine_options else {
-        return;
-    };
-
-    // Same resolution as create_backend_from_effective: profile options win,
-    // legacy top-level fields are the fallback for unmigrated configs.
-    let command = opts.command.clone().unwrap_or_else(|| tts.command.clone());
-    let args_template = opts
-        .args_template
-        .clone()
-        .filter(|items| !items.is_empty())
-        .unwrap_or_else(|| tts.args_template.clone());
-
-    let backend = CliTtsBackend::new(command, args_template);
-    if !backend.is_piper() {
-        return;
+/// Collect a whole daemon stream into a WAV buffer, for callers that want the
+/// batch shape (history, cache, file output).
+fn drain_to_wav(stream: ChunkStream) -> Result<Vec<u8>, String> {
+    let mut pcm = Vec::new();
+    while let Some(item) = stream.recv() {
+        match item {
+            ChunkItem::Pcm(bytes) => pcm.extend_from_slice(&bytes),
+            ChunkItem::Failed(reason) => return Err(reason),
+        }
     }
-    let serve_args = backend.serve_args(&profile.voice);
-    crate::tts::piper_server::prewarm(backend.command, serve_args);
+    if pcm.is_empty() {
+        return Err("daemon produced no audio".to_string());
+    }
+    Ok(super::stream::pcm_to_wav(&pcm, &stream.meta))
 }
 
 impl TtsBackend for CliTtsBackend {
@@ -407,19 +429,39 @@ impl TtsBackend for CliTtsBackend {
         &self.command
     }
 
+    fn prewarm(&self, voice: &str) {
+        let Some(engine) = self.engine_kind() else {
+            return;
+        };
+        crate::tts::local_daemon::prewarm(engine, self.command.clone(), self.serve_args(voice));
+    }
+
+    fn supports_streaming(&self) -> bool {
+        // Only once this engine's daemon is warm. Before then the one-shot
+        // command is the only option and it cannot stream, so promising a
+        // stream would just mean a single-chunk "stream" with extra steps.
+        self.engine_kind()
+            .is_some_and(crate::tts::local_daemon::is_ready)
+    }
+
+    fn synthesize_streaming(&self, text: &str, voice: &str) -> Result<ChunkStream, TtsError> {
+        if let Some(stream) = self.daemon_stream(text, voice) {
+            return Ok(stream);
+        }
+        // No daemon: fall back to the one-shot command wrapped as one chunk.
+        super::stream::chunk_stream_from_wav(self.synthesize(text, voice)?)
+    }
+
     fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
-        // Piper keeps its voice model resident in a daemon; fall through to the
-        // one-shot command only when that daemon can't serve this request.
-        if self.is_piper() {
-            let serve_args = self.serve_args(voice);
-            if let Some(bytes) =
-                crate::tts::piper_server::try_synthesize(&self.command, &serve_args, text)
-            {
-                log::info!(
-                    "[CLI TTS] Synthesized via Piper daemon — {} bytes",
-                    bytes.len()
-                );
-                return Ok(bytes);
+        // A resident daemon keeps the voice model in RAM; fall through to the
+        // one-shot command only when it can't serve this request.
+        if let Some(stream) = self.daemon_stream(text, voice) {
+            match drain_to_wav(stream) {
+                Ok(bytes) => {
+                    log::info!("[CLI TTS] Synthesized via daemon — {} bytes", bytes.len());
+                    return Ok(bytes);
+                }
+                Err(e) => log::warn!("[CLI TTS] Daemon stream failed ({e}); using one-shot"),
             }
         }
 
@@ -840,6 +882,49 @@ mod tests {
                 "en_US-amy-medium",
                 "--serve"
             ]
+        );
+    }
+
+    #[test]
+    fn engine_kind_matches_on_the_wrapper_script_only() {
+        let piper = CliTtsBackend::new(
+            "uv".into(),
+            vec!["{engine_dir}/piper/scripts/copyspeak-piper.py".into()],
+        );
+        assert_eq!(piper.engine_kind(), Some("piper"));
+
+        let pocket = CliTtsBackend::new(
+            "uv".into(),
+            vec!["{engine_dir}/pocket/scripts/copyspeak-pocket.py".into()],
+        );
+        assert_eq!(pocket.engine_kind(), Some("pocket"));
+
+        // A third-party CLI has no --serve mode; attempting a daemon would only
+        // burn a process start per session.
+        let third_party = CliTtsBackend::new("kokoro-tts".into(), vec!["{input}".into()]);
+        assert_eq!(third_party.engine_kind(), None);
+    }
+
+    #[test]
+    fn cuda_appends_device_only_for_our_own_wrappers() {
+        let mut ours = CliTtsBackend::new(
+            "uv".into(),
+            vec!["{engine_dir}/kitten/scripts/copyspeak-kitten.py".into()],
+        );
+        // Off by default the arg list must be byte-identical to before, or every
+        // warm daemon key would be invalidated for existing users.
+        let baseline = ours.build_args("in.txt", "out.wav", "Rosie", "hi");
+        ours.cuda = true;
+        let with_cuda = ours.build_args("in.txt", "out.wav", "Rosie", "hi");
+        assert_eq!(with_cuda.len(), baseline.len() + 2);
+        assert_eq!(&with_cuda[with_cuda.len() - 2..], &["--device", "cuda"]);
+
+        let mut third_party = CliTtsBackend::new("some-tts".into(), vec!["{input}".into()]);
+        third_party.cuda = true;
+        assert_eq!(
+            third_party.build_args("in.txt", "out.wav", "v", "hi"),
+            vec!["in.txt"],
+            "an unknown CLI would reject --device"
         );
     }
 

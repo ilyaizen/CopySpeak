@@ -47,6 +47,12 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Translate vertical mouse-wheel input into horizontal scrolling on the Play history rail, and end its five-reading preview with a link to full History.
 - Keep the wheel-driven history rail free of scroll snapping and reverse wheel deltas in RTL; DOM-only tests cannot verify browser snapping behavior.
 - Close the History-only Delete conditional inside its reading row, before `</li>`; do not place its closing block in the View more card.
+- Local engine wrappers speak daemon protocol v2 (`READY 2`); emit 16-bit signed LE PCM, since `pcm-stream.ts` drops any other `bits_per_sample`.
+- Adding a `TtsEngine` variant: also update the catalog test's engine list and entry count, and the `Record<TtsEngine, number>` fixtures in `html-templates.test.ts` and `html-export.test.ts`.
+- Register CUDA DLL directories with `os.add_dll_directory` inside the wrapper; Python 3.8+ ignores `PATH` for extension-module dependencies, so setting it from Rust does nothing.
+- Emit the streaming `is_final` marker on the last fragment only; an intermediate one arms the player's completion timer mid-passage.
+- KittenTTS 0.8.1 (the pinned wheel) takes only `KittenTTS(model_name, cache_dir)`; select the GPU by replacing `tts.model.session`, not with a `backend=` kwarg that only exists on `main`.
+- Pass `uv init` its target directory positionally (`uv init --bare --name X <dir>`); uv 0.12+ hard-errors on `uv --project <dir> init`, which only shows up when creating a fresh engine project.
 
 <!-- rtk-instructions v2 -->
 ## RTK (Rust Token Killer) - Token-Optimized Commands

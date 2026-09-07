@@ -87,16 +87,35 @@ fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
             ],
         ),
         TtsEngine::Kokoro => (
-            "kokoro-tts",
+            "uv",
             vec![
+                "run",
+                "--project",
+                "{engine_dir}/kokoro",
+                "python",
+                "{engine_dir}/kokoro/scripts/copyspeak-kokoro.py",
+                "--text-file",
                 "{input}",
-                "{output}",
                 "--voice",
                 "{voice}",
-                "--model",
-                "{engine_dir}/kokoro/models/kokoro-v1.0.onnx",
-                "--voices",
-                "{engine_dir}/kokoro/models/voices-v1.0.bin",
+                "--output",
+                "{output}",
+            ],
+        ),
+        TtsEngine::Pocket => (
+            "uv",
+            vec![
+                "run",
+                "--project",
+                "{engine_dir}/pocket",
+                "python",
+                "{engine_dir}/pocket/scripts/copyspeak-pocket.py",
+                "--text-file",
+                "{input}",
+                "--voice",
+                "{voice}",
+                "--output",
+                "{output}",
             ],
         ),
         _ => return None,
@@ -111,7 +130,7 @@ pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<
             tts_config.command.clone(),
             tts_config.args_template.clone(),
         )),
-        TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro => {
+        TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro | TtsEngine::Pocket => {
             // Command/args are fixed by the installer wrapper contract.
             let (command, args) = first_class_local_cli(active).unwrap();
             Box::new(CliTtsBackend::new(command, args))
@@ -156,7 +175,7 @@ pub(crate) fn create_backend_from_effective(
                 .unwrap_or_else(|| tts_config.args_template.clone());
             Box::new(CliTtsBackend::new(command, args_template))
         }
-        TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro => {
+        TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro | TtsEngine::Pocket => {
             // Voice comes from eff.voice (profile-owned); CLI is fixed.
             let (command, args) = first_class_local_cli(&eff.engine).unwrap();
             let mut backend = CliTtsBackend::new(command, args);
@@ -168,6 +187,7 @@ pub(crate) fn create_backend_from_effective(
             {
                 backend.model = Some(model);
             }
+            backend.cuda = eff.engine_options.cuda();
             Box::new(backend)
         }
         TtsEngine::OpenAI => {
@@ -287,6 +307,13 @@ pub(crate) fn create_backend_from_effective(
 }
 
 /// Get the voice string for the active backend.
+/// Warm the active profile's engine so the first utterance skips the model
+/// load. No-op for cloud engines and for local CLIs without a CopySpeak wrapper.
+pub(crate) fn prewarm_active_profile(tts_config: &TtsConfig) {
+    let eff = resolve_effective(tts_config);
+    create_backend_from_effective(&eff, tts_config).prewarm(&eff.voice);
+}
+
 pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> String {
     match active {
         TtsEngine::Local => tts_config.voice.clone(),
@@ -298,7 +325,9 @@ pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> S
         TtsEngine::Microsoft => tts_config.microsoft.voice_name.clone(),
         TtsEngine::Edge => tts_config.edge.voice.clone(),
         // First-class local engines have no global config; voice is profile-owned.
-        TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro => String::new(),
+        TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro | TtsEngine::Pocket => {
+            String::new()
+        }
     }
 }
 
@@ -310,6 +339,7 @@ pub(crate) fn engine_identifier(active: &TtsEngine) -> String {
         TtsEngine::Kitten => "kitten".to_string(),
         TtsEngine::Piper => "piper".to_string(),
         TtsEngine::Kokoro => "kokoro".to_string(),
+        TtsEngine::Pocket => "pocket".to_string(),
         TtsEngine::OpenAI => "openai".to_string(),
         TtsEngine::ElevenLabs => "elevenlabs".to_string(),
         TtsEngine::Cartesia => "cartesia".to_string(),
@@ -392,6 +422,8 @@ pub(crate) fn voice_display_name(
             .nth(1)
             .unwrap_or(voice_id)
             .to_lowercase(),
+        // Pocket voice ids are already bare names (alba, anna, charles).
+        TtsEngine::Pocket => voice_id.to_lowercase(),
         TtsEngine::Http | TtsEngine::Google | TtsEngine::Microsoft => {
             slugify_filename_part(voice_id)
         }
@@ -488,5 +520,6 @@ pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
         TtsEngine::Kitten => "kitten",
         TtsEngine::Piper => "piper",
         TtsEngine::Kokoro => "kokoro",
+        TtsEngine::Pocket => "pocket",
     }
 }

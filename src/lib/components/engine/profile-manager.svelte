@@ -47,7 +47,8 @@
     "edge",
     "kitten",
     "piper",
-    "kokoro"
+    "kokoro",
+    "pocket"
   ];
   const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy"];
 
@@ -92,6 +93,13 @@
       voice: "af_heart",
       voiceLabel: "Heart",
       engineOptions: { engine: "kokoro" }
+    },
+    {
+      name: "Pocket — Alba",
+      engine: "pocket",
+      voice: "alba",
+      voiceLabel: "Alba",
+      engineOptions: { engine: "pocket" }
     }
   ];
 
@@ -148,18 +156,40 @@
     {
       id: "kokoro",
       label: "Kokoro-style",
-      command: "kokoro-tts",
+      command: "uv",
       args_template: [
+        "run",
+        "--project",
+        "{engine_dir}/kokoro",
+        "python",
+        "{engine_dir}/kokoro/scripts/copyspeak-kokoro.py",
+        "--text-file",
         "{input}",
-        "{output}",
         "--voice",
         "{voice}",
-        "--model",
-        "{engine_dir}/kokoro/models/kokoro-v1.0.onnx",
-        "--voices",
-        "{engine_dir}/kokoro/models/voices-v1.0.bin"
+        "--output",
+        "{output}"
       ],
       voice: "af_heart"
+    },
+    {
+      id: "pocket",
+      label: "Pocket-style",
+      command: "uv",
+      args_template: [
+        "run",
+        "--project",
+        "{engine_dir}/pocket",
+        "python",
+        "{engine_dir}/pocket/scripts/copyspeak-pocket.py",
+        "--text-file",
+        "{input}",
+        "--voice",
+        "{voice}",
+        "--output",
+        "{output}"
+      ],
+      voice: "alba"
     }
   ];
 
@@ -339,20 +369,43 @@
     } else if (preset === "kokoro") {
       profile.engine_options = {
         ...profile.engine_options,
-        command: "kokoro-tts",
+        command: "uv",
         args_template: [
+          "run",
+          "--project",
+          "{engine_dir}/kokoro",
+          "python",
+          "{engine_dir}/kokoro/scripts/copyspeak-kokoro.py",
+          "--text-file",
           "{input}",
-          "{output}",
           "--voice",
           "{voice}",
-          "--model",
-          "{engine_dir}/kokoro/models/kokoro-v1.0.onnx",
-          "--voices",
-          "{engine_dir}/kokoro/models/voices-v1.0.bin"
+          "--output",
+          "{output}"
         ]
       } as VoiceProfile["engine_options"];
       profile.voice = "af_heart";
       profile.voice_label = "Heart";
+    } else if (preset === "pocket") {
+      profile.engine_options = {
+        ...profile.engine_options,
+        command: "uv",
+        args_template: [
+          "run",
+          "--project",
+          "{engine_dir}/pocket",
+          "python",
+          "{engine_dir}/pocket/scripts/copyspeak-pocket.py",
+          "--text-file",
+          "{input}",
+          "--voice",
+          "{voice}",
+          "--output",
+          "{output}"
+        ]
+      } as VoiceProfile["engine_options"];
+      profile.voice = "alba";
+      profile.voice_label = "Alba";
     }
   }
 

@@ -9,6 +9,10 @@
     The model auto-downloads on first synthesis. Prompts the user to pick one
     of the 8 built-in voices, which is baked into the profile snippet.
 
+.PARAMETER Cuda
+    Also install onnxruntime-gpu and the NVIDIA CUDA/cuDNN runtime wheels into
+    the engine project, then verify with a real GPU synthesis.
+
 .PARAMETER Force
     Recreate the engine project from scratch.
 
@@ -22,6 +26,9 @@
 
 param(
     [switch]$Force,
+    # Install the GPU runtime (onnxruntime-gpu + the nvidia-* CUDA/cuDNN wheels)
+    # into this engine's uv project and verify it with a real CUDA synthesis.
+    [switch]$Cuda,
     [switch]$SmokeTest,
     # App-driven voice selection: bypasses the interactive menu. The first id
     # is the profile-snippet default; all KittenTTS voices ship with the one
@@ -87,6 +94,13 @@ $kittenVoices = @(
 # All 8 voices ship with the shared model, so the manifest lists every voice
 # once the package is installed (the model auto-downloads on first synth).
 $chosenVoice = if ($Voices -and $Voices.Count -gt 0) { $Voices[0] } else { Select-VoiceFromMenu -Title "Pick a default KittenTTS voice" -Voices $kittenVoices -Default "Rosie" }
+
+if ($Cuda) {
+    Write-Host ""
+    if (Add-CudaRuntime -EngineDir $EngineDir) {
+        Test-CudaSynthesis -EngineDir $EngineDir -Wrapper $dstWrapper -Voice $chosenVoice | Out-Null
+    }
+}
 
 if ($SmokeTest) {
     Write-Host ""

@@ -56,7 +56,8 @@ export type TtsEngine =
   | "edge"
   | "kitten"
   | "piper"
-  | "kokoro";
+  | "kokoro"
+  | "pocket";
 
 export interface OpenAIConfig {
   api_key: string;

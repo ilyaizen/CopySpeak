@@ -12,6 +12,10 @@
     (use -SkipVoiceDownload to skip). The chosen voice is used for the smoke
     test and baked into the emitted profile snippet.
 
+.PARAMETER Cuda
+    Also install onnxruntime-gpu and the NVIDIA CUDA/cuDNN runtime wheels into
+    the engine project, then verify with a real GPU synthesis.
+
 .PARAMETER Force
     Recreate the engine project from scratch. When omitted, the installer
     still prompts interactively ("Reinstall from scratch?") - answering yes
@@ -30,6 +34,9 @@
 
 param(
     [switch]$Force,
+    # Install the GPU runtime (onnxruntime-gpu + the nvidia-* CUDA/cuDNN wheels)
+    # into this engine's uv project and verify it with a real CUDA synthesis.
+    [switch]$Cuda,
     [switch]$SmokeTest,
     [switch]$SkipVoiceDownload,
     # App-driven voice selection: bypasses the interactive menu. The first id
@@ -150,6 +157,13 @@ foreach ($v in $wantedVoices) {
 Write-Host ""
 Write-Host "  Voices directory: $voicesDir" -ForegroundColor Gray
 Write-Host "  More voices:      https://github.com/OHF-Voice/piper1-gpl#voices" -ForegroundColor Gray
+
+if ($Cuda) {
+    Write-Host ""
+    if (Add-CudaRuntime -EngineDir $EngineDir) {
+        Test-CudaSynthesis -EngineDir $EngineDir -Wrapper $dstWrapper -Voice $chosenVoice | Out-Null
+    }
+}
 
 if ($SmokeTest) {
     $smokeModel = Join-Path $voicesDir "$chosenVoice.onnx"

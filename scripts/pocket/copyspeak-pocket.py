@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
-"""CLI wrapper for Piper (piper1-gpl) - used by CopySpeak.
+"""CLI wrapper for Pocket TTS (kyutai-labs/pocket-tts) - used by CopySpeak.
 
-Reads text (inline or from a file), loads the Piper voice model named by
---voice (resolved as ../voices/<voice>.onnx relative to this wrapper), synthesizes,
-and writes a WAV file.
+Replaces the third-party `pocket-tts generate` CLI: that path reloads the model
+and re-derives the voice state on every invocation, and `load_model()` plus
+`get_state_for_audio_prompt()` are the slow parts. Keeping both resident is the
+whole point of the daemon.
+
+Reads text (inline or from a file), synthesizes with pocket-tts, and writes a WAV
+file at the model's own sample rate.
 
 Invoked by CopySpeak via:
-    uv run --project {engine_dir}/piper python scripts/copyspeak-piper.py \
+    uv run --project {engine_dir}/pocket python {engine_dir}/pocket/scripts/copyspeak-pocket.py \
         --text-file {input} --voice {voice} --output {output} [--device cuda]
 
 With --serve the model is loaded once and stays in RAM, speaking protocol v2
-(see src-tauri/src/tts/local_daemon.rs): the wrapper prints READY 2, then answers
-one JSON request per stdin line with a format header, length-prefixed 16-bit LE
-PCM chunks, and an end frame. Piper yields one chunk per sentence, so playback
-starts after the first sentence rather than after the whole passage. Stdin EOF
-ends the process, so the daemon dies with CopySpeak.
-
-Place <voice>.onnx + <voice>.onnx.json in <engine_dir>/voices/. Get voices
-from https://github.com/OHF-Voice/piper1-gpl#voices
+(see src-tauri/src/tts/local_daemon.rs): READY 2, then one JSON request per
+stdin line answered with a format header, length-prefixed 16-bit LE PCM chunks,
+and an end frame. Stdin EOF ends the process.
 """
 
 import argparse
@@ -68,35 +67,32 @@ def read_text(args) -> str:
     sys.exit(2)
 
 
-def resolve_model(name: str) -> Path:
-    # Wrapper lives in <engine_dir>/scripts/; voices live in <engine_dir>/voices/.
-    voices_dir = Path(__file__).resolve().parent.parent / "voices"
-    # ponytail: resolve by exact basename, else first .onnx whose stem ends with the voice name.
-    model = voices_dir / f"{name}.onnx"
-    if model.exists():
-        return model
-    match = next((p for p in voices_dir.glob("*.onnx") if p.stem == name), None)
-    if match is None:
-        available = [p.stem for p in voices_dir.glob("*.onnx")]
-        raise FileNotFoundError(f"voice model not found: {model}\n  Available: {available}")
-    return match
+def pcm16(samples) -> bytes:
+    """float32 in [-1, 1] -> signed 16-bit little-endian PCM bytes."""
+    import numpy as np
+
+    clipped = np.clip(np.asarray(samples, dtype=np.float32), -1.0, 1.0)
+    return (clipped * 32767.0).astype("<i2").tobytes()
 
 
-def stream(voice, text: str):
-    """Yield (pcm16_le_bytes, sample_rate, channels) per sentence."""
-    for chunk in voice.synthesize(text):
-        yield chunk.audio_int16_bytes, chunk.sample_rate, chunk.sample_channels
+def stream(model, voice_state, text: str):
+    """Yield (pcm16_le_bytes, sample_rate, channels)."""
+    audio = model.generate_audio(voice_state, text)
+    # generate_audio returns a tensor on the model's device, so a CUDA run has
+    # to come back to the host before numpy can see it.
+    yield pcm16(audio.detach().cpu().numpy()), model.sample_rate, 1
 
 
-def synthesize(voice, text: str, output: str) -> None:
+def write_wav(output: str, pcm: bytes, rate: int, channels: int) -> None:
     Path(output).parent.mkdir(parents=True, exist_ok=True)
     with wave.open(output, "wb") as wf:
-        # ponytail: piper-tts 1.x owns WAV header setup via set_wav_format=True
-        # (default); the 0.x `synthesize(wf, text)` signature is gone.
-        voice.synthesize_wav(text, wf)
+        wf.setnchannels(channels)
+        wf.setsampwidth(2)
+        wf.setframerate(rate)
+        wf.writeframes(pcm)
 
 
-def serve(voice) -> int:
+def serve(model, voice_state) -> int:
     """Daemon mode, protocol v2. Model stays resident; PCM is framed on stdout.
 
     Everything goes through sys.stdout.buffer — mixing text and binary writes to
@@ -115,7 +111,7 @@ def serve(voice) -> int:
     # Best effort: a warmup failure is not a reason to refuse to serve, and the
     # real request will surface the same error properly framed.
     try:
-        for _ in stream(voice, "Ready."):
+        for _ in stream(model, voice_state, "Ready."):
             pass
     except Exception as exc:  # pragma: no cover - environment dependent
         print(f"WARNING: warmup failed: {exc}", file=sys.stderr, flush=True)
@@ -131,7 +127,7 @@ def serve(voice) -> int:
         if not line:
             continue
         try:
-            chunks = stream(voice, json.loads(line)["text"])
+            chunks = stream(model, voice_state, json.loads(line)["text"])
             first = next(chunks, None)
             if first is None:
                 raise RuntimeError("no audio produced")
@@ -151,17 +147,15 @@ def serve(voice) -> int:
                 pcm = nxt[0]
             frame({"end": True})
         except Exception as exc:  # pragma: no cover - environment dependent
-            # Before the header this is the reply; after it, an error frame.
-            # Rust treats both the same way.
             frame({"ok": False, "error": str(exc)})
         out.flush()
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Piper CLI wrapper for CopySpeak")
+    parser = argparse.ArgumentParser(description="Pocket TTS CLI wrapper for CopySpeak")
     parser.add_argument("--text", help="Inline text to synthesize")
     parser.add_argument("--text-file", help="Path to a UTF-8 text file to synthesize")
-    parser.add_argument("--voice", default="en_US-joe-medium", help="Voice model basename in voices/")
+    parser.add_argument("--voice", default="alba", help="Pocket voice name, or a path to a wav/safetensors prompt")
     parser.add_argument("--output", help="Output WAV file path (required unless --serve)")
     parser.add_argument("--serve", action="store_true", help="Keep the model in RAM and read JSON requests on stdin")
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"], help="Inference device")
@@ -175,44 +169,52 @@ def main() -> int:
             return 2
         text = read_text(args)
 
-    try:
-        model = resolve_model(args.voice)
-    except FileNotFoundError as exc:
-        print(f"ERROR: {exc}", file=sys.stderr)
-        return 1
-
     if args.device == "cuda":
         enable_cuda_dlls()
 
     try:
-        from piper import PiperVoice
+        from pocket_tts import TTSModel
     except ImportError as exc:  # pragma: no cover - environment dependent
         print(f"ERROR: missing dependency: {exc}", file=sys.stderr)
-        print("Reinstall with: ./scripts/install-piper.ps1 -Force", file=sys.stderr)
+        print("Reinstall with: ./scripts/install-pocket.ps1 -Force", file=sys.stderr)
         return 1
 
     try:
-        # use_cuda picks the CUDAExecutionProvider; without onnxruntime-gpu and
-        # the nvidia-* wheels this raises rather than silently running on CPU.
-        voice = PiperVoice.load(str(model), use_cuda=args.device == "cuda")
+        model = TTSModel.load_model()
+        if args.device == "cuda":
+            import torch
+
+            if not torch.cuda.is_available():
+                # torch reports this as a warning and falls back silently, which
+                # would look like "CUDA is on but nothing got faster".
+                raise RuntimeError(
+                    "torch.cuda.is_available() is False — install a torch build "
+                    "matching your driver's CUDA version (install-pocket.ps1 -Cuda)"
+                )
+            # load_model() has no device argument; TTSModel is a plain nn.Module,
+            # so moving it is the documented way to run on the GPU.
+            model.to("cuda")
+        # Deriving the voice state is slow, so it is done once and reused for
+        # every request this daemon serves.
+        voice_state = model.get_state_for_audio_prompt(args.voice)
     except Exception as exc:  # pragma: no cover - environment dependent
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
     # The daemon log is where a user checks whether the GPU is actually in use.
-    print(f"providers: {voice.session.get_providers()}", file=sys.stderr, flush=True)
+    print(f"device: {args.device}", file=sys.stderr, flush=True)
 
     if args.serve:
-        return serve(voice)
+        return serve(model, voice_state)
 
     try:
-        synthesize(voice, text, args.output)
+        pcm, rate, channels = next(stream(model, voice_state, text))
+        write_wav(args.output, pcm, rate, channels)
+        print(f"OK -> {args.output}", file=sys.stderr)
+        return 0
     except Exception as exc:  # pragma: no cover - environment dependent
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
-
-    print(f"OK -> {args.output}", file=sys.stderr)
-    return 0
 
 
 if __name__ == "__main__":

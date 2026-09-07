@@ -23,6 +23,9 @@
     - [ElevenLabs (Cloud)](#elevenlabs-cloud)
   - [Backend Trait Interface](#backend-trait-interface)
     - [Error Types](#error-types)
+    - [Streaming](#streaming)
+    - [Local daemon protocol (v2)](#local-daemon-protocol-v2)
+    - [GPU acceleration](#gpu-acceleration)
   - [Adding a New Backend](#adding-a-new-backend)
     - [Step 1: Create Backend Module](#step-1-create-backend-module)
     - [Step 2: Register in mod.rs](#step-2-register-in-modrs)
@@ -493,35 +496,132 @@ uv tool install edge-tts
 
 ## Backend Trait Interface
 
-All backends implement the `TtsBackend` trait:
+All backends implement the `TtsBackend` trait (`src-tauri/src/tts/mod.rs`).
+It is synchronous — the command layer calls it inside `spawn_blocking` — and
+speed is deliberately absent, because playback rate is applied in the frontend.
 
 ```rust
-#[async_trait]
 pub trait TtsBackend: Send + Sync {
-    /// Synthesize text to WAV audio bytes
-    async fn synthesize(
-        &self,
-        text: &str,
-        voice: &str,
-        _speed: f32,
-    ) -> Result<Vec<u8>, TtsError>;
+    fn name(&self) -> &str;
+    /// Blocking synthesis returning a complete audio file.
+    fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError>;
+    fn health_check(&self) -> Result<(), TtsError>;
 
-    /// Check if the backend is available and properly configured
-    async fn health_check(&self) -> Result<bool, TtsError>;
+    /// Load the model ahead of the first utterance. Local engines with a
+    /// resident daemon override this; everyone else is a no-op.
+    fn prewarm(&self, _voice: &str) {}
+
+    fn supports_streaming(&self) -> bool { false }
+    /// PCM chunks as they are produced. The default wraps `synthesize` as a
+    /// single chunk, so consumers never special-case an engine.
+    fn synthesize_streaming(&self, text: &str, voice: &str) -> Result<ChunkStream, TtsError>;
+
+    fn file_extension(&self) -> &str { "wav" }
+    fn voice_display_name(&self, voice_id: &str) -> String { voice_id.to_lowercase() }
 }
 ```
 
 ### Error Types
 
-```rust
-pub enum TtsError {
-    CommandNotFound(String),
-    CommandFailed { code: i32, stderr: String },
-    OutputNotFound(PathBuf),
-    InvalidWav(String),
-    IoError(std::io::Error),
-}
+`TtsError` (`src-tauri/src/tts/mod.rs`) covers `Unavailable`, `Http`,
+`CommandFailed`, `OutputNotFound`, and `Io`.
+
+### Streaming
+
+A streaming backend produces `ChunkItem::Pcm` values on a `ChunkStream`
+(`src-tauri/src/tts/stream.rs`); the command layer forwards each one as an
+`audio-stream-chunk` event and the frontend's `PcmStreamScheduler`
+(`src/lib/stores/playback/pcm-stream.ts`) schedules them gap-free. **Chunks must
+be 16-bit signed LE PCM** — the scheduler drops anything else — so a backend
+producing float samples converts before sending.
+
+| Engine | Streams | How |
+| --- | --- | --- |
+| ElevenLabs | yes | `POST /v1/text-to-speech/{id}/stream`, `output_format=pcm_24000` |
+| Cartesia | yes | `POST /tts/bytes` with `container: raw`, `pcm_s16le` @ 44.1 kHz |
+| OpenAI | yes | `POST /v1/audio/speech` with `response_format: "pcm"` (24 kHz mono, chunk-transfer). The batch path keeps the user's configured container, which is what file output and the cache want. |
+| Google Gemini | yes | `streamGenerateContent?alt=sse`; base64 PCM per `inlineData` part |
+| Piper / Kitten / Kokoro / Pocket | yes, once warm | Through the resident daemon (below). Piper yields one chunk per sentence; the others send one chunk per request. |
+| Microsoft, HTTP | no | Both point at a user-supplied endpoint. We cannot assume it streams, and guessing wrong means a broken engine rather than a slow one. |
+| Edge | no | Synthesis goes through the `edge-tts` Python CLI, which writes an MP3 to disk. Streaming would mean writing a Rust client for Microsoft's Read Aloud WebSocket — a large change for one engine. |
+
+Pagination is evaluated **before** streaming (`commands/tts/synthesis.rs`), so a
+long passage is split into fragments and each fragment streams. That keeps every
+request under the provider's input limit — OpenAI rejects input past 4096
+characters — without giving up low latency. Only the last fragment sends the
+`is_final` marker; an intermediate one would arm the player's completion timer
+mid-passage.
+
+### Local daemon protocol (v2)
+
+`src-tauri/src/tts/local_daemon.rs` keeps one wrapper process per local engine
+alive in `--serve` mode so the model stays in RAM. Everything degrades to the
+one-shot command: a wrapper that does not speak v2 is recorded as unsupported
+and never retried for that configuration.
+
+Handshake is the line `READY 2`. A bare `READY` is a v1 (temp-file) wrapper —
+the user needs to re-run that engine's installer with `-Force`.
+
+A wrapper synthesizes a throwaway phrase *before* sending the handshake, so
+`READY 2` means "warm", not merely "loaded". Measured on Piper, this moves the
+first request's time-to-first-audio from a 0.47 s median (0.44-0.71) to 0.15 s
+(0.14-0.16), for ~0.3 s added to a startup that already runs in the background.
+
+Request, one JSON line on stdin:
+
+```json
+{"text": "..."}
 ```
+
+Reply, JSON header lines interleaved with raw binary on stdout. Every byte count
+is declared, so text and binary share one pipe safely:
+
+```text
+{"ok":true,"sample_rate":22050,"channels":1,"bits_per_sample":16}
+{"chunk":8820}   followed by 8820 bytes of PCM
+{"chunk":9600}   followed by 9600 bytes
+{"end":true}
+```
+
+A failure at any point is one `{"ok":false,"error":"..."}` line; the Rust side
+treats it the same before and after the header.
+
+A daemon is keyed on its full command + args, so changing voice, engine, or the
+GPU toggle invalidates it: that utterance runs one-shot and the next is warm.
+`try_stream` checks the daemon *out* of the registry for the duration of a
+stream rather than holding a mutex, which keeps two requests from interleaving
+on one pipe. Dropping the receiver (stop/abort) kills the daemon, because the
+pipe still holds unread frames.
+
+Wrappers live in `scripts/<engine>/copyspeak-<engine>.py` and are copied into
+`%LOCALAPPDATA%\CopySpeak\engines\<engine>\scripts\` by the installer.
+
+### GPU acceleration
+
+Per-engine, off by default, exposed as a `cuda` boolean in the profile's engine
+options. When on, CopySpeak passes `--device cuda` and each wrapper picks the
+device its library actually exposes:
+
+| Engine | Call |
+| --- | --- |
+| Piper | `PiperVoice.load(model, use_cuda=True)` |
+| Kitten | `KittenTTS(model, backend="cuda")` |
+| Kokoro | `ONNX_PROVIDER=CUDAExecutionProvider` (kokoro-onnx reads it) |
+| Pocket | `TTSModel.load_model().to("cuda")` — PyTorch, not ONNX |
+
+On Windows, onnxruntime-gpu and torch do not find cuDNN/cuBLAS on their own, and
+since Python 3.8 the process `PATH` is ignored for extension-module
+dependencies. Each wrapper's `enable_cuda_dlls()` therefore calls
+`os.add_dll_directory` on every `nvidia/*/bin` and `nvidia/*/bin/*` directory
+(CUDA 12 and CUDA 13 layouts respectively). Doing this inside the process that
+loads the DLLs is what makes it work; setting `PATH` from Rust would not.
+
+The GPU runtime is installed **into the engine's own uv project**
+(`install-*.ps1 -Cuda`), never into user site-packages, which would shadow the
+resolved build for every engine at once. The installer verifies with a real
+`--device cuda` synthesis: `ort.get_available_providers()` lists
+`CUDAExecutionProvider` even when the DLLs are missing, so it can only produce a
+false green.
 
 ---
 
