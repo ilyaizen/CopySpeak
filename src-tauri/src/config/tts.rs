@@ -757,6 +757,13 @@ impl<'de> Deserialize<'de> for ProfileEngineOptions {
     }
 }
 
+/// Playback speed bounds. Speed time-stretches without shifting pitch, so the
+/// ceiling is about intelligibility rather than artefacts.
+pub const SPEED_RANGE: (f32, f32) = (0.5, 2.0);
+/// Pitch-shift bounds, roughly -5 to +5 semitones. Wide enough to be clearly
+/// audible, narrow enough that the voice stays human.
+pub const PITCH_RANGE: (f32, f32) = (0.75, 1.35);
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct VoiceProfile {

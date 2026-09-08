@@ -301,7 +301,7 @@ Rune-based stores in `src/lib/stores/` (`playback-store`, `synthesis-store`, `hu
 4. Optional LLM post-processing (Groq rewrite for listening)
 5. Pagination (if enabled): split into fragments → fragment_queue
 6. tts/ synthesizes (subprocess or HTTPS) → bytes
-7. audio/ plays via rodio (volume, speed, pitch)
+7. WebView plays the audio (volume; speed and pitch via `TimeStretcher`, independent knobs)
 8. Effects applied per-profile (OfflineAudioContext in the WebView)
 9. history/ logs entry; HUD shows waveform; telemetry records duration
 10. Frontend refreshes via history-updated / audio-ready events
@@ -310,6 +310,8 @@ Rune-based stores in `src/lib/stores/` (`playback-store`, `synthesis-store`, `hu
 ## Voice Profiles
 
 Named presets (`engine + voice + speed + pitch + effects`) managed by `profile-manager.svelte`, applied via `set_active_profile` / `speak_now_with_profile`. Effects live on the profile (`VoiceProfile.effects`), not in global config. Profiles export/import via `profile-export-dialog`.
+
+`speed` (0.5-2.0) and `pitch` (0.75-1.35) are independent: speed time-stretches without shifting pitch, pitch shifts without changing duration. Both ranges live in `config/tts.rs` (`SPEED_RANGE`, `PITCH_RANGE`) and are clamped on config load. The streaming PCM path stretches each chunk in `playback/time-stretch.ts` before scheduling; the `<audio>` path bakes the pitch shift into the blob and leaves speed to `preservesPitch` + `playbackRate`.
 
 ---
 

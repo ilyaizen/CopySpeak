@@ -148,8 +148,7 @@
         <textarea
           readonly
           class="bg-muted/50 border-border focus:ring-ring h-64 w-full resize-none rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
-          value={exportJson}
-        ></textarea>
+          value={exportJson}></textarea>
       </div>
       <div class="border-border flex justify-end gap-2 border-t p-4">
         <Button variant="outline" onclick={onClose}>Close</Button>
@@ -179,8 +178,7 @@
         <textarea
           class="bg-background border-border focus:ring-ring h-48 w-full resize-none rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
           placeholder="Paste profile JSON here..."
-          bind:value={importJson}
-        ></textarea>
+          bind:value={importJson}></textarea>
 
         {#if importError}
           <div class="text-destructive bg-destructive/10 rounded-md p-3 text-sm">

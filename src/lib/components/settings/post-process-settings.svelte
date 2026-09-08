@@ -122,8 +122,7 @@ Text:
           id="groq-prompt"
           rows="10"
           class="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 font-mono text-xs focus-visible:ring-1 focus-visible:outline-none"
-          bind:value={localConfig.post_process.prompt}
-        ></textarea>
+          bind:value={localConfig.post_process.prompt}></textarea>
         <p class="text-muted-foreground text-xs">{$_("settings.postProcess.promptHelp")}</p>
       </div>
     </div>

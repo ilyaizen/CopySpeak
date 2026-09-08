@@ -28,12 +28,7 @@ export type ValidationResult = ValidationError[];
 export type SupportedLocale = "en" | "es" | "ar" | "he";
 
 export type HudPresetPosition =
-  | "top-left"
-  | "top-center"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-center"
-  | "bottom-right";
+  "top-left" | "top-center" | "top-right" | "bottom-left" | "bottom-center" | "bottom-right";
 
 export type HudPosition = HudPresetPosition;
 

@@ -47,8 +47,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("agent_start", async (_event, ctx) => {
     spokenThinkingBlocks = new Set();
-    if (state.enabled && state.speakActivity)
-      await speakSafe("CopySpeak: agent thinking.", ctx);
+    if (state.enabled && state.speakActivity) await speakSafe("CopySpeak: agent thinking.", ctx);
   });
 
   pi.on("message_update", async (event, ctx) => {
@@ -97,7 +96,7 @@ export default function (pi: ExtensionAPI) {
         else if (cmd === "test")
           await speakSafe(
             args.replace(/^test\s*/, "") ||
-            "CopySpeak voice hook is online with walkie talkie effect.",
+              "CopySpeak voice hook is online with walkie talkie effect.",
             ctx,
             true
           );

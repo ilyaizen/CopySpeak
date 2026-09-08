@@ -2,7 +2,7 @@
   import { cn } from "$lib/utils.js";
   import type { HTMLAttributes } from "svelte/elements";
 
-  export type SliderProps = Omit<HTMLAttributes<HTMLDivElement>, "onchange"> & {
+  export type SliderProps = Omit<HTMLAttributes<HTMLDivElement>, "onchange" | "oninput"> & {
     class?: string;
     value?: number;
     min?: number;
@@ -13,6 +13,8 @@
     name?: string;
     "aria-label"?: string;
     onchange?: (value: number) => void;
+    /** Fires on every drag tick. Use for live display only; commit in onchange. */
+    oninput?: (value: number) => void;
   };
 </script>
 
@@ -28,6 +30,7 @@
     name,
     "aria-label": ariaLabel,
     onchange,
+    oninput,
     ...restProps
   }: SliderProps = $props();
 
@@ -47,6 +50,7 @@
     {step}
     {disabled}
     bind:value
+    oninput={() => oninput?.(value)}
     onchange={() => onchange?.(value)}
     aria-label={ariaLabel}
     data-slot="slider"

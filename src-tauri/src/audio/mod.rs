@@ -13,7 +13,7 @@ pub(crate) mod wav;
 // Re-export all public types so external code can use `crate::audio::*` unchanged.
 pub use format::convert_audio_format;
 pub use player::{AudioPlayer, PlaybackState};
-pub use wav::{concat_wav_files, extract_envelope};
+pub use wav::extract_envelope;
 
 /// Pre-computed amplitude envelope for HUD waveform visualization.
 /// Contains N normalized RMS values (0.0–1.0) evenly spaced across the audio duration.

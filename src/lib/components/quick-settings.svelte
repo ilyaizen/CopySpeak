@@ -25,6 +25,11 @@
   const profilePitch = $derived(activeProfile?.pitch ?? 1.0);
   const profileEffectsEnabled = $derived(activeProfile?.effects.enabled ?? false);
 
+  // Live drag values: shown while a slider is dragged, cleared on commit so the
+  // profile becomes the source of truth again (also handles profile switching).
+  let speedLive = $state<number | null>(null);
+  let pitchLive = $state<number | null>(null);
+
   // Toggle clipboard listener on/off — delegates to the store which manages the Tauri backend
   async function handleToggle() {
     await listeningStore.toggle();
@@ -86,7 +91,7 @@
     <div class="flex min-w-0 flex-col gap-2 py-2">
       <div class="flex items-center justify-between">
         <Label for="qs-speed" class="text-sm">Speed</Label>
-        <span class="text-muted-foreground text-xs">{profileSpeed.toFixed(2)}x</span>
+        <span class="text-muted-foreground text-xs">{(speedLive ?? profileSpeed).toFixed(2)}x</span>
       </div>
       <Slider
         id="qs-speed"
@@ -95,8 +100,10 @@
         max={2}
         step={0.05}
         value={profileSpeed}
+        oninput={(v) => (speedLive = v)}
         onchange={(v) => {
           if (activeProfile) activeProfile.speed = v;
+          speedLive = null;
         }}
       />
     </div>
@@ -104,17 +111,19 @@
     <div class="flex min-w-0 flex-col gap-2 py-2">
       <div class="flex items-center justify-between">
         <Label for="qs-pitch" class="text-sm">Pitch</Label>
-        <span class="text-muted-foreground text-xs">{profilePitch.toFixed(2)}x</span>
+        <span class="text-muted-foreground text-xs">{(pitchLive ?? profilePitch).toFixed(2)}x</span>
       </div>
       <Slider
         id="qs-pitch"
         disabled={!activeProfile}
-        min={0.5}
-        max={2}
-        step={0.05}
+        min={0.75}
+        max={1.35}
+        step={0.01}
         value={profilePitch}
+        oninput={(v) => (pitchLive = v)}
         onchange={(v) => {
           if (activeProfile) activeProfile.pitch = v;
+          pitchLive = null;
         }}
       />
     </div>

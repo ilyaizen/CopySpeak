@@ -203,6 +203,11 @@
   const activeId = $derived(localConfig.tts.active_profile_id);
   const activeIndex = $derived(profiles.findIndex((p: VoiceProfile) => p.id === activeId));
   const active = $derived(activeIndex >= 0 ? profiles[activeIndex] : null);
+
+  // Live drag values: shown while a slider is dragged, cleared on commit so the
+  // profile becomes the source of truth again (also handles profile switching).
+  let speedLive = $state<number | null>(null);
+  let pitchLive = $state<number | null>(null);
   const profileOptions = $derived(
     profiles.map((p: VoiceProfile) => ({ value: p.id, label: p.name }))
   );
@@ -563,9 +568,7 @@
 
 <div>
   <!-- Header: title + actions -->
-  <div
-    class="border-border flex flex-wrap items-center justify-between gap-3 border-b pb-4"
-  >
+  <div class="border-border flex flex-wrap items-center justify-between gap-3 border-b pb-4">
     <div>
       <h2 class="text-lg font-semibold">Voice Profiles</h2>
       <p class="text-muted-foreground mt-1 text-sm">
@@ -715,28 +718,36 @@
         <SettingRow label="Speed">
           <div class="flex w-56 items-center gap-2">
             <span class="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
-              {active.speed.toFixed(2)}x
+              {(speedLive ?? active.speed).toFixed(2)}x
             </span>
             <Slider
               value={active.speed}
               min={0.5}
               max={2}
               step={0.05}
-              onchange={(v) => (localConfig.tts.profiles[activeIndex].speed = v)}
+              oninput={(v) => (speedLive = v)}
+              onchange={(v) => {
+                localConfig.tts.profiles[activeIndex].speed = v;
+                speedLive = null;
+              }}
             />
           </div>
         </SettingRow>
         <SettingRow label="Pitch">
           <div class="flex w-56 items-center gap-2">
             <span class="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
-              {active.pitch.toFixed(2)}x
+              {(pitchLive ?? active.pitch).toFixed(2)}x
             </span>
             <Slider
               value={active.pitch}
-              min={0.5}
-              max={2}
-              step={0.05}
-              onchange={(v) => (localConfig.tts.profiles[activeIndex].pitch = v)}
+              min={0.75}
+              max={1.35}
+              step={0.01}
+              oninput={(v) => (pitchLive = v)}
+              onchange={(v) => {
+                localConfig.tts.profiles[activeIndex].pitch = v;
+                pitchLive = null;
+              }}
             />
           </div>
         </SettingRow>
