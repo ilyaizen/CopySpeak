@@ -3,10 +3,12 @@
 // The app doesn't care how speech is synthesized — only that it gets audio bytes back.
 
 pub mod cartesia;
+pub mod captions;
 pub mod catalog;
 pub mod cli;
 pub mod edge;
 pub mod elevenlabs;
+mod elevenlabs_timing;
 pub mod google;
 pub mod http;
 pub mod microsoft;
@@ -61,6 +63,10 @@ pub trait TtsBackend: Send + Sync {
     /// concern (applied via `audioEl.playbackRate`), mirroring how pitch is handled.
     /// Synthesis always runs at native speed; saved files do not bake in speed.
     fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError>;
+
+    fn synthesize_with_captions(&self, text: &str, voice: &str) -> Result<captions::SpeechAudio, TtsError> {
+        self.synthesize(text, voice).map(Into::into)
+    }
 
     /// Check if the engine binary/server is reachable.
     fn health_check(&self) -> Result<(), TtsError>;

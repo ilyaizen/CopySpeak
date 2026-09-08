@@ -53,6 +53,7 @@ export interface AmplitudePayload {
 
 /** Position in the audio actually being played, relative to this fragment. */
 export interface HudCaptionPayload {
+  captions?: import("$lib/models/captions").CaptionAlignment | null;
   text: string;
   position_ms: number;
   duration_ms: number;

@@ -6,7 +6,7 @@
 // Note: kokoro-tts reads from a FILE, not a command-line text argument, so we write
 // the text to a temp file and pass its path via {input}.
 
-use super::stream::{ChunkItem, ChunkStream};
+use super::stream::ChunkStream;
 use super::{TtsBackend, TtsError};
 use std::process::{Command, Stdio};
 
@@ -196,7 +196,6 @@ impl CliTtsBackend {
         let engine = self.engine_kind()?;
         crate::tts::local_daemon::try_stream(engine, &self.command, &self.serve_args(voice), text)
     }
-
 
     /// Check if this is kokoro-tts and model paths are missing
     fn is_kokoro_missing_models(&self) -> bool {
@@ -408,22 +407,6 @@ impl CliTtsBackend {
     }
 }
 
-/// Collect a whole daemon stream into a WAV buffer, for callers that want the
-/// batch shape (history, cache, file output).
-fn drain_to_wav(stream: ChunkStream) -> Result<Vec<u8>, String> {
-    let mut pcm = Vec::new();
-    while let Some(item) = stream.recv() {
-        match item {
-            ChunkItem::Pcm(bytes) => pcm.extend_from_slice(&bytes),
-            ChunkItem::Failed(reason) => return Err(reason),
-        }
-    }
-    if pcm.is_empty() {
-        return Err("daemon produced no audio".to_string());
-    }
-    Ok(super::stream::pcm_to_wav(&pcm, &stream.meta))
-}
-
 impl TtsBackend for CliTtsBackend {
     fn name(&self) -> &str {
         &self.command
@@ -449,17 +432,29 @@ impl TtsBackend for CliTtsBackend {
             return Ok(stream);
         }
         // No daemon: fall back to the one-shot command wrapped as one chunk.
-        super::stream::chunk_stream_from_wav(self.synthesize(text, voice)?)
+        super::stream::chunk_stream_from_speech(self.synthesize_with_captions(text, voice)?)
     }
 
     fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
+        self.synthesize_with_captions(text, voice)
+            .map(|speech| speech.bytes)
+    }
+
+    fn synthesize_with_captions(
+        &self,
+        text: &str,
+        voice: &str,
+    ) -> Result<super::captions::SpeechAudio, TtsError> {
         // A resident daemon keeps the voice model in RAM; fall through to the
         // one-shot command only when it can't serve this request.
         if let Some(stream) = self.daemon_stream(text, voice) {
-            match drain_to_wav(stream) {
-                Ok(bytes) => {
-                    log::info!("[CLI TTS] Synthesized via daemon — {} bytes", bytes.len());
-                    return Ok(bytes);
+            match super::stream::collect_speech(stream) {
+                Ok(speech) => {
+                    log::info!(
+                        "[CLI TTS] Synthesized via daemon — {} bytes",
+                        speech.bytes.len()
+                    );
+                    return Ok(speech);
                 }
                 Err(e) => log::warn!("[CLI TTS] Daemon stream failed ({e}); using one-shot"),
             }
@@ -467,6 +462,7 @@ impl TtsBackend for CliTtsBackend {
 
         let input_path = Self::input_path();
         let output_path = Self::output_path();
+        super::captions::remove_sidecar(&output_path);
 
         // Write input text to temp file
         if crate::logging::is_debug_mode() {
@@ -657,7 +653,9 @@ impl TtsBackend for CliTtsBackend {
             );
         }
 
-        Ok(bytes)
+        let captions = super::captions::read_sidecar(&output_path);
+        super::captions::remove_sidecar(&output_path);
+        Ok(super::captions::SpeechAudio { bytes, captions })
     }
 
     fn health_check(&self) -> Result<(), TtsError> {

@@ -52,6 +52,7 @@ impl TtsBackend for EdgeTtsBackend {
         // Write text to temp file (edge-tts reads via -f, not stdin).
         std::fs::write(&input_path, text).map_err(TtsError::Io)?;
         let _ = std::fs::remove_file(&output_path);
+        let _ = std::fs::remove_file(format!("{output_path}.captions.json"));
 
         log::info!(
             "[Edge-TTS] Synthesizing {} chars, voice: {}",
@@ -62,15 +63,21 @@ impl TtsBackend for EdgeTtsBackend {
         let exec_start = std::time::Instant::now();
 
         #[allow(unused_mut)]
-        let mut cmd = Command::new("edge-tts");
-        cmd.arg("--file")
-            .arg(&input_path)
-            .arg("--voice")
-            .arg(voice)
-            .arg("--write-media")
-            .arg(&output_path)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
+        let mut cmd = Command::new("uv");
+        cmd.args([
+            "run",
+            "--no-project",
+            "--with",
+            "edge-tts==7.2.8",
+            "python",
+            "-c",
+        ])
+        .arg(include_str!("../../../scripts/edge/copyspeak-edge.py"))
+        .arg(&input_path)
+        .arg(&output_path)
+        .arg(voice)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
 
         #[cfg(windows)]
         {
@@ -80,7 +87,7 @@ impl TtsBackend for EdgeTtsBackend {
 
         let child = cmd.spawn().map_err(|e| {
             TtsError::Unavailable(format!(
-                "edge-tts not found. Install with: uv tool install edge-tts\n\nError: {e}"
+                "uv not found. Install uv to run the pinned Edge word-boundary wrapper.\n\nError: {e}"
             ))
         })?;
 
@@ -125,6 +132,16 @@ impl TtsBackend for EdgeTtsBackend {
 
         log::info!("[Edge-TTS] Synthesis complete: {} MP3 bytes", bytes.len());
         Ok(bytes)
+    }
+
+    fn synthesize_with_captions(
+        &self,
+        text: &str,
+        voice: &str,
+    ) -> Result<super::captions::SpeechAudio, TtsError> {
+        let bytes = self.synthesize(text, voice)?;
+        let captions = super::captions::read_sidecar(&Self::output_path());
+        Ok(super::captions::SpeechAudio { bytes, captions })
     }
 
     fn health_check(&self) -> Result<(), TtsError> {

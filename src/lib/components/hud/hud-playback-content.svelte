@@ -2,16 +2,14 @@
   import Waveform from "../waveform.svelte";
   import Progress from "$lib/components/ui/progress/progress.svelte";
   import { hudStore } from "$lib/stores/hud-store.svelte.js";
-  import { activeCaptionWord, buildCaptions } from "$lib/models/captions.js";
+  import { activeCaptionWord, buildCaptions, captionPhrase } from "$lib/models/captions.js";
 
   let { barValues, spokenText }: { barValues: number[]; spokenText: string | null } = $props();
-  let words = $derived(buildCaptions(spokenText ?? ""));
-  let positionIndex = $derived(
-    activeCaptionWord(words, hudStore.caption?.position_ms ?? 0, hudStore.caption?.duration_ms ?? 0)
-  );
+  let words = $derived(buildCaptions(spokenText ?? "", hudStore.caption?.captions));
+  let positionIndex = $derived(activeCaptionWord(words, hudStore.caption?.position_ms ?? 0));
   let activeIndex = $derived(hudStore.caption?.active ? positionIndex : -1);
   // Retain the current phrase during buffering; only the highlight goes away.
-  let phraseIndex = $derived(words[Math.max(0, positionIndex)]?.phrase ?? 0);
+  let phraseIndex = $derived(captionPhrase(words, hudStore.caption?.position_ms ?? 0));
   let phrase = $derived(words.filter((word) => word.phrase === phraseIndex));
 </script>
 
@@ -24,9 +22,9 @@
   <div class="content-layer">
     {#if spokenText}
       <p class="caption" dir="auto">
-        {#each phrase as word (word.start)}
+        {#each phrase as word (word.offset)}
           <span
-            class:spoken={activeIndex >= 0 && word.end <= (words[activeIndex]?.start ?? 0)}
+            class:spoken={word.end !== null && word.end <= (hudStore.caption?.position_ms ?? 0)}
             class:current={word === words[activeIndex]}>{word.text}</span
           >
         {:else}

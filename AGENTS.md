@@ -37,6 +37,10 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 
 ## Active failure log
 
+- Check credential presence without printing `.env` values; never grep secret files into command output.
+- Preserve native caption intervals with their generated audio through stream framing, cache/history replay, and sample-count-based fragment concatenation; never scale word timings by text weights.
+- Reschedule unstarted PCM sources when playback speed or pitch changes; setting playbackRate does not move their scheduled start times.
+
 - Drive HUD captions from the audible fragment's audio clock; synthesis events may describe a later fragment, and incoming PCM chunks must not resume a user-paused stream.
 - Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
 - Treat `git diff --check` as a check; do not run it before explicit confirmation.

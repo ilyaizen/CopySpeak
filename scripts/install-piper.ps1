@@ -70,7 +70,7 @@ Write-Host ""
 Write-Host "  Installing Piper..." -ForegroundColor Gray
 # ponytail: PyPI `piper` is an unrelated bioinformatics toolkit (databio/pypiper,
 # module `pypiper`). The TTS engine ships as `piper-tts` (module `piper`).
-Invoke-Uv add --project $EngineDir "piper-tts"
+Invoke-Uv add --project $EngineDir "piper-tts[alignment]==1.8.0"
 
 $scriptsDir = Join-Path $EngineDir "scripts"
 $voicesDir = Join-Path $EngineDir "voices"

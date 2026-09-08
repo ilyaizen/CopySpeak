@@ -258,6 +258,7 @@ pub fn delete_history_entry(
                 if let Err(e) = std::fs::remove_file(file_path) {
                     log::warn!("Failed to delete audio file {}: {}", path, e);
                 } else {
+                    crate::tts::captions::remove_sidecar(&path);
                     log::info!("Deleted audio file: {}", path);
                 }
             }
@@ -616,6 +617,7 @@ pub fn delete_history_batch(
                 if let Err(e) = std::fs::remove_file(file_path) {
                     log::warn!("Failed to delete audio file {}: {}", path, e);
                 } else {
+                    crate::tts::captions::remove_sidecar(&path);
                     log::info!("Deleted audio file: {}", path);
                 }
             }
@@ -752,6 +754,7 @@ pub async fn play_history_batch(
                 fragment_total: total,
                 is_final: index == total - 1,
                 text: entry.text.clone(),
+                captions: crate::tts::captions::read_sidecar(&output_path),
             },
         );
 

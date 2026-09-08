@@ -128,6 +128,24 @@ describe("PcmStreamScheduler", () => {
     scheduler.stop();
   });
 
+  it.each([0.5, 2])("reschedules future fragments without gaps or overlap at rate %s", (rate) => {
+    const { scheduler, sources, ctx } = createHarness();
+    scheduler.handleChunk(chunk(new Uint8Array(48000)));
+    scheduler.handleChunk({ ...chunk(new Uint8Array(48000)), fragment_index: 1 });
+    const oldFuture = sources[1];
+    oldFuture.stop = vi.fn();
+    ctx.currentTime = 0.53;
+    scheduler.setRate(rate, 1);
+    const expectedStart = 0.53 + 0.5 / rate;
+    expect(oldFuture.stop).toHaveBeenCalledOnce();
+    expect(oldFuture.onended).toBeNull();
+    expect(sources[2].at).toBeCloseTo(expectedStart);
+    ctx.currentTime = expectedStart + 0.1;
+    expect(scheduler.getPlaybackPosition()?.fragmentIndex).toBe(1);
+    expect(scheduler.getPlaybackPosition()?.positionMs).toBeCloseTo(100 * rate);
+    scheduler.stop();
+  });
+
   it("flushes a short intermediate fragment without completing the queue", () => {
     const { scheduler, sources, onComplete } = createHarness();
     scheduler.handleChunk(chunk(new Uint8Array(2400)));

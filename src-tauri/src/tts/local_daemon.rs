@@ -62,8 +62,8 @@ impl Daemon {
     }
 
     /// Read the next PCM chunk. `Ok(None)` is end-of-stream.
-    fn next_chunk(&mut self) -> Result<Option<Vec<u8>>, String> {
-        read_chunk(&mut self.stdout)
+    fn next_chunk(&mut self) -> Result<Option<ChunkItem>, String> {
+        read_item(&mut self.stdout)
     }
 }
 
@@ -99,8 +99,14 @@ fn read_header(reader: &mut impl BufRead) -> Result<AudioFormatMeta, String> {
 
 /// Read one `{"chunk":N}` frame plus its N payload bytes. `Ok(None)` is the
 /// `{"end":true}` marker.
-fn read_chunk(reader: &mut impl BufRead) -> Result<Option<Vec<u8>>, String> {
+fn read_item(reader: &mut impl BufRead) -> Result<Option<ChunkItem>, String> {
     let frame = read_json_line(reader)?;
+    if let Some(captions) = frame.get("captions") {
+        let captions: super::captions::CaptionAlignment =
+            serde_json::from_value(captions.clone()).map_err(|e| e.to_string())?;
+        captions.validate()?;
+        return Ok(Some(ChunkItem::Captions(captions)));
+    }
     if frame["end"].as_bool() == Some(true) {
         return Ok(None);
     }
@@ -117,7 +123,7 @@ fn read_chunk(reader: &mut impl BufRead) -> Result<Option<Vec<u8>>, String> {
     reader
         .read_exact(&mut buf)
         .map_err(|e| format!("short read of {len}-byte chunk: {e}"))?;
-    Ok(Some(buf))
+    Ok(Some(ChunkItem::Pcm(buf)))
 }
 
 /// Whether a handshake line comes from a wrapper speaking protocol v2.
@@ -256,7 +262,9 @@ pub fn prewarm(engine: &str, command: String, serve_args: Vec<String>) {
 /// serve args: callers use it to decide whether to *offer* streaming, and a
 /// stale key still degrades cleanly through `try_stream`.
 pub fn is_ready(engine: &str) -> bool {
-    slots().get(engine).is_some_and(|s| !s.busy && s.daemon.is_some())
+    slots()
+        .get(engine)
+        .is_some_and(|s| !s.busy && s.daemon.is_some())
 }
 
 /// Synthesize through the resident daemon, streaming PCM chunks as they arrive.
@@ -310,8 +318,8 @@ pub fn try_stream(
         let mut healthy = true;
         loop {
             match daemon.next_chunk() {
-                Ok(Some(pcm)) => {
-                    if tx.send(ChunkItem::Pcm(pcm)).is_err() {
+                Ok(Some(item)) => {
+                    if tx.send(item).is_err() {
                         // Consumer dropped (abort/stop). The pipe still holds
                         // unread frames, so this daemon cannot be reused.
                         log::info!("[LocalDaemon] {engine_name} stream dropped by consumer");
@@ -395,9 +403,31 @@ mod tests {
         assert_eq!(meta.channels, 1);
         assert_eq!(meta.bits_per_sample, 16);
 
-        assert_eq!(read_chunk(&mut reader), Ok(Some(vec![1, 2, 3, 4])));
-        assert_eq!(read_chunk(&mut reader), Ok(Some(vec![b'\n', 9])));
-        assert_eq!(read_chunk(&mut reader), Ok(None), "end frame ends the stream");
+        assert_eq!(
+            read_item(&mut reader),
+            Ok(Some(ChunkItem::Pcm(vec![1, 2, 3, 4])))
+        );
+        assert_eq!(
+            read_item(&mut reader),
+            Ok(Some(ChunkItem::Pcm(vec![b'\n', 9])))
+        );
+        assert_eq!(
+            read_item(&mut reader),
+            Ok(None),
+            "end frame ends the stream"
+        );
+    }
+
+    #[test]
+    fn caption_snapshot_precedes_its_pcm_without_ending_the_fragment() {
+        let wire = b"{\"captions\":{\"text\":\"Hi\",\"words\":[{\"text_start\":0,\"text_end\":2,\"start_ms\":120,\"end_ms\":350}]}}\n{\"chunk\":2}\n\x01\x02{\"end\":true}\n";
+        let mut reader = std::io::BufReader::new(&wire[..]);
+        let Some(ChunkItem::Captions(captions)) = read_item(&mut reader).unwrap() else {
+            panic!("expected native captions")
+        };
+        assert_eq!(captions.words[0].start_ms, 120.0);
+        assert_eq!(read_item(&mut reader), Ok(Some(ChunkItem::Pcm(vec![1, 2]))));
+        assert_eq!(read_item(&mut reader), Ok(None));
     }
 
     #[test]
@@ -408,7 +438,7 @@ mod tests {
             "model exploded"
         );
         assert_eq!(
-            read_chunk(&mut std::io::BufReader::new(&wire[..])),
+            read_item(&mut std::io::BufReader::new(&wire[..])),
             Err("model exploded".to_string())
         );
     }
@@ -417,7 +447,7 @@ mod tests {
     fn a_truncated_chunk_is_an_error_not_a_short_read() {
         // Declares 8 bytes, supplies 3.
         let wire = b"{\"chunk\":8}\n\x01\x02\x03";
-        let err = read_chunk(&mut std::io::BufReader::new(&wire[..])).unwrap_err();
+        let err = read_item(&mut std::io::BufReader::new(&wire[..])).unwrap_err();
         assert!(err.contains("short read"), "unexpected error: {err}");
     }
 
@@ -427,7 +457,9 @@ mod tests {
         // A v1 wrapper answers with the temp-file protocol, which would hang.
         assert!(check_handshake("READY").unwrap_err().contains("v1"));
         assert!(check_handshake("").unwrap_err().contains("without READY"));
-        assert!(check_handshake("Traceback...").unwrap_err().contains("unexpected"));
+        assert!(check_handshake("Traceback...")
+            .unwrap_err()
+            .contains("unexpected"));
     }
 
     #[test]

@@ -26,6 +26,8 @@ import json
 import os
 import sys
 import wave
+import re
+from difflib import SequenceMatcher
 from pathlib import Path
 
 
@@ -82,18 +84,107 @@ def resolve_model(name: str) -> Path:
     return match
 
 
+def phone_groups(phonemes):
+    """Lexical phone groups; stress marks don't change the word's identity."""
+    groups = []
+    current = ""
+    for phone in phonemes:
+        if phone.isspace() or phone in "^$.,;:!?—–\"()[]":
+            if current:
+                groups.append(current)
+                current = ""
+        elif phone not in "ˈˌ":
+            current += phone
+    if current:
+        groups.append(current)
+    return groups
+
+
+def word_phone_map(voice, text):
+    """Match text normalization to the full-context phone sequence, not to time.
+
+    Only complete exact phone-group matches earn timings. Context-dependent
+    pronunciations that differ are left unaligned, never interpolated.
+    """
+    expected = []
+    tokens = []
+    for match in re.finditer(r"\S+", text):
+        phones = [p for sentence in voice.phonemize(match.group()) for p in sentence]
+        groups = phone_groups(phones)
+        start = len(expected)
+        expected.extend(groups)
+        if groups:
+            tokens.append((match.start(), match.end(), start, len(expected)))
+    actual = [group for sentence in voice.phonemize(text) for group in phone_groups(sentence)]
+    mapping = {}
+    for block in SequenceMatcher(None, expected, actual, autojunk=False).get_matching_blocks():
+        for offset in range(block.size):
+            mapping[block.a + offset] = block.b + offset
+    result = []
+    for start, end, first, last in tokens:
+        indices = [mapping.get(i) for i in range(first, last)]
+        if any(i is None for i in indices) or indices != list(range(indices[0], indices[0] + len(indices))):
+            continue
+        result.append((len(text[:start].encode("utf-16-le")) // 2,
+                       len(text[:end].encode("utf-16-le")) // 2, indices[0], indices[-1]))
+    return actual, result
+
+
+def timed_phone_groups(alignments, sample_offset, rate):
+    """Preserve native BOS, punctuation, and whitespace durations as silence."""
+    groups = []
+    current = ""
+    start = end = sample_offset
+    for item in alignments:
+        phone = item.phoneme
+        next_sample = sample_offset + item.num_samples
+        if phone.isspace() or phone in "^$.,;:!?—–\"()[]":
+            if current:
+                groups.append((current, start * 1000 / rate, end * 1000 / rate))
+                current = ""
+        elif phone not in "ˈˌ":
+            if not current:
+                start = sample_offset
+            current += phone
+            end = next_sample
+        sample_offset = next_sample
+    if current:
+        groups.append((current, start * 1000 / rate, end * 1000 / rate))
+    return groups
+
+
 def stream(voice, text: str):
-    """Yield (pcm16_le_bytes, sample_rate, channels) per sentence."""
-    for chunk in voice.synthesize(text):
-        yield chunk.audio_int16_bytes, chunk.sample_rate, chunk.sample_channels
+    """Yield PCM plus native caption snapshots, one sentence at a time."""
+    actual, tokens = word_phone_map(voice, text)
+    groups = []
+    sample_offset = 0
+    for chunk in voice.synthesize(text, include_alignments=True):
+        if not chunk.phoneme_alignments:
+            raise RuntimeError("Piper voice has no phoneme alignments; reinstall with piper-tts[alignment]>=1.8.0")
+        groups.extend(timed_phone_groups(chunk.phoneme_alignments, sample_offset, chunk.sample_rate))
+        if [g[0] for g in groups] != actual[:len(groups)]:
+            raise RuntimeError("Piper alignment phonemes differ from the synthesized text")
+        words = []
+        for start, end, first, last in tokens:
+            if last < len(groups) and groups[last][2] > groups[first][1]:
+                words.append({"text_start": start, "text_end": end,
+                              "start_ms": groups[first][1], "end_ms": groups[last][2]})
+        yield chunk.audio_int16_bytes, chunk.sample_rate, chunk.sample_channels, {"text": text, "words": words}
+        sample_offset += len(chunk.audio_int16_bytes) // (2 * chunk.sample_channels)
 
 
 def synthesize(voice, text: str, output: str) -> None:
     Path(output).parent.mkdir(parents=True, exist_ok=True)
     with wave.open(output, "wb") as wf:
-        # ponytail: piper-tts 1.x owns WAV header setup via set_wav_format=True
-        # (default); the 0.x `synthesize(wf, text)` signature is gone.
-        voice.synthesize_wav(text, wf)
+        captions = None
+        for pcm, rate, channels, captions in stream(voice, text):
+            if wf.getnframes() == 0:
+                wf.setframerate(rate)
+                wf.setnchannels(channels)
+                wf.setsampwidth(2)
+            wf.writeframes(pcm)
+    if captions:
+        Path(output + ".captions.json").write_text(json.dumps(captions), encoding="utf-8")
 
 
 def serve(voice) -> int:
@@ -135,7 +226,7 @@ def serve(voice) -> int:
             first = next(chunks, None)
             if first is None:
                 raise RuntimeError("no audio produced")
-            pcm, rate, channels = first
+            pcm, rate, channels, captions = first
             frame({
                 "ok": True,
                 "sample_rate": rate,
@@ -143,12 +234,14 @@ def serve(voice) -> int:
                 "bits_per_sample": 16,
             })
             while True:
+                frame({"captions": captions})
                 frame({"chunk": len(pcm)})
                 out.write(pcm)
+                out.flush()
                 nxt = next(chunks, None)
                 if nxt is None:
                     break
-                pcm = nxt[0]
+                pcm, rate, channels, captions = nxt
             frame({"end": True})
         except Exception as exc:  # pragma: no cover - environment dependent
             # Before the header this is the reply; after it, an error frame.
@@ -194,7 +287,7 @@ def main() -> int:
     try:
         # use_cuda picks the CUDAExecutionProvider; without onnxruntime-gpu and
         # the nvidia-* wheels this raises rather than silently running on CPU.
-        voice = PiperVoice.load(str(model), use_cuda=args.device == "cuda")
+        voice = PiperVoice.load(str(model), use_cuda=args.device == "cuda", include_alignments=True)
     except Exception as exc:  # pragma: no cover - environment dependent
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1

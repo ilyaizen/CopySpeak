@@ -23,6 +23,7 @@ export interface StreamChunkPayload {
   /** Caption metadata sent with the first chunk and at each fragment's end. */
   text?: string;
   fragment_duration_ms?: number;
+  captions?: import("$lib/models/captions").CaptionAlignment | null;
 }
 
 interface ScheduledPosition {
@@ -150,14 +151,39 @@ export class PcmStreamScheduler {
    * the scheduling cursor compensates using the current combined rate.
    */
   setRate(speed: number, pitch: number): void {
+    if (!Number.isFinite(speed * pitch) || speed <= 0 || pitch <= 0) return;
+    const previousRate = this._combinedRate();
     this._speed = speed;
     this._pitch = pitch;
     const rate = speed * pitch;
+    if (rate === previousRate) return;
+    const future: typeof this._pending = [];
+    this._nextStartTime = this._ctx.currentTime;
     for (const [source, position] of this._activeSources) {
       this._advancePosition(position);
+      if (position.clock > this._ctx.currentTime && source.buffer) {
+        // Absolute scheduled start times do not move when playbackRate changes.
+        // Requeue only unstarted sources; leave audible audio uninterrupted.
+        future.push({
+          buffer: source.buffer,
+          fragmentIndex: position.fragmentIndex,
+          offset: position.offset
+        });
+        source.onended = null;
+        source.stop();
+        this._activeSources.delete(source);
+        continue;
+      }
       position.rate = rate;
       source.playbackRate.value = rate;
+      this._nextStartTime = Math.max(
+        this._nextStartTime,
+        this._ctx.currentTime + (position.duration - position.consumed) / rate
+      );
     }
+    this._pending.unshift(...future);
+    this._pendingDuration += future.reduce((sum, item) => sum + item.buffer.duration, 0);
+    if (this._started) this._schedulePending();
   }
 
   /** AudioContext time freezes on pause; no progress is reported in an underrun. */

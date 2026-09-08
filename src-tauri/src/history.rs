@@ -486,7 +486,13 @@ impl HistoryLog {
             for entry in entries {
                 if let Ok(entry) = entry {
                     if let Some(path) = entry.path().to_str() {
-                        if !self.is_file_tracked(path) && entry.path().is_file() {
+                        let is_caption_of_tracked_audio = path
+                            .strip_suffix(".captions.json")
+                            .is_some_and(|audio| self.is_file_tracked(audio));
+                        if !self.is_file_tracked(path)
+                            && !is_caption_of_tracked_audio
+                            && entry.path().is_file()
+                        {
                             orphaned.push(path.to_string());
                         }
                     }
@@ -751,6 +757,7 @@ pub fn cleanup_orphaned_files(history: &Mutex<HistoryLog>) -> Result<usize, Stri
     for file_path in orphaned_files {
         match std::fs::remove_file(&file_path) {
             Ok(_) => {
+                crate::tts::captions::remove_sidecar(&file_path);
                 files_removed += 1;
                 log::info!("Removed orphaned file: {}", file_path);
             }
@@ -831,6 +838,8 @@ pub fn cleanup_old_entries(
     for file_path in files_to_remove {
         if let Err(e) = std::fs::remove_file(&file_path) {
             log::warn!("Failed to remove file {}: {}", file_path, e);
+        } else {
+            crate::tts::captions::remove_sidecar(&file_path);
         }
     }
 

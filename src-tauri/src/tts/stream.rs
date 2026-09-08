@@ -38,6 +38,8 @@ impl From<&WavInfo> for AudioFormatMeta {
 pub enum ChunkItem {
     /// Raw PCM payload in the format described by the stream's meta.
     Pcm(Vec<u8>),
+    /// Complete snapshot so far; offsets and times are relative to this request.
+    Captions(super::captions::CaptionAlignment),
     /// The synthesis failed mid-stream; carries a human-readable reason.
     /// Constructed by native-streaming backends (later slice tasks).
     #[allow(dead_code)]
@@ -97,6 +99,13 @@ impl ChunkStream {
 /// one `Pcm` chunk. This backs the default `synthesize_streaming`
 /// implementation for batch-only backends.
 pub fn chunk_stream_from_wav(wav: Vec<u8>) -> Result<ChunkStream, TtsError> {
+    chunk_stream_from_speech(wav.into())
+}
+
+pub fn chunk_stream_from_speech(
+    speech: super::captions::SpeechAudio,
+) -> Result<ChunkStream, TtsError> {
+    let wav = speech.bytes;
     let info = parse_wav_header(&wav).map_err(TtsError::Http)?;
 
     let data_start = info.data_offset;
@@ -123,12 +132,39 @@ pub fn chunk_stream_from_wav(wav: Vec<u8>) -> Result<ChunkStream, TtsError> {
     );
 
     let (tx, rx) = mpsc::channel();
+    if let Some(captions) = speech.captions {
+        captions.validate().map_err(TtsError::Http)?;
+        let _ = tx.send(ChunkItem::Captions(captions));
+    }
     let _ = tx.send(ChunkItem::Pcm(pcm));
     drop(tx); // closing the sender signals end-of-stream after the single chunk
 
     Ok(ChunkStream {
         meta: AudioFormatMeta::from(&info),
         rx,
+    })
+}
+
+/// Collect the same native stream when playback is configured for batch mode.
+pub fn collect_speech(stream: ChunkStream) -> Result<super::captions::SpeechAudio, TtsError> {
+    let mut pcm = Vec::new();
+    let mut captions = None;
+    while let Some(item) = stream.recv() {
+        match item {
+            ChunkItem::Pcm(bytes) => pcm.extend_from_slice(&bytes),
+            ChunkItem::Captions(value) => {
+                value.validate().map_err(TtsError::Http)?;
+                captions = Some(value);
+            }
+            ChunkItem::Failed(reason) => return Err(TtsError::Http(reason)),
+        }
+    }
+    if pcm.is_empty() {
+        return Err(TtsError::Http("Stream produced no audio".into()));
+    }
+    Ok(super::captions::SpeechAudio {
+        bytes: pcm_to_wav(&pcm, &stream.meta),
+        captions,
     })
 }
 
@@ -164,16 +200,39 @@ mod tests {
     use super::*;
     use std::thread;
 
+    #[test]
+    fn batch_stream_round_trip_preserves_native_captions() {
+        let captions = super::super::captions::CaptionAlignment {
+            text: "Hi".into(),
+            words: vec![super::super::captions::WordTiming {
+                text_start: 0,
+                text_end: 2,
+                start_ms: 1.0,
+                end_ms: 2.0,
+            }],
+        };
+        let bytes = build_wav(8000, 1, 16, &[0; 48]);
+        let speech = collect_speech(
+            chunk_stream_from_speech(super::super::captions::SpeechAudio {
+                bytes: bytes.clone(),
+                captions: Some(captions.clone()),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(speech.bytes, bytes);
+        assert_eq!(speech.captions, Some(captions));
+    }
+
     /// Build a minimal valid WAV: RIFF header + fmt chunk + data chunk.
     fn build_wav(sample_rate: u32, channels: u16, bits_per_sample: u16, pcm: &[u8]) -> Vec<u8> {
         let fmt = vec![
-            &1u16.to_le_bytes()[..],         // PCM format tag
-            &channels.to_le_bytes()[..],     // channel count
-            &sample_rate.to_le_bytes()[..],  // sample rate
-            &(sample_rate * u32::from(channels) * u32::from(bits_per_sample) / 8)
-                .to_le_bytes()[..], // byte rate
+            &1u16.to_le_bytes()[..],        // PCM format tag
+            &channels.to_le_bytes()[..],    // channel count
+            &sample_rate.to_le_bytes()[..], // sample rate
+            &(sample_rate * u32::from(channels) * u32::from(bits_per_sample) / 8).to_le_bytes()[..], // byte rate
             &(channels * bits_per_sample / 8).to_le_bytes()[..], // block align
-            &bits_per_sample.to_le_bytes()[..], // bits per sample
+            &bits_per_sample.to_le_bytes()[..],                  // bits per sample
         ]
         .concat();
 
