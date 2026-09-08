@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.16] - 2026-09-08
+
+### Added
+
+- **Resident local TTS daemons with GPU acceleration** — Piper, KittenTTS, Kokoro, and Pocket now keep their model loaded between utterances instead of reloading it per reading. Each runs as a per-engine daemon speaking protocol v2: a `READY 2` handshake, a format header, and length-prefixed 16-bit LE PCM chunks with an end marker — every byte count is declared, so text and binary share one pipe safely, and the single global temp-WAV path (where two concurrent syntheses collided) is gone. Wrappers select GPU execution providers where available (CUDA DLL directories registered with `os.add_dll_directory` inside the wrapper) and synthesize a throwaway phrase before the handshake, so `READY 2` means warm — first-request time-to-first-audio drops from a ~0.47s median to ~0.15s.
+- **First-class Kokoro and Pocket wrappers** — `copyspeak-kokoro.py` drives kokoro-onnx directly (reusing the model files the installer downloads) and `copyspeak-pocket.py` uses pocket-tts's Python API with cached voice state, replacing per-invocation third-party CLIs that reloaded models and exposed no execution provider. Pocket becomes a `TtsEngine` variant with a migration promoting the old Local-preset profiles.
+- **Word timestamps for cloud streams** — Cartesia, ElevenLabs, and Edge streams map provider word timestamps to per-fragment caption intervals (`tts/captions.rs`, `elevenlabs_timing.rs`); Edge gains a first-class wrapper script plus a caption-alignment test script.
+
+### Changed
+
+- **HUD captions highlight spoken words** — the marquee scroll is replaced with phrase captions that dim words as the active fragment plays. Position is driven by the audible fragment's PCM scheduler audio clock rather than synthesis events (which may describe a later fragment); the backend streams per-fragment text and duration on the `audio-stream-chunk` event. Word boundaries are estimated, not engine-provided.
+- **Native caption intervals are preserved across playback** — stream framing, cache/history replay, and sample-count-based fragment concatenation keep intervals attached to their generated audio; word timings are never rescaled by text weights.
+- **Speed/pitch changes reschedule unstarted PCM sources** — changing playback rate or pitch no longer leaves scheduled-but-unplayed chunks at the old settings.
+- **Older engine installers stay on the one-shot path** — a wrapper still speaking protocol v1 is detected as unsupported; re-run the engine's installer to pick up the resident daemon.
+
 ## [0.1.15] - 2026-09-06
 
 ### Added
@@ -588,7 +603,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.14...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.15...HEAD
+[0.1.16]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.15...v0.1.16
+[0.1.15]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.14...v0.1.15
 [0.1.14]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.13...v0.1.14
 [0.1.13]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.12...v0.1.13
 [0.1.12]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.11...v0.1.12
