@@ -96,6 +96,66 @@ afterEach(() => {
 });
 
 describe("PcmStreamScheduler", () => {
+  it("reports the audible fragment and freezes its clock through pause and underruns", () => {
+    const { scheduler, sources, ctx } = createHarness();
+    const second = new Uint8Array(48000);
+    scheduler.handleChunk(chunk(second));
+    scheduler.handleChunk({ ...chunk(second), fragment_index: 1 });
+    expect(scheduler.getPlaybackPosition()).toBeNull();
+    ctx.currentTime = 0.53;
+    expect(scheduler.getPlaybackPosition()?.positionMs).toBeCloseTo(500);
+    // Suspended AudioContexts keep the same currentTime, even as wall time passes.
+    ctx.state = "suspended";
+    expect(scheduler.getPlaybackPosition()?.positionMs).toBeCloseTo(500);
+    ctx.state = "running";
+    ctx.currentTime = 1.28;
+    expect(scheduler.getPlaybackPosition()?.fragmentIndex).toBe(1);
+    expect(scheduler.getPlaybackPosition()?.positionMs).toBeCloseTo(250);
+    ctx.currentTime = 2.1;
+    sources.forEach((source) => source.onended?.());
+    expect(scheduler.getPlaybackPosition()).toBeNull();
+    scheduler.stop();
+    expect(scheduler.getPlaybackPosition()).toBeNull();
+  });
+
+  it("measures source time across playback rate changes", () => {
+    const { scheduler, ctx } = createHarness();
+    scheduler.handleChunk(chunk(new Uint8Array(48000)));
+    ctx.currentTime = 0.28;
+    scheduler.setRate(2, 1);
+    ctx.currentTime = 0.53;
+    expect(scheduler.getPlaybackPosition()?.positionMs).toBeCloseTo(750);
+    scheduler.stop();
+  });
+
+  it.each([0.5, 2])("reschedules future fragments without gaps or overlap at rate %s", (rate) => {
+    const { scheduler, sources, ctx } = createHarness();
+    scheduler.handleChunk(chunk(new Uint8Array(48000)));
+    scheduler.handleChunk({ ...chunk(new Uint8Array(48000)), fragment_index: 1 });
+    const oldFuture = sources[1];
+    oldFuture.stop = vi.fn();
+    ctx.currentTime = 0.53;
+    scheduler.setRate(rate, 1);
+    const expectedStart = 0.53 + 0.5 / rate;
+    expect(oldFuture.stop).toHaveBeenCalledOnce();
+    expect(oldFuture.onended).toBeNull();
+    expect(sources[2].at).toBeCloseTo(expectedStart);
+    ctx.currentTime = expectedStart + 0.1;
+    expect(scheduler.getPlaybackPosition()?.fragmentIndex).toBe(1);
+    expect(scheduler.getPlaybackPosition()?.positionMs).toBeCloseTo(100 * rate);
+    scheduler.stop();
+  });
+
+  it("flushes a short intermediate fragment without completing the queue", () => {
+    const { scheduler, sources, onComplete } = createHarness();
+    scheduler.handleChunk(chunk(new Uint8Array(2400)));
+    expect(sources).toHaveLength(0);
+    scheduler.handleChunk({ ...chunk(new Uint8Array()), fragment_duration_ms: 50 });
+    expect(sources).toHaveLength(1);
+    sources[0].onended?.();
+    expect(onComplete).not.toHaveBeenCalled();
+    scheduler.stop();
+  });
   it.each([1, 2])("preserves PCM samples across every byte split with %i channels", (channels) => {
     const samples = [0x1234, -0x1234, 32767, -32768, 1, -1, 8192, -8192];
     const bytes = pcmBytes(samples);

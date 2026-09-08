@@ -21,6 +21,7 @@ pub enum TtsEngine {
     Kitten,
     Piper,
     Kokoro,
+    Pocket,
 }
 
 impl Default for TtsEngine {
@@ -479,6 +480,10 @@ pub struct KittenEngineOptions {
     /// HF model id (e.g. `KittenML/kitten-tts-nano-0.8`); threaded to the
     /// wrapper's `--model` flag via the `{model}` placeholder.
     pub model: Option<String>,
+    /// Run inference on an NVIDIA GPU (`--device cuda`). Requires the engine's
+    /// uv project to have the GPU runtime installed (`install-*.ps1 -Cuda`).
+    #[serde(default)]
+    pub cuda: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
@@ -488,15 +493,30 @@ pub struct PiperEngineOptions {
     // ponytail: speed knob exposed per spec; wrapper (copyspeak-piper.py) has no
     // length_scale flag yet, so not threaded. Wire when the wrapper grows it.
     pub length_scale: Option<f32>,
+    /// Run inference on an NVIDIA GPU (`--device cuda`). See KittenEngineOptions.
+    #[serde(default)]
+    pub cuda: bool,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct KokoroEngineOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
-    // ponytail: speed knob exposed per spec; kokoro-tts binary (install-kokoro.ps1
-    // smoke test) takes no --speed flag, so not threaded. Wire when it does.
+    // ponytail: speed knob exposed per spec; the wrapper (copyspeak-kokoro.py)
+    // has no --speed flag yet, so not threaded. Wire when it grows one.
     pub speed: Option<f32>,
+    /// Run inference on an NVIDIA GPU (`--device cuda`). See KittenEngineOptions.
+    #[serde(default)]
+    pub cuda: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct PocketEngineOptions {
+    /// Run inference on an NVIDIA GPU. Pocket is a PyTorch model, so this moves
+    /// the module with `.to("cuda")` rather than switching an ONNX provider.
+    #[serde(default)]
+    pub cuda: bool,
 }
 
 /// Engine-specific, non-secret synthesis knobs carried by a voice profile.
@@ -513,6 +533,7 @@ pub enum ProfileEngineOptions {
     Kitten(KittenEngineOptions),
     Piper(PiperEngineOptions),
     Kokoro(KokoroEngineOptions),
+    Pocket(PocketEngineOptions),
     /// Untagged legacy bag captured at load; resolved during migration.
     Legacy(serde_json::Map<String, serde_json::Value>),
 }
@@ -543,6 +564,7 @@ impl ProfileEngineOptions {
                 | (Self::Kitten(_), TtsEngine::Kitten)
                 | (Self::Piper(_), TtsEngine::Piper)
                 | (Self::Kokoro(_), TtsEngine::Kokoro)
+                | (Self::Pocket(_), TtsEngine::Pocket)
         )
     }
 
@@ -582,6 +604,7 @@ impl ProfileEngineOptions {
             TtsEngine::Kitten => Self::Kitten(serde_json::from_value(value).unwrap_or_default()),
             TtsEngine::Piper => Self::Piper(serde_json::from_value(value).unwrap_or_default()),
             TtsEngine::Kokoro => Self::Kokoro(serde_json::from_value(value).unwrap_or_default()),
+            TtsEngine::Pocket => Self::Pocket(serde_json::from_value(value).unwrap_or_default()),
         }
     }
 
@@ -649,6 +672,18 @@ impl ProfileEngineOptions {
             _ => None,
         }
     }
+
+    /// GPU flag for whichever local engine this is; `false` for cloud engines,
+    /// which have no device to choose.
+    pub fn cuda(&self) -> bool {
+        match self {
+            Self::Kitten(o) => o.cuda,
+            Self::Piper(o) => o.cuda,
+            Self::Kokoro(o) => o.cuda,
+            Self::Pocket(o) => o.cuda,
+            _ => false,
+        }
+    }
 }
 
 impl Serialize for ProfileEngineOptions {
@@ -669,6 +704,7 @@ impl Serialize for ProfileEngineOptions {
             Self::Kitten(o) => ("kitten", serde_json::to_value(o)),
             Self::Piper(o) => ("piper", serde_json::to_value(o)),
             Self::Kokoro(o) => ("kokoro", serde_json::to_value(o)),
+            Self::Pocket(o) => ("pocket", serde_json::to_value(o)),
             // Legacy bags serialize back as their raw untagged object.
             Self::Legacy(map) => {
                 return serde_json::Value::Object(map.clone()).serialize(serializer);
@@ -715,6 +751,7 @@ impl<'de> Deserialize<'de> for ProfileEngineOptions {
             Some("kitten") => Ok(Self::from_engine_map(&TtsEngine::Kitten, map)),
             Some("piper") => Ok(Self::from_engine_map(&TtsEngine::Piper, map)),
             Some("kokoro") => Ok(Self::from_engine_map(&TtsEngine::Kokoro, map)),
+            Some("pocket") => Ok(Self::from_engine_map(&TtsEngine::Pocket, map)),
             _ => Ok(Self::Legacy(map)),
         }
     }
@@ -1000,7 +1037,9 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             TtsEngine::Edge => tts.edge.voice.clone(),
             // First-class local engines can't appear in a legacy (schema_version
             // 0) config; defensive empty string only.
-            TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro => String::new(),
+            TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro | TtsEngine::Pocket => {
+                String::new()
+            }
         };
 
         let voice_label =
@@ -1051,6 +1090,21 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             }
         }
     }
+    // install-pocket.ps1 shipped Pocket as a `Local` preset before it had its
+    // own engine variant. Promote those profiles so they get the daemon and the
+    // GPU toggle; identified by the `pocket-tts` command the preset baked in.
+    for profile in &mut tts.profiles {
+        let is_pocket_preset = profile.engine == TtsEngine::Local
+            && profile
+                .engine_options
+                .local()
+                .and_then(|o| o.command.as_deref())
+                .is_some_and(|cmd| cmd.contains("pocket-tts"));
+        if is_pocket_preset {
+            profile.engine = TtsEngine::Pocket;
+            profile.engine_options = ProfileEngineOptions::default_for(&TtsEngine::Pocket);
+        }
+    }
     // Backfill voice_label from catalog for any profile that has none.
     for profile in &mut tts.profiles {
         if profile.voice_label.is_none() {
@@ -1070,6 +1124,8 @@ fn absolutize_wrapper_path(arg: &str) -> Option<String> {
     const WRAPPERS: &[(&str, &str)] = &[
         ("copyspeak-kitten.py", "kitten"),
         ("copyspeak-piper.py", "piper"),
+        ("copyspeak-kokoro.py", "kokoro"),
+        ("copyspeak-pocket.py", "pocket"),
     ];
     for (name, subdir) in WRAPPERS {
         if arg == &format!("scripts/{name}") {
@@ -1150,7 +1206,7 @@ impl TtsConfig {
             }
             // First-class local engines have no credential/global config to
             // validate; command/voice come from the installer contract + catalog.
-            TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro => {}
+            TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro | TtsEngine::Pocket => {}
         }
 
         errors

@@ -3,15 +3,17 @@
 // The app doesn't care how speech is synthesized — only that it gets audio bytes back.
 
 pub mod cartesia;
+pub mod captions;
 pub mod catalog;
 pub mod cli;
 pub mod edge;
 pub mod elevenlabs;
+mod elevenlabs_timing;
 pub mod google;
 pub mod http;
 pub mod microsoft;
 pub mod openai;
-pub mod piper_server;
+pub mod local_daemon;
 pub mod stream;
 
 use stream::ChunkStream;
@@ -62,6 +64,10 @@ pub trait TtsBackend: Send + Sync {
     /// Synthesis always runs at native speed; saved files do not bake in speed.
     fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError>;
 
+    fn synthesize_with_captions(&self, text: &str, voice: &str) -> Result<captions::SpeechAudio, TtsError> {
+        self.synthesize(text, voice).map(Into::into)
+    }
+
     /// Check if the engine binary/server is reachable.
     fn health_check(&self) -> Result<(), TtsError>;
 
@@ -69,6 +75,10 @@ pub trait TtsBackend: Send + Sync {
     /// [`TtsBackend::synthesize_streaming`]. Defaults to false for batch-only
     /// backends; the command layer uses this to pick the streaming path.
     #[allow(dead_code)]
+    /// Load this engine's model ahead of the first utterance. Only local
+    /// engines with a resident daemon do anything; everyone else is a no-op.
+    fn prewarm(&self, _voice: &str) {}
+
     fn supports_streaming(&self) -> bool {
         false
     }

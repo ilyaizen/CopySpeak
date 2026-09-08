@@ -28,6 +28,7 @@ pub use update::*;
 pub struct CachedAudio {
     pub wav_bytes: Option<Vec<u8>>,
     pub text: Option<String>,
+    pub captions: Option<crate::tts::captions::CaptionAlignment>,
 }
 
 /// Event emitted during pagination playback.
@@ -51,6 +52,7 @@ pub struct AudioFragmentEvent {
     pub is_final: bool,
     /// Text being spoken in this fragment
     pub text: String,
+    pub captions: Option<crate::tts::captions::CaptionAlignment>,
 }
 
 /// Event carrying one PCM chunk of streaming synthesis audio.
@@ -65,6 +67,11 @@ pub struct AudioStreamChunkEvent {
     pub fragment_index: usize,
     /// True only on the terminal zero-byte end-of-stream event
     pub is_final: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fragment_duration_ms: Option<u64>,
+    pub captions: Option<crate::tts::captions::CaptionAlignment>,
 }
 
 /// Event emitted during synthesis to show progress with ETA.

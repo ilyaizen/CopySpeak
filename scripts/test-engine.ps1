@@ -12,6 +12,11 @@
 .PARAMETER Voice
     Voice name. Default: default.
 
+.PARAMETER Device
+    cpu (default) or cuda. `cuda` needs the engine installed with -Cuda, and is
+    the only honest check that GPU inference works — get_available_providers()
+    reports CUDA even when its DLLs are missing.
+
 .EXAMPLE
     ./scripts/test-engine.ps1 -Engine piper
 #>
@@ -19,7 +24,8 @@
 param(
     [Parameter(Mandatory)][string]$Engine,
     [string]$Text = "CopySpeak engine test",
-    [string]$Voice = "default"
+    [string]$Voice = "default",
+    [ValidateSet("cpu", "cuda")][string]$Device = "cpu"
 )
 
 $ErrorActionPreference = "Stop"
@@ -45,8 +51,8 @@ $outDir = Join-Path $EngineDir "output"
 New-Item -ItemType Directory -Force $outDir | Out-Null
 $out = Join-Path $outDir "test.wav"
 
-Write-Host "  Synthesizing with $Engine..." -ForegroundColor Gray
-Invoke-Uv run --project $EngineDir python "$wrapper" --text "$Text" --voice "$Voice" --output "$out"
+Write-Host "  Synthesizing with $Engine on $Device..." -ForegroundColor Gray
+Invoke-Uv run --project $EngineDir python "$wrapper" --text "$Text" --voice "$Voice" --output "$out" --device $Device
 
 if (Test-AudioFile -Path $out) {
     Write-Host "  $Engine engine OK." -ForegroundColor Green

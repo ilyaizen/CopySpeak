@@ -59,7 +59,7 @@
 
 | Feature                              | Reason                               |
 | ------------------------------------ | ------------------------------------ |
-| HUD overlay / waveform visualization | Implemented and integrated (Phase 8) |
+| HUD overlay / waveform visualization | Implemented and integrated (Phase 8); phrase captions highlight estimated spoken words using the active audio fragment's clock. Word boundaries are estimated, not engine-provided; listening/visual acceptance is pending. |
 | Global hotkeys                       | Deferred to features-extras branch   |
 | Voice presets manager                | Not in this milestone                |
 | Speech history viewer UI             | Log exists; UI deferred              |

@@ -12,6 +12,10 @@
     (use -SkipVoiceDownload to skip). The chosen voice is used for the smoke
     test and baked into the emitted profile snippet.
 
+.PARAMETER Cuda
+    Also install onnxruntime-gpu and the NVIDIA CUDA/cuDNN runtime wheels into
+    the engine project, then verify with a real GPU synthesis.
+
 .PARAMETER Force
     Recreate the engine project from scratch. When omitted, the installer
     still prompts interactively ("Reinstall from scratch?") - answering yes
@@ -30,6 +34,9 @@
 
 param(
     [switch]$Force,
+    # Install the GPU runtime (onnxruntime-gpu + the nvidia-* CUDA/cuDNN wheels)
+    # into this engine's uv project and verify it with a real CUDA synthesis.
+    [switch]$Cuda,
     [switch]$SmokeTest,
     [switch]$SkipVoiceDownload,
     # App-driven voice selection: bypasses the interactive menu. The first id
@@ -63,7 +70,7 @@ Write-Host ""
 Write-Host "  Installing Piper..." -ForegroundColor Gray
 # ponytail: PyPI `piper` is an unrelated bioinformatics toolkit (databio/pypiper,
 # module `pypiper`). The TTS engine ships as `piper-tts` (module `piper`).
-Invoke-Uv add --project $EngineDir "piper-tts"
+Invoke-Uv add --project $EngineDir "piper-tts[alignment]==1.8.0"
 
 $scriptsDir = Join-Path $EngineDir "scripts"
 $voicesDir = Join-Path $EngineDir "voices"
@@ -150,6 +157,13 @@ foreach ($v in $wantedVoices) {
 Write-Host ""
 Write-Host "  Voices directory: $voicesDir" -ForegroundColor Gray
 Write-Host "  More voices:      https://github.com/OHF-Voice/piper1-gpl#voices" -ForegroundColor Gray
+
+if ($Cuda) {
+    Write-Host ""
+    if (Add-CudaRuntime -EngineDir $EngineDir) {
+        Test-CudaSynthesis -EngineDir $EngineDir -Wrapper $dstWrapper -Voice $chosenVoice | Out-Null
+    }
+}
 
 if ($SmokeTest) {
     $smokeModel = Join-Path $voicesDir "$chosenVoice.onnx"

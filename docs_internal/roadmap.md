@@ -2,7 +2,7 @@
 
 > **Last Updated:** 2026-03-25
 > **Version:** v0.1.0 (HUD completed; TTS Engine overhaul completed)
-> **Status:** Core feature set complete. Phase 9 (TTS Engine Overhaul) delivered. Remaining: onboarding refinement (OBD-02/03), optional enhancements
+> **Status:** Core feature set complete. TTS Engine Overhaul delivered; Phase 9 (Global Hotkey) delivered. Remaining: onboarding refinement (OBD-02/03), optional enhancements
 
 ---
 
@@ -33,7 +33,7 @@
       - [Settings View](#settings-view)
   - [Phase 8: System Tray Integration ✅](#phase-8-system-tray-integration-)
     - [Deliverables](#deliverables-7)
-  - [Phase 9: Global Hotkey 🚧](#phase-9-global-hotkey-)
+  - [Phase 9: Global Hotkey ✅](#phase-9-global-hotkey-)
     - [Deliverables](#deliverables-8)
   - [Phase 10: Amplitude Envelope Extraction ✅](#phase-10-amplitude-envelope-extraction-)
     - [Deliverables](#deliverables-9)
@@ -66,7 +66,7 @@
 
 ## Overview
 
-This document tracks the implementation progress of CopySpeak, organized by development phases. Phases 1-8, 10, 12 are complete. Phases 9, 11 have deferred features.
+This document tracks the implementation progress of CopySpeak, organized by development phases. Phases 1-8, 9, 10, 12 are complete. Phase 11 has deferred features.
 
 **Recent Change (2026-03-06):** Phase 6 (HUD Overlay) completed. Basic HUD with waveform visualization, preset positioning, and theme customization is now implemented. Monitor selection removed as overkill; HUD now defaults to primary monitor only.
 
@@ -262,16 +262,16 @@ bottom-left  bottom-center  bottom-right
 
 ---
 
-## Phase 9: Global Hotkey 🚧
+## Phase 9: Global Hotkey ✅
 
-**Status:** Deferred to features-extras branch
+**Status:** Completed
 
 ### Deliverables
 
-- [ ] Global shortcut plugin initialization
-- [ ] Hotkey registration from config (default: `Ctrl+Shift+S`)
-- [ ] Handler to trigger `speak_now` command
-- [ ] Hotkey parsing and validation
+- [x] Global shortcut plugin initialization
+- [x] Hotkey registration from config (default: `Ctrl+Shift+S`)
+- [x] Handler to trigger `speak_now` command
+- [x] Hotkey parsing and validation
 
 ---
 
@@ -517,8 +517,7 @@ bun install mode-watcher
 8. ✅ UI Redesign — Brutalist (Phase 12)
 9. ✅ Amplitude Envelope Extraction (Phase 10)
 10. ✅ HUD Overlay — Basic (Phase 6)
-11. ⏸️ **Deferred to v0.2+** (Phase 9, 11 Extended Features)
-    - Global Hotkey (Phase 9)
+11. ⏸️ **Deferred to v0.2+** (Phase 11 Extended Features)
     - Multi-Monitor Support for HUD
     - Language Detection
     - Content Filtering

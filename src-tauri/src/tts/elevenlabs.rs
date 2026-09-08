@@ -215,15 +215,21 @@ impl ElevenLabsTtsBackend {
     /// the channel as they arrive. Errors before headers arrive as a single
     /// [`ChunkItem::Failed`] followed by end-of-stream; mid-body read errors do
     /// the same, annotated with how many bytes were received first.
-    fn synthesize_streaming_from(&self, base_url: &str, text: &str) -> Result<ChunkStream, TtsError> {
+    fn synthesize_streaming_from(
+        &self,
+        base_url: &str,
+        text: &str,
+    ) -> Result<ChunkStream, TtsError> {
         let api_key = crate::secrets::resolve(&self.config.api_key, &["ELEVENLABS_API_KEY"]);
         if api_key.trim().is_empty() {
             log::error!("ElevenLabs stream - API key is missing");
-            return Err(TtsError::Unavailable("ElevenLabs API key is missing".into()));
+            return Err(TtsError::Unavailable(
+                "ElevenLabs API key is missing".into(),
+            ));
         }
 
         let url = format!(
-            "{}/v1/text-to-speech/{}/stream",
+            "{}/v1/text-to-speech/{}/stream/with-timestamps",
             base_url, self.config.voice_id
         );
         let body = json!({
@@ -260,7 +266,7 @@ impl ElevenLabsTtsBackend {
                     .post(&url)
                     .header("xi-api-key", &api_key)
                     .header("Content-Type", "application/json")
-                    .header("Accept", "audio/pcm")
+                    .header("Accept", "application/json")
                     .query(&[("output_format", STREAM_OUTPUT_FORMAT)])
                     .json(&body)
                     .send()
@@ -299,6 +305,7 @@ impl ElevenLabsTtsBackend {
 
                 let mut first_chunk_logged = false;
                 let mut total_bytes = 0usize;
+                let mut decoder = super::elevenlabs_timing::TimestampDecoder::new();
                 loop {
                     match response.chunk().await {
                         Ok(Some(chunk)) => {
@@ -314,15 +321,35 @@ impl ElevenLabsTtsBackend {
                                 );
                             }
                             total_bytes += chunk.len();
-                            if tx.send(ChunkItem::Pcm(chunk.to_vec())).is_err() {
-                                log::warn!(
-                                    "[TTS] ElevenLabs stream consumer dropped after {} bytes; aborting pump",
-                                    total_bytes
-                                );
-                                return;
+                            match decoder.push(&chunk, false) {
+                                Ok(items) => {
+                                    for item in items {
+                                        if tx.send(item).is_err() {
+                                            return;
+                                        }
+                                    }
+                                }
+                                Err(error) => {
+                                    let _ = tx.send(ChunkItem::Failed(error));
+                                    return;
+                                }
                             }
                         }
-                        Ok(None) => break,
+                        Ok(None) => {
+                            match decoder.push(&[], true) {
+                                Ok(items) => {
+                                    for item in items {
+                                        if tx.send(item).is_err() {
+                                            return;
+                                        }
+                                    }
+                                }
+                                Err(error) => {
+                                    let _ = tx.send(ChunkItem::Failed(error));
+                                }
+                            }
+                            break;
+                        }
                         Err(e) => {
                             log::error!(
                                 "[TTS] ElevenLabs stream failed at phase body after {:?} ({} bytes received): {}",
@@ -745,6 +772,14 @@ impl TtsBackend for ElevenLabsTtsBackend {
         }
     }
 
+    fn synthesize_with_captions(
+        &self,
+        text: &str,
+        _voice: &str,
+    ) -> Result<super::captions::SpeechAudio, TtsError> {
+        super::stream::collect_speech(self.synthesize_streaming_from(ELEVENLABS_API_BASE, text)?)
+    }
+
     fn synthesize(&self, text: &str, _voice: &str) -> Result<Vec<u8>, TtsError> {
         log::info!(
             "ElevenLabs TTS request - voice: {}, model: {}, format: {}, text length: {} chars",
@@ -906,6 +941,67 @@ mod tests {
         assert!(backend.supports_streaming());
     }
 
+    /// Explicitly invoked only: uses the configured account for a short synthetic probe.
+    #[test]
+    #[ignore]
+    fn live_caption_probe() {
+        crate::secrets::load_dotenv();
+        let config = crate::config::load_or_default();
+        let mut engine_config = config.tts.elevenlabs.clone();
+        if let Some(profile) = config.tts.profiles.iter().find(|p| {
+            p.engine == crate::config::TtsEngine::ElevenLabs && !p.voice.trim().is_empty()
+        }) {
+            engine_config.voice_id = profile.voice.clone();
+        }
+        if engine_config.voice_id.trim().is_empty() {
+            engine_config.voice_id = ElevenLabsConfig::default().voice_id;
+        }
+        if engine_config.model_id.trim().is_empty() {
+            engine_config.model_id = ElevenLabsConfig::default().model_id;
+        }
+        let backend = ElevenLabsTtsBackend::new(engine_config);
+        let text = "Hello, world. The price is thirteen dollars and sixty cents. Pause here, then continue reading. This is a test of word timestamps across multiple audio chunks.";
+        let start = std::time::Instant::now();
+        let stream = backend
+            .synthesize_streaming_from(ELEVENLABS_API_BASE, text)
+            .unwrap();
+        let mut bytes = Vec::new();
+        let mut snapshots = 0;
+        let mut last = None;
+        while let Some(item) = stream.recv() {
+            match item {
+                ChunkItem::Pcm(pcm) => {
+                    if bytes.is_empty() {
+                        eprintln!("first audio: {} ms", start.elapsed().as_millis());
+                    }
+                    bytes.extend(pcm);
+                }
+                ChunkItem::Captions(captions) => {
+                    snapshots += 1;
+                    eprintln!("snapshot {snapshots}: {} chars, last timestamp {:.1} ms, prior audio {:.1} ms", captions.text.chars().count(), captions.words.last().map(|w| w.end_ms).unwrap_or(0.0), bytes.len() as f64 / 48.0);
+                    last = Some(captions);
+                }
+                ChunkItem::Failed(error) => panic!("Live caption probe failed: {error}"),
+            }
+        }
+        let captions = last.expect("native timestamps");
+        captions.validate().unwrap();
+        assert!(captions.words.len() > 20);
+        assert!(captions.words.last().unwrap().end_ms <= bytes.len() as f64 / 48.0 + 20.0);
+        let path = std::env::temp_dir().join("copyspeak-alignment-elevenlabs.wav");
+        std::fs::write(
+            &path,
+            super::super::stream::pcm_to_wav(&bytes, &stream.meta),
+        )
+        .unwrap();
+        super::super::captions::write_sidecar(&path.to_string_lossy(), &captions).unwrap();
+        eprintln!(
+            "completed in {} ms; audio {:.1} ms",
+            start.elapsed().as_millis(),
+            bytes.len() as f64 / 48.0
+        );
+    }
+
     // ── Streaming (wiremock integration through the real client) ──────────
 
     fn test_backend() -> ElevenLabsTtsBackend {
@@ -916,7 +1012,10 @@ mod tests {
 
     async fn drain(stream: &ChunkStream) -> Vec<ChunkItem> {
         let mut items = Vec::new();
-        while let Some(item) = stream.recv_timeout(std::time::Duration::from_secs(10)).ok().flatten()
+        while let Some(item) = stream
+            .recv_timeout(std::time::Duration::from_secs(10))
+            .ok()
+            .flatten()
         {
             items.push(item);
         }
@@ -935,7 +1034,7 @@ mod tests {
 
         wiremock::Mock::given(wiremock::matchers::method("POST"))
             .and(wiremock::matchers::path(format!(
-                "/v1/text-to-speech/{}/stream",
+                "/v1/text-to-speech/{}/stream/with-timestamps",
                 ElevenLabsConfig::default().voice_id
             )))
             .and(wiremock::matchers::query_param(
@@ -943,10 +1042,14 @@ mod tests {
                 STREAM_OUTPUT_FORMAT,
             ))
             .and(wiremock::matchers::header("xi-api-key", "test-key"))
-            .respond_with(
-                wiremock::ResponseTemplate::new(200)
-                    .set_body_bytes(expected.clone()),
-            )
+            .respond_with(wiremock::ResponseTemplate::new(200).set_body_string({
+                use base64::{engine::general_purpose::STANDARD, Engine};
+                [first_half.clone(), second_half.clone()]
+                    .iter()
+                    .map(|pcm| json!({"audio_base64": STANDARD.encode(pcm)}).to_string())
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            }))
             .mount(&server)
             .await;
 
@@ -964,6 +1067,7 @@ mod tests {
             .iter()
             .flat_map(|item| match item {
                 ChunkItem::Pcm(bytes) => bytes.clone(),
+                ChunkItem::Captions(_) => Vec::new(),
                 ChunkItem::Failed(reason) => panic!("unexpected failure: {}", reason),
             })
             .collect();
@@ -971,13 +1075,19 @@ mod tests {
         assert_eq!(concatenated, expected, "chunks must arrive in body order");
 
         // Request shape: exactly one POST with path, query param, and key header.
-        let requests = server.received_requests().await.expect("request log available");
+        let requests = server
+            .received_requests()
+            .await
+            .expect("request log available");
         assert_eq!(requests.len(), 1);
         let request = &requests[0];
         assert_eq!(request.method, reqwest::Method::POST);
         assert_eq!(
             request.url.path(),
-            format!("/v1/text-to-speech/{}/stream", ElevenLabsConfig::default().voice_id)
+            format!(
+                "/v1/text-to-speech/{}/stream/with-timestamps",
+                ElevenLabsConfig::default().voice_id
+            )
         );
         assert_eq!(
             request.url.query(),
@@ -985,7 +1095,10 @@ mod tests {
             "stream endpoint must pin pcm_24000"
         );
         assert_eq!(
-            request.headers.get("xi-api-key").and_then(|v| v.to_str().ok()),
+            request
+                .headers
+                .get("xi-api-key")
+                .and_then(|v| v.to_str().ok()),
             Some("test-key")
         );
     }
@@ -994,11 +1107,9 @@ mod tests {
     async fn unauthorized_response_surfaces_immediate_failed_item() {
         let server = wiremock::MockServer::start().await;
         wiremock::Mock::given(wiremock::matchers::method("POST"))
-            .respond_with(
-                wiremock::ResponseTemplate::new(401).set_body_string(
-                    r#"{"detail":{"status":"invalid_api_key","message":"Invalid API key"}}"#,
-                ),
-            )
+            .respond_with(wiremock::ResponseTemplate::new(401).set_body_string(
+                r#"{"detail":{"status":"invalid_api_key","message":"Invalid API key"}}"#,
+            ))
             .mount(&server)
             .await;
 
@@ -1022,7 +1133,7 @@ mod tests {
         let server = wiremock::MockServer::start().await;
         wiremock::Mock::given(wiremock::matchers::method("POST"))
             .and(wiremock::matchers::path(format!(
-                "/v1/text-to-speech/{}/stream",
+                "/v1/text-to-speech/{}/stream/with-timestamps",
                 ElevenLabsConfig::default().voice_id
             )))
             .respond_with(wiremock::ResponseTemplate::new(200).set_body_bytes(Vec::new()))
@@ -1052,6 +1163,9 @@ mod tests {
         assert!(matches!(result, Err(TtsError::Unavailable(_))));
 
         let requests = server.received_requests().await.unwrap_or_default();
-        assert!(requests.is_empty(), "no HTTP request may be made without a key");
+        assert!(
+            requests.is_empty(),
+            "no HTTP request may be made without a key"
+        );
     }
 }

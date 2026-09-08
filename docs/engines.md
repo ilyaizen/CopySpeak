@@ -60,14 +60,15 @@ Engines install into `%LOCALAPPDATA%\CopySpeak\engines\<engine>`. Each installer
 3. Optionally runs a smoke test (`-SmokeTest`).
 4. Prints a ready-to-paste profile snippet.
 
-Common flags: `-Force` (reinstall), `-SmokeTest` (synthesize one clip).
+Common flags: `-Force` (reinstall), `-SmokeTest` (synthesize one clip),
+`-Cuda` (GPU acceleration, see below).
 
 | Engine     | Installer                | Size        | Notes                                                     |
 | ---------- | ------------------------ | ----------- | --------------------------------------------------------- |
 | Kitten TTS | `install-kittentts.ps1`  | 25-80MB     | 8 voices, CPU ONNX. Model downloads on first use.         |
 | Piper      | `install-piper.ps1`      | ~60MB/voice | Drop `.onnx` + `.onnx.json` into `engines/piper/voices/`. |
-| Kokoro TTS | `install-kokoro.ps1`     | ~500MB      | Natural voices, broad accent coverage.                    |
-| Pocket TTS | `install-pocket.ps1`     | compact     | Straightforward CLI voice selection.                      |
+| Kokoro TTS | `install-kokoro.ps1`     | ~335MB      | Natural voices, broad accent coverage. Shared model.      |
+| Pocket TTS | `install-pocket.ps1`     | 100M params | Kyutai Pocket; 14 voices in 6 languages. CPU-first.       |
 | Chatterbox | `install-chatterbox.ps1` | ~2GB        | Zero-shot + emotion control; optional voice clone wavs.   |
 
 (Edge-TTS is uv-managed too but has no installer script — install its CLI
@@ -80,6 +81,39 @@ Manual run (if you prefer the terminal):
 uv tool install edge-tts            # edge-tts CLI (no app installer)
 ./scripts/test-engine.ps1 -Engine chatterbox   # verify any installed engine
 ```
+
+### Resident models
+
+Every local engine keeps its model in RAM between utterances. CopySpeak starts
+one wrapper process per engine in `--serve` mode at launch and talks to it over
+a pipe. Each wrapper also synthesizes a throwaway phrase before reporting ready,
+so the one-off costs of a first call (phonemizer init, ONNX graph warmup) land
+during background startup instead of on your first utterance. Piper additionally
+streams sentence by sentence, so audio starts before the passage is finished.
+
+Switching voice, engine, or the GPU toggle restarts that engine's process: the
+utterance that triggered the switch runs one-shot, and the next one is warm.
+Nothing is left running after CopySpeak quits.
+
+If an engine was installed before this existed, its wrapper is out of date and
+CopySpeak silently stays on the slower one-shot path. Re-run its installer with
+`-Force` to pick up the new wrapper.
+
+### GPU acceleration
+
+Off by default. Two steps, both required:
+
+1. Re-run the installer with `-Cuda`. It adds the GPU runtime to that engine's
+   own project (`onnxruntime-gpu` plus the NVIDIA CUDA/cuDNN wheels; a CUDA
+   build of torch for Pocket) and then proves it by synthesizing a clip on the
+   GPU. Nothing is installed system-wide.
+2. Turn on **GPU acceleration** in that engine's profile settings.
+
+Needs an NVIDIA GPU and a current driver. If the GPU is unavailable at
+synthesis time the engine says so in the log rather than quietly using the CPU.
+
+Pocket is the exception worth knowing about: it is designed for CPU, and on a
+fast laptop chip the GPU is no quicker. It pays off on thread-limited machines.
 
 ## HTTP servers
 

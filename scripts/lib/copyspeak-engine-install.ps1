@@ -81,8 +81,11 @@ function New-EngineProject {
         # a PyPI package name (e.g. engines\piper + `uv add piper` -> "self-
         # dependencies are not permitted"). Prefix keeps the project name unique.
         $projectName = "copyspeak-$(Split-Path $EngineDir -Leaf)"
+        # ponytail: the target dir is positional. `uv --project X init` was
+        # accepted by older uv and is a hard error from 0.12 on
+        # ("The `--project` option cannot be used in `uv init`").
         Write-Host "  Running: uv init --bare --name $projectName ($EngineDir)" -ForegroundColor Gray
-        & uv --project $EngineDir init --bare --name $projectName
+        & uv init --bare --name $projectName $EngineDir
     }
 }
 
@@ -94,6 +97,76 @@ function Invoke-Uv {
     if ($LASTEXITCODE -ne 0) {
         throw "uv exited with code $LASTEXITCODE"
     }
+}
+
+# Install the GPU inference runtime into one engine's uv project.
+#
+# Deliberately NOT `pip install --user`: engines live in isolated uv projects,
+# and a user-site onnxruntime-gpu would shadow whatever build the project
+# resolved, for every engine at once.
+#
+# The nvidia-* wheels carry the CUDA/cuDNN DLLs. onnxruntime cannot find them on
+# its own under Windows, so each wrapper registers their bin directories itself
+# (enable_cuda_dlls in scripts/<engine>/copyspeak-<engine>.py).
+function Add-CudaRuntime {
+    param(
+        [Parameter(Mandatory)][string]$EngineDir,
+        # onnx: piper / kitten / kokoro.  torch: pocket.
+        [ValidateSet("onnx", "torch")][string]$Runtime = "onnx"
+    )
+    Write-Host "  [STEP] cuda" -ForegroundColor Yellow
+    try {
+        if ($Runtime -eq "torch") {
+            # pocket-tts pulls whatever torch is current on PyPI, which may need
+            # a newer CUDA than the installed driver; pinning the cu124 index
+            # keeps torch.cuda.is_available() from silently returning False.
+            Invoke-Uv add --project $EngineDir --index "https://download.pytorch.org/whl/cu124" torch
+        } else {
+            # The CPU wheel and the GPU wheel both provide the `onnxruntime`
+            # module, so the CPU one has to go first or resolution is a coin flip.
+            try { Invoke-Uv remove --project $EngineDir onnxruntime } catch { }
+            Invoke-Uv add --project $EngineDir onnxruntime-gpu `
+                nvidia-cuda-runtime-cu12 nvidia-cudnn-cu12 nvidia-cublas-cu12 `
+                nvidia-cufft-cu12 nvidia-curand-cu12 nvidia-cusparse-cu12 nvidia-nvjitlink-cu12
+        }
+    } catch {
+        Write-Host "  [ERROR] cuda ($_)" -ForegroundColor Red
+        return $false
+    }
+    Write-Host "  [DONE] cuda" -ForegroundColor Green
+    return $true
+}
+
+# Prove the GPU actually works by synthesizing with --device cuda.
+#
+# `ort.get_available_providers()` lists CUDAExecutionProvider even when the DLLs
+# are missing, so it can only ever produce a false green. Real audio out of a
+# real CUDA session is the only honest check.
+function Test-CudaSynthesis {
+    param(
+        [Parameter(Mandatory)][string]$EngineDir,
+        [Parameter(Mandatory)][string]$Wrapper,
+        [Parameter(Mandatory)][string]$Voice
+    )
+    Write-Host "  [STEP] cuda-check" -ForegroundColor Yellow
+    $out = Join-Path $EngineDir "output/cuda-check.wav"
+    New-Item -ItemType Directory -Force (Split-Path $out) | Out-Null
+    Remove-Item -Force -ErrorAction SilentlyContinue $out
+    try {
+        Invoke-Uv run --project $EngineDir python "$Wrapper" `
+            --text "GPU check" --voice $Voice --output "$out" --device cuda
+    } catch {
+        Write-Host "  [ERROR] cuda-check ($_)" -ForegroundColor Red
+        Write-Host "  GPU synthesis failed; the engine still works on CPU." -ForegroundColor Yellow
+        return $false
+    }
+    if (-not (Test-AudioFile -Path $out)) {
+        Write-Host "  [ERROR] cuda-check (no audio produced)" -ForegroundColor Red
+        return $false
+    }
+    Write-Host "  [DONE] cuda-check" -ForegroundColor Green
+    Write-Host "  Enable 'GPU acceleration' in this engine's settings to use it." -ForegroundColor Gray
+    return $true
 }
 
 # Validate that a synthesis smoke test produced a non-empty WAV.

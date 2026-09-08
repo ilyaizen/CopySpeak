@@ -377,21 +377,19 @@ pub fn engine_status(engine: String) -> Result<EngineStatus, String> {
         "uv" => on_path("uv"),
         // uv projects: the installer writes the manifest last, so its presence
         // means the package install and wrapper copy both succeeded.
-        "kitten" | "piper" => engine_dir(name)
+        "kitten" | "piper" | "pocket" => engine_dir(name)
             .map(|d| d.join("manifest.json").exists() && d.join("pyproject.toml").exists())
             .unwrap_or(false),
-        // kokoro-tts refuses to synthesize without these two model files.
-        "kokoro" => {
-            on_path("kokoro-tts")
-                && engine_dir("kokoro")
-                    .map(|d| {
-                        d.join("models").join("kokoro-v1.0.onnx").exists()
-                            && d.join("models").join("voices-v1.0.bin").exists()
-                    })
-                    .unwrap_or(false)
-        }
+        // Kokoro refuses to synthesize without these two model files, which the
+        // installer downloads separately from the package.
+        "kokoro" => engine_dir("kokoro")
+            .map(|d| {
+                d.join("manifest.json").exists()
+                    && d.join("models").join("kokoro-v1.0.onnx").exists()
+                    && d.join("models").join("voices-v1.0.bin").exists()
+            })
+            .unwrap_or(false),
         "edge" => on_path("edge-tts"),
-        "pocket" => on_path("pocket-tts"),
         _ => false,
     };
 

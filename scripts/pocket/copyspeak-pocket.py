@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""CLI wrapper for KittenTTS - used by CopySpeak.
+"""CLI wrapper for Pocket TTS (kyutai-labs/pocket-tts) - used by CopySpeak.
 
-Reads text (inline or from a file), synthesizes with KittenTTS, and writes a
-24kHz WAV file. Kept stable so CopySpeak's args_template never changes when
-upstream shifts.
+Replaces the third-party `pocket-tts generate` CLI: that path reloads the model
+and re-derives the voice state on every invocation, and `load_model()` plus
+`get_state_for_audio_prompt()` are the slow parts. Keeping both resident is the
+whole point of the daemon.
+
+Reads text (inline or from a file), synthesizes with pocket-tts, and writes a WAV
+file at the model's own sample rate.
 
 Invoked by CopySpeak via:
-    uv run --project {engine_dir}/kitten python {engine_dir}/kitten/scripts/copyspeak-kitten.py \
+    uv run --project {engine_dir}/pocket python {engine_dir}/pocket/scripts/copyspeak-pocket.py \
         --text-file {input} --voice {voice} --output {output} [--device cuda]
 
 With --serve the model is loaded once and stays in RAM, speaking protocol v2
@@ -22,8 +26,6 @@ import os
 import sys
 import wave
 from pathlib import Path
-
-SAMPLE_RATE = 24000
 
 
 def enable_cuda_dlls() -> None:
@@ -66,57 +68,19 @@ def read_text(args) -> str:
 
 
 def pcm16(samples) -> bytes:
-    """float32 in [-1, 1] -> signed 16-bit little-endian PCM bytes.
-
-    CopySpeak's player only accepts 16-bit samples, so the conversion belongs
-    here rather than in Rust.
-    """
+    """float32 in [-1, 1] -> signed 16-bit little-endian PCM bytes."""
     import numpy as np
 
     clipped = np.clip(np.asarray(samples, dtype=np.float32), -1.0, 1.0)
     return (clipped * 32767.0).astype("<i2").tobytes()
 
 
-def load_engine(model_name: str, device: str):
-    """Build a KittenTTS and return it with the ONNX session it ended up using.
-
-    The pinned 0.8.1 wheel takes no provider or device argument — its
-    `KittenTTS(model_name, cache_dir)` builds the session itself — so the GPU is
-    selected by swapping the session afterwards. Both `model` and `session` are
-    public attributes of the object, and CPU never touches this path.
-    """
-    from kittentts import KittenTTS
-
-    tts = KittenTTS(model_name)
-    inner = getattr(tts, "model", None)
-    session = getattr(inner, "session", None)
-
-    if device == "cuda":
-        if session is None or not hasattr(inner, "model_path"):
-            raise RuntimeError(
-                "this KittenTTS build exposes no ONNX session to move to the GPU"
-            )
-        import onnxruntime as ort
-
-        inner.session = ort.InferenceSession(
-            inner.model_path,
-            providers=[
-                ("CUDAExecutionProvider", {"cudnn_conv_algo_search": "HEURISTIC"}),
-                "CPUExecutionProvider",
-            ],
-        )
-        session = inner.session
-
-    return tts, session
-
-
-def stream(tts, voice: str, text: str):
-    """Yield (pcm16_le_bytes, sample_rate, channels).
-
-    KittenTTS has no incremental API, so this is one chunk per request; the
-    framing is the same either way.
-    """
-    yield pcm16(tts.generate(text=text, voice=voice, clean_text=True)), SAMPLE_RATE, 1
+def stream(model, voice_state, text: str):
+    """Yield (pcm16_le_bytes, sample_rate, channels)."""
+    audio = model.generate_audio(voice_state, text)
+    # generate_audio returns a tensor on the model's device, so a CUDA run has
+    # to come back to the host before numpy can see it.
+    yield pcm16(audio.detach().cpu().numpy()), model.sample_rate, 1
 
 
 def write_wav(output: str, pcm: bytes, rate: int, channels: int) -> None:
@@ -128,7 +92,7 @@ def write_wav(output: str, pcm: bytes, rate: int, channels: int) -> None:
         wf.writeframes(pcm)
 
 
-def serve(tts, voice: str) -> int:
+def serve(model, voice_state) -> int:
     """Daemon mode, protocol v2. Model stays resident; PCM is framed on stdout.
 
     Everything goes through sys.stdout.buffer — mixing text and binary writes to
@@ -147,7 +111,7 @@ def serve(tts, voice: str) -> int:
     # Best effort: a warmup failure is not a reason to refuse to serve, and the
     # real request will surface the same error properly framed.
     try:
-        for _ in stream(tts, voice, "Ready."):
+        for _ in stream(model, voice_state, "Ready."):
             pass
     except Exception as exc:  # pragma: no cover - environment dependent
         print(f"WARNING: warmup failed: {exc}", file=sys.stderr, flush=True)
@@ -163,7 +127,7 @@ def serve(tts, voice: str) -> int:
         if not line:
             continue
         try:
-            chunks = stream(tts, voice, json.loads(line)["text"])
+            chunks = stream(model, voice_state, json.loads(line)["text"])
             first = next(chunks, None)
             if first is None:
                 raise RuntimeError("no audio produced")
@@ -188,19 +152,10 @@ def serve(tts, voice: str) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="KittenTTS CLI wrapper for CopySpeak")
+    parser = argparse.ArgumentParser(description="Pocket TTS CLI wrapper for CopySpeak")
     parser.add_argument("--text", help="Inline text to synthesize")
     parser.add_argument("--text-file", help="Path to a UTF-8 text file to synthesize")
-    parser.add_argument(
-        "--voice",
-        default="Rosie",
-        help="Voice name. Options: Bella, Jasper, Luna, Bruno, Rosie, Hugo, Kiki, Leo",
-    )
-    parser.add_argument(
-        "--model",
-        default="KittenML/kitten-tts-nano-0.8",
-        help="HuggingFace model id (default: kitten-tts-nano-0.8, 25MB)",
-    )
+    parser.add_argument("--voice", default="alba", help="Pocket voice name, or a path to a wav/safetensors prompt")
     parser.add_argument("--output", help="Output WAV file path (required unless --serve)")
     parser.add_argument("--serve", action="store_true", help="Keep the model in RAM and read JSON requests on stdin")
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"], help="Inference device")
@@ -218,27 +173,42 @@ def main() -> int:
         enable_cuda_dlls()
 
     try:
-        import kittentts  # noqa: F401  (imported for its side effect: the check)
+        from pocket_tts import TTSModel
     except ImportError as exc:  # pragma: no cover - environment dependent
         print(f"ERROR: missing dependency: {exc}", file=sys.stderr)
-        print("Reinstall with: ./scripts/install-kittentts.ps1 -Force", file=sys.stderr)
+        print("Reinstall with: ./scripts/install-pocket.ps1 -Force", file=sys.stderr)
         return 1
 
     try:
-        tts, session = load_engine(args.model, args.device)
+        model = TTSModel.load_model()
+        if args.device == "cuda":
+            import torch
+
+            if not torch.cuda.is_available():
+                # torch reports this as a warning and falls back silently, which
+                # would look like "CUDA is on but nothing got faster".
+                raise RuntimeError(
+                    "torch.cuda.is_available() is False — install a torch build "
+                    "matching your driver's CUDA version (install-pocket.ps1 -Cuda)"
+                )
+            # load_model() has no device argument; TTSModel is a plain nn.Module,
+            # so moving it is the documented way to run on the GPU.
+            model.to("cuda")
+        # Deriving the voice state is slow, so it is done once and reused for
+        # every request this daemon serves.
+        voice_state = model.get_state_for_audio_prompt(args.voice)
     except Exception as exc:  # pragma: no cover - environment dependent
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
 
     # The daemon log is where a user checks whether the GPU is actually in use.
-    providers = session.get_providers() if session is not None else "unknown"
-    print(f"providers: {providers}", file=sys.stderr, flush=True)
+    print(f"device: {args.device}", file=sys.stderr, flush=True)
 
     if args.serve:
-        return serve(tts, args.voice)
+        return serve(model, voice_state)
 
     try:
-        pcm, rate, channels = next(stream(tts, args.voice, text))
+        pcm, rate, channels = next(stream(model, voice_state, text))
         write_wav(args.output, pcm, rate, channels)
         print(f"OK -> {args.output}", file=sys.stderr)
         return 0

@@ -119,13 +119,22 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             supports_voice_refresh: false,
             supports_pitch: false,
             supports_bracket_emotes: false,
-            options: vec![option(
-                "model",
-                "Model",
-                EngineOptionKind::Text,
-                "Hugging Face model id.",
-                serde_json::json!("KittenML/kitten-tts-nano-0.8"),
-            )],
+            options: vec![
+                option(
+                    "model",
+                    "Model",
+                    EngineOptionKind::Text,
+                    "Hugging Face model id.",
+                    serde_json::json!("KittenML/kitten-tts-nano-0.8"),
+                ),
+                option(
+                "cuda",
+                "GPU acceleration",
+                EngineOptionKind::Boolean,
+                "Run inference on an NVIDIA GPU. Requires the engine's GPU runtime (install with -Cuda).",
+                serde_json::json!(false),
+            ),
+            ],
             voices: vec![
                 voice("Rosie", "Rosie", Some("en"), None, Some("female")),
                 voice("Bella", "Bella", Some("en"), None, Some("female")),
@@ -145,7 +154,13 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             supports_voice_refresh: false,
             supports_pitch: false,
             supports_bracket_emotes: false,
-            options: vec![],
+            options: vec![option(
+                "cuda",
+                "GPU acceleration",
+                EngineOptionKind::Boolean,
+                "Run inference on an NVIDIA GPU. Requires the engine's GPU runtime (install with -Cuda).",
+                serde_json::json!(false),
+            )],
             voices: vec![
                 voice("en_US-amy-medium", "Amy", Some("en"), None, Some("female")),
                 voice(
@@ -170,11 +185,17 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             engine: TtsEngine::Kokoro,
             label: "Kokoro".into(),
             description: "Free local TTS via Kokoro — one shared model, curated voice set.".into(),
-            docs_url: "https://github.com/hexgrad/kokoro".into(),
+            docs_url: "https://github.com/thewh1teagle/kokoro-onnx".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
             supports_bracket_emotes: false,
-            options: vec![],
+            options: vec![option(
+                "cuda",
+                "GPU acceleration",
+                EngineOptionKind::Boolean,
+                "Run inference on an NVIDIA GPU. Requires the engine's GPU runtime (install with -Cuda).",
+                serde_json::json!(false),
+            )],
             voices: vec![
                 voice("af_heart", "Heart", Some("en"), None, Some("female")),
                 voice("af_bella", "Bella", Some("en"), None, Some("female")),
@@ -184,6 +205,40 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                 voice("am_michael", "Michael", Some("en"), None, Some("male")),
                 voice("bf_emma", "Emma", Some("en"), None, Some("female")),
                 voice("bm_george", "George", Some("en"), None, Some("male")),
+            ],
+        },
+        EngineCatalogEntry {
+            engine: TtsEngine::Pocket,
+            label: "Pocket".into(),
+            description:
+                "Free local TTS via Kyutai Pocket — 100M params, built for CPU, many voices."
+                    .into(),
+            docs_url: "https://github.com/kyutai-labs/pocket-tts".into(),
+            supports_voice_refresh: false,
+            supports_pitch: false,
+            supports_bracket_emotes: false,
+            options: vec![option(
+                "cuda",
+                "GPU acceleration",
+                EngineOptionKind::Boolean,
+                "Run inference on an NVIDIA GPU. Requires the engine's GPU runtime (install with -Cuda).",
+                serde_json::json!(false),
+            )],
+            voices: vec![
+                voice("alba", "Alba", Some("en"), None, Some("female")),
+                voice("anna", "Anna", Some("en"), None, Some("female")),
+                voice("eve", "Eve", Some("en"), None, Some("female")),
+                voice("jane", "Jane", Some("en"), None, Some("female")),
+                voice("mary", "Mary", Some("en"), None, Some("female")),
+                voice("charles", "Charles", Some("en"), None, Some("male")),
+                voice("george", "George", Some("en"), None, Some("male")),
+                voice("michael", "Michael", Some("en"), None, Some("male")),
+                voice("paul", "Paul", Some("en"), None, Some("male")),
+                voice("estelle", "Estelle", Some("fr"), None, Some("female")),
+                voice("lola", "Lola", Some("es"), None, Some("female")),
+                voice("giovanni", "Giovanni", Some("it"), None, Some("male")),
+                voice("juergen", "Juergen", Some("de"), None, Some("male")),
+                voice("rafael", "Rafael", Some("pt"), None, Some("male")),
             ],
         },
         EngineCatalogEntry {
@@ -1076,6 +1131,7 @@ mod tests {
             TtsEngine::Kitten,
             TtsEngine::Piper,
             TtsEngine::Kokoro,
+            TtsEngine::Pocket,
         ] {
             assert_eq!(
                 entries
@@ -1085,7 +1141,7 @@ mod tests {
                 1
             );
         }
-        assert_eq!(entries.len(), 11);
+        assert_eq!(entries.len(), 12);
     }
 
     #[test]

@@ -118,17 +118,17 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
     voiceMode: "shared",
     downloadSize: "~335 MB shared model",
     credential: "none",
-    docsUrl: "https://github.com/hexgrad/kokoro"
+    docsUrl: "https://github.com/thewh1teagle/kokoro-onnx"
   },
   {
     id: "pocket",
     kind: "local",
     installerId: "pocket",
-    // One built-in voice; nothing to choose.
-    voiceMode: "none",
-    downloadSize: "~10 MB CLI",
+    // 14 built-in voices, all served by the one 100M-parameter model.
+    voiceMode: "shared",
+    downloadSize: "~100M params, fetched on first use",
     credential: "none",
-    docsUrl: "https://github.com/nickolas777/pocket-tts"
+    docsUrl: "https://github.com/kyutai-labs/pocket-tts"
   }
 ];
 

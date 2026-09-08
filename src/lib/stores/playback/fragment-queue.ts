@@ -9,6 +9,7 @@ export interface QueuedFragment {
   index: number;
   total: number;
   text: string;
+  captions?: import("$lib/models/captions").CaptionAlignment | null;
 }
 
 export interface FragmentQueueHandlers {

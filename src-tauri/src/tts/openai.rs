@@ -1,7 +1,15 @@
+use super::stream::{AudioFormatMeta, ChunkItem, ChunkStream};
 use super::{TtsBackend, TtsError};
 use crate::config::OpenAIConfig;
 use reqwest::Client;
 use serde_json::json;
+
+const OPENAI_TTS_URL: &str = "https://api.openai.com/v1/audio/speech";
+
+/// `response_format: "pcm"` is documented as 24 kHz, 16-bit signed
+/// little-endian, mono — exactly what the player and the history WAV writer
+/// consume, so the streaming path needs no decode step at all.
+const OPENAI_PCM_SAMPLE_RATE: u32 = 24000;
 
 pub struct OpenAiTtsBackend {
     config: OpenAIConfig,
@@ -38,8 +46,96 @@ impl TtsBackend for OpenAiTtsBackend {
         "OpenAI"
     }
 
+    fn supports_streaming(&self) -> bool {
+        true
+    }
+
+    fn synthesize_streaming(&self, text: &str, voice: &str) -> Result<ChunkStream, TtsError> {
+        let api_key = crate::secrets::resolve(&self.config.api_key, &["OPENAI_API_KEY"]);
+        if api_key.trim().is_empty() {
+            return Err(TtsError::Unavailable("OpenAI API key is missing".into()));
+        }
+        // Raw PCM rather than the configured container: /v1/audio/speech is
+        // chunk-transfer encoded, and a container would only be parseable once
+        // the whole body had arrived. The batch path below keeps the user's
+        // format, which is what file output and the cache want.
+        let mut body = json!({
+            "model": self.config.model,
+            "input": text,
+            "voice": voice,
+            "response_format": "pcm",
+        });
+        if let Some(instructions) = self
+            .config
+            .instructions
+            .as_ref()
+            .filter(|value| !value.trim().is_empty())
+        {
+            body["instructions"] = json!(instructions);
+        }
+
+        log::info!(
+            "OpenAI TTS stream - model: {}, voice: {}, text length: {} chars",
+            self.config.model,
+            voice,
+            text.len()
+        );
+
+        let (tx, rx) = std::sync::mpsc::channel();
+        std::thread::spawn(move || {
+            Self::block_on_async(async move {
+                let result: Result<(), TtsError> = async {
+                    let mut response = Client::new()
+                        .post(OPENAI_TTS_URL)
+                        .header("Authorization", format!("Bearer {api_key}"))
+                        .json(&body)
+                        .send()
+                        .await
+                        .map_err(|e| TtsError::Http(format!("OpenAI stream request failed: {e}")))?;
+                    let status = response.status();
+                    if !status.is_success() {
+                        let error_text = response.text().await.unwrap_or_default();
+                        return Err(TtsError::Http(format!(
+                            "OpenAI API error {status}: {error_text}"
+                        )));
+                    }
+                    let mut total_bytes = 0usize;
+                    while let Some(chunk) = response.chunk().await.map_err(|e| {
+                        TtsError::Http(format!(
+                            "OpenAI stream read failed after {total_bytes} bytes: {e}"
+                        ))
+                    })? {
+                        if chunk.is_empty() {
+                            continue;
+                        }
+                        total_bytes += chunk.len();
+                        if tx.send(ChunkItem::Pcm(chunk.to_vec())).is_err() {
+                            // Consumer dropped (stop/abort): stop pulling the body.
+                            return Ok(());
+                        }
+                    }
+                    Ok(())
+                }
+                .await;
+                if let Err(error) = result {
+                    log::error!("[TTS] {error}");
+                    let _ = tx.send(ChunkItem::Failed(error.to_string()));
+                }
+            });
+        });
+
+        Ok(ChunkStream::new(
+            AudioFormatMeta {
+                sample_rate: OPENAI_PCM_SAMPLE_RATE,
+                channels: 1,
+                bits_per_sample: 16,
+            },
+            rx,
+        ))
+    }
+
     fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
-        let url = "https://api.openai.com/v1/audio/speech";
+        let url = OPENAI_TTS_URL;
 
         let mut body = json!({
             "model": self.config.model,

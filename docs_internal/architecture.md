@@ -120,7 +120,7 @@ src-tauri/src/
     ├── mod.rs           # TtsBackend trait
     ├── catalog.rs       # Engine metadata → drives Engines UI
     ├── cli.rs           # Any local CLI engine (template-driven)
-    ├── piper_server.rs  # Persistent Piper daemon (voice model resident in RAM)
+    ├── local_daemon.rs  # Persistent daemons for Piper/Kitten/Kokoro/Pocket (models resident in RAM)
     ├── edge.rs, openai.rs, elevenlabs.rs, cartesia.rs
     ├── google.rs, microsoft.rs, http.rs
     └── ...
@@ -163,7 +163,7 @@ pub trait TtsBackend: Send + Sync {
 | Backend | Type | Notes |
 | ------- | ---- | ----- |
 | CLI | tokio subprocess | piper, kokoro, kitten, chatterbox, any command; template args |
-| Piper daemon | persistent subprocess | Voice model stays resident; stdin round-trip; falls back to one-shot |
+| Local daemons | persistent subprocess per engine | Model stays resident; PCM streams back over the pipe; falls back to one-shot |
 | Edge | free cloud | Default engine (Microsoft Edge Read Aloud) |
 | OpenAI | cloud API | 9 voices |
 | ElevenLabs | cloud API | Dynamic voice listing, output formats, voice settings |
@@ -367,7 +367,7 @@ Two capability files: `capabilities/default.json` (main window: core, window man
 ### CLI Execution
 
 - User configures which engine command runs; templates stored locally; no remote execution.
-- Subprocess spawning is tokio-managed; the Piper daemon stays resident for latency.
+- Subprocess spawning is tokio-managed; local engine daemons stay resident for latency.
 
 ### API Keys
 
@@ -379,7 +379,7 @@ Two capability files: `capabilities/default.json` (main window: core, window man
 ## Performance Considerations
 
 1. **Event-driven clipboard** — Win32 listener, no polling.
-2. **Piper daemon** — voice model resident in RAM; synthesis is a stdin round-trip instead of full process + model load.
+2. **Local daemons** — model resident in RAM for Piper/Kitten/Kokoro/Pocket; synthesis is a pipe round-trip instead of a full process start + model load, and PCM streams back as it is produced.
 3. **rodio buffering** — playback double-buffering handled by the crate.
 4. **Fragment queue** — long texts synthesize/play sequentially without blocking the UI.
 5. **Telemetry-based ETA** — per-backend/voice timing buckets drive progress estimates.

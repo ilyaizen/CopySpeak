@@ -16,14 +16,6 @@
     timer: null,
     startTime: null
   });
-  // Tracks playback elapsed time for progress bar during audio playback
-  let playbackTimerState = $state<{
-    timer: ReturnType<typeof setInterval> | null;
-    startTime: number | null;
-  }>({
-    timer: null,
-    startTime: null
-  });
   // Tracks the timeout that auto-dismisses clipboard notifications
   // Ensures notifications disappear after the configured duration
   let clipboardDismissTimerState = $state<{ timer: ReturnType<typeof setTimeout> | null }>({
@@ -51,17 +43,6 @@
     clearTimer(elapsedTimerState);
   }
 
-  function startPlaybackTimer() {
-    clearTimer(playbackTimerState);
-    playbackTimerState = createTimer((elapsed) => {
-      hudStore.setPlaybackElapsedMs(elapsed);
-    }, 100);
-  }
-
-  function stopPlaybackTimer() {
-    clearTimer(playbackTimerState);
-  }
-
   // Automatically manage timer based on synthesis state
   // Starts timer when TTS begins, stops when complete - ensures accurate timing throughout synthesis lifecycle
   $effect(() => {
@@ -69,16 +50,6 @@
       startElapsedTimer();
     } else if (!hudStore.isSynthesizing && elapsedTimerState.timer !== null) {
       stopElapsedTimer();
-    }
-  });
-
-  // Manage playback timer when playback is active (visible and not synthesizing)
-  $effect(() => {
-    const isPlayback = hudStore.isVisible && !hudStore.isSynthesizing;
-    if (isPlayback && playbackTimerState.timer === null) {
-      startPlaybackTimer();
-    } else if (!isPlayback && playbackTimerState.timer !== null) {
-      stopPlaybackTimer();
     }
   });
 
@@ -118,7 +89,6 @@
     // Cleanup timers and event listeners to prevent memory leaks and stale callbacks
     // Critical because this component may persist across route changes
     stopElapsedTimer();
-    stopPlaybackTimer();
     clearTimeoutState(clipboardDismissTimerState);
     cleanupEventListeners();
   });

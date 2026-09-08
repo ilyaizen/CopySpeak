@@ -138,6 +138,7 @@ fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
         "kitten" => Ok(TtsEngine::Kitten),
         "piper" => Ok(TtsEngine::Piper),
         "kokoro" => Ok(TtsEngine::Kokoro),
+        "pocket" => Ok(TtsEngine::Pocket),
         _ => Err(format!("unknown engine: {}", engine)),
     }
 }
@@ -229,6 +230,7 @@ fn effective_backend_name(eff: &EffectiveTtsRequest, tts: &TtsConfig) -> String 
         TtsEngine::Kitten => "Kitten TTS".to_string(),
         TtsEngine::Piper => "Piper".to_string(),
         TtsEngine::Kokoro => "Kokoro".to_string(),
+        TtsEngine::Pocket => "Pocket".to_string(),
     }
 }
 
@@ -265,6 +267,7 @@ pub fn test_tts_engine_config(
         TtsEngine::Kitten => "Kitten TTS".to_string(),
         TtsEngine::Piper => "Piper".to_string(),
         TtsEngine::Kokoro => "Kokoro".to_string(),
+        TtsEngine::Pocket => "Pocket".to_string(),
         TtsEngine::Edge => format!("Edge-TTS ({})", first_set(&[&tts_config.edge.voice])),
     };
     health_result(backend, backend_name)
@@ -393,34 +396,16 @@ fn local_engine_spec(engine: &str) -> Option<LocalEngineSpec> {
             voice: "Rosie".into(),
         },
         "kokoro" => LocalEngineSpec {
-            command: "kokoro-tts".into(),
-            args_template: vec![
-                "{input}".into(),
-                "{output}".into(),
-                "--voice".into(),
-                "{voice}".into(),
-                // kokoro-tts requires explicit model paths — the binary does
-                // not bundle or auto-download them. install-kokoro.ps1 places
-                // them under <engine_dir>/kokoro/models/.
-                "--model".into(),
-                "{engine_dir}/kokoro/models/kokoro-v1.0.onnx".into(),
-                "--voices".into(),
-                "{engine_dir}/kokoro/models/voices-v1.0.bin".into(),
-            ],
+            command: "uv".into(),
+            // The wrapper resolves <engine_dir>/kokoro/models/ relative to
+            // itself, so no explicit --model/--voices are needed here.
+            args_template: uv_run("kokoro", "copyspeak-kokoro.py"),
             voice: "af_heart".into(),
         },
         "pocket" => LocalEngineSpec {
-            command: "pocket-tts".into(),
-            args_template: vec![
-                "generate".into(),
-                "--voice".into(),
-                "{voice}".into(),
-                "--text".into(),
-                "{raw_text}".into(),
-                "--output-path".into(),
-                "{output}".into(),
-            ],
-            voice: "default".into(),
+            command: "uv".into(),
+            args_template: uv_run("pocket", "copyspeak-pocket.py"),
+            voice: "alba".into(),
         },
         _ => return None,
     };

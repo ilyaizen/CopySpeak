@@ -21,6 +21,7 @@ mod voices;
 // `__cmd__*` items that the `#[tauri::command]` macro emits alongside each
 // public function.
 pub use credentials::*;
+pub(crate) use helpers::prewarm_active_profile;
 pub use health::*;
 pub use profiles::*;
 pub use selection::*;

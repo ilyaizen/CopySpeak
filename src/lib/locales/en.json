@@ -260,8 +260,8 @@
       },
       "pocket": {
         "title": "Pocket TTS",
-        "description": "Compact offline CLI TTS",
-        "detail": "Local CLI engine with straightforward voice selection."
+        "description": "Compact local TTS",
+        "detail": "Kyutai Pocket: a 100M-parameter model built to run on the CPU, with voices in six languages."
       },
       "edge": {
         "title": "Edge-TTS",
@@ -299,11 +299,11 @@
     },
     "kokoro": {
       "title": "Kokoro TTS",
-      "description": "Local: High-quality offline TTS with natural-sounding voices and broad accent coverage. Requires kokoro-tts CLI."
+      "description": "Local: High-quality offline TTS with natural-sounding voices and broad accent coverage. Keeps its model in RAM; supports GPU acceleration."
     },
     "pocket": {
       "title": "Pocket TTS",
-      "description": "Local: Compact offline TTS engine with straightforward voice selection via CLI."
+      "description": "Local: Kyutai Pocket — a 100M-parameter model built for the CPU, with voices in six languages. Supports GPU acceleration."
     },
     "cartesia": {
       "title": "Cartesia",
@@ -387,7 +387,7 @@
     "localEngine": {
       "voice": "Voice",
       "kittenInstall": "Run ./install-kittentts.ps1 from the project root to install Kitten TTS. Models are downloaded automatically on first use (~25-80MB depending on variant).",
-      "pocketInstall": "Run ./install-pocket.ps1 from the project root to install Pocket TTS. Installs the pocket-tts CLI tool via uv.",
+      "pocketInstall": "Run ./install-pocket.ps1 from the project root to install Pocket TTS. Creates a uv project for pocket-tts; model weights download on first use.",
       "piperModels": "Model files (.onnx + .onnx.json) must be placed in {dataDir}. Download from",
       "commandPreview": "Command Preview",
       "tempDirectory": "resolves to your system temp directory at runtime.",

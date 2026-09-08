@@ -29,17 +29,31 @@ pub fn replay_cached(
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] replay_cached called");
     }
-    let wav_bytes = {
+    let (wav_bytes, text, captions) = {
         let cache = cache.lock().unwrap();
-        cache
-            .wav_bytes
-            .clone()
-            .ok_or_else(|| "No cached audio to replay".to_string())?
+        (
+            cache
+                .wav_bytes
+                .clone()
+                .ok_or_else(|| "No cached audio to replay".to_string())?,
+            cache.text.clone().unwrap_or_default(),
+            cache.captions.clone(),
+        )
     };
 
     use base64::{engine::general_purpose, Engine as _};
     let encoded = general_purpose::STANDARD.encode(&wav_bytes);
-    if let Err(e) = app.emit("audio-ready", encoded) {
+    if let Err(e) = app.emit(
+        "audio-fragment-ready",
+        super::AudioFragmentEvent {
+            audio_base64: encoded,
+            fragment_index: 0,
+            fragment_total: 1,
+            is_final: true,
+            text,
+            captions,
+        },
+    ) {
         log::warn!("Failed to emit audio-ready: {}", e);
     }
 
@@ -163,17 +177,20 @@ pub fn play_history_entry(
         log::debug!("[IPC] play_history_entry called (id: {})", entry_id);
     }
 
-    let output_path = {
+    let (output_path, text) = {
         let hist = history.lock().unwrap();
         let entry = hist
             .get_by_id(&entry_id)
             .ok_or_else(|| format!("History entry not found: {}", entry_id))?;
 
-        entry
-            .output_path
-            .as_ref()
-            .ok_or_else(|| "No audio file available for this entry".to_string())?
-            .clone()
+        (
+            entry
+                .output_path
+                .as_ref()
+                .ok_or_else(|| "No audio file available for this entry".to_string())?
+                .clone(),
+            entry.text.clone(),
+        )
     };
 
     if !std::path::Path::new(&output_path).exists() {
@@ -210,7 +227,18 @@ pub fn play_history_entry(
 
     use base64::{engine::general_purpose, Engine as _};
     let encoded = general_purpose::STANDARD.encode(&wav_bytes);
-    if let Err(e) = app.emit("audio-ready", encoded) {
+    let captions = crate::tts::captions::read_sidecar(&output_path);
+    if let Err(e) = app.emit(
+        "audio-fragment-ready",
+        super::AudioFragmentEvent {
+            audio_base64: encoded,
+            fragment_index: 0,
+            fragment_total: 1,
+            is_final: true,
+            text,
+            captions,
+        },
+    ) {
         log::warn!("Failed to emit audio-ready: {}", e);
     }
 
