@@ -37,6 +37,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 
 ## Active failure log
 
+- Drive HUD captions from the audible fragment's audio clock; synthesis events may describe a later fragment, and incoming PCM chunks must not resume a user-paused stream.
 - Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
 - Treat `git diff --check` as a check; do not run it before explicit confirmation.
 - Present history batches as one reading in `recent-history.svelte`; preserve fragment order for full text, playback, and whole-reading deletion.

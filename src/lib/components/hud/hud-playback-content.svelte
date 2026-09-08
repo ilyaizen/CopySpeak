@@ -2,46 +2,38 @@
   import Waveform from "../waveform.svelte";
   import Progress from "$lib/components/ui/progress/progress.svelte";
   import { hudStore } from "$lib/stores/hud-store.svelte.js";
+  import { activeCaptionWord, buildCaptions } from "$lib/models/captions.js";
 
-  let {
-    barValues,
-    spokenText
-  }: {
-    barValues: number[];
-    spokenText: string | null;
-  } = $props();
-
-  let textEl: HTMLSpanElement | undefined = $state();
-  let marqueeWrapperEl: HTMLDivElement | undefined = $state();
-  let textWidth = $state(0);
-  let marqueeWidth = $state(0);
-
-  let isPlaybackReady = $derived(hudStore.isPlaybackReady);
-  let adjustedDurationMs = $derived(hudStore.adjustedDurationMs);
-  let progressPercent = $derived(hudStore.playbackProgressPercent);
-
-  let canAnimate = $derived(isPlaybackReady && textWidth > marqueeWidth && marqueeWidth > 0);
-
-  let scrollDistance = $derived(canAnimate ? -(textWidth + marqueeWidth * 0.5) : 0);
-
-  $effect(() => {
-    if (textEl) {
-      textWidth = textEl.offsetWidth;
-    }
-  });
-
-  $effect(() => {
-    if (marqueeWrapperEl) {
-      marqueeWidth = marqueeWrapperEl.offsetWidth;
-    }
-  });
+  let { barValues, spokenText }: { barValues: number[]; spokenText: string | null } = $props();
+  let words = $derived(buildCaptions(spokenText ?? ""));
+  let positionIndex = $derived(
+    activeCaptionWord(words, hudStore.caption?.position_ms ?? 0, hudStore.caption?.duration_ms ?? 0)
+  );
+  let activeIndex = $derived(hudStore.caption?.active ? positionIndex : -1);
+  // Retain the current phrase during buffering; only the highlight goes away.
+  let phraseIndex = $derived(words[Math.max(0, positionIndex)]?.phrase ?? 0);
+  let phrase = $derived(words.filter((word) => word.phrase === phraseIndex));
 </script>
 
 <div class="hud-playback-container">
-  <Progress value={isPlaybackReady ? progressPercent : 0} max={100} class="progress-bar" />
-
+  <Progress
+    value={hudStore.isPlaybackReady ? hudStore.playbackProgressPercent : 0}
+    max={100}
+    class="progress-bar"
+  />
   <div class="content-layer">
-    <div class="waveform-layer">
+    {#if spokenText}
+      <p class="caption" dir="auto">
+        {#each phrase as word (word.start)}
+          <span
+            class:spoken={activeIndex >= 0 && word.end <= (words[activeIndex]?.start ?? 0)}
+            class:current={word === words[activeIndex]}>{word.text}</span
+          >
+        {:else}
+          {spokenText}
+        {/each}
+      </p>
+    {:else}
       <Waveform
         {barValues}
         barColor="rgba(255, 255, 255, 0.3)"
@@ -52,104 +44,49 @@
         attackRate={0.8}
         decayRate={0.5}
       />
-    </div>
-
-    {#if spokenText}
-      <div class="marquee-wrapper" bind:this={marqueeWrapperEl} class:centered={!canAnimate}>
-        <div
-          class="marquee-track"
-          class:animating={canAnimate}
-          style="animation-duration: {adjustedDurationMs}ms; --end-pos: {scrollDistance}px;"
-        >
-          <span bind:this={textEl} class="marquee-text">{spokenText}</span>
-          {#if canAnimate}
-            <span class="marquee-spacer"></span>
-          {/if}
-        </div>
-      </div>
     {/if}
   </div>
 </div>
 
 <style>
   .hud-playback-container {
-    position: relative;
     flex: 1;
-    min-height: 52px;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .content-layer {
-    position: relative;
-    flex: 1;
+    min-width: 0;
     min-height: 0;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    gap: 6px;
   }
-
-  .waveform-layer {
-    position: relative;
-    left: 20px;
-    right: 20px;
-    height: 32px;
-    pointer-events: none;
-  }
-
-  .marquee-wrapper {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
+  .content-layer {
+    flex: 1;
+    min-height: 0;
+    display: grid;
+    place-items: center;
     overflow: hidden;
-    pointer-events: none;
   }
-
-  .marquee-wrapper.centered {
-    justify-content: center;
-  }
-
-  .marquee-track {
-    display: flex;
-    align-items: center;
-    will-change: transform;
-  }
-
-  .marquee-track.animating {
-    animation-name: marquee-scroll;
-    animation-timing-function: linear;
-    animation-fill-mode: forwards;
-  }
-
-  .marquee-text {
+  .caption {
+    margin: 0;
+    width: 100%;
+    color: #e2e8f0;
     font-size: 18px;
     font-weight: 600;
-    color: oklch(0.96 0.01 264.8);
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-    text-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.8),
-      0 0 8px rgba(0, 0, 0, 0.6);
-    flex-shrink: 0;
+    line-height: 1.45;
+    text-align: center;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
   }
-
-  .marquee-spacer {
-    flex-shrink: 0;
-    width: 100px;
+  .caption span {
+    border-radius: 4px;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
   }
-
-  @keyframes marquee-scroll {
-    0% {
-      transform: translateX(0);
-    }
-    100% {
-      transform: translateX(var(--end-pos));
-    }
+  .caption .spoken {
+    color: #aebdd0;
+  }
+  .caption .current {
+    color: #101827;
+    background: #93c5fd;
+    box-shadow: 0 0 0 2px #93c5fd;
   }
 </style>

@@ -156,6 +156,8 @@ fn emit_audio_stream_chunk(
     pcm: &[u8],
     fragment_index: usize,
     is_final: bool,
+    text: Option<&str>,
+    fragment_duration_ms: Option<u64>,
 ) {
     use base64::{engine::general_purpose, Engine as _};
     let encoded = general_purpose::STANDARD.encode(pcm);
@@ -166,6 +168,8 @@ fn emit_audio_stream_chunk(
         bits_per_sample: meta.bits_per_sample,
         fragment_index,
         is_final,
+        text: text.map(str::to_owned),
+        fragment_duration_ms,
     };
     if let Err(e) = app.emit("audio-stream-chunk", event) {
         log::warn!("Failed to emit audio-stream-chunk: {}", e);
@@ -269,7 +273,9 @@ async fn synthesize_streaming_and_emit(
         };
 
         let meta = stream.meta.clone();
+        let mut pcm_bytes = 0u64;
         drain_chunk_stream(stream, |chunk_idx, pcm, is_final| {
+            pcm_bytes += pcm.len() as u64;
             if !is_final && chunk_idx == 0 {
                 log::info!(
                     "[TTS][stream] first chunk playing after {}ms",
@@ -278,10 +284,23 @@ async fn synthesize_streaming_and_emit(
             }
             // The player treats a final marker as "no more audio is coming" and
             // arms its completion timer, so only the last fragment sends one.
-            if is_final && !emit_final {
-                return;
-            }
-            emit_audio_stream_chunk(&app, &meta, pcm, fragment_index, is_final);
+            let bytes_per_second = u64::from(meta.sample_rate)
+                * u64::from(meta.channels)
+                * u64::from(meta.bits_per_sample / 8);
+            let duration_ms = if is_final && bytes_per_second > 0 {
+                Some(pcm_bytes * 1000 / bytes_per_second)
+            } else {
+                None
+            };
+            emit_audio_stream_chunk(
+                &app,
+                &meta,
+                pcm,
+                fragment_index,
+                is_final && emit_final,
+                (chunk_idx == 0).then_some(text.as_str()),
+                duration_ms,
+            );
         })
     })
     .await

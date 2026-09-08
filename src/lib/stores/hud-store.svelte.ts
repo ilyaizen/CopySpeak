@@ -5,7 +5,8 @@ import type {
   SynthesisProgressPayload,
   PaginationPayload,
   ClipboardCopiedPayload,
-  AmplitudePayload
+  AmplitudePayload,
+  HudCaptionPayload
 } from "$lib/types/hud.js";
 
 // Core state
@@ -14,6 +15,7 @@ let isVisible = $state(false);
 let isSynthesizing = $state(false);
 let isPaused = $state(false);
 let spokenText = $state<string | null>(null);
+let caption = $state<HudCaptionPayload | null>(null);
 let provider = $state<string | null>(null);
 let voice = $state<string | null>(null);
 
@@ -83,12 +85,16 @@ let hasEstimate = $derived(estimatedDurationMs !== null || totalChars > 0);
 let dotPulsing = $derived(isSynthesizing || (!isPaused && !isSynthesizing));
 
 let playbackProgressPercent = $derived(
-  accurateDurationMs !== null && accurateDurationMs > 0 && pitch > 0 && speed > 0
-    ? Math.min(100, (playbackElapsedMs / (accurateDurationMs / (pitch * speed))) * 100)
-    : 0
+  caption && caption.duration_ms > 0
+    ? Math.min(100, (caption.position_ms / caption.duration_ms) * 100)
+    : accurateDurationMs !== null && accurateDurationMs > 0 && pitch > 0 && speed > 0
+      ? Math.min(100, (playbackElapsedMs / (accurateDurationMs / (pitch * speed))) * 100)
+      : 0
 );
 
-let isPlaybackReady = $derived(accurateDurationMs !== null && accurateDurationMs > 0);
+let isPlaybackReady = $derived(
+  caption !== null || (accurateDurationMs !== null && accurateDurationMs > 0)
+);
 
 // Actions
 export const hudStore = {
@@ -106,7 +112,10 @@ export const hudStore = {
     return isPaused;
   },
   get spokenText() {
-    return spokenText;
+    return caption?.text || spokenText;
+  },
+  get caption() {
+    return caption;
   },
   get provider() {
     return provider;
@@ -269,6 +278,7 @@ export const hudStore = {
   },
 
   handleSynthesizing(payload: HudSynthesizingPayload) {
+    caption = null;
     spokenText = payload.text || null;
     provider = payload.provider ?? null;
     voice = payload.voice ?? null;
@@ -300,6 +310,7 @@ export const hudStore = {
   },
 
   handleStop() {
+    caption = null;
     isSynthesizing = false;
     isPaused = false;
     isVisible = false;
@@ -344,6 +355,12 @@ export const hudStore = {
 
   handleAmplitude(payload: AmplitudePayload) {
     barValues = payload.bars;
+  },
+
+  handleCaption(payload: HudCaptionPayload) {
+    caption = payload;
+    isPaused = payload.paused;
+    if (payload.active) isSynthesizing = false;
   },
 
   togglePause() {

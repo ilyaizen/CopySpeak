@@ -7,7 +7,8 @@ import type {
   SynthesisProgressPayload,
   PaginationPayload,
   ClipboardCopiedPayload,
-  AmplitudePayload
+  AmplitudePayload,
+  HudCaptionPayload
 } from "$lib/types/hud.js";
 
 interface Unlisteners {
@@ -23,6 +24,7 @@ interface Unlisteners {
   clipboardCopied?: () => void;
   synthesisProgress?: () => void;
   audioDuration?: () => void;
+  caption?: () => void;
 }
 
 export function useHudEvents() {
@@ -102,6 +104,10 @@ export function useHudEvents() {
 
       unlisteners.audioDuration = await eventApi.listen<number>("hud:audio-duration", (event) => {
         hudStore.setAccurateDurationMs(event.payload);
+      });
+
+      unlisteners.caption = await eventApi.listen<HudCaptionPayload>("hud:caption", (event) => {
+        hudStore.handleCaption(event.payload);
       });
 
       // Diagnostic: confirm all listeners registered and IPC works

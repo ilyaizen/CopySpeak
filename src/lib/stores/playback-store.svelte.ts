@@ -17,6 +17,8 @@ import { PcmStreamScheduler, type StreamChunkPayload } from "./playback/pcm-stre
 import { getEffect } from "./playback/effects/registry.js";
 import { FragmentQueue, type QueuedFragment } from "./playback/fragment-queue.js";
 import { hudStore } from "./hud-store.svelte.js";
+import { buildCaptions, estimateCaptionDuration } from "$lib/models/captions.js";
+import type { HudCaptionPayload } from "$lib/types/hud.js";
 
 class PlaybackStore {
   isPlaying = $state(false);
@@ -49,6 +51,11 @@ class PlaybackStore {
     null;
   private _stopping = false;
   private _playbackGeneration = 0;
+  private _readingText = "";
+  private _fragmentText = "";
+  private _captionTimer: ReturnType<typeof setInterval> | null = null;
+  private _lastCaption: HudCaptionPayload | null = null;
+  private _streamCaptions = new Map<number, { text: string; durationMs: number }>();
 
   // Modular components
   private _analyser = new AudioAnalyser();
@@ -67,6 +74,7 @@ class PlaybackStore {
         );
         this.currentFragmentIndex = fragment.index;
         this.totalFragments = fragment.total;
+        this._fragmentText = fragment.text;
         await this.handleAudioReady(fragment.audioBase64);
       },
       onQueueComplete: () => {
@@ -82,6 +90,7 @@ class PlaybackStore {
       el.onplay = () => {
         this.isPlaying = true;
         this.isPaused = false;
+        this.startCaptionClock();
       };
       el.onpause = () => {
         if (this._stopping) return;
@@ -92,6 +101,55 @@ class PlaybackStore {
         this._fragmentQueue.handleFragmentEnded();
       };
     }
+  }
+
+  private startCaptionClock() {
+    if (this._captionTimer === null) {
+      this._captionTimer = setInterval(() => this.publishCaption(), 80);
+    }
+    this.publishCaption();
+  }
+
+  private stopCaptionClock() {
+    if (this._captionTimer !== null) clearInterval(this._captionTimer);
+    this._captionTimer = null;
+    this._lastCaption = null;
+    this._streamCaptions.clear();
+  }
+
+  private publishCaption() {
+    let caption: HudCaptionPayload | null = null;
+    if (this._pcmScheduler) {
+      const position = this._pcmScheduler.getPlaybackPosition();
+      const fragment = position ? this._streamCaptions.get(position.fragmentIndex) : null;
+      if (position && fragment) {
+        caption = {
+          text: fragment.text,
+          position_ms: position.positionMs,
+          duration_ms: fragment.durationMs,
+          paused: this.isPaused,
+          active: true
+        };
+      } else if (this._lastCaption) {
+        caption = { ...this._lastCaption, active: false, paused: this.isPaused };
+      }
+    } else if (this._audioEl && this.isPlaying) {
+      const el = this._audioEl;
+      const duration = Number.isFinite(el.duration)
+        ? el.duration
+        : (this._decodedBuffer?.duration ?? 0) / this.pitch;
+      caption = {
+        text: this._fragmentText || this._readingText,
+        position_ms: el.currentTime * 1000,
+        duration_ms: duration * 1000,
+        paused: this.isPaused,
+        active: !this.isLoadingAudio && !el.ended && !el.seeking && el.readyState >= 2
+      };
+    }
+    if (!caption) return;
+    this._lastCaption = caption;
+    hudStore.handleCaption(caption);
+    void this._emitTo?.("hud", "hud:caption", caption);
   }
 
   async buildPlaybackUrl(pitchRatio: number): Promise<string> {
@@ -258,6 +316,7 @@ class PlaybackStore {
    * stops the analyser, resets playback state, hides the HUD.
    */
   private finishPlayback(): void {
+    this.stopCaptionClock();
     this._analyser.stop();
     this.isPlaying = false;
     this.isPaused = false;
@@ -278,7 +337,7 @@ class PlaybackStore {
     }
     const ctx = this._audioCtx;
     // Resume AudioContext if suspended (autoplay policies, or a paused stream)
-    if (ctx.state === "suspended") {
+    if (ctx.state === "suspended" && !this.isPaused) {
       void ctx.resume();
     }
     if (!this._pcmScheduler) {
@@ -298,7 +357,18 @@ class PlaybackStore {
       this.isPlaying = true;
       this.isPaused = false;
     }
+    if (payload.text !== undefined) {
+      this._streamCaptions.set(payload.fragment_index, {
+        text: payload.text,
+        durationMs: estimateCaptionDuration(buildCaptions(payload.text))
+      });
+    }
+    const caption = this._streamCaptions.get(payload.fragment_index);
+    if (caption && payload.fragment_duration_ms !== undefined) {
+      caption.durationMs = payload.fragment_duration_ms;
+    }
     this._pcmScheduler.handleChunk(payload);
+    if (this._pcmScheduler) this.startCaptionClock();
   }
 
   async playAudio() {
@@ -335,6 +405,7 @@ class PlaybackStore {
   }
 
   handleStop() {
+    this.stopCaptionClock();
     this._playbackGeneration += 1;
     this.isLoadingAudio = false;
     this._analyser.stop();
@@ -360,7 +431,7 @@ class PlaybackStore {
   }
 
   handleTogglePause() {
-    if (this._pcmScheduler?.isActive()) {
+    if (this._pcmScheduler) {
       if (this.isPaused) {
         this._pcmScheduler.resume();
         this.isPaused = false;
@@ -413,6 +484,15 @@ class PlaybackStore {
       const { listen, emit, emitTo } = await import("@tauri-apps/api/event");
       this._emit = emit;
       this._emitTo = emitTo;
+      // Legacy audio-ready carries only bytes. HUD metadata supplies its text;
+      // queued/streamed fragments carry their own text and take precedence.
+      const captionListeners = await Promise.all(
+        ["hud:start", "hud:playback_start", "hud:synthesizing"].map((name) =>
+          listen<{ text: string | null }>(name, (event) => {
+            this._readingText = event.payload.text ?? "";
+          })
+        )
+      );
       console.log("[PlaybackStore] event API loaded");
 
       // Note: AnalyserNode is set up in handleAudioReady once we have an AudioContext
@@ -481,6 +561,7 @@ class PlaybackStore {
       });
 
       this._unlistenFns = [
+        ...captionListeners,
         unAudioReady,
         unFragmentReady,
         unStreamChunk,

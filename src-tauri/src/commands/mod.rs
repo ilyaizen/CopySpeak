@@ -65,6 +65,10 @@ pub struct AudioStreamChunkEvent {
     pub fragment_index: usize,
     /// True only on the terminal zero-byte end-of-stream event
     pub is_final: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fragment_duration_ms: Option<u64>,
 }
 
 /// Event emitted during synthesis to show progress with ETA.

@@ -50,3 +50,12 @@ export interface ClipboardCopiedPayload {
 export interface AmplitudePayload {
   bars: number[];
 }
+
+/** Position in the audio actually being played, relative to this fragment. */
+export interface HudCaptionPayload {
+  text: string;
+  position_ms: number;
+  duration_ms: number;
+  paused: boolean;
+  active: boolean;
+}
