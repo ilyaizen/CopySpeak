@@ -292,6 +292,17 @@ fn migrate_add_kitten_profile_v4(cfg: &mut AppConfig) {
     log::info!("Config migrated to schema v4 (add bundled Kitten profile)");
 }
 
+/// Bring every profile's speed and pitch back inside the supported ranges.
+/// Profiles saved before speed and pitch became independent knobs could carry a
+/// pitch of up to 2.0, which is a full octave once it no longer also changes
+/// speed. Not a schema change, so no version bump.
+fn clamp_profile_rates(cfg: &mut AppConfig) {
+    for profile in cfg.tts.profiles.iter_mut() {
+        profile.speed = profile.speed.clamp(tts::SPEED_RANGE.0, tts::SPEED_RANGE.1);
+        profile.pitch = profile.pitch.clamp(tts::PITCH_RANGE.0, tts::PITCH_RANGE.1);
+    }
+}
+
 /// Returns the config file path: %APPDATA%/CopySpeak/config.json
 pub fn config_path() -> PathBuf {
     let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
@@ -321,6 +332,8 @@ pub fn load_or_default() -> AppConfig {
             if cfg.tts.schema_version < 4 {
                 migrate_add_kitten_profile_v4(&mut cfg);
             }
+
+            clamp_profile_rates(&mut cfg);
 
             cfg
         }

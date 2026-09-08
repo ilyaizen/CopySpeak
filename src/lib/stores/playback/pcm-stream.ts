@@ -6,6 +6,7 @@
  * shared AudioContext so speech starts while synthesis is still running
  * (~250ms prebuffer) and continues back-to-back without clicks or gaps.
  */
+import { TimeStretcher, type PcmChannel } from "./time-stretch";
 
 /** Payload of one `audio-stream-chunk` event (matches AudioStreamChunkEvent). */
 export interface StreamChunkPayload {
@@ -26,13 +27,28 @@ export interface StreamChunkPayload {
   captions?: import("$lib/models/captions").CaptionAlignment | null;
 }
 
+/** One decoded chunk of native-rate PCM, still unstretched. */
+interface PendingChunk {
+  channels: PcmChannel[];
+  /** Native seconds of audio this chunk carries. */
+  duration: number;
+  sampleRate: number;
+  fragmentIndex: number;
+}
+
 interface ScheduledPosition {
   fragmentIndex: number;
+  /** Native seconds into the fragment where this source's audio begins. */
   offset: number;
+  /** Native seconds of audio this source carries. */
   duration: number;
+  /** Native seconds already played. */
   consumed: number;
   clock: number;
+  /** Native seconds consumed per wall second - the speed this audio was rendered at. */
   rate: number;
+  /** Source chunk, for re-stretching if the rate changes before this starts. */
+  native: PendingChunk | null;
 }
 
 export interface PcmStreamSchedulerOptions {
@@ -95,9 +111,13 @@ export function pcm16LeToFloat32Channels(
  *
  * Chunks accumulate until ~250ms is buffered, then playback starts; every
  * later chunk is scheduled at a running nextStartTime cursor that self-heals
- * to currentTime after an underrun. Volume routes through a GainNode; speed
- * and pitch map to source.playbackRate (same audible effect as the batch
- * path's element rate plus resampled pitch).
+ * to currentTime after an underrun. Volume routes through a GainNode.
+ *
+ * Speed and pitch are independent: chunks pass through a {@link TimeStretcher}
+ * before scheduling, so `playbackRate` stays at 1 and every source plays at its
+ * natural rate. Positions are tracked in *native* seconds - `duration` and
+ * `offset` describe the source audio, and `rate` is the speed the audio was
+ * rendered at, which is what converts wall time back to caption time.
  */
 export class PcmStreamScheduler {
   private readonly _ctx: AudioContext;
@@ -105,16 +125,23 @@ export class PcmStreamScheduler {
   private readonly _onComplete: () => void;
 
   private _gain: GainNode;
-  private _pending: { buffer: AudioBuffer; fragmentIndex: number; offset: number }[] = [];
+  private _pending: PendingChunk[] = [];
   private _pendingDuration = 0;
   private _activeSources = new Map<AudioBufferSourceNode, ScheduledPosition>();
-  private _fragmentOffsets = new Map<number, number>();
   private _started = false;
   private _nextStartTime = 0;
   private _firstChunkAt: number | null = null;
   private _lastChunkAt: number | null = null;
   /** Transport boundaries need not coincide with a complete interleaved frame. */
   private _remainder: Uint8Array | null = null;
+
+  private _stretcher: TimeStretcher | null = null;
+  private _stretcherSampleRate = 0;
+  private _stretcherChannels = 0;
+  /** Fragment the scheduler is currently emitting audio for. */
+  private _scheduleFragment: number | null = null;
+  /** Native seconds of that fragment already scheduled. */
+  private _emittedNative = 0;
 
   private _volumePercent = 100;
   private _speed = 1.0;
@@ -147,42 +174,43 @@ export class PcmStreamScheduler {
   }
 
   /**
-   * Update speed and pitch. Applied immediately to already-scheduled sources;
-   * the scheduling cursor compensates using the current combined rate.
+   * Update speed and pitch. Audio already rendered keeps the rate it was
+   * rendered at; sources that have not started yet are dropped and their source
+   * chunks re-stretched, so a slider change lands within one audible chunk.
    */
   setRate(speed: number, pitch: number): void {
     if (!Number.isFinite(speed * pitch) || speed <= 0 || pitch <= 0) return;
-    const previousRate = this._combinedRate();
+    if (speed === this._speed && pitch === this._pitch) return;
     this._speed = speed;
     this._pitch = pitch;
-    const rate = speed * pitch;
-    if (rate === previousRate) return;
-    const future: typeof this._pending = [];
+    const requeued: PendingChunk[] = [];
+    let resumeOffset: number | null = null;
     this._nextStartTime = this._ctx.currentTime;
     for (const [source, position] of this._activeSources) {
       this._advancePosition(position);
-      if (position.clock > this._ctx.currentTime && source.buffer) {
-        // Absolute scheduled start times do not move when playbackRate changes.
-        // Requeue only unstarted sources; leave audible audio uninterrupted.
-        future.push({
-          buffer: source.buffer,
-          fragmentIndex: position.fragmentIndex,
-          offset: position.offset
-        });
+      if (position.clock > this._ctx.currentTime) {
+        // Absolute scheduled start times do not move, and the audio itself was
+        // rendered at the old rate. Re-stretch instead of rescheduling.
+        if (position.native) requeued.push(position.native);
+        resumeOffset =
+          resumeOffset === null ? position.offset : Math.min(resumeOffset, position.offset);
         source.onended = null;
         source.stop();
         this._activeSources.delete(source);
         continue;
       }
-      position.rate = rate;
-      source.playbackRate.value = rate;
       this._nextStartTime = Math.max(
         this._nextStartTime,
-        this._ctx.currentTime + (position.duration - position.consumed) / rate
+        this._ctx.currentTime + (position.duration - position.consumed) / position.rate
       );
     }
-    this._pending.unshift(...future);
-    this._pendingDuration += future.reduce((sum, item) => sum + item.buffer.duration, 0);
+    // ponytail: the stretcher's held-back window (<1 WSOLA frame) is discarded
+    // here; re-deriving it would need SoundTouch to expose its pending input.
+    this._stretcher?.reset();
+    this._stretcher?.setRate(speed, pitch);
+    if (resumeOffset !== null) this._emittedNative = resumeOffset;
+    this._pending.unshift(...requeued);
+    this._pendingDuration += requeued.reduce((sum, chunk) => sum + chunk.duration, 0);
     if (this._started) this._schedulePending();
   }
 
@@ -219,6 +247,7 @@ export class PcmStreamScheduler {
       // Flush short intermediate fragments without declaring the whole queue final.
       if (!this._started && this._pending.length) this._startPlayback();
       else this._schedulePending();
+      this._flushStretcher();
       this._remainder = null;
       return;
     }
@@ -251,7 +280,7 @@ export class PcmStreamScheduler {
         arrivalGapMs: this._lastChunkAt === null ? null : Math.round(now - this._lastChunkAt),
         bufferedMs: Math.round(
           1000 *
-            (this._pendingDuration / this._combinedRate() +
+            (this._pendingDuration / this._speed +
               Math.max(0, this._nextStartTime - this._ctx.currentTime))
         ),
         carriedBytes: remainderLength
@@ -261,15 +290,14 @@ export class PcmStreamScheduler {
     const channelData = pcm16LeToFloat32Channels(bytes, channels);
     if (channelData[0].length === 0) return;
 
-    const buffer = this._ctx.createBuffer(channels, channelData[0].length, payload.sample_rate);
-    for (let c = 0; c < channels; c++) {
-      buffer.copyToChannel(channelData[c], c);
-    }
-
-    const offset = this._fragmentOffsets.get(payload.fragment_index) ?? 0;
-    this._fragmentOffsets.set(payload.fragment_index, offset + buffer.duration);
-    this._pending.push({ buffer, fragmentIndex: payload.fragment_index, offset });
-    this._pendingDuration += buffer.duration;
+    const duration = channelData[0].length / payload.sample_rate;
+    this._pending.push({
+      channels: channelData,
+      duration,
+      sampleRate: payload.sample_rate,
+      fragmentIndex: payload.fragment_index
+    });
+    this._pendingDuration += duration;
 
     if (!this._started && this._pendingDuration >= PREBUFFER_SECONDS) {
       this._startPlayback();
@@ -293,6 +321,7 @@ export class PcmStreamScheduler {
     } else {
       this._schedulePending();
     }
+    this._flushStretcher();
     // Fallback completion if no explicit queue-complete signal follows
     // (covers multi-fragment synthesis gaps and the speak_now path).
     this._clearIdleTimer();
@@ -345,7 +374,6 @@ export class PcmStreamScheduler {
       }
     }
     this._activeSources.clear();
-    this._fragmentOffsets.clear();
     this._pending = [];
     this._pendingDuration = 0;
     this._started = false;
@@ -354,6 +382,9 @@ export class PcmStreamScheduler {
     this._lastChunkAt = null;
     this._remainder = null;
     this._pausedByUser = false;
+    this._stretcher = null;
+    this._scheduleFragment = null;
+    this._emittedNative = 0;
     try {
       this._gain.disconnect();
     } catch {
@@ -375,38 +406,80 @@ export class PcmStreamScheduler {
     this._schedulePending();
   }
 
-  private _combinedRate(): number {
-    return this._speed * this._pitch;
+  private _ensureStretcher(chunk: PendingChunk): TimeStretcher {
+    const channelCount = chunk.channels.length;
+    if (
+      !this._stretcher ||
+      this._stretcherSampleRate !== chunk.sampleRate ||
+      this._stretcherChannels !== channelCount
+    ) {
+      this._stretcher = new TimeStretcher(chunk.sampleRate, channelCount);
+      this._stretcherSampleRate = chunk.sampleRate;
+      this._stretcherChannels = channelCount;
+      this._stretcher.setRate(this._speed, this._pitch);
+    }
+    return this._stretcher;
+  }
+
+  /**
+   * Drain the stretcher's trailing window at a fragment boundary so the
+   * fragment's last word is not clipped, and restart native offsets at zero.
+   */
+  private _flushStretcher(): void {
+    if (!this._stretcher) return;
+    this._scheduleOutput(this._stretcher.flush(), this._stretcherSampleRate, null);
+    this._emittedNative = 0;
+    this._scheduleFragment = null;
   }
 
   private _schedulePending(): void {
-    const rate = this._combinedRate();
     while (this._pending.length > 0) {
-      const { buffer, fragmentIndex, offset } = this._pending.shift()!;
-      this._pendingDuration -= buffer.duration;
-      // Underrun tolerance: continue from currentTime if the cursor fell behind.
-      const at = Math.max(this._nextStartTime, this._ctx.currentTime + 0.005);
-      if (import.meta.env.DEV && at > this._nextStartTime) {
-        console.debug("[PcmStream] underrun", {
-          gapMs: Math.round(1000 * (at - this._nextStartTime))
-        });
+      const chunk = this._pending.shift()!;
+      this._pendingDuration -= chunk.duration;
+      if (this._scheduleFragment !== null && this._scheduleFragment !== chunk.fragmentIndex) {
+        this._flushStretcher();
       }
-      const source = this._ctx.createBufferSource();
-      source.buffer = buffer;
-      source.playbackRate.value = rate;
-      source.connect(this._gain);
-      source.onended = () => this._handleSourceEnded(source);
-      source.start(at);
-      this._activeSources.set(source, {
-        fragmentIndex,
-        offset,
-        duration: buffer.duration,
-        consumed: 0,
-        clock: at,
-        rate
-      });
-      this._nextStartTime = at + buffer.duration / rate;
+      const stretcher = this._ensureStretcher(chunk);
+      this._scheduleFragment = chunk.fragmentIndex;
+      this._scheduleOutput(stretcher.push(chunk.channels), chunk.sampleRate, chunk);
     }
+  }
+
+  /** Schedule one block of already-stretched audio at the running cursor. */
+  private _scheduleOutput(
+    channels: PcmChannel[] | null,
+    sampleRate: number,
+    native: PendingChunk | null
+  ): void {
+    if (!channels || channels[0].length === 0) return;
+    const buffer = this._ctx.createBuffer(channels.length, channels[0].length, sampleRate);
+    for (let c = 0; c < channels.length; c++) {
+      buffer.copyToChannel(channels[c], c);
+    }
+    // Underrun tolerance: continue from currentTime if the cursor fell behind.
+    const at = Math.max(this._nextStartTime, this._ctx.currentTime + 0.005);
+    if (import.meta.env.DEV && at > this._nextStartTime) {
+      console.debug("[PcmStream] underrun", {
+        gapMs: Math.round(1000 * (at - this._nextStartTime))
+      });
+    }
+    const source = this._ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this._gain);
+    source.onended = () => this._handleSourceEnded(source);
+    source.start(at);
+    const nativeDuration = buffer.duration * this._speed;
+    this._activeSources.set(source, {
+      fragmentIndex: this._scheduleFragment ?? 0,
+      offset: this._emittedNative,
+      duration: nativeDuration,
+      consumed: 0,
+      clock: at,
+      rate: this._speed,
+      native
+    });
+    this._emittedNative += nativeDuration;
+    this._nextStartTime = at + buffer.duration;
   }
 
   private _handleSourceEnded(source: AudioBufferSourceNode): void {

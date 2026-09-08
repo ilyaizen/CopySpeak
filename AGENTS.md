@@ -39,8 +39,8 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 
 - Check credential presence without printing `.env` values; never grep secret files into command output.
 - Preserve native caption intervals with their generated audio through stream framing, cache/history replay, and sample-count-based fragment concatenation; never scale word timings by text weights.
-- Reschedule unstarted PCM sources when playback speed or pitch changes; setting playbackRate does not move their scheduled start times.
-
+- Route playback speed and pitch through `TimeStretcher` (SoundTouch `pitch` setter, then `stretch.tempo = speed / pitch`); keep `playbackRate` at 1 on PCM sources and track `ScheduledPosition` duration/offset/rate in native time.
+- On a rate change, re-stretch the native chunks of unstarted PCM sources; audio already rendered keeps the rate it was rendered at, since absolute start times do not move.
 - Drive HUD captions from the audible fragment's audio clock; synthesis events may describe a later fragment, and incoming PCM chunks must not resume a user-paused stream.
 - Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
 - Treat `git diff --check` as a check; do not run it before explicit confirmation.
@@ -60,6 +60,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Pass `uv init` its target directory positionally (`uv init --bare --name X <dir>`); uv 0.12+ hard-errors on `uv --project <dir> init`, which only shows up when creating a fresh engine project.
 
 <!-- rtk-instructions v2 -->
+
 ## RTK (Rust Token Killer) - Token-Optimized Commands
 
 ## Golden Rule
@@ -75,5 +76,6 @@ git add . && git commit -m "msg" && git push
 # ✅ Correct
 rtk git add . && rtk git commit -m "msg" && rtk git push
 ```
+
 Full command reference (which tools have dedicated filters, and their savings): the `rtk-commands` skill in `.agents/skills/rtk-commands/`.
 <!-- /rtk-instructions -->

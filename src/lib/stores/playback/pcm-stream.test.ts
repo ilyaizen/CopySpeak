@@ -118,13 +118,15 @@ describe("PcmStreamScheduler", () => {
     expect(scheduler.getPlaybackPosition()).toBeNull();
   });
 
-  it("measures source time across playback rate changes", () => {
+  it("keeps audible audio at the rate it was rendered at", () => {
     const { scheduler, ctx } = createHarness();
     scheduler.handleChunk(chunk(new Uint8Array(48000)));
     ctx.currentTime = 0.28;
     scheduler.setRate(2, 1);
+    // The audible source was time-stretched at speed 1 and cannot be retuned in
+    // place, so its clock keeps advancing one native second per wall second.
     ctx.currentTime = 0.53;
-    expect(scheduler.getPlaybackPosition()?.positionMs).toBeCloseTo(750);
+    expect(scheduler.getPlaybackPosition()?.positionMs).toBeCloseTo(500);
     scheduler.stop();
   });
 
@@ -136,10 +138,16 @@ describe("PcmStreamScheduler", () => {
     oldFuture.stop = vi.fn();
     ctx.currentTime = 0.53;
     scheduler.setRate(rate, 1);
-    const expectedStart = 0.53 + 0.5 / rate;
+    // The audible source still owes 0.5s of native audio at its rendered rate.
+    const expectedStart = 1.03;
     expect(oldFuture.stop).toHaveBeenCalledOnce();
     expect(oldFuture.onended).toBeNull();
     expect(sources[2].at).toBeCloseTo(expectedStart);
+    // The requeued chunk is re-stretched, so one native second now occupies
+    // 1/rate wall seconds of buffer, minus the WSOLA window still held back
+    // until the fragment is flushed.
+    expect(sources[2].buffer!.duration).toBeGreaterThan(0.75 / rate);
+    expect(sources[2].buffer!.duration).toBeLessThanOrEqual(1.02 / rate);
     ctx.currentTime = expectedStart + 0.1;
     expect(scheduler.getPlaybackPosition()?.fragmentIndex).toBe(1);
     expect(scheduler.getPlaybackPosition()?.positionMs).toBeCloseTo(100 * rate);

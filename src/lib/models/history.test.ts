@@ -1,5 +1,10 @@
 import { expect, it } from "vitest";
-import { createHistoryItem, groupHistoryReadings, historyVoiceLabel, historyTimeAgo } from "./history";
+import {
+  createHistoryItem,
+  groupHistoryReadings,
+  historyVoiceLabel,
+  historyTimeAgo
+} from "./history";
 import type { EngineCatalogEntry, VoiceProfile } from "$lib/types";
 
 it("shows elapsed time at minute, hour, and day boundaries", () => {

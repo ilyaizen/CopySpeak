@@ -8,9 +8,13 @@ vi.mock("@tauri-apps/plugin-opener", () => ({ revealItemInDir: vi.fn() }));
 vi.mock("$lib/stores/history-store.svelte.js", () => ({
   historyStore: {
     items: Array.from({ length: 6 }, (_, index) => ({
-      id: String(index), timestamp: Date.now() - index * 60_000,
-      text: `Reading ${index}`, tts_engine: "cartesia", voice: "saved",
-      success: true, output_path: `/audio/${index}.wav`
+      id: String(index),
+      timestamp: Date.now() - index * 60_000,
+      text: `Reading ${index}`,
+      tts_engine: "cartesia",
+      voice: "saved",
+      success: true,
+      output_path: `/audio/${index}.wav`
     }))
   }
 }));
@@ -20,7 +24,8 @@ it("scrolls the five-reading preview sideways with the wheel and ends with Histo
   const view = render(RecentHistory, { compact: true, limit: 5 });
   const rail = view.getByRole("list");
   Object.defineProperties(rail, {
-    scrollWidth: { value: 1600 }, clientWidth: { value: 600 }
+    scrollWidth: { value: 1600 },
+    clientWidth: { value: 600 }
   });
   const wheel = new WheelEvent("wheel", { deltaY: 100, cancelable: true });
   rail.dispatchEvent(wheel);

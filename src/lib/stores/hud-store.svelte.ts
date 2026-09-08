@@ -87,8 +87,8 @@ let dotPulsing = $derived(isSynthesizing || (!isPaused && !isSynthesizing));
 let playbackProgressPercent = $derived(
   caption && caption.duration_ms > 0
     ? Math.min(100, (caption.position_ms / caption.duration_ms) * 100)
-    : accurateDurationMs !== null && accurateDurationMs > 0 && pitch > 0 && speed > 0
-      ? Math.min(100, (playbackElapsedMs / (accurateDurationMs / (pitch * speed))) * 100)
+    : accurateDurationMs !== null && accurateDurationMs > 0 && speed > 0
+      ? Math.min(100, (playbackElapsedMs / (accurateDurationMs / speed)) * 100)
       : 0
 );
 
@@ -188,8 +188,9 @@ export const hudStore = {
   },
   get adjustedDurationMs() {
     if (accurateDurationMs === null || accurateDurationMs <= 0) return 0;
-    if (pitch <= 0 || speed <= 0) return 0;
-    return accurateDurationMs / (pitch * speed);
+    if (speed <= 0) return 0;
+    // Pitch shifting preserves duration; only speed changes it.
+    return accurateDurationMs / speed;
   },
   get isPlaybackReady() {
     return isPlaybackReady;

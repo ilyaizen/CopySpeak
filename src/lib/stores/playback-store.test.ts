@@ -146,9 +146,14 @@ it("publishes captions from the audio clock and audible fragment, then stops pub
   expect(emitTo).not.toHaveBeenCalled();
 });
 
-it.each([0.5, Number.NaN])(
+// The rendered blob carries native duration - pitch shifting no longer resamples
+// it - so the media clock is already caption time, with no correction factor.
+it.each([
+  [0.5, 500],
+  [Number.NaN, 1000]
+])(
   "replays native timings through pitch, speed, and pause (duration %s)",
-  async (duration) => {
+  async (duration, expectedDurationMs) => {
     vi.useFakeTimers();
     vi.spyOn(audio, "readyState", "get").mockReturnValue(4);
     vi.spyOn(audio, "duration", "get").mockReturnValue(duration);
@@ -179,8 +184,8 @@ it.each([0.5, Number.NaN])(
       "hud:caption",
       expect.objectContaining({
         captions,
-        position_ms: 600,
-        duration_ms: 1000
+        position_ms: 300,
+        duration_ms: expectedDurationMs
       })
     );
     audio.dispatchEvent(new Event("pause"));
@@ -188,7 +193,7 @@ it.each([0.5, Number.NaN])(
     expect(emitTo).toHaveBeenLastCalledWith(
       "hud",
       "hud:caption",
-      expect.objectContaining({ captions, position_ms: 600, paused: true })
+      expect.objectContaining({ captions, position_ms: 300, paused: true })
     );
     playbackStore.syncPlaybackConfig(100, 1, 1);
   }

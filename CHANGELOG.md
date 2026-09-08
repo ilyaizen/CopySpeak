@@ -5,7 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.17] - 2026-09-08
+
+### Changed
+
+- **Speed and pitch are now independent knobs** — speed time-stretches the audio while preserving pitch (no more chipmunk voice when speeding up) and pitch shifts the voice without changing how long the reading takes. Previously both were a single resampling factor, so each knob moved the other. Both playback paths route through SoundTouch's WSOLA stretcher (`playback/time-stretch.ts`): the streaming PCM scheduler stretches each chunk before scheduling it and keeps `playbackRate` at 1, while the `<audio>` path bakes the pitch shift into the rendered blob at native duration and leaves speed to `preservesPitch` + `playbackRate`.
+- **Speed and pitch ranges tightened** — speed caps at 0.5-2.0 (the IPC clamp was 0.25-4.0, inconsistent with every slider) and pitch narrows from 0.5-2.0 to 0.75-1.35, roughly ±5 semitones. A full octave was only tolerable while pitch also changed speed. Existing profiles keep their values, clamped into range on load; because pitch no longer secretly adds speed, a saved profile may read slower than it used to.
+
+### Removed
+
+- Dead WAV concatenation helpers (`concat_wav_files`, `find_wav_data_offset`) left over from the pre-streaming batch path.
 
 ## [0.1.16] - 2026-09-08
 

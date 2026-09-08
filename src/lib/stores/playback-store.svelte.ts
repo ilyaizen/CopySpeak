@@ -14,6 +14,7 @@ import type { EffectId } from "$lib/types";
 import { applyFadeIn, audioBufferToWavBlob, detectAudioMimeType } from "./playback/audio-utils.js";
 import { AudioAnalyser } from "./playback/analyser.js";
 import { PcmStreamScheduler, type StreamChunkPayload } from "./playback/pcm-stream.js";
+import { stretchBuffer } from "./playback/time-stretch.js";
 import { getEffect } from "./playback/effects/registry.js";
 import { FragmentQueue, type QueuedFragment } from "./playback/fragment-queue.js";
 import { hudStore } from "./hud-store.svelte.js";
@@ -53,7 +54,6 @@ class PlaybackStore {
   private _playbackGeneration = 0;
   private _readingText = "";
   private _fragmentCaptions: CaptionAlignment | null = null;
-  private _renderedPitch = 1;
   private _streamStopped = false;
   private _fragmentText = "";
   private _captionTimer: ReturnType<typeof setInterval> | null = null;
@@ -147,12 +147,12 @@ class PlaybackStore {
       const el = this._audioEl;
       const duration = Number.isFinite(el.duration)
         ? el.duration
-        : (this._decodedBuffer?.duration ?? 0) / this._renderedPitch;
+        : (this._decodedBuffer?.duration ?? 0);
       caption = {
         text: this._fragmentCaptions?.text ?? (this._fragmentText || this._readingText),
         captions: this._fragmentCaptions,
-        position_ms: el.currentTime * this._renderedPitch * 1000,
-        duration_ms: duration * this._renderedPitch * 1000,
+        position_ms: el.currentTime * 1000,
+        duration_ms: duration * 1000,
         paused: this.isPaused,
         active: !this.isLoadingAudio && !el.ended && !el.seeking && el.readyState >= 2
       };
@@ -195,18 +195,8 @@ class PlaybackStore {
           buffer.copyToChannel(this._decodedBuffer.getChannelData(c), c);
         }
       } else {
-        const outputLen = Math.max(1, Math.round(this._decodedBuffer.length / pitchRatio));
-        const offline = new OfflineAudioContext(
-          this._decodedBuffer.numberOfChannels,
-          outputLen,
-          this._decodedBuffer.sampleRate
-        );
-        const src = offline.createBufferSource();
-        src.buffer = this._decodedBuffer;
-        src.playbackRate.value = pitchRatio;
-        src.connect(offline.destination);
-        src.start(0);
-        buffer = await offline.startRendering();
+        // Pitch shift only - duration stays native so caption positions map 1:1.
+        buffer = stretchBuffer(this._decodedBuffer, 1, pitchRatio);
       }
       if (effect) {
         buffer = await effect.process(buffer, this._audioCtx);
@@ -268,11 +258,9 @@ class PlaybackStore {
         // Emit to HUD window for cross-window state sync
         this._emit?.("hud:audio-duration", accurateDurationMs);
       }
-      const renderedPitch = this.pitch;
-      const url = await this.buildPlaybackUrl(renderedPitch);
+      const url = await this.buildPlaybackUrl(this.pitch);
       if (generation !== this._playbackGeneration) return;
       if (!this._audioEl || !url) throw new Error("Audio player is not ready");
-      this._renderedPitch = renderedPitch;
       this._audioEl.src = url;
       this._analyser.start(); // Start amplitude capture BEFORE audio plays
       await this.playAudio();
@@ -394,6 +382,8 @@ class PlaybackStore {
       throw new Error("Audio player is not ready");
     }
     this._audioEl.volume = this.volume / 100;
+    // Time-stretch rather than resample, so speed never shifts pitch.
+    this._audioEl.preservesPitch = true;
     this._audioEl.playbackRate = this.speed;
     console.log(
       "[PlaybackStore] playAudio: volume",
@@ -409,10 +399,8 @@ class PlaybackStore {
   async handleReplay(): Promise<void> {
     this.historyReadingId = null;
     if (!this._audioEl) return;
-    const renderedPitch = this.pitch;
-    const url = await this.buildPlaybackUrl(renderedPitch);
+    const url = await this.buildPlaybackUrl(this.pitch);
     if (url) {
-      this._renderedPitch = renderedPitch;
       this._audioEl.src = url;
       this._audioEl.currentTime = 0;
       try {
@@ -486,6 +474,7 @@ class PlaybackStore {
     }
     if (this._audioEl) {
       this._audioEl.volume = volume / 100;
+      this._audioEl.preservesPitch = true;
       this._audioEl.playbackRate = speed;
     }
     // Keep the streaming scheduler in sync while it owns playback
