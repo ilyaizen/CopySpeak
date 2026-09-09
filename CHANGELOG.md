@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Rename history readings** — a reading and the rest of its batch can be renamed without touching its text or audio files (`rename_history_reading`, up to 200 characters); the new name appears everywhere the reading is listed and can be cleared to go back to the automatic title.
+- **Voice profile restore from history** — playing a history reading resolves the saved engine and voice ID through the profile catalog (`historyProfile`) and applies only the recorded settings (engine, voice, speed), keeping the current profile's pitch and effects; a missing voice profile aborts with a clear error instead of generating with a different voice.
+- **Per-engine live-caption support flag** — the engine catalog reports `supports_captions` (native word/interval timing) for Piper, ElevenLabs, Cartesia, and Edge; the profile manager labels engines without it, warns when the active engine lacks captions, and a catalog test pins the flag to the native timing adapters.
 - **Browser Companion developer preview** — a Chromium extension can read an ordinary webpage selection through CopySpeak with the toolbar action or `Alt+Shift+R`, then offers page-level Pause, Resume, and Stop controls. A native-messaging host and local named-pipe bridge start normal desktop playback; when sanitization, pagination, and engine caption timings map exactly to the original text, the page follows the current word, otherwise it safely keeps passage-only highlighting. The companion stops when the selected content changes, the page navigates, or its tab closes.
 
 ## [0.1.17] - 2026-09-08
