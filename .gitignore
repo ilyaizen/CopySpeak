@@ -47,3 +47,5 @@ nul
 target-verify.ps1
 /.reasonix
 /browser-native-host/target/
+browser-native-host/target/
+browser-extension/test-results/
