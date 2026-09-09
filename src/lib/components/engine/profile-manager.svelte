@@ -195,8 +195,15 @@
 
   const engineOptions = $derived(
     catalog.length
-      ? catalog.map((entry) => ({ value: entry.engine, label: entry.label }))
+      ? catalog.map((entry) => ({
+          value: entry.engine,
+          label: entry.supports_captions ? entry.label : `${entry.label} (no live captions)`
+        }))
       : fallbackEngineOptions
+  );
+
+  const activeEngineCatalogEntry = $derived(
+    catalog.find((entry) => entry.engine === active?.engine)
   );
 
   const profiles = $derived(localConfig.tts.profiles);
@@ -657,6 +664,12 @@
                 <AlertTriangle size={12} />
                 Set up engine credentials →
               </a>
+            {/if}
+            {#if activeEngineCatalogEntry && !activeEngineCatalogEntry.supports_captions}
+              <p class="text-muted-foreground inline-flex items-center gap-1 text-xs">
+                <AlertTriangle size={12} />
+                Live word captions are unavailable for this engine.
+              </p>
             {/if}
           </div>
         </SettingRow>
