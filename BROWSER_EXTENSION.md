@@ -21,7 +21,7 @@ support are rejected.
 
 `browser-extension/` captures the selection and owns the page UI.
 `browser-native-host/` relays Chrome native-messaging frames to
-`\\\\.\\pipe\\copyspeak-browser`. The desktop bridge starts a normal CopySpeak
+`\\.\pipe\copyspeak-browser`. The desktop bridge starts a normal CopySpeak
 reading and projects audible caption timings back to the original selection.
 
 Word highlighting is deliberately conservative: it is enabled only when the
