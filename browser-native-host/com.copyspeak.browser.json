@@ -1,0 +1,9 @@
+{
+  "name": "com.copyspeak.browser",
+  "description": "CopySpeak browser companion native host",
+  "path": "D:\\Projects\\CopySpeak\\browser-native-host\\target\\debug\\copyspeak-browser-host.exe",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://hojbmioeiccpgkpnpblkdbeegjkcccad/"
+  ]
+}

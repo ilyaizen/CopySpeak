@@ -91,7 +91,9 @@ impl TtsBackend for OpenAiTtsBackend {
                         .json(&body)
                         .send()
                         .await
-                        .map_err(|e| TtsError::Http(format!("OpenAI stream request failed: {e}")))?;
+                        .map_err(|e| {
+                            TtsError::Http(format!("OpenAI stream request failed: {e}"))
+                        })?;
                     let status = response.status();
                     if !status.is_success() {
                         let error_text = response.text().await.unwrap_or_default();

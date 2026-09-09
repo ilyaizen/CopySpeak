@@ -5,6 +5,7 @@
 
 mod audio;
 mod autostart;
+mod browser_bridge;
 mod clipboard;
 mod commands;
 mod config;
@@ -19,6 +20,7 @@ mod post_process;
 mod sanitize;
 mod secrets;
 mod telemetry;
+mod text_map;
 mod tts;
 
 pub struct JobStatus {
@@ -326,6 +328,10 @@ fn main() {
             // --- Init global synthesis lock ---
             app.manage(tokio::sync::Mutex::new(()));
 
+            // --- Init browser bridge ---
+            let bridge = browser_bridge::BrowserBridge::new();
+            app.manage(bridge);
+
             // --- Build system tray ---
             let version = app.package_info().version.to_string();
             let version_item = MenuItem::with_id(
@@ -559,6 +565,12 @@ fn main() {
             let app_handle_for_cleanup = app.handle().clone();
             history::start_cleanup_service(app_handle_for_cleanup);
 
+            // --- Start browser bridge ---
+            let app_handle_for_bridge = app.handle().clone();
+            if let Err(e) = browser_bridge::start_browser_bridge(app_handle_for_bridge) {
+                log::error!("Failed to start browser bridge: {}", e);
+            }
+
             log::info!("CopySpeak started");
             Ok(())
         })
@@ -719,6 +731,9 @@ fn main() {
             commands::test_local_engine,
             // Post-processing models
             commands::list_post_processing_models,
+            // Browser companion bridge (commands live in browser_bridge.rs)
+            crate::browser_bridge::browser_reading_progress,
+            crate::browser_bridge::browser_reading_finished,
         ])
         .run(tauri::generate_context!())
         .expect("error while running CopySpeak");

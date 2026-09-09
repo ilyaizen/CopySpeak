@@ -1,0 +1,2 @@
+[test]
+exclude = ["browser-tests/**"]

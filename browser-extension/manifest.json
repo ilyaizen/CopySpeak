@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA2P2H2M2ApEJsPAABmgdvdBxpRw0bSkGeVNwgqRR0mjdn7DAdd86Ut7LXF6SoqFYCy26LaLEw7YHIQNFQBJ/JdbixM8joyQ9rsmfTKxF0oPTkel/WwFmXdEz5uxCvuOkcnA/FHnBJ9EIDrCj89O3lYt31k4PgBooqC92nMnKwpILRHvhld5VUE1bvHPZIWfcq1Cs3aXhao0Y0aSx9P+LFXYNAzpuvqrIFZTPVN4NN/WzVzvP9mDaPFfWPnYbkA1kAJ95pxJ9hXaWwsiUe/heBE3ak3T6VCgacPAU8MATtRJmKDz6C5z/BXLOMC0C8zytUGvdlrCacliycHpBaj9vcXwIDAQAB",
+  "name": "CopySpeak Companion",
+  "version": "0.1.0",
+  "description": "Read selected page text aloud with CopySpeak and follow along with live word highlighting.",
+  "minimum_chrome_version": "109",
+  "permissions": ["activeTab", "nativeMessaging", "scripting", "storage"],
+  "background": {
+    "service_worker": "worker.js"
+  },
+  "action": {
+    "default_title": "Read selection with CopySpeak"
+  },
+  "commands": {
+    "read-selection": {
+      "suggested_key": {
+        "default": "Alt+Shift+R"
+      },
+      "description": "Read the selected text with CopySpeak"
+    }
+  }
+}

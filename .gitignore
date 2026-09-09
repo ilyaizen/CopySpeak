@@ -46,3 +46,4 @@ nul
 /.hermes
 target-verify.ps1
 /.reasonix
+/browser-native-host/target/

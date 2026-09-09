@@ -5,14 +5,16 @@ use regex::Regex;
 use super::cleanup::cleanup_artifacts;
 
 /// Normalize text for TTS readability.
-/// Applies replacements in priority order: emojis → URLs → citations → slashes →
-/// Latin abbreviations → metric units → symbols → punctuation.
+/// Applies replacements in priority order: character normalization → emojis →
+/// URLs → citations → slashes → Latin abbreviations → metric units → symbols →
+/// punctuation → leading-orphan strip.
 /// Newlines are stripped at the end — they don't affect speech and produce
 /// cleaner single-line text for history preview.
 pub fn sanitize_tts(text: &str) -> String {
     let mut result = text.to_string();
 
     // Order matters — run in the specified priority sequence
+    result = normalize_characters(&result);
     result = remove_emojis(&result);
     result = remove_urls(&result);
     result = remove_citations(&result);
@@ -26,6 +28,11 @@ pub fn sanitize_tts(text: &str) -> String {
     result = expand_symbols(&result);
     result = normalize_punctuation(&result);
     result = cleanup_artifacts(&result);
+    // Last: drop orphan leading punctuation (", They didn't know…" →
+    // "They didn't know…"). Runs after quote/dash normalization so opening
+    // quotes survive while leading commas/bullets/dashes are already
+    // canonical and stripped.
+    result = strip_leading_orphans(&result);
 
     // Strip newlines — they have no effect on speech and produce cleaner
     // single-line output for history preview.
@@ -50,6 +57,139 @@ fn remove_emojis(text: &str) -> String {
         ).unwrap();
     }
     EMOJI_REGEX.replace_all(text, "").to_string()
+}
+
+// ── 0. Character Normalization (sanitext-style) ──────────────────────────────
+
+/// True when two UTF-16 units are the same punctuation under normalization:
+/// curly ↔ straight quotes, en/em dash ↔ hyphen. All pairs are 1 UTF-16 unit
+/// on both sides, so substitution never shifts offsets. Single source of
+/// truth, shared with `browser_bridge` (caption matching).
+pub(crate) fn punct_equivalent(a: u16, b: u16) -> bool {
+    const CURLY_OPEN: u16 = 0x201C; // “
+    const CURLY_CLOSE: u16 = 0x201D; // ”
+    const CURLY_SINGLE_OPEN: u16 = 0x2018; // ‘
+    const CURLY_SINGLE_CLOSE: u16 = 0x2019; // ’
+    const EN_DASH: u16 = 0x2013;
+    const EM_DASH: u16 = 0x2014;
+    const QUOTE: u16 = 0x0022; // "
+    const APOSTROPHE: u16 = 0x0027; // '
+    const HYPHEN: u16 = 0x002D; // -
+    let class = |u: u16| match u {
+        CURLY_OPEN | CURLY_CLOSE | QUOTE => 0,
+        CURLY_SINGLE_OPEN | CURLY_SINGLE_CLOSE | APOSTROPHE => 1,
+        EN_DASH | EM_DASH | HYPHEN => 2,
+        _ => u, // anything else must match exactly
+    };
+    class(a) == class(b)
+}
+
+/// Same-length (1 UTF-16 unit → 1 unit) character substitutions: unicode
+/// spaces, curly → straight quotes, en dash → hyphen, fullwidth → ASCII.
+fn substitute_same_length(text: &str) -> String {
+    lazy_static::lazy_static! {
+        static ref UNICODE_SPACES: Regex =
+            Regex::new(r"[\u{00A0}\u{2000}-\u{200A}\u{202F}\u{205F}\u{3000}]").unwrap();
+        static ref CURLY_DOUBLE: Regex = Regex::new(r"[\u{201C}\u{201D}]").unwrap();
+        static ref CURLY_SINGLE: Regex = Regex::new(r"[\u{2018}\u{2019}\u{02BC}]").unwrap();
+        static ref EN_DASH: Regex = Regex::new(r"\u{2013}").unwrap();
+        static ref FULLWIDTH: Regex = Regex::new(r"[\u{FF01}-\u{FF5E}]").unwrap();
+    }
+    let result = UNICODE_SPACES.replace_all(text, " ").to_string();
+    let result = CURLY_DOUBLE.replace_all(&result, "\"").to_string();
+    let result = CURLY_SINGLE.replace_all(&result, "'").to_string();
+    let result = EN_DASH.replace_all(&result, "-").to_string();
+    // Fullwidth forms (！＂＃… from CJK contexts) fold to ASCII; the block is
+    // a fixed 0xFEE0 offset for 0xFF01..=0xFF5E → 0x0021..=0x007E.
+    FULLWIDTH
+        .replace_all(&result, |caps: &regex::Captures| {
+            let c = caps[0].chars().next().unwrap() as u32;
+            char::from_u32(c - 0xFEE0).unwrap().to_string()
+        })
+        .to_string()
+}
+
+/// Homoglyph folding — Cyrillic confusables (a classic LLM-output artifact
+/// that trips TTS pronunciation) with a visual Latin equivalent fold 1 unit
+/// → 1 unit. Real Cyrillic words survive untouched.
+fn fold_homoglyphs(text: &str) -> String {
+    const MAP: &[(char, char)] = &[
+        ('Ѐ', 'E'),
+        ('Ё', 'E'),
+        ('А', 'A'),
+        ('В', 'B'),
+        ('Е', 'E'),
+        ('К', 'K'),
+        ('М', 'M'),
+        ('Н', 'H'),
+        ('О', 'O'),
+        ('Р', 'P'),
+        ('С', 'C'),
+        ('Т', 'T'),
+        ('Х', 'X'),
+        ('а', 'a'),
+        ('е', 'e'),
+        ('о', 'o'),
+        ('р', 'p'),
+        ('с', 'c'),
+        ('у', 'y'),
+        ('х', 'x'),
+        ('ё', 'e'),
+    ];
+    text.chars()
+        .map(|c| match MAP.iter().find(|(from, _)| *from == c) {
+            Some((_, to)) => *to,
+            None => c,
+        })
+        .collect()
+}
+
+/// Removes zero-width / invisible characters and BOM/soft-hyphen marks.
+/// These are DELETIONS — they disqualify exact mapping by themselves.
+fn strip_invisibles(text: &str) -> String {
+    lazy_static::lazy_static! {
+        static ref INVISIBLE: Regex = Regex::new(
+            r"[\u{200B}-\u{200F}\u{2060}-\u{2064}\u{FEFF}\u{00AD}\u{180E}]"
+        )
+        .unwrap();
+    }
+    INVISIBLE.replace_all(text, "").to_string()
+}
+
+/// Compose the sanitization-side normalization passes (substitutions +
+/// homoglyph folds + invisible deletions).
+fn normalize_characters(text: &str) -> String {
+    strip_invisibles(&fold_homoglyphs(&substitute_same_length(text)))
+}
+
+/// The same-length subset only (substitutions + homoglyph folds, NO
+/// deletions). Used by `text_map` to prove a spoken text is the raw text
+/// under pure 1→1 substitutions, keeping word highlighting exact.
+pub(crate) fn canonical_same_length(text: &str) -> String {
+    fold_homoglyphs(&substitute_same_length(text))
+}
+
+// ── 0b. Leading Orphan Punctuation Strip ────────────────────────────────────
+
+/// Strip orphan leading punctuation before the first word — clipboard
+/// selections frequently pick up a comma/colon/bullet from the preceding
+/// content (e.g. `, They didn't know…`). Opening quotes are NOT orphans
+/// (real quotations start with them) and survive. Runs last, after quote
+/// normalization, so a leading em dash has already become ", ".
+fn strip_leading_orphans(text: &str) -> String {
+    let is_orphan = |c: char| {
+        matches!(
+            c,
+            ',' | ';' | ':' | '-' | '*' | '>' | '•' | '·' | '‣' | '∙' | '◦'
+        )
+    };
+    let stripped_len = text
+        .char_indices()
+        .take_while(|&(_, c)| is_orphan(c) || c.is_whitespace())
+        .map(|(i, c)| i + c.len_utf8())
+        .last()
+        .unwrap_or(0);
+    text[stripped_len..].trim_start().to_string()
 }
 
 // ── 1. Web Artifacts ────────────────────────────────────────────────────────
@@ -247,6 +387,11 @@ fn expand_symbols(text: &str) -> String {
 
 // ── 11. Punctuation Normalization ───────────────────────────────────────────
 
+lazy_static::lazy_static! {
+    // Shared with source mapping so paired delimiters follow the same rule.
+    pub(crate) static ref PAREN_REGEX: Regex = Regex::new(r"\(([^)]+)\)").unwrap();
+}
+
 fn normalize_punctuation(text: &str) -> String {
     lazy_static::lazy_static! {
         // Normalize various ellipsis forms to standard "..."
@@ -254,8 +399,6 @@ fn normalize_punctuation(text: &str) -> String {
         static ref ELLIPSIS_SPACED_REGEX: Regex = Regex::new(r"\.\s*\.\s*\.").unwrap();
         // Em-dash → comma
         static ref EM_DASH_REGEX: Regex = Regex::new(r"\u{2014}").unwrap();
-        // Parenthesized text → comma-delimited
-        static ref PAREN_REGEX: Regex = Regex::new(r"\(([^)]+)\)").unwrap();
     }
 
     let result = ELLIPSIS_UNICODE_REGEX.replace_all(text, "...").to_string();
@@ -269,6 +412,68 @@ fn normalize_punctuation(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_normalize_curly_quotes_and_dashes() {
+        assert_eq!(
+            normalize_characters("\u{201C}quoted\u{201D} and \u{2018}single\u{2019}"),
+            "\"quoted\" and 'single'"
+        );
+        assert_eq!(normalize_characters("co\u{2013}op"), "co-op");
+        assert_eq!(normalize_characters("a\u{00A0}b\u{202F}c"), "a b c");
+    }
+
+    #[test]
+    fn test_normalize_fullwidth_folds_to_ascii() {
+        assert_eq!(
+            normalize_characters("Ｈｅｌｌｏ　Ｗｏｒｌｄ"),
+            "Hello World"
+        );
+    }
+
+    #[test]
+    fn test_normalize_homoglyphs_fold_latin_lookalikes() {
+        // Cyrillic а, е, о fold to Latin; real Cyrillic with no Latin
+        // confusable (жизнь) survives untouched.
+        assert_eq!(normalize_characters("саt"), "cat");
+        assert_eq!(normalize_characters("жизнь"), "жизнь");
+    }
+
+    #[test]
+    fn test_normalize_strips_invisibles() {
+        // ZWSP, soft hyphen, BOM are deletions.
+        assert_eq!(
+            normalize_characters("in\u{200B}vis\u{00AD}ible"),
+            "invisible"
+        );
+        assert_eq!(normalize_characters("\u{FEFF}leading"), "leading");
+    }
+
+    #[test]
+    fn test_strip_leading_orphans_acceptance_example() {
+        // The acceptance example from the browser-companion handoff.
+        assert_eq!(
+            strip_leading_orphans(", They didn't know that they were looking for a better theory."),
+            "They didn't know that they were looking for a better theory."
+        );
+        // Multiple orphans + leading whitespace.
+        assert_eq!(strip_leading_orphans(" ••  Point one"), "Point one");
+        // Opening quote is NOT an orphan and survives.
+        assert_eq!(
+            strip_leading_orphans("\"Quoted start\""),
+            "\"Quoted start\""
+        );
+    }
+
+    #[test]
+    fn test_sanitize_tts_acceptance_example() {
+        // End-to-end: leading comma + curly apostrophe (mojibake source in
+        // TTS) → clean straight-quote output.
+        assert_eq!(
+            sanitize_tts(", They didn\u{2019}t know that they were looking for a better theory."),
+            "They didn't know that they were looking for a better theory."
+        );
+    }
 
     #[test]
     fn test_remove_emojis() {
