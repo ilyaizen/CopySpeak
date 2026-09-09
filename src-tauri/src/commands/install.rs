@@ -132,7 +132,10 @@ fn spawn_streamed(
     let app_err = app.clone();
     let engine_err = engine.clone();
     std::thread::spawn(move || {
-        for line in std::io::BufReader::new(stderr).lines().map_while(Result::ok) {
+        for line in std::io::BufReader::new(stderr)
+            .lines()
+            .map_while(Result::ok)
+        {
             let _ = app_err.emit(
                 "install-progress",
                 InstallProgress {
@@ -146,7 +149,10 @@ fn spawn_streamed(
     });
 
     std::thread::spawn(move || {
-        for line in std::io::BufReader::new(stdout).lines().map_while(Result::ok) {
+        for line in std::io::BufReader::new(stdout)
+            .lines()
+            .map_while(Result::ok)
+        {
             let _ = app.emit(
                 "install-progress",
                 InstallProgress {
@@ -370,8 +376,7 @@ pub struct EngineStatus {
 /// the uv-tool engines require their binary on PATH.
 #[tauri::command]
 pub fn engine_status(engine: String) -> Result<EngineStatus, String> {
-    let name = canonical_engine(&engine)
-        .ok_or_else(|| format!("unknown engine: {engine}"))?;
+    let name = canonical_engine(&engine).ok_or_else(|| format!("unknown engine: {engine}"))?;
 
     let installed = match name {
         "uv" => on_path("uv"),
@@ -395,6 +400,10 @@ pub fn engine_status(engine: String) -> Result<EngineStatus, String> {
 
     Ok(EngineStatus {
         installed,
-        voices: if installed { manifest_voices(name) } else { Vec::new() },
+        voices: if installed {
+            manifest_voices(name)
+        } else {
+            Vec::new()
+        },
     })
 }

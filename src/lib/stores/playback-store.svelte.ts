@@ -10,6 +10,7 @@
  */
 
 import { isTauri } from "$lib/services/tauri.js";
+import { invoke } from "@tauri-apps/api/core";
 import type { EffectId } from "$lib/types";
 import { applyFadeIn, audioBufferToWavBlob, detectAudioMimeType } from "./playback/audio-utils.js";
 import { AudioAnalyser } from "./playback/analyser.js";
@@ -67,6 +68,11 @@ class PlaybackStore {
   private _analyser = new AudioAnalyser();
   private _fragmentQueue: FragmentQueue;
   private _pcmScheduler: PcmStreamScheduler | null = null;
+
+  // Browser companion: while a browser-initiated reading is active, the
+  // audible-clock position is reported to the Rust bridge, which projects the
+  // current word into the page selection (see src-tauri/src/browser_bridge.rs).
+  private _browserReadingActive = false;
 
   constructor() {
     // Initialize fragment queue with handlers
@@ -161,6 +167,19 @@ class PlaybackStore {
     this._lastCaption = caption;
     hudStore.handleCaption(caption);
     void this._emitTo?.("hud", "hud:caption", caption);
+    // Report the audible clock to the browser bridge. Best-effort: the bridge
+    // may not exist (older app build) or no reading may be active.
+    if (this._browserReadingActive) {
+      const fragmentIndex = this._pcmScheduler
+        ? (this._pcmScheduler.getPlaybackPosition()?.fragmentIndex ??
+          (this.currentFragmentIndex ?? 0))
+        : (this.currentFragmentIndex ?? 0);
+      void invoke("browser_reading_progress", {
+        fragmentIndex,
+        positionMs: Math.round(caption.position_ms),
+        paused: caption.paused
+      }).catch(() => {});
+    }
   }
 
   async buildPlaybackUrl(pitchRatio: number): Promise<string> {
@@ -326,6 +345,10 @@ class PlaybackStore {
     this.currentFragmentIndex = null;
     this.totalFragments = null;
     this._pcmScheduler = null;
+    if (this._browserReadingActive) {
+      this._browserReadingActive = false;
+      void invoke("browser_reading_finished", { status: "completed" }).catch(() => {});
+    }
     void this._emit?.("hud:stop", null);
   }
 
@@ -561,6 +584,12 @@ class PlaybackStore {
         this.handleTogglePause();
       });
 
+      // Browser companion: the Rust bridge tells us a browser-initiated
+      // reading started/ended so we only report positions while relevant.
+      const unBrowserReading = await listen<{ active: boolean }>("browser-reading", (e) => {
+        this._browserReadingActive = e.payload.active === true;
+      });
+
       const unSynthesis = await listen<boolean>("synthesis-state-change", (e) => {
         if (e.payload) {
           this.historyReadingId = null;
@@ -582,6 +611,7 @@ class PlaybackStore {
         unPaginationComplete,
         unPlaybackStop,
         unTogglePause,
+        unBrowserReading,
         unSynthesis,
         unAbort
       ];

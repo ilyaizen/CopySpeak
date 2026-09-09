@@ -12,12 +12,42 @@ pub struct TextFragment {
     pub index: usize,
     /// Total number of fragments
     pub total: usize,
+    /// UTF-16 [start, end) of this fragment's text inside the text that was
+    /// paginated. Downstream consumers (browser companion) use this to
+    /// project fragment-local caption offsets back to full-text space.
+    pub source_start: usize,
+    pub source_end: usize,
 }
 
 impl TextFragment {
-    /// Create a new text fragment.
+    /// Create a new text fragment spanning its whole text.
     pub fn new(text: String, index: usize, total: usize) -> Self {
-        Self { text, index, total }
+        let source_end = text.encode_utf16().count();
+        Self {
+            text,
+            index,
+            total,
+            source_start: 0,
+            source_end,
+        }
+    }
+
+    /// Create a fragment and record where its text came from in the source.
+    /// Offsets are UTF-16 into the paginated text.
+    pub fn with_source_span(
+        text: String,
+        index: usize,
+        total: usize,
+        source_start: usize,
+        source_end: usize,
+    ) -> Self {
+        Self {
+            text,
+            index,
+            total,
+            source_start,
+            source_end,
+        }
     }
 
     /// Returns true if this is the first fragment.
@@ -205,22 +235,25 @@ pub fn paginate_text(text: &str, config: &PaginationConfig) -> Vec<TextFragment>
     // Detect sentence boundaries
     let boundaries = detect_sentence_boundaries(text);
 
+    let chars: Vec<char> = text.chars().collect();
+
     // If no boundaries found, force split at max_size (fallback)
     if boundaries.is_empty() {
         log::warn!(
             "[Pagination] No sentence boundaries found, forcing split at {} chars",
             max_size
         );
-        return force_split(text, max_size);
+        let pieces = force_split_ranges(text, max_size);
+        return build_fragments(text, &chars, pieces);
     }
 
     // Build fragments by grouping sentences within max_size.
     //
     // We iterate over sentence boundaries and accumulate sentences into the
     // current fragment until adding the next sentence would exceed max_size,
-    // then we cut.
-    let mut fragments = Vec::new();
-    let chars: Vec<char> = text.chars().collect();
+    // then we cut. Pieces are kept as untrimmed char ranges so exact source
+    // spans survive the trim.
+    let mut pieces: Vec<(usize, usize)> = Vec::new(); // char ranges in `text`
     let mut fragment_start = 0; // start of the current accumulating fragment
 
     for (idx, boundary) in boundaries.iter().enumerate() {
@@ -235,7 +268,7 @@ pub fn paginate_text(text: &str, config: &PaginationConfig) -> Vec<TextFragment>
                 if prev_end > fragment_start {
                     let fragment: String = chars[fragment_start..prev_end].iter().collect();
                     if !fragment.trim().is_empty() {
-                        fragments.push(fragment);
+                        pieces.push((fragment_start, prev_end));
                     }
                     fragment_start = prev_end;
                 }
@@ -246,9 +279,8 @@ pub fn paginate_text(text: &str, config: &PaginationConfig) -> Vec<TextFragment>
             let lone_len = sentence_end - fragment_start;
             if lone_len > max_size {
                 let lone_text: String = chars[fragment_start..sentence_end].iter().collect();
-                let sub_fragments = force_split(&lone_text, max_size);
-                for sf in sub_fragments {
-                    fragments.push(sf.text);
+                for (start, end) in force_split_ranges(&lone_text, max_size) {
+                    pieces.push((fragment_start + start, fragment_start + end));
                 }
                 fragment_start = sentence_end;
             }
@@ -261,48 +293,60 @@ pub fn paginate_text(text: &str, config: &PaginationConfig) -> Vec<TextFragment>
     if fragment_start < chars.len() {
         let final_text: String = chars[fragment_start..].iter().collect();
         if !final_text.trim().is_empty() {
-            fragments.push(final_text);
+            pieces.push((fragment_start, chars.len()));
         }
     }
 
     // If we only have one fragment, return it
-    if fragments.len() <= 1 {
+    if pieces.len() <= 1 {
         return vec![TextFragment::new(text.to_string(), 0, 1)];
     }
 
-    // Create TextFragment objects
-    let total = fragments.len();
-    fragments
+    build_fragments(text, &chars, pieces)
+}
+
+/// Assemble trimmed [`TextFragment`]s from untrimmed char ranges, preserving
+/// exact UTF-16 source spans (trim offsets applied at the point of slicing,
+/// never recovered by searching the text afterwards).
+fn build_fragments(_text: &str, chars: &[char], pieces: Vec<(usize, usize)>) -> Vec<TextFragment> {
+    let char_to_u16: Vec<usize> = std::iter::once(0)
+        .chain(chars.iter().scan(0usize, |acc, ch| {
+            *acc += ch.len_utf16();
+            Some(*acc)
+        }))
+        .collect();
+    let total = pieces.len();
+    pieces
         .into_iter()
         .enumerate()
-        .map(|(index, fragment_text)| {
-            TextFragment::new(fragment_text.trim().to_string(), index, total)
+        .map(|(index, (start, end))| {
+            let slice: String = chars[start..end].iter().collect();
+            let trimmed = slice.trim();
+            let leading = slice.chars().count() - slice.trim_start().chars().count();
+            let trailing = slice.chars().count() - slice.trim_end().chars().count();
+            TextFragment::with_source_span(
+                trimmed.to_string(),
+                index,
+                total,
+                char_to_u16[start + leading],
+                char_to_u16[end - trailing],
+            )
         })
         .collect()
 }
 
-/// Fallback: split text at exact character positions when no sentence boundaries exist.
-fn force_split(text: &str, max_size: usize) -> Vec<TextFragment> {
-    let mut fragments = Vec::new();
-    let chars: Vec<char> = text.chars().collect();
+/// Fallback: split text at exact character positions when no sentence
+/// boundaries exist. Returns untrimmed char ranges into `text`.
+fn force_split_ranges(text: &str, max_size: usize) -> Vec<(usize, usize)> {
+    let mut ranges = Vec::new();
+    let len = text.chars().count();
     let mut start = 0;
-    let mut index = 0;
-
-    while start < chars.len() {
-        let end = (start + max_size).min(chars.len());
-        let fragment: String = chars[start..end].iter().collect();
-        fragments.push(TextFragment::new(fragment.trim().to_string(), index, 0));
+    while start < len {
+        let end = (start + max_size).min(len);
+        ranges.push((start, end));
         start = end;
-        index += 1;
     }
-
-    // Update total counts
-    let total = fragments.len();
-    for fragment in &mut fragments {
-        fragment.total = total;
-    }
-
-    fragments
+    ranges
 }
 
 /// Check if text should be paginated based on length and configuration.
@@ -581,7 +625,7 @@ mod tests {
     #[test]
     fn test_force_split_no_sentence_boundaries() {
         let text = "word1 word2 word3 word4 word5 word6 word7 word8 word9 word10";
-        let fragments = force_split(text, 20);
+        let fragments = paginate_text_fragments_from_ranges(text, force_split_ranges(text, 20));
 
         // Should split into multiple fragments
         assert!(fragments.len() > 1);
@@ -590,6 +634,15 @@ mod tests {
         for fragment in &fragments {
             assert!(fragment.text.len() <= 20);
         }
+    }
+
+    /// Test helper mirroring paginate_text's assembly path.
+    fn paginate_text_fragments_from_ranges(
+        text: &str,
+        pieces: Vec<(usize, usize)>,
+    ) -> Vec<TextFragment> {
+        let chars: Vec<char> = text.chars().collect();
+        build_fragments(text, &chars, pieces)
     }
 
     #[test]
