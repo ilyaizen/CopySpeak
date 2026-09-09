@@ -68,6 +68,36 @@ pub struct HistoryExportResult {
 
 // ── Commands ────────────────────────────────────────────────────────────────
 
+/// Rename a reading without changing its text or audio filenames.
+#[tauri::command]
+pub fn rename_history_reading(
+    history: State<'_, Mutex<HistoryLog>>,
+    entry_id: String,
+    title: String,
+) -> Result<(), String> {
+    let title = title.trim();
+    if title.chars().count() > 200 {
+        return Err("Reading names must be at most 200 characters.".into());
+    }
+    let mut hist = history.lock().map_err(|e| e.to_string())?;
+    let entry = hist.get_by_id(&entry_id).ok_or("History entry not found")?;
+    let batch_id = entry.batch_id.clone();
+    let mut updated = hist.clone();
+    for entry in updated.entries_mut().iter_mut().filter(|entry| {
+        entry.id == entry_id || (batch_id.is_some() && entry.batch_id == batch_id)
+    }) {
+        if title.is_empty() {
+            entry.metadata.remove("title");
+        } else {
+            entry.metadata.insert("title".into(), serde_json::json!(title));
+        }
+    }
+    updated.metadata.last_modified = chrono::Utc::now();
+    history::save(&updated)?;
+    *hist = updated;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn get_history(history: State<'_, Mutex<HistoryLog>>) -> Vec<HistoryEntry> {
     if crate::logging::is_debug_mode() {

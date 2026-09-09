@@ -672,6 +672,7 @@ fn main() {
             commands::get_logs,
             commands::get_logs_path,
             commands::get_history,
+            commands::rename_history_reading,
             commands::clear_history,
             commands::test_tts_engine,
             commands::check_command_exists,
