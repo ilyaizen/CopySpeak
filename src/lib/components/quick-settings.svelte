@@ -1,10 +1,9 @@
 <script lang="ts">
-  import { Label } from "$lib/components/ui/label/index.js";
   import { Switch } from "$lib/components/ui/switch/index.js";
   import { Slider } from "$lib/components/ui/slider/index.js";
+  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
   import { listeningStore } from "$lib/stores/listening-store.svelte";
   import type { AppConfig } from "$lib/types";
-  import InfoTooltip from "$lib/components/ui/info-tooltip.svelte";
 
   interface Props {
     config?: AppConfig;
@@ -37,36 +36,33 @@
 </script>
 
 <!-- Compact settings panel for quick access to the most-used playback and listening controls -->
-<div class="grid min-w-0 grid-cols-1 gap-x-4 sm:grid-cols-2 md:grid-cols-1">
+<div class="border-border divide-border grid min-w-0 grid-cols-1 divide-y border-y">
   <!-- Show clipboard listener errors (e.g. permission denied, backend failure) -->
   {#if error}
     <p class="text-destructive text-xs">{error}</p>
   {/if}
   {#if config}
     <!-- Double-copy listener toggle — uses onchange (not bind) because state lives in the store, not config -->
-    <div class="border-border flex min-w-0 items-center justify-between gap-2 border-b py-2">
-      <div class="flex items-center gap-1">
-        <Label for="listen-double-copy" class="text-sm">Double-copy</Label>
-        <InfoTooltip text="Monitor clipboard for double-copy" />
-      </div>
-      <Switch id="listen-double-copy" checked={isListening} onchange={handleToggle} />
-    </div>
+    <SettingRow label="Double-copy" tooltip="Monitor clipboard for double-copy">
+      <Switch
+        id="listen-double-copy"
+        aria-label="Double-copy"
+        checked={isListening}
+        onchange={handleToggle}
+      />
+    </SettingRow>
     <!-- Global hotkey toggle — binds directly to config since it's a persistent preference -->
-    <div class="border-border flex min-w-0 items-center justify-between gap-2 border-b py-2">
-      <div class="flex items-center gap-1">
-        <Label for="qs-hotkey" class="text-sm">Hotkey</Label>
-        <InfoTooltip text={config.hotkey.shortcut || "Speak clipboard with a keyboard shortcut"} />
-      </div>
-      <Switch id="qs-hotkey" bind:checked={config.hotkey.enabled} />
-    </div>
+    <SettingRow
+      label="Hotkey"
+      tooltip={config.hotkey.shortcut || "Speak clipboard with a keyboard shortcut"}
+    >
+      <Switch id="qs-hotkey" aria-label="Hotkey" bind:checked={config.hotkey.enabled} />
+    </SettingRow>
     <!-- Effects toggle — binds to active profile's effects -->
-    <div class="border-border flex min-w-0 items-center justify-between gap-2 border-b py-2">
-      <div class="flex items-center gap-1">
-        <Label for="qs-effects" class="text-sm">Effects</Label>
-        <InfoTooltip text="Apply audio effect to TTS playback" />
-      </div>
+    <SettingRow label="Effects" tooltip="Apply audio effect to TTS playback">
       <Switch
         id="qs-effects"
+        aria-label="Effects"
         disabled={!activeProfile}
         checked={profileEffectsEnabled}
         onchange={() => {
@@ -78,54 +74,66 @@
           }
         }}
       />
-    </div>
+    </SettingRow>
     <!-- Volume slider — 0–100% range with integer steps for precise control -->
-    <div class="flex min-w-0 flex-col gap-2 py-2">
-      <div class="flex items-center justify-between">
-        <Label for="qs-volume" class="text-sm">Volume</Label>
-        <span class="text-muted-foreground text-xs">{config.playback.volume}%</span>
+    <SettingRow label="Volume">
+      <div class="flex w-28 items-center gap-2">
+        <Slider
+          id="qs-volume"
+          aria-label="Volume"
+          min={0}
+          max={100}
+          step={1}
+          bind:value={config.playback.volume}
+        />
+        <span class="text-muted-foreground w-9 text-right text-xs tabular-nums"
+          >{config.playback.volume}%</span
+        >
       </div>
-      <Slider id="qs-volume" min={0} max={100} step={1} bind:value={config.playback.volume} />
-    </div>
+    </SettingRow>
     <!-- Speed slider — reads from active profile -->
-    <div class="flex min-w-0 flex-col gap-2 py-2">
-      <div class="flex items-center justify-between">
-        <Label for="qs-speed" class="text-sm">Speed</Label>
-        <span class="text-muted-foreground text-xs">{(speedLive ?? profileSpeed).toFixed(2)}x</span>
+    <SettingRow label="Speed">
+      <div class="flex w-28 items-center gap-2">
+        <Slider
+          id="qs-speed"
+          aria-label="Speed"
+          disabled={!activeProfile}
+          min={0.5}
+          max={2}
+          step={0.05}
+          value={profileSpeed}
+          oninput={(v) => (speedLive = v)}
+          onchange={(v) => {
+            if (activeProfile) activeProfile.speed = v;
+            speedLive = null;
+          }}
+        />
+        <span class="text-muted-foreground w-9 text-right text-xs tabular-nums"
+          >{(speedLive ?? profileSpeed).toFixed(2)}x</span
+        >
       </div>
-      <Slider
-        id="qs-speed"
-        disabled={!activeProfile}
-        min={0.5}
-        max={2}
-        step={0.05}
-        value={profileSpeed}
-        oninput={(v) => (speedLive = v)}
-        onchange={(v) => {
-          if (activeProfile) activeProfile.speed = v;
-          speedLive = null;
-        }}
-      />
-    </div>
+    </SettingRow>
     <!-- Pitch slider — reads from active profile -->
-    <div class="flex min-w-0 flex-col gap-2 py-2">
-      <div class="flex items-center justify-between">
-        <Label for="qs-pitch" class="text-sm">Pitch</Label>
-        <span class="text-muted-foreground text-xs">{(pitchLive ?? profilePitch).toFixed(2)}x</span>
+    <SettingRow label="Pitch">
+      <div class="flex w-28 items-center gap-2">
+        <Slider
+          id="qs-pitch"
+          aria-label="Pitch"
+          disabled={!activeProfile}
+          min={0.75}
+          max={1.35}
+          step={0.01}
+          value={profilePitch}
+          oninput={(v) => (pitchLive = v)}
+          onchange={(v) => {
+            if (activeProfile) activeProfile.pitch = v;
+            pitchLive = null;
+          }}
+        />
+        <span class="text-muted-foreground w-9 text-right text-xs tabular-nums"
+          >{(pitchLive ?? profilePitch).toFixed(2)}x</span
+        >
       </div>
-      <Slider
-        id="qs-pitch"
-        disabled={!activeProfile}
-        min={0.75}
-        max={1.35}
-        step={0.01}
-        value={profilePitch}
-        oninput={(v) => (pitchLive = v)}
-        onchange={(v) => {
-          if (activeProfile) activeProfile.pitch = v;
-          pitchLive = null;
-        }}
-      />
-    </div>
+    </SettingRow>
   {/if}
 </div>

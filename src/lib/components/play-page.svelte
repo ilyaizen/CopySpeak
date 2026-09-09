@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
+  import { replaceState } from "$app/navigation";
   import PlaybackControls from "$lib/components/playback-controls.svelte";
   import QuickSettings from "$lib/components/quick-settings.svelte";
   import RecentHistory from "$lib/components/recent-history.svelte";
@@ -12,6 +13,7 @@
   import { listen } from "@tauri-apps/api/event";
   import { isTauri } from "$lib/services/tauri.js";
   import type { AppConfig } from "$lib/types";
+  import { groupHistoryReadings, historyProfile } from "$lib/models/history";
   import { _ } from "svelte-i18n";
 
   const mockConfig: AppConfig = {
@@ -290,9 +292,40 @@
     }
   }
 
+  async function restoreReading(
+    reading: ReturnType<typeof groupHistoryReadings>[number],
+    regenerate = false
+  ) {
+    manualText = reading.text;
+    lastPlayedContent = null;
+    error = null;
+    try {
+      if (!config) throw new Error("Reading settings are still loading.");
+      const profile = historyProfile(reading.items[0], config.tts.profiles);
+      config.tts.profiles = config.tts.profiles.map((p) => (p.id === profile.id ? profile : p));
+      config.tts.active_profile_id = profile.id;
+      config.tts.active_backend = profile.engine;
+      if (isTauri) await invoke("set_config", { newConfig: config });
+      if (regenerate) await handleGenerate();
+      else
+        toast.success("Text, voice and speed restored. Pitch and effects use the current profile.");
+    } catch (e) {
+      error = `Text restored. ${e}`;
+    }
+    document.getElementById("reading-text")?.focus();
+  }
+
   onMount(async () => {
     await loadConfig();
     if (isTauri && historyStore.items.length === 0) await historyStore.loadHistory();
+    const params = new URLSearchParams(window.location.search);
+    const readingId = params.get("reading");
+    if (readingId) {
+      replaceState(window.location.pathname, {});
+      const reading = groupHistoryReadings(historyStore.items).find((r) => r.id === readingId);
+      if (reading) await restoreReading(reading, params.get("regenerate") === "1");
+      else error = "This reading is no longer in history.";
+    }
 
     if (isTauri) {
       try {
@@ -327,7 +360,7 @@
 </script>
 
 <div class="flex min-w-0 flex-1 flex-col gap-4">
-  <div class="grid min-w-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_11.5rem]">
+  <div class="grid min-w-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_14rem]">
     <section aria-labelledby="reader-heading" class="flex min-w-0 flex-col gap-3">
       <div>
         <h2 id="reader-heading" class="sr-only">Read aloud</h2>
@@ -353,7 +386,7 @@
           onAbort={handleAbort}
         />
         {#if manualText}
-          <Button variant="ghost" size="sm" onclick={() => (manualText = "")}
+          <Button variant="ghost" onclick={() => (manualText = "")}
             >{$_("play.clear")}</Button
           >
         {/if}
@@ -395,6 +428,6 @@
   {/if}
 
   {#if config?.history.enabled}
-    <RecentHistory compact limit={5} />
+    <RecentHistory compact limit={3} onRestore={restoreReading} />
   {/if}
 </div>

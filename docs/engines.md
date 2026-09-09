@@ -11,20 +11,20 @@ pitch + effect as one swappable unit.
 
 ## Engine matrix
 
-| Engine             | Type   | API key        | Offline | Installer                      | Setup test               |
-| ------------------ | ------ | -------------- | ------- | ------------------------------ | ------------------------ |
-| Edge-TTS           | cloud  | no             | no      | — (`uv tool install edge-tts`) | `test_tts_engine_config` |
-| Cartesia (Sonic)   | cloud  | yes            | no      | —                              | `test_tts_engine_config` |
-| ElevenLabs         | cloud  | yes            | no      | —                              | `test_tts_engine_config` |
-| OpenAI             | cloud  | yes            | no      | —                              | `test_tts_engine_config` |
-| Google Gemini TTS  | cloud  | yes            | no      | —                              | `test_tts_engine_config` |
-| Microsoft / Azure  | cloud  | yes + endpoint | no      | —                              | `test_tts_engine_config` |
-| Kitten TTS         | local  | no             | yes     | `install-kittentts.ps1`        | installer smoke test     |
-| Piper (piper1-gpl) | local  | no             | yes     | `install-piper.ps1`            | installer smoke test     |
-| Kokoro TTS         | local  | no             | yes     | `install-kokoro.ps1`           | installer smoke test     |
-| Pocket TTS         | local  | no             | yes     | `install-pocket.ps1`           | installer smoke test     |
-| Chatterbox         | local  | no             | yes     | `install-chatterbox.ps1`       | installer smoke test     |
-| HTTP server        | either | varies         | varies  | — (configure in profile)       | —                        |
+| Engine             | Type   | API key        | Offline | Live captions | Installer                      | Setup test               |
+| ------------------ | ------ | -------------- | ------- | ------------- | ------------------------------ | ------------------------ |
+| Edge-TTS           | cloud  | no             | no      | yes           | — (`uv tool install edge-tts`) | `test_tts_engine_config` |
+| Cartesia (Sonic)   | cloud  | yes            | no      | yes           | —                              | `test_tts_engine_config` |
+| ElevenLabs         | cloud  | yes            | no      | yes           | —                              | `test_tts_engine_config` |
+| OpenAI             | cloud  | yes            | no      | no            | —                              | `test_tts_engine_config` |
+| Google Gemini TTS  | cloud  | yes            | no      | no            | —                              | `test_tts_engine_config` |
+| Microsoft / Azure  | cloud  | yes + endpoint | no      | no            | —                              | `test_tts_engine_config` |
+| Kitten TTS         | local  | no             | yes     | no            | `install-kittentts.ps1`        | installer smoke test     |
+| Piper (piper1-gpl) | local  | no             | yes     | yes           | `install-piper.ps1`            | installer smoke test     |
+| Kokoro TTS         | local  | no             | yes     | no            | `install-kokoro.ps1`           | installer smoke test     |
+| Pocket TTS         | local  | no             | yes     | no            | `install-pocket.ps1`           | installer smoke test     |
+| Chatterbox         | local  | no             | yes     | no            | `install-chatterbox.ps1`       | installer smoke test     |
+| HTTP server        | either | varies         | varies  | no            | — (configure in profile)       | —                        |
 
 ## Cloud engines
 

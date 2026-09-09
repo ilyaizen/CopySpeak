@@ -3,7 +3,8 @@ import {
   createHistoryItem,
   groupHistoryReadings,
   historyVoiceLabel,
-  historyTimeAgo
+  historyTimeAgo,
+  historyProfile
 } from "./history";
 import type { EngineCatalogEntry, VoiceProfile } from "$lib/types";
 
@@ -38,6 +39,7 @@ it("uses matching voice labels without confusing engine IDs or exposing unknown 
     docs_url: "",
     supports_voice_refresh: false,
     supports_pitch: false,
+    supports_captions: false,
     supports_bracket_emotes: false,
     options: [],
     voices: [
@@ -56,6 +58,11 @@ it("uses matching voice labels without confusing engine IDs or exposing unknown 
   expect(historyVoiceLabel(item, [{ ...profile, engine: "openai" }], [])).toBe("Saved voice");
   expect(historyVoiceLabel(item, [], [])).toBe("Saved voice");
   expect(item.voice).toBe("voice-id");
+  const restored = historyProfile({ ...item, speed: 1.5 }, [profile]);
+  expect(restored.speed).toBe(1.5);
+  expect(restored.pitch).toBe(profile.pitch);
+  expect(profile.speed).toBe(1);
+  expect(() => historyProfile(item, [{ ...profile, engine: "openai" }])).toThrow("unavailable");
 });
 
 it("presents fragments as one ordered reading without mutating source history", () => {

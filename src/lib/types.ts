@@ -197,6 +197,7 @@ export interface EngineCatalogEntry {
   docs_url: string;
   supports_voice_refresh: boolean;
   supports_pitch: boolean;
+  supports_captions: boolean;
   supports_bracket_emotes: boolean;
   options: EngineOptionDescriptor[];
   voices: VoiceCatalogEntry[];

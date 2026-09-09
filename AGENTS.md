@@ -49,9 +49,9 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Resolve history voice labels by both engine and voice ID using profiles/catalog; retain raw IDs for playback and tooltips.
 - Hide the playback button's decorative spinner from accessibility naming so synthesis keeps the action named “Stop”.
 - Clear the shared audio queue on decode/play failure and invalidate pending decoding on Stop so history retries work and stopped readings cannot restart.
-- Translate vertical mouse-wheel input into horizontal scrolling on the Play history rail, and end its five-reading preview with a link to full History.
-- Keep the wheel-driven history rail free of scroll snapping and reverse wheel deltas in RTL; DOM-only tests cannot verify browser snapping behavior.
-- Close the History-only Delete conditional inside its reading row, before `</li>`; do not place its closing block in the View more card.
+- Keep Recent History as three vertical, text-first readings with View all history; let mouse-wheel input scroll normally on both pages.
+- Restore only history's saved engine, voice and speed; retain current profile pitch/effects, and report a missing voice profile instead of generating with a different voice.
+- Keep actions inside each reading's menu and bulk selection on the full History page; filtering must preserve complete reading batches.
 - Local engine wrappers speak daemon protocol v2 (`READY 2`); emit 16-bit signed LE PCM, since `pcm-stream.ts` drops any other `bits_per_sample`.
 - Adding a `TtsEngine` variant: also update the catalog test's engine list and entry count, and the `Record<TtsEngine, number>` fixtures in `html-templates.test.ts` and `html-export.test.ts`.
 - Register CUDA DLL directories with `os.add_dll_directory` inside the wrapper; Python 3.8+ ignores `PATH` for extension-module dependencies, so setting it from Rust does nothing.

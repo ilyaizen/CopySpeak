@@ -9,6 +9,7 @@ pub struct EngineCatalogEntry {
     pub docs_url: String,
     pub supports_voice_refresh: bool,
     pub supports_pitch: bool,
+    pub supports_captions: bool,
     pub supports_bracket_emotes: bool,
     pub options: Vec<EngineOptionDescriptor>,
     pub voices: Vec<VoiceCatalogEntry>,
@@ -90,6 +91,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             docs_url: "docs/profile-engine-settings.md#engine-matrix".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
+            supports_captions: false,
             supports_bracket_emotes: false,
             options: vec![
                 option(
@@ -118,6 +120,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             docs_url: "https://github.com/KittenML/KittenTTS".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
+            supports_captions: false,
             supports_bracket_emotes: false,
             options: vec![
                 option(
@@ -153,6 +156,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             docs_url: "https://github.com/OHF-Voice/piper1-gpl".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
+            supports_captions: true,
             supports_bracket_emotes: false,
             options: vec![option(
                 "cuda",
@@ -188,6 +192,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             docs_url: "https://github.com/thewh1teagle/kokoro-onnx".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
+            supports_captions: false,
             supports_bracket_emotes: false,
             options: vec![option(
                 "cuda",
@@ -216,6 +221,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             docs_url: "https://github.com/kyutai-labs/pocket-tts".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
+            supports_captions: false,
             supports_bracket_emotes: false,
             options: vec![option(
                 "cuda",
@@ -248,6 +254,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             docs_url: "docs/profile-engine-settings.md#engine-matrix".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
+            supports_captions: false,
             supports_bracket_emotes: false,
             options: vec![
                 option(
@@ -295,6 +302,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             docs_url: "https://platform.openai.com/docs/guides/text-to-speech".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
+            supports_captions: false,
             supports_bracket_emotes: true,
             options: vec![
                 option(
@@ -406,6 +414,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             docs_url: "https://elevenlabs.io/docs/api-reference/text-to-speech/convert".into(),
             supports_voice_refresh: true,
             supports_pitch: false,
+            supports_captions: true,
             supports_bracket_emotes: false,
             options: vec![
                 option(
@@ -610,6 +619,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             docs_url: "https://docs.cartesia.ai/api-reference/tts/bytes".into(),
             supports_voice_refresh: true,
             supports_pitch: false,
+            supports_captions: true,
             supports_bracket_emotes: false,
             options: vec![
                 option(
@@ -858,6 +868,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             docs_url: "https://ai.google.dev/gemini-api/docs/speech-generation".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
+            supports_captions: false,
             supports_bracket_emotes: true,
             options: vec![
                 option(
@@ -994,6 +1005,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                     .into(),
             supports_voice_refresh: false,
             supports_pitch: false,
+            supports_captions: false,
             supports_bracket_emotes: true,
             options: vec![
                 option(
@@ -1028,6 +1040,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             docs_url: "https://github.com/rany2/edge-tts".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
+            supports_captions: true,
             supports_bracket_emotes: false,
             options: vec![],
             voices: [
@@ -1150,6 +1163,24 @@ mod tests {
             assert!(!entry.label.trim().is_empty());
             assert!(!entry.docs_url.trim().is_empty());
         }
+    }
+
+    #[test]
+    fn caption_support_matches_native_timing_adapters() {
+        let supported: Vec<_> = list_engines()
+            .into_iter()
+            .filter(|entry| entry.supports_captions)
+            .map(|entry| entry.engine)
+            .collect();
+        assert_eq!(
+            supported,
+            [
+                TtsEngine::Piper,
+                TtsEngine::ElevenLabs,
+                TtsEngine::Cartesia,
+                TtsEngine::Edge,
+            ]
+        );
     }
 
     #[test]

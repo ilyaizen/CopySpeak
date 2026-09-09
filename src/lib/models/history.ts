@@ -17,6 +17,14 @@ import type {
 } from "$lib/types";
 import type { EngineCatalogEntry, VoiceProfile } from "$lib/types";
 
+/** Restore only settings that history actually records. */
+export function historyProfile(item: HistoryItem, profiles: VoiceProfile[]): VoiceProfile {
+  const profile = profiles.find((p) => p.engine === item.tts_engine && p.voice === item.voice);
+  if (!profile)
+    throw new Error("The saved voice profile is unavailable. Select a voice before generating.");
+  return { ...profile, speed: item.speed };
+}
+
 export function historyVoiceLabel(
   item: HistoryItem,
   profiles: VoiceProfile[],
@@ -61,6 +69,7 @@ export function groupHistoryReadings(items: HistoryItem[]) {
           return typeof expected === "number" ? Math.max(total, expected) : total;
         }, entries.length),
         text: entries.map((item) => item.text).join("\n\n"),
+        title: typeof entries[0].metadata?.title === "string" ? entries[0].metadata.title : "",
         timestamp: entries.reduce((earliest, item) => Math.min(earliest, item.timestamp), Infinity),
         success: entries.every((item) => item.success),
         hasAudio: entries.every((item) => !!item.output_path),

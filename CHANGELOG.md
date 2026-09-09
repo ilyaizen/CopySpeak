@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Browser Companion developer preview** — a Chromium extension can read an ordinary webpage selection through CopySpeak with the toolbar action or `Alt+Shift+R`, then offers page-level Pause, Resume, and Stop controls. A native-messaging host and local named-pipe bridge start normal desktop playback; when sanitization, pagination, and engine caption timings map exactly to the original text, the page follows the current word, otherwise it safely keeps passage-only highlighting. The companion stops when the selected content changes, the page navigates, or its tab closes.
+
 ## [0.1.17] - 2026-09-08
 
 ### Changed
@@ -22,11 +28,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Resident local TTS daemons with GPU acceleration** — Piper, KittenTTS, Kokoro, and Pocket now keep their model loaded between utterances instead of reloading it per reading. Each runs as a per-engine daemon speaking protocol v2: a `READY 2` handshake, a format header, and length-prefixed 16-bit LE PCM chunks with an end marker — every byte count is declared, so text and binary share one pipe safely, and the single global temp-WAV path (where two concurrent syntheses collided) is gone. Wrappers select GPU execution providers where available (CUDA DLL directories registered with `os.add_dll_directory` inside the wrapper) and synthesize a throwaway phrase before the handshake, so `READY 2` means warm — first-request time-to-first-audio drops from a ~0.47s median to ~0.15s.
 - **First-class Kokoro and Pocket wrappers** — `copyspeak-kokoro.py` drives kokoro-onnx directly (reusing the model files the installer downloads) and `copyspeak-pocket.py` uses pocket-tts's Python API with cached voice state, replacing per-invocation third-party CLIs that reloaded models and exposed no execution provider. Pocket becomes a `TtsEngine` variant with a migration promoting the old Local-preset profiles.
-- **Word timestamps for cloud streams** — Cartesia, ElevenLabs, and Edge streams map provider word timestamps to per-fragment caption intervals (`tts/captions.rs`, `elevenlabs_timing.rs`); Edge gains a first-class wrapper script plus a caption-alignment test script.
+- **Native word timestamps** — Cartesia and ElevenLabs streams, Piper synthesis, and Edge batch output map provider timing metadata to per-fragment caption intervals (`tts/captions.rs`, `elevenlabs_timing.rs`); Edge gains a first-class wrapper script plus a caption-alignment test script.
 
 ### Changed
 
-- **HUD captions highlight spoken words** — the marquee scroll is replaced with phrase captions that dim words as the active fragment plays. Position is driven by the audible fragment's PCM scheduler audio clock rather than synthesis events (which may describe a later fragment); the backend streams per-fragment text and duration on the `audio-stream-chunk` event. Word boundaries are estimated, not engine-provided.
+- **HUD captions highlight spoken words** — the marquee scroll is replaced with phrase captions that dim words as the active fragment plays. Position is driven by the audible fragment's PCM scheduler audio clock rather than synthesis events (which may describe a later fragment); native word intervals are available from ElevenLabs, Cartesia, Piper, and Edge.
 - **Native caption intervals are preserved across playback** — stream framing, cache/history replay, and sample-count-based fragment concatenation keep intervals attached to their generated audio; word timings are never rescaled by text weights.
 - **Speed/pitch changes reschedule unstarted PCM sources** — changing playback rate or pitch no longer leaves scheduled-but-unplayed chunks at the old settings.
 - **Older engine installers stay on the one-shot path** — a wrapper still speaking protocol v1 is detected as unsupported; re-run the engine's installer to pick up the resident daemon.
