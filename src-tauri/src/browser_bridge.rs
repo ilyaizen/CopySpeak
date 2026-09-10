@@ -3,13 +3,18 @@
 //
 // Word-highlight pipeline (all exact, no fuzzy matching):
 //   raw selection (extension UTF-16 space)
-//     → sanitize_text → spoken text          [WhitespaceMap, or passage-only]
+//     → sanitize_text → spoken text          [TextAlignment: raw ↔ spoken words]
 //     → paginate_text → fragment table        [per-fragment UTF-16 spans]
 //     → synthesis events carry per-fragment CaptionAlignment (fragment-local)
 //     → frontend reports (fragment_index, position_ms) from the audible clock
 //   word = captions word at position → fragment-local UTF-16
 //        → + fragment.text_start = spoken-page UTF-16
-//        → WhitespaceMap.source_span_utf16 = raw UTF-16 sent to the extension.
+//        → TextAlignment.source_span_utf16 = raw UTF-16 sent to the extension.
+//
+// Degradation is per word and per fragment, never per reading: a word the
+// sanitizer invented simply has no source span, and a fragment whose engine
+// sent no usable captions falls back to passage-only while the rest of the
+// reading keeps highlighting.
 
 use serde_json::{json, Value};
 use std::collections::HashMap;
@@ -25,7 +30,7 @@ use windows::Win32::System::Threading::{CreateEventW, WaitForSingleObject, INFIN
 use windows::Win32::System::IO::{GetOverlappedResult, OVERLAPPED};
 
 use crate::sanitize::tts_normalize::punct_equivalent;
-use crate::text_map::{whitespace_map, WhitespaceMap};
+use crate::text_map::{align, TextAlignment};
 use crate::tts::captions::{CaptionAlignment, WordTiming};
 
 const PIPE_NAME: &str = r"\\.\pipe\copyspeak-browser";
@@ -93,28 +98,14 @@ struct FragmentEntry {
     captions_ok: bool,
 }
 
-/// Fragment table + mapping state for one browser reading.
-#[derive(Default)]
-struct FragmentTable {
-    fragments: Vec<FragmentEntry>,
-    /// False once any fragment deviated from the expected tile (e.g. LLM
-    /// post-processing rewrote the text): degrade to passage-only.
-    tiling_ok: bool,
-    /// False once any fragment's captions were missing or mismatched its text.
-    captions_ok: bool,
-}
-
 struct BrowserSession {
     reading_id: String,
     sequence: AtomicU64,
-    /// Selected (raw) text, the extension's UTF-16 space.
-    raw_text: String,
     /// Sanitized text CopySpeak actually speaks.
     spoken_text: String,
-    /// Raw→spoken exact map; `None` means sanitization was not a pure
-    /// whitespace collapse and word highlighting degrades to passage-only.
-    source_map: Option<WhitespaceMap>,
-    table: Mutex<FragmentTable>,
+    /// Raw ↔ spoken word alignment; always present.
+    source_map: TextAlignment,
+    fragments: Mutex<Vec<FragmentEntry>>,
     active_fragment: AtomicUsize,
     /// Audible-clock position inside the active fragment (ms).
     position_ms: AtomicU64,
@@ -327,8 +318,8 @@ fn record_fragment_captions(
     };
     drop(sessions);
 
-    let mut table = session.table.lock().unwrap();
-    apply_fragment_event(&mut table, index, text, captions);
+    let mut fragments = session.fragments.lock().unwrap();
+    apply_fragment_event(&mut fragments, index, text, captions);
 }
 
 /// Core caption/tile bookkeeping for one synthesis event, as it maps onto the
@@ -339,45 +330,31 @@ fn record_fragment_captions(
 /// - caption item: `text=None`, `captions=Some` (ElevenLabs emits captions as
 ///   a standalone stream item, never paired with chunk text)
 fn apply_fragment_event(
-    table: &mut FragmentTable,
+    fragments: &mut [FragmentEntry],
     index: usize,
     text: Option<&str>,
     captions: Option<CaptionAlignment>,
 ) {
-    let Some(entry) = table.fragments.get_mut(index) else {
+    let Some(entry) = fragments.get_mut(index) else {
         return;
     };
     // Caption-only chunk events arrive with `text: None`, so only verify the
-    // tile when an event actually carries text.
-    if let Some(text) = text {
-        if entry.expected_text != text {
-            // A desktop reading (or post-processing rewrite) invaded the event
-            // stream: exact tiling is gone, degrade to passage-only.
-            table.tiling_ok = false;
-            return;
-        }
+    // tile when an event actually carries text. An event whose text is not
+    // this tile describes someone else's reading (or a post-processing
+    // rewrite): ignore it, rather than degrading a session it never named.
+    if text.is_some_and(|text| text != entry.expected_text) {
+        return;
     }
-    if let Some(caps) = captions {
-        match rebased_captions(caps, &entry.expected_text) {
-            Some(rebased) if rebased.validate().is_ok() => {
-                entry.captions = Some(rebased);
-                entry.captions_ok = true;
-            }
-            _ => {
-                entry.captions_ok = false;
-            }
+    let Some(caps) = captions else {
+        return;
+    };
+    match rebased_captions(caps, &entry.expected_text) {
+        Some(rebased) if rebased.validate().is_ok() => {
+            entry.captions = Some(rebased);
+            entry.captions_ok = true;
         }
-    } else if entry.captions.is_none() {
-        // A text chunk arrived before its captions: pessimistically flag the
-        // fragment. Recoverable — captions_ok is re-derived below once
-        // captions land, so this no longer wedges the whole table.
-        entry.captions_ok = false;
+        _ => entry.captions_ok = false,
     }
-    // The table-level caption verdict is derived from the per-fragment state
-    // on every event. A sticky `false` set by an early captionless chunk used
-    // to survive the later caption arrival, keeping `word_available` false for
-    // the whole reading (2026-09-09).
-    table.captions_ok = table.fragments.iter().all(|f| f.captions_ok);
 }
 
 /// Rebase caption word offsets from `caps.text` into `expected`'s coordinate
@@ -649,16 +626,7 @@ fn start_browser_reading(
         send_rejected(pipe, &request_id, "Text is empty after sanitization")?;
         return Ok(());
     }
-    let source_map = whitespace_map(&raw_text, &spoken_text);
-    if source_map.is_none() {
-        // False-degrade triage: log how the sanitized text diverged from the
-        // raw selection's whitespace collapse + canonical same-length fold.
-        log::warn!(
-            "[Browser] Word highlighting unavailable: {}",
-            crate::text_map::first_divergence(&raw_text, &spoken_text)
-                .unwrap_or_else(|| "map rejected despite matching gate inputs (bug)".to_string())
-        );
-    }
+    let source_map = align(&raw_text, &spoken_text);
 
     // Pre-paginate with the same config speak_queued will use, so synthesis
     // events can be verified tile-by-tile against this table.
@@ -679,21 +647,14 @@ fn start_browser_reading(
             captions_ok: false,
         });
     }
-    let tiling = FragmentTable {
-        fragments,
-        tiling_ok: source_map.is_some(),
-        captions_ok: true,
-    };
-
     let reading_id = format!("browser-{}", request_id);
 
     let session = Arc::new(BrowserSession {
         reading_id: reading_id.clone(),
         sequence: AtomicU64::new(0),
-        raw_text,
         spoken_text,
         source_map,
-        table: Mutex::new(tiling),
+        fragments: Mutex::new(fragments),
         active_fragment: AtomicUsize::new(NO_FRAGMENT),
         position_ms: AtomicU64::new(0),
         status: AtomicU8::new(SessionStatus::Buffering as u8),
@@ -885,23 +846,24 @@ fn spawn_state_ticker(app: AppHandle, session: Arc<BrowserSession>) {
     });
 }
 
-/// Why word highlighting degrades to passage-only for a session, in pipeline
-/// order: sanitization that is not a pure whitespace collapse, a synthesis
-/// event whose text deviated from the expected tile, or captions that are
-/// missing/mismatched after rebase. `None` = word highlighting available.
-/// Single source for the `word_available` verdict and its diagnosis.
+/// Why word highlighting degrades to passage-only, judged for the fragment
+/// that is currently audible: its engine sent no captions, or captions that
+/// did not match the fragment's own text. `None` = word highlighting
+/// available. Single source for the `word_available` verdict.
+///
+/// The verdict is per fragment, not per reading: one caption-less fragment
+/// must not switch highlighting off for the fragments around it.
 fn degrade_reason(session: &BrowserSession) -> Option<&'static str> {
-    if session.source_map.is_none() {
-        return Some("unmappable_sanitization");
+    let index = session.active_fragment.load(Ordering::Relaxed);
+    if index == NO_FRAGMENT {
+        // Nothing audible yet — no verdict to report.
+        return None;
     }
-    let table = session.table.lock().unwrap();
-    if !table.tiling_ok {
-        return Some("tiling_diverged");
+    let fragments = session.fragments.lock().unwrap();
+    match fragments.get(index) {
+        Some(entry) if entry.captions_ok => None,
+        _ => Some("captions_unavailable"),
     }
-    if !table.captions_ok {
-        return Some("captions_unavailable");
-    }
-    None
 }
 
 /// Current (status, word-in-raw-space, degrade-reason) for a session.
@@ -917,18 +879,17 @@ fn project_state(
     (status, word, reason)
 }
 
-/// Exact projection of the audible word into the raw selection's UTF-16 space.
+/// Projection of the audible word into the raw selection's UTF-16 space.
 fn current_word(session: &BrowserSession) -> Option<(usize, usize)> {
-    if degrade_reason(session).is_some() {
-        return None;
-    }
-    let map = session.source_map.as_ref()?;
-    let table = session.table.lock().unwrap();
     let fragment_index = session.active_fragment.load(Ordering::Relaxed);
     if fragment_index == NO_FRAGMENT {
         return None;
     }
-    let entry = table.fragments.get(fragment_index)?;
+    let fragments = session.fragments.lock().unwrap();
+    let entry = fragments.get(fragment_index)?;
+    if !entry.captions_ok {
+        return None;
+    }
     let captions = entry.captions.as_ref()?;
     let position_ms = session.position_ms.load(Ordering::Relaxed) as f64;
     let (local_start, local_end) = find_word_at_position(&captions.words, position_ms)?;
@@ -938,7 +899,7 @@ fn current_word(session: &BrowserSession) -> Option<(usize, usize)> {
     if page_end > entry.text_end {
         return None;
     }
-    map.source_span_utf16(&session.raw_text, page_start, page_end)
+    session.source_map.source_span_utf16(page_start, page_end)
 }
 
 fn send_accepted(pipe: &SafeHandle, request_id: &str, reading_id: &str) -> Result<(), String> {
@@ -1033,6 +994,25 @@ mod tests {
     use super::*;
     use crate::tts::captions::WordTiming;
 
+    fn word(text_start: usize, text_end: usize) -> WordTiming {
+        WordTiming {
+            text_start,
+            text_end,
+            start_ms: 0.0,
+            end_ms: 100.0,
+        }
+    }
+
+    fn entry(text: &str, text_start: usize, text_end: usize) -> FragmentEntry {
+        FragmentEntry {
+            text_start,
+            text_end,
+            expected_text: text.to_string(),
+            captions: None,
+            captions_ok: false,
+        }
+    }
+
     fn session_with(
         raw: &str,
         spoken: &str,
@@ -1042,28 +1022,17 @@ mod tests {
         let entries: Vec<FragmentEntry> = fragments
             .into_iter()
             .map(|(text, start, end)| FragmentEntry {
-                text_start: start,
-                text_end: end,
-                expected_text: text.to_string(),
-                captions: if captions.is_some() && end - start > 0 {
-                    captions.clone()
-                } else {
-                    None
-                },
+                captions: captions.clone(),
                 captions_ok: captions.is_some(),
+                ..entry(text, start, end)
             })
             .collect();
         BrowserSession {
             reading_id: "r".into(),
             sequence: AtomicU64::new(0),
-            raw_text: raw.to_string(),
             spoken_text: spoken.to_string(),
-            source_map: whitespace_map(raw, spoken),
-            table: Mutex::new(FragmentTable {
-                fragments: entries,
-                tiling_ok: true,
-                captions_ok: true,
-            }),
+            source_map: align(raw, spoken),
+            fragments: Mutex::new(entries),
             active_fragment: AtomicUsize::new(0),
             position_ms: AtomicU64::new(0),
             status: AtomicU8::new(SessionStatus::Playing as u8),
@@ -1072,19 +1041,14 @@ mod tests {
     }
 
     #[test]
-    fn word_projects_through_fragment_and_whitespace_map() {
+    fn word_projects_through_fragment_and_source_alignment() {
         let raw = "Hello world.\n\nSecond sentence";
         let spoken = "Hello world. Second sentence";
         // One fragment covering all of spoken; caption word "Second" at
         // fragment-local 13..19 (UTF-16), i.e. spoken-page 13..19.
         let captions = CaptionAlignment {
             text: spoken.to_string(),
-            words: vec![WordTiming {
-                text_start: 13,
-                text_end: 19,
-                start_ms: 0.0,
-                end_ms: 100.0,
-            }],
+            words: vec![word(13, 19)],
         };
         let session = session_with(
             raw,
@@ -1093,7 +1057,7 @@ mod tests {
             Some(captions),
         );
         let (s, e) = current_word(&session).unwrap();
-        assert_eq!(&session.raw_text[s..e], "Second");
+        assert_eq!(&raw[s..e], "Second");
     }
 
     #[test]
@@ -1102,12 +1066,7 @@ mod tests {
         let spoken = "buffalo buffalo buffalo";
         let captions = CaptionAlignment {
             text: spoken.to_string(),
-            words: vec![WordTiming {
-                text_start: 16,
-                text_end: 23,
-                start_ms: 0.0,
-                end_ms: 100.0,
-            }],
+            words: vec![word(16, 23)],
         };
         let session = session_with(
             raw,
@@ -1117,52 +1076,82 @@ mod tests {
         );
         let (s, e) = current_word(&session).unwrap();
         assert_eq!(s, 16);
-        assert_eq!(&session.raw_text[s..e], "buffalo");
+        assert_eq!(&raw[s..e], "buffalo");
     }
 
+    /// Regression for the 2026-09-10 live failure: one `%` in the selection
+    /// expanded to " percent" during sanitization, and the old exact-replay
+    /// map rejected the whole reading. Highlighting must survive it.
     #[test]
-    fn unmappable_sanitization_degrades_to_passage_only() {
-        // Sanitization rewrote text: no whitespace map exists.
-        let session = session_with("see https://x.com now", "see link now", vec![], None);
-        assert!(session.source_map.is_none());
-        let (_, word, reason) = project_state(&session);
-        assert!(word.is_none());
-        assert_eq!(reason, Some("unmappable_sanitization"));
-    }
-
-    /// Degrade reasons report the FIRST failed gate, in pipeline order.
-    #[test]
-    fn degrade_reasons_report_in_pipeline_order() {
-        let session = session_with("see https://x.com now", "see link now", vec![], None);
-        session.table.lock().unwrap().tiling_ok = false;
-        assert_eq!(
-            degrade_reason(&session),
-            Some("unmappable_sanitization"),
-            "map gate precedes tiling gate"
-        );
-        // With a map present, tiling divergence outranks captions.
+    fn sanitizer_expansion_keeps_the_reading_highlighting() {
+        let raw = "Around 10-20% of measles cases result in hospitalization.";
+        let spoken =
+            crate::sanitize::sanitize_text(raw, &crate::config::SanitizationConfig::default());
+        let start = spoken.find("measles").unwrap();
+        let captions = CaptionAlignment {
+            text: spoken.clone(),
+            words: vec![word(start, start + "measles".len())],
+        };
         let session = session_with(
-            "plain text",
-            "plain text",
-            vec![("plain text", 0, 10)],
-            None,
+            raw,
+            &spoken,
+            vec![(spoken.as_str(), 0, spoken.encode_utf16().count())],
+            Some(captions),
         );
-        {
-            let mut table = session.table.lock().unwrap();
-            table.tiling_ok = false;
-            table.captions_ok = false;
-        }
-        assert_eq!(degrade_reason(&session), Some("tiling_diverged"));
+        let (_, projected, reason) = project_state(&session);
+        assert_eq!(reason, None, "expansion must not degrade the reading");
+        let (s, e) = projected.unwrap();
+        assert_eq!(&raw[s..e], "measles");
     }
 
     #[test]
     fn missing_captions_report_captions_unavailable() {
         let spoken = "plain text";
         let session = session_with(spoken, spoken, vec![(spoken, 0, 10)], None);
-        session.table.lock().unwrap().captions_ok = false;
-        let (_, word, reason) = project_state(&session);
-        assert!(word.is_none());
+        let (_, projected, reason) = project_state(&session);
+        assert!(projected.is_none());
         assert_eq!(reason, Some("captions_unavailable"));
+    }
+
+    /// The caption verdict is per fragment: a fragment whose engine sent no
+    /// captions must not switch highlighting off for the one being read.
+    #[test]
+    fn caption_verdict_follows_the_audible_fragment() {
+        let spoken = "first tile second tile";
+        let second = "second tile";
+        let start = spoken.find(second).unwrap();
+        let captions = CaptionAlignment {
+            text: second.to_string(),
+            words: vec![word(0, 6)],
+        };
+        let session = session_with(
+            spoken,
+            spoken,
+            vec![("first tile", 0, 10), (second, start, start + second.len())],
+            None,
+        );
+        {
+            let mut fragments = session.fragments.lock().unwrap();
+            fragments[1].captions = Some(captions);
+            fragments[1].captions_ok = true;
+        }
+        assert_eq!(degrade_reason(&session), Some("captions_unavailable"));
+        session.active_fragment.store(1, Ordering::Relaxed);
+        assert_eq!(degrade_reason(&session), None);
+        let (s, e) = current_word(&session).unwrap();
+        assert_eq!(&spoken[s..e], "second");
+    }
+
+    /// Nothing is audible yet during buffering, so there is no verdict to
+    /// report and the panel must not claim highlighting is unavailable.
+    #[test]
+    fn buffering_session_reports_no_degrade_reason() {
+        let spoken = "plain text";
+        let session = session_with(spoken, spoken, vec![(spoken, 0, 10)], None);
+        session.active_fragment.store(NO_FRAGMENT, Ordering::Relaxed);
+        let (_, projected, reason) = project_state(&session);
+        assert!(projected.is_none());
+        assert_eq!(reason, None);
     }
 
     #[test]
@@ -1170,12 +1159,7 @@ mod tests {
         let spoken = "plain text";
         let caps = CaptionAlignment {
             text: spoken.to_string(),
-            words: vec![WordTiming {
-                text_start: 0,
-                text_end: 5,
-                start_ms: 0.0,
-                end_ms: 100.0,
-            }],
+            words: vec![word(0, 5)],
         };
         let session = session_with(spoken, spoken, vec![(spoken, 0, 10)], Some(caps));
         let (_, _, reason) = project_state(&session);
@@ -1190,12 +1174,7 @@ mod tests {
         let start = spoken.find(f2).unwrap();
         let captions = CaptionAlignment {
             text: f2.to_string(),
-            words: vec![WordTiming {
-                text_start: 5,
-                text_end: 8,
-                start_ms: 0.0,
-                end_ms: 100.0,
-            }],
+            words: vec![word(5, 8)],
         };
         let session = session_with(
             raw,
@@ -1205,44 +1184,25 @@ mod tests {
         );
         session.active_fragment.store(1, Ordering::Relaxed);
         let (s, e) = current_word(&session).unwrap();
-        assert_eq!(&session.raw_text[s..e], "two");
+        assert_eq!(&raw[s..e], "two");
     }
 
-    /// Regression for the 2026-09-09 `word_available=false` gap. The wire
-    /// sends a text chunk (captions=None) BEFORE the caption item
-    /// (text=None); the old sticky `table.captions_ok=false` survived the
-    /// later caption arrival and degraded the whole reading to passage-only.
+    /// The wire sends a text chunk (captions=None) BEFORE the caption item
+    /// (text=None); the fragment only becomes usable once captions land.
     #[test]
-    fn late_captions_restore_table_captions_ok() {
+    fn late_captions_make_the_fragment_usable() {
         let text = "hello world";
-        let mut table = FragmentTable {
-            fragments: vec![FragmentEntry {
-                text_start: 0,
-                text_end: text.len(),
-                expected_text: text.to_string(),
-                captions: None,
-                captions_ok: false,
-            }],
-            tiling_ok: true,
-            captions_ok: true,
-        };
+        let mut fragments = vec![entry(text, 0, text.len())];
         let caps = CaptionAlignment {
             text: text.to_string(),
-            words: vec![WordTiming {
-                text_start: 0,
-                text_end: 5,
-                start_ms: 0.0,
-                end_ms: 100.0,
-            }],
+            words: vec![word(0, 5)],
         };
 
-        // 1. Text chunk: captions=None, then
-        // 2. caption item: text=None (the ElevenLabs standalone stream item).
-        apply_fragment_event(&mut table, 0, Some(text), None);
-        assert!(!table.captions_ok);
-        apply_fragment_event(&mut table, 0, None, Some(caps));
+        apply_fragment_event(&mut fragments, 0, Some(text), None);
+        assert!(!fragments[0].captions_ok);
+        apply_fragment_event(&mut fragments, 0, None, Some(caps));
 
-        assert!(table.captions_ok, "late captions must clear the table flag");
+        assert!(fragments[0].captions_ok, "late captions must land");
     }
 
     /// A standalone caption item (text=None) must NOT be mistaken for foreign
@@ -1250,85 +1210,66 @@ mod tests {
     #[test]
     fn caption_only_event_skips_tile_check() {
         let text = "hello world";
-        let mut table = FragmentTable {
-            fragments: vec![FragmentEntry {
-                text_start: 0,
-                text_end: text.len(),
-                expected_text: text.to_string(),
-                captions: None,
-                captions_ok: false,
-            }],
-            tiling_ok: true,
-            captions_ok: true,
-        };
+        let mut fragments = vec![entry(text, 0, text.len())];
         let caps = CaptionAlignment {
             text: text.to_string(),
-            words: vec![WordTiming {
-                text_start: 0,
-                text_end: 5,
-                start_ms: 0.0,
-                end_ms: 100.0,
-            }],
+            words: vec![word(0, 5)],
         };
-        apply_fragment_event(&mut table, 0, None, Some(caps));
+        apply_fragment_event(&mut fragments, 0, None, Some(caps));
 
-        assert!(table.tiling_ok, "tile check must not run on text=None");
-        assert!(table.captions_ok);
+        assert!(fragments[0].captions_ok);
     }
 
-    /// Captions whose text diverges from the expected tile still degrade the
+    /// A concurrent desktop reading's events name a different tile. They are
+    /// ignored, leaving captions this fragment already has intact.
+    #[test]
+    fn foreign_tile_events_are_ignored_not_fatal() {
+        let text = "hello world";
+        let mut fragments = vec![entry(text, 0, text.len())];
+        let caps = CaptionAlignment {
+            text: text.to_string(),
+            words: vec![word(0, 5)],
+        };
+        apply_fragment_event(&mut fragments, 0, None, Some(caps));
+        apply_fragment_event(
+            &mut fragments,
+            0,
+            Some("a different reading"),
+            Some(CaptionAlignment {
+                text: "a different reading".to_string(),
+                words: vec![word(0, 8)],
+            }),
+        );
+
+        assert!(fragments[0].captions_ok, "foreign events must not degrade");
+        assert_eq!(fragments[0].captions.as_ref().unwrap().text, text);
+    }
+
+    /// Captions whose text diverges from their own tile still degrade that
     /// fragment — the identity-mapping policy is unchanged.
     #[test]
     fn mismatched_captions_still_degrade() {
         let text = "hello world";
-        let mut table = FragmentTable {
-            fragments: vec![FragmentEntry {
-                text_start: 0,
-                text_end: text.len(),
-                expected_text: text.to_string(),
-                captions: None,
-                captions_ok: false,
-            }],
-            tiling_ok: true,
-            captions_ok: true,
-        };
+        let mut fragments = vec![entry(text, 0, text.len())];
         let caps = CaptionAlignment {
             text: "different text".to_string(),
-            words: vec![WordTiming {
-                text_start: 0,
-                text_end: 5,
-                start_ms: 0.0,
-                end_ms: 100.0,
-            }],
+            words: vec![word(0, 5)],
         };
-        apply_fragment_event(&mut table, 0, Some(text), None);
-        apply_fragment_event(&mut table, 0, None, Some(caps));
+        apply_fragment_event(&mut fragments, 0, Some(text), None);
+        apply_fragment_event(&mut fragments, 0, Some(text), Some(caps));
 
-        assert!(!table.captions_ok);
-        assert!(table.tiling_ok);
+        assert!(!fragments[0].captions_ok);
     }
 
     /// Regression for the 2026-09-09 live-click failure: ElevenLabs pads its
     /// alignment text with one leading/trailing space (each pad char gets its
     /// own timing entry), so exact-identity matching degraded every reading.
-    /// Proven from history sidecars: caps.text " The Great Fiction-Nonfiction
-    /// Inversion " vs tile "The Great Fiction-Nonfiction Inversion".
     #[test]
     fn edge_padded_captions_are_rebased_to_tile() {
         let expected = "The Great Fiction-Nonfiction Inversion";
         let padded = format!(" {expected} ");
         let content_u16 = expected.encode_utf16().count();
-        let mut table = FragmentTable {
-            fragments: vec![FragmentEntry {
-                text_start: 0,
-                text_end: content_u16,
-                expected_text: expected.to_string(),
-                captions: None,
-                captions_ok: false,
-            }],
-            tiling_ok: true,
-            captions_ok: true,
-        };
+        let mut fragments = vec![entry(expected, 0, content_u16)];
         let caps = CaptionAlignment {
             text: padded,
             words: vec![
@@ -1348,56 +1289,37 @@ mod tests {
                 },
                 // Trailing pad "word".
                 WordTiming {
-                    text_start: (content_u16 + 1) as usize,
-                    text_end: (content_u16 + 2) as usize,
+                    text_start: content_u16 + 1,
+                    text_end: content_u16 + 2,
                     start_ms: 300.0,
                     end_ms: 350.0,
                 },
             ],
         };
-        apply_fragment_event(&mut table, 0, Some(expected), None);
-        apply_fragment_event(&mut table, 0, None, Some(caps));
+        apply_fragment_event(&mut fragments, 0, Some(expected), None);
+        apply_fragment_event(&mut fragments, 0, None, Some(caps));
 
-        assert!(
-            table.captions_ok,
-            "padded captions must rebase, not degrade"
-        );
-        let caps = table.fragments[0].captions.as_ref().unwrap();
+        assert!(fragments[0].captions_ok, "padded captions must rebase");
+        let caps = fragments[0].captions.as_ref().unwrap();
         assert_eq!(caps.text, expected);
         assert_eq!(caps.words.len(), 1, "pad-only words dropped");
         assert_eq!((caps.words[0].text_start, caps.words[0].text_end), (0, 4));
         assert_eq!(caps.words[0].start_ms, 58.0, "audio timings untouched");
     }
 
-    /// Interior divergence (normalized/rewritten caption text) still degrades
-    /// the fragment — the identity-mapping policy is unchanged.
+    /// Interior divergence (rewritten caption text) still degrades the
+    /// fragment — the identity-mapping policy is unchanged.
     #[test]
     fn interior_divergent_captions_still_degrade() {
-        let mut table = FragmentTable {
-            fragments: vec![FragmentEntry {
-                text_start: 0,
-                text_end: 12,
-                expected_text: "hello world!".to_string(),
-                captions: None,
-                captions_ok: false,
-            }],
-            tiling_ok: true,
-            captions_ok: true,
-        };
+        let mut fragments = vec![entry("hello world!", 0, 12)];
         let caps = CaptionAlignment {
             text: " hello worlds! ".to_string(),
-            words: vec![WordTiming {
-                text_start: 1,
-                text_end: 6,
-                start_ms: 0.0,
-                end_ms: 100.0,
-            }],
+            words: vec![word(1, 6)],
         };
-        apply_fragment_event(&mut table, 0, Some("hello world!"), None);
-        apply_fragment_event(&mut table, 0, None, Some(caps));
+        apply_fragment_event(&mut fragments, 0, Some("hello world!"), None);
+        apply_fragment_event(&mut fragments, 0, None, Some(caps));
 
-        assert!(!table.captions_ok);
-        assert!(table.tiling_ok);
+        assert!(!fragments[0].captions_ok);
     }
 
     /// The proven fragment-2 shape: edge padding PLUS curly→straight quote
@@ -1409,17 +1331,8 @@ mod tests {
             " {}",
             expected.replace('\u{201C}', "\"").replace('\u{201D}', "\"")
         );
-        let mut table = FragmentTable {
-            fragments: vec![FragmentEntry {
-                text_start: 0,
-                text_end: expected.encode_utf16().count(),
-                expected_text: expected.to_string(),
-                captions: None,
-                captions_ok: false,
-            }],
-            tiling_ok: true,
-            captions_ok: true,
-        };
+        let content_u16 = expected.encode_utf16().count();
+        let mut fragments = vec![entry(expected, 0, content_u16)];
         let mut padded_u16 = padded.encode_utf16().collect::<Vec<_>>();
         padded_u16.push(0x20); // trailing pad
         let caps = CaptionAlignment {
@@ -1433,28 +1346,28 @@ mod tests {
                 }, // lead pad
                 WordTiming {
                     text_start: 1,
-                    text_end: 1 + expected.encode_utf16().count(),
+                    text_end: 1 + content_u16,
                     start_ms: 20.0,
                     end_ms: 500.0,
                 },
                 WordTiming {
-                    text_start: (1 + expected.encode_utf16().count()) as usize,
-                    text_end: (2 + expected.encode_utf16().count()) as usize,
+                    text_start: 1 + content_u16,
+                    text_end: 2 + content_u16,
                     start_ms: 500.0,
                     end_ms: 520.0,
                 }, // trail pad
             ],
         };
-        apply_fragment_event(&mut table, 0, Some(expected), None);
-        apply_fragment_event(&mut table, 0, None, Some(caps));
+        apply_fragment_event(&mut fragments, 0, Some(expected), None);
+        apply_fragment_event(&mut fragments, 0, None, Some(caps));
 
-        assert!(table.captions_ok, "quote-normalized padding must rebase");
-        let caps = table.fragments[0].captions.as_ref().unwrap();
+        assert!(fragments[0].captions_ok, "quote-normalized padding rebases");
+        let caps = fragments[0].captions.as_ref().unwrap();
         assert_eq!(caps.text, expected);
         assert_eq!(caps.words.len(), 1);
         assert_eq!(
             (caps.words[0].text_start, caps.words[0].text_end),
-            (0, expected.encode_utf16().count())
+            (0, content_u16)
         );
     }
 }

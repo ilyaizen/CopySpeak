@@ -104,8 +104,13 @@ def caption_batches(text, tokens, vocab):
         if len(token.text.split()) > 1:
             raise ValueError("Kokoro cannot caption merged words; replace tabs/unusual spaces with ordinary spaces")
         ps = token.phonemes
-        if ps is None or any(p not in vocab for p in ps):
+        if ps is None or any(p.isalpha() and p not in vocab for p in ps):
             raise ValueError(f"Kokoro cannot map pronunciation to model tokens: {token.text!r}")
+        # misaki passes punctuation it cannot pronounce straight through as a
+        # phoneme (an unbalanced "[", a guillemet). Those carry no sound and are
+        # absent from Kokoro's vocab, so drop them rather than abort the reading.
+        # A missing *letter* phoneme is a real pronunciation gap - stay loud.
+        ps = "".join(p for p in ps if p in vocab)
         if len(ps) > 510:
             raise ValueError("Kokoro source token exceeds the model window; shorten the word/expression")
         if len(phones) + len(ps) > 510:

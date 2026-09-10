@@ -39,11 +39,20 @@ class AlignmentTests(unittest.TestCase):
         token = SimpleNamespace(text="do\tnot", whitespace="", phonemes="du nat")
         with self.assertRaisesRegex(ValueError, "merged words"):
             list(kokoro.caption_batches(token.text, [token], dict.fromkeys(token.phonemes)))
-        token = SimpleNamespace(text="Hi", whitespace="", phonemes="h?")
+        token = SimpleNamespace(text="Hi", whitespace="", phonemes="hz")
         with self.assertRaisesRegex(ValueError, "model tokens"):
             list(kokoro.caption_batches("Hi", [token], {"h": 1}))
         with self.assertRaisesRegex(ValueError, "original text"):
             list(kokoro.caption_batches("Hi!", [token], {"h": 1}))
+
+    def test_kokoro_drops_unpronounceable_punctuation_instead_of_aborting(self):
+        # misaki leaks an unbalanced "[" into the phonemes of "[02:11"; it is not
+        # in Kokoro's vocab and must not kill the reading.
+        tokens = [SimpleNamespace(text=t, whitespace=w, phonemes=p) for t, w, p in
+                  [("at", " ", "at"), ("[02:11", "", "[tu:"), ("]", "", ")")]]
+        phones, spans = next(kokoro.caption_batches("at [02:11]", tokens, dict.fromkeys("atu: ", 1)))
+        self.assertEqual(phones, "at tu:")
+        self.assertEqual(spans, [(0, 2, 0, 2), (3, 9, 3, 6)])
 
     def test_kokoro_whole_token_chunks_keep_source_offsets(self):
         tokens = [SimpleNamespace(text=t, whitespace=w, phonemes=p) for t, w, p in
