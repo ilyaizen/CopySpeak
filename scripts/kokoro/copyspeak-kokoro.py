@@ -22,6 +22,7 @@ install-kokoro.ps1.
 """
 
 import argparse
+import contextlib
 import glob
 import json
 import os
@@ -70,12 +71,12 @@ def read_text(args) -> str:
 
 
 def resolve_models(model_arg, voices_arg):
-    """Locate kokoro-v1.0.onnx and voices-v1.0.bin.
+    """Locate kokoro-v1.0-duration.onnx and voices-v1.0.bin.
 
     Wrapper lives in <engine_dir>/kokoro/scripts/; models in ../models/.
     """
     models_dir = Path(__file__).resolve().parent.parent / "models"
-    model = Path(model_arg) if model_arg else models_dir / "kokoro-v1.0.onnx"
+    model = Path(model_arg) if model_arg else models_dir / "kokoro-v1.0-duration.onnx"
     voices = Path(voices_arg) if voices_arg else models_dir / "voices-v1.0.bin"
     missing = [str(p) for p in (model, voices) if not p.exists()]
     if missing:
@@ -94,14 +95,86 @@ def pcm16(samples) -> bytes:
     return (clipped * 32767.0).astype("<i2").tobytes()
 
 
-def stream(kokoro, voice: str, text: str):
-    """Yield (pcm16_le_bytes, sample_rate, channels).
+def caption_batches(text, tokens, vocab):
+    """Keep source ownership while packing whole native tokens into ONNX windows."""
+    if "".join(t.text + t.whitespace for t in tokens) != text:
+        raise ValueError("Kokoro frontend did not preserve the original text")
+    phones, spans, offset = "", [], 0
+    for token in tokens:
+        if len(token.text.split()) > 1:
+            raise ValueError("Kokoro cannot caption merged words; replace tabs/unusual spaces with ordinary spaces")
+        ps = token.phonemes
+        if ps is None or any(p not in vocab for p in ps):
+            raise ValueError(f"Kokoro cannot map pronunciation to model tokens: {token.text!r}")
+        if len(ps) > 510:
+            raise ValueError("Kokoro source token exceeds the model window; shorten the word/expression")
+        if len(phones) + len(ps) > 510:
+            yield phones.rstrip(), spans
+            phones, spans = "", []
+        first = len(phones)
+        phones += ps
+        if any(p.isalpha() for p in ps):
+            # Keep numeric/emoji expansions as their native source token, never
+            # subdivide them by the number of words in their pronunciation.
+            left = offset + len(token.text) - len(token.text.lstrip())
+            right = offset + len(token.text.rstrip())
+            spans.append((len(text[:left].encode("utf-16-le")) // 2,
+                          len(text[:right].encode("utf-16-le")) // 2,
+                          first, len(phones)))
+        if token.whitespace and phones:
+            phones += " "
+        offset += len(token.text + token.whitespace)
+    if phones.strip():
+        yield phones.rstrip(), spans
 
-    kokoro-onnx also has an async create_stream(); create() is used here because
-    the daemon protocol is synchronous. Switching later needs no wire change.
+
+def native_words(text_spans, durations, sample_count, sample_offset):
+    """Native Kokoro frames are 600 samples at 24 kHz, including BOS/EOS."""
+    edges = [0]
+    for duration in durations:
+        if int(duration) != duration or duration <= 0:
+            raise ValueError("Kokoro returned invalid native durations")
+        edges.append(edges[-1] + int(duration) * 600)
+    if edges[-1] != sample_count:
+        raise ValueError("Kokoro duration geometry differs from its PCM; refusing to rescale")
+    return [{"text_start": start, "text_end": end,
+             "start_ms": (sample_offset + edges[first + 1]) / 24,
+             "end_ms": (sample_offset + edges[last + 1]) / 24}
+            for start, end, first, last in text_spans]
+
+
+def stream(kokoro, voice: str, text: str, frontend):
+    """Yield one complete alignment before a fragment's buffered PCM.
+
+    Bypass create_timed's rescaling/trimming/pause insertion. The raw inference
+    durations and waveform must come from the same call.
     """
-    samples, rate = kokoro.create(text, voice=voice)
-    yield pcm16(samples), rate, 1
+    import numpy as np
+
+    # Third-party frontend diagnostics must never enter the binary protocol.
+    with contextlib.redirect_stdout(sys.stderr):
+        _, tokens = frontend(text, preprocess=False)
+    vocab = kokoro.tokenizer.vocab
+    pcm, words, sample_offset = [], [], 0
+    # Validate the entire fragment before inference or releasing any PCM.
+    batches = list(caption_batches(text, tokens, vocab))
+    for phones, spans in batches:
+        ids = [vocab[p] for p in phones]
+        samples, durations = kokoro.sess.run(["waveform", "duration"], {
+            "input_ids": np.array([[0, *ids, 0]], dtype=np.int64),
+            "style": kokoro.get_voice_style(voice)[len(ids) - 1].reshape(1, 256).astype(np.float32),
+            # Playback speed/pitch belong to CopySpeak's TimeStretcher.
+            "speed": np.array([1.0], dtype=np.float32),
+        })
+        samples, durations = samples.reshape(-1), durations.reshape(-1)
+        if len(durations) != len(ids) + 2 or not np.isfinite(samples).all():
+            raise ValueError("Kokoro native alignment does not match the generated audio")
+        words.extend(native_words(spans, durations, len(samples), sample_offset))
+        pcm.append(pcm16(samples))
+        sample_offset += len(samples)
+    if not pcm:
+        raise ValueError("Kokoro produced no pronunciation for this text")
+    yield b"".join(pcm), 24000, 1, {"text": text, "words": words}
 
 
 def write_wav(output: str, pcm: bytes, rate: int, channels: int) -> None:
@@ -113,7 +186,7 @@ def write_wav(output: str, pcm: bytes, rate: int, channels: int) -> None:
         wf.writeframes(pcm)
 
 
-def serve(kokoro, voice: str) -> int:
+def serve(kokoro, voice: str, frontend) -> int:
     """Daemon mode, protocol v2. Model stays resident; PCM is framed on stdout.
 
     Everything goes through sys.stdout.buffer — mixing text and binary writes to
@@ -132,7 +205,7 @@ def serve(kokoro, voice: str) -> int:
     # Best effort: a warmup failure is not a reason to refuse to serve, and the
     # real request will surface the same error properly framed.
     try:
-        for _ in stream(kokoro, voice, "Ready."):
+        for _ in stream(kokoro, voice, "Ready.", frontend):
             pass
     except Exception as exc:  # pragma: no cover - environment dependent
         print(f"WARNING: warmup failed: {exc}", file=sys.stderr, flush=True)
@@ -148,24 +221,16 @@ def serve(kokoro, voice: str) -> int:
         if not line:
             continue
         try:
-            chunks = stream(kokoro, voice, json.loads(line)["text"])
-            first = next(chunks, None)
-            if first is None:
-                raise RuntimeError("no audio produced")
-            pcm, rate, channels = first
+            pcm, rate, channels, captions = next(stream(kokoro, voice, json.loads(line)["text"], frontend))
             frame({
                 "ok": True,
                 "sample_rate": rate,
                 "channels": channels,
                 "bits_per_sample": 16,
             })
-            while True:
-                frame({"chunk": len(pcm)})
-                out.write(pcm)
-                nxt = next(chunks, None)
-                if nxt is None:
-                    break
-                pcm = nxt[0]
+            frame({"captions": captions})
+            frame({"chunk": len(pcm)})
+            out.write(pcm)
             frame({"end": True})
         except Exception as exc:  # pragma: no cover - environment dependent
             frame({"ok": False, "error": str(exc)})
@@ -177,7 +242,7 @@ def main() -> int:
     parser.add_argument("--text", help="Inline text to synthesize")
     parser.add_argument("--text-file", help="Path to a UTF-8 text file to synthesize")
     parser.add_argument("--voice", default="af_heart", help="Kokoro voice id (e.g. af_heart)")
-    parser.add_argument("--model", help="Path to kokoro-v1.0.onnx (default: ../models/)")
+    parser.add_argument("--model", help="Path to duration-capable Kokoro ONNX (default: ../models/kokoro-v1.0-duration.onnx)")
     parser.add_argument("--voices", help="Path to voices-v1.0.bin (default: ../models/)")
     parser.add_argument("--output", help="Output WAV file path (required unless --serve)")
     parser.add_argument("--serve", action="store_true", help="Keep the model in RAM and read JSON requests on stdin")
@@ -214,6 +279,14 @@ def main() -> int:
 
     try:
         kokoro = Kokoro(model_path, voices_path)
+        if not {"waveform", "duration"}.issubset(o.name for o in kokoro.sess.get_outputs()):
+            raise ValueError("Kokoro needs the duration-capable model; re-run install-kokoro.ps1")
+        if args.voice[:1] not in ("a", "b"):
+            raise ValueError("Kokoro native source captions currently support English voices only")
+        with contextlib.redirect_stdout(sys.stderr):
+            from misaki import en, espeak
+            british = args.voice.startswith("b")
+            frontend = en.G2P(trf=False, british=british, fallback=espeak.EspeakFallback(british=british))
     except Exception as exc:  # pragma: no cover - environment dependent
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
@@ -222,11 +295,12 @@ def main() -> int:
     print(f"providers: {kokoro.sess.get_providers()}", file=sys.stderr, flush=True)
 
     if args.serve:
-        return serve(kokoro, args.voice)
+        return serve(kokoro, args.voice, frontend)
 
     try:
-        pcm, rate, channels = next(stream(kokoro, args.voice, text))
+        pcm, rate, channels, captions = next(stream(kokoro, args.voice, text, frontend))
         write_wav(args.output, pcm, rate, channels)
+        Path(args.output + ".captions.json").write_text(json.dumps(captions), encoding="utf-8")
         print(f"OK -> {args.output}", file=sys.stderr)
         return 0
     except Exception as exc:  # pragma: no cover - environment dependent

@@ -188,11 +188,11 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
         EngineCatalogEntry {
             engine: TtsEngine::Kokoro,
             label: "Kokoro".into(),
-            description: "Free local TTS via Kokoro — one shared model, curated voice set.".into(),
+            description: "Free local TTS via Kokoro, with native English captions after reinstalling the duration-capable model.".into(),
             docs_url: "https://github.com/thewh1teagle/kokoro-onnx".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
-            supports_captions: false,
+            supports_captions: true,
             supports_bracket_emotes: false,
             options: vec![option(
                 "cuda",
@@ -1176,6 +1176,7 @@ mod tests {
             supported,
             [
                 TtsEngine::Piper,
+                TtsEngine::Kokoro,
                 TtsEngine::ElevenLabs,
                 TtsEngine::Cartesia,
                 TtsEngine::Edge,

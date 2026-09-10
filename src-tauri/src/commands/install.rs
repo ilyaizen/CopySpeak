@@ -386,11 +386,12 @@ pub fn engine_status(engine: String) -> Result<EngineStatus, String> {
             .map(|d| d.join("manifest.json").exists() && d.join("pyproject.toml").exists())
             .unwrap_or(false),
         // Kokoro refuses to synthesize without these two model files, which the
-        // installer downloads separately from the package.
+        // installer prepares separately from the package. The old audio-only
+        // ONNX does not satisfy the native-caption wrapper's requirements.
         "kokoro" => engine_dir("kokoro")
             .map(|d| {
                 d.join("manifest.json").exists()
-                    && d.join("models").join("kokoro-v1.0.onnx").exists()
+                    && d.join("models").join("kokoro-v1.0-duration.onnx").exists()
                     && d.join("models").join("voices-v1.0.bin").exists()
             })
             .unwrap_or(false),

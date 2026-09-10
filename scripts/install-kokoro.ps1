@@ -5,8 +5,9 @@
 
 .DESCRIPTION
     Creates a uv-managed project under %LOCALAPPDATA%\CopySpeak\engines\kokoro,
-    installs kokoro-onnx, drops the stable CLI wrapper, and downloads the model
-    files (kokoro-v1.0.onnx + voices-v1.0.bin, ~335 MB) into <engine_dir>/models/.
+    installs kokoro-onnx and Misaki English, drops the CLI wrapper, and exports
+    a duration-capable ONNX model using the pinned upstream exporter. The first
+    installation also downloads the Kokoro checkpoint and export dependencies.
 
     The third-party `kokoro-tts` CLI this used to install reloaded the 310 MB
     model on every invocation and gave no way to pick an execution provider, so
@@ -83,8 +84,8 @@ Write-Host ""
 Write-Host "  [STEP] engine" -ForegroundColor Yellow
 $engineOk = $true
 try {
-    Write-Host "  Installing kokoro-onnx..." -ForegroundColor Gray
-    Invoke-Uv add --project $EngineDir "kokoro-onnx"
+    Write-Host "  Installing Kokoro and its English caption frontend..." -ForegroundColor Gray
+    Invoke-Uv add --project $EngineDir "kokoro-onnx==0.6.1" "misaki[en]==0.9.4" "en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl"
 } catch {
     Write-Host "  [ERROR] engine (uv add failed: $_)" -ForegroundColor Red
     $engineOk = $false
@@ -105,16 +106,14 @@ if ($engineOk) { Write-Host "  [DONE] engine" -ForegroundColor Green }
 # Model files. kokoro-onnx requires these and does not auto-download them.
 # Stable home is <engine_dir>/models/ so the wrapper resolves them relative to
 # itself, the same way piper resolves its voices/.
-$modelFile = Join-Path $modelsDir "kokoro-v1.0.onnx"
+$modelFile = Join-Path $modelsDir "kokoro-v1.0-duration.onnx"
 $voicesFile = Join-Path $modelsDir "voices-v1.0.bin"
-$modelUrl = "https://github.com/nazdridoy/kokoro-tts/releases/download/v1.0.0/kokoro-v1.0.onnx"
 $voicesUrl = "https://github.com/nazdridoy/kokoro-tts/releases/download/v1.0.0/voices-v1.0.bin"
 
 if (-not $SkipModelDownload) {
     Write-Host "  [STEP] model" -ForegroundColor Yellow
     $modelOk = $true
     foreach ($f in @(
-        @{ Path = $modelFile;  Url = $modelUrl;  Label = "kokoro-v1.0.onnx (~310 MB, full quality)" },
         @{ Path = $voicesFile; Url = $voicesUrl; Label = "voices-v1.0.bin (~25 MB)" }
     )) {
         if (Test-Path $f.Path) {
@@ -131,6 +130,37 @@ if (-not $SkipModelDownload) {
             Remove-Item -Force -ErrorAction SilentlyContinue $f.Path
             Write-Host "  WARNING: download failed: $_" -ForegroundColor Red
             Write-Host "  Re-run with -Force, or download manually from $($f.Url)" -ForegroundColor Gray
+            $modelOk = $false
+        }
+    }
+    if ($engineOk -and -not (Test-Path $modelFile)) {
+        # Keep the old audio-only model intact. Promote the new artifact only
+        # after upstream's export and native-duration verification both succeed.
+        $exportDir = Join-Path $modelsDir "native-export"
+        New-Item -ItemType Directory -Force $exportDir | Out-Null
+        $exportScript = Join-Path $exportDir "export.py"
+        $exportConfig = Join-Path $exportDir "config.json"
+        $checkpoint = Join-Path $exportDir "kokoro-v1_0.pth"
+        $pendingModel = Join-Path $exportDir "kokoro-v1.0-duration.onnx"
+        $checkpointBase = "https://huggingface.co/hexgrad/Kokoro-82M/resolve/f3ff3571791e39611d31c381e3a41a3af07b4987"
+        try {
+            foreach ($source in @(
+                @{ Path = $exportScript; Url = "https://raw.githubusercontent.com/thewh1teagle/kokoro-onnx/3596b26764286a7de9d90c363e988d50578918e5/scripts/export.py" },
+                @{ Path = $exportConfig; Url = "$checkpointBase/config.json" },
+                @{ Path = $checkpoint; Url = "$checkpointBase/kokoro-v1_0.pth" }
+            )) {
+                if (-not (Test-Path $source.Path)) {
+                    $partial = $source.Path + ".download"
+                    Invoke-WebRequest -Uri $source.Url -OutFile $partial -UseBasicParsing
+                    Move-Item -LiteralPath $partial -Destination $source.Path -Force
+                }
+            }
+            # Kokoro's export package requires NumPy 1.x, which has no Python
+            # 3.13 wheel. Keep this build environment separate from inference.
+            Invoke-Uv run --no-project --python 3.12 --with "onnx==1.22.0" --with "onnxscript==0.7.2" --with "onnxruntime==1.29.0" --with "torch==2.14.0" --with "transformers==5.17.0" $exportScript --config $exportConfig --checkpoint $checkpoint --output $pendingModel
+            Move-Item -LiteralPath $pendingModel -Destination $modelFile
+        } catch {
+            Write-Host "  [ERROR] native caption model export: $_" -ForegroundColor Red
             $modelOk = $false
         }
     }

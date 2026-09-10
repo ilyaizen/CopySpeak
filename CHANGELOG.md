@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-09-10
+
+### Changed
+
+- **Kokoro now has native live captions** — the local Kokoro engine reports `supports_captions: true`. The installer instead exports a duration-capable ONNX model (`kokoro-v1.0-duration.onnx`) using the pinned upstream exporter under an isolated Python 3.12 environment (Kokoro 0.8.4's NumPy 1.x dependency needs it), and installs `misaki[en]` for the English caption frontend. Existing audio-only installs show as needing reinstall; the old model is kept until the export succeeds.
+- **Engine options are no longer suffixed with "(no live captions)"** — the profile manager now relies on the catalog's caption warning instead of decorating the label.
+
+### Fixed
+
+- Pass Kokoro installer/exporter options by their long names through `Invoke-Uv`; PowerShell binds short flags like `-o` before uv runs.
+- `engine_status` for Kokoro checks for the duration-capable model, so the audio-only ONNX no longer counts as installed.
+
 ## [0.2.0] - 2026-09-09
 
 ### Added
