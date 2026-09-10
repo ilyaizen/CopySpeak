@@ -163,8 +163,8 @@ fn normalize_characters(text: &str) -> String {
 }
 
 /// The same-length subset only (substitutions + homoglyph folds, NO
-/// deletions). Used by `text_map` to prove a spoken text is the raw text
-/// under pure 1→1 substitutions, keeping word highlighting exact.
+/// deletions). Used by `text_map` to compare raw and spoken words under the
+/// folds the sanitizer applies, so a folded word still matches its source.
 pub(crate) fn canonical_same_length(text: &str) -> String {
     fold_homoglyphs(&substitute_same_length(text))
 }
@@ -388,8 +388,7 @@ fn expand_symbols(text: &str) -> String {
 // ── 11. Punctuation Normalization ───────────────────────────────────────────
 
 lazy_static::lazy_static! {
-    // Shared with source mapping so paired delimiters follow the same rule.
-    pub(crate) static ref PAREN_REGEX: Regex = Regex::new(r"\(([^)]+)\)").unwrap();
+    static ref PAREN_REGEX: Regex = Regex::new(r"\(([^)]+)\)").unwrap();
 }
 
 fn normalize_punctuation(text: &str) -> String {

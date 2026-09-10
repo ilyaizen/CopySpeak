@@ -59,7 +59,9 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Register CUDA DLL directories with `os.add_dll_directory` inside the wrapper; Python 3.8+ ignores `PATH` for extension-module dependencies, so setting it from Rust does nothing.
 - Emit the streaming `is_final` marker on the last fragment only; an intermediate one arms the player's completion timer mid-passage.
 - KittenTTS 0.8.1 (the pinned wheel) takes only `KittenTTS(model_name, cache_dir)`; select the GPU by replacing `tts.model.session`, not with a `backend=` kwarg that only exists on `main`.
+- Map browser caption words onto the raw selection with `text_map::align`'s word alignment; never re-derive the sanitizer's rewrites in a second place, and keep the highlight verdict per word and per fragment rather than per reading.
 - Pass `uv init` its target directory positionally (`uv init --bare --name X <dir>`); uv 0.12+ hard-errors on `uv --project <dir> init`, which only shows up when creating a fresh engine project.
+- Filter Kokoro's misaki phonemes through the model vocab before inference; misaki emits unpronounceable punctuation (an unbalanced `[`) as a literal phoneme, and only a missing *letter* phoneme is a real pronunciation gap worth aborting on.
 
 <!-- rtk-instructions v2 -->
 

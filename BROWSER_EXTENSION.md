@@ -24,10 +24,12 @@ support are rejected.
 `\\.\pipe\copyspeak-browser`. The desktop bridge starts a normal CopySpeak
 reading and projects audible caption timings back to the original selection.
 
-Word highlighting is deliberately conservative: it is enabled only when the
-sanitized text, paginated fragments, and caption text can be mapped exactly to
-the original selection. Otherwise the passage remains highlighted without a
-current-word marker.
+Word highlighting degrades per word and per fragment, never per reading. The
+raw selection and the sanitized text are aligned word by word, so a word the
+sanitizer rewrote maps to the source run it replaced and a word it invented
+(`%` → "percent") maps to the punctuation it expanded. A fragment whose engine
+sent no usable caption timings keeps the passage highlighted without a
+current-word marker, while the fragments around it still follow the word.
 
 ## Developer setup
 
