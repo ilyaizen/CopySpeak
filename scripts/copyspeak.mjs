@@ -14,7 +14,7 @@ async function request(path, options = {}) {
   try {
     response = await fetch(`${base}${path}`, {
       ...options,
-      headers: { "Content-Type": "application/json", ...(options.headers || {}) }
+      headers: { "Content-Type": "application/json", ...options.headers }
     });
   } catch {
     die(`CopySpeak control server is not reachable at ${base}`);

@@ -47,7 +47,7 @@ function generateTypes(keys) {
 
 /**
  * All available translation keys
- * Use with \$_() from svelte-i18n for type-safe translations
+ * Use with $_() from svelte-i18n for type-safe translations
  * 
  * Example:
  * \`\`\`svelte
@@ -58,7 +58,7 @@ function generateTypes(keys) {
  *   const key: TranslationKeys = 'settings.categories.general';
  * </script>
  * 
- * <h1>{\$_(key)}</h1>
+ * <h1>{$_(key)}</h1>
  * \`\`\`
  */
 export type TranslationKeys =

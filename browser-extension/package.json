@@ -1,1 +1,15 @@
-{"name":"copyspeak-browser-companion","private":true,"version":"0.1.0","type":"module","scripts":{"build":"bun build.mjs","check":"tsc --noEmit","test":"bun test tests/anchor.test.ts tests/protocol.test.ts tests/worker.test.ts","test:browser":"playwright test --config playwright.config.ts"},"devDependencies":{"@types/chrome":"^0.1.0"}}
+{
+  "name": "copyspeak-browser-companion",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "bun build.mjs",
+    "check": "tsc --noEmit",
+    "test": "bun test tests/anchor.test.ts tests/protocol.test.ts tests/worker.test.ts",
+    "test:browser": "playwright test --config playwright.config.ts"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.0"
+  }
+}
