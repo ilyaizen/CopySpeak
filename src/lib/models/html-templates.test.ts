@@ -3,7 +3,7 @@
  * This file demonstrates the usage of the template backend
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect } from "vite-plus/test";
 import {
   createTemplateContext,
   renderHtmlTemplate,

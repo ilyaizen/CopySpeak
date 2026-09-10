@@ -1,4 +1,4 @@
-import type { Plugin } from "vite";
+import type { Plugin } from "vite-plus";
 
 // Mock for SvelteKit virtual modules used in vitest
 let mockPathname = "/";

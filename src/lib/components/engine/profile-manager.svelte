@@ -227,7 +227,8 @@
     const rawVoices = catalogVoicesFor(active.engine as TtsEngine);
     if (active.engine === "local") {
       const preset = (active.engine_options as Record<string, unknown> | undefined)?.preset as
-        string | undefined;
+        | string
+        | undefined;
       if (preset === "piper") return rawVoices.filter((v) => v.language === "Piper");
       if (preset === "kokoro") return rawVoices.filter((v) => v.language === "Kokoro");
       if (preset === "kitten-tts") return rawVoices.filter((v) => v.language === "KittenTTS");
@@ -478,7 +479,8 @@
     if (engine === "local") {
       const entry = catalog.find((item) => item.engine === engine);
       const defaultPreset = entry?.options.find((o) => o.key === "preset")?.default_value as
-        string | undefined;
+        | string
+        | undefined;
       if (defaultPreset && defaultPreset !== "custom") {
         applyPresetDefaults(activeIndex, defaultPreset);
       }

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { playbackStore } from "./playback-store.svelte";
 import { emitTo } from "@tauri-apps/api/event";
 import { PcmStreamScheduler } from "./playback/pcm-stream";

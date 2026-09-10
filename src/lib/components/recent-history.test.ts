@@ -1,4 +1,4 @@
-import { expect, it, vi } from "vitest";
+import { expect, it, vi } from "vite-plus/test";
 import { fireEvent, render } from "@testing-library/svelte";
 import { waitForI18nReady } from "$lib/i18n";
 import RecentHistory from "./recent-history.svelte";

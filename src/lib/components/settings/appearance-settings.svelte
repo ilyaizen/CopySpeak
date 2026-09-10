@@ -21,7 +21,9 @@
 
   function handleThemeChange(e: Event) {
     localConfig.general.appearance = (e.target as HTMLSelectElement).value as
-      "system" | "light" | "dark";
+      | "system"
+      | "light"
+      | "dark";
   }
 
   function handleLocaleChange(e: Event) {

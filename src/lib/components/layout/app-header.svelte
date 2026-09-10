@@ -83,7 +83,7 @@
         </div>
       </a>
     </div>
-    <div class="min-w-0 max-w-full">
+    <div class="max-w-full min-w-0">
       <nav aria-label="Main navigation" class="flex flex-wrap items-center gap-1">
         {#each navItems as item}
           {@const isActive =

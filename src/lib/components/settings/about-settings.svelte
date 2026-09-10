@@ -118,7 +118,7 @@
                     class="px-1 py-0.5 font-mono text-[10px] leading-tight break-all whitespace-pre-wrap">{line}</pre>
                 </div>
               {:else}
-                <div class="text-muted-foreground font-mono text-[10px] p-2">No logs available</div>
+                <div class="text-muted-foreground p-2 font-mono text-[10px]">No logs available</div>
               {/each}
             </div>
           </div>

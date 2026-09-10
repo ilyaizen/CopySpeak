@@ -4,7 +4,7 @@ const ELLIPSIS = "\u2026";
 
 export function formatTextForDisplay(text: string): string {
   return text
-    .replace(/([^\.\!\?\;\:\,])\n/g, "$1. ")
+    .replace(/([^.\!?\;:\,])\n/g, "$1. ")
     .replace(/\n/g, " ")
     .trim()
     .substring(0, MAX_DISPLAY_LENGTH);

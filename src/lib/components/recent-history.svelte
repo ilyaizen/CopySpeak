@@ -310,7 +310,7 @@
             {#if reading.title}<span class="mb-1 block truncate text-sm font-semibold"
                 >{reading.title}</span
               >{/if}
-            <span class="line-clamp-2 text-sm leading-relaxed whitespace-pre-wrap wrap-anywhere"
+            <span class="line-clamp-2 text-sm leading-relaxed wrap-anywhere whitespace-pre-wrap"
               >{reading.text}</span
             >
             <span

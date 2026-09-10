@@ -232,8 +232,8 @@
       >
         <MotionWrapper
           class={isOnboarding
-            ? "min-h-full min-w-0 flex flex-col"
-            : "mx-auto flex min-h-full w-full min-w-0 max-w-6xl flex-col"}
+            ? "flex min-h-full min-w-0 flex-col"
+            : "mx-auto flex min-h-full w-full max-w-6xl min-w-0 flex-col"}
         >
           {@render children()}
         </MotionWrapper>
