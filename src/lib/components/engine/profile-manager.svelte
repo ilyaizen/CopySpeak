@@ -197,7 +197,7 @@
     catalog.length
       ? catalog.map((entry) => ({
           value: entry.engine,
-          label: entry.supports_captions ? entry.label : `${entry.label} (no live captions)`
+          label: entry.label
         }))
       : fallbackEngineOptions
   );
