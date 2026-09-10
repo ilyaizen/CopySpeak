@@ -7,12 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- **Browser companion word highlighting now survives sanitization** — the source map used to *replay* a hand-picked subset of the sanitizer's rewrites and reject everything else, so a single `%` expanding to " percent" switched word highlighting off for a whole reading. `text_map` now aligns the raw selection and the spoken text word by word (order-preserving, with bounded resynchronization), so only a word the sanitizer invented loses its highlight — and it points at the punctuation it came from.
-- **Live-caption verdicts are per fragment, not per reading** — the browser panel no longer reports "Word highlighting unavailable" for an entire reading while later fragments are still being synthesized, and a synthesis event belonging to a different reading is ignored instead of degrading the browser session.
-- **Kokoro no longer aborts a reading on an unpronounceable bracket** — misaki passes punctuation it cannot pronounce straight through as a phoneme (an unbalanced `[` from a link-heavy web selection, a guillemet). Those symbols are absent from Kokoro's vocab and carry no sound, so the wrapper drops them instead of failing the fragment with `Kokoro cannot map pronunciation to model tokens: '[02:11'`. A missing *letter* phoneme is still a hard error.
-
 ## [0.2.1] - 2026-09-10
 
 ### Changed
@@ -22,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Browser companion word highlighting now survives sanitization** — the source map used to *replay* a hand-picked subset of the sanitizer's rewrites and reject everything else, so a single `%` expanding to " percent" switched word highlighting off for a whole reading. `text_map` now aligns the raw selection and the spoken text word by word (order-preserving, with bounded resynchronization), so only a word the sanitizer invented loses its highlight — and it points at the punctuation it came from.
+- **Live-caption verdicts are per fragment, not per reading** — the browser panel no longer reports "Word highlighting unavailable" for an entire reading while later fragments are still being synthesized, and a synthesis event belonging to a different reading is ignored instead of degrading the browser session.
+- **Kokoro no longer aborts a reading on an unpronounceable bracket** — misaki passes punctuation it cannot pronounce straight through as a phoneme (an unbalanced `[` from a link-heavy web selection, a guillemet). Those symbols are absent from Kokoro's vocab and carry no sound, so the wrapper drops them instead of failing the fragment with `Kokoro cannot map pronunciation to model tokens: '[02:11'`. A missing *letter* phoneme is still a hard error.
 - Pass Kokoro installer/exporter options by their long names through `Invoke-Uv`; PowerShell binds short flags like `-o` before uv runs.
 - `engine_status` for Kokoro checks for the duration-capable model, so the audio-only ONNX no longer counts as installed.
 
