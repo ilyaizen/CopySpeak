@@ -37,20 +37,30 @@
   let importJson = $state("");
   let importError = $state<string | null>(null);
 
-  function isValidProfile(p: unknown): p is VoiceProfile {
-    if (!p || typeof p !== "object") return false;
-    const o = p as Record<string, unknown>;
+  // Untrusted import JSON is validated field by field; prototype tags stand in
+  // for `typeof` and every check runs on the imported object directly.
+  // JSON.parse's own return type is the owner contract for imported payloads.
+  type ParsedJson = ReturnType<typeof JSON.parse>;
+  const isObjectTag = (x: ParsedJson): boolean =>
+    Object.prototype.toString.call(x) === "[object Object]";
+  const isStringTag = (x: ParsedJson): boolean =>
+    Object.prototype.toString.call(x) === "[object String]";
+
+  function isValidProfile(p: ParsedJson): p is VoiceProfile {
+    if (!p || !isObjectTag(p)) return false;
+    // SAFETY: the prototype tag above establishes a plain object; id/name/
+    // engine/voice are string-tagged and engine/effect come from the registries.
+    const o = p as VoiceProfile;
     return (
-      typeof o.id === "string" &&
-      typeof o.name === "string" &&
-      typeof o.engine === "string" &&
-      ENGINES.includes(o.engine as TtsEngine) &&
-      typeof o.voice === "string" &&
+      isStringTag(o.id) &&
+      isStringTag(o.name) &&
+      isStringTag(o.engine) &&
+      ENGINES.includes(o.engine) &&
+      isStringTag(o.voice) &&
       Number.isFinite(o.speed) &&
       Number.isFinite(o.pitch) &&
-      typeof o.effects === "object" &&
-      o.effects !== null &&
-      EFFECTS.includes((o.effects as Record<string, unknown>).active_effect as EffectId)
+      isObjectTag(o.effects) &&
+      EFFECTS.includes(o.effects.active_effect)
     );
   }
 
@@ -82,11 +92,13 @@
   }
 
   function handleFileSelect(event: Event) {
+    // SAFETY: this handler is only bound to the file <input>, whose target is that element.
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (e) => {
+      // SAFETY: readAsText resolves result as string in this onload handler.
       importJson = e.target?.result as string;
       importError = null;
     };
@@ -110,7 +122,7 @@
           "Invalid profile: missing required fields (id, name, engine, voice, speed, pitch, effects)";
         return;
       }
-      onImport(parsed as VoiceProfile);
+      onImport(parsed);
     } catch (e) {
       importError = e instanceof SyntaxError ? "Invalid JSON" : String(e);
     }

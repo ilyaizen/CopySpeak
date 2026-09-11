@@ -28,15 +28,18 @@ describe("HTML Export Utilities", () => {
     originalAppendChild = document.body.appendChild;
     originalRemoveChild = document.body.removeChild;
 
-    document.createElement = vi.fn((tagName: string) => {
+    // vi.fn doubles implement the subset of createElement/appendChild/removeChild
+    // the test exercises; typing restores the DOM component signatures.
+    const createElementMock: typeof document.createElement = vi.fn((tagName: string) => {
       if (tagName === "a") {
         return mockAnchor;
       }
       return originalCreateElement.call(document, tagName);
-    }) as unknown as typeof document.createElement;
+    });
+    document.createElement = createElementMock;
 
-    document.body.appendChild = vi.fn() as unknown as typeof document.body.appendChild;
-    document.body.removeChild = vi.fn() as unknown as typeof document.body.removeChild;
+    document.body.appendChild = vi.fn();
+    document.body.removeChild = vi.fn();
 
     globalThis.URL.createObjectURL = vi.fn(() => mockUrl);
     globalThis.URL.revokeObjectURL = vi.fn();

@@ -18,6 +18,6 @@ export async function load() {
   }
 
   return {
-    locale: "en" as SupportedLocale
+    locale: "en" satisfies SupportedLocale
   };
 }

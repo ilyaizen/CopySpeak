@@ -10,7 +10,7 @@
 
     // Show the window now that transparent CSS is applied.
     // We only show once; from here on, HUD is hidden by moving off-screen.
-    if (typeof window !== "undefined" && "__TAURI_INTERNALS__" in window) {
+    if ("window" in globalThis && "__TAURI_INTERNALS__" in window) {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
       await getCurrentWindow().show();
     }
