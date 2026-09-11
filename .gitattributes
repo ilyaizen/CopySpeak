@@ -1,0 +1,8 @@
+# Normalize every text file to LF in the repo and on checkout.
+# oxfmt (vp fmt) requires LF; this stops git/oxfmt EOL tug-of-war on Windows.
+* text=auto eol=lf
+
+# Binary assets - never normalize.
+*.png binary
+*.ico binary
+*.icns binary
