@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-09-12
+
 ### Added
 
 - **Repeated text replays saved audio** — a double-copy, browser reading, hotkey or Play with text that history already holds for the active engine and voice plays the saved audio (with its caption sidecar) instead of calling the engine again. A paginated reading replays only when every fragment is saved, so it never mixes saved and fresh parts. A replay adds no history row, audio file or telemetry sample; history's **Regenerate** always synthesizes fresh audio (`regenerate_now`).
