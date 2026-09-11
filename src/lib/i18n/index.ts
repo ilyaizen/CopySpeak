@@ -27,6 +27,7 @@ export function setLocale(newLocale: SupportedLocale): void {
 
 // Helper function to get current locale value
 export function getCurrentLocale(): SupportedLocale {
+  // SAFETY: setLocale restricts writes to SupportedLocale and init starts at "en".
   return get(localeStore) as SupportedLocale;
 }
 

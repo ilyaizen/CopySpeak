@@ -4,7 +4,9 @@ type SaveBarOnCancel = () => void;
 export const saveBar = $state({
   visible: false,
   isSaving: false,
+  // SAFETY: these are explicitly typed null slots for later save/cancel callbacks.
   onSave: null as SaveBarOnSave | null,
+  // SAFETY: typed null slot for the later-registered cancel callback.
   onCancel: null as SaveBarOnCancel | null,
   saveLabel: "",
   cancelLabel: ""

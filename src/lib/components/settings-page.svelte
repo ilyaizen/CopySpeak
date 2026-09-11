@@ -57,6 +57,7 @@
   );
 
   function handleHudChange(e: Event) {
+    // SAFETY: this handler is only bound to the HUD <select>, whose target is that element.
     const target = e.target as HTMLSelectElement;
     const value = target.value;
     if (!localConfig?.hud) return;
@@ -65,6 +66,7 @@
       localConfig.hud.enabled = false;
     } else {
       localConfig.hud.enabled = true;
+      // SAFETY: the only non-disabled option values are the HudPosition ids.
       localConfig.hud.position = value as HudPosition;
     }
   }
@@ -93,6 +95,7 @@
         if (isScrolling) return;
         for (const entry of entries) {
           if (entry.isIntersecting) {
+            // SAFETY: the observer only watches the tab sections whose ids are SettingsTab.
             const id = entry.target.id as SettingsTab;
             if (TAB_ORDER.includes(id)) {
               activeTab = id;

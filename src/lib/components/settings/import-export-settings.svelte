@@ -73,12 +73,14 @@
   }
 
   function handleFileSelect(event: Event) {
+    // SAFETY: this handler is only bound to the file <input>, whose target is that element.
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (e) => {
+      // SAFETY: readAsText resolves result as string in this onload handler.
       importJson = e.target?.result as string;
       importError = null;
     };

@@ -35,9 +35,11 @@
   let isRefreshingModels = $state(false);
   let modelRefreshError = $state("");
 
-  let providerConfig = $derived(
-    localConfig.post_processing[localConfig.post_processing.provider] as LlmProviderConfig
-  );
+  let providerConfig = $derived.by(() => {
+    const { provider } = localConfig.post_processing;
+    // SAFETY: each provider key's config block is an LlmProviderConfig by AppConfig contract.
+    return localConfig.post_processing[provider] as LlmProviderConfig;
+  });
 
   let promptOptions = $derived(
     localConfig.post_processing.prompt_presets.map((preset: PostProcessingPromptPreset) => ({
@@ -47,6 +49,8 @@
   );
 
   function handleProviderChange(e: Event) {
+    // SAFETY: this handler is only bound to the provider <select>; its target is that element
+    // and its options enumerate exactly PostProcessingProvider ids.
     localConfig.post_processing.provider = (e.target as HTMLSelectElement)
       .value as PostProcessingProvider;
     modelOptions = [];
@@ -54,6 +58,7 @@
   }
 
   function handlePromptPresetChange(e: Event) {
+    // SAFETY: this handler is only bound to the prompt-preset <select>, whose target is that element.
     const label = (e.target as HTMLSelectElement).value;
     const preset = localConfig.post_processing.prompt_presets.find(
       (item: PostProcessingPromptPreset) => item.label === label

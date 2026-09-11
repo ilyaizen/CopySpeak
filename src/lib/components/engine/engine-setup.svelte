@@ -35,7 +35,7 @@
   const initialId = (() => {
     const active = localConfig.tts.profiles.find((p) => p.id === localConfig.tts.active_profile_id);
     if (active && CLOUD_ENGINES.some((e) => e.id === active.engine)) {
-      return active.engine as string;
+      return active.engine;
     }
     return CLOUD_ENGINES[0].id;
   })();

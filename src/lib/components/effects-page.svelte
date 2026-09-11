@@ -40,6 +40,7 @@
   async function handleEffectChange(value: string) {
     if (!config) return;
     const c = config;
+    // SAFETY: the Select enumerates EFFECTS ids, so value is already an EffectId.
     const next = value as EffectId;
     activeEffect = next;
     const activeProfile = c.tts.profiles.find((p) => p.id === c.tts.active_profile_id);
