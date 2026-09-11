@@ -17,7 +17,13 @@ const agentToolingIgnores = [
   ".pi/**",
   ".roo/**",
   ".windsurf/**",
-  "tools/oxlint/anti-slop/**"
+  "tools/oxlint/anti-slop/**",
+  // Minified build output of the browser extension (built via its own bun build).
+  "browser-extension/dist/",
+  // shadcn-style barrels re-export type-only members from .svelte modules; the
+  // lint type-check pass cannot resolve .svelte exports (TS2614 false positives).
+  // svelte-check validates these properly via `bun run check`.
+  "src/lib/components/ui/**/index.ts"
 ];
 
 // https://vite.dev/config/
