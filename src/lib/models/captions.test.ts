@@ -1,4 +1,4 @@
-import { expect, it } from "vitest";
+import { expect, it } from "vite-plus/test";
 import { activeCaptionWord, buildCaptions, captionPhrase } from "./captions";
 
 it("preserves multilingual text and punctuation while making short phrases", () => {

@@ -1,4 +1,4 @@
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it } from "vite-plus/test";
 import { cleanup, render } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { hudStore } from "$lib/stores/hud-store.svelte";

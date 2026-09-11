@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi } from "vite-plus/test";
 import "$lib/i18n";
 
 // Create a global mock for $app/state before any imports

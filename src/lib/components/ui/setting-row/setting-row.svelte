@@ -21,7 +21,7 @@
       <InfoTooltip text={tooltip} />
     {/if}
   </div>
-  <div class="flex min-w-0 max-w-full items-center justify-end [&>*]:max-w-full">
+  <div class="flex max-w-full min-w-0 items-center justify-end [&>*]:max-w-full">
     {@render children()}
   </div>
 </div>

@@ -172,7 +172,8 @@ class PlaybackStore {
     if (this._browserReadingActive) {
       const fragmentIndex = this._pcmScheduler
         ? (this._pcmScheduler.getPlaybackPosition()?.fragmentIndex ??
-          (this.currentFragmentIndex ?? 0))
+          this.currentFragmentIndex ??
+          0)
         : (this.currentFragmentIndex ?? 0);
       void invoke("browser_reading_progress", {
         fragmentIndex,

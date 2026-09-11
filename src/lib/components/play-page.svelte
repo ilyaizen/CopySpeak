@@ -372,7 +372,7 @@
       <Textarea
         id="reading-text"
         aria-describedby="reader-hint"
-        class="min-h-48 flex-1 resize-none field-sizing-fixed p-4 text-base leading-relaxed"
+        class="field-sizing-fixed min-h-48 flex-1 resize-none p-4 text-base leading-relaxed"
         placeholder={$_("play.placeholder")}
         bind:value={manualText}
       />
@@ -386,9 +386,7 @@
           onAbort={handleAbort}
         />
         {#if manualText}
-          <Button variant="ghost" onclick={() => (manualText = "")}
-            >{$_("play.clear")}</Button
-          >
+          <Button variant="ghost" onclick={() => (manualText = "")}>{$_("play.clear")}</Button>
         {/if}
         <span class="text-muted-foreground ml-auto text-xs whitespace-nowrap tabular-nums">
           {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}

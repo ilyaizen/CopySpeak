@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { PcmStreamScheduler, type StreamChunkPayload } from "./pcm-stream";
 
 interface RecordedBuffer {
