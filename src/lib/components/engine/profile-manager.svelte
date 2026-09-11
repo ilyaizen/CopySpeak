@@ -28,6 +28,7 @@
     AppConfig,
     EngineCatalogEntry,
     EngineOptionDescriptor,
+    EngineOptionValue,
     TtsEngine,
     EffectId,
     VoiceCatalogEntry,
@@ -71,7 +72,7 @@
     engine: TtsEngine;
     voice: string;
     voiceLabel: string;
-    engineOptions: Record<string, unknown>;
+    engineOptions: Record<string, EngineOptionValue>;
   }[] = [
     {
       name: "Kitten TTS — Rosie",

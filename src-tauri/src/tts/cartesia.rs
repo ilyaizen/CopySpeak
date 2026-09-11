@@ -616,6 +616,7 @@ mod tests {
                     match item {
                         ChunkItem::Pcm(bytes) => pcm.extend(bytes),
                         ChunkItem::Captions(value) => captions = Some(value),
+                        ChunkItem::ClearCaptions => captions = None,
                         ChunkItem::Failed(reason) => {
                             assert!(reason.contains("401"));
                             failed = true;

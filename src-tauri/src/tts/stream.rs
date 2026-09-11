@@ -40,6 +40,8 @@ pub enum ChunkItem {
     Pcm(Vec<u8>),
     /// Complete snapshot so far; offsets and times are relative to this request.
     Captions(super::captions::CaptionAlignment),
+    /// Rejected optional metadata invalidates the retained snapshot, not audio.
+    ClearCaptions,
     /// The synthesis failed mid-stream; carries a human-readable reason.
     /// Constructed by native-streaming backends (later slice tasks).
     #[allow(dead_code)]
@@ -133,8 +135,12 @@ pub fn chunk_stream_from_speech(
 
     let (tx, rx) = mpsc::channel();
     if let Some(captions) = speech.captions {
-        captions.validate().map_err(TtsError::Http)?;
-        let _ = tx.send(ChunkItem::Captions(captions));
+        match captions.validate() {
+            Ok(()) => {
+                let _ = tx.send(ChunkItem::Captions(captions));
+            }
+            Err(error) => log::warn!("Ignoring invalid batch captions: {error}"),
+        }
     }
     let _ = tx.send(ChunkItem::Pcm(pcm));
     drop(tx); // closing the sender signals end-of-stream after the single chunk
@@ -153,9 +159,15 @@ pub fn collect_speech(stream: ChunkStream) -> Result<super::captions::SpeechAudi
         match item {
             ChunkItem::Pcm(bytes) => pcm.extend_from_slice(&bytes),
             ChunkItem::Captions(value) => {
-                value.validate().map_err(TtsError::Http)?;
-                captions = Some(value);
+                captions = match value.validate() {
+                    Ok(()) => Some(value),
+                    Err(error) => {
+                        log::warn!("Ignoring invalid stream captions: {error}");
+                        None
+                    }
+                };
             }
+            ChunkItem::ClearCaptions => captions = None,
             ChunkItem::Failed(reason) => return Err(TtsError::Http(reason)),
         }
     }
@@ -222,6 +234,128 @@ mod tests {
         .unwrap();
         assert_eq!(speech.bytes, bytes);
         assert_eq!(speech.captions, Some(captions));
+    }
+
+    #[test]
+    fn invalid_batch_captions_do_not_reject_valid_wav() {
+        let bytes = build_wav(8000, 1, 16, &[1, 2, 3, 4]);
+        let captions = super::super::captions::CaptionAlignment {
+            text: "Hi".into(),
+            words: vec![super::super::captions::WordTiming {
+                text_start: 0,
+                text_end: 3,
+                start_ms: 0.0,
+                end_ms: 1.0,
+            }],
+        };
+        assert!(captions.validate().is_err());
+        let speech = collect_speech(
+            chunk_stream_from_speech(super::super::captions::SpeechAudio {
+                bytes: bytes.clone(),
+                captions: Some(captions),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(speech.bytes, bytes);
+        assert_eq!(speech.captions, None);
+    }
+
+    #[test]
+    fn invalid_snapshot_clears_collected_captions_without_losing_pcm() {
+        let valid = super::super::captions::CaptionAlignment {
+            text: "Hi".into(),
+            words: vec![super::super::captions::WordTiming {
+                text_start: 0,
+                text_end: 2,
+                start_ms: 0.0,
+                end_ms: 0.1,
+            }],
+        };
+        let mut invalid = valid.clone();
+        invalid.words[0].start_ms = -1.0;
+        let (tx, rx) = mpsc::channel();
+        for item in [
+            ChunkItem::Captions(valid.clone()),
+            ChunkItem::Pcm(vec![1, 2]),
+            ChunkItem::Captions(invalid),
+            ChunkItem::Pcm(vec![3, 4]),
+        ] {
+            tx.send(item).unwrap();
+        }
+        drop(tx);
+        let meta = AudioFormatMeta {
+            sample_rate: 8000,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        let speech = collect_speech(ChunkStream::new(meta, rx)).unwrap();
+        assert_eq!(speech.bytes, build_wav(8000, 1, 16, &[1, 2, 3, 4]));
+        assert_eq!(speech.captions, None);
+
+        let next = collect_speech(
+            chunk_stream_from_speech(super::super::captions::SpeechAudio {
+                bytes: build_wav(8000, 1, 16, &[5, 6]),
+                captions: Some(valid.clone()),
+            })
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(next.captions, Some(valid));
+    }
+
+    #[test]
+    fn provider_caption_clear_removes_the_collected_snapshot() {
+        let captions = super::super::captions::CaptionAlignment {
+            text: "Hi".into(),
+            words: vec![super::super::captions::WordTiming {
+                text_start: 0,
+                text_end: 2,
+                start_ms: 0.0,
+                end_ms: 0.1,
+            }],
+        };
+        let (tx, rx) = mpsc::channel();
+        for item in [
+            ChunkItem::Captions(captions),
+            ChunkItem::Pcm(vec![1, 2]),
+            ChunkItem::ClearCaptions,
+            ChunkItem::Pcm(vec![3, 4]),
+        ] {
+            tx.send(item).unwrap();
+        }
+        drop(tx);
+        let meta = AudioFormatMeta {
+            sample_rate: 8000,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        let speech = collect_speech(ChunkStream::new(meta, rx)).unwrap();
+        assert_eq!(speech.captions, None);
+        assert_eq!(speech.bytes, build_wav(8000, 1, 16, &[1, 2, 3, 4]));
+    }
+
+    #[test]
+    fn collection_still_rejects_empty_audio_and_explicit_failure() {
+        for items in [
+            vec![],
+            vec![
+                ChunkItem::Pcm(vec![1, 2]),
+                ChunkItem::Failed("engine failed".into()),
+            ],
+        ] {
+            let (tx, rx) = mpsc::channel();
+            for item in items {
+                tx.send(item).unwrap();
+            }
+            drop(tx);
+            let meta = AudioFormatMeta {
+                sample_rate: 8000,
+                channels: 1,
+                bits_per_sample: 16,
+            };
+            assert!(collect_speech(ChunkStream::new(meta, rx)).is_err());
+        }
     }
 
     /// Build a minimal valid WAV: RIFF header + fmt chunk + data chunk.
