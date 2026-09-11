@@ -101,20 +101,36 @@ fn read_header(reader: &mut impl BufRead) -> Result<AudioFormatMeta, String> {
 /// `{"end":true}` marker.
 fn read_item(reader: &mut impl BufRead) -> Result<Option<ChunkItem>, String> {
     let frame = read_json_line(reader)?;
-    if let Some(captions) = frame.get("captions") {
-        let captions: super::captions::CaptionAlignment =
-            serde_json::from_value(captions.clone()).map_err(|e| e.to_string())?;
-        captions.validate()?;
-        return Ok(Some(ChunkItem::Captions(captions)));
-    }
-    if frame["end"].as_bool() == Some(true) {
-        return Ok(None);
-    }
+    // Optional metadata must never mask an explicit engine failure.
     if frame["ok"].as_bool() == Some(false) {
         return Err(frame["error"]
             .as_str()
             .unwrap_or("unknown daemon error")
             .to_string());
+    }
+    if let Some(captions) = frame.get("captions") {
+        // Only a caption-only frame can degrade safely. A mixed frame could
+        // own binary bytes; ignoring it would desynchronize the pipe.
+        if frame.as_object().is_none_or(|object| object.len() != 1) {
+            return Err("unexpected mixed caption frame".into());
+        }
+        let captions =
+            serde_json::from_value::<super::captions::CaptionAlignment>(captions.clone())
+                .map_err(|e| e.to_string())
+                .and_then(|captions| {
+                    captions.validate()?;
+                    Ok(captions)
+                });
+        return Ok(Some(match captions {
+            Ok(captions) => ChunkItem::Captions(captions),
+            Err(error) => {
+                log::warn!("Clearing invalid daemon captions: {error}");
+                ChunkItem::ClearCaptions
+            }
+        }));
+    }
+    if frame["end"].as_bool() == Some(true) {
+        return Ok(None);
     }
     let Some(len) = frame["chunk"].as_u64() else {
         return Err(format!("unexpected frame: {frame}"));
@@ -427,6 +443,54 @@ mod tests {
         };
         assert_eq!(captions.words[0].start_ms, 120.0);
         assert_eq!(read_item(&mut reader), Ok(Some(ChunkItem::Pcm(vec![1, 2]))));
+        assert_eq!(read_item(&mut reader), Ok(None));
+    }
+
+    #[test]
+    fn invalid_caption_frames_clear_metadata_without_consuming_audio_or_next_reply() {
+        let valid = b"{\"captions\":{\"text\":\"Hi\",\"words\":[{\"text_start\":0,\"text_end\":2,\"start_ms\":0,\"end_ms\":1}]}}\n";
+        let mut wire = valid.to_vec();
+        wire.extend_from_slice(b"{\"chunk\":2}\n\x01\x02");
+        // A long run must be consumed iteratively, not recursively.
+        for _ in 0..4096 {
+            wire.extend_from_slice(b"{\"captions\":{}}\n");
+        }
+        wire.extend_from_slice(b"{\"captions\":{\"text\":\"Hi\",\"words\":[{\"text_start\":0,\"text_end\":9,\"start_ms\":0,\"end_ms\":1}]}}\n");
+        wire.extend_from_slice(b"{\"chunk\":2}\n\x03\x04{\"end\":true}\n");
+        wire.extend_from_slice(valid);
+        wire.extend_from_slice(b"{\"end\":true}\n");
+        let mut reader = std::io::BufReader::new(&wire[..]);
+        let first = read_item(&mut reader).unwrap();
+        assert!(matches!(first, Some(ChunkItem::Captions(_))));
+        assert_eq!(read_item(&mut reader), Ok(Some(ChunkItem::Pcm(vec![1, 2]))));
+        for _ in 0..4096 {
+            assert_eq!(read_item(&mut reader), Ok(Some(ChunkItem::ClearCaptions)));
+        }
+        assert_eq!(read_item(&mut reader), Ok(Some(ChunkItem::ClearCaptions)));
+        assert_eq!(read_item(&mut reader), Ok(Some(ChunkItem::Pcm(vec![3, 4]))));
+        assert_eq!(read_item(&mut reader), Ok(None));
+        assert_eq!(read_item(&mut reader), Ok(first));
+        assert_eq!(read_item(&mut reader), Ok(None));
+    }
+
+    #[test]
+    fn caption_degradation_does_not_hide_protocol_errors() {
+        for suffix in [
+            "not json\n",
+            "{\"unexpected\":true}\n",
+            "{\"ok\":false,\"error\":\"engine failed\",\"captions\":{}}\n",
+            "{\"chunk\":8}\nabc",
+            "{\"captions\":{},\"chunk\":2}\nxx",
+            "",
+        ] {
+            let wire = format!("{{\"captions\":{{}}}}\n{suffix}");
+            let mut reader = std::io::BufReader::new(wire.as_bytes());
+            assert_eq!(read_item(&mut reader), Ok(Some(ChunkItem::ClearCaptions)));
+            assert!(read_item(&mut reader).is_err());
+        }
+        let wire = b"{\"captions\":null}\n{\"end\":true}\n";
+        let mut reader = std::io::BufReader::new(&wire[..]);
+        assert_eq!(read_item(&mut reader), Ok(Some(ChunkItem::ClearCaptions)));
         assert_eq!(read_item(&mut reader), Ok(None));
     }
 

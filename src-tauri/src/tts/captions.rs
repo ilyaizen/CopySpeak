@@ -90,12 +90,37 @@ pub fn concat_speech(fragments: Vec<(SpeechAudio, String)>) -> Result<SpeechAudi
         }
         let offset_ms =
             pcm.len() as f64 * 1000.0 / (meta.sample_rate as f64 * meta.channels as f64 * 2.0);
+        let pcm_start = pcm.len();
+        for sample in source.convert_samples::<i16>() {
+            pcm.extend_from_slice(&sample.to_le_bytes());
+        }
+        let duration_ms = (pcm.len() - pcm_start) as f64 * 1000.0
+            / (meta.sample_rate as f64 * meta.channels as f64 * 2.0);
+        let captions = speech.captions.filter(|captions| {
+            if let Err(error) = captions.validate() {
+                log::warn!("Ignoring invalid fragment captions during concatenation: {error}");
+                return false;
+            }
+            // Empty snapshots carry no usable timing. Keep the fragment's
+            // source text so later captions retain their joined text offsets.
+            if captions.words.is_empty() {
+                return false;
+            }
+            if captions
+                .words
+                .last()
+                .is_some_and(|word| word.end_ms > duration_ms)
+            {
+                log::warn!("Ignoring fragment captions extending beyond their audio");
+                return false;
+            }
+            true
+        });
         if !combined.text.is_empty() {
             combined.text.push(' ');
         }
         let text_offset = combined.text.encode_utf16().count();
-        if let Some(mut captions) = speech.captions {
-            captions.validate()?;
+        if let Some(mut captions) = captions {
             for word in &mut captions.words {
                 word.text_start += text_offset;
                 word.text_end += text_offset;
@@ -107,16 +132,19 @@ pub fn concat_speech(fragments: Vec<(SpeechAudio, String)>) -> Result<SpeechAudi
         } else {
             combined.text.push_str(&text);
         }
-        for sample in source.convert_samples::<i16>() {
-            pcm.extend_from_slice(&sample.to_le_bytes());
-        }
         format = Some(meta);
     }
     let meta = format.ok_or("No speech fragments to concatenate")?;
-    combined.validate()?;
+    let captions = match combined.validate() {
+        Ok(()) => (!combined.words.is_empty()).then_some(combined),
+        Err(error) => {
+            log::warn!("Ignoring invalid combined captions: {error}");
+            None
+        }
+    };
     Ok(SpeechAudio {
         bytes: super::stream::pcm_to_wav(&pcm, &meta),
-        captions: (!combined.words.is_empty()).then_some(combined),
+        captions,
     })
 }
 
@@ -192,6 +220,110 @@ mod tests {
         assert_eq!(read_sidecar(path), None);
         remove_sidecar(path);
         assert_eq!(read_sidecar(path), None);
+    }
+
+    #[test]
+    fn rejected_fragment_captions_preserve_audio_and_neighbor_timings() {
+        let meta = super::super::stream::AudioFormatMeta {
+            sample_rate: 8000,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        let make = |text: &str| SpeechAudio {
+            bytes: super::super::stream::pcm_to_wav(&vec![0; 16000], &meta),
+            captions: Some(CaptionAlignment {
+                text: text.into(),
+                words: vec![WordTiming {
+                    text_start: 0,
+                    text_end: text.encode_utf16().count(),
+                    start_ms: 100.0,
+                    end_ms: 300.0,
+                }],
+            }),
+        };
+        // Both invalid offsets and locally ordered timings beyond the audio
+        // must degrade only this fragment, not invalidate the joined reading.
+        for overrun in [false, true] {
+            let mut middle = make("wrong");
+            let word = &mut middle.captions.as_mut().unwrap().words[0];
+            if overrun {
+                word.end_ms = 2000.0;
+            } else {
+                word.text_end = 99;
+            }
+            let speech = concat_speech(vec![
+                (make("A"), "A".into()),
+                (middle, "😀 B".into()),
+                (make("C"), "C".into()),
+            ])
+            .unwrap();
+            let captions = speech.captions.unwrap();
+            assert_eq!(captions.text, "A 😀 B C");
+            assert_eq!(captions.words.len(), 2);
+            assert_eq!(captions.words[0].start_ms, 100.0);
+            assert_eq!(captions.words[0].end_ms, 300.0);
+            assert_eq!(captions.words[1].text_start, 7);
+            assert_eq!(captions.words[1].start_ms, 2100.0);
+            assert_eq!(captions.words[1].end_ms, 2300.0);
+            assert_eq!(
+                speech.bytes,
+                super::super::stream::pcm_to_wav(&vec![0; 48000], &meta)
+            );
+            assert!(captions.validate().is_ok());
+        }
+    }
+
+    #[test]
+    fn untimed_fragment_uses_source_text_between_timed_neighbors() {
+        let meta = super::super::stream::AudioFormatMeta {
+            sample_rate: 8000,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        let timed = |text: &str| SpeechAudio {
+            bytes: super::super::stream::pcm_to_wav(&vec![0; 16000], &meta),
+            captions: Some(CaptionAlignment {
+                text: text.into(),
+                words: vec![WordTiming {
+                    text_start: 0,
+                    text_end: text.encode_utf16().count(),
+                    start_ms: 100.0,
+                    end_ms: 300.0,
+                }],
+            }),
+        };
+        for captions in [
+            None,
+            Some(CaptionAlignment {
+                text: String::new(),
+                words: Vec::new(),
+            }),
+        ] {
+            let middle = SpeechAudio {
+                bytes: super::super::stream::pcm_to_wav(&vec![0; 16000], &meta),
+                captions,
+            };
+            let speech = concat_speech(vec![
+                (timed("A"), "A".into()),
+                (middle, "😀 B".into()),
+                (timed("C"), "C".into()),
+            ])
+            .unwrap();
+            let captions = speech.captions.unwrap();
+            assert_eq!(captions.text, "A 😀 B C");
+            assert_eq!(captions.words.len(), 2);
+            assert_eq!(captions.words[1].text_start, 7);
+            assert_eq!(captions.words[1].start_ms, 2100.0);
+            assert_eq!(
+                speech.bytes,
+                super::super::stream::pcm_to_wav(&vec![0; 48000], &meta)
+            );
+        }
+    }
+
+    #[test]
+    fn concatenation_still_rejects_undecodable_audio() {
+        assert!(concat_speech(vec![(vec![1, 2, 3].into(), "Hi".into())]).is_err());
     }
 
     #[test]

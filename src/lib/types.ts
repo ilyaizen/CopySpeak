@@ -157,6 +157,10 @@ export interface ProfileEffects {
   active_effect: EffectId;
 }
 
+// Engine options are flat scalar settings written by the catalog UI and read by
+// the Rust side; nested payloads are not part of the contract.
+export type EngineOptionValue = string | number | boolean | string[] | null;
+
 export interface VoiceProfile {
   id: string;
   name: string;
@@ -167,7 +171,7 @@ export interface VoiceProfile {
   speed: number;
   pitch: number;
   effects: ProfileEffects;
-  engine_options: Record<string, unknown>;
+  engine_options: Record<string, EngineOptionValue>;
 }
 
 // ── Engine catalog (returned by list_tts_engines IPC) ────────────────────────
@@ -177,7 +181,7 @@ export interface EngineOptionDescriptor {
   label: string;
   kind: string;
   help: string;
-  default_value: unknown;
+  default_value: EngineOptionValue;
   choices?: string[];
 }
 
@@ -394,6 +398,14 @@ export interface HistoryItemStatus {
   percentage: number;
 }
 
+// Metadata keys the app reads back (fragment ordering, display title). The Rust
+// side may attach more, but only these are consumed in the frontend.
+export interface HistoryItemMetadata {
+  fragment_index?: number;
+  fragment_total?: number;
+  title?: string;
+}
+
 export interface HistoryItem {
   id: string;
   timestamp: number; // Unix timestamp in milliseconds
@@ -413,7 +425,7 @@ export interface HistoryItem {
   error_message?: string;
   attempts: number;
   tags?: string[];
-  metadata?: Record<string, unknown>;
+  metadata?: HistoryItemMetadata;
 }
 
 export interface HistoryFilters {
