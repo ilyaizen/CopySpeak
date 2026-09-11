@@ -96,7 +96,7 @@ export class FragmentQueue {
 
     if (this._queue.length > 0) {
       // Auto-advance to next fragment
-      this.processNext();
+      void this.processNext();
     } else {
       // No more fragments - playback complete
       this._isProcessing = false;

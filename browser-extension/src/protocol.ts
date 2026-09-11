@@ -36,15 +36,14 @@ export type CaptureReply = { text: string; document_token: string };
 // return null instead of narrowing so every parser constructs domain values
 // from checked fields rather than casting.
 
-type WireMessage = Parameters<
-  Parameters<(typeof chrome.runtime.onMessage)["addListener"]>[0]
->[0];
+type WireMessage = Parameters<Parameters<(typeof chrome.runtime.onMessage)["addListener"]>[0]>[0];
 
 const tag = (x: WireMessage): string => Object.prototype.toString.call(x).slice(8, -1);
 const str = (x: WireMessage): string | null => (tag(x) === "String" ? x : null);
 const int = (x: WireMessage): number | null => (Number.isSafeInteger(x) ? x : null);
 const boolean = (x: WireMessage): boolean | null => (x === true || x === false ? x : null);
-const bag = (x: WireMessage): WireMessage | null => (tag(x) === "Object" ? x : null);
+const bag = (x: WireMessage): Record<string, WireMessage> | null =>
+  tag(x) === "Object" ? x : null;
 const bounded = (x: string, max: number): string | null =>
   x.length > 0 && x.length <= max ? x : null;
 
@@ -60,9 +59,11 @@ const status = (x: string): Status | null =>
 export function parseEvent(value: WireMessage): NativeEvent | null {
   const x = bag(value);
   if (x === null || x.v !== 1) return null;
-  const requestId = str(x.request_id) === null ? null : bounded(x.request_id, 128);
+  const rawRequestId = str(x.request_id);
+  const requestId = rawRequestId === null ? null : bounded(rawRequestId, 128);
   if (x.type === "accepted") {
-    const readingId = str(x.reading_id) === null ? null : bounded(x.reading_id, 128);
+    const readingRaw = str(x.reading_id);
+    const readingId = readingRaw === null ? null : bounded(readingRaw, 128);
     if (requestId === null || readingId === null) return null;
     return { v: 1, type: "accepted", request_id: requestId, reading_id: readingId };
   }
@@ -75,7 +76,8 @@ export function parseEvent(value: WireMessage): NativeEvent | null {
     return requestId !== null ? { v: 1, type: "probe", request_id: requestId } : null;
   }
   if (x.type !== "state") return null;
-  const statusValue = str(x.status) === null ? null : status(x.status);
+  const statusName = str(x.status);
+  const statusValue = statusName === null ? null : status(statusName);
   const seq = int(x.seq);
   const wordAvailable = boolean(x.word_available);
   if (
@@ -91,14 +93,7 @@ export function parseEvent(value: WireMessage): NativeEvent | null {
     const w = bag(x.word);
     const start = w === null ? null : int(w.start);
     const end = w === null ? null : int(w.end);
-    if (
-      w === null ||
-      start === null ||
-      end === null ||
-      start < 0 ||
-      end <= start ||
-      end > 131072
-    )
+    if (w === null || start === null || end === null || start < 0 || end <= start || end > 131072)
       return null;
     if (!wordAvailable || terminal(statusValue) || statusValue === "buffering") return null;
     word = { start, end };

@@ -14,19 +14,22 @@ import type { HistoryItem, HistoryStatistics } from "$lib/types";
 describe("HTML Export Utilities", () => {
   let mockUrl: string;
   let mockAnchor: HTMLAnchorElement;
+  let clickMock: () => void;
+  let createObjectUrlMock: ReturnType<typeof vi.fn>;
+  let revokeObjectUrlMock: (url: string) => void;
   let originalCreateElement: typeof document.createElement;
   let originalAppendChild: typeof document.body.appendChild;
   let originalRemoveChild: typeof document.body.removeChild;
 
   beforeEach(() => {
     mockAnchor = document.createElement("a");
-    mockAnchor.click = vi.fn();
+    mockAnchor.click = clickMock = vi.fn<() => void>();
 
     mockUrl = "blob:test-url";
 
-    originalCreateElement = document.createElement;
-    originalAppendChild = document.body.appendChild;
-    originalRemoveChild = document.body.removeChild;
+    originalCreateElement = document.createElement.bind(document);
+    originalAppendChild = document.body.appendChild.bind(document.body);
+    originalRemoveChild = document.body.removeChild.bind(document.body);
 
     // vi.fn doubles implement the subset of createElement/appendChild/removeChild
     // the test exercises; typing restores the DOM component signatures.
@@ -41,8 +44,8 @@ describe("HTML Export Utilities", () => {
     document.body.appendChild = vi.fn();
     document.body.removeChild = vi.fn();
 
-    globalThis.URL.createObjectURL = vi.fn(() => mockUrl);
-    globalThis.URL.revokeObjectURL = vi.fn();
+    globalThis.URL.createObjectURL = createObjectUrlMock = vi.fn(() => mockUrl);
+    globalThis.URL.revokeObjectURL = revokeObjectUrlMock = vi.fn<(url: string) => void>();
   });
 
   afterEach(() => {
@@ -125,11 +128,11 @@ describe("HTML Export Utilities", () => {
         message: "Export complete"
       });
 
-      expect(URL.createObjectURL).toHaveBeenCalled();
+      expect(createObjectUrlMock).toHaveBeenCalled();
       expect(mockAnchor.download).toBe("test-export.html");
       expect(mockAnchor.href).toBe(mockUrl);
-      expect(mockAnchor.click).toHaveBeenCalled();
-      expect(URL.revokeObjectURL).toHaveBeenCalledWith(mockUrl);
+      expect(clickMock).toHaveBeenCalled();
+      expect(revokeObjectUrlMock).toHaveBeenCalledWith(mockUrl);
     });
 
     it("should handle empty history", async () => {
@@ -208,7 +211,7 @@ describe("HTML Export Utilities", () => {
       });
 
       expect(mockAnchor.download).toBe("selected-items.html");
-      expect(mockAnchor.click).toHaveBeenCalled();
+      expect(clickMock).toHaveBeenCalled();
     });
 
     it("should handle empty selection", async () => {
@@ -217,7 +220,7 @@ describe("HTML Export Utilities", () => {
       });
 
       expect(mockAnchor.download).toBe("empty-selection.html");
-      expect(mockAnchor.click).toHaveBeenCalled();
+      expect(clickMock).toHaveBeenCalled();
     });
   });
 

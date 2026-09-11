@@ -1,8 +1,15 @@
-import { parseEvent, parseCaptureReply, ReadingOwner, type CopyCommand } from "./protocol";
+import {
+  parseEvent,
+  parseCaptureReply,
+  ReadingOwner,
+  type CopyCommand,
+  type NativeEvent
+} from "./protocol";
 
-// The wire message type derives from tabs.sendMessage's own contract, so the
-// deliverables keep chrome's declared shape instead of a hand-rolled dictionary.
-type DeliverableMessage = Parameters<typeof chrome.tabs.sendMessage>[1];
+// Deliverables are worker-built objects given to chrome.tabs.sendMessage, which
+// types its payload through an unresolved generic; hand-roll the two variants it
+// actually sends and let deliver() stamp the document token.
+type DeliverableMessage = { type: "disconnect" } | { type: "native"; event: NativeEvent };
 type Route = {
   tabId: number;
   frameId: number;
@@ -176,7 +183,12 @@ chrome.runtime.onMessage.addListener((message: CopyCommand, sender) => {
     message.reading_id !== r.owner.readingId
   )
     return;
-  port?.postMessage({ v: 1, type: "control", reading_id: r.owner.readingId, action: message.action });
+  port?.postMessage({
+    v: 1,
+    type: "control",
+    reading_id: r.owner.readingId,
+    action: message.action
+  });
 });
 chrome.tabs.onRemoved.addListener((tabId) => {
   if (route?.tabId === tabId) {

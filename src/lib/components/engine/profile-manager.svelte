@@ -248,9 +248,12 @@
   let manualRef = $state<HTMLInputElement | null>(null);
 
   $effect(() => {
-    activeId;
-    active?.engine;
-    manualOverride = false;
+    let lastKey = "";
+    const key = `${activeId}:${active?.engine}`;
+    if (lastKey !== key) {
+      lastKey = key;
+      manualOverride = false;
+    }
   });
 
   const manualLocked = $derived(

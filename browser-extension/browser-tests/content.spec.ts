@@ -85,7 +85,10 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
     );
   }, capture.document_token);
   expect(
-    await page.evaluate(() => [...CSS.highlights.get("copyspeak-word")!].map((r) => r.toString()))
+    await page.evaluate(() => {
+      // SAFETY: highlight ranges are Range/StaticRange set members; the cast only widens to Range which has toString.
+      return [...CSS.highlights.get("copyspeak-word")!].map((r) => (r as Range).toString());
+    })
   ).toEqual(["same"]);
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   expect(

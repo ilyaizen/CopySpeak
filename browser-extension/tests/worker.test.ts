@@ -37,15 +37,17 @@ test("worker routes one accepted reading to captured document and ignores forged
     windows: { getLastFocused: async () => ({ focused: true }) }
   };
   await import("../src/worker");
-  await hooks.click({ id: 7 });
+  await Promise.resolve(hooks.click({ id: 7 }));
   expect(sent.filter((x) => x.type === "start").length).toBe(1);
   const request = sent.find((x) => x.type === "start");
-  await hooks.native({
-    v: 1,
-    type: "accepted",
-    request_id: request.request_id,
-    reading_id: "reading"
-  });
+  await Promise.resolve(
+    hooks.native({
+      v: 1,
+      type: "accepted",
+      request_id: request.request_id,
+      reading_id: "reading"
+    })
+  );
   expect(delivered.at(-1).opts.documentId).toBe("browser-doc");
   expect(delivered.at(-1).m.document_token).toBe("doc");
   hooks.message(
@@ -60,8 +62,8 @@ test("worker routes one accepted reading to captured document and ignores forged
     () => {}
   );
   expect(sent.at(-1).action).toBe("pause");
-  await hooks.disconnect();
+  await Promise.resolve(hooks.disconnect());
   expect(delivered.at(-1).m.type).toBe("disconnect");
-  await hooks.menu({ menuItemId: "read-selection" }, { id: 7 });
+  await Promise.resolve(hooks.menu({ menuItemId: "read-selection" }, { id: 7 }));
   expect(sent.filter((x) => x.type === "start").length).toBe(2);
 });

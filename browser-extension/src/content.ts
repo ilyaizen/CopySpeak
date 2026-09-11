@@ -122,11 +122,11 @@ if (!scope[marker]) {
       return;
     }
     if (message.type !== "native" && message.type !== "disconnect") return;
-    if (message.document_token !== documentToken) return;
     if (message.type === "disconnect") {
       cleanup();
       return;
     }
+    if (message.document_token !== documentToken) return;
     const e = parseEvent(message.event);
     if (!e || !owner?.apply(e)) return;
     if (e.type === "accepted") accepted();

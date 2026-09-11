@@ -16,7 +16,7 @@ export const isRtl = derived<typeof svelteLocale, boolean>(svelteLocale, ($local
 
 // Load locale from config
 export async function loadLocaleFromConfig(savedLocale: SupportedLocale): Promise<void> {
-  locale.set(savedLocale);
+  void locale.set(savedLocale);
 }
 
 // Get initial locale (for SSR/layout load)

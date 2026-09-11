@@ -22,7 +22,7 @@ export { localeStore as locale };
 
 // Helper function to set locale programmatically
 export function setLocale(newLocale: SupportedLocale): void {
-  localeStore.set(newLocale);
+  void localeStore.set(newLocale);
 }
 
 // Helper function to get current locale value

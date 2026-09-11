@@ -280,7 +280,7 @@ class PlaybackStore {
         const accurateDurationMs = Math.round(this._decodedBuffer.duration * 1000);
         hudStore.setAccurateDurationMs(accurateDurationMs);
         // Emit to HUD window for cross-window state sync
-        this._emit?.("hud:audio-duration", accurateDurationMs);
+        void this._emit?.("hud:audio-duration", accurateDurationMs);
       }
       const url = await this.buildPlaybackUrl(this.pitch);
       if (generation !== this._playbackGeneration) return;
@@ -293,7 +293,7 @@ class PlaybackStore {
     } catch (e) {
       if (generation !== this._playbackGeneration) return;
       this.handleStop();
-      this.error = `Audio playback failed: ${e}`;
+      this.error = `Audio playback failed: ${e instanceof Error ? e.message : String(e)}`;
     } finally {
       if (generation === this._playbackGeneration) this.isLoadingAudio = false;
     }
@@ -435,7 +435,7 @@ class PlaybackStore {
         await this.playAudio();
       } catch (e) {
         this.handleStop();
-        this.error = `Audio playback failed: ${e}`;
+        this.error = `Audio playback failed: ${e instanceof Error ? e.message : String(e)}`;
       }
     }
   }
@@ -638,7 +638,7 @@ class PlaybackStore {
       this._cachedPitchUrl = null;
     }
     if (this._audioCtx) {
-      this._audioCtx.close();
+      void this._audioCtx.close();
       this._audioCtx = null;
     }
     this._emit = null;

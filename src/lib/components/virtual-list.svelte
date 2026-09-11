@@ -8,7 +8,7 @@
 
   let { items, itemHeight, overscan = 3, children }: Props = $props();
 
-  let containerElement: HTMLDivElement;
+  let containerElement: HTMLDivElement | undefined = undefined;
   let scrollTop = $state(0);
   let viewportHeight = $state(0);
 
@@ -20,7 +20,9 @@
   const offsetY = $derived(startIndex * itemHeight);
 
   function handleScroll() {
-    scrollTop = containerElement.scrollTop;
+    if (containerElement) {
+      scrollTop = containerElement.scrollTop;
+    }
   }
 
   function handleResize() {
