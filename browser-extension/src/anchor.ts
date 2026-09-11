@@ -53,8 +53,10 @@ export function captureSelection(doc: Document): SelectionAnchor | null {
     if (node.nodeType === 1 && (node as Element).tagName === "BR" && selected.intersectsNode(node))
       lineBreak = true;
     // SAFETY: nodeType === 3 exhausts text nodes, so node is a Text node here.
-    if (node.nodeType === 3 && selected.intersectsNode(node)) {
-      if (!safe(node)) return null;
+    // Hidden, script, SVG and editable text is skipped, not fatal: page
+    // selections routinely cross icons, inline scripts and hidden labels.
+    // A selection made only of such text still yields nothing and is refused.
+    if (node.nodeType === 3 && selected.intersectsNode(node) && safe(node)) {
       // SAFETY: inside the nodeType === 3 branch, node is a Text node (see comment above).
       const value = (node as Text).data;
       const from = node === selected.startContainer ? selected.startOffset : 0;

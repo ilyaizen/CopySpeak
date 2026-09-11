@@ -5,7 +5,7 @@
   "version": "0.1.0",
   "description": "Read selected page text aloud with CopySpeak and follow along with live word highlighting.",
   "minimum_chrome_version": "109",
-  "permissions": ["activeTab", "nativeMessaging", "scripting", "storage"],
+  "permissions": ["activeTab", "contextMenus", "nativeMessaging", "scripting", "storage"],
   "background": {
     "service_worker": "worker.js"
   },
@@ -15,7 +15,7 @@
   "commands": {
     "read-selection": {
       "suggested_key": {
-        "default": "Alt+Shift+R"
+        "default": "Alt+Shift+T"
       },
       "description": "Read the selected text with CopySpeak"
     }

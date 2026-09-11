@@ -31,6 +31,8 @@ class PlaybackStore {
   hasCachedAudio = $state(false);
   // Retained after stop/completion so the owning history row can offer Replay.
   historyReadingId = $state<string | null>(null);
+  // Audible fragment's text, caption timings and clock; null when nothing plays.
+  caption = $state<HudCaptionPayload | null>(null);
 
   // Pagination state for HUD display
   currentFragmentIndex = $state<number | null>(null);
@@ -129,6 +131,7 @@ class PlaybackStore {
     if (this._captionTimer !== null) clearInterval(this._captionTimer);
     this._captionTimer = null;
     this._lastCaption = null;
+    this.caption = null;
     this._streamCaptions.clear();
   }
 
@@ -165,6 +168,7 @@ class PlaybackStore {
     }
     if (!caption) return;
     this._lastCaption = caption;
+    this.caption = caption;
     hudStore.handleCaption(caption);
     void this._emitTo?.("hud", "hud:caption", caption);
     // Report the audible clock to the browser bridge. Best-effort: the bridge

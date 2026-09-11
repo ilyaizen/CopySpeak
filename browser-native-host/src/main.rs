@@ -15,10 +15,13 @@ use serde_json::{json, Value};
 use std::io::{self, Write};
 use std::sync::mpsc;
 use std::thread;
-use windows::Win32::Foundation::{GENERIC_READ, GENERIC_WRITE, HANDLE, WAIT_OBJECT_0};
+use windows::Win32::Foundation::{
+    ERROR_PIPE_BUSY, GENERIC_READ, GENERIC_WRITE, HANDLE, WAIT_OBJECT_0,
+};
 use windows::Win32::Storage::FileSystem::{
     CreateFileW, FILE_FLAG_OVERLAPPED, FILE_SHARE_NONE, OPEN_EXISTING,
 };
+use windows::Win32::System::Pipes::WaitNamedPipeW;
 use windows::Win32::System::IO::{GetOverlappedResult, OVERLAPPED};
 use windows::Win32::System::Threading::INFINITE;
 
@@ -177,18 +180,33 @@ impl io::Write for PipeChannel {
 
 fn open_pipe(pipe_name: &str) -> std::io::Result<PipeChannel> {
     let wide: Vec<u16> = pipe_name.encode_utf16().chain(std::iter::once(0)).collect();
-    let handle = unsafe {
-        CreateFileW(
-            windows::core::PCWSTR(wide.as_ptr()),
-            (GENERIC_READ.0 | GENERIC_WRITE.0) as u32,
-            FILE_SHARE_NONE,
-            None,
-            OPEN_EXISTING,
-            FILE_FLAG_OVERLAPPED,
-            None,
-        )
-    }
-    .map_err(|e| std::io::Error::from_raw_os_error(e.code().0))?;
+    let name = windows::core::PCWSTR(wide.as_ptr());
+    // The desktop serves one client at a time. A new reading started while the
+    // previous host is still exiting finds the instance busy; wait for the
+    // server to re-listen instead of failing the reading.
+    let mut attempts = 0;
+    let handle = loop {
+        let opened = unsafe {
+            CreateFileW(
+                name,
+                (GENERIC_READ.0 | GENERIC_WRITE.0) as u32,
+                FILE_SHARE_NONE,
+                None,
+                OPEN_EXISTING,
+                FILE_FLAG_OVERLAPPED,
+                None,
+            )
+        };
+        match opened {
+            Ok(handle) => break handle,
+            Err(e) if e.code() == ERROR_PIPE_BUSY.to_hresult() && attempts < 5 => {
+                attempts += 1;
+                // Either outcome retries: a timeout re-checks, a free instance connects.
+                let _ = unsafe { WaitNamedPipeW(name, 1000) };
+            }
+            Err(e) => return Err(std::io::Error::from_raw_os_error(e.code().0)),
+        }
+    };
     Ok(PipeChannel {
         handle,
         buf: std::sync::Mutex::new(Vec::new()),

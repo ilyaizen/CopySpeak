@@ -63,6 +63,9 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Map browser caption words onto the raw selection with `text_map::align`'s word alignment; never re-derive the sanitizer's rewrites in a second place, and keep the highlight verdict per word and per fragment rather than per reading.
 - Pass `uv init` its target directory positionally (`uv init --bare --name X <dir>`); uv 0.12+ hard-errors on `uv --project <dir> init`, which only shows up when creating a fresh engine project.
 - The `no-shape-in-symbol-names` rule cannot be satisfied for DOM Web Audio's `createWaveShaper` — a stdlib method name; reported, not silenced. Avoid naming local symbols with the substring "shape".
+- Double-copy and browser readings run `speak_queued`; Play page, hotkey and control server run `speak_now`. Change both paths together (saved-audio replay, `reading-started`).
+- `hud:*` events fire only while the HUD is enabled; main-window UI reads `playbackStore.caption` and `reading-started`, never HUD events.
+- The browser pipe serves one client at a time; the native host retries `ERROR_PIPE_BUSY` with `WaitNamedPipeW` instead of failing the reading.
 - Filter Kokoro's misaki phonemes through the model vocab before inference; misaki emits unpronounceable punctuation (an unbalanced `[`) as a literal phoneme, and only a missing _letter_ phoneme is a real pronunciation gap worth aborting on.
 
 <!-- rtk-instructions v2 -->

@@ -72,8 +72,12 @@ function connect() {
       if (r.owner.readingId)
         p.postMessage({ v: 1, type: "control", reading_id: r.owner.readingId, action: "stop" });
     });
-    if (r.owner.ended) await release();
-    else await badge("", "CopySpeak · Reading selected text");
+    if (r.owner.ended) {
+      await release();
+      if (e.type === "rejected") await badge("!", `CopySpeak refused the selection: ${e.reason}`);
+      else if (e.type === "state" && e.status === "error")
+        await badge("!", "CopySpeak could not read the selection. Check the app for the error.");
+    } else await badge("", "CopySpeak · Reading selected text");
   });
   p.postMessage({ v: 1, type: "hello", automatic });
   return p;
@@ -153,6 +157,9 @@ chrome.action.onClicked.addListener((tab) => capture(tab));
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === "read-selection") await capture();
 });
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === "read-selection") await capture(tab);
+});
 chrome.runtime.onMessage.addListener((message: CopyCommand, sender) => {
   const r = route;
   if (message.type === "settings" && !sender.tab?.url?.startsWith("http")) {
@@ -210,6 +217,12 @@ chrome.runtime.onStartup.addListener(() => {
   void initialize();
 });
 chrome.runtime.onInstalled.addListener(() => {
+  // Menus persist across worker restarts; reading lastError silences the
+  // duplicate-id error an extension reload can raise.
+  chrome.contextMenus.create(
+    { id: "read-selection", title: "Read with CopySpeak", contexts: ["selection"] },
+    () => void chrome.runtime.lastError
+  );
   void initialize();
 });
 void initialize();

@@ -20,6 +20,7 @@ test("worker routes one accepted reading to captured document and ignores forged
       lastError: undefined
     },
     commands: { onCommand: event("command") },
+    contextMenus: { create: () => {}, onClicked: event("menu") },
     action: { onClicked: event("click"), setBadgeText: async () => {}, setTitle: async () => {} },
     tabs: {
       query: async () => [{ id: 7, windowId: 1 }],
@@ -61,4 +62,6 @@ test("worker routes one accepted reading to captured document and ignores forged
   expect(sent.at(-1).action).toBe("pause");
   await hooks.disconnect();
   expect(delivered.at(-1).m.type).toBe("disconnect");
+  await hooks.menu({ menuItemId: "read-selection" }, { id: 7 });
+  expect(sent.filter((x) => x.type === "start").length).toBe(2);
 });
