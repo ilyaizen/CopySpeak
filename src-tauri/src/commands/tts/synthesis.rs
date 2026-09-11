@@ -220,10 +220,19 @@ fn drain_chunk_stream(
                 on_chunk(chunk_index, &bytes, false, None);
                 chunk_index += 1;
             }
-            Some(ChunkItem::Captions(value)) => {
-                value.validate()?;
+            Some(ChunkItem::Captions(value)) if value.validate().is_ok() => {
                 on_chunk(chunk_index, &[], false, Some(&value));
                 captions = Some(value);
+            }
+            Some(ChunkItem::Captions(_)) | Some(ChunkItem::ClearCaptions) => {
+                log::warn!("Clearing rejected live stream captions; continuing audio");
+                if let Some(mut previous) = captions.take() {
+                    // None means "no update" on the existing live wire. Send
+                    // an empty valid snapshot to clear both live consumers,
+                    // while retaining None for saved/cache metadata.
+                    previous.words.clear();
+                    on_chunk(chunk_index, &[], false, Some(&previous));
+                }
             }
             Some(ChunkItem::Failed(reason)) => {
                 log::error!(
@@ -1336,6 +1345,67 @@ mod streaming_tests {
         assert_eq!(
             &wav.bytes[info.data_offset..info.data_offset + info.data_size],
             &expected
+        );
+    }
+
+    #[test]
+    fn invalid_captions_do_not_interrupt_live_audio_or_survive_in_history() {
+        let valid = CaptionAlignment {
+            text: "Hi".into(),
+            words: vec![crate::tts::captions::WordTiming {
+                text_start: 0,
+                text_end: 2,
+                start_ms: 0.0,
+                end_ms: 0.1,
+            }],
+        };
+        let mut invalid = valid.clone();
+        invalid.words[0].text_end = 9;
+        let cleared = CaptionAlignment {
+            text: valid.text.clone(),
+            words: Vec::new(),
+        };
+        for rejection in [ChunkItem::Captions(invalid), ChunkItem::ClearCaptions] {
+            let stream = stream_from_items(
+                vec![
+                    ChunkItem::Captions(valid.clone()),
+                    ChunkItem::Pcm(vec![1, 2]),
+                    rejection,
+                    ChunkItem::Pcm(vec![3, 4]),
+                ],
+                8000,
+            );
+            let mut seen = Vec::new();
+            let (speech, _) = drain_chunk_stream(stream, |idx, pcm, is_final, captions| {
+                seen.push((idx, pcm.to_vec(), is_final, captions.cloned()));
+            })
+            .unwrap();
+            assert_eq!(speech.bytes, pcm_to_wav(&[1, 2, 3, 4], &meta(8000)));
+            assert_eq!(speech.captions, None);
+            assert_eq!(
+                seen,
+                vec![
+                    (0, vec![], false, Some(valid.clone())),
+                    (0, vec![1, 2], false, None),
+                    (1, vec![], false, Some(cleared.clone())),
+                    (1, vec![3, 4], false, None),
+                    (2, vec![], true, None),
+                ]
+            );
+            // The existing frontend accepts this as a replacement snapshot;
+            // absent metadata on ordinary PCM events is not a clear command.
+            assert!(cleared.validate().is_ok());
+        }
+        let next = stream_from_items(
+            vec![
+                ChunkItem::Captions(valid.clone()),
+                ChunkItem::Pcm(vec![5, 6]),
+            ],
+            8000,
+        );
+        assert_eq!(
+            drain_chunk_stream(next, |_, _, _, _| {}).unwrap().0.captions,
+            Some(valid)
         );
     }
 

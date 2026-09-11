@@ -981,6 +981,7 @@ mod tests {
                     eprintln!("snapshot {snapshots}: {} chars, last timestamp {:.1} ms, prior audio {:.1} ms", captions.text.chars().count(), captions.words.last().map(|w| w.end_ms).unwrap_or(0.0), bytes.len() as f64 / 48.0);
                     last = Some(captions);
                 }
+                ChunkItem::ClearCaptions => last = None,
                 ChunkItem::Failed(error) => panic!("Live caption probe failed: {error}"),
             }
         }
@@ -1067,7 +1068,7 @@ mod tests {
             .iter()
             .flat_map(|item| match item {
                 ChunkItem::Pcm(bytes) => bytes.clone(),
-                ChunkItem::Captions(_) => Vec::new(),
+                ChunkItem::Captions(_) | ChunkItem::ClearCaptions => Vec::new(),
                 ChunkItem::Failed(reason) => panic!("unexpected failure: {}", reason),
             })
             .collect();
