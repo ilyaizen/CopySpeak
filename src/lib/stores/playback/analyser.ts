@@ -5,10 +5,14 @@
 
 import { buildBarValues } from "./audio-utils.js";
 
+// Emitted payload types trace back to @tauri-apps/api/event's own emit
+// contract, so arbitrary event JSON stays owned by the event API.
+export type EmitPayload = Parameters<(typeof import("@tauri-apps/api/event"))["emit"]>[1];
+
 export interface AnalyserConfig {
   fftSize?: number;
   smoothingTimeConstant?: number;
-  emitTo?: ((target: string, name: string, payload: unknown) => Promise<void>) | null;
+  emitTo?: ((target: string, name: string, payload: EmitPayload) => Promise<void>) | null;
 }
 
 export class AudioAnalyser {

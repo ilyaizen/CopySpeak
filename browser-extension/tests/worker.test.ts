@@ -2,8 +2,10 @@ import { test, expect } from "bun:test";
 test("worker routes one accepted reading to captured document and ignores forged controls", async () => {
   const sent: any[] = [];
   const delivered: any[] = [];
-  const hooks: Record<string, any> = {};
+  type TestHook = (...args: any[]) => void;
+  const hooks: Record<string, TestHook> = {};
   const event = (name: string) => ({ addListener: (f: any) => (hooks[name] = f) });
+  // SAFETY: the test stubs the chrome global that the worker reads; global typing cannot know it.
   (globalThis as any).chrome = {
     runtime: {
       connectNative: () => ({

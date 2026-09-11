@@ -20,7 +20,9 @@ interface BackendHistoryEntry {
   error_message?: string;
   attempts: number;
   tags?: string[];
-  metadata?: Record<string, unknown>;
+  // Backend metadata is a free-form key/value record; the value shape derives
+  // from the backend's own serialized payload (strings, numbers and null).
+  metadata?: Record<string, string | number | boolean | null>;
 }
 
 /**
@@ -32,9 +34,12 @@ function backendToHistoryItem(entry: BackendHistoryEntry): HistoryItem {
     timestamp: new Date(entry.timestamp).getTime(),
     text: entry.text,
     text_length: entry.text_length,
+    // SAFETY: the backend serializes tts_engine/output_format as the exact
+    // union members used by HistoryItem.
     tts_engine: entry.tts_engine as HistoryItem["tts_engine"],
     voice: entry.voice,
     speed: entry.speed,
+    // SAFETY: backend union member (see tts_engine note above).
     output_format: entry.output_format as HistoryItem["output_format"],
     output_path: entry.output_path,
     duration_ms: entry.duration_ms,
@@ -85,7 +90,7 @@ function createHistoryStore() {
    * Initialize Tauri invoke function
    */
   async function initInvoke() {
-    if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    if (!("window" in globalThis) || !("__TAURI_INTERNALS__" in window)) {
       return false;
     }
 

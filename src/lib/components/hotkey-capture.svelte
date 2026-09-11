@@ -15,8 +15,13 @@
   let isCapturing = $state(false);
   let inputRef: HTMLButtonElement | undefined = $state();
 
+  // Display labels for capture keys; keys outside the map render as-is.
+  interface KeyLabels {
+    readonly [key: string]: string;
+  }
+
   function formatKey(key: string): string {
-    const keyMap: Record<string, string> = {
+    const keyMap: KeyLabels = {
       Control: "Ctrl",
       Alt: "Alt",
       Shift: "Shift",

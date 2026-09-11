@@ -62,6 +62,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - KittenTTS 0.8.1 (the pinned wheel) takes only `KittenTTS(model_name, cache_dir)`; select the GPU by replacing `tts.model.session`, not with a `backend=` kwarg that only exists on `main`.
 - Map browser caption words onto the raw selection with `text_map::align`'s word alignment; never re-derive the sanitizer's rewrites in a second place, and keep the highlight verdict per word and per fragment rather than per reading.
 - Pass `uv init` its target directory positionally (`uv init --bare --name X <dir>`); uv 0.12+ hard-errors on `uv --project <dir> init`, which only shows up when creating a fresh engine project.
+- The `no-shape-in-symbol-names` rule cannot be satisfied for DOM Web Audio's `createWaveShaper` — a stdlib method name; reported, not silenced. Avoid naming local symbols with the substring "shape".
 - Filter Kokoro's misaki phonemes through the model vocab before inference; misaki emits unpronounceable punctuation (an unbalanced `[`) as a literal phoneme, and only a missing _letter_ phoneme is a real pronunciation gap worth aborting on.
 
 <!-- rtk-instructions v2 -->

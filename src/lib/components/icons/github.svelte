@@ -1,5 +1,8 @@
 <script lang="ts">
-  let { class: className = "", ...rest } = $props<{ class?: string; [key: string]: any }>();
+  import type { SVGAttributes } from "svelte/elements";
+  let { class: className = "", ...rest } = $props<
+    { class?: string } & SVGAttributes<SVGSVGElement>
+  >();
 </script>
 
 <svg

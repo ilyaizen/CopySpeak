@@ -13,7 +13,7 @@ import { isTauri } from "$lib/services/tauri.js";
 import { invoke } from "@tauri-apps/api/core";
 import type { EffectId } from "$lib/types";
 import { applyFadeIn, audioBufferToWavBlob, detectAudioMimeType } from "./playback/audio-utils.js";
-import { AudioAnalyser } from "./playback/analyser.js";
+import { AudioAnalyser, type EmitPayload } from "./playback/analyser.js";
 import { PcmStreamScheduler, type StreamChunkPayload } from "./playback/pcm-stream.js";
 import { stretchBuffer } from "./playback/time-stretch.js";
 import { getEffect } from "./playback/effects/registry.js";
@@ -48,8 +48,8 @@ class PlaybackStore {
   private _originalBytes: ArrayBuffer | null = null;
   private _cachedPitchUrl: { ratio: number; effectId: EffectId; url: string } | null = null;
   private _unlistenFns: Array<() => void> = [];
-  private _emit: ((name: string, payload: unknown) => Promise<void>) | null = null;
-  private _emitTo: ((target: string, name: string, payload: unknown) => Promise<void>) | null =
+  private _emit: ((name: string, payload: EmitPayload) => Promise<void>) | null = null;
+  private _emitTo: ((target: string, name: string, payload: EmitPayload) => Promise<void>) | null =
     null;
   private _stopping = false;
   private _playbackGeneration = 0;

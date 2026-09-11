@@ -1,6 +1,10 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 
-export const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+// Invoke argument payloads derive from @tauri-apps/api's own invoke contract
+// (arbitrary per-command JSON), so the type is owned by the API, not us.
+type InvokeArgs = Parameters<typeof tauriInvoke>[1];
+
+export const isTauri = "window" in globalThis && "__TAURI_INTERNALS__" in window;
 
 /**
  * Service to handle Tauri API interactions.
@@ -22,7 +26,7 @@ export class TauriService {
    * Wrapper for Tauri's invoke function with error handling and logging.
    * safely handles instances where Tauri API might not be available (e.g. browser dev)
    */
-  public async invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  public async invoke<T>(cmd: string, args?: InvokeArgs): Promise<T> {
     if (isTauri) {
       try {
         console.debug(`[TauriService] Invoking: ${cmd}`, args);
@@ -47,5 +51,4 @@ export class TauriService {
 export const tauriService = TauriService.getInstance();
 
 // Export a direct invoke function for convenience, maintaining the signature
-export const invoke = <T>(cmd: string, args?: Record<string, unknown>) =>
-  tauriService.invoke<T>(cmd, args);
+export const invoke = <T>(cmd: string, args?: InvokeArgs) => tauriService.invoke<T>(cmd, args);

@@ -10,8 +10,10 @@ export function isRtlLocale(locale: SupportedLocale): boolean {
 }
 
 // Get display name for a locale
+type LocaleNames = { [K in SupportedLocale]?: string };
+
 export function getLocaleDisplayName(locale: SupportedLocale): string {
-  const names: Partial<Record<SupportedLocale, string>> = {
+  const names: LocaleNames = {
     en: "English"
     // es: "Español",
     // ar: "العربية",

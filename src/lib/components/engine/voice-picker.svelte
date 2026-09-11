@@ -46,7 +46,10 @@
     );
   });
 
-  const GROUP_ORDER: Record<string, number> = { Female: 0, Male: 1 };
+  interface GroupOrderMap {
+    readonly [group: string]: number;
+  }
+  const GROUP_ORDER: GroupOrderMap = { Female: 0, Male: 1 };
 
   const groups = $derived.by(() => {
     const map = new Map<string, VoiceCatalogEntry[]>();
@@ -63,7 +66,7 @@
       else map.set(key, [v]);
     }
     const entries = [...map.entries()];
-    if (entries.length <= 1) return [] as { key: string; items: VoiceCatalogEntry[] }[];
+    if (entries.length <= 1) return [];
     entries.sort((a, b) => {
       const oa = GROUP_ORDER[a[0]] ?? 999;
       const ob = GROUP_ORDER[b[0]] ?? 999;
@@ -99,6 +102,7 @@
   }
 
   function onDocMouseDown(e: MouseEvent) {
+    // SAFETY: every dispatched DOM event target is a Node; EventTarget is only the static type.
     const t = e.target as Node | null;
     if (!t) return;
     if (triggerRef?.contains(t) || panelRef?.contains(t)) return;
