@@ -23,6 +23,10 @@ pub(super) struct TimestampDecoder {
     pending: Vec<u8>,
     captions: CaptionAlignment,
     alignment_active: bool,
+    /// Records seen so far, so the log can tell a stream that lost alignment
+    /// entirely from one whose later records carry audio without it.
+    aligned_records: usize,
+    audio_only_records: usize,
 }
 
 impl TimestampDecoder {
@@ -34,6 +38,8 @@ impl TimestampDecoder {
                 words: Vec::new(),
             },
             alignment_active: true,
+            aligned_records: 0,
+            audio_only_records: 0,
         }
     }
 
@@ -63,31 +69,46 @@ impl TimestampDecoder {
                 .decode(&record.audio_base64)
                 .map_err(|e| format!("Invalid ElevenLabs audio: {e}"))?;
             if self.alignment_active {
-                let result = match record.normalized_alignment.or(record.alignment) {
-                    Some(value) => serde_json::from_value::<CharacterAlignment>(value)
-                        .map_err(|e| format!("Invalid ElevenLabs alignment schema: {e}"))
-                        .and_then(|alignment| {
-                            if !pcm.is_empty() && alignment.characters.iter().all(String::is_empty)
-                            {
-                                return Err("ElevenLabs audio has empty alignment".into());
+                match record.normalized_alignment.or(record.alignment) {
+                    Some(value) => {
+                        let result = serde_json::from_value::<CharacterAlignment>(value)
+                            .map_err(|e| format!("Invalid ElevenLabs alignment schema: {e}"))
+                            .and_then(|alignment| {
+                                if !pcm.is_empty()
+                                    && alignment.characters.iter().all(String::is_empty)
+                                {
+                                    return Err("ElevenLabs audio has empty alignment".into());
+                                }
+                                self.extend_captions(alignment)
+                            });
+                        match result {
+                            Ok(()) => {
+                                self.aligned_records += 1;
+                                items.push(ChunkItem::Captions(self.captions.clone()));
                             }
-                            self.extend_captions(alignment)
-                        })
-                        .map(|()| true),
-                    None if pcm.is_empty() => Ok(false),
-                    None => Err("ElevenLabs audio has no alignment".into()),
-                };
-                match result {
-                    Ok(true) => items.push(ChunkItem::Captions(self.captions.clone())),
-                    Ok(false) => {}
-                    Err(error) => {
-                        log::warn!("Disabling ElevenLabs captions for this fragment: {error}");
-                        // Later records are deltas. After a gap, their source
-                        // offsets cannot be recovered by appending to the prefix.
-                        self.alignment_active = false;
-                        self.captions.text.clear();
-                        self.captions.words.clear();
-                        items.push(ChunkItem::ClearCaptions);
+                            Err(error) => self.disable_captions(&error, pcm.len(), &mut items),
+                        }
+                    }
+                    None if pcm.is_empty() => self.audio_only_records += 1,
+                    None if self.aligned_records == 0 => {
+                        self.disable_captions(
+                            "ElevenLabs audio has no alignment",
+                            pcm.len(),
+                            &mut items,
+                        );
+                    }
+                    // The provider now streams most with-timestamps records as
+                    // audio alone after the leading aligned record; dropping
+                    // the accumulated captions over them would hide captions
+                    // for the whole fragment.
+                    None => {
+                        self.audio_only_records += 1;
+                        log::debug!(
+                            "ElevenLabs record carried {} PCM bytes without alignment \
+                             after {} aligned records; keeping captions",
+                            pcm.len(),
+                            self.aligned_records
+                        );
                     }
                 }
             }
@@ -97,6 +118,26 @@ impl TimestampDecoder {
             }
         }
         Ok(items)
+    }
+
+    /// Hard degrade: reject the stream's captions while keeping its audio.
+    /// Reserved for unusable metadata (malformed schema) or audio arriving
+    /// with no aligned record to anchor it. Later records are deltas; after a
+    /// gap their source offsets cannot be recovered by appending to the
+    /// prefix.
+    fn disable_captions(&mut self, error: &str, pcm_len: usize, items: &mut Vec<ChunkItem>) {
+        log::warn!(
+            "Disabling ElevenLabs captions for this fragment: {error} \
+             (record carried {} PCM bytes after {} aligned and \
+              {} audio-only records)",
+            pcm_len,
+            self.aligned_records,
+            self.audio_only_records
+        );
+        self.alignment_active = false;
+        self.captions.text.clear();
+        self.captions.words.clear();
+        items.push(ChunkItem::ClearCaptions);
     }
 
     fn extend_captions(&mut self, alignment: CharacterAlignment) -> Result<(), String> {
@@ -204,7 +245,6 @@ mod tests {
     #[test]
     fn unusable_alignment_preserves_audio_without_resuming_shifted_captions() {
         let bad_alignments = [
-            serde_json::Value::Null,
             serde_json::json!("wrong schema"),
             serde_json::json!({"characters": ["B"], "character_start_times_seconds": [], "character_end_times_seconds": []}),
             serde_json::json!({"characters": ["B"], "character_start_times_seconds": ["wrong type"], "character_end_times_seconds": [0.3]}),
@@ -300,27 +340,91 @@ mod tests {
     }
 
     #[test]
-    fn absent_alignment_only_disables_captions_when_audio_is_present() {
+    fn audio_without_any_aligned_record_still_disables_captions() {
         let mut decoder = TimestampDecoder::new();
         assert!(decoder
             .push(b"{\"audio_base64\":\"\"}\n", false)
             .unwrap()
             .is_empty());
-        let first = decoder
-            .push(timed_record("A", 0.1).as_bytes(), false)
-            .unwrap();
-        assert!(matches!(&first[0], ChunkItem::Captions(_)));
         assert_eq!(
             decoder
                 .push(b"{\"audio_base64\":\"AQI=\"}\n", false)
                 .unwrap(),
             vec![ChunkItem::ClearCaptions, ChunkItem::Pcm(vec![1, 2])]
         );
+        // Disabled: later aligned records are deltas without a recoverable
+        // prefix, so only their audio passes through.
         assert_eq!(
             decoder
                 .push(timed_record("C", 1.0).as_bytes(), true)
                 .unwrap(),
             vec![ChunkItem::Pcm(vec![1, 2])]
         );
+        assert!(decoder.captions.text.is_empty());
+    }
+
+    #[test]
+    fn null_alignment_after_an_aligned_record_is_normal_audio_only_streaming() {
+        let mut decoder = TimestampDecoder::new();
+        let first = decoder
+            .push(timed_record("A", 0.1).as_bytes(), false)
+            .unwrap();
+        assert!(matches!(&first[0], ChunkItem::Captions(c) if c.text == "A"));
+        let rest = "{\"audio_base64\":\"AwQ=\",\"normalized_alignment\":null}\n".to_string()
+            + &timed_record("C", 1.0);
+        assert_eq!(
+            decoder.push(rest.as_bytes(), true).unwrap(),
+            vec![
+                ChunkItem::Pcm(vec![3, 4]),
+                ChunkItem::Captions(decoder.captions.clone()),
+                ChunkItem::Pcm(vec![1, 2]),
+            ]
+        );
+        assert_eq!(decoder.captions.text, "AC");
+        assert_eq!(decoder.aligned_records, 2);
+        assert_eq!(decoder.audio_only_records, 1);
+    }
+
+    #[test]
+    fn audio_only_records_after_an_aligned_record_keep_captions() {
+        let mut decoder = TimestampDecoder::new();
+        let items = decoder
+            .push(
+                (timed_record("Hello ", 0.1)
+                    + "{\"audio_base64\":\"AwQ=\"}\n"
+                    + "{\"audio_base64\":\"\"}\n"
+                    + &timed_record("world", 1.2))
+                    .as_bytes(),
+                true,
+            )
+            .unwrap();
+        assert_eq!(items.len(), 5);
+        assert!(matches!(&items[0], ChunkItem::Captions(c) if c.text == "Hello "));
+        assert_eq!(items[1], ChunkItem::Pcm(vec![1, 2]));
+        assert_eq!(items[2], ChunkItem::Pcm(vec![3, 4]));
+        assert!(matches!(&items[3], ChunkItem::Captions(c) if c.text == "Hello world"));
+        assert_eq!(items[4], ChunkItem::Pcm(vec![1, 2]));
+        assert_eq!(decoder.captions.text, "Hello world");
+        assert_eq!(decoder.aligned_records, 2);
+        assert_eq!(decoder.audio_only_records, 2);
+    }
+
+    #[test]
+    fn single_leading_alignment_covers_trailing_audio_only_records() {
+        let mut decoder = TimestampDecoder::new();
+        let wire = timed_record("Hello", 0.1)
+            + "{\"audio_base64\":\"AwQ=\"}\n"
+            + "{\"audio_base64\":\"BQ==\"}\n";
+        let items = decoder.push(wire.as_bytes(), true).unwrap();
+        assert_eq!(
+            items,
+            vec![
+                ChunkItem::Captions(decoder.captions.clone()),
+                ChunkItem::Pcm(vec![1, 2]),
+                ChunkItem::Pcm(vec![3, 4]),
+                ChunkItem::Pcm(vec![5]),
+            ]
+        );
+        assert_eq!(decoder.captions.text, "Hello");
     }
 }
