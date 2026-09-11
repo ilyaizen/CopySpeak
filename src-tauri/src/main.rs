@@ -654,6 +654,7 @@ fn main() {
             commands::reset_config,
             commands::config_exists,
             commands::speak_now,
+            commands::regenerate_now,
             commands::replay_cached,
             commands::speak_selected_text,
             commands::speak_queued,

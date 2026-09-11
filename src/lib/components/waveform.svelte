@@ -34,7 +34,7 @@
     decayRate = 0.4
   }: Props = $props();
 
-  let canvas: HTMLCanvasElement;
+  let canvas: HTMLCanvasElement | undefined = undefined;
   let ctx: CanvasRenderingContext2D | null = null;
 
   // Responsive canvas sizing
@@ -163,8 +163,6 @@
 
   // Start/stop animation based on barValues
   $effect(() => {
-    barValues; // reference to establish reactivity
-
     if (barValues.length > 0 && animationFrameId === null) {
       // Start animation loop when we have data
       animationLoop();
@@ -184,6 +182,7 @@
   });
 
   onMount(() => {
+    if (!canvas) return;
     ctx = canvas.getContext("2d");
     resizeCanvas();
 
@@ -193,8 +192,9 @@
       drawWaveform();
     });
 
-    if (canvas.parentElement) {
-      resizeObserver.observe(canvas.parentElement);
+    if (canvas) {
+      const parent = canvas.parentElement;
+      if (parent) resizeObserver.observe(parent);
     }
 
     return () => {

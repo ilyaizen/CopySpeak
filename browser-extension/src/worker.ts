@@ -1,4 +1,15 @@
-import { parseEvent, ReadingOwner } from "./protocol";
+import {
+  parseEvent,
+  parseCaptureReply,
+  ReadingOwner,
+  type CopyCommand,
+  type NativeEvent
+} from "./protocol";
+
+// Deliverables are worker-built objects given to chrome.tabs.sendMessage, which
+// types its payload through an unresolved generic; hand-roll the two variants it
+// actually sends and let deliver() stamp the document token.
+type DeliverableMessage = { type: "disconnect" } | { type: "native"; event: NativeEvent };
 type Route = {
   tabId: number;
   frameId: number;
@@ -13,7 +24,7 @@ let automatic = false;
 let invocation = 0;
 const badge = (text: string, title: string) =>
   Promise.all([chrome.action.setBadgeText({ text }), chrome.action.setTitle({ title })]);
-async function deliver(r: Route, message: Record<string, unknown>) {
+async function deliver(r: Route, message: DeliverableMessage) {
   await chrome.tabs.sendMessage(
     r.tabId,
     { ...message, document_token: r.token },
@@ -45,7 +56,7 @@ function connect() {
     port = null;
     void release(true);
   });
-  p.onMessage.addListener(async (value: unknown) => {
+  p.onMessage.addListener(async (value) => {
     if (port !== p) return;
     const e = parseEvent(value);
     if (!e) {
@@ -68,8 +79,12 @@ function connect() {
       if (r.owner.readingId)
         p.postMessage({ v: 1, type: "control", reading_id: r.owner.readingId, action: "stop" });
     });
-    if (r.owner.ended) await release();
-    else await badge("", "CopySpeak · Reading selected text");
+    if (r.owner.ended) {
+      await release();
+      if (e.type === "rejected") await badge("!", `CopySpeak refused the selection: ${e.reason}`);
+      else if (e.type === "state" && e.status === "error")
+        await badge("!", "CopySpeak could not read the selection. Check the app for the error.");
+    } else await badge("", "CopySpeak · Reading selected text");
   });
   p.postMessage({ v: 1, type: "hello", automatic });
   return p;
@@ -100,15 +115,9 @@ async function capture(tab?: chrome.tabs.Tab, probe?: string) {
             { documentId: frame.documentId }
           )
           .catch(() => null);
-        if (
-          !result ||
-          typeof result.text !== "string" ||
-          typeof result.document_token !== "string" ||
-          !result.text.trim() ||
-          result.text.length > 65536
-        )
-          return null;
-        return { frame, result };
+        const reply = result === null || result === undefined ? null : parseCaptureReply(result);
+        if (reply === null) return null;
+        return { frame, result: reply };
       })
     );
     const eligible = candidates.filter((x) => x !== null);
@@ -155,25 +164,31 @@ chrome.action.onClicked.addListener((tab) => capture(tab));
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === "read-selection") await capture();
 });
-chrome.runtime.onMessage.addListener((message: unknown, sender) => {
-  if (!message || typeof message !== "object") return;
-  const m = message as Record<string, unknown>;
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === "read-selection") await capture(tab);
+});
+chrome.runtime.onMessage.addListener((message: CopyCommand, sender) => {
   const r = route;
-  if (m.type === "settings" && !sender.tab?.url?.startsWith("http")) {
+  if (message.type === "settings" && !sender.tab?.url?.startsWith("http")) {
     void initialize();
     return;
   }
+  if (message.type !== "control") return;
   if (
     !r ||
     sender.tab?.id !== r.tabId ||
     sender.frameId !== r.frameId ||
     sender.documentId !== r.documentId ||
-    m.document_token !== r.token ||
-    m.reading_id !== r.owner.readingId
+    message.document_token !== r.token ||
+    message.reading_id !== r.owner.readingId
   )
     return;
-  if (m.type === "control" && ["pause", "resume", "stop"].includes(m.action as string))
-    port?.postMessage({ v: 1, type: "control", reading_id: r.owner.readingId, action: m.action });
+  port?.postMessage({
+    v: 1,
+    type: "control",
+    reading_id: r.owner.readingId,
+    action: message.action
+  });
 });
 chrome.tabs.onRemoved.addListener((tabId) => {
   if (route?.tabId === tabId) {
@@ -214,6 +229,12 @@ chrome.runtime.onStartup.addListener(() => {
   void initialize();
 });
 chrome.runtime.onInstalled.addListener(() => {
+  // Menus persist across worker restarts; reading lastError silences the
+  // duplicate-id error an extension reload can raise.
+  chrome.contextMenus.create(
+    { id: "read-selection", title: "Read with CopySpeak", contexts: ["selection"] },
+    () => void chrome.runtime.lastError
+  );
   void initialize();
 });
 void initialize();

@@ -91,9 +91,9 @@ export const walkieTalkie: Effect = {
     notch.frequency.value = 1800;
     notch.Q.value = 5;
 
-    const shaper = offline.createWaveShaper();
-    shaper.curve = buildSoftClipCurve();
-    shaper.oversample = "2x";
+    const softClip = offline.createWaveShaper();
+    softClip.curve = buildSoftClipCurve();
+    softClip.oversample = "2x";
 
     const comp = offline.createDynamicsCompressor();
     comp.threshold.value = -28;
@@ -116,8 +116,8 @@ export const walkieTalkie: Effect = {
     highpass.connect(lowpass);
     lowpass.connect(presence);
     presence.connect(notch);
-    notch.connect(shaper);
-    shaper.connect(comp);
+    notch.connect(softClip);
+    softClip.connect(comp);
     comp.connect(radioGain);
     radioGain.connect(offline.destination);
     wobble.start(headDur);

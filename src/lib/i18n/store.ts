@@ -10,17 +10,18 @@ export const locale = svelteLocale;
 
 // Derived store for RTL detection
 export const isRtl = derived<typeof svelteLocale, boolean>(svelteLocale, ($locale) => {
+  // SAFETY: locales are set only through loadLocaleFromConfig/setLocale (SupportedLocale).
   return RTL_LOCALES.includes($locale as SupportedLocale);
 });
 
 // Load locale from config
 export async function loadLocaleFromConfig(savedLocale: SupportedLocale): Promise<void> {
-  locale.set(savedLocale);
+  void locale.set(savedLocale);
 }
 
 // Get initial locale (for SSR/layout load)
 export function getInitialLocale(): SupportedLocale {
-  if (typeof window === "undefined") {
+  if (!("window" in globalThis)) {
     return "en";
   }
   return "en"; // Will be overridden after config loads

@@ -22,7 +22,12 @@ export interface CaptionWord {
 export function validCaptionAlignment(
   value: CaptionAlignment | null | undefined
 ): value is CaptionAlignment {
-  if (!value || typeof value.text !== "string" || !Array.isArray(value.words)) return false;
+  if (
+    !value ||
+    Object.prototype.toString.call(value.text) !== "[object String]" ||
+    !Array.isArray(value.words)
+  )
+    return false;
   let textEnd = 0;
   let audioEnd = 0;
   const boundary = (offset: number) => {

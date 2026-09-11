@@ -30,6 +30,9 @@
   import type { HTMLAttributes } from "svelte/elements";
   import type { Snippet } from "svelte";
 
+  // Snippet child contract mirrors bits-ui's own floating content signature.
+  type ChildSnippet = Snippet<[{ props: HTMLAttributes<HTMLDivElement> }]>;
+
   let {
     ref = $bindable(null),
     class: className,
@@ -38,7 +41,7 @@
     size,
     ...restProps
   }: WithElementRef<HTMLAttributes<HTMLDivElement>> & {
-    child?: Snippet<[{ props: Record<string, unknown> }]>;
+    child?: ChildSnippet;
     variant?: ItemVariant;
     size?: ItemSize;
   } = $props();

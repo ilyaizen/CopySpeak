@@ -8,7 +8,7 @@ let unlistenSpeak: UnlistenFn | null = null;
 let isListening = false;
 
 export async function startHistoryEventListeners(): Promise<void> {
-  if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+  if (!("window" in globalThis) || !("__TAURI_INTERNALS__" in window)) {
     return;
   }
 

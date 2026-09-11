@@ -19,7 +19,7 @@
   import { Label } from "$lib/components/ui/label/index.js";
   import { openExternal } from "$lib/utils/external-link";
   import type { AppConfig } from "$lib/types";
-  import type { EngineSetupEntry, TestState } from "./engine-meta";
+  import type { CredentialTarget, EngineSetupEntry, TestState } from "./engine-meta";
 
   // Track which fields are revealed (per credential target, keyed by field name)
   let revealedFields = $state<Record<string, boolean>>({});
@@ -43,9 +43,20 @@
   // ponytail: tts config carries per-engine structs indexed by provider name.
   // Index through a record; the typed structs are mirrored here just enough to
   // bind credentials without widening the public TtsConfig type.
-  type TtsFields = Record<string, { api_key?: string; endpoint?: string }>;
+  interface CredentialFields {
+    api_key?: string;
+    endpoint?: string;
+  }
+  interface TtsFields extends Record<CredentialTarget, CredentialFields> {}
   function tts(): TtsFields {
-    return localConfig.tts as unknown as TtsFields;
+    const c = localConfig.tts;
+    return {
+      openai: c.openai,
+      elevenlabs: c.elevenlabs,
+      cartesia: c.cartesia,
+      google: c.google,
+      microsoft: c.microsoft
+    };
   }
 
   function openDocs(e: Event) {

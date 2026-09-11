@@ -5,6 +5,7 @@
 
 import type {
   HistoryEvent,
+  HistoryEventType,
   HistoryItem,
   HistoryFilters,
   HistorySortOptions,
@@ -56,8 +57,9 @@ export function groupHistoryReadings(items: HistoryItem[]) {
       entries.sort((a, b) => {
         const aIndex = a.metadata?.fragment_index;
         const bIndex = b.metadata?.fragment_index;
-        return typeof aIndex === "number" && typeof bIndex === "number"
-          ? aIndex - bIndex
+        // SAFETY: indices reach arithmetic paths only after the safe-integer check.
+        return Number.isSafeInteger(aIndex) && Number.isSafeInteger(bIndex)
+          ? (aIndex as number) - (bIndex as number)
           : a.timestamp - b.timestamp;
       });
       return {
@@ -66,10 +68,15 @@ export function groupHistoryReadings(items: HistoryItem[]) {
         batchId: entries[0].batch_id,
         partCount: entries.reduce((total, item) => {
           const expected = item.metadata?.fragment_total;
-          return typeof expected === "number" ? Math.max(total, expected) : total;
+          // SAFETY: total only feeds arithmetic after the safe-integer check.
+          return Number.isSafeInteger(expected) ? Math.max(total, expected as number) : total;
         }, entries.length),
         text: entries.map((item) => item.text).join("\n\n"),
-        title: typeof entries[0].metadata?.title === "string" ? entries[0].metadata.title : "",
+        // SAFETY: the prototype tag below already established a string value.
+        title:
+          Object.prototype.toString.call(entries[0].metadata?.title) === "[object String]"
+            ? (entries[0].metadata?.title as string)
+            : "",
         timestamp: entries.reduce((earliest, item) => Math.min(earliest, item.timestamp), Infinity),
         success: entries.every((item) => item.success),
         hasAudio: entries.every((item) => !!item.output_path),
@@ -110,7 +117,7 @@ export function createHistoryItem(
  * Creates a new history event with default values
  */
 export function createHistoryEvent(
-  eventType: HistoryItem["id"],
+  eventType: HistoryEventType,
   text: string,
   overrides: Partial<HistoryEvent> = {}
 ): HistoryEvent {
@@ -120,7 +127,7 @@ export function createHistoryEvent(
   return {
     id,
     timestamp,
-    event_type: eventType as any,
+    event_type: eventType,
     text,
     success: false,
     ...overrides
@@ -324,7 +331,9 @@ export function calculateHistoryStatistics(items: HistoryItem[]): HistoryStatist
       successful_items: 0,
       failed_items: 0,
       success_rate: 0,
+      // SAFETY: union-keyed counters start empty; keys are added as readings are counted.
       by_engine: {} as Record<TtsEngine, number>,
+      // SAFETY: union-keyed counters start empty; keys are added as readings are counted.
       by_format: {} as Record<AudioFormat, number>,
       by_hour: {},
       by_day: {},
@@ -340,7 +349,9 @@ export function calculateHistoryStatistics(items: HistoryItem[]): HistoryStatist
     successful_items: 0,
     failed_items: 0,
     success_rate: 0,
+    // SAFETY: union-keyed counters start empty; keys are added as readings are counted.
     by_engine: {} as Record<TtsEngine, number>,
+    // SAFETY: union-keyed counters start empty; keys are added as readings are counted.
     by_format: {} as Record<AudioFormat, number>,
     by_hour: {},
     by_day: {},

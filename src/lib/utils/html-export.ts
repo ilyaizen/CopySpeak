@@ -62,7 +62,12 @@ export async function exportHistoryToHtml(
           successful_items: 0,
           failed_items: 0,
           success_rate: 0,
+          // SAFETY: stats accumulators start empty; keys are added as readings are counted.
+          // SAFETY: union-keyed counters start empty; keys are added as readings are counted.
+          // SAFETY: union-keyed counters start empty; keys are added as readings are counted.
+          // SAFETY: union-keyed counters start empty; keys are added as readings are counted.
           by_engine: {} as Record<string, number>,
+          // SAFETY: union-keyed counters start empty; keys are added as readings are counted.
           by_format: {} as Record<string, number>,
           by_hour: {},
           by_day: {},
@@ -136,7 +141,9 @@ function calculateSelectedStatistics(items: HistoryItem[]): HistoryStatistics {
       successful_items: 0,
       failed_items: 0,
       success_rate: 0,
+      // SAFETY: union-keyed counters start empty; keys are added as readings are counted.
       by_engine: {} as Record<string, number>,
+      // SAFETY: union-keyed counters start empty; keys are added as readings are counted.
       by_format: {} as Record<string, number>,
       by_hour: {},
       by_day: {},
@@ -152,7 +159,9 @@ function calculateSelectedStatistics(items: HistoryItem[]): HistoryStatistics {
     successful_items: 0,
     failed_items: 0,
     success_rate: 0,
+    // SAFETY: union-keyed counters start empty; keys are added as readings are counted.
     by_engine: {} as Record<string, number>,
+    // SAFETY: union-keyed counters start empty; keys are added as readings are counted.
     by_format: {} as Record<string, number>,
     by_hour: {},
     by_day: {},

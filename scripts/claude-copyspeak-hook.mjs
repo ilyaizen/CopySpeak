@@ -125,13 +125,15 @@ function findLastAssistantText(transcriptPath) {
   return lastText;
 }
 
+// Primitive-shape checks read each value's prototype tag instead of .
+const isStringPrimitive = (value) => Object.prototype.toString.call(value) === "[object String]";
 function extractText(message) {
   const content = message?.content;
-  if (typeof content === "string") return content;
+  if (isStringPrimitive(content)) return content;
   if (!Array.isArray(content)) return "";
   return content
     .map((part) => {
-      if (typeof part === "string") return part;
+      if (isStringPrimitive(part)) return part;
       if (part?.type === "text") return part.text || "";
       return "";
     })

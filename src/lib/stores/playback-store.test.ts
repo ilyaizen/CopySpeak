@@ -29,6 +29,7 @@ vi.mock("./playback/analyser.js", () => ({
 
 const decode = vi.fn(async () => ({ duration: 1 }));
 let audio: HTMLAudioElement;
+let playSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(async () => {
   decode.mockReset().mockResolvedValue({ duration: 1 });
@@ -42,7 +43,7 @@ beforeEach(async () => {
   );
   audio = document.createElement("audio");
   vi.spyOn(audio, "pause").mockImplementation(() => {});
-  vi.spyOn(audio, "play").mockImplementation(async () => {
+  playSpy = vi.spyOn(audio, "play").mockImplementation(async () => {
     audio.dispatchEvent(new Event("play"));
   });
   vi.spyOn(playbackStore, "buildPlaybackUrl").mockResolvedValue("blob:history-audio");
@@ -81,7 +82,7 @@ it.each(["decode", "play"])(
   "releases the queue after a %s failure so history can retry",
   async (failure) => {
     if (failure === "decode") decode.mockRejectedValueOnce(new Error("broken audio"));
-    else vi.mocked(audio.play).mockRejectedValueOnce(new Error("play rejected"));
+    else playSpy.mockRejectedValueOnce(new Error("play rejected"));
     await sendAudio();
     expect(playbackStore.error).toContain("Audio playback failed");
     expect(playbackStore.isLoadingAudio).toBe(false);
@@ -101,19 +102,19 @@ it("does not restart a stopped reading when its pending decode finishes", async 
   playbackStore.handleStop();
   pending.resolve({ duration: 1 });
   await first;
-  expect(audio.play).not.toHaveBeenCalled();
+  expect(playSpy).not.toHaveBeenCalled();
   expect(playbackStore.isLoadingAudio).toBe(false);
   await sendAudio(0);
-  expect(audio.play).toHaveBeenCalledTimes(1);
+  expect(playSpy).toHaveBeenCalledTimes(1);
 });
 
 it("plays grouped fragments in order and retains the reading for Replay", async () => {
   await sendAudio(0);
   await sendAudio(1);
-  expect(audio.play).toHaveBeenCalledTimes(1);
+  expect(playSpy).toHaveBeenCalledTimes(1);
   expect(playbackStore.currentFragmentIndex).toBe(0);
   audio.dispatchEvent(new Event("ended"));
-  await vi.waitFor(() => expect(audio.play).toHaveBeenCalledTimes(2));
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(2));
   expect(playbackStore.currentFragmentIndex).toBe(1);
   audio.dispatchEvent(new Event("ended"));
   expect(playbackStore.isPlaying).toBe(false);

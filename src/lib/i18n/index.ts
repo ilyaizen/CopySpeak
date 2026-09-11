@@ -22,11 +22,12 @@ export { localeStore as locale };
 
 // Helper function to set locale programmatically
 export function setLocale(newLocale: SupportedLocale): void {
-  localeStore.set(newLocale);
+  void localeStore.set(newLocale);
 }
 
 // Helper function to get current locale value
 export function getCurrentLocale(): SupportedLocale {
+  // SAFETY: setLocale restricts writes to SupportedLocale and init starts at "en".
   return get(localeStore) as SupportedLocale;
 }
 

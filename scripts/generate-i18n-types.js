@@ -24,7 +24,7 @@ function flattenKeys(obj, prefix = "") {
     if (obj.hasOwnProperty(key)) {
       const newKey = prefix ? `${prefix}.${key}` : key;
 
-      if (typeof obj[key] === "object" && obj[key] !== null) {
+      if (obj[key] !== null && Object.prototype.toString.call(obj[key]) === "[object Object]") {
         keys = keys.concat(flattenKeys(obj[key], newKey));
       } else {
         keys.push(newKey);

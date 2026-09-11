@@ -84,4 +84,4 @@ async function bumpVersion() {
   }
 }
 
-bumpVersion();
+void bumpVersion();

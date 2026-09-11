@@ -10,7 +10,7 @@ export async function setupSynthesisListener() {
 
   try {
     const { listen } = await import("@tauri-apps/api/event");
-    return (await listen)<boolean>("synthesis-state-change", (event) => {
+    return await listen<boolean>("synthesis-state-change", (event) => {
       synthesisStore.update((state) => ({
         ...state,
         isSynthesizing: event.payload

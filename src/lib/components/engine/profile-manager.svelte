@@ -225,11 +225,9 @@
   );
   const activeVoiceCatalog = $derived.by<VoiceCatalogEntry[]>(() => {
     if (!active) return [];
-    const rawVoices = catalogVoicesFor(active.engine as TtsEngine);
+    const rawVoices = catalogVoicesFor(active.engine);
     if (active.engine === "local") {
-      const preset = (active.engine_options as Record<string, unknown> | undefined)?.preset as
-        | string
-        | undefined;
+      const preset = active.engine_options?.preset;
       if (preset === "piper") return rawVoices.filter((v) => v.language === "Piper");
       if (preset === "kokoro") return rawVoices.filter((v) => v.language === "Kokoro");
       if (preset === "kitten-tts") return rawVoices.filter((v) => v.language === "KittenTTS");
@@ -250,9 +248,12 @@
   let manualRef = $state<HTMLInputElement | null>(null);
 
   $effect(() => {
-    activeId;
-    active?.engine;
-    manualOverride = false;
+    let lastKey = "";
+    const key = `${activeId}:${active?.engine}`;
+    if (lastKey !== key) {
+      lastKey = key;
+      manualOverride = false;
+    }
   });
 
   const manualLocked = $derived(
@@ -289,10 +290,12 @@
     if (catalogLoading || catalog.length > 0) return;
     catalogLoading = true;
     try {
+      // SAFETY: list_tts_engines serializes the Rust catalog as EngineCatalogEntry[].
       const entries = (await invoke("list_tts_engines")) as EngineCatalogEntry[];
       catalog = entries;
       const next: Partial<Record<TtsEngine, VoiceCatalogEntry[]>> = {};
       for (const entry of entries) {
+        // SAFETY: catalog engine ids come from the same Rust registry behind TtsEngine.
         next[entry.engine as TtsEngine] = entry.voices;
       }
       voicesByEngine = next;
@@ -306,6 +309,7 @@
   async function refreshVoices(engine: TtsEngine) {
     voicesLoadingFor = engine;
     try {
+      // SAFETY: list_tts_voices serializes the Rust catalog as VoiceCatalogEntry[].
       const voices = (await invoke("list_tts_voices", { engine })) as VoiceCatalogEntry[];
       voicesByEngine = { ...voicesByEngine, [engine]: voices };
       toast.success(`Loaded ${voices.length} voice${voices.length === 1 ? "" : "s"}`);
@@ -316,12 +320,12 @@
     }
   }
 
-  function optionValue(profile: VoiceProfile, descriptor: EngineOptionDescriptor): unknown {
-    const options = profile.engine_options;
-    if (options && typeof options === "object" && !Array.isArray(options)) {
-      const existing = (options as Record<string, unknown>)[descriptor.key];
-      if (existing !== undefined && existing !== null) return existing;
-    }
+  function optionValue(
+    profile: VoiceProfile,
+    descriptor: EngineOptionDescriptor
+  ): EngineOptionValue {
+    const existing = profile.engine_options[descriptor.key];
+    if (existing !== undefined && existing !== null) return existing;
     return descriptor.default_value;
   }
 
@@ -335,7 +339,7 @@
     return voicesByEngine[engine] ?? [];
   }
 
-  function applyPresetDefaults(index: number, preset: string) {
+  function applyPresetDefaults(index: number, preset: EngineOptionValue) {
     const profile = localConfig.tts.profiles[index];
     if (profile.engine !== "local") return;
     if (preset === "piper") {
@@ -355,7 +359,7 @@
           "--output",
           "{output}"
         ]
-      } as VoiceProfile["engine_options"];
+      } satisfies VoiceProfile["engine_options"];
       profile.voice = "en_US-amy-medium";
       profile.voice_label = "Amy";
     } else if (preset === "kitten-tts") {
@@ -377,7 +381,7 @@
           "--model",
           "{model}"
         ]
-      } as VoiceProfile["engine_options"];
+      } satisfies VoiceProfile["engine_options"];
       profile.voice = "Rosie";
       profile.voice_label = "Rosie";
     } else if (preset === "kokoro") {
@@ -397,7 +401,7 @@
           "--output",
           "{output}"
         ]
-      } as VoiceProfile["engine_options"];
+      } satisfies VoiceProfile["engine_options"];
       profile.voice = "af_heart";
       profile.voice_label = "Heart";
     } else if (preset === "pocket") {
@@ -417,16 +421,21 @@
           "--output",
           "{output}"
         ]
-      } as VoiceProfile["engine_options"];
+      } satisfies VoiceProfile["engine_options"];
       profile.voice = "alba";
       profile.voice_label = "Alba";
     }
   }
 
-  function setOptionValue(index: number, key: string, value: unknown) {
+  function setOptionValue(index: number, key: string, value: EngineOptionValue) {
     const profile = localConfig.tts.profiles[index];
-    const current = profile.engine_options;
-    const base = current && typeof current === "object" && !Array.isArray(current) ? current : {};
+    // SAFETY: engine_options carrying a non-plain or missing payload is
+    // tolerated only by discarding it — same defensive reset as before.
+    const base =
+      profile.engine_options !== undefined &&
+      Object.prototype.toString.call(profile.engine_options) === "[object Object]"
+        ? profile.engine_options
+        : {};
 
     let updatedOptions = {
       ...base,
@@ -434,10 +443,10 @@
       [key]: value
     };
 
-    profile.engine_options = updatedOptions as VoiceProfile["engine_options"];
+    profile.engine_options = updatedOptions;
 
     if (profile.engine === "local" && key === "preset") {
-      applyPresetDefaults(index, value as string);
+      applyPresetDefaults(index, value);
     }
   }
 
@@ -451,11 +460,14 @@
   function resetEngineOptions(index: number, engine: TtsEngine) {
     const entry = catalog.find((item) => item.engine === engine);
     if (!entry) return;
-    const defaults: Record<string, unknown> = { engine };
+    interface EngineOptionDefaults {
+      [key: string]: EngineOptionValue;
+    }
+    const defaults: EngineOptionDefaults = { engine };
     for (const option of entry.options) {
       if (option.default_value !== null) defaults[option.key] = option.default_value;
     }
-    localConfig.tts.profiles[index].engine_options = defaults as VoiceProfile["engine_options"];
+    localConfig.tts.profiles[index].engine_options = defaults;
   }
 
   async function selectProfile(id: string) {
@@ -479,9 +491,7 @@
     // Auto-populate default preset's command/args/voice for local engine
     if (engine === "local") {
       const entry = catalog.find((item) => item.engine === engine);
-      const defaultPreset = entry?.options.find((o) => o.key === "preset")?.default_value as
-        | string
-        | undefined;
+      const defaultPreset = entry?.options.find((o) => o.key === "preset")?.default_value;
       if (defaultPreset && defaultPreset !== "custom") {
         applyPresetDefaults(activeIndex, defaultPreset);
       }

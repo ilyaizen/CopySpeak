@@ -11,6 +11,9 @@ export const page = {
 };
 
 // Allow tests to set pathname
-(globalThis as Record<string, unknown>).__setMockPathname = (pathname: string) => {
+// SAFETY: only adds __setMockPathname; no other global members are touched or hidden.
+(
+  globalThis as typeof globalThis & { __setMockPathname?: (pathname: string) => void }
+).__setMockPathname = (pathname: string) => {
   mockPathname = pathname;
 };

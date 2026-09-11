@@ -38,6 +38,18 @@ describe("selection anchor", () => {
       expect(captureSelection(d)).toBeNull();
     }
   });
+  test("skips script and hidden text inside an ordinary selection", () => {
+    const { d } = fixture(
+      '<p id="a">one</p><script>x()</script><p hidden>secret</p><p id="b">two</p>',
+      "#a",
+      0,
+      "#b",
+      3
+    );
+    const anchor = captureSelection(d)!;
+    expect(anchor.text).toBe("one\ntwo");
+    expect(anchor.range(4, 7)?.toString()).toBe("two");
+  });
   test("inserts unmapped block and BR separators while preserving inline continuity", () => {
     const { d } = fixture("<p>one<br>two</p><p><b>thr</b>ee</p>", "p", 0, "b", 3);
     const anchor = captureSelection(d)!;

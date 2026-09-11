@@ -28,6 +28,7 @@
   // which is available synchronously when the page loads inside Tauri.
   function getTauriWindowLabel(): string | null {
     try {
+      // SAFETY: Tauri injects __TAURI_INTERNALS__ at runtime; window typing cannot know it.
       const internals = (window as any).__TAURI_INTERNALS__;
       return internals?.metadata?.currentWindow?.label ?? null;
     } catch {
@@ -35,7 +36,7 @@
     }
   }
 
-  const tauriWindowLabel = typeof window !== "undefined" ? getTauriWindowLabel() : null;
+  const tauriWindowLabel = "window" in globalThis ? getTauriWindowLabel() : null;
   // Detect HUD window via two independent signals:
   // 1. Window label from __TAURI_INTERNALS__ (most reliable in Tauri context)
   // 2. URL path (reliable since Tauri loads the HUD window at /hud)
@@ -43,7 +44,7 @@
   //    windows load devUrl ("/"), so label detection is the primary signal.
   //    But if the URL is already /hud (e.g. production or url config works), use that.
   const isHudByLabel = tauriWindowLabel === "hud";
-  const isHudByPath = typeof window !== "undefined" && window.location.pathname === "/hud";
+  const isHudByPath = "window" in globalThis && window.location.pathname === "/hud";
   const isHudWindow = isHudByLabel || isHudByPath;
 
   const isOnboarding = $derived(page.url.pathname === "/onboarding");

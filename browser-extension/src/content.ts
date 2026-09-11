@@ -1,8 +1,9 @@
 import { captureSelection, type SelectionAnchor } from "./anchor";
-import { ReadingOwner, parseEvent } from "./protocol";
+import { ReadingOwner, parseEvent, type CopyCommand } from "./protocol";
 
 // Repeated scripting.executeScript calls do not install duplicate listeners.
 const marker = "__copyspeak_companion_v1__";
+// SAFETY: only adds the optional script-unique marker; globalThis members are untouched.
 const scope = globalThis as typeof globalThis & { [marker]?: boolean };
 if (!scope[marker]) {
   scope[marker] = true;
@@ -86,15 +87,13 @@ if (!scope[marker]) {
     });
     observer.observe(anchor.root, { subtree: true, childList: true, characterData: true });
   }
-  chrome.runtime.onMessage.addListener((message: unknown, _sender, respond) => {
-    if (!message || typeof message !== "object") return;
-    const m = message as Record<string, unknown>;
-    if (m.type === "capture" && typeof m.request_id === "string" && m.request_id.length <= 128) {
-      if (!CSS.highlights || typeof Highlight === "undefined") {
+  chrome.runtime.onMessage.addListener((message: CopyCommand, _sender, respond) => {
+    if (message.type === "capture") {
+      if (!CSS.highlights || !("Highlight" in globalThis)) {
         respond({ error: "This browser does not support text highlighting." });
         return;
       }
-      if (m.probe && (!document.hasFocus() || document.visibilityState !== "visible")) {
+      if (message.probe && (!document.hasFocus() || document.visibilityState !== "visible")) {
         respond(null);
         return;
       }
@@ -118,17 +117,17 @@ if (!scope[marker]) {
       sendControl("stop");
       cleanup();
       anchor = captured;
-      owner = new ReadingOwner(m.request_id);
+      owner = new ReadingOwner(message.request_id);
       respond({ text: anchor.text, document_token: documentToken });
       return;
     }
-    if (m.document_token !== documentToken) return;
-    if (m.type === "disconnect") {
+    if (message.type !== "native" && message.type !== "disconnect") return;
+    if (message.type === "disconnect") {
       cleanup();
       return;
     }
-    if (m.type !== "native") return;
-    const e = parseEvent(m.event);
+    if (message.document_token !== documentToken) return;
+    const e = parseEvent(message.event);
     if (!e || !owner?.apply(e)) return;
     if (e.type === "accepted") accepted();
     if (e.type === "rejected") cleanup();

@@ -4,7 +4,13 @@ import type { Effect, EffectId } from "./types";
 import { walkieTalkie } from "./walkie-talkie";
 import { gameBoy } from "./game-boy";
 
-const EFFECTS: Record<EffectId, Effect | null> = {
+interface EffectLookup {
+  none: Effect | null;
+  walkie_talkie: Effect | null;
+  game_boy: Effect | null;
+}
+
+const EFFECTS: EffectLookup = {
   none: null,
   walkie_talkie: walkieTalkie,
   game_boy: gameBoy

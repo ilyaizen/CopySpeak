@@ -20,7 +20,9 @@ interface BackendHistoryEntry {
   error_message?: string;
   attempts: number;
   tags?: string[];
-  metadata?: Record<string, unknown>;
+  // Backend metadata is a free-form key/value record; the value shape derives
+  // from the backend's own serialized payload (strings, numbers and null).
+  metadata?: Record<string, string | number | boolean | null>;
 }
 
 /**
@@ -32,9 +34,12 @@ function backendToHistoryItem(entry: BackendHistoryEntry): HistoryItem {
     timestamp: new Date(entry.timestamp).getTime(),
     text: entry.text,
     text_length: entry.text_length,
+    // SAFETY: the backend serializes tts_engine/output_format as the exact
+    // union members used by HistoryItem.
     tts_engine: entry.tts_engine as HistoryItem["tts_engine"],
     voice: entry.voice,
     speed: entry.speed,
+    // SAFETY: backend union member (see tts_engine note above).
     output_format: entry.output_format as HistoryItem["output_format"],
     output_path: entry.output_path,
     duration_ms: entry.duration_ms,
@@ -85,7 +90,7 @@ function createHistoryStore() {
    * Initialize Tauri invoke function
    */
   async function initInvoke() {
-    if (typeof window === "undefined" || !("__TAURI_INTERNALS__" in window)) {
+    if (!("window" in globalThis) || !("__TAURI_INTERNALS__" in window)) {
       return false;
     }
 
@@ -126,7 +131,7 @@ function createHistoryStore() {
       state.statistics = calculateHistoryStatistics(state.items);
       state.last_updated = Date.now();
     } catch (e) {
-      state.error = `Failed to load history: ${e}`;
+      state.error = `Failed to load history: ${e instanceof Error ? e.message : String(e)}`;
       state.items = [];
     } finally {
       state.is_loading = false;
@@ -176,7 +181,9 @@ function createHistoryStore() {
       state.statistics = calculateHistoryStatistics(state.items);
       state.last_updated = Date.now();
     } catch (e) {
-      throw new Error(`Failed to delete history entry: ${e}`);
+      throw new Error(
+        `Failed to delete history entry: ${e instanceof Error ? e.message : String(e)}`
+      );
     }
   }
 
@@ -194,7 +201,7 @@ function createHistoryStore() {
       try {
         await invoke("delete_history_entry", { entryId: id });
       } catch (e) {
-        errors.push(`${id}: ${e}`);
+        errors.push(`${id}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 
@@ -223,7 +230,7 @@ function createHistoryStore() {
       state.statistics = calculateHistoryStatistics([]);
       state.last_updated = Date.now();
     } catch (e) {
-      throw new Error(`Failed to clear history: ${e}`);
+      throw new Error(`Failed to clear history: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -300,7 +307,7 @@ function createHistoryStore() {
       await invoke("play_history_entry", { entryId: id });
     } catch (e) {
       playbackStore.historyReadingId = null;
-      throw new Error(`Failed to play entry: ${e}`);
+      throw new Error(`Failed to play entry: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -316,7 +323,7 @@ function createHistoryStore() {
     try {
       await invoke("speak_history_entry", { entryId: id });
     } catch (e) {
-      throw new Error(`Failed to re-speak entry: ${e}`);
+      throw new Error(`Failed to re-speak entry: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -332,7 +339,7 @@ function createHistoryStore() {
     try {
       await invoke("copy_history_entry_text", { entryId: id });
     } catch (e) {
-      throw new Error(`Failed to copy entry text: ${e}`);
+      throw new Error(`Failed to copy entry text: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -349,7 +356,7 @@ function createHistoryStore() {
       const entries = await invoke<BackendHistoryEntry[]>("get_history_batch", { batchId });
       return entries.map(backendToHistoryItem);
     } catch (e) {
-      throw new Error(`Failed to get batch: ${e}`);
+      throw new Error(`Failed to get batch: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -367,7 +374,7 @@ function createHistoryStore() {
       await invoke("play_history_batch", { batchId });
     } catch (e) {
       playbackStore.historyReadingId = null;
-      throw new Error(`Failed to play batch: ${e}`);
+      throw new Error(`Failed to play batch: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 
@@ -386,7 +393,7 @@ function createHistoryStore() {
       state.statistics = calculateHistoryStatistics(state.items);
       state.last_updated = Date.now();
     } catch (e) {
-      throw new Error(`Failed to delete batch: ${e}`);
+      throw new Error(`Failed to delete batch: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
 

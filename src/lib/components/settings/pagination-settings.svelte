@@ -25,6 +25,7 @@
   );
 
   function handlePaginationChange(e: Event) {
+    // SAFETY: this handler is only bound to the pagination <select>, whose target is that element.
     const target = e.target as HTMLSelectElement;
     const value = target.value;
     if (value === "disabled") {

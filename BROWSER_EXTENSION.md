@@ -6,8 +6,11 @@ through Chrome native messaging and a local named pipe.
 
 ## What it does
 
-- Click the extension action or press `Alt+Shift+R` to read the current
-  selection.
+- Click the extension action, press `Alt+Shift+T`, or right-click the
+  selection and choose **Read with CopySpeak** to read the current selection.
+  Chrome applies the suggested shortcut only on a fresh install; change it at
+  `chrome://extensions/shortcuts`.
+- Hover the extension icon when it shows `!` for the reason a reading failed.
 - Shows the selected passage and, when the engine supplies matching caption
   timings, follows the current word.
 - Provides Pause, Resume, and Stop controls in the page.

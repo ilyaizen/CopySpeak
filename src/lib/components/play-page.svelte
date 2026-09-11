@@ -14,6 +14,7 @@
   import { isTauri } from "$lib/services/tauri.js";
   import type { AppConfig } from "$lib/types";
   import { groupHistoryReadings, historyProfile } from "$lib/models/history";
+  import { activeCaptionWord, buildCaptions } from "$lib/models/captions";
   import { _ } from "svelte-i18n";
 
   const mockConfig: AppConfig = {
@@ -159,9 +160,27 @@
 
   let unlistenTruncated: (() => void) | null = null;
   let unlistenConfig: (() => void) | null = null;
+  let unlistenReading: (() => void) | null = null;
+  // True while this page's own Play request runs, so its text stays as typed.
+  let generating = false;
 
   // Proxy store state for template readability
   let isPlaying = $derived(playbackStore.isPlaying);
+
+  // While audio plays, the text field shows the audible part with live captions.
+  let caption = $derived(isPlaying ? playbackStore.caption : null);
+  let captionText = $derived(caption?.text ?? "");
+  let captionTimings = $derived(caption?.captions);
+  let captionWords = $derived(buildCaptions(captionText, captionTimings));
+  let currentWord = $derived(
+    caption?.active ? activeCaptionWord(captionWords, caption.position_ms) : -1
+  );
+  let readingView = $state<HTMLElement | null>(null);
+
+  $effect(() => {
+    if (currentWord >= 0)
+      readingView?.querySelector("[data-current]")?.scrollIntoView({ block: "nearest" });
+  });
 
   // Sync playback config to store and auto-save (debounced)
   $effect(() => {
@@ -256,21 +275,25 @@
     }
   }
 
-  async function handleGenerate() {
+  // `fresh` skips the saved audio history already holds for this text.
+  async function handleGenerate(fresh = false) {
     if (!isTauri) {
       error = "Not running in Tauri environment";
       return;
     }
+    generating = true;
     try {
       error = null;
       abortRequested = false;
-      await invoke("speak_now", { text: currentContent });
+      await invoke(fresh ? "regenerate_now" : "speak_now", { text: currentContent });
       lastPlayedContent = currentContent;
     } catch (e) {
       // Don't show error if abort was requested (process was killed)
       if (!abortRequested) {
         error = `${e}`;
       }
+    } finally {
+      generating = false;
     }
   }
 
@@ -306,7 +329,7 @@
       config.tts.active_profile_id = profile.id;
       config.tts.active_backend = profile.engine;
       if (isTauri) await invoke("set_config", { newConfig: config });
-      if (regenerate) await handleGenerate();
+      if (regenerate) await handleGenerate(true);
       else
         toast.success("Text, voice and speed restored. Pitch and effects use the current profile.");
     } catch (e) {
@@ -332,6 +355,10 @@
         unlistenConfig = await listen("config-changed", async () => {
           await loadConfig(true);
         });
+        // Double-copy, hotkey and browser readings fill the field with their text.
+        unlistenReading = await listen<string>("reading-started", (event) => {
+          if (!generating) manualText = event.payload;
+        });
       } catch {}
     }
 
@@ -356,6 +383,7 @@
   onDestroy(() => {
     if (unlistenTruncated) unlistenTruncated();
     if (unlistenConfig) unlistenConfig();
+    if (unlistenReading) unlistenReading();
   });
 </script>
 
@@ -368,14 +396,34 @@
           Paste text here, or copy it twice anywhere.
         </p>
       </div>
-      <label for="reading-text" class="sr-only">Text to read aloud</label>
-      <Textarea
-        id="reading-text"
-        aria-describedby="reader-hint"
-        class="field-sizing-fixed min-h-48 flex-1 resize-none p-4 text-base leading-relaxed"
-        placeholder={$_("play.placeholder")}
-        bind:value={manualText}
-      />
+      {#if caption}
+        <div
+          bind:this={readingView}
+          id="reading-text"
+          role="region"
+          aria-label="Now reading"
+          dir="auto"
+          class="border-input dark:bg-input/30 min-h-48 flex-1 overflow-y-auto rounded-md border p-4 text-base leading-relaxed whitespace-pre-wrap shadow-xs"
+        >
+          {#each captionWords as word, i (word.offset)}<span
+              data-current={i === currentWord || undefined}
+              class={i === currentWord
+                ? "bg-primary text-primary-foreground rounded-sm"
+                : word.end !== null && word.end <= caption.position_ms
+                  ? "text-muted-foreground"
+                  : ""}>{word.text}</span
+            >{:else}{captionText}{/each}
+        </div>
+      {:else}
+        <label for="reading-text" class="sr-only">Text to read aloud</label>
+        <Textarea
+          id="reading-text"
+          aria-describedby="reader-hint"
+          class="field-sizing-fixed min-h-48 flex-1 resize-none p-4 text-base leading-relaxed"
+          placeholder={$_("play.placeholder")}
+          bind:value={manualText}
+        />
+      {/if}
       <div class="flex flex-wrap items-center gap-2">
         <PlaybackControls
           {isPlaying}

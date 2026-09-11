@@ -22,11 +22,11 @@
 
   // Type guards for AutoDeleteMode
   function isKeepLatest(mode: AutoDeleteMode): mode is { keep_latest: number } {
-    return typeof mode === "object" && "keep_latest" in mode;
+    return mode !== "never" && "keep_latest" in mode;
   }
 
   function isAfterDays(mode: AutoDeleteMode): mode is { after_days: number } {
-    return typeof mode === "object" && "after_days" in mode;
+    return mode !== "never" && "after_days" in mode;
   }
 </script>
 

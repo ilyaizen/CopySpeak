@@ -384,6 +384,76 @@ fn cache_audio(app: &AppHandle, speech: &SpeechAudio, text: &str) {
     cache.captions = speech.captions.clone();
 }
 
+/// Saved audio (and caption sidecar) of the newest successful history entry
+/// with this exact text, engine and voice. `None` when no entry matches or its
+/// file is gone or unreadable — the caller then synthesizes as usual.
+fn find_cached_speech(
+    history: &Mutex<HistoryLog>,
+    text: &str,
+    engine: &str,
+    voice: &str,
+) -> Option<SpeechAudio> {
+    let path = history
+        .lock()
+        .unwrap()
+        .entries()
+        .iter()
+        .rev()
+        .filter(|e| e.success && e.text == text && e.voice == voice && e.tts_engine == engine)
+        .find_map(|e| {
+            e.output_path
+                .clone()
+                .filter(|path| std::path::Path::new(path).exists())
+        })?;
+    match std::fs::read(&path) {
+        Ok(bytes) => Some(SpeechAudio {
+            bytes,
+            captions: read_sidecar(&path),
+        }),
+        Err(e) => {
+            log::warn!("[TTS] Saved audio unreadable ({}): {}. Re-synthesizing.", path, e);
+            None
+        }
+    }
+}
+
+/// Saved audio for a whole reading: one entry with this text, or else every
+/// fragment `speak_queued` would split it into, joined in order.
+fn find_cached_reading(
+    history: &Mutex<HistoryLog>,
+    text: &str,
+    pagination_config: &crate::config::PaginationConfig,
+    engine: &str,
+    voice: &str,
+) -> Option<SpeechAudio> {
+    if let Some(speech) = find_cached_speech(history, text, engine, voice) {
+        return Some(speech);
+    }
+    let fragments = pagination::paginate_text(text, pagination_config);
+    if fragments.len() < 2 {
+        return None;
+    }
+    let parts = fragments
+        .into_iter()
+        .map(|f| Some((find_cached_speech(history, &f.text, engine, voice)?, f.text)))
+        .collect::<Option<Vec<_>>>()?;
+    crate::tts::captions::concat_speech(parts)
+        .map_err(|e| log::warn!("[TTS] Cannot join saved fragments: {e}. Re-synthesizing."))
+        .ok()
+}
+
+/// Play audio that history already holds: no new entry, file or telemetry
+/// sample, since nothing was synthesized.
+fn replay_saved_audio(app: &AppHandle, speech: &SpeechAudio, text: &str) {
+    cache_audio(app, speech, text);
+    hud::show_hud(
+        app,
+        extract_envelope_or_default(&speech.bytes),
+        Some(text.to_string()),
+    );
+    emit_audio_ready(app, speech, text);
+}
+
 // ── speak_now ───────────────────────────────────────────────────────────────
 
 /// Manually trigger TTS for the given text (or current clipboard if empty).
@@ -396,7 +466,31 @@ pub async fn speak_now(
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     text: Option<String>,
 ) -> Result<(), String> {
-    speak_now_internal(app, config, _player, history, telemetry_state, text, None).await
+    speak_now_internal(app, config, _player, history, telemetry_state, text, None, true).await
+}
+
+/// Like `speak_now`, but always synthesizes fresh audio, even when history
+/// already holds this text for the active engine and voice.
+#[tauri::command]
+pub async fn regenerate_now(
+    app: AppHandle,
+    config: State<'_, Mutex<AppConfig>>,
+    player: State<'_, Mutex<AudioPlayer>>,
+    history: State<'_, Mutex<HistoryLog>>,
+    telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
+    text: String,
+) -> Result<(), String> {
+    speak_now_internal(
+        app,
+        config,
+        player,
+        history,
+        telemetry_state,
+        Some(text),
+        None,
+        false,
+    )
+    .await
 }
 
 #[tauri::command]
@@ -417,6 +511,7 @@ pub async fn speak_now_with_profile(
         telemetry_state,
         text,
         profile_id,
+        true,
     )
     .await
 }
@@ -429,6 +524,7 @@ async fn speak_now_internal(
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     text: Option<String>,
     _profile_id: Option<String>,
+    reuse_saved_audio: bool,
 ) -> Result<(), String> {
     let text = get_text_or_clipboard(text)?;
     if text.trim().is_empty() {
@@ -466,6 +562,7 @@ async fn speak_now_internal(
     // Optional LLM post-processing (e.g., Groq) — best-effort; falls back to
     // the input text on any failure so synthesis is never blocked.
     let text = crate::post_process::try_process(text, &post_process_config).await;
+    let _ = app.emit("reading-started", &text);
 
     log_tts_debug("TTS", &format!("{:?}", active_backend), &text);
 
@@ -475,27 +572,18 @@ async fn speak_now_internal(
     let backend: Box<dyn TtsBackend> = create_backend_from_effective(&eff, &tts_config);
     let engine_str_for_cache = engine_str(&active_backend);
 
-    // Check for cached audio in history
-    let cached_path = {
-        let hist = history.lock().unwrap();
-        hist.entries().iter().rev().find_map(|e| {
-            if e.text == text
-                && e.voice == voice
-                && e.tts_engine == engine_str_for_cache
-                && e.success
-            {
-                e.output_path.as_ref().and_then(|path| {
-                    if std::path::Path::new(path).exists() {
-                        Some(path.clone())
-                    } else {
-                        None
-                    }
-                })
-            } else {
-                None
-            }
-        })
+    let cached = if reuse_saved_audio {
+        find_cached_reading(
+            &history,
+            &text,
+            &pagination_config,
+            &engine_str_for_cache,
+            &voice,
+        )
+    } else {
+        None
     };
+    let cache_hit = cached.is_some();
 
     let synthesis_start = Instant::now();
 
@@ -528,31 +616,11 @@ async fn speak_now_internal(
     // untouched existing branches.
     let streaming_playback = streaming_enabled
         && backend_arc.supports_streaming()
-        && cached_path.is_none()
+        && !cache_hit
         && !output_config.enabled;
-    let (wav_bytes, already_streamed) = if let Some(ref path) = cached_path {
-        // Try to read cached audio
-        match std::fs::read(path) {
-            Ok(bytes) => {
-                log::info!("[TTS] Reusing cached audio from history: {}", path);
-                (
-                    SpeechAudio {
-                        bytes,
-                        captions: read_sidecar(path),
-                    },
-                    false,
-                )
-            }
-            Err(e) => {
-                log::warn!(
-                    "[TTS] Found cached history entry but failed to read audio file: {}. Re-synthesizing.",
-                    e
-                );
-                let bytes =
-                    synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?;
-                (bytes, false)
-            }
-        }
+    let (wav_bytes, already_streamed) = if let Some(speech) = cached {
+        log::info!("[TTS] Replaying saved audio from history instead of synthesizing");
+        (speech, false)
     } else if pagination::should_paginate(&text, &pagination_config) && !output_config.enabled {
         // Pagination comes first even for streaming engines: bounded fragments
         // keep each request under the provider's input limit (OpenAI rejects
@@ -600,21 +668,23 @@ async fn speak_now_internal(
     let synthesis_duration = synthesis_start.elapsed();
     let synthesis_ms = synthesis_duration.as_millis() as u64;
 
-    // Record telemetry
-    record_telemetry(
-        &telemetry_state,
-        &engine_str(&active_backend),
-        &voice,
-        text.len(),
-        synthesis_ms,
-    );
+    // A replay took no synthesis time; recording it would skew estimates.
+    if !cache_hit {
+        record_telemetry(
+            &telemetry_state,
+            &engine_str(&active_backend),
+            &voice,
+            text.len(),
+            synthesis_ms,
+        );
+    }
 
     if crate::logging::is_debug_mode() {
         log::debug!("[TTS] Synthesis completed in {:?}", synthesis_duration);
         log::debug!("[TTS] Audio size: {} bytes", wav_bytes.bytes.len());
     }
 
-    // Handle file output mode
+    // Handle file output mode (a replay still writes the requested file)
     if output_config.enabled && !output_config.directory.is_empty() {
         return handle_file_output(
             &app,
@@ -627,6 +697,11 @@ async fn speak_now_internal(
             &output_config,
             synthesis_ms,
         );
+    }
+
+    if cache_hit {
+        replay_saved_audio(&app, &wav_bytes, &text);
+        return Ok(());
     }
 
     // Normal playback mode
@@ -914,6 +989,7 @@ pub async fn speak_queued(
 
     // Optional LLM post-processing — best-effort; falls back on failure.
     let text = crate::post_process::try_process(text, &post_process_config).await;
+    let _ = app.emit("reading-started", &text);
 
     log_tts_debug("Queue", &format!("{:?}", active_backend), &text);
 
@@ -992,6 +1068,19 @@ pub async fn speak_queued(
     let engine_str_val = engine_str(&active_backend);
     let engine_id_val = engine_identifier(&active_backend);
 
+    // Repeated text replays saved audio — only when history holds every
+    // fragment, so a reading never mixes saved and fresh parts nor leaves a
+    // partial batch in history.
+    let mut saved: Option<std::vec::IntoIter<SpeechAudio>> = fragments
+        .iter()
+        .map(|f| find_cached_speech(&history, &f.text, &engine_str_val, &voice))
+        .collect::<Option<Vec<_>>>()
+        .map(Vec::into_iter);
+    let replaying = saved.is_some();
+    if replaying {
+        log::info!("[Queue] Replaying saved audio for all {} fragments", total);
+    }
+
     // Synthesize and play each fragment
     for (index, fragment) in fragments.iter().enumerate() {
         // Check if we should stop
@@ -1054,8 +1143,10 @@ pub async fn speak_queued(
         // Synthesize fragment — streaming-capable backends forward PCM chunks
         // as they arrive; batch backends take the untouched synthesize path.
         let fragment_start = Instant::now();
-        let streamed = streaming_enabled && backend_arc.supports_streaming();
-        let wav_bytes = if streamed {
+        let streamed = !replaying && streaming_enabled && backend_arc.supports_streaming();
+        let wav_bytes = if let Some(speech) = saved.as_mut().and_then(Iterator::next) {
+            speech
+        } else if streamed {
             synthesize_streaming_and_emit(
                 &app,
                 backend_arc.clone(),
@@ -1073,14 +1164,15 @@ pub async fn speak_queued(
             return Ok(());
         }
 
-        // Record telemetry
-        record_telemetry(
-            &telemetry_state,
-            &engine_str_val,
-            &voice,
-            fragment.text.len(),
-            fragment_duration.as_millis() as u64,
-        );
+        if !replaying {
+            record_telemetry(
+                &telemetry_state,
+                &engine_str_val,
+                &voice,
+                fragment.text.len(),
+                fragment_duration.as_millis() as u64,
+            );
+        }
 
         // Store audio in queue
         {
@@ -1102,36 +1194,43 @@ pub async fn speak_queued(
             hud::show_hud(&app, envelope.clone(), Some(text.clone()));
         }
 
-        // Save to history
-        let audio_ext = backend_arc.file_extension().to_string();
-        let voice_name = voice_display_name(
-            &active_backend,
-            &tts_config,
-            &voice,
-            eff.voice_label.as_deref(),
-        );
-        let history_path =
-            save_to_history_storage(&config, &wav_bytes, &engine_id_val, &voice_name, &audio_ext);
+        // Save to history (a replay is already there)
+        if !replaying {
+            let audio_ext = backend_arc.file_extension().to_string();
+            let voice_name = voice_display_name(
+                &active_backend,
+                &tts_config,
+                &voice,
+                eff.voice_label.as_deref(),
+            );
+            let history_path = save_to_history_storage(
+                &config,
+                &wav_bytes,
+                &engine_id_val,
+                &voice_name,
+                &audio_ext,
+            );
 
-        // Build metadata
-        let mut metadata = HashMap::new();
-        if total > 1 {
-            metadata.insert("fragment_index".to_string(), serde_json::json!(index));
-            metadata.insert("fragment_total".to_string(), serde_json::json!(total));
+            // Build metadata
+            let mut metadata = HashMap::new();
+            if total > 1 {
+                metadata.insert("fragment_index".to_string(), serde_json::json!(index));
+                metadata.insert("fragment_total".to_string(), serde_json::json!(total));
+            }
+
+            add_history_with_metadata(
+                &history,
+                &fragment.text,
+                &engine_str_val,
+                &voice,
+                envelope.duration_ms,
+                history_path,
+                batch_id.clone(),
+                fragment_duration.as_millis() as u64,
+                Some(metadata),
+            );
+            let _ = app.emit("history-updated", ());
         }
-
-        add_history_with_metadata(
-            &history,
-            &fragment.text,
-            &engine_str_val,
-            &voice,
-            envelope.duration_ms,
-            history_path,
-            batch_id.clone(),
-            fragment_duration.as_millis() as u64,
-            Some(metadata),
-        );
-        let _ = app.emit("history-updated", ());
 
         // Emit audio fragment for streaming playback. Skipped when the PCM
         // chunks were already forwarded by the streaming path above.
@@ -1441,5 +1540,74 @@ mod streaming_tests {
         .unwrap();
         assert_eq!(finals, 1);
         assert_eq!(wav.bytes.len(), 44 + 3);
+    }
+}
+
+#[cfg(test)]
+mod cache_tests {
+    use super::*;
+    use crate::history::HistoryEntry;
+
+    fn saved(history: &Mutex<HistoryLog>, text: &str, voice: &str) -> std::path::PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "copyspeak-cache-test-{}-{}.wav",
+            std::process::id(),
+            history.lock().unwrap().entries().len()
+        ));
+        let meta = AudioFormatMeta {
+            sample_rate: 8000,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        std::fs::write(&path, pcm_to_wav(&[0, 0, 1, 0], &meta)).unwrap();
+        history.lock().unwrap().add(HistoryEntry {
+            id: text.to_string(),
+            timestamp: chrono::Utc::now(),
+            text: text.to_string(),
+            text_length: text.len() as u32,
+            tts_engine: "edge".into(),
+            voice: voice.into(),
+            speed: 1.0,
+            output_format: None,
+            output_path: Some(path.to_string_lossy().into_owned()),
+            duration_ms: 0,
+            batch_id: None,
+            app_name: None,
+            source: None,
+            filters_applied: Vec::new(),
+            success: true,
+            error_message: None,
+            attempts: 1,
+            tags: Vec::new(),
+            metadata: HashMap::new(),
+        });
+        path
+    }
+
+    #[test]
+    fn replays_a_reading_only_when_every_fragment_is_saved() {
+        let pagination = crate::config::PaginationConfig {
+            enabled: true,
+            fragment_size: 25,
+        };
+        let text = "First sentence goes here. Second sentence goes here.";
+        let fragments = pagination::paginate_text(text, &pagination);
+        assert_eq!(fragments.len(), 2);
+        let history = Mutex::new(HistoryLog::new());
+        let first = saved(&history, &fragments[0].text, "ava");
+        assert!(find_cached_reading(&history, text, &pagination, "edge", "ava").is_none());
+
+        let second = saved(&history, &fragments[1].text, "ava");
+        let joined = find_cached_reading(&history, text, &pagination, "edge", "ava").unwrap();
+        assert_eq!(
+            crate::audio::wav::parse_wav_header(&joined.bytes).unwrap().data_size,
+            8,
+            "both fragments' samples, in order"
+        );
+        assert!(find_cached_reading(&history, text, &pagination, "edge", "other").is_none());
+
+        std::fs::remove_file(&second).unwrap();
+        assert!(find_cached_reading(&history, text, &pagination, "edge", "ava").is_none());
+        std::fs::remove_file(&first).unwrap();
     }
 }

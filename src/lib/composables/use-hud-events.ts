@@ -37,7 +37,7 @@ export function useHudEvents() {
       const eventApi = await import("@tauri-apps/api/event");
 
       unlisteners.start = await eventApi.listen<HudStartPayload>("hud:start", (event) => {
-        eventApi.emit("hud:diag:start-received");
+        void eventApi.emit("hud:diag:start-received");
         hudStore.handleStart(event.payload);
       });
 

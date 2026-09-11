@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-09-12
+
+### Added
+
+- **Repeated text replays saved audio** — a double-copy, browser reading, hotkey or Play with text that history already holds for the active engine and voice plays the saved audio (with its caption sidecar) instead of calling the engine again. A paginated reading replays only when every fragment is saved, so it never mixes saved and fresh parts. A replay adds no history row, audio file or telemetry sample; history's **Regenerate** always synthesizes fresh audio (`regenerate_now`).
+- **The Play page shows what is being read** — double-copy, hotkey and browser readings fill the text field with their text (`reading-started` event), and while audio plays the field becomes a live caption view of the audible part: spoken words dim, the current word is highlighted and kept in view.
+- **Browser companion context menu** — right-click a selection and choose **Read with CopySpeak**.
+
+### Changed
+
+- **Browser companion shortcut is now `Alt+Shift+T`** (Chrome applies it on fresh installs only).
+
+### Fixed
+
+- **Play-page cache hits no longer duplicate history** — replaying saved audio used to add a new history row, copy the audio file again and record a ~0 ms synthesis sample that skewed time estimates.
+- **Browser companion accepts selections that cross hidden or script text** — a selection spanning an inline `<script>`, SVG icon or hidden label was refused outright ("Select text in one permitted, ordinary HTML frame"); that text is now skipped.
+- **Browser companion survives a quick second reading** — starting a new reading while the previous native host was still exiting found the single-instance pipe busy and failed with the "check native-host installation" badge; the host now waits for the pipe to free up.
+- **Browser companion explains failures** — a refused selection or a failed synthesis now shows the `!` badge with the reason in its tooltip instead of ending silently.
+
 ## [0.2.1] - 2026-09-10
 
 ### Changed

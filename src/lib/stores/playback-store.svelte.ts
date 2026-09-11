@@ -13,7 +13,7 @@ import { isTauri } from "$lib/services/tauri.js";
 import { invoke } from "@tauri-apps/api/core";
 import type { EffectId } from "$lib/types";
 import { applyFadeIn, audioBufferToWavBlob, detectAudioMimeType } from "./playback/audio-utils.js";
-import { AudioAnalyser } from "./playback/analyser.js";
+import { AudioAnalyser, type EmitPayload } from "./playback/analyser.js";
 import { PcmStreamScheduler, type StreamChunkPayload } from "./playback/pcm-stream.js";
 import { stretchBuffer } from "./playback/time-stretch.js";
 import { getEffect } from "./playback/effects/registry.js";
@@ -31,6 +31,8 @@ class PlaybackStore {
   hasCachedAudio = $state(false);
   // Retained after stop/completion so the owning history row can offer Replay.
   historyReadingId = $state<string | null>(null);
+  // Audible fragment's text, caption timings and clock; null when nothing plays.
+  caption = $state<HudCaptionPayload | null>(null);
 
   // Pagination state for HUD display
   currentFragmentIndex = $state<number | null>(null);
@@ -48,8 +50,8 @@ class PlaybackStore {
   private _originalBytes: ArrayBuffer | null = null;
   private _cachedPitchUrl: { ratio: number; effectId: EffectId; url: string } | null = null;
   private _unlistenFns: Array<() => void> = [];
-  private _emit: ((name: string, payload: unknown) => Promise<void>) | null = null;
-  private _emitTo: ((target: string, name: string, payload: unknown) => Promise<void>) | null =
+  private _emit: ((name: string, payload: EmitPayload) => Promise<void>) | null = null;
+  private _emitTo: ((target: string, name: string, payload: EmitPayload) => Promise<void>) | null =
     null;
   private _stopping = false;
   private _playbackGeneration = 0;
@@ -129,6 +131,7 @@ class PlaybackStore {
     if (this._captionTimer !== null) clearInterval(this._captionTimer);
     this._captionTimer = null;
     this._lastCaption = null;
+    this.caption = null;
     this._streamCaptions.clear();
   }
 
@@ -165,6 +168,7 @@ class PlaybackStore {
     }
     if (!caption) return;
     this._lastCaption = caption;
+    this.caption = caption;
     hudStore.handleCaption(caption);
     void this._emitTo?.("hud", "hud:caption", caption);
     // Report the audible clock to the browser bridge. Best-effort: the bridge
@@ -276,7 +280,7 @@ class PlaybackStore {
         const accurateDurationMs = Math.round(this._decodedBuffer.duration * 1000);
         hudStore.setAccurateDurationMs(accurateDurationMs);
         // Emit to HUD window for cross-window state sync
-        this._emit?.("hud:audio-duration", accurateDurationMs);
+        void this._emit?.("hud:audio-duration", accurateDurationMs);
       }
       const url = await this.buildPlaybackUrl(this.pitch);
       if (generation !== this._playbackGeneration) return;
@@ -289,7 +293,7 @@ class PlaybackStore {
     } catch (e) {
       if (generation !== this._playbackGeneration) return;
       this.handleStop();
-      this.error = `Audio playback failed: ${e}`;
+      this.error = `Audio playback failed: ${e instanceof Error ? e.message : String(e)}`;
     } finally {
       if (generation === this._playbackGeneration) this.isLoadingAudio = false;
     }
@@ -431,7 +435,7 @@ class PlaybackStore {
         await this.playAudio();
       } catch (e) {
         this.handleStop();
-        this.error = `Audio playback failed: ${e}`;
+        this.error = `Audio playback failed: ${e instanceof Error ? e.message : String(e)}`;
       }
     }
   }
@@ -634,7 +638,7 @@ class PlaybackStore {
       this._cachedPitchUrl = null;
     }
     if (this._audioCtx) {
-      this._audioCtx.close();
+      void this._audioCtx.close();
       this._audioCtx = null;
     }
     this._emit = null;

@@ -20,6 +20,8 @@
   const localeOptions = getSupportedLocales();
 
   function handleThemeChange(e: Event) {
+    // SAFETY: this handler is only bound to the theme <select>; its target is that element
+    // and its options enumerate exactly system/light/dark.
     localConfig.general.appearance = (e.target as HTMLSelectElement).value as
       | "system"
       | "light"
@@ -27,6 +29,7 @@
   }
 
   function handleLocaleChange(e: Event) {
+    // SAFETY: localeOptions enumerates SupportedLocale, so the select's value is one of them.
     localConfig.general.locale = (e.target as HTMLSelectElement).value as SupportedLocale;
   }
 </script>

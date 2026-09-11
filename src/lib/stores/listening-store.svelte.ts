@@ -39,7 +39,7 @@ class ListeningStore {
       this._isListening = newState;
       this._error = null;
     } catch (e) {
-      this._error = `${e}`;
+      this._error = `${e instanceof Error ? e.message : String(e)}`;
       console.error("Failed to toggle listening state:", e);
     }
   }
@@ -55,7 +55,7 @@ class ListeningStore {
       this._isListening = enabled;
       this._error = null;
     } catch (e) {
-      this._error = `${e}`;
+      this._error = `${e instanceof Error ? e.message : String(e)}`;
       console.error("Failed to set listening state:", e);
     }
   }
@@ -84,10 +84,10 @@ if (isTauri) {
     })
   ])
     .then(() => {
-      listeningStore.loadFromBackend();
+      void listeningStore.loadFromBackend();
       if (listenFn) {
-        listenFn("config-changed", () => {
-          listeningStore.loadFromBackend();
+        void listenFn("config-changed", () => {
+          void listeningStore.loadFromBackend();
         });
       }
     })
