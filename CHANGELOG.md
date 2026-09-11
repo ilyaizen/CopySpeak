@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-09-11
+
+### Fixed
+
+- **ElevenLabs live captions survive the new with-timestamps stream format** — ElevenLabs changed its with-timestamps streams: alignment now arrives on the leading record only (full text, accurate end timestamp) and later records stream audio alone. The decoder cleared complete captions at the first audio-only record, killing live captions on every surface (HUD, Play page, browser companion) mid-reading. Audio-only records after an aligned one are now treated as normal; captions hard-degrade only when no aligned record ever arrives or the metadata is malformed.
+- **Fragment seams no longer click** — `TimeStretcher` gives its first output after every reset a ~5 ms fade-in and holds the last ~5 ms of input out of the WSOLA feed for flush, so a cold-start full-amplitude sample or a hard speech-to-silence step no longer clicks at fragment boundaries.
+
 ## [0.2.2] - 2026-09-12
 
 ### Added
@@ -657,7 +664,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.15...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.2...HEAD
+[0.2.3]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.2...v0.2.3
 [0.1.16]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.15...v0.1.16
 [0.1.15]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.14...v0.1.15
 [0.1.14]: https://github.com/ilyaizen/CopySpeak/compare/v0.1.13...v0.1.14

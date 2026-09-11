@@ -71,6 +71,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Captions dying on every surface at once means the active engine's provider stopped emitting timing metadata, not a broken pipeline: check `%APPDATA%/CopySpeak/logs` for "Disabling ... captions" and verify other engines still write `.captions.json` sidecars before touching code; guard ElevenLabs drift by running the `#[ignore]`d `live_caption_probe` (`cargo test live_caption_probe -- --ignored --nocapture`) before releases.
 - The app loads secrets from `<exe-dir>/.env` (`src-tauri/target/debug/.env` in dev), not the repo-root `.env`; diagnose key/quota questions against the file the log line names.
 - ElevenLabs with-timestamps streams carry alignment on the leading record(s) and stream later records as audio alone; treat audio-only records after an aligned one as normal, and hard-degrade only when no aligned record ever arrives.
+- `bun run bump` derives the new version only from `src/lib/version.ts`; a stale version.ts under-shoots every file and `No version string found` means that file already carried the target — verify all five ✅ lines after bumping.
 
 <!-- rtk-instructions v2 -->
 
