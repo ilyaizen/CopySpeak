@@ -44,6 +44,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Reject unusable caption metadata without rejecting valid PCM; propagate caption clears to live/cache/history consumers, keep audio/protocol errors fatal, and retain source text for untimed fragments when joining readings.
 - Route playback speed and pitch through `TimeStretcher` (SoundTouch `pitch` setter, then `stretch.tempo = speed / pitch`); keep `playbackRate` at 1 on PCM sources and track `ScheduledPosition` duration/offset/rate in native time.
 - On a rate change, re-stretch the native chunks of unstarted PCM sources; audio already rendered keeps the rate it was rendered at, since absolute start times do not move.
+- Give `TimeStretcher`'s first output after every reset a ~5 ms fade-in, and hold the last ~5 ms of input out of the WSOLA feed for flush to release decaying; a cold-start full-amplitude sample or a hard speech-to-silence flush step clicks at fragment seams. Re-feeding a faded copy of the tail is not enough - the backward jump clicks too.
 - Drive HUD captions from the audible fragment's audio clock; synthesis events may describe a later fragment, and incoming PCM chunks must not resume a user-paused stream.
 - Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
 - Treat `git diff --check` as a check; do not run it before explicit confirmation.

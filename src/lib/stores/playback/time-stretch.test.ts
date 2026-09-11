@@ -46,6 +46,39 @@ function render(
   return joined;
 }
 
+/**
+ * Voiced worst case for WSOLA matching: gliding f0 with vibrato and 15
+ * harmonics, so any splice lands mid-waveform instead of on a zero crossing.
+ */
+function voiced(frames: number): Float32Array<ArrayBuffer> {
+  const out = new Float32Array(frames);
+  let phase = 0;
+  for (let i = 0; i < frames; i++) {
+    const t = i / SAMPLE_RATE;
+    const f0 = 145 + 35 * Math.sin(2 * Math.PI * 0.21 * t) + 4 * Math.sin(2 * Math.PI * 6 * t);
+    phase += (2 * Math.PI * f0) / SAMPLE_RATE;
+    let volume = 0;
+    for (let h = 1; h <= 15; h++) volume += Math.sin(phase * h) / h;
+    out[i] = 0.3 * volume;
+  }
+  return out;
+}
+
+/** Largest per-sample step, restricted to (or, with `exclude`, away from) a window around each seam. */
+function maxDeltaNearSeams(
+  samples: Float32Array,
+  seams: number[],
+  window: number,
+  exclude = false
+): number {
+  let max = 0;
+  for (let i = 1; i < samples.length; i++) {
+    if (seams.some((seam) => Math.abs(i - seam) <= window) === exclude) continue;
+    max = Math.max(max, Math.abs(samples[i] - samples[i - 1]));
+  }
+  return max;
+}
+
 describe("TimeStretcher", () => {
   it("passes audio through untouched at speed 1 and pitch 1", () => {
     const input = sine(SAMPLE_RATE, 440);
@@ -100,6 +133,58 @@ describe("TimeStretcher", () => {
     expect(body + tail).toBeLessThanOrEqual(Math.round(input.length / 1.25));
     expect(body + tail).toBeGreaterThan(input.length / 1.25 - 0.05 * SAMPLE_RATE);
   });
+
+  // Flush resets SoundTouch between fragments; without the fades the next
+  // fragment's first sample lands at full amplitude in one step while the
+  // flushed tail splices mid-waveform. Both showed up as per-sample steps well
+  // above the signal's natural slew, audible as scattered ticks.
+  it.each([
+    [1.35, 1.15],
+    [1.25, 1.0]
+  ])(
+    "keeps fragment seams as smooth as the surrounding audio (speed %s, pitch %s)",
+    (speed, pitch) => {
+      const input = voiced(6 * SAMPLE_RATE);
+      const fragmentFrames = 2 * SAMPLE_RATE;
+      const chunkFrames = 2048;
+      const stretcher = new TimeStretcher(SAMPLE_RATE, 1);
+      stretcher.setRate(speed, pitch);
+      const parts: Float32Array[] = [];
+      const seams: number[] = [];
+      let total = 0;
+      for (let start = 0; start < input.length; start += fragmentFrames) {
+        const end = Math.min(start + fragmentFrames, input.length);
+        for (let offset = start; offset < end; offset += chunkFrames) {
+          const output = stretcher.push([input.slice(offset, Math.min(offset + chunkFrames, end))]);
+          if (output) {
+            parts.push(output[0]);
+            total += output[0].length;
+          }
+        }
+        const tail = stretcher.flush();
+        if (tail) {
+          parts.push(tail[0]);
+          total += tail[0].length;
+        }
+        if (end < input.length) seams.push(total);
+      }
+      const joined = new Float32Array(total);
+      let written = 0;
+      for (const part of parts) {
+        joined.set(part, written);
+        written += part.length;
+      }
+
+      // Reference is the same stretched audio away from the seams - the signal's
+      // natural per-sample slew. 15 ms covers the flushed-tail splice and the
+      // next fragment's post-seam onset.
+      const window = Math.round(0.015 * SAMPLE_RATE);
+      const nearSeams = maxDeltaNearSeams(joined, seams, window);
+      const elsewhere = maxDeltaNearSeams(joined, seams, window, true);
+      expect(seams.length).toBe(2);
+      expect(nearSeams).toBeLessThanOrEqual(elsewhere);
+    }
+  );
 });
 
 describe("concatTrim", () => {

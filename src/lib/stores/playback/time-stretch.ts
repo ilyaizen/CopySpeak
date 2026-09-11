@@ -84,16 +84,26 @@ export function concatTrim(
 export class TimeStretcher {
   private readonly _processor: SoundTouch;
   private readonly _channelCount: number;
+  /** ~5 ms of frames - long enough to mask a seam step, short enough to stay inaudible. */
+  private readonly _fadeFrames: number;
   private _speed = 1;
   private _pitch = 1;
   /** Frames the current rate says should have been emitted for everything fed so far. */
   private _expectedFrames = 0;
   private _emittedFrames = 0;
+  /** Output frames still owed a fade-in since the last reset (reading start, fragment seam). */
+  private _fadeInRemaining = 0;
+  /** Real input held back from the WSOLA feed, released decaying by flush. */
+  private readonly _pending: Float32Array;
+  private _pendingLen = 0;
 
   constructor(sampleRate: number, channelCount: number) {
     this._channelCount = Math.min(Math.max(channelCount, 1), 2);
+    this._fadeFrames = Math.max(1, Math.round(sampleRate * 0.005));
+    this._pending = new Float32Array(this._fadeFrames * SAMPLES_PER_FRAME);
     this._processor = new SoundTouch({ sampleRate, sampleBufferType: "fifo" });
     this.setRate(1, 1);
+    this._fadeInRemaining = this._fadeFrames;
   }
 
   /** True when no processing is needed and chunks pass through untouched. */
@@ -117,15 +127,15 @@ export class TimeStretcher {
       this._emittedFrames += frames;
       return channels;
     }
-    this._processor.inputBuffer.putSamples(interleave(channels));
+    this._feed(interleave(channels));
     this._processor.process();
     return this._drain();
   }
 
   /**
-   * Push the trailing WSOLA window out with silence and reset. Output is capped
-   * at the frame count the pushed audio is owed, so the padding never becomes
-   * audible silence or drifts the caption clock.
+   * Push the trailing WSOLA window out with a decayed input tail into silence
+   * and reset. Output is capped at the frame count the pushed audio is owed, so
+   * the padding never becomes audible silence or drifts the caption clock.
    */
   flush(): PcmChannel[] | null {
     if (this.isBypassed) {
@@ -134,8 +144,17 @@ export class TimeStretcher {
     }
     // ponytail: pad generously rather than model the transposer's frame ratio;
     // the owed-frames cap below discards whatever the padding over-produced.
-    const padFrames = Math.max(1, this._processor.stretch.sampleReq * 4);
-    this._processor.inputBuffer.putSamples(new Float32Array(padFrames * SAMPLES_PER_FRAME));
+    const padFrames = Math.max(this._fadeFrames + 1, this._processor.stretch.sampleReq * 4);
+    const padding = new Float32Array(padFrames * SAMPLES_PER_FRAME);
+    // Release the held-back tail at a linear decay: a hard speech-to-silence step
+    // forces WSOLA to splice inside the flushed tail, which clicks.
+    const tailFrames = this._pendingLen / SAMPLES_PER_FRAME;
+    for (let frame = 0; frame < tailFrames; frame++) {
+      const gain = 1 - frame / tailFrames;
+      padding[frame * SAMPLES_PER_FRAME] = this._pending[frame * SAMPLES_PER_FRAME] * gain;
+      padding[frame * SAMPLES_PER_FRAME + 1] = this._pending[frame * SAMPLES_PER_FRAME + 1] * gain;
+    }
+    this._processor.inputBuffer.putSamples(padding);
     this._processor.process();
     const drained = this._drain();
     const owed =
@@ -150,6 +169,8 @@ export class TimeStretcher {
     this._processor.clear();
     this._expectedFrames = 0;
     this._emittedFrames = 0;
+    this._pendingLen = 0;
+    this._fadeInRemaining = this._fadeFrames;
   }
 
   private _drain(): PcmChannel[] | null {
@@ -158,8 +179,49 @@ export class TimeStretcher {
     const interleaved = new Float32Array(frames * SAMPLES_PER_FRAME);
     this._processor.outputBuffer.extract(interleaved, 0, frames);
     this._processor.outputBuffer.receive(frames);
+    this._applyFadeIn(interleaved, frames);
     this._emittedFrames += frames;
     return deinterleave(interleaved, frames, this._channelCount);
+  }
+
+  /**
+   * Linear fade-in over the first output after a reset. The previous fragment's
+   * flushed tail ends at ~0, and SoundTouch's cold start would otherwise emit
+   * its primer sample at full amplitude in a single step.
+   */
+  private _applyFadeIn(interleaved: Float32Array, frames: number): void {
+    if (this._fadeInRemaining <= 0) return;
+    const fadeFrom = this._fadeFrames - this._fadeInRemaining;
+    const count = Math.min(this._fadeInRemaining, frames);
+    for (let frame = 0; frame < count; frame++) {
+      const gain = (fadeFrom + frame) / this._fadeFrames;
+      interleaved[frame * SAMPLES_PER_FRAME] *= gain;
+      interleaved[frame * SAMPLES_PER_FRAME + 1] *= gain;
+    }
+    this._fadeInRemaining -= count;
+  }
+
+  /**
+   * Feed WSOLA everything except the trailing ~5 ms, which stays pending so
+   * flush can release it through a decay instead of stepping off real speech
+   * straight into silence.
+   */
+  private _feed(interleaved: Float32Array): void {
+    const total = this._pendingLen + interleaved.length;
+    const keep = Math.min(this._pending.length, total);
+    const feedLen = total - keep;
+    if (feedLen > 0) {
+      const fromPending = Math.min(this._pendingLen, feedLen);
+      const feed = new Float32Array(feedLen);
+      feed.set(this._pending.subarray(0, fromPending), 0);
+      feed.set(interleaved.subarray(0, feedLen - fromPending), fromPending);
+      this._processor.inputBuffer.putSamples(feed);
+    }
+    const start = total - keep;
+    const fromPending = Math.max(0, this._pendingLen - start);
+    this._pending.copyWithin(0, this._pendingLen - fromPending, this._pendingLen);
+    this._pending.set(interleaved.subarray(interleaved.length - (keep - fromPending)), fromPending);
+    this._pendingLen = keep;
   }
 }
 
