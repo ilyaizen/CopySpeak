@@ -44,12 +44,15 @@ _WORD = re.compile(r"\S+")
 
 
 def enable_cuda_dlls() -> None:
-    """Windows: register the nvidia-* wheel DLL directories.
+    """Windows: put the nvidia-* wheel DLL directories on the DLL search paths.
 
-    onnxruntime-gpu and torch do not locate cuDNN/cuBLAS on their own, and since
+    onnxruntime-gpu and torch do not locate cuDNN/cuBLAS on their own. Since
     Python 3.8 the process PATH is ignored for extension-module dependencies —
-    only os.add_dll_directory counts. Globs both the CUDA 12 wheel layout
-    (nvidia/<pkg>/bin) and CUDA 13, which consolidates under nvidia/cu13/bin/<arch>.
+    only os.add_dll_directory counts there — but onnxruntime then loads
+    cudnn64_9.dll and cublas64_13.dll with plain LoadLibrary, which ignores
+    add_dll_directory and honors PATH, so both are set. Globs both the CUDA 12
+    wheel layout (nvidia/<pkg>/bin) and CUDA 13, which consolidates under
+    nvidia/cu13/bin/<arch>.
 
     A no-op off Windows and when the nvidia-* wheels are not installed; the
     caller then fails loudly at session creation rather than silently on CPU.
@@ -67,10 +70,14 @@ def enable_cuda_dlls() -> None:
         )
         return
     root = list(nvidia.__path__)[0]
+    dirs = []
     for pattern in ("*/bin", "*/bin/*"):
         for path in glob.glob(os.path.join(root, pattern)):
             if os.path.isdir(path):
                 os.add_dll_directory(path)
+                dirs.append(path)
+    if dirs:
+        os.environ["PATH"] = ";".join(dirs) + ";" + os.environ["PATH"]
 
 
 def read_text(args) -> str:

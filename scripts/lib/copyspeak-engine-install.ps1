@@ -125,9 +125,15 @@ function Add-CudaRuntime {
             # The CPU wheel and the GPU wheel both provide the `onnxruntime`
             # module, so the CPU one has to go first or resolution is a coin flip.
             try { Invoke-Uv remove --project $EngineDir onnxruntime } catch { }
+            # Current onnxruntime-gpu builds target CUDA 13 (the provider imports
+            # cublas64_13/cudart64_13); paired with the old cu12 wheels, session
+            # creation dies with "Invalid handle. Cannot load symbol cudnnCreate".
+            # nvidia-cuda-runtime-cu13 is a deprecated 0.0.1 placeholder whose
+            # build fails on purpose - the CUDA 13 runtime publishes under
+            # nvidia-cuda-runtime. cudnn-cu13 pulls cublas/nvrtc along; the
+            # provider's FFT ops still import cufft64_12, so that one stays cu12.
             Invoke-Uv add --project $EngineDir onnxruntime-gpu `
-                nvidia-cuda-runtime-cu12 nvidia-cudnn-cu12 nvidia-cublas-cu12 `
-                nvidia-cufft-cu12 nvidia-curand-cu12 nvidia-cusparse-cu12 nvidia-nvjitlink-cu12
+                nvidia-cuda-runtime nvidia-cudnn-cu13 nvidia-cufft-cu12
         }
     } catch {
         Write-Host "  [ERROR] cuda ($_)" -ForegroundColor Red
