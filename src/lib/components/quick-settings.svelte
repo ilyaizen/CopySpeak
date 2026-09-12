@@ -99,7 +99,7 @@
           aria-label="Speed"
           disabled={!activeProfile}
           min={0.5}
-          max={2}
+          max={1.5}
           step={0.05}
           value={profileSpeed}
           oninput={(v) => (speedLive = v)}
@@ -121,7 +121,7 @@
           aria-label="Pitch"
           disabled={!activeProfile}
           min={0.75}
-          max={1.35}
+          max={1.25}
           step={0.01}
           value={profilePitch}
           oninput={(v) => (pitchLive = v)}
