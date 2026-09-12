@@ -108,11 +108,13 @@ def split_sentences(text: str) -> list[str]:
 
 
 def word_timings(text: str, duration_ms: float) -> list[dict]:
-    """Exact UTF-16 word offsets; times proportional to word length.
+    """Exact UTF-16 word offsets; raw ms proportional to word length.
 
     The sentence's real audio duration is spread across its words by character
     weight — an honest estimate, since KittenTTS exposes no alignment. The last
-    word ends exactly at the audio's end.
+    word ends exactly at the audio's end. Values stay unrounded: rounding
+    happens once, in offset_timings, so a sentence's last word and its
+    neighbor's first word can never drift apart by a rounded 0.1 ms.
     """
     matches = list(_WORD.finditer(text))
     if not matches:
@@ -133,8 +135,8 @@ def word_timings(text: str, duration_ms: float) -> list[dict]:
             {
                 "text_start": units,
                 "text_end": units + utf16_len(match.group()),
-                "start_ms": round(cursor, 1),
-                "end_ms": round(cursor_end, 1),
+                "start_ms": cursor,
+                "end_ms": cursor_end,
             }
         )
         units += utf16_len(match.group())
@@ -144,7 +146,11 @@ def word_timings(text: str, duration_ms: float) -> list[dict]:
 
 
 def offset_timings(timings: list[dict], text_offset: int, ms_offset: float) -> list[dict]:
-    """Shift one sentence's timings into the request's text and audio clock."""
+    """Shift one sentence's timings into the request's text and audio clock.
+
+    The single rounding point: every emitted millisecond is rounded once, after
+    accumulation, so adjacent sentences' word times stay monotone.
+    """
     return [
         {
             "text_start": timing["text_start"] + text_offset,
