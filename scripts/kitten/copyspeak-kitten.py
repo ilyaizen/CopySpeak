@@ -7,23 +7,40 @@ upstream shifts.
 
 Invoked by CopySpeak via:
     uv run --project {engine_dir}/kitten python {engine_dir}/kitten/scripts/copyspeak-kitten.py \
-        --text-file {input} --voice {voice} --output {output} [--device cuda]
+        --text-file {input} --voice {voice} --output {output} [--speed 1.0] [--device cuda]
 
 With --serve the model is loaded once and stays in RAM, speaking protocol v2
 (see src-tauri/src/tts/local_daemon.rs): READY 2, then one JSON request per
-stdin line answered with a format header, length-prefixed 16-bit LE PCM chunks,
+stdin line answered with a format header, caption-frame-plus-PCM-chunk pairs,
 and an end frame. Stdin EOF ends the process.
+
+KittenTTS has no incremental API, so the text is synthesized one sentence at a
+time: each sentence becomes one PCM chunk, so first audio flows without
+waiting for the whole request. Each chunk is preceded by a cumulative caption
+frame, the shape ElevenLabs streams: its text covers every sentence so far
+with exact UTF-16 word offsets, while word times are estimated proportionally
+from each sentence's real audio duration. CopySpeak keeps only the newest
+snapshot on every consumer, so the final frame doubles as the whole-request
+alignment.
 """
 
 import argparse
+import contextlib
 import glob
 import json
 import os
+import re
 import sys
 import wave
 from pathlib import Path
 
 SAMPLE_RATE = 24000
+
+# Sentence end: terminal punctuation (CJK included) plus any closing quotes
+# and the trailing whitespace. The pieces concatenate back to the input text.
+_SENTENCE_END = re.compile(r"[.!?。！？]+[\"'”’)]*\s*")
+
+_WORD = re.compile(r"\S+")
 
 
 def enable_cuda_dlls() -> None:
@@ -65,6 +82,80 @@ def read_text(args) -> str:
     sys.exit(2)
 
 
+def utf16_len(s: str) -> int:
+    """UTF-16 code units — the offset unit CopySpeak's captions address."""
+    return len(s.encode("utf-16-le")) // 2
+
+
+def split_sentences(text: str) -> list[str]:
+    """Split on terminal punctuation; the pieces concatenate back to `text`.
+
+    Keeping each piece's original whitespace is what makes the cumulative
+    caption text byte-identical to the request text, so word offsets can stay
+    absolute.
+    """
+    parts, start = [], 0
+    for match in _SENTENCE_END.finditer(text):
+        parts.append(text[start : match.end()])
+        start = match.end()
+    tail = text[start:]
+    if tail:
+        if parts and not tail.strip():
+            parts[-1] += tail
+        else:
+            parts.append(tail)
+    return parts
+
+
+def word_timings(text: str, duration_ms: float) -> list[dict]:
+    """Exact UTF-16 word offsets; times proportional to word length.
+
+    The sentence's real audio duration is spread across its words by character
+    weight — an honest estimate, since KittenTTS exposes no alignment. The last
+    word ends exactly at the audio's end.
+    """
+    matches = list(_WORD.finditer(text))
+    if not matches:
+        return []
+    weights = [match.end() - match.start() for match in matches]
+    total = sum(weights)
+    timings = []
+    cursor = 0.0
+    units = 0
+    walked = 0
+    for index, (match, width) in enumerate(zip(matches, weights)):
+        units += utf16_len(text[walked : match.start()])
+        walked = match.start()
+        cursor_end = (
+            duration_ms if index == len(matches) - 1 else cursor + duration_ms * width / total
+        )
+        timings.append(
+            {
+                "text_start": units,
+                "text_end": units + utf16_len(match.group()),
+                "start_ms": round(cursor, 1),
+                "end_ms": round(cursor_end, 1),
+            }
+        )
+        units += utf16_len(match.group())
+        walked = match.end()
+        cursor = cursor_end
+    return timings
+
+
+def offset_timings(timings: list[dict], text_offset: int, ms_offset: float) -> list[dict]:
+    """Shift one sentence's timings into the request's text and audio clock."""
+    return [
+        {
+            "text_start": timing["text_start"] + text_offset,
+            "text_end": timing["text_end"] + text_offset,
+            "start_ms": round(timing["start_ms"] + ms_offset, 1),
+            "end_ms": round(timing["end_ms"] + ms_offset, 1),
+        }
+        for timing in timings
+    ]
+
+
 def pcm16(samples) -> bytes:
     """float32 in [-1, 1] -> signed 16-bit little-endian PCM bytes.
 
@@ -87,36 +178,63 @@ def load_engine(model_name: str, device: str):
     """
     from kittentts import KittenTTS
 
-    tts = KittenTTS(model_name)
-    inner = getattr(tts, "model", None)
-    session = getattr(inner, "session", None)
+    # Model load (and any progress output HF prints for a first download) must
+    # never precede the daemon handshake on stdout.
+    with contextlib.redirect_stdout(sys.stderr):
+        tts = KittenTTS(model_name)
+        inner = getattr(tts, "model", None)
+        session = getattr(inner, "session", None)
 
-    if device == "cuda":
-        if session is None or not hasattr(inner, "model_path"):
-            raise RuntimeError(
-                "this KittenTTS build exposes no ONNX session to move to the GPU"
+        if device == "cuda":
+            if session is None or not hasattr(inner, "model_path"):
+                raise RuntimeError(
+                    "this KittenTTS build exposes no ONNX session to move to the GPU"
+                )
+            import onnxruntime as ort
+
+            inner.session = ort.InferenceSession(
+                inner.model_path,
+                providers=[
+                    ("CUDAExecutionProvider", {"cudnn_conv_algo_search": "HEURISTIC"}),
+                    "CPUExecutionProvider",
+                ],
             )
-        import onnxruntime as ort
-
-        inner.session = ort.InferenceSession(
-            inner.model_path,
-            providers=[
-                ("CUDAExecutionProvider", {"cudnn_conv_algo_search": "HEURISTIC"}),
-                "CPUExecutionProvider",
-            ],
-        )
-        session = inner.session
+            session = inner.session
 
     return tts, session
 
 
-def stream(tts, voice: str, text: str):
-    """Yield (pcm16_le_bytes, sample_rate, channels).
+def stream(tts, voice: str, speed: float, text: str):
+    """Yield (pcm, rate, channels, captions) per sentence; captions cumulative.
 
-    KittenTTS has no incremental API, so this is one chunk per request; the
-    framing is the same either way.
+    The caption frame before a chunk covers every sentence so far — word
+    offsets exact in the joined text, word times estimated from each sentence's
+    real audio duration — because CopySpeak's live player and its batch
+    collector both keep only the newest snapshot. Anything the wheel prints
+    during generate is destaged to stderr: on stdout it would interleave with
+    the protocol's binary frames.
     """
-    yield pcm16(tts.generate(text=text, voice=voice, clean_text=True)), SAMPLE_RATE, 1
+    sentences = split_sentences(text)
+    if not any(sentence.strip() for sentence in sentences):
+        raise ValueError("no sentences to synthesize")
+    joined = ""
+    words: list[dict] = []
+    offset_ms = 0.0
+    for sentence in sentences:
+        with contextlib.redirect_stdout(sys.stderr):
+            samples = tts.generate(
+                text=sentence.strip(), voice=voice, speed=speed, clean_text=True
+            )
+        pcm = pcm16(samples)
+        if not pcm:
+            raise ValueError(f"KittenTTS produced no audio for {sentence.strip()!r}")
+        duration_ms = len(pcm) / 2 * 1000 / SAMPLE_RATE
+        words.extend(
+            offset_timings(word_timings(sentence, duration_ms), utf16_len(joined), offset_ms)
+        )
+        joined += sentence
+        offset_ms += duration_ms
+        yield pcm, SAMPLE_RATE, 1, {"text": joined, "words": list(words)}
 
 
 def write_wav(output: str, pcm: bytes, rate: int, channels: int) -> None:
@@ -128,7 +246,7 @@ def write_wav(output: str, pcm: bytes, rate: int, channels: int) -> None:
         wf.writeframes(pcm)
 
 
-def serve(tts, voice: str) -> int:
+def serve(tts, voice: str, speed: float) -> int:
     """Daemon mode, protocol v2. Model stays resident; PCM is framed on stdout.
 
     Everything goes through sys.stdout.buffer — mixing text and binary writes to
@@ -147,7 +265,7 @@ def serve(tts, voice: str) -> int:
     # Best effort: a warmup failure is not a reason to refuse to serve, and the
     # real request will surface the same error properly framed.
     try:
-        for _ in stream(tts, voice, "Ready."):
+        for _ in stream(tts, voice, speed, "Ready."):
             pass
     except Exception as exc:  # pragma: no cover - environment dependent
         print(f"WARNING: warmup failed: {exc}", file=sys.stderr, flush=True)
@@ -163,24 +281,29 @@ def serve(tts, voice: str) -> int:
         if not line:
             continue
         try:
-            chunks = stream(tts, voice, json.loads(line)["text"])
-            first = next(chunks, None)
-            if first is None:
+            # The ok header must precede every other frame, so it is emitted
+            # from the first sentence rather than up front: a request whose
+            # first sentence fails has produced nothing to describe.
+            header = False
+            for pcm, rate, channels, captions in stream(
+                tts, voice, speed, json.loads(line)["text"]
+            ):
+                if not header:
+                    frame(
+                        {
+                            "ok": True,
+                            "sample_rate": rate,
+                            "channels": channels,
+                            "bits_per_sample": 16,
+                        }
+                    )
+                    header = True
+                frame({"captions": captions})
+                if pcm:
+                    frame({"chunk": len(pcm)})
+                    out.write(pcm)
+            if not header:
                 raise RuntimeError("no audio produced")
-            pcm, rate, channels = first
-            frame({
-                "ok": True,
-                "sample_rate": rate,
-                "channels": channels,
-                "bits_per_sample": 16,
-            })
-            while True:
-                frame({"chunk": len(pcm)})
-                out.write(pcm)
-                nxt = next(chunks, None)
-                if nxt is None:
-                    break
-                pcm = nxt[0]
             frame({"end": True})
         except Exception as exc:  # pragma: no cover - environment dependent
             frame({"ok": False, "error": str(exc)})
@@ -195,6 +318,12 @@ def main() -> int:
         "--voice",
         default="Rosie",
         help="Voice name. Options: Bella, Jasper, Luna, Bruno, Rosie, Hugo, Kiki, Leo",
+    )
+    parser.add_argument(
+        "--speed",
+        type=float,
+        default=1.0,
+        help="Native synthesis speed multiplier rendered by the model (1 = normal)",
     )
     parser.add_argument(
         "--model",
@@ -235,11 +364,19 @@ def main() -> int:
     print(f"providers: {providers}", file=sys.stderr, flush=True)
 
     if args.serve:
-        return serve(tts, args.voice)
+        return serve(tts, args.voice, args.speed)
 
     try:
-        pcm, rate, channels = next(stream(tts, args.voice, text))
-        write_wav(args.output, pcm, rate, channels)
+        parts: list[bytes] = []
+        captions: dict | None = None
+        for pcm, rate, channels, captions in stream(tts, args.voice, args.speed, text):
+            if pcm:
+                parts.append(pcm)
+        write_wav(args.output, b"".join(parts), SAMPLE_RATE, 1)
+        if captions and captions["words"]:
+            Path(args.output + ".captions.json").write_text(
+                json.dumps(captions), encoding="utf-8"
+            )
         print(f"OK -> {args.output}", file=sys.stderr)
         return 0
     except Exception as exc:  # pragma: no cover - environment dependent

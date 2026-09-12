@@ -124,7 +124,7 @@ $profileJson = @"
     "engine": "local",
     "preset": "kitten-tts",
     "command": "uv",
-    "args_template": ["run", "--project", "{engine_dir}/kitten", "python", "{engine_dir}/kitten/scripts/copyspeak-kitten.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}", "--model", "{model}"]
+    "args_template": ["run", "--project", "{engine_dir}/kitten", "python", "{engine_dir}/kitten/scripts/copyspeak-kitten.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}", "--model", "{model}", "--speed", "{speed}"]
   }
 }
 "@
