@@ -271,6 +271,18 @@ fn drain_chunk_stream(
     ))
 }
 
+/// Whether a fresh synthesis may play as live `audio-stream-chunk` events.
+/// The frontend PCM scheduler wires straight into `ctx.destination` with no
+/// effect chain, so an enabled profile effect must force the fragment path,
+/// where `buildPlaybackUrl` runs `effect.process` before playback.
+fn allows_streaming_playback(
+    streaming_enabled: bool,
+    backend_streams: bool,
+    effects_enabled: bool,
+) -> bool {
+    streaming_enabled && backend_streams && !effects_enabled
+}
+
 /// Synthesize via the backend's streaming path, forwarding each PCM chunk to
 /// the frontend as an `audio-stream-chunk` event while accumulating the full
 /// payload into a WAV container for history/cache/envelope handling.
@@ -614,9 +626,11 @@ async fn speak_now_internal(
     // Streaming backends forward PCM chunks during synthesis in playback mode;
     // batch backends (and cache hits / file output / pagination) take the
     // untouched existing branches.
-    let streaming_playback = streaming_enabled
-        && backend_arc.supports_streaming()
-        && !cache_hit
+    let streaming_playback = allows_streaming_playback(
+        streaming_enabled,
+        backend_arc.supports_streaming(),
+        eff.effects.enabled,
+    ) && !cache_hit
         && !output_config.enabled;
     let (wav_bytes, already_streamed) = if let Some(speech) = cached {
         log::info!("[TTS] Replaying saved audio from history instead of synthesizing");
@@ -1143,7 +1157,12 @@ pub async fn speak_queued(
         // Synthesize fragment — streaming-capable backends forward PCM chunks
         // as they arrive; batch backends take the untouched synthesize path.
         let fragment_start = Instant::now();
-        let streamed = !replaying && streaming_enabled && backend_arc.supports_streaming();
+        let streamed = !replaying
+            && allows_streaming_playback(
+                streaming_enabled,
+                backend_arc.supports_streaming(),
+                eff.effects.enabled,
+            );
         let wav_bytes = if let Some(speech) = saved.as_mut().and_then(Iterator::next) {
             speech
         } else if streamed {
@@ -1445,6 +1464,17 @@ mod streaming_tests {
             &wav.bytes[info.data_offset..info.data_offset + info.data_size],
             &expected
         );
+    }
+
+    #[test]
+    fn enabled_effect_forces_fragment_path_over_stream_chunks() {
+        // Streaming on, warm streaming backend, no effect: live chunks.
+        assert!(allows_streaming_playback(true, true, false));
+        // Any kill switch routes the reading through audio-fragment-ready,
+        // the only path where buildPlaybackUrl applies the effect.
+        assert!(!allows_streaming_playback(false, true, false));
+        assert!(!allows_streaming_playback(true, false, false));
+        assert!(!allows_streaming_playback(true, true, true));
     }
 
     #[test]

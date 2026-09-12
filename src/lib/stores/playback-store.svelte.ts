@@ -11,7 +11,7 @@
 
 import { isTauri } from "$lib/services/tauri.js";
 import { invoke } from "@tauri-apps/api/core";
-import type { EffectId } from "$lib/types";
+import type { AppConfig, EffectId } from "$lib/types";
 import { applyFadeIn, audioBufferToWavBlob, detectAudioMimeType } from "./playback/audio-utils.js";
 import { AudioAnalyser, type EmitPayload } from "./playback/analyser.js";
 import { PcmStreamScheduler, type StreamChunkPayload } from "./playback/pcm-stream.js";
@@ -595,6 +595,21 @@ class PlaybackStore {
         this._browserReadingActive = e.payload.active === true;
       });
 
+      // Effects/speed/pitch chosen outside the Play page (Effects page, profile
+      // switch) only ever reach the backend config; re-sync here so the next
+      // reading uses them instead of the values this store held at startup.
+      const unConfigChanged = await listen("config-changed", async () => {
+        try {
+          const config = await invoke<AppConfig>("get_config");
+          const { volume } = config.playback;
+          const profile = config.tts.profiles.find((p) => p.id === config.tts.active_profile_id);
+          const effect = profile?.effects?.enabled ? profile.effects.active_effect : "none";
+          this.syncPlaybackConfig(volume, profile?.speed ?? 1.0, profile?.pitch ?? 1.0, effect);
+        } catch (e) {
+          console.error("[PlaybackStore] Failed to re-sync after config-changed:", e);
+        }
+      });
+
       const unSynthesis = await listen<boolean>("synthesis-state-change", (e) => {
         if (e.payload) {
           this.historyReadingId = null;
@@ -617,6 +632,7 @@ class PlaybackStore {
         unPlaybackStop,
         unTogglePause,
         unBrowserReading,
+        unConfigChanged,
         unSynthesis,
         unAbort
       ];

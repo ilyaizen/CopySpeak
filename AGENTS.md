@@ -41,12 +41,15 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Export Kokoro's duration-capable model under isolated Python 3.12; Kokoro 0.8.4's NumPy 1.x dependency cannot use the managed engine's Python 3.13 wheels.
 - Check credential presence without printing `.env` values; never grep secret files into command output.
 - Preserve native caption intervals with their generated audio through stream framing, cache/history replay, and sample-count-based fragment concatenation; never scale word timings by text weights.
+- Emit daemon caption frames as cumulative request snapshots (text and ms covering every sentence so far): live, batch, and history consumers each keep only the newest frame, so sentence-local frames validate but kill highlights after the first chunk.
+- Round estimated caption milliseconds once, after accumulating sentence offsets; rounding per sentence and then offsetting re-rounds sentence-boundary pairs apart by 0.1 ms, and that `start_ms < audio_end` clears the whole reading's captions.
 - Reject unusable caption metadata without rejecting valid PCM; propagate caption clears to live/cache/history consumers, keep audio/protocol errors fatal, and retain source text for untimed fragments when joining readings.
 - Route playback speed and pitch through `TimeStretcher` (SoundTouch `pitch` setter, then `stretch.tempo = speed / pitch`); keep `playbackRate` at 1 on PCM sources and track `ScheduledPosition` duration/offset/rate in native time.
 - On a rate change, re-stretch the native chunks of unstarted PCM sources; audio already rendered keeps the rate it was rendered at, since absolute start times do not move.
 - Give `TimeStretcher`'s first output after every reset a ~5 ms fade-in, and hold the last ~5 ms of input out of the WSOLA feed for flush to release decaying; a cold-start full-amplitude sample or a hard speech-to-silence flush step clicks at fragment seams. Re-feeding a faded copy of the tail is not enough - the backward jump clicks too.
 - Drive HUD captions from the audible fragment's audio clock; synthesis events may describe a later fragment, and incoming PCM chunks must not resume a user-paused stream.
 - Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
+- Re-sync `playbackStore` from its own `config-changed` listener; pages that only `set_config` (Effects page, `set_active_profile`) never update it, so previews and readings play the values the store held at startup until restart.
 - Treat `git diff --check` as a check; do not run it before explicit confirmation.
 - Present history batches as one reading in `recent-history.svelte`; preserve fragment order for full text, playback, and whole-reading deletion.
 - Show pagination as a part count on history rows; keep Play/Stop/Replay on the reading's button instead of adding a lower playback bar.
@@ -57,8 +60,9 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Restore only history's saved engine, voice and speed; retain current profile pitch/effects, and report a missing voice profile instead of generating with a different voice.
 - Keep actions inside each reading's menu and bulk selection on the full History page; filtering must preserve complete reading batches.
 - Local engine wrappers speak daemon protocol v2 (`READY 2`); emit 16-bit signed LE PCM, since `pcm-stream.ts` drops any other `bits_per_sample`.
+- Gate streaming playback off when the active profile has an effect: warm local daemons stream via `CliTtsBackend::supports_streaming`, so `streaming_enabled: true` sends kokoro/piper as `audio-stream-chunk` too, and the PCM scheduler has no effect chain — only the `audio-fragment-ready` fragment path applies effects.
 - Adding a `TtsEngine` variant: also update the catalog test's engine list and entry count, and the `Record<TtsEngine, number>` fixtures in `html-templates.test.ts` and `html-export.test.ts`.
-- Register CUDA DLL directories with `os.add_dll_directory` inside the wrapper; Python 3.8+ ignores `PATH` for extension-module dependencies, so setting it from Rust does nothing.
+- Register CUDA DLL directories with `os.add_dll_directory` inside the wrapper (Python 3.8+ ignores `PATH` for extension-module dependencies, so setting it from Rust does nothing), and prepend the same directories to `PATH`: onnxruntime loads `cudnn64_9.dll`/`cublas64_13.dll` with plain `LoadLibrary`, which ignores `add_dll_directory`; missing this fails hard with "Invalid handle. Cannot load symbol cudnnCreate".
 - Emit the streaming `is_final` marker on the last fragment only; an intermediate one arms the player's completion timer mid-passage.
 - KittenTTS 0.8.1 (the pinned wheel) takes only `KittenTTS(model_name, cache_dir)`; select the GPU by replacing `tts.model.session`, not with a `backend=` kwarg that only exists on `main`.
 - Map browser caption words onto the raw selection with `text_map::align`'s word alignment; never re-derive the sanitizer's rewrites in a second place, and keep the highlight verdict per word and per fragment rather than per reading.
