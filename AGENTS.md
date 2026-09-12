@@ -72,6 +72,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - The app loads secrets from `<exe-dir>/.env` (`src-tauri/target/debug/.env` in dev), not the repo-root `.env`; diagnose key/quota questions against the file the log line names.
 - ElevenLabs with-timestamps streams carry alignment on the leading record(s) and stream later records as audio alone; treat audio-only records after an aligned one as normal, and hard-degrade only when no aligned record ever arrives.
 - `bun run bump` derives the new version only from `src/lib/version.ts`; a stale version.ts under-shoots every file and `No version string found` means that file already carried the target — verify all five ✅ lines after bumping.
+- "Beeps" in generated audio: suspect the text before the playback code — the TimeStretcher pipeline passes silence and fuzz cleanly; ElevenLabs/Cartesia render unpronounceable glyphs (arrows, stars, math symbols, enclosed alphanumerics, private-use, control chars) as ~1 s beep artifacts, so keep `remove_unpronounceable`'s symbol ranges ahead of what vendors confound.
 
 <!-- rtk-instructions v2 -->
 

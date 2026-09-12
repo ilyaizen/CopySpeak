@@ -49,3 +49,4 @@ target-verify.ps1
 /browser-native-host/target/
 browser-native-host/target/
 browser-extension/test-results/
+scripts/debug-beep-fuzz.ts

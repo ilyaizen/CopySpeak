@@ -5,9 +5,9 @@ use regex::Regex;
 use super::cleanup::cleanup_artifacts;
 
 /// Normalize text for TTS readability.
-/// Applies replacements in priority order: character normalization → emojis →
-/// URLs → citations → slashes → Latin abbreviations → metric units → symbols →
-/// punctuation → leading-orphan strip.
+/// Applies replacements in priority order: character normalization →
+/// unpronounceable glyphs → URLs → citations → slashes → Latin abbreviations →
+/// metric units → symbols → punctuation → leading-orphan strip.
 /// Newlines are stripped at the end — they don't affect speech and produce
 /// cleaner single-line text for history preview.
 pub fn sanitize_tts(text: &str) -> String {
@@ -15,7 +15,7 @@ pub fn sanitize_tts(text: &str) -> String {
 
     // Order matters — run in the specified priority sequence
     result = normalize_characters(&result);
-    result = remove_emojis(&result);
+    result = remove_unpronounceable(&result);
     result = remove_urls(&result);
     result = remove_citations(&result);
     result = expand_slash_lookups(&result);
@@ -40,23 +40,48 @@ pub fn sanitize_tts(text: &str) -> String {
     result.trim().to_string()
 }
 
-// ── 0. Emoji Removal ─────────────────────────────────────────────────────────
+// ── 0. Unpronounceable Glyph Removal ────────────────────────────────────────
 
-fn remove_emojis(text: &str) -> String {
+/// Strip glyphs neural TTS engines render as beep/noise artifacts (~1 s
+/// bursts) instead of skipping: symbolic scripts beyond the classic emoji
+/// ranges, plus control and invisible formatting characters.
+fn remove_unpronounceable(text: &str) -> String {
     lazy_static::lazy_static! {
-        // Matches common emoji Unicode ranges:
+        // Symbol ranges engines confound into sound effects:
+        // 00AD:        soft hyphen (invisible, mid-word)
+        // 203C 2049:   ‼ ⁉ (emoji codepoints inside general punctuation)
+        // 2139:        ℹ (emoji codepoint inside letterlike symbols)
+        // 2190–2BFF:   arrows, math operators, technical symbols, enclosed
+        //              alphanumerics, box/geometric shapes, stars, dingbats
+        // E000–F8FF:   private use area
+        // 1F000–1F2FF: mahjong, dominoes, playing cards, enclosed pictographs
         // 1F300–1F9FF: misc symbols, pictographs, emoticons, transport, etc.
         // 1FA00–1FAFF: newer emoji additions
-        // 2600–27BF:   miscellaneous symbols and dingbats
+        // 1F1E6–1F1FF: regional indicator symbols (flag pairs)
         // FE00–FE0F:   variation selectors (emoji vs text presentation)
-        // 200D:        zero-width joiner (used in multi-part emoji sequences)
-        // 20E3:        combining enclosing keycap (e.g. 1️⃣)
-        // 1F1E0–1F1FF: regional indicator symbols (flag pairs)
-        static ref EMOJI_REGEX: Regex = Regex::new(
-            r"[\u{1F300}-\u{1F9FF}\u{1FA00}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}\u{20E3}\u{1F1E0}-\u{1F1FF}]+"
+        // E0100–E01EF: variation selector supplement
+        // FFFD–FFFF:   replacement character and noncharacters
+        static ref SYMBOL_REGEX: Regex = Regex::new(
+            r"[\u{00AD}\u{203C}\u{2049}\u{2139}\u{2190}-\u{2BFF}\u{E000}-\u{F8FF}\u{1F000}-\u{1F2FF}\u{1F300}-\u{1F9FF}\u{1FA00}-\u{1FAFF}\u{1F1E6}-\u{1F1FF}\u{FE00}-\u{FE0F}\u{E0100}-\u{E01EF}\u{FFFD}-\u{FFFF}]+"
+        ).unwrap();
+        // Control and invisible formatting characters - never speech content:
+        // 0000–0008 000E–001F: C0 controls except tab/newline/VT/FF
+        // 007F–009F:   DEL and C1 controls
+        // 200B–200F:   zero-width space/non-joiner/joiner, LRM/RLM
+        // 2028–202E:   line/paragraph separators, bidi overrides
+        // 2060–2064:   word joiner and invisible operators
+        // 20D0–20FF:   combining marks for symbols (keycap, etc.)
+        // FEFF:        BOM / zero-width no-break space
+        static ref INVISIBLE_REGEX: Regex = Regex::new(
+            r"[\u{0000}-\u{0008}\u{000E}-\u{001F}\u{007F}-\u{009F}\u{200B}-\u{200F}\u{2028}-\u{202E}\u{2060}-\u{2064}\u{20D0}-\u{20FF}\u{FEFF}]+"
         ).unwrap();
     }
-    EMOJI_REGEX.replace_all(text, "").to_string()
+    // Tab/VT/FF separate words, so normalize them to spaces instead of
+    // stripping (stripping would fuse adjacent words). Newlines stay for the
+    // pipeline's end-of-pass handling.
+    let spaced = text.replace(['\t', '\u{000B}', '\u{000C}'], " ");
+    let without_invisible = INVISIBLE_REGEX.replace_all(&spaced, "");
+    SYMBOL_REGEX.replace_all(&without_invisible, "").into_owned()
 }
 
 // ── 0. Character Normalization (sanitext-style) ──────────────────────────────
@@ -475,12 +500,48 @@ mod tests {
     }
 
     #[test]
-    fn test_remove_emojis() {
-        assert_eq!(remove_emojis("Hello 😀 world"), "Hello  world");
-        assert_eq!(remove_emojis("🎉🎊 Party time"), " Party time");
-        assert_eq!(remove_emojis("No emojis here"), "No emojis here");
-        assert_eq!(remove_emojis("🌍 Earth 🌏"), " Earth ");
-        assert_eq!(remove_emojis("Text ✅ check"), "Text  check");
+    fn test_remove_unpronounceable() {
+        assert_eq!(remove_unpronounceable("Hello 😀 world"), "Hello  world");
+        assert_eq!(remove_unpronounceable("🎉🎊 Party time"), " Party time");
+        assert_eq!(remove_unpronounceable("No emojis here"), "No emojis here");
+        assert_eq!(remove_unpronounceable("🌍 Earth 🌏"), " Earth ");
+        assert_eq!(remove_unpronounceable("Text ✅ check"), "Text  check");
+    }
+
+    /// Glyphs outside the classic emoji ranges reached the engines before and
+    /// are rendered as beep/noise artifacts instead of being skipped.
+    #[test]
+    fn test_remove_unpronounceable_strips_symbol_scripts() {
+        assert_eq!(remove_unpronounceable("A⭐B★C→D∑E①F■G"), "ABCDEFG");
+        assert_eq!(remove_unpronounceable("⌚ watch ⏩ now"), " watch  now");
+        assert_eq!(remove_unpronounceable("🀄🂠🄰 tiles"), " tiles");
+        assert_eq!(remove_unpronounceable("wow‼ really⁉ infoℹ"), "wow really info");
+        assert_eq!(remove_unpronounceable("🇺🇸 US flag"), " US flag");
+    }
+
+    #[test]
+    fn test_remove_unpronounceable_strips_control_and_invisible() {
+        assert_eq!(remove_unpronounceable("x\u{E000}y"), "xy");
+        assert_eq!(remove_unpronounceable("bad \u{FFFD} data"), "bad  data");
+        assert_eq!(remove_unpronounceable("hy\u{00AD}phen"), "hyphen");
+        assert_eq!(remove_unpronounceable("a\u{200B}b"), "ab");
+        assert_eq!(remove_unpronounceable("\u{FEFF}text"), "text");
+        assert_eq!(remove_unpronounceable("a\u{0007}\u{009F}b"), "ab");
+        // Keycap sequence keeps its digit, drops the presentation marks.
+        assert_eq!(remove_unpronounceable("1\u{FE0F}\u{20E3}"), "1");
+    }
+
+    #[test]
+    fn test_remove_unpronounceable_normalizes_whitespace_controls_to_spaces() {
+        assert_eq!(remove_unpronounceable("foo\tbar"), "foo bar");
+        assert_eq!(remove_unpronounceable("a\u{000B}b\u{000C}c"), "a b c");
+    }
+
+    #[test]
+    fn test_remove_unpronounceable_keeps_speech_content() {
+        assert_eq!(remove_unpronounceable("it's — ok… \"quoted\""), "it's — ok… \"quoted\"");
+        assert_eq!(remove_unpronounceable("a、b。c「d」"), "a、b。c「d」");
+        assert_eq!(remove_unpronounceable("50% + $5"), "50% + $5");
     }
 
     #[test]
