@@ -674,6 +674,12 @@ fn start_browser_reading(
     // Send acceptance.
     send_accepted(pipe, &request_id, &reading_id)?;
 
+    // Start the state ticker before synthesis: speak_queued only returns once
+    // the whole reading is generated, and the ticker is the only writer of
+    // `state` frames, so starting it later would pin the panel at "buffering"
+    // for the entire generation even while audio already plays.
+    spawn_state_ticker(app.clone(), session.clone());
+
     // Spawn synthesis via the existing speak_queued command.
     let app_clone = app.clone();
     let reading_id_clone = reading_id.clone();
@@ -696,22 +702,14 @@ fn start_browser_reading(
         )
         .await;
 
-        let bridge = app_clone.state::<BrowserBridge>();
-        let session_arc = {
-            let sessions = bridge.sessions.lock().unwrap();
-            sessions.get(&reading_id_clone).cloned()
-        };
-        let Some(session) = session_arc else {
-            return;
-        };
-        match result {
-            Ok(()) => {
-                // Synthesis dispatched; playback state arrives via the
-                // frontend position reports. Start the state ticker.
-                spawn_state_ticker(app_clone.clone(), session);
-            }
-            Err(e) => {
-                log::error!("[Browser] speak_queued failed: {}", e);
+        if let Err(e) = result {
+            log::error!("[Browser] speak_queued failed: {}", e);
+            let bridge = app_clone.state::<BrowserBridge>();
+            let session_arc = {
+                let sessions = bridge.sessions.lock().unwrap();
+                sessions.get(&reading_id_clone).cloned()
+            };
+            if let Some(session) = session_arc {
                 finish_session(&app_clone, &session, SessionStatus::Error);
             }
         }
