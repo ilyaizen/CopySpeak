@@ -480,6 +480,12 @@ pub struct KittenEngineOptions {
     /// HF model id (e.g. `KittenML/kitten-tts-nano-0.8`); threaded to the
     /// wrapper's `--model` flag via the `{model}` placeholder.
     pub model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Native synthesis speed threaded to the wrapper's `--speed` flag via the
+    /// `{speed}` placeholder; when unset the flag is dropped and the model
+    /// renders at its own 1.0. Multiplies with the profile's playback speed,
+    /// which CopySpeak applies separately with TimeStretcher.
+    pub speed: Option<f32>,
     /// Run inference on an NVIDIA GPU (`--device cuda`). Requires the engine's
     /// uv project to have the GPU runtime installed (`install-*.ps1 -Cuda`).
     #[serde(default)]

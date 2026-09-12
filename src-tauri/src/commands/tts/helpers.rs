@@ -48,8 +48,8 @@ impl Drop for SynthesisGuard {
 /// Hard-coded CLI invocation for a first-class local engine (Kitten/Piper/Kokoro).
 /// Unlike `Local`, the command and args are fixed by the installer's wrapper
 /// contract — not user-editable. Returns `None` for non-local engines and for
-/// `Local` itself. `{engine_dir}`/`{input}`/`{voice}`/`{output}`/`{model}` are
-/// resolved by `CliTtsBackend::build_args` at run time.
+/// `Local` itself. `{engine_dir}`/`{input}`/`{voice}`/`{output}`/`{model}`/
+/// `{speed}` are resolved by `CliTtsBackend::build_args` at run time.
 fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
     let (cmd, args): (&str, Vec<&str>) = match engine {
         TtsEngine::Kitten => (
@@ -68,6 +68,8 @@ fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
                 "{output}",
                 "--model",
                 "{model}",
+                "--speed",
+                "{speed}",
             ],
         ),
         TtsEngine::Piper => (
@@ -186,6 +188,9 @@ pub(crate) fn create_backend_from_effective(
                 .filter(|m| !m.trim().is_empty())
             {
                 backend.model = Some(model);
+            }
+            if let Some(speed) = eff.engine_options.kitten().and_then(|o| o.speed) {
+                backend.speed = Some(speed);
             }
             backend.cuda = eff.engine_options.cuda();
             Box::new(backend)

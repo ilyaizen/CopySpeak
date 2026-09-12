@@ -64,6 +64,23 @@ fn option(
     }
 }
 
+fn select_option(
+    key: &str,
+    label: &str,
+    help: &str,
+    default_value: serde_json::Value,
+    choices: Vec<&str>,
+) -> EngineOptionDescriptor {
+    EngineOptionDescriptor {
+        key: key.into(),
+        label: label.into(),
+        kind: EngineOptionKind::Select,
+        help: help.into(),
+        default_value,
+        choices: Some(choices.into_iter().map(str::to_string).collect()),
+    }
+}
+
 fn voice(
     id: &str,
     label: &str,
@@ -115,28 +132,40 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
         EngineCatalogEntry {
             engine: TtsEngine::Kitten,
             label: "Kitten TTS".into(),
-            description: "Free local TTS via KittenTTS — one shared 25MB model, 8 built-in voices."
+            description: "Free local TTS via KittenTTS — four model sizes (25–80MB), 8 built-in voices, native captions."
                 .into(),
             docs_url: "https://github.com/KittenML/KittenTTS".into(),
             supports_voice_refresh: false,
             supports_pitch: false,
-            supports_captions: false,
+            supports_captions: true,
             supports_bracket_emotes: false,
             options: vec![
-                option(
+                select_option(
                     "model",
                     "Model",
-                    EngineOptionKind::Text,
-                    "Hugging Face model id.",
+                    "Model size — nano is the fast default, mini sounds best, int8 is upstream-buggy.",
                     serde_json::json!("KittenML/kitten-tts-nano-0.8"),
+                    vec![
+                        "KittenML/kitten-tts-nano-0.8",
+                        "KittenML/kitten-tts-micro-0.8",
+                        "KittenML/kitten-tts-mini-0.8",
+                        "KittenML/kitten-tts-nano-0.8-int8",
+                    ],
                 ),
                 option(
-                "cuda",
-                "GPU acceleration",
-                EngineOptionKind::Boolean,
-                "Run inference on an NVIDIA GPU. Requires the engine's GPU runtime (install with -Cuda).",
-                serde_json::json!(false),
-            ),
+                    "speed",
+                    "Speed",
+                    EngineOptionKind::Number,
+                    "Native synthesis speed rendered by the model (1 = normal). Multiplies with the profile's playback speed.",
+                    serde_json::json!(null),
+                ),
+                option(
+                    "cuda",
+                    "GPU acceleration",
+                    EngineOptionKind::Boolean,
+                    "Run inference on an NVIDIA GPU. Requires the engine's GPU runtime (install with -Cuda).",
+                    serde_json::json!(false),
+                ),
             ],
             voices: vec![
                 voice("Rosie", "Rosie", Some("en"), None, Some("female")),
@@ -1175,6 +1204,7 @@ mod tests {
         assert_eq!(
             supported,
             [
+                TtsEngine::Kitten,
                 TtsEngine::Piper,
                 TtsEngine::Kokoro,
                 TtsEngine::ElevenLabs,

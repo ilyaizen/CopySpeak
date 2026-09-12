@@ -164,6 +164,10 @@ pub struct CliTtsBackend {
     /// Optional model id for the `{model}` placeholder; when unset the
     /// `--model` flag is dropped so the engine uses its built-in default.
     pub model: Option<String>,
+    /// Optional native synthesis speed for the `{speed}` placeholder; when
+    /// unset the `--speed` flag is dropped so the engine renders at its own
+    /// default.
+    pub speed: Option<f32>,
     /// Run inference on the GPU. Adds `--device cuda` for our own wrappers and
     /// puts the NVIDIA wheel DLL directories on the child's PATH.
     pub cuda: bool,
@@ -175,6 +179,7 @@ impl CliTtsBackend {
             command,
             args_template,
             model: None,
+            speed: None,
             cuda: false,
         }
     }
@@ -265,6 +270,7 @@ impl CliTtsBackend {
     /// {home_dir} resolves to the user's home directory.
     /// {data_dir} resolves to ~/piper-voices for Piper model storage.
     /// {model} resolves to `self.model`; when unset the flag is dropped below.
+    /// {speed} resolves to `self.speed`; when unset the flag is dropped below.
     fn build_args(
         &self,
         input_path: &str,
@@ -275,6 +281,7 @@ impl CliTtsBackend {
         let data_dir = Self::data_dir();
         let home_dir = Self::home_dir();
         let engine_dir = Self::engine_dir();
+        let speed_value = self.speed.map(|s| s.to_string()).unwrap_or_default();
         let mut args: Vec<String> = self
             .args_template
             .iter()
@@ -286,6 +293,7 @@ impl CliTtsBackend {
                     .replace("{output}", output_path)
                     .replace("{voice}", voice)
                     .replace("{model}", self.model.as_deref().unwrap_or(""))
+                    .replace("{speed}", &speed_value)
                     .replace("{data_dir}", &data_dir)
                     .replace("{home_dir}", &home_dir)
                     .replace("{engine_dir}", &engine_dir);
@@ -299,16 +307,21 @@ impl CliTtsBackend {
             })
             .collect();
 
-        // {model} is optional: without a model value drop the `--model` flag
+        // {model} and {speed} are optional: without a value drop the flag
         // (and its empty value) so the engine falls back to its built-in
-        // default. Only this exact pair is touched — other empty args (e.g.
-        // serve mode's {input}/{output}) keep their pre-existing handling.
-        if self.model.is_none() {
+        // default. Only these exact pairs are touched — other empty args
+        // (e.g. serve mode's {input}/{output}) keep their pre-existing
+        // handling.
+        let drop_model = self.model.is_none();
+        let drop_speed = self.speed.is_none();
+        if drop_model || drop_speed {
             let mut kept: Vec<String> = Vec::with_capacity(args.len());
             let mut i = 0;
             while i < args.len() {
-                if args[i] == "--model" && args.get(i + 1).is_some_and(|v| v.is_empty()) {
-                    i += 2; // drop "--model" and its empty value
+                let droppable_flag =
+                    (drop_model && args[i] == "--model") || (drop_speed && args[i] == "--speed");
+                if droppable_flag && args.get(i + 1).is_some_and(|v| v.is_empty()) {
+                    i += 2; // drop the flag and its empty value
                 } else {
                     kept.push(args[i].clone());
                     i += 1;
@@ -923,6 +936,25 @@ mod tests {
             third_party.build_args("in.txt", "out.wav", "v", "hi"),
             vec!["in.txt"],
             "an unknown CLI would reject --device"
+        );
+    }
+
+    #[test]
+    fn speed_placeholder_threads_value_and_drops_flag_when_unset() {
+        let mut backend = CliTtsBackend::new(
+            "uv".into(),
+            vec!["--speed".into(), "{speed}".into(), "{input}".into()],
+        );
+        assert_eq!(
+            backend.build_args("in.txt", "out.wav", "Rosie", "hi"),
+            vec!["in.txt"],
+            "unset speed drops the whole flag pair"
+        );
+
+        backend.speed = Some(1.5);
+        assert_eq!(
+            backend.build_args("in.txt", "out.wav", "Rosie", "hi"),
+            vec!["--speed", "1.5", "in.txt"]
         );
     }
 
