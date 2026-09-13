@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-09-13
+
+### Added
+
+- **Hover any paragraph to read it** — the browser companion can show a subtle highlight and a CopySpeak play button when you hover paragraphs, list items, and quotes on permitted websites; clicking reads just that paragraph through the desktop app without touching your selection. A new settings page (extension Options, or right-click → CopySpeak Companion settings) turns hover reading on, manages double-copy highlighting and the playback box, and grants per-site or all-sites access. Selection reading via the toolbar, context menu, or `Alt+Shift+T` is unchanged.
+- **KittenTTS gains native captions, a model picker, and a speed setting** — Kitten now synthesizes per sentence with estimated word timings, so live word highlighting works on the local Kitten engine too; the voice picker lists Kitten models with their speed option, and caption sentence boundaries stay monotone.
+- **Every release now ships the browser companion** — the Windows release workflow attaches `CopySpeak-Companion-<version>.zip` next to the installer (extract it, then load unpacked in Chrome or Edge), and `bun run bump` keeps the extension version in lockstep with the app.
+
+### Fixed
+
+- **Profile effects are no longer skipped during streaming playback** — when the active profile has an effect, local engines now fall back from streamed playback to the fragment path, so the effect chain is actually applied instead of silently bypassed.
+- **GPU Kokoro installs load their CUDA libraries** — the installer pairs `onnxruntime-gpu` with CUDA 13 wheels and registers the DLL directories inside the Python wrapper, fixing hard failures like "Invalid handle. Cannot load symbol cudnnCreate".
+- **Neural voices no longer beep through unpronounceable glyphs** — symbols that ElevenLabs and Cartesia render as ~1-second beep artifacts (arrows, stars, math symbols, enclosed alphanumerics, control characters) are stripped before synthesis.
+- **The companion panel no longer sticks at "buffering" while audio plays** — the session state ticker starts when the reading is accepted instead of after the entire synthesis loop finishes.
+- **Sliders keep values on their step** — effect slider ranges are tightened and values snap to the step, so they no longer hold off-step numbers.
+
 ## [0.2.3] - 2026-09-11
 
 ### Fixed
