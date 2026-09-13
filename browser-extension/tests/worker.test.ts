@@ -8,6 +8,7 @@ test("worker routes one accepted reading to captured document and ignores forged
   // SAFETY: the test stubs the chrome global that the worker reads; global typing cannot know it.
   (globalThis as any).chrome = {
     runtime: {
+      getURL: (path: string) => `chrome-extension://test/${path}`,
       connectNative: () => ({
         postMessage: (x: any) => sent.push(x),
         disconnect: () => {},
@@ -23,7 +24,7 @@ test("worker routes one accepted reading to captured document and ignores forged
     contextMenus: { create: () => {}, onClicked: event("menu") },
     action: { onClicked: event("click"), setBadgeText: async () => {}, setTitle: async () => {} },
     tabs: {
-      query: async () => [{ id: 7, windowId: 1 }],
+      query: async (query: any) => (query.active ? [{ id: 7, windowId: 1 }] : []),
       sendMessage: async (id: number, m: any, opts: any) => {
         delivered.push({ id, m, opts });
         if (m.type === "capture") return { text: "selected", document_token: "doc" };
@@ -31,8 +32,16 @@ test("worker routes one accepted reading to captured document and ignores forged
       onRemoved: event("removed"),
       onUpdated: event("updated")
     },
-    scripting: { executeScript: async () => [{ frameId: 0, documentId: "browser-doc" }] },
-    permissions: { contains: async () => false, onRemoved: event("permissions") },
+    scripting: {
+      executeScript: async () => [{ frameId: 0, documentId: "browser-doc" }],
+      getRegisteredContentScripts: async () => []
+    },
+    permissions: {
+      contains: async () => false,
+      getAll: async () => ({ origins: [] }),
+      onRemoved: event("permissions"),
+      onAdded: event("permissionsAdded")
+    },
     storage: { local: { get: async () => ({ automatic: false }) } },
     windows: { getLastFocused: async () => ({ focused: true }) }
   };
@@ -62,8 +71,12 @@ test("worker routes one accepted reading to captured document and ignores forged
     () => {}
   );
   expect(sent.at(-1).action).toBe("pause");
+  await Promise.resolve(hooks.click({ id: 7 }));
+  const replacement = delivered.slice(-2).map((entry) => entry.m.type);
+  expect(replacement).toEqual(["disconnect", "capture"]);
+  expect(sent.filter((entry) => entry.type === "start").length).toBe(2);
   await Promise.resolve(hooks.disconnect());
   expect(delivered.at(-1).m.type).toBe("disconnect");
   await Promise.resolve(hooks.menu({ menuItemId: "read-selection" }, { id: 7 }));
-  expect(sent.filter((x) => x.type === "start").length).toBe(2);
+  expect(sent.filter((x) => x.type === "start").length).toBe(3);
 });

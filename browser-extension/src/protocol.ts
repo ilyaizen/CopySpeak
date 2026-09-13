@@ -21,7 +21,10 @@ export type ControlAction = "pause" | "resume" | "stop";
  * contract is declared here and every listener branches on these variants.
  */
 export type CopyCommand =
-  | { type: "capture"; request_id: string; probe?: boolean }
+  | { type: "capture"; request_id: string; probe?: boolean; paragraph?: boolean }
+  | { type: "read-paragraph" }
+  | { type: "site-access" }
+  | { type: "refresh-site-access" }
   | { type: "disconnect" }
   | { type: "native"; document_token: string; event: NativeEvent }
   | { type: "control"; document_token: string; reading_id: string; action: ControlAction }

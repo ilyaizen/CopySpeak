@@ -37,6 +37,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 
 ## Active failure log
 
+- Release the old browser reading before asking the document to capture its replacement; a later disconnect erases the new paragraph/selection anchor.
 - Pass Kokoro exporter options by their long names through `Invoke-Uv`; PowerShell binds `-o` as an ambiguous common parameter before uv runs.
 - Export Kokoro's duration-capable model under isolated Python 3.12; Kokoro 0.8.4's NumPy 1.x dependency cannot use the managed engine's Python 3.13 wheels.
 - Check credential presence without printing `.env` values; never grep secret files into command output.

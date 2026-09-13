@@ -79,6 +79,7 @@ function connect() {
       if (r.owner.readingId)
         p.postMessage({ v: 1, type: "control", reading_id: r.owner.readingId, action: "stop" });
     });
+    if (route !== r) return;
     if (r.owner.ended) {
       await release();
       if (e.type === "rejected") await badge("!", `CopySpeak refused the selection: ${e.reason}`);
@@ -89,7 +90,7 @@ function connect() {
   p.postMessage({ v: 1, type: "hello", automatic });
   return p;
 }
-async function capture(tab?: chrome.tabs.Tab, probe?: string) {
+async function capture(tab?: chrome.tabs.Tab, probe?: string, paragraphDocument?: string) {
   const generation = ++invocation;
   try {
     if (!tab) tab = (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
@@ -102,16 +103,34 @@ async function capture(tab?: chrome.tabs.Tab, probe?: string) {
     }
     const requestId = probe ?? crypto.randomUUID();
     const frames = await chrome.scripting.executeScript({
-      target: { tabId: tab.id, allFrames: true },
+      target: paragraphDocument
+        ? { tabId: tab.id, documentIds: [paragraphDocument] }
+        : { tabId: tab.id, allFrames: true },
       files: ["content.js"]
     });
+    if (generation !== invocation) return;
+    if (route?.owner.readingId)
+      port?.postMessage({
+        v: 1,
+        type: "control",
+        reading_id: route.owner.readingId,
+        action: "stop"
+      });
+    // Disconnect before capture installs a replacement anchor in the same document.
+    await release();
+    if (generation !== invocation) return;
     const candidates = await Promise.all(
       frames.map(async (frame) => {
         if (!frame.documentId) return null;
         const result = await chrome.tabs
           .sendMessage(
             tab!.id!,
-            { type: "capture", request_id: requestId, probe: !!probe },
+            {
+              type: "capture",
+              request_id: requestId,
+              probe: !!probe,
+              paragraph: !!paragraphDocument
+            },
             { documentId: frame.documentId }
           )
           .catch(() => null);
@@ -126,14 +145,6 @@ async function capture(tab?: chrome.tabs.Tab, probe?: string) {
       await badge("!", "Select text in one permitted, ordinary HTML frame.");
       return;
     }
-    if (route?.owner.readingId)
-      port?.postMessage({
-        v: 1,
-        type: "control",
-        reading_id: route.owner.readingId,
-        action: "stop"
-      });
-    await release();
     const { frame, result } = eligible[0]!;
     const r: Route = {
       tabId: tab.id,
@@ -166,11 +177,45 @@ chrome.commands.onCommand.addListener(async (command) => {
 });
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "read-selection") await capture(tab);
+  if (info.menuItemId === "companion-settings") await chrome.runtime.openOptionsPage();
 });
-chrome.runtime.onMessage.addListener((message: CopyCommand, sender) => {
+chrome.runtime.onMessage.addListener((message: CopyCommand, sender, respond) => {
   const r = route;
-  if (message.type === "settings" && !sender.tab?.url?.startsWith("http")) {
-    void initialize();
+  if (message.type === "site-access") {
+    if (!sender.url || !/^https?:/.test(sender.url)) {
+      respond(false);
+      return;
+    }
+    void chrome.permissions
+      .contains({ origins: [new URL(sender.url).origin + "/*"] })
+      .then(respond, () => respond(false));
+    return true;
+  }
+  if (message.type === "settings" && sender.url === chrome.runtime.getURL("options.html")) {
+    void initialize().then(
+      () => respond({ ok: true }),
+      () => respond({ error: "Could not apply settings. Try again." })
+    );
+    return true;
+  }
+  if (message.type === "read-paragraph") {
+    if (
+      sender.tab?.id === undefined ||
+      !sender.documentId ||
+      !sender.url ||
+      !/^https?:/.test(sender.url)
+    )
+      return;
+    const tab = sender.tab;
+    const documentId = sender.documentId;
+    void chrome.storage.local.get("hoverRead").then(async (settings) => {
+      if (
+        settings.hoverRead !== true ||
+        !(await chrome.permissions.contains({ origins: [new URL(sender.url!).origin + "/*"] }))
+      )
+        return;
+      await capture(tab, undefined, documentId);
+    });
     return;
   }
   if (message.type !== "control") return;
@@ -215,15 +260,62 @@ chrome.tabs.onUpdated.addListener((tabId, change) => {
   }
 });
 chrome.permissions.onRemoved.addListener(() => {
-  automatic = false;
-  port?.postMessage({ v: 1, type: "hello", automatic: false });
-  void release();
+  void initialize();
 });
-async function initialize() {
-  const settings = await chrome.storage.local.get("automatic");
-  automatic = settings.automatic === true;
+chrome.permissions.onAdded.addListener(() => {
+  void initialize();
+});
+// Serialize registration updates when permission and settings events arrive together.
+let initialization = Promise.resolve();
+function initialize() {
+  initialization = initialization.catch(() => {}).then(applySettings);
+  return initialization;
+}
+async function applySettings() {
+  const settings = await chrome.storage.local.get(["automatic", "hoverRead"]);
+  const origins =
+    (await chrome.permissions.getAll()).origins?.filter((origin) => /^https?:\/\//.test(origin)) ??
+    [];
+  automatic = settings.automatic === true && origins.length > 0;
+  port?.postMessage({ v: 1, type: "hello", automatic });
   if (automatic) connect();
   else if (!route) await release();
+  const scripts = await chrome.scripting.getRegisteredContentScripts({ ids: ["paragraph-hover"] });
+  if (settings.hoverRead === true && origins.length) {
+    const script = {
+      id: "paragraph-hover",
+      matches: origins,
+      js: ["content.js"],
+      allFrames: true,
+      runAt: "document_idle" as const
+    };
+    if (scripts.length) await chrome.scripting.updateContentScripts([script]);
+    else await chrome.scripting.registerContentScripts([script]);
+    // Apply immediately to already-open permitted pages; future pages use registration.
+    const tabs = await chrome.tabs.query({ url: origins });
+    await Promise.all(
+      tabs.map(async (tab) => {
+        if (tab.id === undefined) return;
+        await chrome.scripting
+          .executeScript({
+            target: { tabId: tab.id, allFrames: true },
+            files: ["content.js"]
+          })
+          .catch(() => {});
+      })
+    );
+  } else if (scripts.length) {
+    await chrome.scripting.unregisterContentScripts({ ids: ["paragraph-hover"] });
+  }
+  const tabs = await chrome.tabs.query({});
+  await Promise.all(
+    tabs.map(async (tab) => {
+      if (tab.id === undefined) return;
+      // Ask each injected frame about its own origin; cross-origin frames can have
+      // different grants from their containing tab.
+      await chrome.tabs.sendMessage(tab.id, { type: "refresh-site-access" }).catch(() => {});
+    })
+  );
 }
 chrome.runtime.onStartup.addListener(() => {
   void initialize();
@@ -233,6 +325,10 @@ chrome.runtime.onInstalled.addListener(() => {
   // duplicate-id error an extension reload can raise.
   chrome.contextMenus.create(
     { id: "read-selection", title: "Read with CopySpeak", contexts: ["selection"] },
+    () => void chrome.runtime.lastError
+  );
+  chrome.contextMenus.create(
+    { id: "companion-settings", title: "CopySpeak Companion settings", contexts: ["action"] },
     () => void chrome.runtime.lastError
   );
   void initialize();

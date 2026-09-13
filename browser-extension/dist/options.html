@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CopySpeak Companion settings</title>
+    <link rel="icon" href="icons/32.png" />
+    <link rel="stylesheet" href="options.css" />
+    <script type="module" src="options.js"></script>
+  </head>
+  <body>
+    <main>
+      <header>
+        <img src="icons/128.png" width="56" height="56" alt="" />
+        <div>
+          <p class="eyebrow">BROWSER COMPANION · <span id="version"></span></p>
+          <h1>Read where you are.</h1>
+        </div>
+      </header>
+      <p class="intro">
+        Keep CopySpeak open. Your desktop voice, speed, and effects apply here too.
+      </p>
+      <section aria-labelledby="reading-title">
+        <h2 id="reading-title">On the page</h2>
+        <label class="setting"
+          ><span
+            ><strong>Hover to read a paragraph</strong
+            ><small
+              >A subtle highlight and play button appear over paragraphs, list items, and quotes.
+              Click the button to read.</small
+            ></span
+          ><input id="hoverRead" type="checkbox"
+        /></label>
+        <label class="setting"
+          ><span
+            ><strong>Highlight when I double-copy</strong
+            ><small
+              >Follow readings started by CopySpeak’s double-copy shortcut on permitted
+              websites.</small
+            ></span
+          ><input id="automatic" type="checkbox"
+        /></label>
+        <label class="setting"
+          ><span
+            ><strong>Show the playback box</strong
+            ><small
+              >Pause and stop from the bottom-right corner. When hidden, use the desktop app to
+              control playback. Text highlighting stays on.</small
+            ></span
+          ><input id="showPanel" type="checkbox" checked
+        /></label>
+      </section>
+      <section aria-labelledby="access-title">
+        <h2 id="access-title">Website access</h2>
+        <p>
+          Hover reading and double-copy highlighting work on websites you allow below. Reading
+          selected text with the toolbar or shortcut needs no saved website access.
+        </p>
+        <form id="site-form">
+          <label for="site">Website address</label>
+          <div class="site-entry">
+            <input
+              id="site"
+              type="text"
+              placeholder="https://example.com"
+              autocomplete="url"
+              required
+            /><button type="submit">Allow website</button>
+          </div>
+        </form>
+        <ul id="sites" aria-label="Permitted websites"></ul>
+        <button id="all-sites" type="button" class="secondary">Allow all websites…</button>
+      </section>
+      <p id="status" role="status" aria-live="polite"></p>
+      <footer>
+        <strong>Read a selection</strong>
+        <p>
+          Select text and click the CopySpeak toolbar icon, right-click → Read with CopySpeak, or
+          press <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>T</kbd> (default shortcut).
+        </p>
+        <p>
+          Open this page again from the extension’s right-click menu → CopySpeak Companion settings,
+          or its Options entry. Browser settings pages, PDF viewers, and text editors are
+          unsupported.
+        </p>
+      </footer>
+    </main>
+  </body>
+</html>

@@ -7,10 +7,11 @@ export interface SelectionAnchor {
 }
 
 /** Offsets are UTF16, as in DOM Range and native CopySpeak captions. */
-export function captureSelection(doc: Document): SelectionAnchor | null {
+export function captureSelection(doc: Document, paragraph?: Range): SelectionAnchor | null {
   const selection = doc.getSelection();
-  if (!selection || selection.rangeCount !== 1 || selection.isCollapsed) return null;
-  const selected = selection.getRangeAt(0).cloneRange();
+  if (!paragraph && (!selection || selection.rangeCount !== 1 || selection.isCollapsed))
+    return null;
+  const selected = (paragraph ?? selection!.getRangeAt(0)).cloneRange();
   const root = selected.commonAncestorContainer;
   if (root.getRootNode() !== doc || doc.designMode === "on") return null;
   const safe = (node: Node) => {
@@ -110,7 +111,7 @@ export function captureSelection(doc: Document): SelectionAnchor | null {
       return range;
     },
     clearIfUnchanged() {
-      if (!valid() || selection.rangeCount !== 1) return false;
+      if (paragraph || !valid() || !selection || selection.rangeCount !== 1) return false;
       const now = selection.getRangeAt(0);
       if (
         now.startContainer !== selected.startContainer ||

@@ -1,5 +1,6 @@
 import { captureSelection, type SelectionAnchor } from "./anchor";
 import { ReadingOwner, parseEvent, type CopyCommand } from "./protocol";
+import { paragraphHover } from "./hover";
 
 // Repeated scripting.executeScript calls do not install duplicate listeners.
 const marker = "__copyspeak_companion_v1__";
@@ -16,6 +17,30 @@ if (!scope[marker]) {
   let pauseButton: HTMLButtonElement | null = null;
   let label: HTMLElement | null = null;
   let paused = false;
+  let showPanel = true;
+  let siteAllowed = false;
+  const hover = paragraphHover(() => {
+    void chrome.runtime.sendMessage({ type: "read-paragraph" }).catch(() => cleanup());
+  });
+  async function loadSettings() {
+    const settings = await chrome.storage.local.get(["hoverRead", "showPanel"]);
+    showPanel = settings.showPanel !== false;
+    if (panel) panel.hidden = !showPanel;
+    hover.setEnabled(siteAllowed && settings.hoverRead === true);
+  }
+  chrome.storage.onChanged.addListener((_changes, area) => {
+    if (area === "local") void loadSettings();
+  });
+  function refreshSiteAccess() {
+    void chrome.runtime
+      .sendMessage({ type: "site-access" })
+      .then((allowed) => {
+        siteAllowed = allowed === true;
+        return loadSettings();
+      })
+      .catch(() => hover.setEnabled(false));
+  }
+  refreshSiteAccess();
   const sendControl = (action: "pause" | "resume" | "stop") => {
     if (owner?.readingId)
       void chrome.runtime
@@ -57,10 +82,11 @@ if (!scope[marker]) {
       "::highlight(copyspeak-passage){background-color:#8cbcff55}::highlight(copyspeak-word){background-color:#1672de;color:#fff}";
     document.documentElement.append(style);
     panel = document.createElement("aside");
+    panel.hidden = !showPanel;
     const shadow = panel.attachShadow({ mode: "open" });
     const css = document.createElement("style");
     css.textContent =
-      ":host{all:initial;position:fixed;z-index:2147483647;bottom:16px;right:16px}section{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;color:#172232;border:1px solid #8394aa;border-radius:8px;box-shadow:0 2px 12px #17223233;font:13px system-ui}button{font:inherit;color:#172232;background:#edf3fa;border:1px solid #8394aa;border-radius:4px;padding:6px 10px;cursor:pointer}button:focus-visible{outline:3px solid #1672de;outline-offset:2px}";
+      ":host{all:initial;position:fixed;z-index:2147483647;bottom:16px;right:16px}:host([hidden]){display:none}section{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;color:#172232;border:1px solid #8394aa;border-radius:8px;box-shadow:0 2px 12px #17223233;font:13px system-ui}button{font:inherit;color:#172232;background:#edf3fa;border:1px solid #8394aa;border-radius:4px;padding:6px 10px;cursor:pointer}button:focus-visible{outline:3px solid #1672de;outline-offset:2px}";
     const strip = document.createElement("section");
     strip.setAttribute("aria-label", "CopySpeak reading controls");
     label = document.createElement("span");
@@ -75,7 +101,16 @@ if (!scope[marker]) {
       sendControl("stop");
       cleanup();
     };
-    strip.append(label, pauseButton, stop);
+    const hide = document.createElement("button");
+    hide.textContent = "×";
+    hide.setAttribute("aria-label", "Hide playback box");
+    hide.title = "Hide playback box. Restore it in CopySpeak Companion settings.";
+    hide.onclick = () => {
+      showPanel = false;
+      if (panel) panel.hidden = true;
+      void chrome.storage.local.set({ showPanel: false });
+    };
+    strip.append(label, pauseButton, stop, hide);
     shadow.append(css, strip);
     document.documentElement.append(panel);
     anchor.clearIfUnchanged();
@@ -88,6 +123,10 @@ if (!scope[marker]) {
     observer.observe(anchor.root, { subtree: true, childList: true, characterData: true });
   }
   chrome.runtime.onMessage.addListener((message: CopyCommand, _sender, respond) => {
+    if (message.type === "refresh-site-access") {
+      refreshSiteAccess();
+      return;
+    }
     if (message.type === "capture") {
       if (!CSS.highlights || !("Highlight" in globalThis)) {
         respond({ error: "This browser does not support text highlighting." });
@@ -99,6 +138,7 @@ if (!scope[marker]) {
       }
       // Do not read an unfocused frame, including a top frame with a focused iframe.
       if (
+        !message.paragraph &&
         document.activeElement?.matches(
           'iframe,frame,input,textarea,[contenteditable]:not([contenteditable="false"])'
         )
@@ -106,7 +146,7 @@ if (!scope[marker]) {
         respond(null);
         return;
       }
-      const captured = captureSelection(document);
+      const captured = message.paragraph ? hover.take() : captureSelection(document);
       if (!captured || captured.text.length > 65536) {
         respond({
           error:
