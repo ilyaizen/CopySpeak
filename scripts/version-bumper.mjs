@@ -15,6 +15,10 @@ const filesToUpdate = {
     content.replace(/("version":\s*)"[^"]+"/, `$1"${version}"`),
   "src-tauri/Cargo.toml": (content, version) =>
     content.replace(/(version\s*=\s*)"[^"]+"/, `$1"${version}"`),
+  "browser-extension/manifest.json": (content, version) =>
+    content.replace(/("version":\s*)"[^"]+"/, `$1"${version}"`),
+  "browser-extension/package.json": (content, version) =>
+    content.replace(/("version":\s*)"[^"]+"/, `$1"${version}"`),
   [versionFile]: (content, version) =>
     content.replace(/export const VERSION = "[^"]+";/, `export const VERSION = "${version}";`),
   "README.md": (content, version) =>

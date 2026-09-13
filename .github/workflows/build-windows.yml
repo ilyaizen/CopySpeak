@@ -85,6 +85,13 @@ jobs:
       - name: Build frontend
         run: bun run build
 
+      - name: Build browser companion zip
+        run: |
+          cd browser-extension
+          bun run build
+          Compress-Archive -Path dist/* -DestinationPath ../CopySpeak-Companion-${{ steps.version.outputs.version }}.zip -Force
+        shell: pwsh
+
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -107,3 +114,11 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: "--target ${{ matrix.target }}"
+
+      - name: Attach browser companion zip to release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          files: CopySpeak-Companion-*.zip
