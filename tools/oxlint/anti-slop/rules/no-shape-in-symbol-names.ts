@@ -7,6 +7,18 @@ function containsForbiddenSymbolName(name: string): boolean {
   return name.toLowerCase().includes(FORBIDDEN_SYMBOL_NAME);
 }
 
+function isNativeWaveShaperCall(node: ESTree.Node & { name: string }): boolean {
+  const member = node.parent;
+  return (
+    node.name === "createWaveShaper" &&
+    member.type === "MemberExpression" &&
+    !member.computed &&
+    member.property === node &&
+    member.parent.type === "CallExpression" &&
+    member.parent.callee === member
+  );
+}
+
 /** Ban the case-insensitive substring "shape" in every JavaScript and TypeScript symbol name. */
 export const noForbiddenTermInSymbolNamesRule = defineRule({
   meta: {
@@ -22,7 +34,7 @@ export const noForbiddenTermInSymbolNamesRule = defineRule({
   },
   createOnce(context) {
     const reportForbiddenSymbolName = (node: ESTree.Node & { name: string }) => {
-      if (!containsForbiddenSymbolName(node.name)) return;
+      if (!containsForbiddenSymbolName(node.name) || isNativeWaveShaperCall(node)) return;
       context.report({
         node,
         messageId: "forbiddenSymbolName",
