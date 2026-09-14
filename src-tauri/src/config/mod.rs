@@ -292,6 +292,11 @@ fn migrate_add_kitten_profile_v4(cfg: &mut AppConfig) {
     log::info!("Config migrated to schema v4 (add bundled Kitten profile)");
 }
 
+fn migrate_add_qwen_profile_v5(cfg: &mut AppConfig) {
+    tts::migrate_add_qwen_profile_v5(&mut cfg.tts);
+    log::info!("Config migrated to schema v5 (add bundled Qwen profile)");
+}
+
 /// Bring every profile's speed and pitch back inside the supported ranges.
 /// Profiles saved before speed and pitch became independent knobs could carry a
 /// pitch of up to 2.0, which is a full octave once it no longer also changes
@@ -331,6 +336,11 @@ pub fn load_or_default() -> AppConfig {
             // Migrate v3 → v4: add the bundled first-class Kitten profile.
             if cfg.tts.schema_version < 4 {
                 migrate_add_kitten_profile_v4(&mut cfg);
+            }
+
+            // Migrate v4 -> v5: add the bundled first-class Qwen profile.
+            if cfg.tts.schema_version < 5 {
+                migrate_add_qwen_profile_v5(&mut cfg);
             }
 
             clamp_profile_rates(&mut cfg);

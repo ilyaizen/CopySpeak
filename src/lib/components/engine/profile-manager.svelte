@@ -47,6 +47,7 @@
     "microsoft",
     "edge",
     "kitten",
+    "qwen",
     "piper",
     "kokoro",
     "pocket"
@@ -80,6 +81,17 @@
       voice: "Rosie",
       voiceLabel: "Rosie",
       engineOptions: { engine: "kitten" }
+    },
+    {
+      name: "Qwen3-TTS — Aiden",
+      engine: "qwen",
+      voice: "Aiden",
+      voiceLabel: "Aiden",
+      engineOptions: {
+        engine: "qwen",
+        model: "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+        cuda: false
+      }
     },
     {
       name: "Piper — Amy",

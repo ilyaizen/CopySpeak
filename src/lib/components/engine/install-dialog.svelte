@@ -38,6 +38,8 @@
   const mode = $derived(entry.voiceMode ?? "none");
 
   let voices = $state<VoiceCatalogEntry[]>([]);
+  let supportsCuda = $state(false);
+  let cuda = $state(false);
   let installed = $state<Set<string>>(new Set());
   let isInstalled = $state(false);
   let selected = $state<Set<string>>(new Set());
@@ -56,9 +58,12 @@
     if (mode !== "none") {
       try {
         const catalog = await invoke<EngineCatalogEntry[]>("list_tts_engines");
-        voices = catalog.find((e) => e.engine === engineId)?.voices ?? [];
+        const engine = catalog.find((e) => e.engine === engineId);
+        voices = engine?.voices ?? [];
+        supportsCuda = engine?.options.some((option) => option.key === "cuda") ?? false;
       } catch {
         voices = [];
+        supportsCuda = false;
       }
     }
     try {
@@ -117,7 +122,11 @@
     confirmingUninstall = false;
     await installStore.start(engineId, ids);
     try {
-      await invoke("install_engine", { engine: engineId, voice: ids.length > 0 ? ids : null });
+      await invoke("install_engine", {
+        engine: engineId,
+        voice: ids.length > 0 ? ids : null,
+        cuda
+      });
     } catch (e) {
       toast.error(`${$_("engines.installFailed")}: ${e}`);
     }
@@ -140,7 +149,7 @@
     toasted = false;
     installStore.markVoice(engineId, id, "pending");
     try {
-      await invoke("install_engine", { engine: engineId, voice: [id] });
+      await invoke("install_engine", { engine: engineId, voice: [id], cuda });
     } catch (e) {
       toast.error(`${$_("engines.installFailed")}: ${e}`);
     }
@@ -221,6 +230,16 @@
             </li>
           {/each}
         </ul>
+      {/if}
+
+      {#if supportsCuda}
+        <label class="border-border flex items-start gap-2 rounded border p-3 text-sm">
+          <input type="checkbox" class="mt-0.5 h-4 w-4" bind:checked={cuda} disabled={busy} />
+          <span>
+            <span class="font-medium">{$_("engines.installCuda")}</span>
+            <span class="text-muted-foreground block text-xs">{$_("engines.installCudaHint")}</span>
+          </span>
+        </label>
       {/if}
 
       {#if confirmingUninstall}

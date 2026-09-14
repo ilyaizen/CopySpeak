@@ -117,10 +117,41 @@ function Add-CudaRuntime {
     Write-Host "  [STEP] cuda" -ForegroundColor Yellow
     try {
         if ($Runtime -eq "torch") {
-            # pocket-tts pulls whatever torch is current on PyPI, which may need
-            # a newer CUDA than the installed driver; pinning the cu124 index
-            # keeps torch.cuda.is_available() from silently returning False.
-            Invoke-Uv add --project $EngineDir --index "https://download.pytorch.org/whl/cu124" torch
+            # PyPI torch has been CPU-only since 2.4; CUDA wheels live only on
+            # https://download.pytorch.org/whl/*. cu124 caps at 2.6.0 for
+            # cp313-win, so an unpinned `uv add --index cu124 torch` resolves
+            # to PyPI 2.14.0 CPU (newer) and gives "Torch not compiled with CUDA".
+            # Use explicit cu126 index (CUDA 12.6, compatible with driver 616.92/CUDA 13.4)
+            # and pin to 2.8.0+cu126 — exists for cp313-win_amd64 and satisfies
+            # qwen-tts/pocket-tts — so the CUDA build sticks across later `uv add`.
+            $pyproject = Join-Path $EngineDir "pyproject.toml"
+            if (Test-Path $pyproject) {
+                $content = Get-Content $pyproject -Raw
+                if ($content -notmatch 'pytorch-cu126') {
+                    Add-Content $pyproject "`n[[tool.uv.index]]`nname = `"pytorch-cu126`"`nurl = `"https://download.pytorch.org/whl/cu126`"`nexplicit = true`n"
+                    $content = Get-Content $pyproject -Raw
+                }
+                if ($content -notmatch '\[tool\.uv\.sources\]') {
+                    Add-Content $pyproject "`n[tool.uv.sources]`ntorch = { index = `"pytorch-cu126`" }`ntorchaudio = { index = `"pytorch-cu126`" }`n"
+                } else {
+                    # torchaudio starts with "torch", so check the torch mapping
+                    # before adding the torchaudio line or it always matches.
+                    if ($content -notmatch 'torch.*pytorch-cu126') {
+                        $content = $content -replace '(\[tool\.uv\.sources\])', "`$1`ntorch = { index = `"pytorch-cu126`" }"
+                    }
+                    if ($content -notmatch 'torchaudio.*pytorch-cu126') {
+                        $content = $content -replace '(\[tool\.uv\.sources\])', "`$1`ntorchaudio = { index = `"pytorch-cu126`" }"
+                    }
+                    Set-Content $pyproject $content -Encoding utf8
+                }
+            }
+            # torch and torchaudio must come from the same index: qwen_tts/pocket
+            # import torchaudio, and an unpinned PyPI torchaudio (2.11) beside
+            # cu126 torch (2.8) dies at `import torchaudio` with "[WinError 127]
+            # The specified procedure could not be found" - _torchaudio.pyd asks
+            # the older torch C++ ABI for symbols it does not export. CPU
+            # profiles are unaffected (PyPI torch + PyPI torchaudio match).
+            Invoke-Uv add --project $EngineDir "torch==2.8.0" "torchaudio==2.8.0"
         } else {
             # The CPU wheel and the GPU wheel both provide the `onnxruntime`
             # module, so the CPU one has to go first or resolution is a coin flip.

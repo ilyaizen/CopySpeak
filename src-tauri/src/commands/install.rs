@@ -45,6 +45,7 @@ fn installer_script_for(engine: &str) -> Result<&'static str, String> {
     match engine {
         "uv" => Ok("install-uv.ps1"),
         "kitten" | "kittentts" | "kitten-tts" => Ok("install-kittentts.ps1"),
+        "qwen" | "qwen3" | "qwen3-tts" => Ok("install-qwen.ps1"),
         "piper" => Ok("install-piper.ps1"),
         "kokoro" | "kokoro-tts" => Ok("install-kokoro.ps1"),
         "pocket" | "pocket-tts" => Ok("install-pocket.ps1"),
@@ -181,17 +182,19 @@ fn spawn_streamed(
 /// Launch an engine installer by id, streaming stdout/stderr as
 /// `install-progress` events. Returns immediately after spawning; completion
 /// is signalled by a terminal event (`done: true`). When `voice` is supplied
-/// it is forwarded as repeated `-Voices <id>` args, bypassing the script's
-/// interactive menu (uv/edge have no voice concept and omit it).
+/// it is forwarded as one `-Voices <id,id,...>` array argument, bypassing the script's
+/// interactive menu (uv/edge have no voice concept and omit it). `cuda` adds
+/// the installers' shared `-Cuda` switch.
 #[tauri::command]
 pub fn install_engine(
     app: tauri::AppHandle,
     engine: String,
     voice: Option<Vec<String>>,
+    cuda: bool,
 ) -> Result<(), String> {
     #[cfg(not(target_os = "windows"))]
     {
-        let _ = (app, voice);
+        let _ = (app, voice, cuda);
         return Err("Engine installers are Windows-only.".into());
     }
 
@@ -204,15 +207,21 @@ pub fn install_engine(
             script_path.display()
         );
 
-        // Repeated `-Voices id` accumulates into the script's [string[]].
-        let mut args: Vec<String> = Vec::new();
-        for v in voice.as_deref().unwrap_or(&[]) {
-            args.push("-Voices".into());
-            args.push(v.clone());
-        }
+        let args = installer_args(voice.as_deref(), cuda);
 
         spawn_streamed(app, engine, &script_path, &args)
     }
+}
+
+fn installer_args(voices: Option<&[String]>, cuda: bool) -> Vec<String> {
+    let mut args = match voices {
+        Some(voices) if !voices.is_empty() => vec!["-Voices".into(), voices.join(",")],
+        _ => Vec::new(),
+    };
+    if cuda {
+        args.push("-Cuda".into());
+    }
+    args
 }
 
 /// Uninstall a local engine, streaming progress as `install-progress` events on
@@ -255,6 +264,7 @@ fn canonical_engine(engine: &str) -> Option<&'static str> {
     match engine {
         "uv" => Some("uv"),
         "kitten" | "kittentts" | "kitten-tts" => Some("kitten"),
+        "qwen" | "qwen3" | "qwen3-tts" => Some("qwen"),
         "piper" => Some("piper"),
         "kokoro" | "kokoro-tts" => Some("kokoro"),
         "edge" | "edge-tts" => Some("edge"),
@@ -382,7 +392,7 @@ pub fn engine_status(engine: String) -> Result<EngineStatus, String> {
         "uv" => on_path("uv"),
         // uv projects: the installer writes the manifest last, so its presence
         // means the package install and wrapper copy both succeeded.
-        "kitten" | "piper" | "pocket" => engine_dir(name)
+        "kitten" | "qwen" | "piper" | "pocket" => engine_dir(name)
             .map(|d| d.join("manifest.json").exists() && d.join("pyproject.toml").exists())
             .unwrap_or(false),
         // Kokoro refuses to synthesize without these two model files, which the
@@ -407,4 +417,19 @@ pub fn engine_status(engine: String) -> Result<EngineStatus, String> {
             Vec::new()
         },
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::installer_args;
+
+    #[test]
+    fn installer_voices_are_one_powershell_array_argument() {
+        let voices = vec!["Aiden".to_string(), "Ryan".to_string()];
+
+        assert_eq!(
+            installer_args(Some(&voices), true),
+            ["-Voices", "Aiden,Ryan", "-Cuda"]
+        );
+    }
 }

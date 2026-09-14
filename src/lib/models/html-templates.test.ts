@@ -41,6 +41,7 @@ describe("HTML Template Backend", () => {
       microsoft: 0,
       edge: 0,
       kitten: 0,
+      qwen: 0,
       piper: 0,
       kokoro: 0,
       pocket: 0

@@ -28,7 +28,8 @@
       "../scripts/uninstall-*.ps1": "scripts/",
       "../scripts/lib/*.ps1": "scripts/lib/",
       "../scripts/piper/*.py": "scripts/piper/",
-      "../scripts/kitten/*.py": "scripts/kitten/"
+      "../scripts/kitten/*.py": "scripts/kitten/",
+      "../scripts/qwen/*.py": "scripts/qwen/"
     },
     "windows": {
       "certificateThumbprint": null,

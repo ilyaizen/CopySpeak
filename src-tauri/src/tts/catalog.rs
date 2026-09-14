@@ -179,6 +179,46 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             ],
         },
         EngineCatalogEntry {
+            engine: TtsEngine::Qwen,
+            label: "Qwen3-TTS".into(),
+            description: "Local multilingual Qwen3-TTS with 9 built-in voices and estimated word captions.".into(),
+            docs_url: "https://github.com/QwenLM/Qwen3-TTS".into(),
+            supports_voice_refresh: false,
+            supports_pitch: false,
+            supports_captions: true,
+            supports_bracket_emotes: false,
+            options: vec![
+                select_option(
+                    "model",
+                    "Model",
+                    "0.6B is the lighter default; 1.7B needs more memory.",
+                    serde_json::json!("Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice"),
+                    vec![
+                        "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
+                        "Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice",
+                    ],
+                ),
+                option(
+                    "cuda",
+                    "GPU acceleration",
+                    EngineOptionKind::Boolean,
+                    "Run inference on an NVIDIA GPU. Requires the engine's GPU runtime (install with -Cuda).",
+                    serde_json::json!(false),
+                ),
+            ],
+            voices: vec![
+                voice("Aiden", "Aiden", Some("en"), Some("Sunny American male voice"), Some("male")),
+                voice("Ryan", "Ryan", Some("en"), Some("Dynamic male voice"), Some("male")),
+                voice("Vivian", "Vivian", Some("zh"), Some("Bright young female voice"), Some("female")),
+                voice("Serena", "Serena", Some("zh"), Some("Warm young female voice"), Some("female")),
+                voice("Uncle_Fu", "Uncle Fu", Some("zh"), Some("Low, mellow older male voice"), Some("male")),
+                voice("Dylan", "Dylan", Some("zh-Beijing"), Some("Youthful Beijing male voice"), Some("male")),
+                voice("Eric", "Eric", Some("zh-Sichuan"), Some("Lively Chengdu male voice"), Some("male")),
+                voice("Ono_Anna", "Ono Anna", Some("ja"), Some("Playful Japanese female voice"), Some("female")),
+                voice("Sohee", "Sohee", Some("ko"), Some("Warm Korean female voice"), Some("female")),
+            ],
+        },
+        EngineCatalogEntry {
             engine: TtsEngine::Piper,
             label: "Piper".into(),
             description: "Free local TTS via Piper — per-voice download, ~20-100MB each.".into(),
@@ -1171,6 +1211,7 @@ mod tests {
             TtsEngine::Microsoft,
             TtsEngine::Edge,
             TtsEngine::Kitten,
+            TtsEngine::Qwen,
             TtsEngine::Piper,
             TtsEngine::Kokoro,
             TtsEngine::Pocket,
@@ -1183,7 +1224,7 @@ mod tests {
                 1
             );
         }
-        assert_eq!(entries.len(), 12);
+        assert_eq!(entries.len(), 13);
     }
 
     #[test]
@@ -1195,7 +1236,7 @@ mod tests {
     }
 
     #[test]
-    fn caption_support_matches_native_timing_adapters() {
+    fn caption_support_matches_timing_adapters() {
         let supported: Vec<_> = list_engines()
             .into_iter()
             .filter(|entry| entry.supports_captions)
@@ -1205,6 +1246,7 @@ mod tests {
             supported,
             [
                 TtsEngine::Kitten,
+                TtsEngine::Qwen,
                 TtsEngine::Piper,
                 TtsEngine::Kokoro,
                 TtsEngine::ElevenLabs,

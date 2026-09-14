@@ -41,7 +41,7 @@ use std::os::windows::process::CommandExt;
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 /// Engines that can run a resident wrapper.
-pub const DAEMON_ENGINES: [&str; 4] = ["piper", "kitten", "kokoro", "pocket"];
+pub const DAEMON_ENGINES: [&str; 5] = ["piper", "kitten", "qwen", "kokoro", "pocket"];
 
 struct Daemon {
     /// Command + args the daemon was started with. A mismatch means the user

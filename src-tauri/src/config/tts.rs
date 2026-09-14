@@ -19,6 +19,7 @@ pub enum TtsEngine {
     // First-class local engines (§1): own hard-coded CLI contract, not
     // user-editable like `Local`. Voice id lives on VoiceProfile.voice.
     Kitten,
+    Qwen,
     Piper,
     Kokoro,
     Pocket,
@@ -494,6 +495,15 @@ pub struct KittenEngineOptions {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
+pub struct QwenEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(default)]
+    pub cuda: bool,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct PiperEngineOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     // ponytail: speed knob exposed per spec; wrapper (copyspeak-piper.py) has no
@@ -537,6 +547,7 @@ pub enum ProfileEngineOptions {
     Microsoft(MicrosoftEngineOptions),
     Edge(EdgeEngineOptions),
     Kitten(KittenEngineOptions),
+    Qwen(QwenEngineOptions),
     Piper(PiperEngineOptions),
     Kokoro(KokoroEngineOptions),
     Pocket(PocketEngineOptions),
@@ -568,6 +579,7 @@ impl ProfileEngineOptions {
                 | (Self::Microsoft(_), TtsEngine::Microsoft)
                 | (Self::Edge(_), TtsEngine::Edge)
                 | (Self::Kitten(_), TtsEngine::Kitten)
+                | (Self::Qwen(_), TtsEngine::Qwen)
                 | (Self::Piper(_), TtsEngine::Piper)
                 | (Self::Kokoro(_), TtsEngine::Kokoro)
                 | (Self::Pocket(_), TtsEngine::Pocket)
@@ -608,6 +620,7 @@ impl ProfileEngineOptions {
             }
             TtsEngine::Edge => Self::Edge(serde_json::from_value(value).unwrap_or_default()),
             TtsEngine::Kitten => Self::Kitten(serde_json::from_value(value).unwrap_or_default()),
+            TtsEngine::Qwen => Self::Qwen(serde_json::from_value(value).unwrap_or_default()),
             TtsEngine::Piper => Self::Piper(serde_json::from_value(value).unwrap_or_default()),
             TtsEngine::Kokoro => Self::Kokoro(serde_json::from_value(value).unwrap_or_default()),
             TtsEngine::Pocket => Self::Pocket(serde_json::from_value(value).unwrap_or_default()),
@@ -633,6 +646,12 @@ impl ProfileEngineOptions {
     pub fn kitten(&self) -> Option<&KittenEngineOptions> {
         match self {
             Self::Kitten(o) => Some(o),
+            _ => None,
+        }
+    }
+    pub fn qwen(&self) -> Option<&QwenEngineOptions> {
+        match self {
+            Self::Qwen(o) => Some(o),
             _ => None,
         }
     }
@@ -684,6 +703,7 @@ impl ProfileEngineOptions {
     pub fn cuda(&self) -> bool {
         match self {
             Self::Kitten(o) => o.cuda,
+            Self::Qwen(o) => o.cuda,
             Self::Piper(o) => o.cuda,
             Self::Kokoro(o) => o.cuda,
             Self::Pocket(o) => o.cuda,
@@ -708,6 +728,7 @@ impl Serialize for ProfileEngineOptions {
             Self::Microsoft(o) => ("microsoft", serde_json::to_value(o)),
             Self::Edge(o) => ("edge", serde_json::to_value(o)),
             Self::Kitten(o) => ("kitten", serde_json::to_value(o)),
+            Self::Qwen(o) => ("qwen", serde_json::to_value(o)),
             Self::Piper(o) => ("piper", serde_json::to_value(o)),
             Self::Kokoro(o) => ("kokoro", serde_json::to_value(o)),
             Self::Pocket(o) => ("pocket", serde_json::to_value(o)),
@@ -755,6 +776,7 @@ impl<'de> Deserialize<'de> for ProfileEngineOptions {
             Some("microsoft") => Ok(Self::from_engine_map(&TtsEngine::Microsoft, map)),
             Some("edge") => Ok(Self::from_engine_map(&TtsEngine::Edge, map)),
             Some("kitten") => Ok(Self::from_engine_map(&TtsEngine::Kitten, map)),
+            Some("qwen") => Ok(Self::from_engine_map(&TtsEngine::Qwen, map)),
             Some("piper") => Ok(Self::from_engine_map(&TtsEngine::Piper, map)),
             Some("kokoro") => Ok(Self::from_engine_map(&TtsEngine::Kokoro, map)),
             Some("pocket") => Ok(Self::from_engine_map(&TtsEngine::Pocket, map)),
@@ -988,16 +1010,46 @@ pub(crate) fn migrate_add_kitten_profile_v4(tts: &mut TtsConfig) {
     tts.schema_version = 4;
 }
 
+pub(crate) const QWEN_DEFAULT_PROFILE_ID: &str = "profile-qwen-default";
+
+fn default_qwen_profile() -> VoiceProfile {
+    VoiceProfile {
+        id: QWEN_DEFAULT_PROFILE_ID.into(),
+        name: "Qwen3-TTS".into(),
+        description: None,
+        engine: TtsEngine::Qwen,
+        voice: "Aiden".into(),
+        voice_label: Some("Aiden".into()),
+        speed: 1.0,
+        pitch: 1.0,
+        effects: ProfileEffects::default(),
+        text_processing: ProfileTextProcessing::default(),
+        engine_options: ProfileEngineOptions::Qwen(QwenEngineOptions {
+            model: Some("Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice".into()),
+            cuda: false,
+        }),
+    }
+}
+
+/// v4 -> v5: make Qwen reachable without changing existing profiles.
+pub(crate) fn migrate_add_qwen_profile_v5(tts: &mut TtsConfig) {
+    if !tts.profiles.iter().any(|p| p.id == QWEN_DEFAULT_PROFILE_ID) {
+        tts.profiles.push(default_qwen_profile());
+    }
+    tts.schema_version = 5;
+}
+
 impl Default for TtsConfig {
     fn default() -> Self {
         let cartesia_profile = default_cartesia_profile();
         Self {
-            schema_version: 4,
+            schema_version: 5,
             active_backend: TtsEngine::Cartesia,
             active_profile_id: cartesia_profile.id.clone(),
             profiles: vec![
                 VoiceProfile::default(),
                 default_kitten_profile(),
+                default_qwen_profile(),
                 default_elevenlabs_profile(),
                 cartesia_profile,
                 default_google_profile(),
@@ -1050,9 +1102,11 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             TtsEngine::Edge => tts.edge.voice.clone(),
             // First-class local engines can't appear in a legacy (schema_version
             // 0) config; defensive empty string only.
-            TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro | TtsEngine::Pocket => {
-                String::new()
-            }
+            TtsEngine::Kitten
+            | TtsEngine::Qwen
+            | TtsEngine::Piper
+            | TtsEngine::Kokoro
+            | TtsEngine::Pocket => String::new(),
         };
 
         let voice_label =
@@ -1136,6 +1190,7 @@ fn absolutize_wrapper_path(arg: &str) -> Option<String> {
     // ponytail: lookup-driven; add a (wrapper_name, subdir) pair per engine.
     const WRAPPERS: &[(&str, &str)] = &[
         ("copyspeak-kitten.py", "kitten"),
+        ("copyspeak-qwen.py", "qwen"),
         ("copyspeak-piper.py", "piper"),
         ("copyspeak-kokoro.py", "kokoro"),
         ("copyspeak-pocket.py", "pocket"),
@@ -1219,7 +1274,11 @@ impl TtsConfig {
             }
             // First-class local engines have no credential/global config to
             // validate; command/voice come from the installer contract + catalog.
-            TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro | TtsEngine::Pocket => {}
+            TtsEngine::Kitten
+            | TtsEngine::Qwen
+            | TtsEngine::Piper
+            | TtsEngine::Kokoro
+            | TtsEngine::Pocket => {}
         }
 
         errors

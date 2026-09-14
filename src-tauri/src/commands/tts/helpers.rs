@@ -72,6 +72,24 @@ fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
                 "{speed}",
             ],
         ),
+        TtsEngine::Qwen => (
+            "uv",
+            vec![
+                "run",
+                "--project",
+                "{engine_dir}/qwen",
+                "python",
+                "{engine_dir}/qwen/scripts/copyspeak-qwen.py",
+                "--text-file",
+                "{input}",
+                "--voice",
+                "{voice}",
+                "--output",
+                "{output}",
+                "--model",
+                "{model}",
+            ],
+        ),
         TtsEngine::Piper => (
             "uv",
             vec![
@@ -132,7 +150,11 @@ pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<
             tts_config.command.clone(),
             tts_config.args_template.clone(),
         )),
-        TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro | TtsEngine::Pocket => {
+        TtsEngine::Kitten
+        | TtsEngine::Qwen
+        | TtsEngine::Piper
+        | TtsEngine::Kokoro
+        | TtsEngine::Pocket => {
             // Command/args are fixed by the installer wrapper contract.
             let (command, args) = first_class_local_cli(active).unwrap();
             Box::new(CliTtsBackend::new(command, args))
@@ -177,13 +199,25 @@ pub(crate) fn create_backend_from_effective(
                 .unwrap_or_else(|| tts_config.args_template.clone());
             Box::new(CliTtsBackend::new(command, args_template))
         }
-        TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro | TtsEngine::Pocket => {
+        TtsEngine::Kitten
+        | TtsEngine::Qwen
+        | TtsEngine::Piper
+        | TtsEngine::Kokoro
+        | TtsEngine::Pocket => {
             // Voice comes from eff.voice (profile-owned); CLI is fixed.
             let (command, args) = first_class_local_cli(&eff.engine).unwrap();
             let mut backend = CliTtsBackend::new(command, args);
             if let Some(model) = eff
                 .engine_options
                 .kitten()
+                .and_then(|o| o.model.clone())
+                .filter(|m| !m.trim().is_empty())
+            {
+                backend.model = Some(model);
+            }
+            if let Some(model) = eff
+                .engine_options
+                .qwen()
                 .and_then(|o| o.model.clone())
                 .filter(|m| !m.trim().is_empty())
             {
@@ -330,9 +364,11 @@ pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> S
         TtsEngine::Microsoft => tts_config.microsoft.voice_name.clone(),
         TtsEngine::Edge => tts_config.edge.voice.clone(),
         // First-class local engines have no global config; voice is profile-owned.
-        TtsEngine::Kitten | TtsEngine::Piper | TtsEngine::Kokoro | TtsEngine::Pocket => {
-            String::new()
-        }
+        TtsEngine::Kitten
+        | TtsEngine::Qwen
+        | TtsEngine::Piper
+        | TtsEngine::Kokoro
+        | TtsEngine::Pocket => String::new(),
     }
 }
 
@@ -342,6 +378,7 @@ pub(crate) fn engine_identifier(active: &TtsEngine) -> String {
     match active {
         TtsEngine::Local => "local".to_string(),
         TtsEngine::Kitten => "kitten".to_string(),
+        TtsEngine::Qwen => "qwen".to_string(),
         TtsEngine::Piper => "piper".to_string(),
         TtsEngine::Kokoro => "kokoro".to_string(),
         TtsEngine::Pocket => "pocket".to_string(),
@@ -417,6 +454,7 @@ pub(crate) fn voice_display_name(
                 .to_lowercase()
         }
         TtsEngine::Kitten => voice_id.to_lowercase(),
+        TtsEngine::Qwen => voice_id.to_lowercase(),
         TtsEngine::Piper => voice_id
             .split('-')
             .nth(1)
@@ -523,6 +561,7 @@ pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
         TtsEngine::Microsoft => "microsoft",
         TtsEngine::Edge => "edge",
         TtsEngine::Kitten => "kitten",
+        TtsEngine::Qwen => "qwen",
         TtsEngine::Piper => "piper",
         TtsEngine::Kokoro => "kokoro",
         TtsEngine::Pocket => "pocket",

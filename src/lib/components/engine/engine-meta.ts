@@ -15,7 +15,7 @@ export type TestState = "idle" | "testing" | "success" | "fail";
 /**
  * How the install dialog presents voices for an installable engine:
  * - `per-voice`: each voice is a separate model download (piper)
- * - `shared`: one model download covers every listed voice (kitten, kokoro)
+ * - `shared`: one selected model download covers every listed voice (kitten, kokoro)
  * - `none`: nothing to pick — a binary install only (uv, pocket)
  */
 export type VoiceMode = "per-voice" | "shared" | "none";
@@ -98,9 +98,18 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
     kind: "local",
     installerId: "kitten",
     voiceMode: "shared",
-    downloadSize: "~25 MB shared model",
+    downloadSize: "~25–80 MB selected model, fetched on first use",
     credential: "none",
     docsUrl: "https://github.com/KittenML/KittenTTS"
+  },
+  {
+    id: "qwen",
+    kind: "local",
+    installerId: "qwen",
+    voiceMode: "shared",
+    downloadSize: "~1.2 GB selected model, fetched on first use",
+    credential: "none",
+    docsUrl: "https://github.com/QwenLM/Qwen3-TTS"
   },
   {
     id: "piper",

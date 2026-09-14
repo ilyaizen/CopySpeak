@@ -55,6 +55,7 @@ export type TtsEngine =
   | "microsoft"
   | "edge"
   | "kitten"
+  | "qwen"
   | "piper"
   | "kokoro"
   | "pocket";

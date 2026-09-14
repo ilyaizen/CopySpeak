@@ -171,6 +171,7 @@ pub struct CliTtsBackend {
     /// Run inference on the GPU. Adds `--device cuda` for our own wrappers and
     /// puts the NVIDIA wheel DLL directories on the child's PATH.
     pub cuda: bool,
+    daemon_enabled: bool,
 }
 
 impl CliTtsBackend {
@@ -181,7 +182,15 @@ impl CliTtsBackend {
             model: None,
             speed: None,
             cuda: false,
+            daemon_enabled: true,
         }
+    }
+
+    /// Force one-shot synthesis. Health checks use this so testing an engine
+    /// cannot start a resident model and a second one-shot model together.
+    pub fn one_shot(mut self) -> Self {
+        self.daemon_enabled = false;
+        self
     }
 
     /// Which daemon-capable engine this backend runs, identified by the
@@ -195,10 +204,14 @@ impl CliTtsBackend {
             .find(|engine| haystack.contains(&format!("copyspeak-{engine}.py")))
     }
 
+    fn daemon_engine_kind(&self) -> Option<&'static str> {
+        self.daemon_enabled.then(|| self.engine_kind()).flatten()
+    }
+
     /// Stream from this engine's resident daemon, or `None` when it cannot
     /// serve this configuration (cold, busy, or a different voice/device).
     fn daemon_stream(&self, text: &str, voice: &str) -> Option<ChunkStream> {
-        let engine = self.engine_kind()?;
+        let engine = self.daemon_engine_kind()?;
         crate::tts::local_daemon::try_stream(engine, &self.command, &self.serve_args(voice), text)
     }
 
@@ -426,7 +439,7 @@ impl TtsBackend for CliTtsBackend {
     }
 
     fn prewarm(&self, voice: &str) {
-        let Some(engine) = self.engine_kind() else {
+        let Some(engine) = self.daemon_engine_kind() else {
             return;
         };
         crate::tts::local_daemon::prewarm(engine, self.command.clone(), self.serve_args(voice));
@@ -436,7 +449,7 @@ impl TtsBackend for CliTtsBackend {
         // Only once this engine's daemon is warm. Before then the one-shot
         // command is the only option and it cannot stream, so promising a
         // stream would just mean a single-chunk "stream" with extra steps.
-        self.engine_kind()
+        self.daemon_engine_kind()
             .is_some_and(crate::tts::local_daemon::is_ready)
     }
 
@@ -910,10 +923,28 @@ mod tests {
         );
         assert_eq!(pocket.engine_kind(), Some("pocket"));
 
+        let qwen = CliTtsBackend::new(
+            "uv".into(),
+            vec!["{engine_dir}/qwen/scripts/copyspeak-qwen.py".into()],
+        );
+        assert_eq!(qwen.engine_kind(), Some("qwen"));
+
         // A third-party CLI has no --serve mode; attempting a daemon would only
         // burn a process start per session.
         let third_party = CliTtsBackend::new("kokoro-tts".into(), vec!["{input}".into()]);
         assert_eq!(third_party.engine_kind(), None);
+    }
+
+    #[test]
+    fn one_shot_backend_is_not_daemon_eligible() {
+        let backend = CliTtsBackend::new(
+            "uv".into(),
+            vec!["{engine_dir}/qwen/scripts/copyspeak-qwen.py".into()],
+        )
+        .one_shot();
+
+        assert_eq!(backend.engine_kind(), Some("qwen"));
+        assert_eq!(backend.daemon_engine_kind(), None);
     }
 
     #[test]

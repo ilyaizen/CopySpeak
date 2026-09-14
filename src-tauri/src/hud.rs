@@ -43,6 +43,7 @@ fn get_provider_voice(cfg: &AppConfig) -> (Option<String>, Option<String>) {
     let provider = match eff.engine {
         TtsEngine::Local => "Local".to_string(),
         TtsEngine::Kitten => "Kitten TTS".to_string(),
+        TtsEngine::Qwen => "Qwen3-TTS".to_string(),
         TtsEngine::Piper => "Piper".to_string(),
         TtsEngine::Kokoro => "Kokoro".to_string(),
         TtsEngine::Pocket => "Pocket".to_string(),

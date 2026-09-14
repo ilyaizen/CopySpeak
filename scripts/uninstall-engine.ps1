@@ -19,7 +19,7 @@
     prerequisite that other engines (and possibly other apps) depend on.
 
 .PARAMETER Engine
-    kitten | piper | kokoro | pocket | edge
+    kitten | qwen | piper | kokoro | pocket | edge
 
 .PARAMETER KeepModels
     Uninstall the package/binary but leave downloaded model files on disk
@@ -32,7 +32,7 @@
 
 param(
     [Parameter(Mandatory)]
-    [ValidateSet("kitten", "piper", "kokoro", "pocket", "edge")]
+    [ValidateSet("kitten", "qwen", "piper", "kokoro", "pocket", "edge")]
     [string]$Engine,
     [switch]$KeepModels
 )
@@ -45,6 +45,7 @@ $ErrorActionPreference = "Stop"
 # Tool is the `uv tool` name (engines installed as project deps have none).
 $layout = @{
     kitten = @{ Dir = "kitten"; Tool = $null;          Title = "Kitten TTS" }
+    qwen   = @{ Dir = "qwen";   Tool = $null;          Title = "Qwen3-TTS" }
     piper  = @{ Dir = "piper";  Tool = $null;          Title = "Piper TTS" }
     kokoro = @{ Dir = "kokoro"; Tool = "kokoro-tts";   Title = "Kokoro TTS" }
     pocket = @{ Dir = $null;    Tool = "pocket-tts";   Title = "Pocket TTS" }

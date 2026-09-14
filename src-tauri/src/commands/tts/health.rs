@@ -136,6 +136,7 @@ fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
         "microsoft" => Ok(TtsEngine::Microsoft),
         "edge" => Ok(TtsEngine::Edge),
         "kitten" => Ok(TtsEngine::Kitten),
+        "qwen" => Ok(TtsEngine::Qwen),
         "piper" => Ok(TtsEngine::Piper),
         "kokoro" => Ok(TtsEngine::Kokoro),
         "pocket" => Ok(TtsEngine::Pocket),
@@ -228,6 +229,7 @@ fn effective_backend_name(eff: &EffectiveTtsRequest, tts: &TtsConfig) -> String 
         ),
         TtsEngine::Edge => format!("Edge-TTS ({})", first_set(&[&edge, &tts.edge.voice])),
         TtsEngine::Kitten => "Kitten TTS".to_string(),
+        TtsEngine::Qwen => "Qwen3-TTS".to_string(),
         TtsEngine::Piper => "Piper".to_string(),
         TtsEngine::Kokoro => "Kokoro".to_string(),
         TtsEngine::Pocket => "Pocket".to_string(),
@@ -265,6 +267,7 @@ pub fn test_tts_engine_config(
             format!("Microsoft ({})", first_set(&[&tts_config.microsoft.model]))
         }
         TtsEngine::Kitten => "Kitten TTS".to_string(),
+        TtsEngine::Qwen => "Qwen3-TTS".to_string(),
         TtsEngine::Piper => "Piper".to_string(),
         TtsEngine::Kokoro => "Kokoro".to_string(),
         TtsEngine::Pocket => "Pocket".to_string(),
@@ -292,7 +295,7 @@ pub fn test_local_engine(engine: String) -> Result<TtsHealthResult, String> {
             });
         }
     };
-    let backend = CliTtsBackend::new(spec.command.clone(), spec.args_template.clone());
+    let backend = CliTtsBackend::new(spec.command.clone(), spec.args_template.clone()).one_shot();
     let backend_name = format!("Local ({})", engine);
 
     log::info!(
@@ -394,6 +397,11 @@ fn local_engine_spec(engine: &str) -> Option<LocalEngineSpec> {
             command: "uv".into(),
             args_template: uv_run("kitten", "copyspeak-kitten.py"),
             voice: "Rosie".into(),
+        },
+        "qwen" => LocalEngineSpec {
+            command: "uv".into(),
+            args_template: uv_run("qwen", "copyspeak-qwen.py"),
+            voice: "Aiden".into(),
         },
         "kokoro" => LocalEngineSpec {
             command: "uv".into(),

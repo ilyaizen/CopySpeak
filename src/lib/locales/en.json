@@ -256,7 +256,12 @@
       "kitten": {
         "title": "Kitten TTS",
         "description": "Ultra-lightweight local ONNX TTS",
-        "detail": "Default engine. 25-80MB CPU-only ONNX inference with 8 built-in voices, no GPU required."
+        "detail": "Four selectable 25–80MB ONNX models with 8 built-in voices, optimized for CPU with optional GPU acceleration."
+      },
+      "qwen": {
+        "title": "Qwen3-TTS",
+        "description": "Multilingual local TTS",
+        "detail": "Local Qwen3-TTS CustomVoice with 9 built-in voices and optional GPU acceleration."
       },
       "pocket": {
         "title": "Pocket TTS",
@@ -291,7 +296,11 @@
     "testing": "Testing...",
     "kitten": {
       "title": "Kitten TTS",
-      "description": "Local: Ultra-lightweight TTS (25-80MB) with 8 natural voices. CPU-optimized ONNX inference, no GPU required."
+      "description": "Local: Four selectable ONNX models (25–80MB) with 8 natural voices. Optimized for CPU with optional GPU acceleration."
+    },
+    "qwen": {
+      "title": "Qwen3-TTS",
+      "description": "Local: Multilingual Qwen3-TTS CustomVoice with 9 built-in voices. The model downloads on first use."
     },
     "piper": {
       "title": "Piper TTS",
@@ -478,6 +487,8 @@
     "docs": "Docs",
     "noCredentialNeeded": "No API key required.",
     "installerSmokeTestHint": "Install, then press Test to verify the engine synthesizes audio.",
+    "installCuda": "Install NVIDIA GPU runtime",
+    "installCudaHint": "Enable this when the profile uses GPU acceleration. Reinstalling changes the engine runtime.",
     "installFailed": "Install failed",
     "saveBeforeTestFailed": "Save your changes before testing.",
     "installDone": "Install complete",

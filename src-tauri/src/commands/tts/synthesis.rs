@@ -1618,7 +1618,7 @@ mod cache_tests {
     fn replays_a_reading_only_when_every_fragment_is_saved() {
         let pagination = crate::config::PaginationConfig {
             enabled: true,
-            fragment_size: 25,
+            fragment_size: 30,
         };
         let text = "First sentence goes here. Second sentence goes here.";
         let fragments = pagination::paginate_text(text, &pagination);
