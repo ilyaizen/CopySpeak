@@ -1,6 +1,6 @@
 # CopySpeak
 
-**Current Version:** 0.2.4
+**Current Version:** 0.2.5
 
 A modern Windows desktop app that reads clipboard text aloud using AI Text-to-Speech engines. Trigger speech by quickly copying the same text twice in a row.
 
@@ -20,8 +20,8 @@ bun run tauri dev
 ### Core
 
 - **Multiple trigger modes**: Double-copy (1.5s window), hotkey, or manual paste/play
-- **11 TTS engines**:
-  - **Local CLI** — Piper, Kokoro, Kitten, Chatterbox, or any CLI TTS tool via local subprocess
+- **13 TTS engines**:
+  - **Local** — Piper, Kokoro, Kitten, Chatterbox, Qwen3-TTS (multilingual, 9 CustomVoice voices), or any CLI TTS tool via local subprocess
   - **Edge TTS** — Free Microsoft Edge Read Aloud backend (default)
   - **OpenAI TTS** — Cloud API with 9 voices
   - **ElevenLabs TTS** — Cloud API with voice library support
@@ -29,7 +29,8 @@ bun run tauri dev
   - **Google TTS** — Cloud API
   - **Microsoft TTS** — Azure Cognitive Services
   - **HTTP TTS** — Generic HTTP endpoint backend
-- **HUD overlay** — Floating heads-up display with real-time waveform visualization
+- **HUD overlay** — Floating heads-up display with real-time waveform visualization and live word-highlighting captions
+- **Live captions** — Word-level highlighting synced to the audio clock on the Play page, HUD, and browser companion, for engines that emit timing metadata
 - **History** — Persistent TTS generation history with playback and batch management
 - **Voice profiles** — Create, edit, and switch between named voice profiles with engine, voice, speed, pitch, and effects settings
 - **Audio effects** — Walkie-talkie, 8-bit Game Boy, and more via OfflineAudioContext post-processing
@@ -49,6 +50,7 @@ bun run tauri dev
 ### System
 
 - **System tray** — Quick access controls
+- **Browser companion** — Chrome/Edge extension to read your selection or hovered paragraphs through the app, with a context menu, status badge, and per-site permissions
 - **Auto-updater** — Check and install updates from GitHub Releases
 - **Control server** — Local HTTP server for external integrations (Pi, Claude Code, curl)
 - **Pi & Claude Code extensions** — Speak AI assistant responses through CopySpeak

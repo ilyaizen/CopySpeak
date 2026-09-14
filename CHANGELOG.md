@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-09-14
+
+### Added
+
+- **New local engine: Qwen3-TTS** — multilingual synthesis with nine built-in CustomVoice voices across English, Mandarin, Cantonese-flavored regional variants, Japanese, and Korean. The engine picker offers the 0.6B and 1.7B models (the model downloads on first use), an NVIDIA GPU runtime toggle, and native estimated word captions, so live word highlighting works out of the box with `bunx`-free one-shot install (`install-qwen.ps1`, or the Engines page installer with CUDA support).
+
+### Fixed
+
+- **GPU Qwen installs pin the CUDA wheel set** — the installer pairs torch 2.8.0+cu126 with a matching torchaudio and registers CUDA DLL directories inside the Python wrapper, avoiding the `import torchaudio` WinError 127 on brand-new installs.
+- **Engines-page health checks launch large local models once** — prewarming no longer stacks with the immediate fallback check, so Kokoro/Qwen-sized models are not loaded twice.
+
 ## [0.2.4] - 2026-09-13
 
 ### Added
