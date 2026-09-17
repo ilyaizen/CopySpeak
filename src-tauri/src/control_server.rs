@@ -27,6 +27,13 @@ enum ControlRequest {
 
 pub fn start(app: AppHandle) {
     let addr = std::env::var("COPYSPEAK_CONTROL_ADDR").unwrap_or_else(|_| DEFAULT_ADDR.to_string());
+    if !is_loopback_addr(&addr) {
+        log::error!(
+            "[Control] Refusing to bind control server to non-loopback address {}.",
+            addr
+        );
+        return;
+    }
     std::thread::spawn(move || {
         let listener = match TcpListener::bind(&addr) {
             Ok(listener) => listener,
@@ -207,6 +214,23 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
     .await
 }
 
+/// Whether a `host:port` socket address targets loopback.
+/// Unresolvable or malformed addresses fail closed (refuse to bind).
+pub fn is_loopback_addr(addr: &str) -> bool {
+    let host = addr.rsplit_once(':').map(|(host, _)| host).unwrap_or(addr);
+    let host = host.trim_start_matches('[').trim_end_matches(']');
+    if urls_like_local_name(host) {
+        return true;
+    }
+    host.parse::<std::net::IpAddr>()
+        .map(|ip| ip.is_loopback())
+        .unwrap_or(false)
+}
+
+fn urls_like_local_name(host: &str) -> bool {
+    host.eq_ignore_ascii_case("localhost")
+}
+
 fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
     match engine.to_ascii_lowercase().as_str() {
         "cartesia" => Ok(TtsEngine::Cartesia),
@@ -234,4 +258,96 @@ fn http_response(status: u16, reason: &str, body: &str) -> String {
         body.len(),
         body
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn loopback_only_accepts_loopback_addresses() {
+        assert!(is_loopback_addr("127.0.0.1:43117"));
+        assert!(is_loopback_addr("127.9.9.9:8080"));
+        assert!(is_loopback_addr("[::1]:43117"));
+        assert!(is_loopback_addr("localhost:43117"));
+        assert!(is_loopback_addr("LOCALHOST:43117"));
+    }
+
+    #[test]
+    fn loopback_rejects_non_loopback_and_garbage() {
+        assert!(!is_loopback_addr("0.0.0.0:43117"));
+        assert!(!is_loopback_addr("192.168.1.5:43117"));
+        assert!(!is_loopback_addr("[::]:43117"));
+        assert!(!is_loopback_addr("example.com:43117"));
+        assert!(!is_loopback_addr("10.0.0.1:43117"));
+        // Malformed / unresolvable values fail closed.
+        assert!(!is_loopback_addr(""));
+        assert!(!is_loopback_addr("not an address"));
+    }
+
+    /// A known-slow client changes its mind and disconnects instead of
+    /// completing the request; the reader must time out and free the
+    /// connection rather than blocking forever.
+    #[test]
+    fn slow_stalled_client_is_dropped_after_read_timeout() {
+        let addr = "127.0.0.1:0";
+        let listener = TcpListener::bind(addr).expect("bind ephemeral port");
+        let server_addr = listener.local_addr().expect("local addr");
+
+        let judge = std::thread::spawn(move || {
+            let mut established = listener
+                .incoming()
+                .next()
+                .expect("one connection")
+                .expect("accept");
+            let _ = established.set_read_timeout(Some(READ_TIMEOUT));
+            let started = std::time::Instant::now();
+            let mut buffer: Vec<u8> = Vec::new();
+            let mut chunk = [0_u8; 4096];
+            // The partial body arrives quickly; keep reading until the
+            // read-timeout fires while the client holds the connection open.
+            let error = loop {
+                match established.read(&mut chunk) {
+                    Ok(0) => panic!("client EOF before the read timeout fired"),
+                    Ok(n) => buffer.extend_from_slice(&chunk[..n]),
+                    Err(error) => break error,
+                }
+            };
+            let timed_out = error.kind() == std::io::ErrorKind::WouldBlock
+                || error.kind() == std::io::ErrorKind::TimedOut;
+            assert!(timed_out, "read failed with a non-timeout error: {}", error);
+            let elapsed = started.elapsed();
+            assert!(
+                elapsed >= READ_TIMEOUT,
+                "reader gave up early after {:?}",
+                elapsed
+            );
+            assert!(
+                elapsed < READ_TIMEOUT + Duration::from_secs(3),
+                "reader lingered {:?} past its timeout",
+                elapsed - READ_TIMEOUT
+            );
+        });
+
+        // The client half: connect, send a partial body, then stall — never
+        // send the remaining 8 declared bytes and never close the socket.
+        let _stall_client = std::thread::spawn(move || {
+            let mut client = TcpStream::connect(server_addr).expect("connect");
+            client
+                .write_all(
+                    b"POST /speak HTTP/1.1
+Content-Length: 10
+
+ab",
+                )
+                .expect("write partial body");
+            client.flush().expect("flush");
+            // Hold the connection open well beyond READ_TIMEOUT so the
+            // server-side read timeout is what severs the request.
+            std::thread::sleep(READ_TIMEOUT + Duration::from_secs(3));
+            drop(client);
+        });
+
+        judge.join().expect("server-side assertions hold");
+    }
 }

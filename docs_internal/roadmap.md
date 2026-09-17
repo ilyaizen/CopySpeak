@@ -1,8 +1,10 @@
 # CopySpeak Implementation Roadmap
 
-> **Last Updated:** 2026-03-25
-> **Version:** v0.1.0 (HUD completed; TTS Engine overhaul completed)
-> **Status:** Core feature set complete. TTS Engine Overhaul delivered; Phase 9 (Global Hotkey) delivered. Remaining: onboarding refinement (OBD-02/03), optional enhancements
+> **Last Updated:** 2026-09-17
+> **Version:** v0.2.5 (browser companion, live captions, resident local engines delivered)
+> **Status:** The Phase 11 backlog list was retired on 2026-09-17 and replaced by the
+> [capability table](#phase-11-capability-table-) below. New work is tracked per release in
+> [CHANGELOG.md](../CHANGELOG.md), not here.
 
 ---
 
@@ -37,11 +39,8 @@
     - [Deliverables](#deliverables-8)
   - [Phase 10: Amplitude Envelope Extraction ✅](#phase-10-amplitude-envelope-extraction-)
     - [Deliverables](#deliverables-9)
-  - [Phase 11: Extended Features 🚧](#phase-11-extended-features-)
+  - [Phase 11: Capability Table ✅](#phase-11-capability-table-)
     - [Completed](#completed)
-    - [Backlog (Priority 1)](#backlog-priority-1)
-    - [Backlog (Priority 2)](#backlog-priority-2)
-    - [Backlog (Priority 3)](#backlog-priority-3)
   - [Phase 12: UI Redesign - Brutalist Aesthetic ✅](#phase-12-ui-redesign---brutalist-aesthetic-)
     - [Deliverables](#deliverables-10)
       - [Design System](#design-system)
@@ -66,11 +65,13 @@
 
 ## Overview
 
-This document tracks the implementation progress of CopySpeak, organized by development phases. Phases 1-8, 9, 10, 12 are complete. Phase 11 has deferred features.
+This document tracks the implementation progress of CopySpeak, organized by development phases. Phases 1-10 and 12 are complete. Phase 11 is now a capability table (see above); forward-looking work lives in [CHANGELOG.md](../CHANGELOG.md).
 
-**Recent Change (2026-03-06):** Phase 6 (HUD Overlay) completed. Basic HUD with waveform visualization, preset positioning, and theme customization is now implemented. Monitor selection removed as overkill; HUD now defaults to primary monitor only.
+**Recent Change (2026-09-17):** Phase 11's stale backlog checklists were retired and replaced by a capability table with implemented / limited / planned states and source links per row, plus dated phase notes (COPY-02).
 
-**Previous Change (2026-02-24):** Updated roadmap based on implemented_features.md. Ten advanced features were deferred from v0.1 and are now on the `features-extras` branch. This includes Phase 9 (Global Hotkey) and additional Phase 11 features. Core clipboard-to-speech functionality is complete.
+**Previous Change (2026-03-06):** Phase 6 (HUD Overlay) completed. Basic HUD with waveform visualization, preset positioning, and theme customization is now implemented. Monitor selection removed as overkill; HUD now defaults to primary monitor only.
+
+**Earlier Change (2026-02-24):** Updated roadmap based on implemented_features.md. Ten advanced features were deferred from v0.1 and are now on the `features-extras` branch. This includes Phase 9 (Global Hotkey) and additional Phase 11 features. Core clipboard-to-speech functionality is complete.
 
 ---
 
@@ -291,9 +292,34 @@ bottom-left  bottom-center  bottom-right
 
 ---
 
-## Phase 11: Extended Features 🚧
+## Phase 11: Capability Table ✅
 
-**Status:** In Progress
+**Status:** Converted from a backlog checklist to a capability table on 2026-09-17.
+The itemized "Backlog (Priority 1-3)" lists this section used to carry were stale:
+most entries shipped long ago (update checker, config import/export, voice presets,
+sanitization/text preprocessing, engine installers, history viewer…). Deltas now land in
+[CHANGELOG.md](../CHANGELOG.md); this table states what the app can and cannot do today,
+with a source link for every row.
+
+| Capability | State | Evidence / Source |
+| ---------------------------------------------- | ----------- | --------------------------------------------------------------- |
+| Double-copy & hotkey triggering | Implemented | [clipboard pattern](../AGENTS.md); Phase 5 below |
+| 13 TTS engines (cloud + resident local) | Implemented | [engines.md](engines.md); [tts_backends.md](tts_backends.md) |
+| Voice profiles & engine catalog | Implemented | [profile-engine-settings.md](profile-engine-settings.md) |
+| HUD overlay with live captions | Implemented | [hud-overlay.md](hud-overlay.md); [caption-alignment.md](caption-alignment.md) |
+| Browser companion (hover/selection reading) | Implemented | [browser-companion.md](browser-companion.md) |
+| Control server (loopback-only HTTP API) | Implemented | src-tauri/src/control_server.rs |
+| LLM post-processing & sanitization | Implemented | src-tauri/src/post_process.rs; src-tauri/src/sanitize.rs |
+| History, replay & saved-audio cache | Implemented | CHANGELOG 0.2.2; src-tauri/src/history.rs |
+| Auto-updater & tray integration | Implemented | CHANGELOG 0.2.x; src-tauri/tauri.conf.json |
+| Audio output device selection | Implemented | Phase 4 below; CHANGELOG 0.1.15 |
+| Custom pronunciation dictionary / word substitutions | Planned | Not started; would extend src-tauri/src/sanitize.rs |
+| Language detection → auto voice selection | Planned | Deferred (Deferral Rationale below); requires per-language voice routing |
+| Application whitelist / per-app clipboard filter | Planned | Deferred (Deferral Rationale below); Win32 foreground-window tracking |
+| Batch TTS processor (multi-text queue UI) | Planned | Deferred (Deferral Rationale below); queue exists, UI does not |
+| Statistics / usage analytics dashboard | Planned | Data exists in src-tauri/src/telemetry.rs; no dashboard surface |
+| Multi-monitor HUD positioning | Limited | Primary monitor only, by design (Phase 6 notes) |
+| Abort of in-flight daemon synthesis | Limited | `stop` cuts playback but cannot cancel a running local daemon (AGENTS.md, daemon path) |
 
 ### Completed
 
@@ -322,37 +348,6 @@ bottom-left  bottom-center  bottom-right
 - [x] **Main Window Settings** — Comprehensive settings interface
 - [x] **Main Window Status View** — Status dashboard
 - [x] **Minimize to Tray** — Close-to-tray behavior
-
-### Backlog (Priority 1)
-
-- [ ] **Application Update Checker** — GitHub releases API check
-- [ ] **Config Import/Export** — JSON preset sharing
-- [ ] **Custom Pronunciation Dictionary** — Word/phrase substitutions
-- [ ] **Text Preprocessing** — Strip URLs, formatting, etc.
-- [ ] **Voice Preset Manager** — Save/load voice configurations
-
-### Backlog (Priority 2)
-
-- [ ] **Audio Device Selector UI** — Refinement for device selection
-- [ ] **Custom Hotkey Editor** — UI for rebinding shortcuts
-- [ ] **Keyboard Shortcuts Help** — Help overlay showing shortcuts
-- [ ] **View Toggle Mechanism** — Keyboard shortcut for toggle
-
-### Backlog (Priority 3)
-
-- [ ] **Application Whitelist** — Per-app clipboard monitoring
-- [ ] **Batch TTS Processor** — Process multiple texts sequentially
-- [ ] **History Viewer UI** — Browse speech history log
-- [ ] **Language Detection** — Auto-detect text language
-- [ ] **Multi-Monitor Support** — HUD across monitors
-- [ ] **Preset Import/Export** — Share presets as JSON
-- [ ] **Pronunciation Dictionary** — Custom pronunciations
-- [ ] **Skip Forward/Backward** — Audio navigation
-- [ ] **Statistics Dashboard** — Usage analytics
-- [ ] **TTS Engine Installer** — Guided TTS setup
-- [ ] **TTS Health Check UI** — Engine availability
-- [ ] **TTS Queue Viewer** — Visual queue
-- [ ] **Usage Statistics** — Track metrics
 
 ---
 
@@ -517,13 +512,9 @@ bun install mode-watcher
 8. ✅ UI Redesign — Brutalist (Phase 12)
 9. ✅ Amplitude Envelope Extraction (Phase 10)
 10. ✅ HUD Overlay — Basic (Phase 6)
-11. ⏸️ **Deferred to v0.2+** (Phase 11 Extended Features)
-    - Multi-Monitor Support for HUD
-    - Language Detection
-    - Content Filtering
-    - Application Filter
-    - Batch Processing
-
+11. 📋 **Planned / Limited** — see the [Phase 11 capability table](#phase-11-capability-table-)
+    - Language Detection, Application Whitelist/Filter, Batch Processing UI, Multi-Monitor HUD (Planned)
+    - Multi-Monitor HUD positioning and in-flight daemon abort are Limited today
 **Deferred features location:**
 
 ```bash
