@@ -74,6 +74,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Bundle each installer wrapper directory in `tauri.conf.json`; bundling `install-*.ps1` without its sibling Python wrapper breaks app-driven installs in both dev and release builds.
 - Run Engines-page health checks in one-shot mode; daemon prewarming plus the immediate fallback launches two copies of large local models.
 - Pass the install dialog's GPU-runtime choice as `-Cuda`; a CUDA profile cannot run against the default CPU-only engine install.
+- Keep the cu126-index CUDA setup Windows-only in `Add-CudaRuntime`: on Linux PyPI torch 2.8.0 already IS the CUDA build (nvidia-* wheel deps), so the `install-*.sh` ports pin plain PyPI torch/torchaudio and must not grow a custom index.
 
 <!-- rtk-instructions v2 -->
 
