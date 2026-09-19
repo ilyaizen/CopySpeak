@@ -206,6 +206,7 @@ impl PipeChannel {
     }
 }
 
+#[cfg(windows)]
 impl io::Read for PipeChannel {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let mut staged = self.buf.lock().unwrap();
@@ -222,6 +223,7 @@ impl io::Read for PipeChannel {
     }
 }
 
+#[cfg(windows)]
 impl io::Write for PipeChannel {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         unsafe { overlapped_write(self.handle, buf) }?;
