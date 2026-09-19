@@ -15,15 +15,26 @@ use serde_json::{json, Value};
 use std::io::{self, Write};
 use std::sync::mpsc;
 use std::thread;
+#[cfg(windows)]
 use windows::Win32::Foundation::{
     ERROR_PIPE_BUSY, GENERIC_READ, GENERIC_WRITE, HANDLE, WAIT_OBJECT_0,
 };
+#[cfg(windows)]
 use windows::Win32::Storage::FileSystem::{
     CreateFileW, FILE_FLAG_OVERLAPPED, FILE_SHARE_NONE, OPEN_EXISTING,
 };
+#[cfg(windows)]
 use windows::Win32::System::Pipes::WaitNamedPipeW;
-use windows::Win32::System::IO::{GetOverlappedResult, OVERLAPPED};
+#[cfg(windows)]
 use windows::Win32::System::Threading::INFINITE;
+#[cfg(windows)]
+use windows::Win32::System::IO::{GetOverlappedResult, OVERLAPPED};
+
+/// Default desktop endpoint, per platform. Matches CopySpeak's bridge server.
+#[cfg(windows)]
+const DEFAULT_ENDPOINT: &str = r"\\.\pipe\copyspeak-browser";
+#[cfg(not(windows))]
+const DEFAULT_ENDPOINT: &str = "copyspeak-browser.sock";
 
 enum HostEvent {
     /// A complete message arrived from the desktop pipe.
@@ -34,6 +45,46 @@ enum HostEvent {
     BrowserClosed,
     /// Browser-side failure; `message` goes to the worker as an error frame.
     BrowserError(&'static str),
+}
+
+/// Linux transport: a connected Unix stream socket to the desktop bridge.
+/// The relay reads and writes through `&UnixStream`'s `Read`/`Write` impls.
+#[cfg(not(windows))]
+struct PipeChannel {
+    stream: std::os::unix::net::UnixStream,
+}
+
+#[cfg(not(windows))]
+impl PipeChannel {
+    /// Independent handle to the same socket for the read leg (fd duplicate,
+    /// so each relay leg owns its own file description offsets state).
+    fn same_handle(&self) -> PipeChannel {
+        PipeChannel {
+            stream: self
+                .stream
+                .try_clone()
+                .expect("duplicating bridge socket fd"),
+        }
+    }
+}
+
+#[cfg(not(windows))]
+impl io::Read for PipeChannel {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        let mut reader = &self.stream;
+        reader.read(buf)
+    }
+}
+
+#[cfg(not(windows))]
+impl io::Write for PipeChannel {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        let mut writer = &self.stream;
+        writer.write(buf)
+    }
+    fn flush(&mut self) -> io::Result<()> {
+        Ok(())
+    }
 }
 
 #[cfg(windows)]
@@ -52,11 +103,13 @@ fn write_error_frame(writer: &mut impl io::Write, message: &str) {
 }
 
 /// True when a failed I/O call means "started, still pending" (ERROR_IO_PENDING).
+#[cfg(windows)]
 fn is_pending(e: &std::io::Error) -> bool {
     e.raw_os_error() == Some(997)
 }
 
 /// One blocking overlapped READ to completion. Ok(0) = peer disconnected.
+#[cfg(windows)]
 unsafe fn overlapped_read(handle: HANDLE) -> std::io::Result<Vec<u8>> {
     let event = windows::Win32::System::Threading::CreateEventW(None, true, false, None)
         .map_err(|e| std::io::Error::from_raw_os_error(e.code().0))?;
@@ -77,9 +130,7 @@ unsafe fn overlapped_read(handle: HANDLE) -> std::io::Result<Vec<u8>> {
             return Err(err);
         }
     }
-    if windows::Win32::System::Threading::WaitForSingleObject(event, INFINITE)
-        != WAIT_OBJECT_0
-    {
+    if windows::Win32::System::Threading::WaitForSingleObject(event, INFINITE) != WAIT_OBJECT_0 {
         return Err(std::io::Error::last_os_error());
     }
     let mut moved: u32 = 0;
@@ -91,6 +142,7 @@ unsafe fn overlapped_read(handle: HANDLE) -> std::io::Result<Vec<u8>> {
 }
 
 /// One blocking overlapped WRITE to completion.
+#[cfg(windows)]
 unsafe fn overlapped_write(handle: HANDLE, buf: &[u8]) -> std::io::Result<()> {
     let event = windows::Win32::System::Threading::CreateEventW(None, true, false, None)
         .map_err(|e| std::io::Error::from_raw_os_error(e.code().0))?;
@@ -110,9 +162,7 @@ unsafe fn overlapped_write(handle: HANDLE, buf: &[u8]) -> std::io::Result<()> {
             return Err(err);
         }
     }
-    if windows::Win32::System::Threading::WaitForSingleObject(event, INFINITE)
-        != WAIT_OBJECT_0
-    {
+    if windows::Win32::System::Threading::WaitForSingleObject(event, INFINITE) != WAIT_OBJECT_0 {
         return Err(std::io::Error::last_os_error());
     }
     let mut moved: u32 = 0;
@@ -130,6 +180,7 @@ unsafe fn overlapped_write(handle: HANDLE, buf: &[u8]) -> std::io::Result<()> {
 
 /// Duplex named-pipe handle opened in overlapped mode; safe to share across
 /// the two relay threads (one parked read + one write at a time).
+#[cfg(windows)]
 struct PipeChannel {
     handle: HANDLE,
     /// Leftover bytes from the last overlapped read. read_frame() requests
@@ -137,9 +188,12 @@ struct PipeChannel {
     /// swallow a whole pipe chunk and silently drop its tail.
     buf: std::sync::Mutex<Vec<u8>>,
 }
+#[cfg(windows)]
 unsafe impl Send for PipeChannel {}
+#[cfg(windows)]
 unsafe impl Sync for PipeChannel {}
 
+#[cfg(windows)]
 impl PipeChannel {
     /// Second owner of the SAME kernel handle (no DuplicateHandle needed:
     /// the I/O legs use independent OVERLAPPED structures, which is the whole
@@ -178,6 +232,7 @@ impl io::Write for PipeChannel {
     }
 }
 
+#[cfg(windows)]
 fn open_pipe(pipe_name: &str) -> std::io::Result<PipeChannel> {
     let wide: Vec<u16> = pipe_name.encode_utf16().chain(std::iter::once(0)).collect();
     let name = windows::core::PCWSTR(wide.as_ptr());
@@ -213,20 +268,59 @@ fn open_pipe(pipe_name: &str) -> std::io::Result<PipeChannel> {
     })
 }
 
+/// Desktop endpoint resolver, per platform. `endpoint` is a socket path on
+/// Linux, a pipe name on Windows. Mirrors `bridge_socket_path` on the desktop
+/// side (same env vars, same fallback).
+#[cfg(not(windows))]
+fn resolve_endpoint(endpoint: &str) -> std::path::PathBuf {
+    use std::path::PathBuf;
+
+    let path = PathBuf::from(endpoint);
+    if path.is_absolute() {
+        return path;
+    }
+    let dir = std::env::var_os("XDG_RUNTIME_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            let user = std::env::var("USER").unwrap_or_default();
+            PathBuf::from(format!("/tmp/{user}.runtime-1800"))
+        });
+    dir.join(endpoint)
+}
+
+/// Linux: connect to the desktop bridge's Unix stream socket. One client at a
+/// time is served, so a busy server surfaces here as a connect error and the
+/// worker shows CopySpeak as unavailable — no wait-and-retry policy to keep
+/// in sync with the desktop.
+#[cfg(not(windows))]
+fn open_channel(endpoint: &str) -> std::io::Result<PipeChannel> {
+    let path = resolve_endpoint(endpoint);
+    let stream = std::os::unix::net::UnixStream::connect(&path)?;
+    Ok(PipeChannel { stream })
+}
+
+#[cfg(windows)]
+fn open_channel(endpoint: &str) -> std::io::Result<PipeChannel> {
+    open_pipe(endpoint)
+}
+
 fn run() {
     let stdout = io::stdout();
     let mut writer = stdout.lock();
 
-    // Pipe name is configured; default matches CopySpeak desktop.
-    let pipe_name = std::env::var("COPYSPEAK_BROWSER_PIPE")
-        .unwrap_or_else(|_| r"\\.\pipe\copyspeak-browser".to_string());
+    // Desktop endpoint is configurable; the default matches CopySpeak's
+    // bridge server per platform (named pipe / Unix socket path).
+    let pipe_name =
+        std::env::var("COPYSPEAK_BROWSER_PIPE").unwrap_or_else(|_| DEFAULT_ENDPOINT.to_string());
 
     // Connect to desktop app. If unavailable, report via stdout and exit.
-    let mut pipe = match open_pipe(&pipe_name) {
+    // (Only moved into the relay threads; the mut binding lives in the stdin
+    // thread's shadowed copy.)
+    let pipe = match open_channel(&pipe_name) {
         Ok(p) => p,
         Err(e) => {
             eprintln!(
-                "[native-host] Cannot open CopySpeak pipe {}: {}",
+                "[native-host] Cannot connect to CopySpeak at {}: {}",
                 pipe_name, e
             );
             write_error_frame(&mut writer, "Open CopySpeak");
@@ -292,7 +386,8 @@ fn run() {
                     return;
                 }
                 Err(e) => {
-                    let _ = pipe_tx.send(HostEvent::DesktopClosed(format!("Pipe read error: {}", e)));
+                    let _ =
+                        pipe_tx.send(HostEvent::DesktopClosed(format!("Pipe read error: {}", e)));
                     return;
                 }
             }
@@ -325,8 +420,8 @@ fn run() {
 }
 
 fn forward_to_pipe(pipe: &mut PipeChannel, message: &Value) -> io::Result<()> {
-    let bytes = serde_json::to_vec(message)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
+    let bytes =
+        serde_json::to_vec(message).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
     if bytes.is_empty() || bytes.len() > MAX_FRAME {
         return Err(io::Error::new(
             io::ErrorKind::InvalidData,

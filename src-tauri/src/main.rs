@@ -207,6 +207,22 @@ pub fn register_hotkey(
     }
 
     let shortcut = parse_hotkey(&hotkey_config.shortcut)?;
+
+    // Wayland has no global-hotkey protocol: `register` cannot succeed there.
+    // Bind the compositor key instead — the control server's POST /speak is
+    // the same entry point the hotkey handler drives. X11 sessions use the
+    // regular plugin path.
+    #[cfg(not(target_os = "windows"))]
+    if std::env::var("WAYLAND_DISPLAY").is_ok() {
+        log::info!(
+            "[Hotkey] Wayland session: compositor binds the key instead. \
+             Hyprland example: bind = {}, exec, curl -s -X POST http://127.0.0.1:8078/speak \
+             --data-binary @- <<< $(wl-paste)",
+            hotkey_config.shortcut
+        );
+        return Ok(());
+    }
+
     app.global_shortcut().register(shortcut).map_err(|e| {
         format!(
             "Failed to register shortcut '{}': {}",
