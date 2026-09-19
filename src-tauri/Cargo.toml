@@ -17,21 +17,6 @@ serde_json = "1"
 rodio = "0.19"
 tokio = { version = "1", features = ["process", "fs", "sync", "time"] }
 dirs = "5"
-windows = { version = "0.58", features = [
-    "Win32_System_DataExchange",
-    "Win32_System_Memory",
-    "Win32_System_Threading",
-    "Win32_Foundation",
-    "Win32_UI_WindowsAndMessaging",
-    "Win32_System_LibraryLoader",
-    "Win32_System_Console",
-    "Win32_Graphics_Gdi",
-    "Win32_UI_Input_KeyboardAndMouse",
-    "Win32_Storage_FileSystem",
-    "Win32_System_Pipes",
-    "Win32_System_IO",
-    "Win32_Security",
-] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
 log = "0.4"
@@ -51,6 +36,26 @@ tauri-build = { version = "2", features = [] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.52"
+windows = { version = "0.58", features = [
+    "Win32_System_DataExchange",
+    "Win32_System_Memory",
+    "Win32_System_Threading",
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Console",
+    "Win32_Graphics_Gdi",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Pipes",
+    "Win32_System_IO",
+    "Win32_Security",
+] }
+
+[target.'cfg(not(windows))'.dependencies]
+# Wayland clipboard (wlr-data-control protocol): read/write plus the change
+# listener the double-copy trigger polls.
+wl-clipboard-rs = "0.9"
 
 [features]
 default = ["custom-protocol"]
