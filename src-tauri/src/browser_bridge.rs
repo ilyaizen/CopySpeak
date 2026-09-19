@@ -1205,6 +1205,8 @@ mod tests {
             position_ms: AtomicU64::new(0),
             status: AtomicU8::new(SessionStatus::Playing as u8),
             cancelled: AtomicBool::new(false),
+            #[cfg(not(target_os = "windows"))]
+            stream: Mutex::new(None),
         }
     }
 
