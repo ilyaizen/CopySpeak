@@ -423,7 +423,11 @@ fn find_cached_speech(
             captions: read_sidecar(&path),
         }),
         Err(e) => {
-            log::warn!("[TTS] Saved audio unreadable ({}): {}. Re-synthesizing.", path, e);
+            log::warn!(
+                "[TTS] Saved audio unreadable ({}): {}. Re-synthesizing.",
+                path,
+                e
+            );
             None
         }
     }
@@ -478,7 +482,17 @@ pub async fn speak_now(
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     text: Option<String>,
 ) -> Result<(), String> {
-    speak_now_internal(app, config, _player, history, telemetry_state, text, None, true).await
+    speak_now_internal(
+        app,
+        config,
+        _player,
+        history,
+        telemetry_state,
+        text,
+        None,
+        true,
+    )
+    .await
 }
 
 /// Like `speak_now`, but always synthesizes fresh audio, even when history
@@ -1533,7 +1547,10 @@ mod streaming_tests {
             8000,
         );
         assert_eq!(
-            drain_chunk_stream(next, |_, _, _, _| {}).unwrap().0.captions,
+            drain_chunk_stream(next, |_, _, _, _| {})
+                .unwrap()
+                .0
+                .captions,
             Some(valid)
         );
     }
@@ -1630,7 +1647,9 @@ mod cache_tests {
         let second = saved(&history, &fragments[1].text, "ava");
         let joined = find_cached_reading(&history, text, &pagination, "edge", "ava").unwrap();
         assert_eq!(
-            crate::audio::wav::parse_wav_header(&joined.bytes).unwrap().data_size,
+            crate::audio::wav::parse_wav_header(&joined.bytes)
+                .unwrap()
+                .data_size,
             8,
             "both fragments' samples, in order"
         );

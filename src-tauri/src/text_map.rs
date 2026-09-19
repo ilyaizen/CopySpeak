@@ -87,7 +87,9 @@ impl TextAlignment {
             return None;
         }
         // First spoken word that ends after `start`; spans are ascending.
-        let first = self.spoken.partition_point(|&(_, word_end)| word_end <= start);
+        let first = self
+            .spoken
+            .partition_point(|&(_, word_end)| word_end <= start);
         let mut span: Option<Span> = None;
         for (index, &(word_start, _)) in self.spoken.iter().enumerate().skip(first) {
             if word_start >= end {
@@ -179,7 +181,9 @@ fn agrees(source: &[String], spoken: &[String], source_skip: usize, spoken_skip:
 /// "percent"). `None` when the words are only separated by whitespace.
 fn gap_before(source: &[u16], spans: &[Span], i: usize) -> Option<Span> {
     let mut start = if i == 0 { 0 } else { spans[i - 1].1 };
-    let mut end = spans.get(i).map_or(source.len(), |&(word_start, _)| word_start);
+    let mut end = spans
+        .get(i)
+        .map_or(source.len(), |&(word_start, _)| word_start);
     while start < end && is_space(source[start]) {
         start += 1;
     }
@@ -224,8 +228,14 @@ mod tests {
     fn plain_whitespace_collapse_maps_every_word() {
         let source = "First para.\n\nSecond one here.";
         let spoken = "First para. Second one here.";
-        assert_eq!(highlight(source, spoken, "Second", 0).as_deref(), Some("Second"));
-        assert_eq!(highlight(source, spoken, "First", 0).as_deref(), Some("First"));
+        assert_eq!(
+            highlight(source, spoken, "Second", 0).as_deref(),
+            Some("Second")
+        );
+        assert_eq!(
+            highlight(source, spoken, "First", 0).as_deref(),
+            Some("First")
+        );
     }
 
     /// The live 2026-09-10 failure: one `%` in a 1,944-character selection
@@ -233,10 +243,8 @@ mod tests {
     #[test]
     fn percent_expansion_costs_only_the_inserted_word() {
         let source = "Around 10-20% of measles cases result in hospitalization.";
-        let spoken = crate::sanitize::sanitize_text(
-            source,
-            &crate::config::SanitizationConfig::default(),
-        );
+        let spoken =
+            crate::sanitize::sanitize_text(source, &crate::config::SanitizationConfig::default());
         assert!(spoken.contains("percent"), "{spoken:?}");
         for word in ["Around", "10", "20", "of", "measles", "hospitalization"] {
             assert_eq!(
@@ -246,26 +254,35 @@ mod tests {
             );
         }
         // The invented word points at the punctuation it was expanded from.
-        assert_eq!(highlight(source, &spoken, "percent", 0).as_deref(), Some("%"));
+        assert_eq!(
+            highlight(source, &spoken, "percent", 0).as_deref(),
+            Some("%")
+        );
     }
 
     #[test]
     fn deletions_do_not_drift_the_words_after_them() {
         let source = "See https://example.com/x now, really now.";
-        let spoken = crate::sanitize::sanitize_text(
-            source,
-            &crate::config::SanitizationConfig::default(),
-        );
+        let spoken =
+            crate::sanitize::sanitize_text(source, &crate::config::SanitizationConfig::default());
         assert_eq!(highlight(source, &spoken, "See", 0).as_deref(), Some("See"));
-        assert_eq!(highlight(source, &spoken, "really", 0).as_deref(), Some("really"));
+        assert_eq!(
+            highlight(source, &spoken, "really", 0).as_deref(),
+            Some("really")
+        );
     }
 
     #[test]
     fn same_length_folds_still_map_to_the_raw_form() {
         // Curly quotes and a Cyrillic homoglyph both fold 1 unit → 1 unit.
         assert_eq!(
-            highlight("The \u{201C}platform\u{201D} shipped", "The \"platform\" shipped", "platform", 0)
-                .as_deref(),
+            highlight(
+                "The \u{201C}platform\u{201D} shipped",
+                "The \"platform\" shipped",
+                "platform",
+                0
+            )
+            .as_deref(),
             Some("platform")
         );
         assert_eq!(
@@ -297,7 +314,11 @@ mod tests {
         let spoken = "a  b c";
         let alignment = align(source, spoken);
         // Source UTF-16: a=0, sp=1, thumb=2..4, tone=4..6, sp=6, b=7, sp=8, c=9.
-        assert_eq!(alignment.source_span_utf16(3, 4), Some((7, 8)), "b, not the emoji");
+        assert_eq!(
+            alignment.source_span_utf16(3, 4),
+            Some((7, 8)),
+            "b, not the emoji"
+        );
         assert_eq!(alignment.source_span_utf16(5, 6), Some((9, 10)));
     }
 
@@ -355,7 +376,11 @@ mod tests {
         let source = "alpha bravo charlie delta";
         let spoken = "alpha zulu yankee xray";
         let alignment = align(source, spoken);
-        assert_eq!(alignment.source_span_utf16(0, 5), Some((0, 5)), "alpha still exact");
+        assert_eq!(
+            alignment.source_span_utf16(0, 5),
+            Some((0, 5)),
+            "alpha still exact"
+        );
         let (start, end) = alignment.source_span_utf16(6, 10).unwrap();
         assert_eq!(utf16_slice(source, (start, end)), "bravo charlie delta");
     }

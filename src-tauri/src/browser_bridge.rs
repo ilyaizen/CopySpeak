@@ -1146,7 +1146,9 @@ mod tests {
     fn buffering_session_reports_no_degrade_reason() {
         let spoken = "plain text";
         let session = session_with(spoken, spoken, vec![(spoken, 0, 10)], None);
-        session.active_fragment.store(NO_FRAGMENT, Ordering::Relaxed);
+        session
+            .active_fragment
+            .store(NO_FRAGMENT, Ordering::Relaxed);
         let (_, projected, reason) = project_state(&session);
         assert!(projected.is_none());
         assert_eq!(reason, None);
