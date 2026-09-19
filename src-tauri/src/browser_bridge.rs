@@ -219,8 +219,21 @@ unsafe fn overlapped_write(handle: HANDLE, buf: &[u8]) -> std::io::Result<()> {
 
 /// Same `SafeHandle` name for the shared code below; wraps a connected stream.
 #[cfg(not(target_os = "windows"))]
-#[derive(Clone)]
 struct SafeHandle(std::os::unix::net::UnixStream);
+
+// `UnixStream` is not `Clone`, but it can `try_clone` its descriptor — a
+// duplicated handle to the same socket, which is exactly what the ticker and
+// the session thread both need.
+#[cfg(not(target_os = "windows"))]
+impl Clone for SafeHandle {
+    fn clone(&self) -> Self {
+        SafeHandle(
+            self.0
+                .try_clone()
+                .expect("duplicating the bridge socket fd"),
+        )
+    }
+}
 
 /// Unix twin of `overlapped_read`: one blocking read into a fresh buffer.
 /// An empty result means the peer disconnected (EOF).
@@ -229,7 +242,9 @@ fn stream_read(stream: &SafeHandle) -> std::io::Result<Vec<u8>> {
     use std::io::Read;
 
     let mut chunk = vec![0u8; MAX_FRAME];
-    let got = stream.0.read(&mut chunk)?;
+    // `&UnixStream` implements `Read`, so a shared borrow can read.
+    let mut reader = &stream.0;
+    let got = reader.read(&mut chunk)?;
     chunk.truncate(got);
     Ok(chunk)
 }
@@ -239,7 +254,8 @@ fn stream_read(stream: &SafeHandle) -> std::io::Result<Vec<u8>> {
 fn stream_write(stream: &SafeHandle, buf: &[u8]) -> std::io::Result<()> {
     use std::io::Write;
 
-    stream.0.write_all(buf)
+    let mut writer = &stream.0;
+    writer.write_all(buf)
 }
 
 pub struct BrowserBridge {
@@ -1094,7 +1110,7 @@ fn send_state(
                 .map(|s| s.stream.lock().unwrap().clone())
         };
         match stream {
-            Some(Some(stream)) => send_frame(&SafeHandle(stream), &message),
+            Some(Some(stream)) => send_frame(&stream, &message),
             _ => Ok(()),
         }
     }

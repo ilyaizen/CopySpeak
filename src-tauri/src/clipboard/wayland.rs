@@ -10,10 +10,10 @@
 // and decides, so a copy is never missed and never double-counted.
 
 use std::io::Read as _;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use tauri::AppHandle;
-use wl_clipboard_rs::copy::{MimeType, Options as CopyOptions, ServeRequests, Source};
+use wl_clipboard_rs::copy::{MimeType, Options as CopyOptions, Source};
 use wl_clipboard_rs::paste::{
     get_contents, ClipboardType, Error as PasteError, MimeType as PasteMimeType, Seat,
 };
@@ -28,7 +28,11 @@ const POLL_INTERVAL_MS: u64 = 1000;
 /// Read current clipboard text. `None` when the clipboard holds no text
 /// offer, is empty, or the compositor/data-control protocol is unavailable.
 pub fn read_clipboard_text() -> Option<String> {
-    let result = get_contents(ClipboardType::Regular, Seat::All, PasteMimeType::Text);
+    let result = get_contents(
+        ClipboardType::Regular,
+        Seat::Unspecified,
+        PasteMimeType::Text,
+    );
     match result {
         Ok((mut reader, _mime)) => {
             let mut text = String::new();
@@ -49,14 +53,13 @@ pub fn read_clipboard_text() -> Option<String> {
     }
 }
 
-/// Set clipboard text. The copy outlives this process: `serve_requests(Undead)`
-/// forks a daemon thread that serves paste requests after CopySpeak exits,
-/// mirroring how the Windows clipboard keeps data after a copy.
+/// Set clipboard text. With default `Options` the crate daemonizes a helper
+/// that serves paste requests indefinitely, so the copy keeps working after
+/// CopySpeak exits — the same behavior as the Windows clipboard.
 pub fn set_clipboard_text(text: &str) -> Result<(), String> {
-    let mut opts = CopyOptions::new();
-    opts.serve_requests(ServeRequests::Undead);
+    let opts = CopyOptions::new();
     let source = Source::Bytes(text.as_bytes().into());
-    opts.copy(ClipboardType::Regular, Seat::All, MimeType::Text, source)
+    opts.copy(source, MimeType::Text)
         .map_err(|e| format!("Failed to set clipboard: {e}"))
 }
 

@@ -87,11 +87,12 @@ fn get_selected_text() -> Result<String, String> {
 
 #[cfg(not(target_os = "windows"))]
 fn get_selected_text() -> Result<String, String> {
+    use std::io::Read as _;
     use wl_clipboard_rs::paste::{
         get_contents, ClipboardType, Error as PasteError, MimeType, Seat,
     };
 
-    let result = get_contents(ClipboardType::Primary, Seat::All, MimeType::Text);
+    let result = get_contents(ClipboardType::Primary, Seat::Unspecified, MimeType::Text);
     match result {
         Ok((mut reader, _mime)) => {
             let mut text = String::new();
