@@ -75,6 +75,8 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Run Engines-page health checks in one-shot mode; daemon prewarming plus the immediate fallback launches two copies of large local models.
 - Pass the install dialog's GPU-runtime choice as `-Cuda`; a CUDA profile cannot run against the default CPU-only engine install.
 - Keep the cu126-index CUDA setup Windows-only in `Add-CudaRuntime`: on Linux PyPI torch 2.8.0 already IS the CUDA build (nvidia-* wheel deps), so the `install-*.sh` ports pin plain PyPI torch/torchaudio and must not grow a custom index.
+- On Linux launch with `GDK_BACKEND=x11` and show() the HUD window before `set_position`: Wayland toplevels cannot self-position (tao's set_position → gtk_window_move is silently ignored), and an X11 move only sticks once the GdkWindow is realized.
+- Hide the HUD's native window when the frontend emits global `hud:stop` on Linux: webview playback never trips the Rust AudioPlayer monitor, so without this listener the HUD stays mapped after audio ends (Windows keeps the parked-window design and JS-only hide).
 
 <!-- rtk-instructions v2 -->
 
