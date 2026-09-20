@@ -31,6 +31,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
 use std::sync::mpsc;
 use std::sync::{Mutex, MutexGuard, OnceLock};
+use std::time::Duration;
 
 use super::stream::{AudioFormatMeta, ChunkItem, ChunkStream};
 
@@ -190,6 +191,10 @@ struct Slot {
     /// A start thread is in flight, or a stream currently owns the daemon.
     /// Either way, do not start a second process for this engine.
     busy: bool,
+    /// Key whose start thread is in flight (`busy` above). Lets a request for
+    /// the SAME config wait for the resident model instead of forking a
+    /// one-shot — on a 4GB GPU the overlap runs two model copies and OOMs.
+    pending: Option<String>,
     /// Key whose wrapper could not serve, so we stop paying the startup cost.
     unsupported: Option<String>,
 }
@@ -269,6 +274,7 @@ pub fn prewarm(engine: &str, command: String, serve_args: Vec<String>) {
         if slot.busy || slot.daemon.as_ref().is_some_and(|d| d.key == key) {
             return;
         }
+        slot.pending = Some(key.clone());
         slot.busy = true;
     }
 
@@ -277,6 +283,7 @@ pub fn prewarm(engine: &str, command: String, serve_args: Vec<String>) {
         let mut guard = slots();
         let slot = guard.entry(engine.clone()).or_default();
         slot.busy = false;
+        slot.pending = None;
         match started {
             Ok(daemon) => {
                 // Assigning drops (and kills) any daemon left from a prior config.
@@ -300,6 +307,31 @@ pub fn is_ready(engine: &str) -> bool {
         .is_some_and(|s| !s.busy && s.daemon.is_some())
 }
 
+/// Block until any in-flight start for this engine settles (daemon ready,
+/// start failed, or a different config took over). Unbounded by design: the
+/// start thread owns the whole outcome, the caller just re-reads the slot.
+/// Config changes during the wait flip `pending` to the new key, which no
+/// longer matches and falls through to the normal take-or-one-shot path.
+fn wait_for_start(engine: &str, key: &str) {
+    loop {
+        {
+            let guard = slots();
+            let slot = guard.get(engine);
+            let settled = match slot {
+                Some(slot) => {
+                    slot.pending.as_deref() != Some(key)
+                        || slot.daemon.as_ref().is_some_and(|d| d.key == key)
+                }
+                None => true,
+            };
+            if settled {
+                return;
+            }
+        }
+        std::thread::sleep(Duration::from_millis(200));
+    }
+}
+
 /// Synthesize through the resident daemon, streaming PCM chunks as they arrive.
 /// Returns `None` when the daemon cannot serve this configuration — the caller
 /// then runs the one-shot command.
@@ -316,6 +348,19 @@ pub fn try_stream(
     // two requests interleaving on one pipe impossible.
     let mut daemon = {
         let mut guard = slots();
+        let slot = guard.entry(engine.to_string()).or_default();
+        // A start thread for this exact config is still loading the model.
+        // Forking a one-shot here runs two model copies at once — a guaranteed
+        // CUDA OOM on a 4GB GPU — so wait for the load to settle, then take the
+        // freshly-ready daemon (or degrade below if the start failed).
+        if slot.pending.as_deref() == Some(key.as_str()) {
+            log::info!(
+                "[LocalDaemon] {engine} daemon is loading for this config; waiting instead of one-shot"
+            );
+            drop(guard);
+            wait_for_start(engine, &key);
+            guard = slots();
+        }
         let slot = guard.entry(engine.to_string()).or_default();
         let usable = !slot.busy && slot.daemon.as_ref().is_some_and(|d| d.key == key);
         // Take first, mark busy second: an early return must never leave the

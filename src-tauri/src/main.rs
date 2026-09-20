@@ -288,6 +288,23 @@ fn main() {
         eprintln!("Failed to initialize logging: {}", e);
     }
 
+    // Linux: Wayland toplevels cannot self-position (tao set_position is
+    // silently ignored), so the HUD needs XWayland. WEBKIT_DISABLE_COMPOSITING_MODE
+    // avoids WebKitGTK repaint artifacts on Hyprland. Baked in so the packaged
+    // app works from any launcher, not just the dev wrapper. The desktop
+    // session exports GDK_BACKEND=wayland globally, so a mere is-none() check
+    // is a no-op — override that specific value; any other explicit backend
+    // the user sets is respected.
+    #[cfg(target_os = "linux")]
+    {
+        if std::env::var_os("GDK_BACKEND").is_none_or(|v| v == "wayland") {
+            std::env::set_var("GDK_BACKEND", "x11");
+        }
+        if std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_none() {
+            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        }
+    }
+
     // Load .env (next to copyspeak.exe) before any backend reads credentials.
     secrets::load_dotenv();
 
@@ -598,8 +615,8 @@ fn main() {
             {
                 let app_handle_for_hud_stop = app.handle().clone();
                 app.listen("hud:stop", move |_| {
+                    log::info!("[HUD] hud:stop received, hiding window");
                     if let Some(hud) = app_handle_for_hud_stop.get_webview_window("hud") {
-                        log::debug!("[HUD] hud:stop received, hiding window");
                         let _ = hud.hide();
                     }
                 });
