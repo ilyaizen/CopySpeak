@@ -14,26 +14,13 @@ bun.lock
 skills-lock.json
 package-lock.json
 /.agents
-# Track repo Claude settings/examples, but keep local overrides and generated skills/commands ignored.
-/.claude/settings.local.json
-/.kilocode
 src-tauri/Cargo.lock
-/.gemini
-/archive
 /.agent
-/Handy
 .vercel
 __pycache__/
 *.pyc
-/.ruff_cache
 /.tauri
-/.opencode
-/openspec
-# AGENTS.md
-# CLAUDE.md
-# GEMINI.md
 /docs_internal
-# file-structure.txt
 DO_NOT_TOUCH/
 /.claude/skills
 /.claude/commands
@@ -42,11 +29,9 @@ DO_NOT_TOUCH/
 .firecrawl
 /.scratch
 /.pi-subagents
-nul
 /.hermes
-target-verify.ps1
 /.reasonix
 /browser-native-host/target/
-browser-native-host/target/
-browser-extension/test-results/
-scripts/debug-beep-fuzz.ts
+/browser-extension/test-results/
+/scripts/debug-beep-fuzz.ts
+nul

@@ -81,7 +81,6 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Treat a Windows-green `cargo check` as silent about `cfg(not(windows))` code: before deleting an "unused" import, grep the file for that trait's methods inside cfg-gated blocks — the Linux-only `hud:stop` listener needs `tauri::Listener` (cfg-gate the import itself), and only the Linux CI build catches its absence.
 
 <!-- rtk-instructions v2 -->
-
 ## RTK (Rust Token Killer) - Token-Optimized Commands
 
 ## Golden Rule

@@ -2,17 +2,13 @@
 
 **Current Version:** 0.2.6
 
-A modern desktop app for Windows and Linux that reads clipboard text aloud using AI Text-to-Speech engines. Trigger speech by quickly copying the same text twice in a row — works out of the box with no API key (Edge TTS is the default engine).
+A modern desktop app that reads clipboard text aloud using AI Text-to-Speech engines. Trigger speech by quickly copying the same text twice in a row — works out of the box with no API key (Edge TTS is the default engine).
 
 ## [Download Latest](https://github.com/ilyaizen/CopySpeak/releases)
-
-Windows installers and Linux packages (AppImage, deb, rpm) are built by CI — see `.github/workflows/build-windows.yml` and `.github/workflows/build-linux.yml`. The Linux port is tested on Omarchy (Arch, Wayland).
 
 ![CopySpeak screenshot](static/screen-0.2.6.png)
 
 ## Install
-
-No account or API key is needed — the default engine (Edge TTS) works out of the box. Grab the latest assets from the [releases page](https://github.com/ilyaizen/CopySpeak/releases).
 
 ### Windows
 

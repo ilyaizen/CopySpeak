@@ -1,11 +1,8 @@
 .
 ├── .github
 │   └── workflows
+│       ├── build-linux.yml
 │       └── build-windows.yml
-├── .hermes
-│   └── plans
-│       ├── 2026-06-22-profile-integrations-engine-settings.md
-│       └── 2026-06-23-profiles-as-synthesis-source.md
 ├── .pi
 │   └── extensions
 │       └── copyspeak
@@ -13,95 +10,90 @@
 │           └── index.ts
 ├── .vscode
 │   └── settings.json
-├── agent-harness
-│   ├── cli_anything
-│   │   └── copyspeak
-│   │       ├── core
-│   │       │   ├── __init__.py
-│   │       │   ├── export.py
-│   │       │   ├── project.py
-│   │       │   ├── queue.py
-│   │       │   └── session.py
-│   │       ├── tests
-│   │       │   ├── TEST.md
-│   │       │   ├── test_core.py
-│   │       │   └── test_full_e2e.py
-│   │       ├── utils
-│   │       │   ├── __init__.py
-│   │       │   ├── copyspeak_backend.py
-│   │       │   └── repl_skin.py
-│   │       ├── README.md
-│   │       ├── __init__.py
-│   │       ├── __main__.py
-│   │       └── copyspeak_cli.py
-│   ├── COPYSPEAK.md
-│   └── setup.py
+├── browser-extension
+│   ├── browser-tests
+│   │   ├── content.spec.ts
+│   │   └── options.spec.ts
+│   ├── src
+│   │   ├── anchor.ts
+│   │   ├── content.ts
+│   │   ├── hover.ts
+│   │   ├── options.ts
+│   │   ├── protocol.ts
+│   │   └── worker.ts
+│   ├── test-results
+│   │   └── .last-run.json
+│   ├── tests
+│   │   ├── anchor.test.ts
+│   │   ├── protocol.test.ts
+│   │   └── worker.test.ts
+│   ├── build.mjs
+│   ├── bunfig.toml
+│   ├── manifest.json
+│   ├── options.css
+│   ├── options.html
+│   ├── package.json
+│   ├── playwright.config.ts
+│   └── tsconfig.json
+├── browser-native-host
+│   ├── src
+│   │   ├── lib.rs
+│   │   └── main.rs
+│   ├── tests
+│   │   ├── framing.rs
+│   │   └── harness_deadlock.py
+│   ├── Cargo.lock
+│   ├── Cargo.toml
+│   ├── com.copyspeak.browser.json
+│   └── install-linux.sh
 ├── docs
 │   ├── CONTRIBUTING.md
 │   ├── COPYSPEAK_PI_VOICE.md
 │   ├── COPYSPEAK_PI_VOICE_2.md
 │   ├── engines.md
 │   └── profile-engine-settings.md
-├── docs_internal
-│   ├── CARTESIA_TTS_PLAN.md
-│   ├── README.md
-│   ├── README_BAD.md
-│   ├── add-comments.md
-│   ├── app-logo.png
-│   ├── architecture.md
-│   ├── brutalist_design.md
-│   ├── build_workflow.md
-│   ├── code-patterns-reference.md
-│   ├── development_guide.md
-│   ├── engines-profiles-unification.md
-│   ├── event-system.md
-│   ├── hud-overlay.md
-│   ├── implemented_features.md
-│   ├── kittentts-cli.py
-│   ├── major-rename.md
-│   ├── project-overview.md
-│   ├── requirements.md
-│   ├── roadmap.md
-│   ├── security_hardening_plan.md
-│   ├── tts_backends.md
-│   └── tts_engines_profiles_installers_plan.md
-├── plans
-│   ├── about-settings-implementation.md
-│   ├── auto-updater-debugging-plan.md
-│   ├── auto-updater-implementation.md
-│   ├── footer-engine-dropdown.md
-│   ├── history-directory-change.md
-│   ├── hud-synthesis-progress-improvement.md
-│   ├── kittentts-clean-install-fix.md
-│   ├── streaming-pagination-playback.md
-│   ├── swirling-snuggling-valiant.md
-│   ├── tts-refactoring.md
-│   ├── update-checker-production-fix.md
-│   └── waveform-improvements.md
 ├── scripts
-│   ├── chatterbox
-│   │   └── copyspeak-chatterbox.py
+│   ├── edge
+│   │   └── copyspeak-edge.py
 │   ├── kitten
 │   │   └── copyspeak-kitten.py
+│   ├── kokoro
+│   │   └── copyspeak-kokoro.py
 │   ├── lib
-│   │   └── copyspeak-engine-install.ps1
+│   │   ├── copyspeak-engine-install.ps1
+│   │   └── copyspeak-engine-install.sh
 │   ├── piper
 │   │   └── copyspeak-piper.py
+│   ├── pocket
+│   │   └── copyspeak-pocket.py
+│   ├── qwen
+│   │   └── copyspeak-qwen.py
+│   ├── tmp-beep-debug
+│   ├── capture-screenshot.mjs
 │   ├── claude-copyspeak-hook.mjs
 │   ├── claude-copyspeak-status.mjs
 │   ├── copyspeak.mjs
+│   ├── debug-beep-fuzz.ts
 │   ├── fix-ports.ps1
 │   ├── generate-i18n-types.js
-│   ├── install-chatterbox.ps1
-│   ├── install-edge-tts.ps1
 │   ├── install-kittentts.ps1
+│   ├── install-kittentts.sh
 │   ├── install-kokoro.ps1
+│   ├── install-kokoro.sh
 │   ├── install-piper.ps1
+│   ├── install-piper.sh
 │   ├── install-pocket.ps1
+│   ├── install-pocket.sh
+│   ├── install-qwen.ps1
+│   ├── install-qwen.sh
 │   ├── install-uv.ps1
+│   ├── install-uv.sh
 │   ├── screenshot-window.ps1
 │   ├── tauri-dev.mjs
+│   ├── test-caption-alignment.py
 │   ├── test-engine.ps1
+│   ├── test-installer-lib.ps1
+│   ├── uninstall-engine.ps1
 │   └── version-bumper.mjs
 ├── src
 │   ├── lib
@@ -109,9 +101,13 @@
 │   │   │   └── app-logo.png
 │   │   ├── components
 │   │   │   ├── engine
-│   │   │   │   ├── engine-page.svelte
-│   │   │   │   ├── engine-page.test.ts
-│   │   │   │   └── profile-manager.svelte
+│   │   │   │   ├── engine-meta.ts
+│   │   │   │   ├── engine-panel.svelte
+│   │   │   │   ├── engine-setup.svelte
+│   │   │   │   ├── install-dialog.svelte
+│   │   │   │   ├── profile-export-dialog.svelte
+│   │   │   │   ├── profile-manager.svelte
+│   │   │   │   └── voice-picker.svelte
 │   │   │   ├── history
 │   │   │   │   ├── export-dialog.svelte
 │   │   │   │   ├── history-bulk-actions.svelte
@@ -120,6 +116,7 @@
 │   │   │   ├── hud
 │   │   │   │   ├── clipboard-notification.svelte
 │   │   │   │   ├── hud-playback-content.svelte
+│   │   │   │   ├── hud-playback-content.test.ts
 │   │   │   │   ├── hud-status.svelte
 │   │   │   │   ├── hud-synthesis-progress.svelte
 │   │   │   │   └── index.ts
@@ -137,7 +134,6 @@
 │   │   │   │   ├── about-settings.svelte
 │   │   │   │   ├── appearance-settings.svelte
 │   │   │   │   ├── batch-settings.svelte
-│   │   │   │   ├── effects-settings.svelte
 │   │   │   │   ├── general-settings.svelte
 │   │   │   │   ├── history-settings.svelte
 │   │   │   │   ├── hotkey-settings.svelte
@@ -154,9 +150,10 @@
 │   │   │   ├── hud-overlay.svelte
 │   │   │   ├── play-page.svelte
 │   │   │   ├── playback-controls.svelte
-│   │   │   ├── profiles-page.svelte
+│   │   │   ├── playback-controls.test.ts
 │   │   │   ├── quick-settings.svelte
 │   │   │   ├── recent-history.svelte
+│   │   │   ├── recent-history.test.ts
 │   │   │   ├── settings-page.svelte
 │   │   │   ├── theme-toggle.svelte
 │   │   │   ├── update-checker.svelte
@@ -176,6 +173,9 @@
 │   │   │   │   └── he.json
 │   │   │   └── en.json
 │   │   ├── models
+│   │   │   ├── captions.test.ts
+│   │   │   ├── captions.ts
+│   │   │   ├── history.test.ts
 │   │   │   ├── history.ts
 │   │   │   ├── html-export.ts
 │   │   │   ├── html-templates.example.ts
@@ -193,12 +193,18 @@
 │   │   │   │   │   └── walkie-talkie.ts
 │   │   │   │   ├── analyser.ts
 │   │   │   │   ├── audio-utils.ts
-│   │   │   │   └── fragment-queue.ts
+│   │   │   │   ├── fragment-queue.ts
+│   │   │   │   ├── pcm-stream.test.ts
+│   │   │   │   ├── pcm-stream.ts
+│   │   │   │   ├── time-stretch.test.ts
+│   │   │   │   └── time-stretch.ts
 │   │   │   ├── history-store.svelte.ts
 │   │   │   ├── hud-store.svelte.ts
 │   │   │   ├── index.ts
+│   │   │   ├── install-store.svelte.ts
 │   │   │   ├── listening-store.svelte.ts
 │   │   │   ├── playback-store.svelte.ts
+│   │   │   ├── playback-store.test.ts
 │   │   │   ├── save-bar.svelte.ts
 │   │   │   └── synthesis-store.svelte.ts
 │   │   ├── types
@@ -218,7 +224,7 @@
 │   ├── routes
 │   │   ├── effects
 │   │   │   └── +page.svelte
-│   │   ├── engine
+│   │   ├── engines
 │   │   │   └── +page.svelte
 │   │   ├── history
 │   │   │   └── +page.svelte
@@ -227,9 +233,9 @@
 │   │   │   └── +page.ts
 │   │   ├── onboarding
 │   │   │   └── +page.svelte
-│   │   ├── profiles
-│   │   │   └── +page.svelte
 │   │   ├── settings
+│   │   │   └── +page.svelte
+│   │   ├── voices
 │   │   │   └── +page.svelte
 │   │   ├── +layout.css
 │   │   ├── +layout.svelte
@@ -249,6 +255,10 @@
 │   │   │   ├── player.rs
 │   │   │   ├── stream.rs
 │   │   │   └── wav.rs
+│   │   ├── clipboard
+│   │   │   ├── mod.rs
+│   │   │   ├── wayland.rs
+│   │   │   └── win32.rs
 │   │   ├── commands
 │   │   │   ├── tts
 │   │   │   │   ├── credentials.rs
@@ -264,6 +274,7 @@
 │   │   │   ├── install.rs
 │   │   │   ├── logging.rs
 │   │   │   ├── mod.rs
+│   │   │   ├── onboarding.rs
 │   │   │   ├── playback.rs
 │   │   │   ├── post_process.rs
 │   │   │   ├── queue.rs
@@ -290,19 +301,23 @@
 │   │   │   ├── mod.rs
 │   │   │   └── tts_normalize.rs
 │   │   ├── tts
+│   │   │   ├── captions.rs
 │   │   │   ├── cartesia.rs
 │   │   │   ├── catalog.rs
 │   │   │   ├── cli.rs
 │   │   │   ├── edge.rs
 │   │   │   ├── elevenlabs.rs
+│   │   │   ├── elevenlabs_timing.rs
 │   │   │   ├── google.rs
 │   │   │   ├── http.rs
+│   │   │   ├── local_daemon.rs
 │   │   │   ├── microsoft.rs
 │   │   │   ├── mod.rs
-│   │   │   └── openai.rs
+│   │   │   ├── openai.rs
+│   │   │   └── stream.rs
 │   │   ├── autostart.rs
+│   │   ├── browser_bridge.rs
 │   │   ├── cli.rs
-│   │   ├── clipboard.rs
 │   │   ├── control_server.rs
 │   │   ├── fragment_queue.rs
 │   │   ├── history.rs
@@ -312,7 +327,9 @@
 │   │   ├── main.rs
 │   │   ├── pagination.rs
 │   │   ├── post_processing.rs
-│   │   └── telemetry.rs
+│   │   ├── secrets.rs
+│   │   ├── telemetry.rs
+│   │   └── text_map.rs
 │   ├── .gitignore
 │   ├── Cargo.lock
 │   ├── Cargo.toml
@@ -324,21 +341,52 @@
 │   │   └── walkie-static.wav
 │   ├── app-logo.png
 │   ├── favicon.png
-│   └── screen-v0.1.4.png
+│   └── screen-0.2.6.png
+├── tools
+│   └── oxlint
+│       └── anti-slop
+│           ├── effect
+│           │   ├── rules
+│           │   │   └── no-service-constructor-imports.ts
+│           │   └── index.ts
+│           ├── rules
+│           │   ├── no-chained-type-assertions.ts
+│           │   ├── no-conditional-empty-object-spread.ts
+│           │   ├── no-known-value-widening.ts
+│           │   ├── no-module-mocking.ts
+│           │   ├── no-object-parameters.ts
+│           │   ├── no-reflect-apply.ts
+│           │   ├── no-reflect-get.ts
+│           │   ├── no-runtime-typeof.ts
+│           │   ├── no-shape-in-symbol-names.ts
+│           │   ├── no-unknown-parameters.ts
+│           │   ├── no-unknown-returns.ts
+│           │   ├── no-unknown-type-aliases.ts
+│           │   ├── no-unsafe-dictionary-type.ts
+│           │   ├── no-widen-then-assert.ts
+│           │   └── require-safety-comment-for-type-assertion.ts
+│           ├── shared
+│           │   ├── dictionary-types.ts
+│           │   ├── lexical-type-parameters.ts
+│           │   └── reflect-method.ts
+│           ├── index.ts
+│           └── test-no-shape-in-symbol-names.mjs
+├── .env
+├── .env.example
+├── .gitattributes
 ├── .gitignore
-├── .hintrc
-├── .prettierignore
-├── .prettierrc
 ├── .vercelignore
 ├── AGENTS.md
+├── BROWSER_EXTENSION.md
 ├── CHANGELOG.md
 ├── CLAUDE.md
+├── DESIGN.md
+├── IDEA.md
 ├── LICENSE
 ├── README.md
 ├── components.json
 ├── file-structure.txt
 ├── package.json
-├── skills-lock.json
 ├── svelte.config.js
 ├── tsconfig.json
 ├── vercel.json
