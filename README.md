@@ -2,11 +2,13 @@
 
 **Current Version:** 0.2.6
 
-A modern Windows desktop app that reads clipboard text aloud using AI Text-to-Speech engines. Trigger speech by quickly copying the same text twice in a row.
+A modern desktop app for Windows and Linux that reads clipboard text aloud using AI Text-to-Speech engines. Trigger speech by quickly copying the same text twice in a row — works out of the box with no API key (Edge TTS is the default engine).
 
 ## [Download Latest](https://github.com/ilyaizen/CopySpeak/releases)
 
-![CopySpeak v0.1.8](static/screen-v0.1.8.png)
+Windows installers and Linux packages (AppImage, deb, rpm) are built by CI — see `.github/workflows/build-windows.yml` and `.github/workflows/build-linux.yml`.
+
+![CopySpeak screenshot](static/screen-v0.1.8.png)
 
 ## Quick Start
 
@@ -61,6 +63,7 @@ bun run tauri dev
 
 | Component       | Technology                     |
 | --------------- | ------------------------------ |
+| Platforms       | Windows, Linux (x86_64)        |
 | Backend         | Rust (Tauri v2)                |
 | Frontend        | Svelte 5, TypeScript, Vite     |
 | Package Manager | Bun                            |
