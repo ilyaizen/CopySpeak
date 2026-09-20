@@ -6,9 +6,44 @@ A modern desktop app for Windows and Linux that reads clipboard text aloud using
 
 ## [Download Latest](https://github.com/ilyaizen/CopySpeak/releases)
 
-Windows installers and Linux packages (AppImage, deb, rpm) are built by CI — see `.github/workflows/build-windows.yml` and `.github/workflows/build-linux.yml`.
+Windows installers and Linux packages (AppImage, deb, rpm) are built by CI — see `.github/workflows/build-windows.yml` and `.github/workflows/build-linux.yml`. The Linux port is tested on Omarchy (Arch, Wayland).
 
-![CopySpeak screenshot](static/screen-v0.1.8.png)
+![CopySpeak screenshot](static/screen-0.2.6.png)
+
+## Install
+
+No account or API key is needed — the default engine (Edge TTS) works out of the box. Grab the latest assets from the [releases page](https://github.com/ilyaizen/CopySpeak/releases).
+
+### Windows
+
+1. Download `CopySpeak_<version>_x64-setup.exe` and run it (`.msi` also available).
+2. On first launch, onboarding walks you through picking an engine and voice.
+3. Updates: the app checks GitHub Releases automatically (or via **Check for updates** in the footer).
+
+### Linux (x86_64)
+
+Tested on Omarchy (Arch, Wayland); ships AppImage, `.deb`, and `.rpm`:
+
+```bash
+# AppImage
+chmod +x CopySpeak_<version>_amd64.AppImage
+./CopySpeak_<version>_amd64.AppImage
+
+# Debian / Ubuntu
+sudo apt install ./copyspeak_<version>_amd64.deb
+
+# Fedora / openSUSE
+sudo dnf install ./copyspeak_<version>_amd64.rpm
+```
+
+On Wayland compositors the HUD runs through XWayland and global hotkeys are protocol-impossible — trigger readings by double-copy, the tray, or a compositor keybind that POSTs to the local [control server](docs/profile-engine-settings.md).
+
+### Browser companion (Chrome / Edge)
+
+1. Install and start the desktop app first — the extension drives it.
+2. Download `CopySpeak-Companion-<version>.zip` from the same release and extract it.
+3. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the extracted `dist` folder.
+4. Open the extension's settings to grant per-site access, then select text and double-copy (or use the extension's toolbar button) to read it through the app.
 
 ## Quick Start
 
