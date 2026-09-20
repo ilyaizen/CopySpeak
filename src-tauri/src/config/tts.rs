@@ -27,7 +27,10 @@ pub enum TtsEngine {
 
 impl Default for TtsEngine {
     fn default() -> Self {
-        TtsEngine::Cartesia
+        // Edge-TTS is the fresh-install default: free, no API key, works
+        // instantly (issue #43). Cloud/local engines are opted into via
+        // onboarding or Settings; existing configs are never migrated.
+        TtsEngine::Edge
     }
 }
 
@@ -1042,10 +1045,14 @@ pub(crate) fn migrate_add_qwen_profile_v5(tts: &mut TtsConfig) {
 impl Default for TtsConfig {
     fn default() -> Self {
         let cartesia_profile = default_cartesia_profile();
+        // Fresh installs start on Edge-TTS (profile id "default" — see
+        // VoiceProfile::default(), first in the vec): no API key needed, so
+        // onboarding needs nothing (issue #43). Existing configs on disk are
+        // unaffected — defaults only apply when no config file exists.
         Self {
             schema_version: 5,
-            active_backend: TtsEngine::Cartesia,
-            active_profile_id: cartesia_profile.id.clone(),
+            active_backend: TtsEngine::Edge,
+            active_profile_id: VoiceProfile::default().id,
             profiles: vec![
                 VoiceProfile::default(),
                 default_kitten_profile(),

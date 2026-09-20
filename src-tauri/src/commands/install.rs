@@ -290,12 +290,13 @@ fn which_shell() -> &'static str {
     }
 }
 
-/// `%LOCALAPPDATA%\CopySpeak\engines\<engine>` — the root the installers use
-/// and the `{engine_dir}` placeholder resolves to.
+/// `~/.local/share` on Linux, `%LOCALAPPDATA%` on Windows — `dirs` resolves
+/// both to the platform's user-local data root, so one code path serves
+/// `~/.local/share/CopySpeak/engines/<engine>` and
+/// `%LOCALAPPDATA%\CopySpeak\engines\<engine>` alike.
 fn engine_dir(name: &str) -> Option<PathBuf> {
-    let local_appdata = std::env::var("LOCALAPPDATA").ok()?;
     Some(
-        PathBuf::from(local_appdata)
+        dirs::data_local_dir()?
             .join("CopySpeak")
             .join("engines")
             .join(name),

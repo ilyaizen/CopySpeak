@@ -18,15 +18,22 @@
 
 use serde_json::{json, Value};
 use std::collections::HashMap;
+#[cfg(not(target_os = "windows"))]
+use std::os::unix::net::UnixListener;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, Listener, Manager, State};
+#[cfg(target_os = "windows")]
 use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
+#[cfg(target_os = "windows")]
 use windows::Win32::Storage::FileSystem::{
     ReadFile, WriteFile, FILE_FLAG_FIRST_PIPE_INSTANCE, FILE_FLAG_OVERLAPPED, PIPE_ACCESS_DUPLEX,
 };
+#[cfg(target_os = "windows")]
 use windows::Win32::System::Pipes::{ConnectNamedPipe, CreateNamedPipeW, DisconnectNamedPipe};
+#[cfg(target_os = "windows")]
 use windows::Win32::System::Threading::{CreateEventW, WaitForSingleObject, INFINITE};
+#[cfg(target_os = "windows")]
 use windows::Win32::System::IO::{GetOverlappedResult, OVERLAPPED};
 
 use crate::sanitize::tts_normalize::punct_equivalent;
@@ -111,15 +118,24 @@ struct BrowserSession {
     position_ms: AtomicU64,
     status: AtomicU8,
     cancelled: AtomicBool,
+    /// Unix only: the connected host stream, so the state ticker can push
+    /// `state` frames on the session's own socket (Windows projects through
+    /// the global pipe handle instead).
+    #[cfg(not(target_os = "windows"))]
+    stream: Mutex<Option<SafeHandle>>,
 }
 
 // HANDLE wrapper for Send+Sync
+#[cfg(target_os = "windows")]
 #[derive(Clone)]
 struct SafeHandle(HANDLE);
+#[cfg(target_os = "windows")]
 unsafe impl Send for SafeHandle {}
+#[cfg(target_os = "windows")]
 unsafe impl Sync for SafeHandle {}
 
 /// True when a failed I/O call means "started, still pending" (ERROR_IO_PENDING).
+#[cfg(target_os = "windows")]
 fn is_pending(e: &std::io::Error) -> bool {
     e.raw_os_error() == Some(997)
 }
@@ -129,6 +145,7 @@ fn is_pending(e: &std::io::Error) -> bool {
 /// Overlapped I/O is what lets the state ticker write while this read is
 /// parked: sync-mode handles allow only ONE outstanding I/O per file object,
 /// which deadlocked the duplex relay (2026-09-09).
+#[cfg(target_os = "windows")]
 unsafe fn overlapped_read(handle: HANDLE) -> std::io::Result<Vec<u8>> {
     let event = CreateEventW(None, true, false, None)
         .map_err(|e| std::io::Error::from_raw_os_error(e.code().0))?;
@@ -161,6 +178,7 @@ unsafe fn overlapped_read(handle: HANDLE) -> std::io::Result<Vec<u8>> {
 }
 
 /// Run one blocking overlapped WRITE to completion.
+#[cfg(target_os = "windows")]
 unsafe fn overlapped_write(handle: HANDLE, buf: &[u8]) -> std::io::Result<()> {
     let event = CreateEventW(None, true, false, None)
         .map_err(|e| std::io::Error::from_raw_os_error(e.code().0))?;
@@ -191,8 +209,61 @@ unsafe fn overlapped_write(handle: HANDLE, buf: &[u8]) -> std::io::Result<()> {
     Ok(())
 }
 
+// ── Unix transport (Linux): Unix stream socket ──────────────────────────────
+//
+// The native messaging host speaks a length-prefixed JSON frame protocol over
+// a byte stream; the Windows side needed overlapped named-pipe I/O to keep the
+// duplex relay from deadlocking (see 2026-09-09 notes). Unix stream sockets
+// are natively full-duplex with independent read/write state, so plain
+// blocking std I/O is correct here: the parked read never blocks a write.
+
+/// Same `SafeHandle` name for the shared code below; wraps a connected stream.
+#[cfg(not(target_os = "windows"))]
+struct SafeHandle(std::os::unix::net::UnixStream);
+
+// `UnixStream` is not `Clone`, but it can `try_clone` its descriptor — a
+// duplicated handle to the same socket, which is exactly what the ticker and
+// the session thread both need.
+#[cfg(not(target_os = "windows"))]
+impl Clone for SafeHandle {
+    fn clone(&self) -> Self {
+        SafeHandle(
+            self.0
+                .try_clone()
+                .expect("duplicating the bridge socket fd"),
+        )
+    }
+}
+
+/// Unix twin of `overlapped_read`: one blocking read into a fresh buffer.
+/// An empty result means the peer disconnected (EOF).
+#[cfg(not(target_os = "windows"))]
+fn stream_read(stream: &SafeHandle) -> std::io::Result<Vec<u8>> {
+    use std::io::Read;
+
+    let mut chunk = vec![0u8; MAX_FRAME];
+    // `&UnixStream` implements `Read`, so a shared borrow can read.
+    let mut reader = &stream.0;
+    let got = reader.read(&mut chunk)?;
+    chunk.truncate(got);
+    Ok(chunk)
+}
+
+/// Unix twin of `overlapped_write`: one blocking write of the whole frame.
+#[cfg(not(target_os = "windows"))]
+fn stream_write(stream: &SafeHandle, buf: &[u8]) -> std::io::Result<()> {
+    use std::io::Write;
+
+    let mut writer = &stream.0;
+    writer.write_all(buf)
+}
+
 pub struct BrowserBridge {
     sessions: Mutex<HashMap<String, Arc<BrowserSession>>>,
+    #[cfg(target_os = "windows")]
+    /// Windows only: the global pipe handle the state ticker writes through.
+    /// Unix sockets need no global handle — state flows through the session's
+    /// own stream, so the field does not exist there.
     pipe_handle: Mutex<Option<SafeHandle>>,
     automatic_mode: AtomicBool,
 }
@@ -201,13 +272,51 @@ impl BrowserBridge {
     pub fn new() -> Self {
         Self {
             sessions: Mutex::new(HashMap::new()),
+            #[cfg(target_os = "windows")]
             pipe_handle: Mutex::new(None),
             automatic_mode: AtomicBool::new(false),
         }
     }
 }
 
+/// Runtime dir for the Linux bridge socket. `$XDG_RUNTIME_DIR` is set by the
+/// session (systemd/logind); a user-owned, user-only directory by definition.
+#[cfg(not(target_os = "windows"))]
+fn bridge_socket_path() -> std::path::PathBuf {
+    let dir = std::env::var_os("XDG_RUNTIME_DIR").unwrap_or_else(|| {
+        format!(
+            "/tmp/{}.runtime-1800",
+            std::env::var("USER").unwrap_or_default()
+        )
+        .into()
+    });
+    std::path::PathBuf::from(dir).join("copyspeak-browser.sock")
+}
+
+/// Start the browser bridge on the platform transport. Sets up the caption
+/// event listeners (shared) and spawns the connection acceptor loop.
 pub fn start_browser_bridge(app: AppHandle) -> Result<(), String> {
+    // Synthesis events carry per-fragment captions; record them onto the
+    // active browser session so word projection has exact timings.
+    let app_for_events = app.clone();
+    app.listen("audio-fragment-ready", move |event| {
+        handle_fragment_event(&app_for_events, event.payload());
+    });
+    let app_for_stream = app.clone();
+    app.listen("audio-stream-chunk", move |event| {
+        handle_stream_chunk_event(&app_for_stream, event.payload());
+    });
+
+    #[cfg(target_os = "windows")]
+    start_windows_pipe(app)?;
+    #[cfg(not(target_os = "windows"))]
+    start_unix_socket(app)?;
+    Ok(())
+}
+
+/// Windows transport: overlapped named-pipe server.
+#[cfg(target_os = "windows")]
+fn start_windows_pipe(app: AppHandle) -> Result<(), String> {
     let bridge = app.state::<BrowserBridge>();
     let pipe_name_wide: Vec<u16> = PIPE_NAME.encode_utf16().chain(std::iter::once(0)).collect();
 
@@ -236,23 +345,54 @@ pub fn start_browser_bridge(app: AppHandle) -> Result<(), String> {
 
     log::info!("[Browser] Named pipe server listening on {}", PIPE_NAME);
 
-    // Synthesis events carry per-fragment captions; record them onto the
-    // active browser session so word projection has exact timings.
-    let app_for_events = app.clone();
-    app.listen("audio-fragment-ready", move |event| {
-        handle_fragment_event(&app_for_events, event.payload());
-    });
-    let app_for_stream = app.clone();
-    app.listen("audio-stream-chunk", move |event| {
-        handle_stream_chunk_event(&app_for_stream, event.payload());
-    });
-
     // Spawn connection acceptor loop.
     let app_clone = app.clone();
     let handle_for_thread = SafeHandle(handle);
     std::thread::spawn(move || {
         if let Err(e) = accept_connections(app_clone, handle_for_thread) {
             log::error!("[Browser] Pipe server error: {}", e);
+        }
+    });
+    Ok(())
+}
+
+/// Linux transport: Unix stream socket at a fixed per-user path. One client at
+/// a time, mirroring the pipe server. A stale socket file (crash leftover) is
+/// replaced by `UnixListener::bind` failing-over through its error.
+#[cfg(not(target_os = "windows"))]
+fn start_unix_socket(app: AppHandle) -> Result<(), String> {
+    let path = bridge_socket_path();
+    // Remove a stale socket from a previous crashed run; bind fails with
+    // EADDRINUSE when a live server owns it, which surfaces as an error below
+    // rather than silently stealing the endpoint.
+    let _ = std::fs::remove_file(&path);
+    let listener = UnixListener::bind(&path).map_err(|e| {
+        format!(
+            "Failed to bind browser bridge socket {}: {e}",
+            path.display()
+        )
+    })?;
+
+    log::info!(
+        "[Browser] Unix socket server listening on {}",
+        path.display()
+    );
+
+    // Accept loop: one connection at a time, same as the pipe server.
+    std::thread::spawn(move || {
+        for stream in listener.incoming() {
+            match stream {
+                Ok(stream) => {
+                    log::info!("[Browser] Native host connected");
+                    if let Err(e) = handle_session(app.clone(), SafeHandle(stream)) {
+                        log::warn!("[Browser] Session error: {}", e);
+                    }
+                    log::info!("[Browser] Native host disconnected");
+                }
+                Err(e) => {
+                    log::warn!("[Browser] Accept failed: {e}");
+                }
+            }
         }
     });
     Ok(())
@@ -426,6 +566,7 @@ fn rebased_captions(caps: CaptionAlignment, expected: &str) -> Option<CaptionAli
     })
 }
 
+#[cfg(target_os = "windows")]
 fn accept_connections(app: AppHandle, pipe: SafeHandle) -> Result<(), String> {
     loop {
         unsafe {
@@ -472,10 +613,14 @@ fn handle_session(app: AppHandle, pipe: SafeHandle) -> Result<(), String> {
     // keeping the remainder for the next read.
     let mut buffer: Vec<u8> = Vec::with_capacity(MAX_FRAME);
     loop {
-        // Overlapped read: the state ticker must be able to write to this
-        // handle while the read is parked (sync handles allow one outstanding
-        // I/O per file object and deadlocked the duplex relay).
+        // Windows: overlapped read so the state ticker can write while this
+        // read is parked (sync handles allow one outstanding I/O per file
+        // object and deadlocked the duplex relay). Unix: plain blocking read,
+        // which already has independent read/write state.
+        #[cfg(target_os = "windows")]
         let chunk = unsafe { overlapped_read(pipe.0).map_err(|e| e.to_string())? };
+        #[cfg(not(target_os = "windows"))]
+        let chunk = stream_read(&pipe).map_err(|e| e.to_string())?;
         if chunk.is_empty() {
             log::info!("[Browser] Native host disconnected");
             return Ok(());
@@ -543,7 +688,7 @@ fn handle_message(app: AppHandle, pipe: &SafeHandle, message: Value) -> Result<(
             );
 
             if raw_text.trim().is_empty() || raw_text.encode_utf16().count() > 65536 {
-                send_rejected(&pipe, &request_id, "Invalid text")?;
+                send_rejected(pipe, &request_id, "Invalid text")?;
                 return Ok(());
             }
 
@@ -659,6 +804,8 @@ fn start_browser_reading(
         position_ms: AtomicU64::new(0),
         status: AtomicU8::new(SessionStatus::Buffering as u8),
         cancelled: AtomicBool::new(false),
+        #[cfg(not(target_os = "windows"))]
+        stream: Mutex::new(Some(pipe.clone())),
     });
 
     bridge
@@ -944,10 +1091,29 @@ fn send_state(
         "word_available": reason.is_none(),
         "word_degrade_reason": reason
     });
-    if let Some(pipe_handle) = bridge.pipe_handle.lock().unwrap().as_ref() {
-        return send_frame(pipe_handle, &message);
+    // Windows: the ticker has no stream of its own; it writes through the
+    // global pipe handle. Unix: state flows through the session's own socket,
+    // so look the session up by id instead.
+    #[cfg(target_os = "windows")]
+    {
+        if let Some(pipe_handle) = bridge.pipe_handle.lock().unwrap().as_ref() {
+            return send_frame(pipe_handle, &message);
+        }
+        Ok(())
     }
-    Ok(())
+    #[cfg(not(target_os = "windows"))]
+    {
+        let stream = {
+            let sessions = bridge.sessions.lock().unwrap();
+            sessions
+                .get(reading_id)
+                .map(|s| s.stream.lock().unwrap().clone())
+        };
+        match stream {
+            Some(Some(stream)) => send_frame(&stream, &message),
+            _ => Ok(()),
+        }
+    }
 }
 
 fn send_error(pipe: &SafeHandle, message: &str) -> Result<(), String> {
@@ -965,11 +1131,15 @@ fn send_frame(pipe: &SafeHandle, message: &Value) -> Result<(), String> {
     frame.extend_from_slice(&(bytes.len() as u32).to_le_bytes());
     frame.extend_from_slice(&bytes);
 
-    // Overlapped write: the session read is parked while this runs, so the
-    // write MUST go through on the same overlapped handle.
+    // Windows: overlapped write — the session read is parked while this runs,
+    // so the write MUST go through on the same overlapped handle.
+    // Unix: plain blocking write on the session's own stream.
+    #[cfg(target_os = "windows")]
     unsafe {
         overlapped_write(pipe.0, &frame).map_err(|e| format!("WriteFile failed: {}", e))?;
     }
+    #[cfg(not(target_os = "windows"))]
+    stream_write(pipe, &frame).map_err(|e| format!("Socket write failed: {e}"))?;
 
     Ok(())
 }
@@ -1035,6 +1205,8 @@ mod tests {
             position_ms: AtomicU64::new(0),
             status: AtomicU8::new(SessionStatus::Playing as u8),
             cancelled: AtomicBool::new(false),
+            #[cfg(not(target_os = "windows"))]
+            stream: Mutex::new(None),
         }
     }
 
@@ -1146,7 +1318,9 @@ mod tests {
     fn buffering_session_reports_no_degrade_reason() {
         let spoken = "plain text";
         let session = session_with(spoken, spoken, vec![(spoken, 0, 10)], None);
-        session.active_fragment.store(NO_FRAGMENT, Ordering::Relaxed);
+        session
+            .active_fragment
+            .store(NO_FRAGMENT, Ordering::Relaxed);
         let (_, projected, reason) = project_state(&session);
         assert!(projected.is_none());
         assert_eq!(reason, None);

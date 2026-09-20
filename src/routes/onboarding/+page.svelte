@@ -4,82 +4,88 @@
   import { invoke } from "@tauri-apps/api/core";
   import { toast } from "svelte-sonner";
   import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-
-  import type { AppConfig } from "$lib/types";
-  import { Volume2 } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
+  import { Sparkles, Volume2, Zap, KeyRound } from "@lucide/svelte";
 
-  let localConfig = $state<AppConfig | null>(null);
+  // Issue #43 structural fix: onboarding never calls the full `get_config`
+  // (its invoke() promise hangs on fresh installs). Everything here runs
+  // through tiny dedicated commands: get_onboarding_status / complete_onboarding.
+
+  type OnboardingStatus = {
+    has_config: boolean;
+    engine: string;
+    engine_name: string;
+    voice: string;
+    keyless: boolean;
+  };
+
+  type EngineChoice = {
+    id: string;
+    name: string;
+    tagline: string;
+    detail: string;
+    recommended: boolean;
+    keyless: boolean;
+  };
+
+  const engineChoices: EngineChoice[] = [
+    {
+      id: "edge",
+      name: "Edge-TTS",
+      tagline: "Recommended — works instantly",
+      detail:
+        "Free Microsoft Read Aloud voices. No API key, no downloads — start listening right away.",
+      recommended: true,
+      keyless: true
+    },
+    {
+      id: "cartesia",
+      name: "Cartesia",
+      tagline: "Premium cloud voices",
+      detail: "Fast, high-quality voices. Requires an API key — you can add it later in Settings.",
+      recommended: false,
+      keyless: false
+    }
+  ];
+
+  let selectedEngine = $state("edge");
+  let status = $state<OnboardingStatus | null>(null);
   let isLoading = $state(true);
   let isSaving = $state(false);
-  let testing = $state(false);
 
-  async function loadDefaultConfig() {
-    isLoading = true;
+  onMount(async () => {
     try {
-      const config = await invoke<AppConfig>("get_config");
-      const cartesiaProfile = config.tts.profiles.find((profile) => profile.engine === "cartesia");
-      config.tts.active_backend = "cartesia";
-      if (cartesiaProfile) config.tts.active_profile_id = cartesiaProfile.id;
-      config.pagination.fragment_size = 500;
-      localConfig = config;
+      status = await invoke<OnboardingStatus>("get_onboarding_status");
+      if (status.has_config) selectedEngine = status.engine;
     } catch (e) {
-      console.error("Failed to load config:", e);
-      toast.error("Failed to load configuration");
+      // Even if this fails, defaults are safe: Edge is the fresh-install
+      // default in Rust, so completing with "edge" is always valid.
+      console.error("Failed to load onboarding status:", e);
+      status = {
+        has_config: false,
+        engine: "edge",
+        engine_name: "Edge-TTS",
+        voice: "en-US-AvaMultilingualNeural",
+        keyless: true
+      };
     } finally {
       isLoading = false;
     }
-  }
+  });
 
-  async function testCartesia() {
-    if (!localConfig) return;
-    testing = true;
-    try {
-      await invoke("set_config", { newConfig: localConfig });
-      const result = await invoke<{ success: boolean; message: string }>(
-        "check_cartesia_credentials"
-      );
-      if (result.success) toast.success(result.message || "Cartesia is ready.");
-      else toast.error(result.message || "Cartesia API key check failed.");
-    } catch (e) {
-      toast.error(`Cartesia API key check failed: ${e}`);
-    } finally {
-      testing = false;
-    }
-  }
-
-  async function skipOnboarding() {
-    if (!localConfig) return;
+  async function finish(engineId: string) {
     isSaving = true;
     try {
-      await invoke("set_config", { newConfig: localConfig });
+      await invoke("complete_onboarding", { engine: engineId });
       toast.success("Welcome to CopySpeak!");
       await goto("/");
     } catch (e) {
-      console.error("Failed to save config:", e);
+      console.error("Failed to complete onboarding:", e);
       toast.error(`Failed to save settings: ${e}`);
     } finally {
       isSaving = false;
     }
   }
-
-  async function completeOnboarding() {
-    if (!localConfig) return;
-    isSaving = true;
-    try {
-      await invoke("set_config", { newConfig: localConfig });
-      toast.success("Configuration saved! Let's get started.");
-      await goto("/");
-    } catch (e) {
-      console.error("Failed to save config:", e);
-      toast.error(`Failed to save settings: ${e}`);
-    } finally {
-      isSaving = false;
-    }
-  }
-
-  onMount(loadDefaultConfig);
 </script>
 
 <div class="bg-background flex min-h-screen items-center justify-center p-4 sm:p-8">
@@ -95,65 +101,87 @@
         </p>
       </div>
 
-      <!-- Configuration Section -->
       {#if isLoading}
         <div class="flex min-h-50 items-center justify-center">
           <div class="text-muted-foreground">{$_("onboarding.loading")}</div>
         </div>
-      {:else if localConfig}
-        <div class="border-border space-y-5 border-y py-6">
-          <div class="p-1">
-            <div class="flex items-start gap-3">
-              <div class="bg-primary/10 text-primary rounded-sm p-2">
-                <Volume2 class="h-5 w-5" />
-              </div>
-              <div class="space-y-1">
-                <h2 class="text-lg font-semibold">Set up Cartesia</h2>
-                <p class="text-muted-foreground text-sm leading-relaxed">
-                  CopySpeak is set to Cartesia by default for fast, high-quality speech. Paste your
-                  API key, verify it without spending synthesis credits, then start listening.
-                </p>
-              </div>
+      {:else}
+        <!-- Engine choice -->
+        <div class="border-border space-y-3 border-y py-6">
+          <div class="flex items-start gap-3">
+            <div class="bg-primary/10 text-primary rounded-sm p-2">
+              <Volume2 class="h-5 w-5" />
             </div>
-            <label for="cartesia-api-key" class="mt-5 block text-sm font-medium">
-              Cartesia API key
-            </label>
-            <Input
-              id="cartesia-api-key"
-              type="password"
-              bind:value={localConfig.tts.cartesia.api_key}
-              placeholder="sk_car_…"
-              class="mt-2"
-            />
+            <div class="space-y-1">
+              <h2 class="text-lg font-semibold">Choose your voice engine</h2>
+              <p class="text-muted-foreground text-sm leading-relaxed">
+                You can switch engines, voices, and speed anytime in Settings.
+              </p>
+            </div>
           </div>
+
+          <div class="mt-4 grid gap-3">
+            {#each engineChoices as choice (choice.id)}
+              <button
+                type="button"
+                onclick={() => (selectedEngine = choice.id)}
+                class={selectedEngine === choice.id
+                  ? "border-primary ring-primary bg-primary/5 rounded-lg border p-4 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
+                  : "border-border hover:border-primary/60 rounded-lg border p-4 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"}
+              >
+                <div class="flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium">{choice.name}</span>
+                    {#if choice.recommended}
+                      <span
+                        class="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                      >
+                        <Sparkles class="h-3 w-3" />
+                        {choice.tagline}
+                      </span>
+                    {/if}
+                  </div>
+                  {#if choice.keyless}
+                    <span class="text-muted-foreground inline-flex items-center gap-1 text-xs">
+                      <Zap class="h-3 w-3" />
+                      No key needed
+                    </span>
+                  {:else}
+                    <span class="text-muted-foreground inline-flex items-center gap-1 text-xs">
+                      <KeyRound class="h-3 w-3" />
+                      API key in Settings
+                    </span>
+                  {/if}
+                </div>
+                <p class="text-muted-foreground mt-1.5 text-sm leading-relaxed">
+                  {choice.detail}
+                </p>
+              </button>
+            {/each}
+          </div>
+
+          <p class="text-muted-foreground mt-2 text-xs">
+            Local engines (Kitten, Kokoro, Qwen, Piper) can be installed from the Engines page after
+            setup.
+          </p>
         </div>
 
-        <!-- Test -->
-        <div class="flex flex-col gap-3 pt-2 sm:flex-row">
+        <!-- Action Button -->
+        <div class="flex flex-col gap-3 pt-2">
           <Button
-            variant="outline"
             size="lg"
-            onclick={testCartesia}
-            disabled={testing || !localConfig.tts.cartesia.api_key.trim()}
-            class="flex-1"
-          >
-            {testing ? "Testing…" : "Test"}
-          </Button>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="flex flex-col gap-3 pt-2 sm:flex-row">
-          <Button
-            variant="outline"
-            size="lg"
-            onclick={skipOnboarding}
+            onclick={() => finish(selectedEngine)}
             disabled={isSaving}
-            class="flex-1"
+            class="w-full"
           >
-            {$_("onboarding.skip")}
-          </Button>
-          <Button size="lg" onclick={completeOnboarding} disabled={isSaving} class="flex-1">
-            {isSaving ? $_("common.saving") : $_("onboarding.complete")}
+            {#if isSaving}
+              {$_("common.saving")}
+            {:else if selectedEngine === "edge"}
+              {$_("onboarding.complete")}
+            {:else}
+              {$_("onboarding.complete")} — {engineChoices.find((c) => c.id === selectedEngine)
+                ?.name}
+            {/if}
           </Button>
         </div>
 

@@ -81,7 +81,9 @@ fn remove_unpronounceable(text: &str) -> String {
     // pipeline's end-of-pass handling.
     let spaced = text.replace(['\t', '\u{000B}', '\u{000C}'], " ");
     let without_invisible = INVISIBLE_REGEX.replace_all(&spaced, "");
-    SYMBOL_REGEX.replace_all(&without_invisible, "").into_owned()
+    SYMBOL_REGEX
+        .replace_all(&without_invisible, "")
+        .into_owned()
 }
 
 // ── 0. Character Normalization (sanitext-style) ──────────────────────────────
@@ -515,7 +517,10 @@ mod tests {
         assert_eq!(remove_unpronounceable("A⭐B★C→D∑E①F■G"), "ABCDEFG");
         assert_eq!(remove_unpronounceable("⌚ watch ⏩ now"), " watch  now");
         assert_eq!(remove_unpronounceable("🀄🂠🄰 tiles"), " tiles");
-        assert_eq!(remove_unpronounceable("wow‼ really⁉ infoℹ"), "wow really info");
+        assert_eq!(
+            remove_unpronounceable("wow‼ really⁉ infoℹ"),
+            "wow really info"
+        );
         assert_eq!(remove_unpronounceable("🇺🇸 US flag"), " US flag");
     }
 
@@ -539,7 +544,10 @@ mod tests {
 
     #[test]
     fn test_remove_unpronounceable_keeps_speech_content() {
-        assert_eq!(remove_unpronounceable("it's — ok… \"quoted\""), "it's — ok… \"quoted\"");
+        assert_eq!(
+            remove_unpronounceable("it's — ok… \"quoted\""),
+            "it's — ok… \"quoted\""
+        );
         assert_eq!(remove_unpronounceable("a、b。c「d」"), "a、b。c「d」");
         assert_eq!(remove_unpronounceable("50% + $5"), "50% + $5");
     }

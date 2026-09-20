@@ -160,8 +160,21 @@ pub fn position_hud_window(app: &AppHandle, hud_window: &WebviewWindow, config: 
 
 // ponytail: HUD stays visible always; "hidden" = parked off-screen. Avoids the WebView2
 // transparent-window hidden→visible repaint bug; show_* repositions on-screen.
+//
+// Windows (WebView2): park by position. Hiding and re-showing a transparent WebView2
+// window triggers a repaint flash bug (the reason this fn exists — keep it).
+// Linux (Wayland): set_position is best-effort and the compositor CLAMPS off-screen
+// coordinates, so a parked HUD reappears clamped at/near (0,0) — the "stuck centered"
+// bug. There is no WebView2 flash on WebKitGTK, so hide()/show() instead.
 pub fn move_hud_offscreen(window: &WebviewWindow) {
-    let _ = window.set_position(PhysicalPosition::new(-10_000, -10_000));
+    #[cfg(target_os = "windows")]
+    {
+        let _ = window.set_position(PhysicalPosition::new(-10_000, -10_000));
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = window.hide();
+    }
 }
 
 pub fn show_hud(app: &AppHandle, envelope: AmplitudeEnvelope, text: Option<String>) {
@@ -180,6 +193,12 @@ pub fn show_hud(app: &AppHandle, envelope: AmplitudeEnvelope, text: Option<Strin
     log::info!("Showing HUD for playback");
 
     if let Some(window) = app.get_webview_window("hud") {
+        // Linux: show() FIRST, then position. gtk_window_move on a not-yet-realized
+        // (hidden) window doesn't stick — the position applies only after the next
+        // map, leaving the synthesizing HUD at the stale realization spot (~19,13).
+        // Showing first realizes the GdkWindow, so the subsequent move sticks.
+        #[cfg(not(target_os = "windows"))]
+        let _ = window.show();
         position_hud_window(app, &window, &config);
         let _ = window.set_ignore_cursor_events(true);
     } else {
@@ -230,6 +249,10 @@ pub fn show_hud_synthesizing(app: &AppHandle, text: Option<String>) {
     log::info!("Showing HUD for synthesizing");
 
     if let Some(window) = app.get_webview_window("hud") {
+        // Linux: show() FIRST, then position — same realized-window reasoning
+        // as show_hud below.
+        #[cfg(not(target_os = "windows"))]
+        let _ = window.show();
         position_hud_window(app, &window, &config);
         let _ = window.set_ignore_cursor_events(true);
     } else {
@@ -276,6 +299,10 @@ pub fn show_hud_playback(app: &AppHandle, text: Option<String>, audio_duration_m
 
     if let Some(window) = app.get_webview_window("hud") {
         position_hud_window(app, &window, &config);
+        // Linux: hide_hud() hides the window (Wayland clamps off-screen park
+        // coordinates). Re-show it at the just-applied position.
+        #[cfg(not(target_os = "windows"))]
+        let _ = window.show();
         let _ = window.set_ignore_cursor_events(true);
     } else {
         log::warn!("HUD window not found");
@@ -371,6 +398,10 @@ pub fn show_hud_clipboard_copied(app: &AppHandle, trigger_window_ms: u64) {
     }
 
     if let Some(window) = app.get_webview_window("hud") {
+        // Linux: show() FIRST, then position — same realized-window reasoning
+        // as show_hud below.
+        #[cfg(not(target_os = "windows"))]
+        let _ = window.show();
         position_hud_window(app, &window, &config);
         let _ = window.set_ignore_cursor_events(true);
     } else {

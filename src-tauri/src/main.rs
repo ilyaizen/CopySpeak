@@ -207,6 +207,22 @@ pub fn register_hotkey(
     }
 
     let shortcut = parse_hotkey(&hotkey_config.shortcut)?;
+
+    // Wayland has no global-hotkey protocol: `register` cannot succeed there.
+    // Bind the compositor key instead — the control server's POST /speak is
+    // the same entry point the hotkey handler drives. X11 sessions use the
+    // regular plugin path.
+    #[cfg(not(target_os = "windows"))]
+    if std::env::var("WAYLAND_DISPLAY").is_ok() {
+        log::info!(
+            "[Hotkey] Wayland session: compositor binds the key instead. \
+             Hyprland example: bind = {}, exec, curl -s -X POST http://127.0.0.1:8078/speak \
+             --data-binary @- <<< $(wl-paste)",
+            hotkey_config.shortcut
+        );
+        return Ok(());
+    }
+
     app.global_shortcut().register(shortcut).map_err(|e| {
         format!(
             "Failed to register shortcut '{}': {}",
@@ -263,13 +279,30 @@ use std::sync::Arc;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Emitter, Manager, State,
+    Emitter, Listener, Manager, State,
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 fn main() {
     if let Err(e) = logging::init_logging() {
         eprintln!("Failed to initialize logging: {}", e);
+    }
+
+    // Linux: Wayland toplevels cannot self-position (tao set_position is
+    // silently ignored), so the HUD needs XWayland. WEBKIT_DISABLE_COMPOSITING_MODE
+    // avoids WebKitGTK repaint artifacts on Hyprland. Baked in so the packaged
+    // app works from any launcher, not just the dev wrapper. The desktop
+    // session exports GDK_BACKEND=wayland globally, so a mere is-none() check
+    // is a no-op — override that specific value; any other explicit backend
+    // the user sets is respected.
+    #[cfg(target_os = "linux")]
+    {
+        if std::env::var_os("GDK_BACKEND").is_none_or(|v| v == "wayland") {
+            std::env::set_var("GDK_BACKEND", "x11");
+        }
+        if std::env::var_os("WEBKIT_DISABLE_COMPOSITING_MODE").is_none() {
+            std::env::set_var("WEBKIT_DISABLE_COMPOSITING_MODE", "1");
+        }
     }
 
     // Load .env (next to copyspeak.exe) before any backend reads credentials.
@@ -506,9 +539,34 @@ fn main() {
             // frame before Tauri applies ours — a visible flash. Park first, then show.
             // From here on it stays shown; show_* reposition it on-screen.
             if let Some(hud_window) = app.get_webview_window("hud") {
-                let _ = hud_window.set_ignore_cursor_events(true);
-                hud::move_hud_offscreen(&hud_window);
-                let _ = hud_window.show();
+                #[cfg(target_os = "windows")]
+                {
+                    let _ = hud_window.set_ignore_cursor_events(true);
+                    hud::move_hud_offscreen(&hud_window);
+                    let _ = hud_window.show();
+                }
+                // Linux (tao/GTK): set_ignore_cursor_events on a never-realized
+                // hidden window queues a CursorIgnoreEvents request whose
+                // `window().unwrap()` panics the event loop (tao
+                // event_loop.rs:457) once it dequeues before the GdkWindow
+                // exists. So: show() once to realize the GdkWindow, THEN defer
+                // set_ignore_cursor_events 150ms, THEN hide() again. On Wayland
+                // we do NOT park by position: set_position is clamped to the
+                // workspace (the HUD would sit visible clamped at (0,0) — the
+                // "stuck centered" bug). show_* re-shows it on demand.
+                // Windows (WebView2) is unaffected; keep the old order there.
+                #[cfg(not(target_os = "windows"))]
+                {
+                    let _ = hud_window.show();
+                    let app_handle = app.handle().clone();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_millis(150));
+                        if let Some(hud) = app_handle.get_webview_window("hud") {
+                            let _ = hud.set_ignore_cursor_events(true);
+                            let _ = hud.hide();
+                        }
+                    });
+                }
                 if let Some(main_window) = app.get_webview_window("main") {
                     let _ = main_window.set_focus();
                 }
@@ -547,6 +605,22 @@ fn main() {
             }
 
             // --- Start playback monitor thread (auto-hide HUD when audio finishes) ---
+            // Linux: playback happens in the webview (WebKitGTK <audio>), so the
+            // Rust AudioPlayer never reports a playing->idle transition here. The
+            // frontend emits a global "hud:stop" when the queue drains / audio
+            // ends — listen for it and hide the native HUD window (Wayland can't
+            // park by position, so hide() IS the park). On Windows the HUD is
+            // parked off-screen and shown permanently; JS-only hide is correct.
+            #[cfg(not(target_os = "windows"))]
+            {
+                let app_handle_for_hud_stop = app.handle().clone();
+                app.listen("hud:stop", move |_| {
+                    log::info!("[HUD] hud:stop received, hiding window");
+                    if let Some(hud) = app_handle_for_hud_stop.get_webview_window("hud") {
+                        let _ = hud.hide();
+                    }
+                });
+            }
             let app_handle_for_monitor = app.handle().clone();
             std::thread::spawn(move || loop {
                 std::thread::sleep(std::time::Duration::from_millis(100));
@@ -653,6 +727,8 @@ fn main() {
             commands::set_config,
             commands::reset_config,
             commands::config_exists,
+            commands::get_onboarding_status,
+            commands::complete_onboarding,
             commands::speak_now,
             commands::regenerate_now,
             commands::replay_cached,

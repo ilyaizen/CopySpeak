@@ -83,13 +83,17 @@ pub fn rename_history_reading(
     let entry = hist.get_by_id(&entry_id).ok_or("History entry not found")?;
     let batch_id = entry.batch_id.clone();
     let mut updated = hist.clone();
-    for entry in updated.entries_mut().iter_mut().filter(|entry| {
-        entry.id == entry_id || (batch_id.is_some() && entry.batch_id == batch_id)
-    }) {
+    for entry in updated
+        .entries_mut()
+        .iter_mut()
+        .filter(|entry| entry.id == entry_id || (batch_id.is_some() && entry.batch_id == batch_id))
+    {
         if title.is_empty() {
             entry.metadata.remove("title");
         } else {
-            entry.metadata.insert("title".into(), serde_json::json!(title));
+            entry
+                .metadata
+                .insert("title".into(), serde_json::json!(title));
         }
     }
     updated.metadata.last_modified = chrono::Utc::now();

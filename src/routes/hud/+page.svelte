@@ -12,7 +12,12 @@
     // We only show once; from here on, HUD is hidden by moving off-screen.
     if ("window" in globalThis && "__TAURI_INTERNALS__" in window) {
       const { getCurrentWindow } = await import("@tauri-apps/api/window");
-      await getCurrentWindow().show();
+      // Rust owns HUD visibility (setup park + show_* paths). This call is only
+      // needed on Windows (WebView2 first-paint flash workaround) where the hud
+      // capability... also denies it. Swallow the rejection — on Linux an
+      // unwanted success here would race the Rust-side deferred startup hide
+      // and leave the parked HUD stuck visible.
+      await getCurrentWindow().show().catch(() => {});
     }
   });
 </script>
