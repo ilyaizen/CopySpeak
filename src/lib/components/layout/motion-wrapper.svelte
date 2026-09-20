@@ -15,7 +15,10 @@
 
   let {
     children,
-    disableMotion = false,
+    // TEMP (2026-09-20): page slide-up animation globally disabled. Flip back
+    // to `false` to re-enable — the keyframes in +layout.css and this prop
+    // stay in place on purpose, this is not dead code.
+    disableMotion = true,
     class: className = "",
     ...rest
   }: MotionWrapperProps = $props();
