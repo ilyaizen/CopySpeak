@@ -78,6 +78,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - On Linux launch with `GDK_BACKEND=x11` and show() the HUD window before `set_position`: Wayland toplevels cannot self-position (tao's set_position → gtk_window_move is silently ignored), and an X11 move only sticks once the GdkWindow is realized.
 - Hide the HUD's native window when the frontend emits global `hud:stop` on Linux: webview playback never trips the Rust AudioPlayer monitor, so without this listener the HUD stays mapped after audio ends (Windows keeps the parked-window design and JS-only hide).
 - Run frontend tests as `bun run test` (vitest); bare `bun test` uses bun's built-in runner without the vitest DOM environment and fails ~39 document-dependent tests that pass in CI.
+- Treat a Windows-green `cargo check` as silent about `cfg(not(windows))` code: before deleting an "unused" import, grep the file for that trait's methods inside cfg-gated blocks — the Linux-only `hud:stop` listener needs `tauri::Listener` (cfg-gate the import itself), and only the Linux CI build catches its absence.
 
 <!-- rtk-instructions v2 -->
 

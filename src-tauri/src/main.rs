@@ -281,6 +281,9 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager, State,
 };
+// `Listener` provides `app.listen`; only the non-Windows hud:stop block uses it.
+#[cfg(not(target_os = "windows"))]
+use tauri::Listener;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 fn main() {
