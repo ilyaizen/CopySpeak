@@ -23,7 +23,7 @@ bun run tauri dev
 
 - **Multiple trigger modes**: Double-copy (1.5s window), hotkey, or manual paste/play
 - **13 TTS engines**:
-  - **Local** — Piper, Kokoro, Kitten, Chatterbox, Qwen3-TTS (multilingual, 9 CustomVoice voices), or any CLI TTS tool via local subprocess
+  - **Local** — Piper, Kokoro, Kitten, Qwen3-TTS (multilingual, 9 CustomVoice voices), Pocket, or any CLI TTS tool via local subprocess
   - **Edge TTS** — Free Microsoft Edge Read Aloud backend (default)
   - **OpenAI TTS** — Cloud API with 9 voices
   - **ElevenLabs TTS** — Cloud API with voice library support
@@ -90,9 +90,9 @@ src/                     # Svelte 5 frontend
 └── routes/              # SvelteKit routes
     ├── settings/        # Settings page
     ├── effects/         # Effects page
-    ├── engine/          # Engine page
+    ├── engines/         # Engine page
     ├── history/         # History page
-    ├── profiles/        # Profiles page
+    ├── voices/          # Voice profiles page
     ├── onboarding/      # First-run setup
     └── hud/             # HUD overlay
 
@@ -112,7 +112,7 @@ src-tauri/src/           # Rust backend
 │   ├── http.rs          # Generic HTTP
 │   ├── cli.rs           # Local CLI engines
 │   └── catalog.rs       # Engine catalog types
-├── clipboard.rs         # Double-copy detection
+├── clipboard/           # Double-copy detection (win32 / wayland)
 ├── audio.rs             # Playback
 ├── post_process.rs      # LLM post-processing
 └── sanitize/            # Text normalization
