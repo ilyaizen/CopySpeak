@@ -7,15 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **Default voice profile starts neutral** — the fresh-install Edge profile now ships at speed 1.0 / pitch 1.0 instead of 0.9 / 1.3, so out-of-box speech plays at the voice's natural rate. Existing profiles are untouched.
-
-### Fixed
-
-- **Config export carries the real app version** — the `version` field in exported settings had fossilized at `0.1.10` (a schema-version default that was never bumped). It now tracks the app version (`0.2.6`), is refreshed on every config load and save, and rides the version bump script like the other versioned files.
-- Removed an unused `Listener` import in `main.rs` that generated a cargo warning on every build.
-
 ## [0.2.6] - 2026-09-20
 
 ### Added
@@ -26,10 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Edge-TTS is the default engine on fresh installs** — free Microsoft Read Aloud voices with no API key and no downloads, so text-to-speech works immediately after setup. Existing configurations are untouched; premium cloud engines (Cartesia, ElevenLabs, OpenAI, Google, Microsoft) and local engines remain available in Settings / Engines.
+- **Default voice profile starts neutral** — the fresh-install Edge profile now ships at speed 1.0 / pitch 1.0 instead of 0.9 / 1.3, so out-of-box speech plays at the voice's natural rate. Existing profiles are untouched.
 
 ### Fixed
 
 - **Onboarding no longer hangs on "Loading configuration..."** (issue #43) — on a fresh install the first-run screen's full-config request could never resolve on Windows. Onboarding was reworked to not need it: it now uses small dedicated commands (`get_onboarding_status`, `complete_onboarding`), presents an engine choice with Edge-TTS preselected, and no longer demands an API key before you can start. The `.env` key overlay for power users is unchanged.
+- **Config export carries the real app version** — the `version` field in exported settings had fossilized at `0.1.10` (a schema-version default that was never bumped). It now tracks the app version (`0.2.6`), is refreshed on every config load and save, and rides the version bump script like the other versioned files.
+- Removed an unused `Listener` import in `main.rs` that generated a cargo warning on every build.
 
 ## [0.2.5] - 2026-09-14
 
