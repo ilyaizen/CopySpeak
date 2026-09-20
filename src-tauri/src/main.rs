@@ -522,9 +522,26 @@ fn main() {
             // frame before Tauri applies ours — a visible flash. Park first, then show.
             // From here on it stays shown; show_* reposition it on-screen.
             if let Some(hud_window) = app.get_webview_window("hud") {
+                #[cfg(target_os = "windows")]
                 let _ = hud_window.set_ignore_cursor_events(true);
                 hud::move_hud_offscreen(&hud_window);
                 let _ = hud_window.show();
+                // Linux (tao/GTK): set_ignore_cursor_events on a never-realized
+                // hidden window queues a CursorIgnoreEvents request whose
+                // `window().unwrap()` panics the event loop (tao
+                // event_loop.rs:457) once it dequeues before the GdkWindow
+                // exists. Call it only after show() has realized the window.
+                // Windows (WebView2) is unaffected; keep the old order there.
+                #[cfg(not(target_os = "windows"))]
+                {
+                    let app_handle = app.handle().clone();
+                    std::thread::spawn(move || {
+                        std::thread::sleep(std::time::Duration::from_millis(150));
+                        if let Some(hud) = app_handle.get_webview_window("hud") {
+                            let _ = hud.set_ignore_cursor_events(true);
+                        }
+                    });
+                }
                 if let Some(main_window) = app.get_webview_window("main") {
                     let _ = main_window.set_focus();
                 }
