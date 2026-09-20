@@ -21,6 +21,11 @@ const filesToUpdate = {
     content.replace(/("version":\s*)"[^"]+"/, `$1"${version}"`),
   [versionFile]: (content, version) =>
     content.replace(/export const VERSION = "[^"]+";/, `export const VERSION = "${version}";`),
+  "src-tauri/src/config/mod.rs": (content, version) =>
+    content.replace(
+      /const CONFIG_VERSION: &str = "[^"]+";/,
+      `const CONFIG_VERSION: &str = "${version}";`
+    ),
   "README.md": (content, version) =>
     content.replace(/(\*\*Current Version:\*\*\s*)[\d.]+/, `$1${version}`)
 };

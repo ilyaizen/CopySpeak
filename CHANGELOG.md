@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Default voice profile starts neutral** — the fresh-install Edge profile now ships at speed 1.0 / pitch 1.0 instead of 0.9 / 1.3, so out-of-box speech plays at the voice's natural rate. Existing profiles are untouched.
+
+### Fixed
+
+- **Config export carries the real app version** — the `version` field in exported settings had fossilized at `0.1.10` (a schema-version default that was never bumped). It now tracks the app version (`0.2.6`), is refreshed on every config load and save, and rides the version bump script like the other versioned files.
+- Removed an unused `Listener` import in `main.rs` that generated a cargo warning on every build.
+
 ## [0.2.6] - 2026-09-20
 
 ### Added

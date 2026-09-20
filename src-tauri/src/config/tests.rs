@@ -354,4 +354,19 @@ mod tests {
             .iter()
             .any(|e| matches!(e, ValidationError::DoubleCopyWindowTooSmall { .. })));
     }
+
+    #[test]
+    fn default_profile_speed_and_pitch_are_neutral() {
+        let profile = VoiceProfile::default();
+        assert_eq!(profile.speed, 1.0);
+        assert_eq!(profile.pitch, 1.0);
+    }
+
+    #[test]
+    fn loaded_config_gets_current_version_stamp() {
+        let mut config = AppConfig::default();
+        config.version = "0.1.10-fossil".into();
+        let stamped = stamp_config_version(config);
+        assert_eq!(stamped.version, CONFIG_VERSION);
+    }
 }

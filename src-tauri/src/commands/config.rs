@@ -165,6 +165,10 @@ pub fn set_config(
         return Err(format!("Validation failed: {}", error_messages.join("; ")));
     }
 
+    // `version` is owned by the app, not the caller (frontend or imported
+    // file) — always persist the running version stamp.
+    new_config.version = crate::config::config_version().into();
+
     // Strip API keys that match env vars so they aren't persisted to disk.
     // Env values are loaded via secrets::load_dotenv() and injected at read
     // time; saving them would leak secrets and override the env-first contract.

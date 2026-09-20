@@ -1,8 +1,16 @@
 // Config: typed settings struct, persisted as JSON to %APPDATA%/CopySpeak/config.json.
 // Auto-saved on every change from the frontend via set_config command.
 
-/// Current config schema version. Bumped when making breaking changes to config structure.
-const CONFIG_VERSION: &str = "0.1.10";
+/// Version stamp written into config files (the `version` field users see in
+/// exports). Tracks the app version (VERSION in src/lib/version.ts) and is
+/// refreshed by scripts/version-bumper.mjs alongside the other versioned
+/// files; load_or_default re-stamps loaded configs so old files catch up.
+const CONFIG_VERSION: &str = "0.2.6";
+
+/// The current config file version stamp (see `CONFIG_VERSION`).
+pub fn config_version() -> &'static str {
+    CONFIG_VERSION
+}
 
 mod effects;
 mod general;
@@ -345,13 +353,24 @@ pub fn load_or_default() -> AppConfig {
 
             clamp_profile_rates(&mut cfg);
 
-            cfg
+            // `version` is informational (shown in exports); always reflect the
+            // running app version so long-lived config files don't fossilize a
+            // stale one. Persisted on the next save.
+            stamp_config_version(cfg)
         }
         Err(_) => {
             log::info!("No config found at {}, using defaults", path.display());
             AppConfig::default()
         }
     }
+}
+
+/// Refresh the config's informational version stamp to the running app
+/// version (`CONFIG_VERSION`), so exports from long-lived config files don't
+/// carry a stale one. Persisted on the next save.
+fn stamp_config_version(mut config: AppConfig) -> AppConfig {
+    config.version = CONFIG_VERSION.into();
+    config
 }
 
 /// Save config to disk. Creates parent directory if needed.
