@@ -89,12 +89,19 @@ def pcm16(samples) -> bytes:
 
 
 def load_engine(model_name: str, device: str):
+    import sys
+
     import torch
-    from qwen_tts import Qwen3TTSModel
 
     target = "cuda:0" if device == "cuda" else "cpu"
     dtype = torch.bfloat16 if device == "cuda" else torch.float32
+    # ponytail: everything between here and from_pretrained() returning must stay
+    # off real stdout — in --serve mode stdout IS the protocol v2 pipe, and a
+    # stray banner (qwen_tts's flash-attn warning) ahead of READY 2 kills the
+    # daemon handshake (Rust read_line sees a blank line and gives up).
     with contextlib.redirect_stdout(sys.stderr):
+        from qwen_tts import Qwen3TTSModel
+
         return Qwen3TTSModel.from_pretrained(model_name, device_map=target, dtype=dtype)
 
 
@@ -188,9 +195,11 @@ def main() -> int:
         return 0
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
-        command = "./scripts/install-qwen.ps1 -Force"
-        if args.device == "cuda":
-            command += " -Cuda -SmokeTest"
+        command = "./scripts/install-qwen.sh --force --smoke-test"
+        if sys.platform != "linux":
+            command = "./scripts/install-qwen.ps1 -Force" + (" -Cuda -SmokeTest" if args.device == "cuda" else "")
+        elif args.device == "cuda":
+            command = "./scripts/install-qwen.sh --force --cuda --smoke-test"
         print(f"Reinstall with: {command}", file=sys.stderr)
         return 1
 

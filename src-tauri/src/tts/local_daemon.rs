@@ -152,6 +152,31 @@ fn check_handshake(line: &str) -> Result<(), String> {
     }
 }
 
+/// Read the v2 handshake, tolerating stray lines the wrapper leaked to stdout
+/// before `READY 2` (third-party print/banner code that ignores the
+/// "stdout is a protocol pipe" contract). Blank lines are skipped too — a
+/// wrapper that dies before handshaking still surfaces as EOF (`Ok(0)`), which
+/// is the case this loop must not mask. Without the skip, one stray banner
+/// line ahead of READY disabled the daemon for the whole session.
+fn read_handshake(stdout: &mut BufReader<ChildStdout>) -> Result<(), String> {
+    let mut line = String::new();
+    loop {
+        match stdout.read_line(&mut line) {
+            // EOF before READY: the wrapper genuinely exited (or was OOM-killed).
+            Ok(0) => return check_handshake(""),
+            Ok(_) if line.trim().is_empty() || !line.starts_with("READY") => {
+                log::debug!(
+                    "[LocalDaemon] skipping pre-handshake stdout line: {:?}",
+                    line.trim()
+                );
+                line.clear();
+            }
+            Ok(_) => return check_handshake(&line),
+            Err(e) => return Err(e.to_string()),
+        }
+    }
+}
+
 impl Drop for Daemon {
     fn drop(&mut self) {
         let _ = self.child.kill();
@@ -214,15 +239,7 @@ fn start(key: String, command: &str, serve_args: &[String]) -> Result<Daemon, St
     // ponytail: no read timeout — a pre-daemon wrapper rejects `--serve` and
     // exits, which surfaces as EOF. A wedged interpreter would leak this thread
     // and permanently disable the daemon; synthesis still works one-shot.
-    let handshake = {
-        let mut line = String::new();
-        match stdout.read_line(&mut line) {
-            // EOF and a blank line both mean "no handshake arrived".
-            Ok(0) => check_handshake(""),
-            Ok(_) => check_handshake(&line),
-            Err(e) => Err(e.to_string()),
-        }
-    };
+    let handshake = read_handshake(&mut stdout);
     if let Err(e) = handshake {
         let _ = child.kill();
         let _ = child.wait();
