@@ -279,7 +279,7 @@ use std::sync::Arc;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Emitter, Manager, State,
+    Emitter, Listener, Manager, State,
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
@@ -523,22 +523,30 @@ fn main() {
             // From here on it stays shown; show_* reposition it on-screen.
             if let Some(hud_window) = app.get_webview_window("hud") {
                 #[cfg(target_os = "windows")]
-                let _ = hud_window.set_ignore_cursor_events(true);
-                hud::move_hud_offscreen(&hud_window);
-                let _ = hud_window.show();
+                {
+                    let _ = hud_window.set_ignore_cursor_events(true);
+                    hud::move_hud_offscreen(&hud_window);
+                    let _ = hud_window.show();
+                }
                 // Linux (tao/GTK): set_ignore_cursor_events on a never-realized
                 // hidden window queues a CursorIgnoreEvents request whose
                 // `window().unwrap()` panics the event loop (tao
                 // event_loop.rs:457) once it dequeues before the GdkWindow
-                // exists. Call it only after show() has realized the window.
+                // exists. So: show() once to realize the GdkWindow, THEN defer
+                // set_ignore_cursor_events 150ms, THEN hide() again. On Wayland
+                // we do NOT park by position: set_position is clamped to the
+                // workspace (the HUD would sit visible clamped at (0,0) — the
+                // "stuck centered" bug). show_* re-shows it on demand.
                 // Windows (WebView2) is unaffected; keep the old order there.
                 #[cfg(not(target_os = "windows"))]
                 {
+                    let _ = hud_window.show();
                     let app_handle = app.handle().clone();
                     std::thread::spawn(move || {
                         std::thread::sleep(std::time::Duration::from_millis(150));
                         if let Some(hud) = app_handle.get_webview_window("hud") {
                             let _ = hud.set_ignore_cursor_events(true);
+                            let _ = hud.hide();
                         }
                     });
                 }
@@ -580,6 +588,22 @@ fn main() {
             }
 
             // --- Start playback monitor thread (auto-hide HUD when audio finishes) ---
+            // Linux: playback happens in the webview (WebKitGTK <audio>), so the
+            // Rust AudioPlayer never reports a playing->idle transition here. The
+            // frontend emits a global "hud:stop" when the queue drains / audio
+            // ends — listen for it and hide the native HUD window (Wayland can't
+            // park by position, so hide() IS the park). On Windows the HUD is
+            // parked off-screen and shown permanently; JS-only hide is correct.
+            #[cfg(not(target_os = "windows"))]
+            {
+                let app_handle_for_hud_stop = app.handle().clone();
+                app.listen("hud:stop", move |_| {
+                    if let Some(hud) = app_handle_for_hud_stop.get_webview_window("hud") {
+                        log::debug!("[HUD] hud:stop received, hiding window");
+                        let _ = hud.hide();
+                    }
+                });
+            }
             let app_handle_for_monitor = app.handle().clone();
             std::thread::spawn(move || loop {
                 std::thread::sleep(std::time::Duration::from_millis(100));
