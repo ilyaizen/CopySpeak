@@ -17,7 +17,9 @@
       // capability... also denies it. Swallow the rejection — on Linux an
       // unwanted success here would race the Rust-side deferred startup hide
       // and leave the parked HUD stuck visible.
-      await getCurrentWindow().show().catch(() => {});
+      await getCurrentWindow()
+        .show()
+        .catch(() => {});
     }
   });
 </script>
