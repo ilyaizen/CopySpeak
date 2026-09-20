@@ -727,6 +727,8 @@ fn main() {
             commands::set_config,
             commands::reset_config,
             commands::config_exists,
+            commands::get_onboarding_status,
+            commands::complete_onboarding,
             commands::speak_now,
             commands::regenerate_now,
             commands::replay_cached,

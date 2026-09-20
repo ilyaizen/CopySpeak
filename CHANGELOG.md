@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-09-20
+
+### Added
+
+- **Linux port** — CopySpeak now ships native Linux packages: AppImage, `.deb`, and `.rpm`, built by CI (`build-linux.yml`). The HUD runs reliably on Wayland compositors via XWayland (backend baked in at startup, pixel-exact positioning, auto-hide synced from playback), the tray works out of the box, and a Linux browser companion is included with native-messaging manifests installed for Chromium, Chrome, and Firefox. A Hyprland keybind → local control-server `POST /speak` script replaces the (protocol-impossible) Wayland global hotkey.
+- **Fixed a daemon-load race that could exhaust GPU memory** — on app restart, a speak request arriving while the resident daemon was still loading used to spawn a one-shot engine beside it (two model copies → CUDA OOM). Requests now wait for the in-flight load and reuse it.
+
+### Changed
+
+- **Edge-TTS is the default engine on fresh installs** — free Microsoft Read Aloud voices with no API key and no downloads, so text-to-speech works immediately after setup. Existing configurations are untouched; premium cloud engines (Cartesia, ElevenLabs, OpenAI, Google, Microsoft) and local engines remain available in Settings / Engines.
+
+### Fixed
+
+- **Onboarding no longer hangs on "Loading configuration..."** (issue #43) — on a fresh install the first-run screen's full-config request could never resolve on Windows. Onboarding was reworked to not need it: it now uses small dedicated commands (`get_onboarding_status`, `complete_onboarding`), presents an engine choice with Edge-TTS preselected, and no longer demands an API key before you can start. The `.env` key overlay for power users is unchanged.
+
 ## [0.2.5] - 2026-09-14
 
 ### Added
