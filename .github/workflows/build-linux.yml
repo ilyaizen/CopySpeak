@@ -139,6 +139,7 @@ jobs:
         id: appimage
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
           BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle/appimage"
@@ -206,10 +207,9 @@ jobs:
 
           # Re-sign for the updater (tauri-action signed the ORIGINAL bytes;
           # both the .sig file and latest.json must carry the NEW signature).
-          # NOTE: do NOT set TAURI_SIGNING_PRIVATE_KEY_PASSWORD (even empty):
-          # an empty password makes the CLI try to prompt on /dev/tty and die
-          # with os error 6 on CI. The key is password-less — tauri-action
-          # signed the build without any password env var.
+          # The key IS password-protected: the password secret exists on the
+          # repo (see env above). The CLI reads it from TAURI_SIGNING_PRIVATE_
+          # KEY_PASSWORD — do NOT delete that env line and do NOT pass "".
           bunx @tauri-apps/cli signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" \
             "$APPIMAGE"
 
