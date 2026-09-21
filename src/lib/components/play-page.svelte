@@ -125,7 +125,7 @@
     },
     pagination: {
       enabled: true,
-      fragment_size: 500
+      fragment_size: 600
     },
     history: {
       enabled: true,

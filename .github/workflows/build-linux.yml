@@ -122,6 +122,118 @@ jobs:
           prerelease: false
           args: "--target ${{ matrix.target }}"
 
+      # ── AppImage post-process (fixes #45) ────────────────────────────────────
+      # linuxdeploy's AppRun.wrapped C runtime setenv's four poisoned vars at
+      # exec time (PYTHONHOME, PYTHONPATH, GST_PLUGIN_SYSTEM_PATH,
+      # GST_PLUGIN_SYSTEM_PATH_1_0). A bash `unset` in AppRun CANNOT undo them
+      # (the exports happen when AppRun.wrapped execs, after AppRun's unset).
+      # Fix A: same-length byte patches inside AppRun.wrapped
+      #        (PYTHONHOME→_YTHONHOME etc.) so the exports become no-ops.
+      # Fix B: quarantine the bundled gst CORE libs (bundled 1.20 core +
+      #        system 1.28 plugins = ABI mismatch both ways); with the env var
+      #        gone WebKitGTK falls through to the system gstreamer stack
+      #        (plugins-good + libav, installed above).
+      # Then repack, re-sign (updater needs a valid signature) and clobber
+      # the draft-release assets.
+      - name: Patch and repack AppImage
+        id: appimage
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          BUNDLE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle/appimage"
+          APPIMAGE=$(ls "$BUNDLE_DIR"/*.AppImage | head -1)
+          BASE=$(basename "$APPIMAGE" .AppImage)
+          echo "Patching $APPIMAGE"
+
+          rm -rf squashfs-root
+          APPIMAGE_EXTRACT_AND_RUN=1 NO_STRIP=1 "$APPIMAGE" --appimage-extract > /dev/null
+
+          # Fix A: same-length byte patches in AppRun.wrapped (order matters:
+          # patch the _1_0 variant before the bare GST var).
+          python3 - <<'PYEOF'
+          data = bytearray(open("squashfs-root/AppRun.wrapped", "rb").read())
+          def patch_all(buf, old, new):
+              assert len(old) == len(new), "patch must be same-length"
+              n = 0
+              idx = 0
+              while True:
+                  i = buf.find(old, idx)
+                  if i < 0:
+                      return n
+                  buf[i:i+len(old)] = new
+                  n += 1
+                  idx = i + len(old)
+          counts = [
+              patch_all(data, b"GST_PLUGIN_SYSTEM_PATH_1_0", b"XST_PLUGIN_SYSTEM_PATH_1_0"),
+              patch_all(data, b"GST_PLUGIN_SYSTEM_PATH", b"XST_PLUGIN_SYSTEM_PATH"),
+              patch_all(data, b"PYTHONHOME", b"_YTHONHOME"),
+              patch_all(data, b"PYTHONPATH", b"_YTHONPATH"),
+          ]
+          assert counts == [1, 1, 1, 2], f"unexpected patch counts: {counts}"
+          open("squashfs-root/AppRun.wrapped", "wb").write(bytes(data))
+          PYEOF
+
+          # Belt-and-braces: also unset the four vars in the bash AppRun.
+          # (NOT sufficient alone — AppRun.wrapped re-exports at exec time —
+          # but makes the intent explicit and covers future runtime changes.)
+          sed -i '/^exec /i unset PYTHONHOME PYTHONPATH GST_PLUGIN_SYSTEM_PATH GST_PLUGIN_SYSTEM_PATH_1_0' squashfs-root/AppRun
+          # (The gtk hook does NOT export GST_PLUGIN_SYSTEM_PATH — the poisoned
+          # exports live solely in AppRun.wrapped's C runtime.)
+
+          # Fix B: quarantine bundled gst core libs + glib siblings so WebKit
+          # loads the SYSTEM glib/gstreamer (matching system plugins).
+          LIBDIR=squashfs-root/usr/lib
+          mkdir -p "$LIBDIR/gst-core-quarantine"
+          for pattern in libgst* libglib-2.0* libgobject* libgio* libgmodule* \
+                         libmount* libpcre2-8* libffi* liblzma* libzstd* \
+                         libblkid* libcap.so* liblz4* libselinux* libsystemd* \
+                         libgcrypt*; do
+            for f in "$LIBDIR"/$pattern; do
+              [ -e "$f" ] || continue
+              mv "$f" "$LIBDIR/gst-core-quarantine/"
+            done
+          done
+          # The bundled gstreamer plugin dir is empty anyway; drop it.
+          rm -rf "$LIBDIR/gstreamer-1.0"
+
+          # Repack. appimagetool on ubuntu-22.04 has working FUSE-less run
+          # via APPIMAGE_EXTRACT_AND_RUN; NO_STRIP mirrors the build args.
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool-x86_64.AppImage \
+            --no-appstream squashfs-root "$APPIMAGE"
+
+          # Re-sign for the updater (tauri-action signed the ORIGINAL bytes;
+          # both the .sig file and latest.json must carry the NEW signature).
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" \
+            npx @tauri-apps/cli signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" \
+            "$APPIMAGE" 2>/dev/null || \
+          bunx @tauri-apps/cli signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" \
+            "$APPIMAGE"
+
+          echo "appimage=$APPIMAGE" >> "$GITHUB_OUTPUT"
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          ls -la "$BUNDLE_DIR"
+
+      # Upload the patched AppImage + new .sig, then refresh the linux-x86_64
+      # signature inside latest.json (tauri-action embedded the ORIGINAL
+      # signature when it generated the manifest during the build step).
+      - name: Upload patched AppImage and refresh updater manifest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+          APPIMAGE: ${{ steps.appimage.outputs.appimage }}
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern "latest.json" --output latest.json
+          jq --arg sig "$(cat "$APPIMAGE.sig")" \
+            '.platforms["linux-x86_64"].signature = $sig' \
+            latest.json > latest.json.tmp && mv latest.json.tmp latest.json
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
+            "$APPIMAGE" "$APPIMAGE.sig" latest.json
+
       - name: Attach browser companion zip to release
         uses: softprops/action-gh-release@v2
         env:
