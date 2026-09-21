@@ -206,9 +206,10 @@ jobs:
 
           # Re-sign for the updater (tauri-action signed the ORIGINAL bytes;
           # both the .sig file and latest.json must carry the NEW signature).
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" \
-            npx @tauri-apps/cli signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" \
-            "$APPIMAGE" 2>/dev/null || \
+          # NOTE: do NOT set TAURI_SIGNING_PRIVATE_KEY_PASSWORD (even empty):
+          # an empty password makes the CLI try to prompt on /dev/tty and die
+          # with os error 6 on CI. The key is password-less — tauri-action
+          # signed the build without any password env var.
           bunx @tauri-apps/cli signer sign -k "$TAURI_SIGNING_PRIVATE_KEY" \
             "$APPIMAGE"
 
