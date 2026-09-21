@@ -230,6 +230,9 @@ jobs:
           APPIMAGE: ${{ steps.appimage.outputs.appimage }}
         run: |
           set -euo pipefail
+          # tauri-action (includeUpdaterJson) leaves a latest.json in the repo
+          # root; remove it or the download below refuses to overwrite.
+          rm -f latest.json
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
             --pattern "latest.json" --output latest.json
           jq --arg sig "$(cat "$APPIMAGE.sig")" \
