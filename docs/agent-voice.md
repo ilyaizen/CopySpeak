@@ -1,7 +1,9 @@
 # CopySpeak Agent Voice
 
-Project-local Pi extension: `.pi/extensions/copyspeak/`.
-Project-local Claude Code hook: `scripts/claude-copyspeak-hook.mjs` wired from `.claude/settings.json` or `.claude/settings.local.json`.
+Speaks AI-agent activity through the running CopySpeak app.
+
+- **Pi extension** (project-local): `.pi/extensions/copyspeak/`
+- **Claude Code hook** (project-local): `scripts/claude-copyspeak-hook.mjs`, wired from `.claude/settings.json` or `.claude/settings.local.json`
 
 ## What it does
 
@@ -12,7 +14,7 @@ Project-local Claude Code hook: `scripts/claude-copyspeak-hook.mjs` wired from `
 
 ## Setup
 
-Set any API keys and start Pi from this repository:
+Pi (start from this repository):
 
 ```powershell
 $env:CARTESIA_API_KEY="..."
@@ -71,3 +73,7 @@ The repo-local Claude hook is configured in `.claude/settings.json`; `.claude/se
 - `COPYSPEAK_PI_MAX_CHARS=700` / `COPYSPEAK_CLAUDE_MAX_CHARS=700` limits final response speech length.
 - `COPYSPEAK_PI_LAUNCH=1` / `COPYSPEAK_CLAUDE_LAUNCH=1` enables auto-launching CopySpeak.
 - `COPYSPEAK_CONTROL_URL=http://127.0.0.1:43117/speak` overrides the local control endpoint.
+
+## History
+
+Merged from `docs/COPYSPEAK_PI_VOICE.md` + `docs/COPYSPEAK_PI_VOICE_2.md` (2026-09-22). The V1-only clipboard-primer trigger described the pre-control-server behavior and no longer matches the extension code.

@@ -1,4 +1,4 @@
-// @see docs_internal/event-system.md
+// History store refreshes on backend events; listeners are deduplicated and skip non-Tauri runs.
 
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { historyStore } from "$lib/stores/history-store.svelte";

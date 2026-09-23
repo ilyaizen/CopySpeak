@@ -27,14 +27,14 @@ Before you begin, ensure you have the following installed:
 2. **Clone your fork**:
 
    ```bash
-   git clone https://github.com/ilyaizen/copyspeak-tts.git
-   cd copyspeak-tts
+   git clone https://github.com/ilyaizen/CopySpeak.git
+   cd CopySpeak
    ```
 
 3. **Add upstream remote**:
 
    ```bash
-   git remote add upstream git@github.com:ilyaizen/copyspeak-tts.git
+   git remote add upstream git@github.com:ilyaizen/CopySpeak.git
    ```
 
 4. **Install dependencies**:
@@ -57,9 +57,9 @@ CopySpeak follows a clean architecture pattern:
 - `main.rs` - Main application entry point with Tauri setup
 - `config/` - Configuration persistence modules
 - `commands/` - Tauri command handlers for frontend communication
-- `clipboard.rs` - Double-copy detection trigger
-- `audio.rs` - Audio playback using rodio
-- `tts/` - TTS backend abstraction (Kitten, Piper, Kokoro, OpenAI, ElevenLabs)
+- `clipboard/` - Double-copy detection trigger
+- `audio/` - Audio playback using rodio
+- `tts/` - TTS backend abstraction (cloud: ElevenLabs, OpenAI, Cartesia, Microsoft, Google, Edge · local: Kokoro, Piper, Kitten, Qwen, Pocket · generic: HTTP)
 - `sanitize/` - Text normalization modules
 
 **Frontend (Svelte 5/TypeScript - `src/`):**
@@ -69,13 +69,14 @@ CopySpeak follows a clean architecture pattern:
 - `lib/components/settings/` - Settings page components
 - `lib/components/hud/` - HUD overlay components
 - `lib/types.ts` - Shared TypeScript types
+- `routes/` - SvelteKit pages (Play, Engines, Effects, History, Voices, Settings, Onboarding, HUD)
 
 ## 🐛 Reporting Bugs
 
 ### Before Submitting a Bug Report
 
-1. **Search existing issues** at [github.com/ilyaizen/CopySpeak/issues](https://github.com/ilyaizen/copyspeak-tts/issues)
-2. **Check discussions** at [github.com/ilyaizen/CopySpeak/discussions](https://github.com/ilyaizen/copyspeak-tts/discussions)
+1. **Search existing issues** at [github.com/ilyaizen/CopySpeak/issues](https://github.com/ilyaizen/CopySpeak/issues)
+2. **Check discussions** at [github.com/ilyaizen/CopySpeak/discussions](https://github.com/ilyaizen/CopySpeak/discussions)
 3. **Try the latest release** to see if the issue has been fixed
 
 ### Submitting a Bug Report
@@ -104,7 +105,7 @@ We use GitHub Discussions for feature requests rather than issues. This keeps is
 
 ### Submitting a Feature Request
 
-1. Go to [Discussions](https://github.com/ilyaizen/copyspeak-tts/discussions)
+1. Go to [Discussions](https://github.com/ilyaizen/CopySpeak/discussions)
 2. Click "New discussion"
 3. Choose the appropriate category (Ideas, Feature Requests, etc.)
 4. Describe your feature idea including:
@@ -120,14 +121,14 @@ We use GitHub Discussions for feature requests rather than issues. This keeps is
 **This is critical:** Before writing any code, please do the following:
 
 1. **Search existing issues and PRs** - Check both open AND closed issues and pull requests. Someone may have already addressed this, or there may be a reason it was closed.
-   - [Open issues](https://github.com/ilyaizen/copyspeak-tts/issues)
-   - [Closed issues](https://github.com/ilyaizen/copyspeak-tts/issues?q=is%3Aissue+is%3Aclosed)
-   - [Open PRs](https://github.com/ilyaizen/copyspeak-tts/pulls)
-   - [Closed PRs](https://github.com/ilyaizen/copyspeak-tts/pulls?q=is%3Apr+is%3Aclosed)
+   - [Open issues](https://github.com/ilyaizen/CopySpeak/issues)
+   - [Closed issues](https://github.com/ilyaizen/CopySpeak/issues?q=is%3Aissue+is%3Aclosed)
+   - [Open PRs](https://github.com/ilyaizen/CopySpeak/pulls)
+   - [Closed PRs](https://github.com/ilyaizen/CopySpeak/pulls?q=is%3Apr+is%3Aclosed)
 
 2. **If something was previously closed** - If you want to revisit a closed issue or PR, you need to:
    - Provide a strong argument for why it should be reconsidered
-   - Gather community feedback first via [Discussions](https://github.com/ilyaizen/copyspeak-tts/discussions)
+   - Gather community feedback first via [Discussions](https://github.com/ilyaizen/CopySpeak/discussions)
    - Link to that discussion in your PR
 
 3. **Get community feedback for features** - PRs with demonstrated community interest are **much more likely to be merged**. Start a discussion, get feedback, and link to it in your PR. This helps ensure CopySpeak stays focused and useful for the most people without becoming bloated.
@@ -186,7 +187,7 @@ Community feedback is essential to keeping CopySpeak the best it can be for ever
    ```
 
 7. **Create a Pull Request**:
-   - Go to the [CopySpeak repository](https://github.com/ilyaizen/copyspeak-tts)
+   - Go to the [CopySpeak repository](https://github.com/ilyaizen/CopySpeak)
    - Click "New Pull Request"
    - Select your fork and branch
    - Fill out the PR template completely, including:
@@ -197,7 +198,7 @@ Community feedback is essential to keeping CopySpeak the best it can be for ever
      - Screenshots/videos if applicable
      - Breaking changes (if any)
 
-   **Remember:** PRs with community support are prioritized. If you haven't already, start a [discussion](https://github.com/ilyaizen/copyspeak-tts/discussions) to gather feedback before or alongside your PR. It is not explicitly required to gather feedback, but it certainly helps your PR get merged faster.
+   **Remember:** PRs with community support are prioritized. If you haven't already, start a [discussion](https://github.com/ilyaizen/CopySpeak/discussions) to gather feedback before or alongside your PR. It is not explicitly required to gather feedback, but it certainly helps your PR get merged faster.
 
 ### AI Assistance Disclosure
 
@@ -272,7 +273,7 @@ Documentation improvements are highly valued! You can contribute by:
 
 ### DO NOT TOUCH Directory
 
-**⚠️ CRITICAL: Do NOT modify or touch files in `src-web/src/lib/locales/DO_NOT_TOUCH/`**
+**⚠️ CRITICAL: Do NOT modify or touch files in `src/lib/locales/DO_NOT_TOUCH/`**
 
 This directory contains non-English translations (Arabic, Spanish, Hebrew) that are managed externally. During pre-production, translation keys change frequently as the app evolves.
 
@@ -307,8 +308,8 @@ Look for issues labeled `good first issue` or `help wanted` if you're new to the
 
 ## 📞 Getting Help
 
-- **Discussions**: Ask questions in [GitHub Discussions](https://github.com/ilyaizen/copyspeak-tts/discussions)
-- **Issues**: Report bugs via [GitHub Issues](https://github.com/ilyaizen/copyspeak-tts/issues)
+- **Discussions**: Ask questions in [GitHub Discussions](https://github.com/ilyaizen/CopySpeak/discussions)
+- **Issues**: Report bugs via [GitHub Issues](https://github.com/ilyaizen/CopySpeak/issues)
 
 ---
 
