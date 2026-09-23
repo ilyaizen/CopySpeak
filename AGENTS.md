@@ -20,9 +20,8 @@ CopySpeak: A lightwieight and modern AI text-to-speech orchestrator for Windows 
 
 ## Documentation
 
-- **docs/ (Public Docs)**: **CONTRIBUTING.md** (contribution guidelines).
-
-- **docs_internal/ (Internal Docs)**: **project-overview.md** (project context and key decisions), **requirements.md** (feature requirements and traceability), **architecture.md** (system architecture and design), **development_guide.md** (setup and development workflow), **tts_backends.md** (TTS engine integration guide), **brutalist_design.md** (UI design system and aesthetics), **roadmap.md** (development roadmap and phases), **code-patterns-reference.md** (Svelte 5, Rust, and Tauri IPC code examples).
+- **Public (tracked)**: README.md, CHANGELOG.md, BROWSER_EXTENSION.md, DESIGN.md (historical spec), docs/CONTRIBUTING.md, docs/engines.md, docs/profile-engine-settings.md, docs/agent-voice.md.
+- **Internal (untracked)**: `docs_internal/` — start from `docs_internal/README.md` (the index). Superseded and historical docs live in `docs_internal/archive/`.
 
 ## Keeping this file current
 
@@ -78,9 +77,11 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - On Linux launch with `GDK_BACKEND=x11` and show() the HUD window before `set_position`: Wayland toplevels cannot self-position (tao's set_position → gtk_window_move is silently ignored), and an X11 move only sticks once the GdkWindow is realized.
 - Hide the HUD's native window when the frontend emits global `hud:stop` on Linux: webview playback never trips the Rust AudioPlayer monitor, so without this listener the HUD stays mapped after audio ends (Windows keeps the parked-window design and JS-only hide).
 - Run frontend tests as `bun run test` (vitest); bare `bun test` uses bun's built-in runner without the vitest DOM environment and fails ~39 document-dependent tests that pass in CI.
+- Send installer voice ids as one comma-joined `-Voices` argument and split them with `ConvertTo-VoiceIds`; `powershell -File` binds neither `-Voices a,b` nor `-Voices a b` as an array.
 - Treat a Windows-green `cargo check` as silent about `cfg(not(windows))` code: before deleting an "unused" import, grep the file for that trait's methods inside cfg-gated blocks — the Linux-only `hud:stop` listener needs `tauri::Listener` (cfg-gate the import itself), and only the Linux CI build catches its absence.
 
 <!-- rtk-instructions v2 -->
+
 ## RTK (Rust Token Killer) - Token-Optimized Commands
 
 ## Golden Rule

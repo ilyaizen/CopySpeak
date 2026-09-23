@@ -49,6 +49,8 @@ $ErrorActionPreference = "Stop"
 
 . "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
 
+$Voices = ConvertTo-VoiceIds $Voices
+
 Write-EngineBanner -Title "Piper TTS Installer"
 
 Require-Uv
@@ -99,13 +101,15 @@ $voiceBaseUrl = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/e
 # interactive menu; otherwise the manual menu picks one. The first id is the
 # profile-snippet default.
 $existingModel = Get-ChildItem -Path $voicesDir -Filter "*.onnx" -ErrorAction SilentlyContinue | Select-Object -First 1
-$wantedVoices = if ($Voices -and $Voices.Count -gt 0) {
-    @($Voices)
+# Wrap the whole statement: assigning an if-statement unwraps a one-element
+# array back to a scalar, and $wantedVoices[0] would then be its first letter.
+$wantedVoices = @(if ($Voices.Count -gt 0) {
+    $Voices
 } elseif ($SkipVoiceDownload -and $existingModel) {
-    @([IO.Path]::GetFileNameWithoutExtension($existingModel.Name))
+    [IO.Path]::GetFileNameWithoutExtension($existingModel.Name)
 } else {
-    @(Select-VoiceFromMenu -Title "Pick an English Piper voice" -Voices $piperVoices -Default "en_US-amy-medium")
-}
+    Select-VoiceFromMenu -Title "Pick an English Piper voice" -Voices $piperVoices -Default "en_US-amy-medium"
+})
 $chosenVoice = $wantedVoices[0]
 
 # Download each wanted model pair if missing. Per-voice [STEP]/[DONE]/[ERROR]

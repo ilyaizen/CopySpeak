@@ -40,6 +40,8 @@ $ErrorActionPreference = "Stop"
 
 . "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
 
+$Voices = ConvertTo-VoiceIds $Voices
+
 Write-EngineBanner -Title "Kitten TTS Installer"
 
 Require-Uv

@@ -148,6 +148,13 @@ fn models_endpoint(
     }
 }
 
+/// The last global-hotkey registration failure, if the current hotkey did not
+/// register (taken by another app). `None` when it registered or is disabled.
+#[tauri::command]
+pub fn get_hotkey_error() -> Option<String> {
+    crate::hotkey_error()
+}
+
 #[tauri::command]
 pub fn set_config(
     app: AppHandle,

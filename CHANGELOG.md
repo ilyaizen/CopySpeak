@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-09-23
+
+### Fixed
+
+- **Kokoro and Pocket install from packaged builds** (#54) — release builds shipped without their engine wrappers, so app-driven installs failed at "Cannot find path ... copyspeak-kokoro.py". A test now fails when an installer's wrapper directory is missing from the bundle.
+- **Multi-voice and single-voice installs pick the right voices** (#49, #53) — a multi-voice selection reached the installers as one bogus id, and a single Piper voice was reduced to its first letter. An empty voice list now reports a clean error instead of crashing the manifest step.
+- **GPU installs of ONNX engines run on the GPU** (#51) — the CUDA runtime wheels are pinned to the set onnxruntime-gpu 1.30.0 ships against; newer unpinned wheels made it silently fall back to CPU.
+- **Pocket and Qwen fail clearly on unsupported GPUs** (#50) — a torch build without kernels for the GPU now errors at load with a "use a CPU profile" message instead of crashing on the first reading.
+- **Play page readings are sanitized** (#47) — the Speak/Regenerate buttons, hotkey, tray and selection paths skipped text sanitization, so web text with tabs or non-breaking spaces made Kokoro fail on longer passages.
+- **Linux packages ship a 512px app icon** — `.deb`/`.rpm` installed only 32px and 128px icons (the third landed in a non-standard `256x256@2` dir), so some launchers showed no icon.
+- **Hotkey registration failures are shown** (#46) — Settings shows a toast when the saved hotkey could not be registered (at startup or after saving) instead of reporting it as active.
+
 ## [0.2.6] - 2026-09-20
 
 ### Added

@@ -182,8 +182,9 @@ fn spawn_streamed(
 /// Launch an engine installer by id, streaming stdout/stderr as
 /// `install-progress` events. Returns immediately after spawning; completion
 /// is signalled by a terminal event (`done: true`). When `voice` is supplied
-/// it is forwarded as one `-Voices <id,id,...>` array argument, bypassing the script's
-/// interactive menu (uv/edge have no voice concept and omit it). `cuda` adds
+/// it is forwarded as one comma-joined `-Voices <id,id,...>` argument, bypassing the
+/// script's interactive menu. `-File` binds that as a single string (and would drop
+/// extra space-separated ids), so each installer splits it with `ConvertTo-VoiceIds` (uv/edge have no voice concept and omit it). `cuda` adds
 /// the installers' shared `-Cuda` switch.
 #[tauri::command]
 pub fn install_engine(
@@ -422,15 +423,48 @@ pub fn engine_status(engine: String) -> Result<EngineStatus, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::installer_args;
+    use super::{installer_args, installer_script_for};
+    use regex::Regex;
+    use std::path::Path;
 
     #[test]
-    fn installer_voices_are_one_powershell_array_argument() {
+    fn installer_voices_are_one_comma_joined_argument() {
         let voices = vec!["Aiden".to_string(), "Ryan".to_string()];
 
         assert_eq!(
             installer_args(Some(&voices), true),
             ["-Voices", "Aiden,Ryan", "-Cuda"]
         );
+    }
+
+    /// A packaged build only ships what `bundle.resources` lists; an installer
+    /// whose wrapper directory is missing there fails at `Copy-Item` in every
+    /// release while dev runs (repo-relative) never notice.
+    #[test]
+    fn every_installer_wrapper_dir_is_bundled() {
+        let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let conf: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(manifest.join("tauri.conf.json")).unwrap(),
+        )
+        .unwrap();
+        let resources = conf["bundle"]["resources"].as_object().unwrap();
+        let wrapper = Regex::new(r#"\$PSScriptRoot "(\w+)/[^"]+\.py""#).unwrap();
+
+        for engine in ["kitten", "qwen", "piper", "kokoro", "pocket"] {
+            let script = installer_script_for(engine).unwrap();
+            let src = std::fs::read_to_string(manifest.join("../scripts").join(script)).unwrap();
+            let dirs: Vec<String> = wrapper
+                .captures_iter(&src)
+                .map(|c| c[1].to_string())
+                .collect();
+            assert!(!dirs.is_empty(), "{script}: no wrapper copy found");
+            for dir in dirs {
+                let glob = format!("../scripts/{dir}/*.py");
+                assert!(
+                    resources.contains_key(&glob),
+                    "{script} copies from scripts/{dir}/ but tauri.conf.json does not bundle {glob}"
+                );
+            }
+        }
     }
 }

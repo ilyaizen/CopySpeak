@@ -184,13 +184,10 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
     }
 
     let config_state: State<Mutex<AppConfig>> = app.state();
+    // speak_now sanitizes; only the length cap is applied here.
     let text = {
         let cfg = config_state.lock().map_err(|e| e.to_string())?;
-        let text = if cfg.sanitization.enabled {
-            crate::sanitize::sanitize_text(&request.text, &cfg.sanitization)
-        } else {
-            request.text
-        };
+        let text = request.text;
         if text.chars().count() > cfg.trigger.max_text_length as usize {
             text.chars()
                 .take(cfg.trigger.max_text_length as usize)

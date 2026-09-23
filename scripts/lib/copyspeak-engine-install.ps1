@@ -122,8 +122,8 @@ function Add-CudaRuntime {
             # cp313-win, so an unpinned `uv add --index cu124 torch` resolves
             # to PyPI 2.14.0 CPU (newer) and gives "Torch not compiled with CUDA".
             # Use explicit cu126 index (CUDA 12.6, compatible with driver 616.92/CUDA 13.4)
-            # and pin to 2.8.0+cu126 — exists for cp313-win_amd64 and satisfies
-            # qwen-tts/pocket-tts — so the CUDA build sticks across later `uv add`.
+            # and pin to 2.8.0+cu126 - exists for cp313-win_amd64 and satisfies
+            # qwen-tts/pocket-tts - so the CUDA build sticks across later `uv add`.
             $pyproject = Join-Path $EngineDir "pyproject.toml"
             if (Test-Path $pyproject) {
                 $content = Get-Content $pyproject -Raw
@@ -163,8 +163,14 @@ function Add-CudaRuntime {
             # build fails on purpose - the CUDA 13 runtime publishes under
             # nvidia-cuda-runtime. cudnn-cu13 pulls cublas/nvrtc along; the
             # provider's FFT ops still import cufft64_12, so that one stays cu12.
-            Invoke-Uv add --project $EngineDir onnxruntime-gpu `
-                nvidia-cuda-runtime nvidia-cudnn-cu13 nvidia-cufft-cu12
+            # Pin the exact set onnxruntime-gpu 1.30.0 ships against: newer
+            # cudnn-cu13 (9.26) + cublas (13.8) each load via ctypes, but the
+            # provider bridge fails on cublasLt64_13.dll (Error 126) and ORT
+            # silently runs on CPU.
+            Invoke-Uv add --project $EngineDir "onnxruntime-gpu==1.30.0" `
+                "nvidia-cuda-runtime==13.0.96" "nvidia-cuda-nvrtc==13.0.88" `
+                "nvidia-cudnn-cu13==9.24.0.43" "nvidia-cublas==13.1.1.3" `
+                "nvidia-cufft-cu12==11.4.1.4"
         }
     } catch {
         Write-Host "  [ERROR] cuda ($_)" -ForegroundColor Red
@@ -230,7 +236,9 @@ function Test-AudioFile {
 function Write-EngineManifest {
     param(
         [Parameter(Mandatory)][string]$EngineDir,
-        [Parameter(Mandatory)][string[]]$VoicesInstalled,
+        # A failed/skipped download can leave this empty; let the caller's
+        # [ERROR] reporting run instead of a parameter-binding crash.
+        [Parameter(Mandatory)][AllowEmptyCollection()][string[]]$VoicesInstalled,
         [string]$Version = "1.0"
     )
     $manifest = [ordered]@{
@@ -279,6 +287,15 @@ function Get-Confirmation {
 
 # Print a numbered menu of voices and return the chosen Id.
 #
+# The app runs installers via `powershell -File`, which binds `-Voices a,b` as
+# ONE string "a,b" (and silently drops space-separated extra ids), so the app
+# sends one comma-joined argument and each installer splits it back here.
+# Always returns an array, even for a single id.
+function ConvertTo-VoiceIds {
+    param([string[]]$Voices)
+    return ,@($Voices -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+}
+
 # Voices is an array of hashtables: @{ Id = "..."; Label = "..." }.
 # Defaults to the entry marked Default (or the first) on a blank Enter.
 function Select-VoiceFromMenu {

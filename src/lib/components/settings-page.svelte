@@ -198,6 +198,9 @@
 
   onMount(async () => {
     await loadConfig();
+    // saveConfig reloads the page, so this also reports a failed re-register.
+    const hotkeyError = await invoke<string | null>("get_hotkey_error").catch(() => null);
+    if (hotkeyError) toast.error(`Hotkey registration failed: ${hotkeyError}`);
     await tick();
     setupScrollSpy();
   });
