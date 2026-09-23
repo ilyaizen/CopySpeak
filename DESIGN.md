@@ -1,6 +1,6 @@
 # Brutalist Redesign Spec
 
-## Current implementation — 0.1.14
+## Current implementation (verified 2026-09-06)
 
 The historical specification below is not an exact description of today's UI.
 Use `src/routes/+layout.css` as the source of truth for the existing Lato typography,
@@ -30,7 +30,6 @@ issues in the surrounding shell/settings code; these are outside this UI change.
 ## Historical specification
 
 > **Date:** 2026-03-25
-> **Version:** v0.2.2
 > **Reference:** shadcn-svelte Dark Mode Documentation
 
 ---

@@ -186,8 +186,25 @@ fn parse_hotkey(hotkey: &str) -> Result<Shortcut, String> {
         .ok_or_else(|| "No key code found in hotkey string".into())
 }
 
+/// Last hotkey registration failure (startup or `set_config`), surfaced by
+/// the Settings page via `get_hotkey_error`; both paths otherwise only log it.
+static HOTKEY_ERROR: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+pub fn hotkey_error() -> Option<String> {
+    HOTKEY_ERROR.lock().unwrap().clone()
+}
+
 /// Register the global hotkey for speak-from-clipboard.
 pub fn register_hotkey(
+    app: &tauri::AppHandle,
+    hotkey_config: &config::HotkeyConfig,
+) -> Result<(), String> {
+    let result = try_register_hotkey(app, hotkey_config);
+    *HOTKEY_ERROR.lock().unwrap() = result.as_ref().err().cloned();
+    result
+}
+
+fn try_register_hotkey(
     app: &tauri::AppHandle,
     hotkey_config: &config::HotkeyConfig,
 ) -> Result<(), String> {
@@ -728,6 +745,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
             commands::set_config,
+            commands::get_hotkey_error,
             commands::reset_config,
             commands::config_exists,
             commands::get_onboarding_status,

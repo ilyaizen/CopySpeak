@@ -553,6 +553,12 @@ async fn speak_now_internal(
     reuse_saved_audio: bool,
 ) -> Result<(), String> {
     let text = get_text_or_clipboard(text)?;
+    // Play page, hotkey, tray, selection and control server all land here;
+    // unsanitized web text (tabs, NBSPs) breaks engine tokenizers like Kokoro's.
+    let text = {
+        let cfg = config.lock().unwrap();
+        crate::sanitize::sanitize_text(&text, &cfg.sanitization)
+    };
     if text.trim().is_empty() {
         return Err("Nothing to speak".into());
     }

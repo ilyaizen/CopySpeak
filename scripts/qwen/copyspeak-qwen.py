@@ -15,6 +15,22 @@ _SENTENCE_END = re.compile(r'[.!?。！？]+["\'\u201d\u2019)]*\s*')
 _WORD = re.compile(r"\S+")
 
 
+def probe_cuda_kernels(torch) -> None:
+    """Fail at load, loudly, when this torch build cannot run on this GPU.
+
+    torch.cuda.is_available() only proves a driver and runtime; a build without
+    kernels for the card's compute capability (a Blackwell sm_120 card on a
+    cu126 build) passes it and dies on the first real inference instead.
+    """
+    try:
+        (torch.zeros(1, device="cuda:0") + 1).cpu()
+    except Exception as exc:
+        raise RuntimeError(
+            f"CUDA is present but this torch build cannot run on this GPU ({exc}); "
+            "use a CPU profile (--device cpu)"
+        ) from exc
+
+
 def enable_cuda_dlls() -> None:
     if os.name != "nt":
         return
@@ -95,6 +111,9 @@ def load_engine(model_name: str, device: str):
 
     target = "cuda:0" if device == "cuda" else "cpu"
     dtype = torch.bfloat16 if device == "cuda" else torch.float32
+    if device == "cuda":
+        # Before from_pretrained: its dtype cast can itself launch a kernel.
+        probe_cuda_kernels(torch)
     # ponytail: everything between here and from_pretrained() returning must stay
     # off real stdout — in --serve mode stdout IS the protocol v2 pipe, and a
     # stray banner (qwen_tts's flash-attn warning) ahead of READY 2 kills the

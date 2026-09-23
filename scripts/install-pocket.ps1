@@ -9,7 +9,7 @@
     auto-download from Hugging Face on first synthesis.
 
     The `pocket-tts generate` CLI this used to install reloaded the model and
-    re-derived the voice state on every invocation — the two slow steps. Talking
+    re-derived the voice state on every invocation - the two slow steps. Talking
     to the Python API through our own wrapper keeps both resident.
 
 .PARAMETER Force
@@ -41,6 +41,8 @@ param(
 $ErrorActionPreference = "Stop"
 
 . "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
+
+$Voices = ConvertTo-VoiceIds $Voices
 
 Write-EngineBanner -Title "Pocket TTS Installer"
 

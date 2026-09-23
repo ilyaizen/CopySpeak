@@ -51,6 +51,8 @@ $ErrorActionPreference = "Stop"
 
 . "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
 
+$Voices = ConvertTo-VoiceIds $Voices
+
 Write-EngineBanner -Title "Kokoro TTS Installer"
 
 Require-Uv

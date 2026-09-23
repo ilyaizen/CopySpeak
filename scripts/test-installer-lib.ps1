@@ -52,6 +52,13 @@ try {
 }
 Assert-That (-not (Test-NonInteractive)) "Test-NonInteractive is false when the env var is unset"
 
+Write-Host "voice id splitting" -ForegroundColor Cyan
+$ids = ConvertTo-VoiceIds @("a, b")
+Assert-That (($ids.Count -eq 2) -and ($ids[1] -eq "b")) "ConvertTo-VoiceIds splits a comma-joined -File argument"
+$ids = ConvertTo-VoiceIds @("en_US-amy-medium")
+Assert-That ($ids[0] -eq "en_US-amy-medium") "ConvertTo-VoiceIds keeps a single id whole (no scalar unwrap)"
+Assert-That ((ConvertTo-VoiceIds $null).Count -eq 0) "ConvertTo-VoiceIds turns no voices into an empty array"
+
 Write-Host "script parsing (ANSI-safe)" -ForegroundColor Cyan
 foreach ($file in Get-ChildItem -Path $PSScriptRoot -Recurse -Filter *.ps1) {
     $errors = $null

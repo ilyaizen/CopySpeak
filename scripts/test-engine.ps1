@@ -14,7 +14,7 @@
 
 .PARAMETER Device
     cpu (default) or cuda. `cuda` needs the engine installed with -Cuda, and is
-    the only honest check that GPU inference works — get_available_providers()
+    the only honest check that GPU inference works - get_available_providers()
     reports CUDA even when its DLLs are missing.
 
 .EXAMPLE

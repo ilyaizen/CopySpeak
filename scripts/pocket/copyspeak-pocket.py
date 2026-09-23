@@ -28,6 +28,22 @@ import wave
 from pathlib import Path
 
 
+def probe_cuda_kernels(torch) -> None:
+    """Fail at load, loudly, when this torch build cannot run on this GPU.
+
+    torch.cuda.is_available() only proves a driver and runtime; a build without
+    kernels for the card's compute capability (a Blackwell sm_120 card on a
+    cu126 build) passes it and dies on the first real inference instead.
+    """
+    try:
+        (torch.zeros(1, device="cuda:0") + 1).cpu()
+    except Exception as exc:
+        raise RuntimeError(
+            f"CUDA is present but this torch build cannot run on this GPU ({exc}); "
+            "use a CPU profile (--device cpu)"
+        ) from exc
+
+
 def enable_cuda_dlls() -> None:
     """Windows: register the nvidia-* wheel DLL directories.
 
@@ -191,6 +207,7 @@ def main() -> int:
                     "torch.cuda.is_available() is False — install a torch build "
                     "matching your driver's CUDA version (install-pocket.ps1 -Cuda)"
                 )
+            probe_cuda_kernels(torch)
             # load_model() has no device argument; TTSModel is a plain nn.Module,
             # so moving it is the documented way to run on the GPU.
             model.to("cuda")
