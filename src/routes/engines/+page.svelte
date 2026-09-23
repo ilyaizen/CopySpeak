@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { invoke } from "$lib/services/tauri";
   import { toast } from "svelte-sonner";
   import { _ } from "svelte-i18n";
-  import { showSaveBar, hideSaveBar } from "$lib/stores/save-bar.svelte";
+  import { hideSaveBar } from "$lib/stores/save-bar.svelte";
+  import { syncSaveBarOrAutoSave, flushAutoSave } from "$lib/stores/auto-save.svelte";
   import EngineSetup from "$lib/components/engine/engine-setup.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Loader2 } from "@lucide/svelte";
@@ -52,21 +53,23 @@
   }
 
   $effect(() => {
-    if (hasChanges) {
-      showSaveBar(
-        saveConfig,
-        cancelChanges,
-        $_("engine.saveBar.saveChanges"),
-        $_("engine.saveBar.cancel")
-      );
-    } else {
-      hideSaveBar();
-    }
+    syncSaveBarOrAutoSave(
+      hasChanges,
+      localConfig?.general.auto_save_profiles === true,
+      saveConfig,
+      cancelChanges,
+      $_("engine.saveBar.saveChanges"),
+      $_("engine.saveBar.cancel")
+    );
     return () => hideSaveBar();
   });
 
   onMount(() => {
     loadConfig();
+  });
+
+  onDestroy(() => {
+    flushAutoSave();
   });
 </script>
 

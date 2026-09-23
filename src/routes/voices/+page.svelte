@@ -4,7 +4,8 @@
   import { invoke, isTauri } from "$lib/services/tauri";
   import { toast } from "svelte-sonner";
   import { _ } from "svelte-i18n";
-  import { showSaveBar, hideSaveBar } from "$lib/stores/save-bar.svelte";
+  import { hideSaveBar } from "$lib/stores/save-bar.svelte";
+  import { syncSaveBarOrAutoSave, flushAutoSave } from "$lib/stores/auto-save.svelte";
   import ProfileManager from "$lib/components/engine/profile-manager.svelte";
   import type { AppConfig } from "$lib/types";
 
@@ -49,16 +50,14 @@
   }
 
   $effect(() => {
-    if (hasChanges) {
-      showSaveBar(
-        saveConfig,
-        cancelChanges,
-        $_("settings.actions.save"),
-        $_("settings.actions.cancel")
-      );
-    } else {
-      hideSaveBar();
-    }
+    syncSaveBarOrAutoSave(
+      hasChanges,
+      localConfig?.general.auto_save_profiles === true,
+      saveConfig,
+      cancelChanges,
+      $_("settings.actions.save"),
+      $_("settings.actions.cancel")
+    );
     return () => hideSaveBar();
   });
 
@@ -77,6 +76,7 @@
   });
 
   onDestroy(() => {
+    flushAutoSave();
     if (unlistenConfig) unlistenConfig();
   });
 </script>

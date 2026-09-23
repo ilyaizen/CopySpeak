@@ -19,7 +19,8 @@
   import { onMount, onDestroy } from "svelte";
   import { tick } from "svelte";
   import { _ } from "svelte-i18n";
-  import { showSaveBar, hideSaveBar } from "$lib/stores/save-bar.svelte";
+  import { hideSaveBar } from "$lib/stores/save-bar.svelte";
+  import { syncSaveBarOrAutoSave, flushAutoSave } from "$lib/stores/auto-save.svelte";
 
   import type { AppConfig, HudPosition } from "$lib/types";
 
@@ -165,16 +166,14 @@
   }
 
   $effect(() => {
-    if (hasChanges) {
-      showSaveBar(
-        saveConfig,
-        cancelChanges,
-        $_("settings.actions.save"),
-        $_("settings.actions.cancel")
-      );
-    } else {
-      hideSaveBar();
-    }
+    syncSaveBarOrAutoSave(
+      hasChanges,
+      localConfig?.general.auto_save_profiles === true,
+      saveConfig,
+      cancelChanges,
+      $_("settings.actions.save"),
+      $_("settings.actions.cancel")
+    );
     return () => hideSaveBar();
   });
 
@@ -206,6 +205,7 @@
   });
 
   onDestroy(() => {
+    flushAutoSave();
     destroyScrollSpy();
   });
 </script>

@@ -208,6 +208,7 @@ impl Default for AppConfig {
                 close_behavior: CloseBehavior::default(),
                 appearance: AppearanceMode::default(),
                 update_checks_enabled: true,
+                auto_save_profiles: false,
                 locale: "en".to_string(),
             },
             trigger: TriggerConfig {

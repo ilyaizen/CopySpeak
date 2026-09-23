@@ -291,6 +291,7 @@ export interface GeneralConfig {
   close_behavior: CloseBehavior;
   appearance: AppearanceMode;
   update_checks_enabled?: boolean;
+  auto_save_profiles?: boolean;
   locale: SupportedLocale;
 }
 

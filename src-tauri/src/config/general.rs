@@ -41,6 +41,8 @@ pub struct GeneralConfig {
     pub appearance: AppearanceMode,
     #[serde(default = "default_update_checks_enabled")]
     pub update_checks_enabled: bool,
+    #[serde(default)]
+    pub auto_save_profiles: bool,
     #[serde(default = "default_locale")]
     pub locale: String,
 }

@@ -95,7 +95,9 @@
       "closeBehavior": "Close button behavior",
       "appearance": "Appearance",
       "debugMode": "Debug mode",
-      "updateChecks": "Check for updates automatically"
+      "updateChecks": "Check for updates automatically",
+      "autoSave": "Auto-save changes",
+      "autoSaveDescription": "Save edits automatically 800ms after the last change on Settings, Engines, and Voices — no Save/Cancel bar"
     },
     "playback": {
       "title": "Playback Settings",
