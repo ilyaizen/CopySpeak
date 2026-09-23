@@ -14,6 +14,8 @@ mod fragment_queue;
 mod history;
 mod history_manager;
 mod hud;
+#[cfg(target_os = "linux")]
+mod hud_layershell;
 mod logging;
 mod pagination;
 mod post_process;
@@ -339,6 +341,39 @@ fn main() {
             // --- Load config ---
             let cfg = config::load_or_default();
             app.manage(std::sync::Mutex::new(cfg));
+
+            // --- Wayland: configure the HUD as a layer surface (BEFORE first map) ---
+            // On Wayland a toplevel cannot position itself (compositor owns
+            // xdg_toplevel placement — the (0,0)-clamp bug). Layer-shell
+            // anchors replace coordinates entirely; this initializes the
+            // surface once while the window is still hidden. position_hud_window
+            // re-applies anchors on every show, so Settings-side position
+            // changes take effect without a restart.
+            #[cfg(target_os = "linux")]
+            if let Some(hud_gtk) = app
+                .get_webview_window("hud")
+                .and_then(|w| w.gtk_window().ok())
+            {
+                let (hud_pos, margin_px, scale) = {
+                    let state = app.state::<std::sync::Mutex<config::AppConfig>>();
+                    let cfg = state.lock().unwrap();
+                    let scale = app
+                        .primary_monitor()
+                        .ok()
+                        .flatten()
+                        .map(|m| m.scale_factor())
+                        .unwrap_or(1.0);
+                    (cfg.hud.position.clone(), 16, scale)
+                };
+                match hud_layershell::apply_anchors(&hud_gtk, &hud_pos, margin_px, scale) {
+                    Ok(()) => log::info!(
+                        "[HUD] Wayland layer surface configured (anchors replace set_position)"
+                    ),
+                    Err(e) => log::warn!(
+                        "[HUD] layer-shell init failed: {e} — using set_position fallback"
+                    ),
+                }
+            }
 
             // --- Init audio player with saved config ---
             let app_handle = app.handle().clone();

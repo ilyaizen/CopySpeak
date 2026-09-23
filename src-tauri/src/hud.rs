@@ -116,6 +116,74 @@ fn monitor_to_info(monitor: &Monitor, primary_name: &Option<String>) -> MonitorI
 
 /// Position the HUD window according to config.
 pub fn position_hud_window(app: &AppHandle, hud_window: &WebviewWindow, config: &HudConfig) {
+    // Wayland (layer surface): set_position is a compositor-ignored no-op on
+    // the HUD; placement is anchor-based. Re-apply anchors so a Settings-side
+    // position change takes effect on the next show.
+    //
+    // THREADING: position_hud_window can run on ANY thread (control server,
+    // tauri command workers). EVERY gtk-layer-shell call asserts
+    // main-thread-only and PANICS off-thread ("GTK may only be used from the
+    // main thread") — including is_layer_window(). On a tokio worker that
+    // panic kills the calling task: the control server's task died this way
+    // and took port 43117 down with it (the "app hangs on first HUD show"
+    // report). So the probe and apply BOTH run on the main thread, and this
+    // function blocks on a channel for the outcome.
+    #[cfg(target_os = "linux")]
+    {
+        // Runs probe + apply. ONLY call from the main thread.
+        use gtk_layer_shell::LayerShell;
+        let apply = |app_handle: &AppHandle, position: &HudPosition| -> Result<(), String> {
+            if let Some(hud) = app_handle.get_webview_window("hud") {
+                let gtk_win = hud
+                    .gtk_window()
+                    .map_err(|e| format!("gtk_window unavailable: {e}"))?;
+                if gtk_win.is_layer_window() {
+                    let scale = app_handle
+                        .primary_monitor()
+                        .ok()
+                        .flatten()
+                        .map(|m| m.scale_factor())
+                        .unwrap_or(1.0);
+                    return crate::hud_layershell::apply_anchors(&gtk_win, position, 16, scale);
+                }
+            }
+            Err("not a layer surface".to_string())
+        };
+
+        let applied: Result<(), String> = if glib::MainContext::default().is_owner() {
+            // Already on the main thread: run directly. Dispatching to the
+            // loop and blocking on a channel would deadlock (the closure
+            // needs the loop we're blocking).
+            apply(app, &config.position)
+        } else {
+            let app_handle = app.clone();
+            let position = config.position.clone();
+            let (tx, rx) = std::sync::mpsc::channel();
+            match app.run_on_main_thread(move || {
+                let _ = tx.send(apply(&app_handle, &position));
+            }) {
+                Ok(()) => rx
+                    .recv()
+                    .unwrap_or_else(|e| Err(format!("main-thread worker dropped result: {e}"))),
+                Err(e) => Err(format!("main-thread dispatch failed: {e}")),
+            }
+        };
+
+        match applied {
+            Ok(()) => {
+                log::info!("[HUD] layer anchors applied for {:?}", config.position);
+                // Layer surface: the compositor places the window;
+                // coordinates are meaningless. Don't set_position.
+                return;
+            }
+            Err(e) => {
+                log::debug!(
+                    "[HUD] layer anchors not applicable ({e}) — falling through to set_position"
+                );
+            }
+        }
+    }
+
     let available_monitors = get_available_monitors(app);
 
     let target_monitor = available_monitors
