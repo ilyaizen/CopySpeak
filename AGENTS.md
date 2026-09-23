@@ -79,6 +79,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Run frontend tests as `bun run test` (vitest); bare `bun test` uses bun's built-in runner without the vitest DOM environment and fails ~39 document-dependent tests that pass in CI.
 - Send installer voice ids as one comma-joined `-Voices` argument and split them with `ConvertTo-VoiceIds`; `powershell -File` binds neither `-Voices a,b` nor `-Voices a b` as an array.
 - Treat a Windows-green `cargo check` as silent about `cfg(not(windows))` code: before deleting an "unused" import, grep the file for that trait's methods inside cfg-gated blocks — the Linux-only `hud:stop` listener needs `tauri::Listener` (cfg-gate the import itself), and only the Linux CI build catches its absence.
+- Backport shared wrapper fixes to every engine's wrapper, not just the one that failed: the kokoro wrapper shipped without the PATH-prepend half of the CUDA DLL fix (kitten/qwen had it), and `--device cuda` died on `cudnn64_9.dll` even though the wheel carried it — `diff` engine wrappers against each other when touching a function they share.
 
 <!-- rtk-instructions v2 -->
 
