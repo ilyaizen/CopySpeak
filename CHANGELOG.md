@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Play page readings are sanitized** (#47) — the Speak/Regenerate buttons, hotkey, tray and selection paths skipped text sanitization, so web text with tabs or non-breaking spaces made Kokoro fail on longer passages.
 - **Linux packages ship a 512px app icon** — `.deb`/`.rpm` installed only 32px and 128px icons (the third landed in a non-standard `256x256@2` dir), so some launchers showed no icon.
 - **Hotkey registration failures are shown** (#46) — Settings shows a toast when the saved hotkey could not be registered (at startup or after saving) instead of reporting it as active.
+- **Wayland double-copy trigger fixed** — copying identical text twice in a row (same clipboard content re-set) never fired the HUD trigger, because pure content polling dedupes identical reads. The trigger now also watches `wl-paste --watch`, which fires on every clipboard set including identical re-sets; the 1 Hz content poll remains as a fallback (e93b723).
+- **CI AppImage patch pipeline** — the Linux CI build now post-processes the AppImage before upload: the AppRun runtime's poisoned `PYTHONHOME`/`PYTHONPATH`/`GST_PLUGIN_SYSTEM_PATH*` string exports are binary-patched out, bundled GStreamer core libs are quarantined so WebKitGTK uses the system GStreamer, and the updater signature + `latest.json` are regenerated after repack. This is what broke the original v0.2.6 AppImage upload.
 
 ## [0.2.6] - 2026-09-20
 
