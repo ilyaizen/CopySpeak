@@ -8,6 +8,7 @@ import type {
   AmplitudePayload,
   HudCaptionPayload
 } from "$lib/types/hud.js";
+import { sameCaptionAlignment } from "$lib/models/captions.js";
 
 // Core state
 let barValues = $state<number[]>([]);
@@ -15,7 +16,7 @@ let isVisible = $state(false);
 let isSynthesizing = $state(false);
 let isPaused = $state(false);
 let spokenText = $state<string | null>(null);
-let caption = $state<HudCaptionPayload | null>(null);
+let caption = $state.raw<HudCaptionPayload | null>(null);
 let provider = $state<string | null>(null);
 let voice = $state<string | null>(null);
 
@@ -359,7 +360,11 @@ export const hudStore = {
   },
 
   handleCaption(payload: HudCaptionPayload) {
-    caption = payload;
+    // Keep the timings reference stable across ticks so captions are not rebuilt.
+    caption =
+      caption && sameCaptionAlignment(caption.captions, payload.captions)
+        ? { ...payload, captions: caption.captions }
+        : payload;
     isPaused = payload.paused;
     if (payload.active) isSynthesizing = false;
   },

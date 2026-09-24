@@ -1,5 +1,11 @@
 import { expect, it } from "vite-plus/test";
-import { activeCaptionWord, buildCaptions, captionPhrase } from "./captions";
+import {
+  activeCaptionWord,
+  buildCaptions,
+  captionPhrase,
+  sameCaptionAlignment,
+  spokenUntil
+} from "./captions";
 
 it("preserves multilingual text and punctuation while making short phrases", () => {
   for (const text of [
@@ -58,4 +64,27 @@ it("uses normalized character timings, handles UTF-16, and rejects missing or co
   expect(
     buildCaptions(text, { ...timing, words: [{ ...timing.words[0], end_ms: -1 }] })[0].start
   ).toBeNull();
+});
+
+it("moves the spoken boundary only at word ends and matches copied timings by value", () => {
+  const timing = {
+    text: "one two",
+    words: [
+      { text_start: 0, text_end: 3, start_ms: 0, end_ms: 100 },
+      { text_start: 4, text_end: 7, start_ms: 150, end_ms: 300 }
+    ]
+  };
+  const words = buildCaptions(timing.text, timing);
+  expect(spokenUntil(words, 50)).toBe(-1);
+  expect(spokenUntil(words, 100)).toBe(100);
+  expect(spokenUntil(words, 299)).toBe(100);
+  expect(spokenUntil(words, 300)).toBe(300);
+  expect(sameCaptionAlignment(timing, structuredClone(timing))).toBe(true);
+  expect(
+    sameCaptionAlignment(timing, {
+      ...timing,
+      words: [timing.words[0], { ...timing.words[1], end_ms: 301 }]
+    })
+  ).toBe(false);
+  expect(sameCaptionAlignment(timing, null)).toBe(false);
 });

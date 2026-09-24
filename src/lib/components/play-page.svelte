@@ -14,7 +14,7 @@
   import { isTauri } from "$lib/services/tauri.js";
   import type { AppConfig } from "$lib/types";
   import { groupHistoryReadings, historyProfile } from "$lib/models/history";
-  import { activeCaptionWord, buildCaptions } from "$lib/models/captions";
+  import { activeCaptionWord, buildCaptions, spokenUntil } from "$lib/models/captions";
   import { _ } from "svelte-i18n";
 
   const mockConfig: AppConfig = {
@@ -175,6 +175,7 @@
   let currentWord = $derived(
     caption?.active ? activeCaptionWord(captionWords, caption.position_ms) : -1
   );
+  let spokenEnd = $derived(spokenUntil(captionWords, caption?.position_ms ?? 0));
   let readingView = $state<HTMLElement | null>(null);
 
   $effect(() => {
@@ -409,7 +410,7 @@
               data-current={i === currentWord || undefined}
               class={i === currentWord
                 ? "bg-primary text-primary-foreground rounded-sm"
-                : word.end !== null && word.end <= caption.position_ms
+                : word.end !== null && word.end <= spokenEnd
                   ? "text-muted-foreground"
                   : ""}>{word.text}</span
             >{:else}{captionText}{/each}

@@ -32,7 +32,7 @@ class PlaybackStore {
   // Retained after stop/completion so the owning history row can offer Replay.
   historyReadingId = $state<string | null>(null);
   // Audible fragment's text, caption timings and clock; null when nothing plays.
-  caption = $state<HudCaptionPayload | null>(null);
+  caption = $state.raw<HudCaptionPayload | null>(null);
 
   // Pagination state for HUD display
   currentFragmentIndex = $state<number | null>(null);

@@ -134,6 +134,34 @@ export function activeCaptionWord(words: CaptionWord[], positionMs: number): num
   );
 }
 
+/** Latest word end reached by the clock. Changes only at word boundaries, so
+ * per-word "spoken" styling keyed on it does not re-run on every clock tick. */
+export function spokenUntil(words: CaptionWord[], positionMs: number): number {
+  let until = -1;
+  for (const word of words) {
+    if (word.end !== null && word.end <= positionMs) until = word.end;
+  }
+  return until;
+}
+
+/** IPC delivers a fresh copy each tick; compare by value to keep one reference. */
+export function sameCaptionAlignment(
+  a: CaptionAlignment | null | undefined,
+  b: CaptionAlignment | null | undefined
+): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.text !== b.text || a.words.length !== b.words.length) return false;
+  return a.words.every((word, i) => {
+    const other = b.words[i];
+    return (
+      word.text_start === other.text_start &&
+      word.text_end === other.text_end &&
+      word.start_ms === other.start_ms &&
+      word.end_ms === other.end_ms
+    );
+  });
+}
+
 /** Keep the previous phrase through native silence or an audio underrun. */
 export function captionPhrase(words: CaptionWord[], positionMs: number): number {
   let phrase = 0;
