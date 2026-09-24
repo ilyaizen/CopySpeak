@@ -157,10 +157,13 @@ class PlaybackStore {
       const duration = Number.isFinite(el.duration)
         ? el.duration
         : (this._decodedBuffer?.duration ?? 0);
+      // The element plays through the AudioContext (analyser), and its media clock
+      // leads the speakers by the context's output latency, in wall seconds.
+      const latency = Math.max(0, this._audioCtx?.outputLatency || 0) * el.playbackRate;
       caption = {
         text: this._fragmentCaptions?.text ?? (this._fragmentText || this._readingText),
         captions: this._fragmentCaptions,
-        position_ms: el.currentTime * 1000,
+        position_ms: Math.max(0, el.currentTime - latency) * 1000,
         duration_ms: duration * 1000,
         paused: this.isPaused,
         active: !this.isLoadingAudio && !el.ended && !el.seeking && el.readyState >= 2

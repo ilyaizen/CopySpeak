@@ -147,6 +147,37 @@ it("publishes captions from the audio clock and audible fragment, then stops pub
   expect(emitTo).not.toHaveBeenCalled();
 });
 
+it("delays element captions by the AudioContext output latency in media time", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal(
+    "AudioContext",
+    class {
+      state = "running";
+      outputLatency = 0.2;
+      decodeAudioData = decode;
+      close = vi.fn();
+    }
+  );
+  vi.spyOn(audio, "readyState", "get").mockReturnValue(4);
+  vi.spyOn(audio, "duration", "get").mockReturnValue(1);
+  await sendAudio(0);
+  audio.playbackRate = 1.5;
+  audio.currentTime = 0.6;
+  await vi.advanceTimersByTimeAsync(25);
+  expect(emitTo).toHaveBeenLastCalledWith(
+    "hud",
+    "hud:caption",
+    expect.objectContaining({ position_ms: expect.closeTo(300) })
+  );
+  audio.currentTime = 0.1;
+  await vi.advanceTimersByTimeAsync(25);
+  expect(emitTo).toHaveBeenLastCalledWith(
+    "hud",
+    "hud:caption",
+    expect.objectContaining({ position_ms: 0 })
+  );
+});
+
 // The rendered blob carries native duration - pitch shifting no longer resamples
 // it - so the media clock is already caption time, with no correction factor.
 it.each([
