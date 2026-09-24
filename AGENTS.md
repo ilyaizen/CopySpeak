@@ -17,6 +17,7 @@ CopySpeak: A lightwieight and modern AI text-to-speech orchestrator for Windows 
 - Hand-off prompts only include what next session can't access: decisions made, dead ends, ongoing states, next steps. Don't repeat AGENTS.md.
 - Avoid image-previewing. Only user verifies/approves visually.
 - Commits: [Conventional Commits](https://www.conventionalcommits.org/).
+- Branches: squash-merge into `main`, then delete the branch (local and origin) in the same pass — never leave merged branches behind.
 
 ## Documentation
 
