@@ -118,6 +118,25 @@ describe("PcmStreamScheduler", () => {
     expect(scheduler.getPlaybackPosition()).toBeNull();
   });
 
+  it("reports the position reaching the speakers, behind currentTime by outputLatency", () => {
+    const { scheduler, sources, ctx } = createHarness();
+    Object.assign(ctx, { outputLatency: 0.2 });
+    const second = new Uint8Array(48000);
+    scheduler.handleChunk(chunk(second));
+    scheduler.handleChunk({ ...chunk(second), fragment_index: 1 });
+    ctx.currentTime = 0.53;
+    expect(scheduler.getPlaybackPosition()?.positionMs).toBeCloseTo(300);
+    // Fragment 0 has ended on the context clock but is still in the output pipeline.
+    ctx.currentTime = 1.13;
+    sources.filter((source) => source.at < 1).forEach((source) => source.onended?.());
+    expect(scheduler.getPlaybackPosition()?.fragmentIndex).toBe(0);
+    expect(scheduler.getPlaybackPosition()?.positionMs).toBeCloseTo(900);
+    ctx.currentTime = 1.33;
+    expect(scheduler.getPlaybackPosition()?.fragmentIndex).toBe(1);
+    expect(scheduler.getPlaybackPosition()?.positionMs).toBeCloseTo(100);
+    scheduler.stop();
+  });
+
   it("keeps audible audio at the rate it was rendered at", () => {
     const { scheduler, ctx } = createHarness();
     scheduler.handleChunk(chunk(new Uint8Array(48000)));

@@ -42,9 +42,8 @@ interface ScheduledPosition {
   offset: number;
   /** Native seconds of audio this source carries. */
   duration: number;
-  /** Native seconds already played. */
-  consumed: number;
-  clock: number;
+  /** AudioContext time this source starts playing. */
+  start: number;
   /** Native seconds consumed per wall second - the speed this audio was rendered at. */
   rate: number;
   /** Source chunk, for re-stretching if the rate changes before this starts. */
@@ -128,6 +127,8 @@ export class PcmStreamScheduler {
   private _pending: PendingChunk[] = [];
   private _pendingDuration = 0;
   private _activeSources = new Map<AudioBufferSourceNode, ScheduledPosition>();
+  /** Ended sources still in the output pipeline, audible for up to outputLatency. */
+  private _endedPositions: ScheduledPosition[] = [];
   private _started = false;
   private _nextStartTime = 0;
   private _firstChunkAt: number | null = null;
@@ -187,8 +188,7 @@ export class PcmStreamScheduler {
     let resumeOffset: number | null = null;
     this._nextStartTime = this._ctx.currentTime;
     for (const [source, position] of this._activeSources) {
-      this._advancePosition(position);
-      if (position.clock > this._ctx.currentTime) {
+      if (position.start > this._ctx.currentTime) {
         // Absolute scheduled start times do not move, and the audio itself was
         // rendered at the old rate. Re-stretch instead of rescheduling.
         if (position.native) requeued.push(position.native);
@@ -201,7 +201,7 @@ export class PcmStreamScheduler {
       }
       this._nextStartTime = Math.max(
         this._nextStartTime,
-        this._ctx.currentTime + (position.duration - position.consumed) / position.rate
+        position.start + position.duration / position.rate
       );
     }
     // ponytail: the stretcher's held-back window (<1 WSOLA frame) is discarded
@@ -214,27 +214,26 @@ export class PcmStreamScheduler {
     if (this._started) this._schedulePending();
   }
 
-  /** AudioContext time freezes on pause; no progress is reported in an underrun. */
+  /**
+   * Position of the audio reaching the speakers: currentTime minus the output
+   * latency (20-40 ms wired, 150-250 ms Bluetooth). AudioContext time freezes
+   * on pause; no progress is reported in an underrun.
+   */
   getPlaybackPosition(): { fragmentIndex: number; positionMs: number } | null {
-    for (const position of this._activeSources.values()) {
-      this._advancePosition(position);
-      if (this._ctx.currentTime >= position.clock && position.consumed < position.duration) {
+    const audible = this._ctx.currentTime - Math.max(0, this._ctx.outputLatency || 0);
+    this._endedPositions = this._endedPositions.filter(
+      (position) => position.start + position.duration / position.rate > audible
+    );
+    for (const position of [...this._endedPositions, ...this._activeSources.values()]) {
+      const played = (audible - position.start) * position.rate;
+      if (played >= 0 && played < position.duration) {
         return {
           fragmentIndex: position.fragmentIndex,
-          positionMs: (position.offset + position.consumed) * 1000
+          positionMs: (position.offset + played) * 1000
         };
       }
     }
     return null;
-  }
-
-  private _advancePosition(position: ScheduledPosition): void {
-    const now = this._ctx.currentTime;
-    position.consumed = Math.min(
-      position.duration,
-      position.consumed + Math.max(0, now - position.clock) * position.rate
-    );
-    position.clock = Math.max(position.clock, now);
   }
 
   /** Feed one decoded chunk event from the backend. */
@@ -374,6 +373,7 @@ export class PcmStreamScheduler {
       }
     }
     this._activeSources.clear();
+    this._endedPositions = [];
     this._pending = [];
     this._pendingDuration = 0;
     this._started = false;
@@ -473,8 +473,7 @@ export class PcmStreamScheduler {
       fragmentIndex: this._scheduleFragment ?? 0,
       offset: this._emittedNative,
       duration: nativeDuration,
-      consumed: 0,
-      clock: at,
+      start: at,
       rate: this._speed,
       native
     });
@@ -483,6 +482,8 @@ export class PcmStreamScheduler {
   }
 
   private _handleSourceEnded(source: AudioBufferSourceNode): void {
+    const position = this._activeSources.get(source);
+    if (position) this._endedPositions.push(position);
     this._activeSources.delete(source);
     if (this._finished && !this.isActive()) {
       this._complete();
