@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **GPU Kokoro finds cuDNN** — the wrapper now also puts the NVIDIA wheel DLL directories on `PATH`, fixing "LoadLibrary failed for cudnn64_9.dll" on `--device cuda`. Existing installs pick up the fixed wrapper by re-running the Kokoro install.
 - **GPU installs of ONNX engines drop the CPU runtime** — kokoro-onnx, kittentts and piper-tts pull in the CPU `onnxruntime` wheel, which shares its files with `onnxruntime-gpu`, so the GPU build could be silently overwritten. GPU installs now exclude the CPU wheel and reinstall the GPU one.
+- **Kokoro on CPU works after a GPU install** — with only the GPU runtime installed, kokoro-onnx tried CUDA even in CPU mode and failed the engine test on "cudnn64_9.dll". The wrapper now pins the CPU provider unless `--device cuda` is set.
+- **GPU installs ship the cuFFT the CUDA provider loads** — the installers pinned CUDA 12's cuFFT (`cufft64_11`) while onnxruntime-gpu loads CUDA 13's `cufft64_12`; they now install `nvidia-cufft`.
+- **Linux GPU installs use the pinned CUDA runtime set and load it** — the Linux installer pins the same wheel versions as Windows, and the Kokoro, Kitten and Piper wrappers preload the NVIDIA wheel libraries on `--device cuda`. Piper on Windows also gets the `PATH` half of the cuDNN fix.
 
 ## [0.2.7] - 2026-09-23
 

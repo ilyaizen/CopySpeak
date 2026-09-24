@@ -21,6 +21,7 @@ from https://github.com/OHF-Voice/piper1-gpl#voices
 """
 
 import argparse
+import contextlib
 import glob
 import json
 import os
@@ -32,18 +33,23 @@ from pathlib import Path
 
 
 def enable_cuda_dlls() -> None:
-    """Windows: register the nvidia-* wheel DLL directories.
+    """Put the nvidia-* wheel CUDA libraries where onnxruntime finds them.
 
     onnxruntime-gpu and torch do not locate cuDNN/cuBLAS on their own, and since
     Python 3.8 the process PATH is ignored for extension-module dependencies —
-    only os.add_dll_directory counts. Globs both the CUDA 12 wheel layout
-    (nvidia/<pkg>/bin) and CUDA 13, which consolidates under nvidia/cu13/bin/<arch>.
+    only os.add_dll_directory counts there — but onnxruntime then loads
+    cudnn64_9.dll and cublas64_13.dll with plain LoadLibrary, which ignores
+    add_dll_directory and honors PATH, so both are set. Globs both the CUDA 12
+    wheel layout (nvidia/<pkg>/bin) and CUDA 13, which consolidates under
+    nvidia/cu13/bin/<arch>.
 
-    A no-op off Windows and when the nvidia-* wheels are not installed; the
-    caller then fails loudly at session creation rather than silently on CPU.
+    Linux: the onnxruntime-gpu wheel has no RPATH into the nvidia-* wheels, so
+    ORT's own preload_dlls() dlopens them (it knows the CUDA 13 nvidia/cu13/lib
+    layout). It prints, and stdout is the daemon protocol, so it goes to stderr.
+
+    A no-op when the nvidia-* wheels are not installed; the caller then fails
+    loudly at session creation rather than silently on CPU.
     """
-    if os.name != "nt":
-        return
     try:
         import nvidia
     except ImportError:
@@ -54,11 +60,21 @@ def enable_cuda_dlls() -> None:
             flush=True,
         )
         return
+    if os.name != "nt":
+        import onnxruntime
+
+        with contextlib.redirect_stdout(sys.stderr):
+            onnxruntime.preload_dlls()
+        return
     root = list(nvidia.__path__)[0]
+    dirs = []
     for pattern in ("*/bin", "*/bin/*"):
         for path in glob.glob(os.path.join(root, pattern)):
             if os.path.isdir(path):
                 os.add_dll_directory(path)
+                dirs.append(path)
+    if dirs:
+        os.environ["PATH"] = ";".join(dirs) + ";" + os.environ["PATH"]
 
 
 def read_text(args) -> str:

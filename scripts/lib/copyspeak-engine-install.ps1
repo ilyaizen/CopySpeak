@@ -173,8 +173,9 @@ function Add-CudaRuntime {
             # creation dies with "Invalid handle. Cannot load symbol cudnnCreate".
             # nvidia-cuda-runtime-cu13 is a deprecated 0.0.1 placeholder whose
             # build fails on purpose - the CUDA 13 runtime publishes under
-            # nvidia-cuda-runtime. cudnn-cu13 pulls cublas/nvrtc along; the
-            # provider's FFT ops still import cufft64_12, so that one stays cu12.
+            # nvidia-cuda-runtime. cudnn-cu13 pulls cublas/nvrtc along. The
+            # provider imports cufft64_12.dll, which is CUDA 13's cuFFT and ships
+            # in nvidia-cufft (nvidia-cufft-cu12 is CUDA 12's cufft64_11.dll).
             # Pin the exact set onnxruntime-gpu 1.30.0 ships against: newer
             # cudnn-cu13 (9.26) + cublas (13.8) each load via ctypes, but the
             # provider bridge fails on cublasLt64_13.dll (Error 126) and ORT
@@ -182,7 +183,7 @@ function Add-CudaRuntime {
             Invoke-Uv add --project $EngineDir "onnxruntime-gpu==1.30.0" `
                 "nvidia-cuda-runtime==13.0.96" "nvidia-cuda-nvrtc==13.0.88" `
                 "nvidia-cudnn-cu13==9.24.0.43" "nvidia-cublas==13.1.1.3" `
-                "nvidia-cufft-cu12==11.4.1.4"
+                "nvidia-cufft==12.0.0.61"
             # Uninstalling the excluded CPU wheel deletes files it shared with
             # onnxruntime-gpu; reinstall the GPU wheel over the hole.
             Invoke-Uv sync --project $EngineDir --reinstall-package onnxruntime-gpu
