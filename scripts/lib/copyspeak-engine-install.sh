@@ -161,8 +161,18 @@ add_cuda_runtime() {
         fi
     else
         # The CPU wheel and the GPU wheel both provide the `onnxruntime`
-        # module, so the CPU one has to go first or resolution is a coin flip.
-        invoke_uv remove --project "$engine_dir" onnxruntime || true
+        # module and write the same files. kokoro-onnx, kittentts and
+        # piper-tts each require the CPU wheel transitively, so `uv remove`
+        # is a no-op and whichever wheel installs last owns the module.
+        # Exclude it from resolution instead.
+        local pyproject="$engine_dir/pyproject.toml"
+        if ! grep -q 'exclude-dependencies' "$pyproject"; then
+            if grep -qE '^\[tool\.uv\][[:space:]]*$' "$pyproject"; then
+                sed -i -E 's/^\[tool\.uv\][[:space:]]*$/[tool.uv]\nexclude-dependencies = ["onnxruntime"]/' "$pyproject"
+            else
+                printf '\n[tool.uv]\nexclude-dependencies = ["onnxruntime"]\n' >> "$pyproject"
+            fi
+        fi
         # Current onnxruntime-gpu builds target CUDA 13 (the provider opens
         # libcuda.so.1 / libcublas.so.13 / libcudart.so.13); paired with the
         # old cu12 wheels, session creation dies with "Invalid handle. Cannot
@@ -173,6 +183,10 @@ add_cuda_runtime() {
         # still dlopen libcufft.so.12, so that one stays cu12.
         if ! invoke_uv add --project "$engine_dir" onnxruntime-gpu \
             nvidia-cuda-runtime nvidia-cudnn-cu13 nvidia-cufft-cu12; then
+            failed=1
+        # Uninstalling the excluded CPU wheel deletes files it shared with
+        # onnxruntime-gpu; reinstall the GPU wheel over the hole.
+        elif ! invoke_uv sync --project "$engine_dir" --reinstall-package onnxruntime-gpu; then
             failed=1
         fi
     fi

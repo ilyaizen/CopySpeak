@@ -154,8 +154,20 @@ function Add-CudaRuntime {
             Invoke-Uv add --project $EngineDir "torch==2.8.0" "torchaudio==2.8.0"
         } else {
             # The CPU wheel and the GPU wheel both provide the `onnxruntime`
-            # module, so the CPU one has to go first or resolution is a coin flip.
-            try { Invoke-Uv remove --project $EngineDir onnxruntime } catch { }
+            # module and write the same files. kokoro-onnx, kittentts and
+            # piper-tts each require the CPU wheel transitively, so `uv remove`
+            # is a no-op and whichever wheel installs last owns the module.
+            # Exclude it from resolution instead.
+            $pyproject = Join-Path $EngineDir "pyproject.toml"
+            $content = Get-Content $pyproject -Raw
+            if ($content -notmatch 'exclude-dependencies') {
+                if ($content -match '(?m)^\[tool\.uv\]\s*$') {
+                    $content = $content -replace '(?m)^(\[tool\.uv\])\s*$', "`$1`nexclude-dependencies = [`"onnxruntime`"]"
+                    Set-Content $pyproject $content -Encoding utf8
+                } else {
+                    Add-Content $pyproject "`n[tool.uv]`nexclude-dependencies = [`"onnxruntime`"]`n"
+                }
+            }
             # Current onnxruntime-gpu builds target CUDA 13 (the provider imports
             # cublas64_13/cudart64_13); paired with the old cu12 wheels, session
             # creation dies with "Invalid handle. Cannot load symbol cudnnCreate".
@@ -171,6 +183,9 @@ function Add-CudaRuntime {
                 "nvidia-cuda-runtime==13.0.96" "nvidia-cuda-nvrtc==13.0.88" `
                 "nvidia-cudnn-cu13==9.24.0.43" "nvidia-cublas==13.1.1.3" `
                 "nvidia-cufft-cu12==11.4.1.4"
+            # Uninstalling the excluded CPU wheel deletes files it shared with
+            # onnxruntime-gpu; reinstall the GPU wheel over the hole.
+            Invoke-Uv sync --project $EngineDir --reinstall-package onnxruntime-gpu
         }
     } catch {
         Write-Host "  [ERROR] cuda ($_)" -ForegroundColor Red
