@@ -358,6 +358,7 @@ class PlaybackStore {
       void invoke("browser_reading_finished", { status: "completed" }).catch(() => {});
     }
     void this._emit?.("hud:stop", null);
+    this.emitPlaybackFinished();
   }
 
   /**
@@ -465,9 +466,19 @@ class PlaybackStore {
     this.isPlaying = false;
     this.isPaused = false;
     void this._emit?.("hud:stop", null);
+    this.emitPlaybackFinished();
     setTimeout(() => {
       this._stopping = false;
     }, 0);
+  }
+
+  /**
+   * Terminal-state signal for Rust waiters (control-server --wait): a
+   * blocking /speak resolves when this fires, for natural ends and user
+   * stops alike.
+   */
+  private emitPlaybackFinished(): void {
+    void this._emit?.("playback-finished", null);
   }
 
   handleTogglePause() {

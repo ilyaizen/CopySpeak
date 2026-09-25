@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { playbackStore } from "./playback-store.svelte";
-import { emitTo } from "@tauri-apps/api/event";
+import { emit, emitTo } from "@tauri-apps/api/event";
 import { PcmStreamScheduler } from "./playback/pcm-stream";
 
 const { listeners } = vi.hoisted(() => ({
@@ -106,6 +106,15 @@ it("does not restart a stopped reading when its pending decode finishes", async 
   expect(playbackStore.isLoadingAudio).toBe(false);
   await sendAudio(0);
   expect(playSpy).toHaveBeenCalledTimes(1);
+});
+
+it("emits playback-finished when a reading ends and when it is stopped", async () => {
+  await sendAudio();
+  audio.dispatchEvent(new Event("ended"));
+  await vi.waitFor(() => expect(emit).toHaveBeenCalledWith("playback-finished", null));
+  vi.mocked(emit).mockClear();
+  playbackStore.handleStop();
+  expect(emit).toHaveBeenCalledWith("playback-finished", null);
 });
 
 it("plays grouped fragments in order and retains the reading for Replay", async () => {

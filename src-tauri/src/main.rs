@@ -18,6 +18,7 @@ mod hud;
 mod hud_layershell;
 mod logging;
 mod pagination;
+mod playback_signal;
 mod post_process;
 mod sanitize;
 mod secrets;

@@ -5,19 +5,26 @@ use crate::telemetry;
 use serde::Deserialize;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tauri::{AppHandle, Manager, State};
 
 const DEFAULT_ADDR: &str = "127.0.0.1:43117";
 const MAX_BODY_BYTES: usize = 200_000;
 const READ_TIMEOUT: Duration = Duration::from_secs(5);
+/// Upper bound for a blocking speak: one long paragraph can speak for
+/// minutes; past this the server answers anyway (the user may have stopped
+/// playback, which also resolves the wait from the client side).
+const SPEAK_WAIT_TIMEOUT_SECS: u64 = 600;
 
 #[derive(Debug, Deserialize)]
 struct SpeakRequest {
     text: String,
     engine: Option<String>,
     effect: Option<String>,
+    /// Block until webview playback finishes (or the user stops it) before
+    /// answering; serializes sentence-by-sentence Hermes callers.
+    wait: Option<bool>,
 }
 
 enum ControlRequest {
@@ -44,16 +51,30 @@ pub fn start(app: AppHandle) {
         };
 
         log::info!("[Control] Listening on http://{}", addr);
+        // One wait at a time: a new blocking speak must not race the previous
+        // request's completion wait. Non-wait callers are unaffected.
+        let wait_lock: Arc<tokio::sync::Mutex<()>> = Arc::new(tokio::sync::Mutex::new(()));
         for stream in listener.incoming() {
             match stream {
-                Ok(stream) => handle_connection(stream, app.clone()),
+                Ok(stream) => {
+                    let app = app.clone();
+                    let wait_lock = Arc::clone(&wait_lock);
+                    // Handle connections on their own threads so a blocking
+                    // speak leaves the accept loop free (health checks and
+                    // later speaks keep working while one waits).
+                    std::thread::spawn(move || handle_connection(stream, app, wait_lock));
+                }
                 Err(error) => log::warn!("[Control] Connection failed: {}", error),
             }
         }
     });
 }
 
-fn handle_connection(mut stream: TcpStream, app: AppHandle) {
+fn handle_connection(
+    mut stream: TcpStream,
+    app: AppHandle,
+    wait_lock: Arc<tokio::sync::Mutex<()>>,
+) {
     let _ = stream.set_read_timeout(Some(READ_TIMEOUT));
     let _ = stream.set_write_timeout(Some(READ_TIMEOUT));
 
@@ -81,7 +102,7 @@ fn handle_connection(mut stream: TcpStream, app: AppHandle) {
     let response = match read_result.and_then(|()| parse_request(&buffer)) {
         Ok(ControlRequest::Health) => http_response(200, "OK", r#"{"ok":true,"app":"CopySpeak"}"#),
         Ok(ControlRequest::Speak(request)) => {
-            match tauri::async_runtime::block_on(speak(app.clone(), request)) {
+            match tauri::async_runtime::block_on(handle_speak(app, request, wait_lock)) {
                 Ok(()) => http_response(200, "OK", r#"{"ok":true}"#),
                 Err(error) => {
                     log::error!("[Control] Speak failed: {}", error);
@@ -99,6 +120,36 @@ enum RequestState {
     Incomplete,
     Complete,
     TooLarge,
+}
+
+/// Run one speak, optionally blocking until playback finishes. `speak_now`
+/// resolves at playback START (the webview plays asynchronously), so the wait
+/// rides on the frontend's `playback-finished` signal. User stop and synthesis
+/// abort also terminate playback, so a wait timeout is not an error.
+async fn handle_speak(
+    app: AppHandle,
+    request: SpeakRequest,
+    wait_lock: Arc<tokio::sync::Mutex<()>>,
+) -> Result<(), String> {
+    if request.wait.unwrap_or(false) {
+        let _wait_guard = wait_lock.lock().await;
+        let generation = crate::playback_signal::generation();
+        speak(app, request).await?;
+        let finished = crate::playback_signal::wait_until(
+            generation,
+            Duration::from_secs(SPEAK_WAIT_TIMEOUT_SECS),
+        )
+        .await;
+        if !finished {
+            log::warn!(
+                "[Control] Speak wait timed out after {}s; answering anyway",
+                SPEAK_WAIT_TIMEOUT_SECS
+            );
+        }
+        Ok(())
+    } else {
+        speak(app, request).await
+    }
 }
 
 fn request_state(buffer: &[u8]) -> RequestState {
@@ -346,5 +397,53 @@ ab",
         });
 
         judge.join().expect("server-side assertions hold");
+    }
+
+    /// Build a POST /speak request whose Content-Length always matches.
+    fn speak_request(body: &serde_json::Value) -> Vec<u8> {
+        let body = body.to_string();
+        format!(
+            "POST /speak HTTP/1.1\r\nContent-Length: {}\r\n\r\n{}",
+            body.len(),
+            body
+        )
+        .into_bytes()
+    }
+
+    #[test]
+    fn speak_request_parses_wait_field() {
+        let request = serde_json::json!({ "text": "hello", "wait": true });
+        match parse_request(&speak_request(&request)) {
+            Ok(ControlRequest::Speak(speak)) => {
+                assert_eq!(speak.text, "hello");
+                assert_eq!(speak.wait, Some(true));
+            }
+            _ => panic!("expected a speak request"),
+        }
+    }
+
+    #[test]
+    fn speak_request_wait_defaults_to_false() {
+        let request = serde_json::json!({ "text": "hello" });
+        match parse_request(&speak_request(&request)) {
+            Ok(ControlRequest::Speak(speak)) => assert_eq!(speak.wait, None),
+            _ => panic!("expected a speak request"),
+        }
+    }
+
+    /// Legacy callers send profile/persist_selection fields the server drops;
+    /// parsing must keep accepting them alongside the new wait field.
+    #[test]
+    fn speak_request_tolerates_unknown_fields() {
+        let request = serde_json::json!({
+            "text": "hello",
+            "profile": "pi",
+            "persist_selection": true,
+            "wait": false
+        });
+        match parse_request(&speak_request(&request)) {
+            Ok(ControlRequest::Speak(speak)) => assert_eq!(speak.wait, Some(false)),
+            _ => panic!("expected a speak request"),
+        }
     }
 }

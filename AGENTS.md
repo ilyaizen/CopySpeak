@@ -60,6 +60,7 @@ Keep active failure log short: entries for work not in `## Active work` move to 
 - Pass `uv init` its target directory positionally (`uv init --bare --name X <dir>`); uv 0.12+ hard-errors on `uv --project <dir> init`, which only shows up when creating a fresh engine project.
 - Allow `createWaveShaper` only as a directly called member; keep rejecting local declarations and every other symbol containing "shape".
 - Double-copy and browser readings run `speak_queued`; Play page, hotkey and control server run `speak_now`. Change both paths together (saved-audio replay, `reading-started`).
+- Treat `speak_now`'s return as playback-START, not completion: the webview plays asynchronously and only its store sees the end (`finishPlayback`/`handleStop` → `playback-finished` → `playback_signal` waiter → control-server `wait`). Never await rodio's AudioPlayer for webview playback, and keep both terminal paths emitting the signal or blocking `/speak --wait` callers hang until the 600 s cap.
 - `hud:*` events fire only while the HUD is enabled; main-window UI reads `playbackStore.caption` and `reading-started`, never HUD events.
 - The browser pipe serves one client at a time; the native host retries `ERROR_PIPE_BUSY` with `WaitNamedPipeW` instead of failing the reading.
 - Start the browser session's state ticker at accept time, not after `speak_queued` returns; `speak_queued` awaits the entire synthesis loop, so a post-synthesis ticker pins the companion panel at `buffering` for the whole generation while audio already plays.

@@ -13,7 +13,9 @@ use std::time::{Duration, Instant};
 const DEFAULT_ADDR: &str = "127.0.0.1:43117";
 const STARTUP_WAIT: Duration = Duration::from_secs(20);
 const POLL_INTERVAL: Duration = Duration::from_millis(300);
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
+/// A blocking speak (--wait) resolves only after playback finishes; one long
+/// paragraph can speak for minutes. The server's own wait cap is 600s.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(600);
 
 /// Entry point for CLI mode. Returns the process exit code.
 pub fn run(args: &[String]) -> i32 {
@@ -150,6 +152,8 @@ fn speak_cmd(client: &Client, base: &str, args: &[String]) -> Result<String, (i3
     let mut effect: Option<String> = None;
     let mut profile: Option<String> = None;
     let mut persist = false;
+    let mut wait = false;
+    let mut ack: Option<String> = None;
 
     let mut i = 0;
     while i < args.len() {
@@ -168,6 +172,11 @@ fn speak_cmd(client: &Client, base: &str, args: &[String]) -> Result<String, (i3
                 profile = args.get(i).cloned();
             }
             "--persist" => persist = true,
+            "--wait" => wait = true,
+            "--ack" => {
+                i += 1;
+                ack = args.get(i).cloned();
+            }
             "--" => {
                 // Everything after `--` is the text verbatim.
                 let remainder = args[i + 1..].join(" ");
@@ -191,7 +200,7 @@ fn speak_cmd(client: &Client, base: &str, args: &[String]) -> Result<String, (i3
 
     let text = text.ok_or((
         2,
-        "usage: copyspeak speak \"<text>\" [--profile X] [--engine X] [--effect X] [--persist]"
+        "usage: copyspeak speak \"<text>\" [--profile X] [--engine X] [--effect X] [--persist] [--wait] [--ack <path>]"
             .to_string(),
     ))?;
 
@@ -208,9 +217,41 @@ fn speak_cmd(client: &Client, base: &str, args: &[String]) -> Result<String, (i3
         "effect": effect,
         "profile": profile,
         "persist_selection": persist,
+        "wait": wait,
     })
     .to_string();
-    post(client, base, "/speak", body)
+    let response = post(client, base, "/speak", body)?;
+    if let Some(path) = ack {
+        // Hermes' command-TTS contract needs a non-empty audio file even
+        // though CopySpeak already spoke; write a tiny valid silent WAV.
+        if let Err(e) = write_silent_wav_ack(&path) {
+            return Err((1, format!("speak succeeded but ack write failed: {}", e)));
+        }
+    }
+    Ok(response)
+}
+
+/// ~10 ms of 16 kHz mono 16-bit silence as a real RIFF/WAVE file (364 bytes).
+fn write_silent_wav_ack(path: &str) -> std::io::Result<()> {
+    const SAMPLE_RATE: u32 = 16_000;
+    const SAMPLES: u32 = 160; // 10 ms
+    let data_len = SAMPLES * 2; // 16-bit mono
+    let mut wav = Vec::with_capacity(44 + data_len as usize);
+    wav.extend_from_slice(b"RIFF");
+    wav.extend_from_slice(&(36 + data_len).to_le_bytes());
+    wav.extend_from_slice(b"WAVE");
+    wav.extend_from_slice(b"fmt ");
+    wav.extend_from_slice(&16_u32.to_le_bytes());
+    wav.extend_from_slice(&1_u16.to_le_bytes()); // PCM
+    wav.extend_from_slice(&1_u16.to_le_bytes()); // mono
+    wav.extend_from_slice(&SAMPLE_RATE.to_le_bytes());
+    wav.extend_from_slice(&(SAMPLE_RATE * 2).to_le_bytes()); // byte rate
+    wav.extend_from_slice(&2_u16.to_le_bytes()); // block align
+    wav.extend_from_slice(&16_u16.to_le_bytes()); // bits per sample
+    wav.extend_from_slice(b"data");
+    wav.extend_from_slice(&data_len.to_le_bytes());
+    wav.resize(44 + data_len as usize, 0); // silence
+    std::fs::write(path, &wav)
 }
 
 fn get(client: &Client, base: &str, path: &str) -> Result<String, (i32, String)> {
@@ -221,12 +262,7 @@ fn get(client: &Client, base: &str, path: &str) -> Result<String, (i32, String)>
     format_response(resp)
 }
 
-fn post(
-    client: &Client,
-    base: &str,
-    path: &str,
-    body: String,
-) -> Result<String, (i32, String)> {
+fn post(client: &Client, base: &str, path: &str, body: String) -> Result<String, (i32, String)> {
     let resp = client
         .post(format!("{}{}", base, path))
         .header("Content-Type", "application/json")
@@ -257,9 +293,11 @@ CopySpeak CLI — controls the running CopySpeak instance.
 Usage: copyspeak <command> [options]
 
 Commands:
-  speak \"<text>\" [--profile X] [--engine X] [--effect X] [--persist]
+  speak \"<text>\" [--profile X] [--engine X] [--effect X] [--persist] [--wait] [--ack <path>]
       Speak the given text. Use --profile to pick a preset profile by id.
       --persist also saves engine/effect/profile as the active selection.
+      --wait blocks until playback finishes; --ack <path> then writes a tiny
+      silent WAV (for callers like Hermes that require an output file).
   profiles                 List all configured profiles.
   profile <id>             Show details for one profile.
   profile --set <id>       Set the active profile.
@@ -269,4 +307,28 @@ Commands:
 
 If no CopySpeak instance is running, one is launched automatically."
         .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Hermes' command-TTS validation rejects empty output files, so the ack
+    /// must be a real, parseable, non-empty RIFF/WAVE file.
+    #[test]
+    fn silent_wav_ack_is_a_valid_non_empty_wave_file() {
+        let path = std::env::temp_dir().join("copyspeak-ack-test.wav");
+        write_silent_wav_ack(path.to_str().unwrap()).expect("write ack");
+        let bytes = std::fs::read(&path).expect("read ack");
+        let _ = std::fs::remove_file(&path);
+        assert_eq!(bytes.len(), 364); // 44-byte header + 10 ms of silence
+        assert_eq!(&bytes[0..4], b"RIFF");
+        assert_eq!(&bytes[8..12], b"WAVE");
+        assert_eq!(&bytes[36..40], b"data");
+        assert_eq!(
+            u32::from_le_bytes(bytes[40..44].try_into().unwrap()),
+            320 // 100 samples x 2 bytes
+        );
+        assert!(bytes[44..].iter().all(|&b| b == 0));
+    }
 }
