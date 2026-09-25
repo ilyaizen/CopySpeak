@@ -301,8 +301,8 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager, State,
 };
-// `Listener` provides `app.listen`; only the non-Windows hud:stop block uses it.
-#[cfg(not(target_os = "windows"))]
+// `Listener` provides `app.listen`; used by the non-Windows hud:stop block
+// and the playback-finished hook that unblocks control-server wait requests.
 use tauri::Listener;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
@@ -678,6 +678,11 @@ fn main() {
                 });
             }
             let app_handle_for_monitor = app.handle().clone();
+            // Unblock control-server /speak --wait callers when any playback
+            // run reaches its terminal state (natural end or user stop).
+            app.listen("playback-finished", move |_| {
+                crate::playback_signal::signal_finished();
+            });
             std::thread::spawn(move || loop {
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 let player: State<std::sync::Mutex<audio::AudioPlayer>> =
