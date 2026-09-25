@@ -5,7 +5,7 @@
 /// exports). Tracks the app version (VERSION in src/lib/version.ts) and is
 /// refreshed by scripts/version-bumper.mjs alongside the other versioned
 /// files; load_or_default re-stamps loaded configs so old files catch up.
-const CONFIG_VERSION: &str = "0.2.7";
+const CONFIG_VERSION: &str = "0.2.8";
 
 /// The current config file version stamp (see `CONFIG_VERSION`).
 pub fn config_version() -> &'static str {

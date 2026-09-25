@@ -1,6 +1,6 @@
 # CopySpeak
 
-**Current Version:** 0.2.7
+**Current Version:** 0.2.8
 
 A modern desktop app that reads clipboard text aloud using AI Text-to-Speech engines. Trigger speech by quickly copying the same text twice in a row — works out of the box with no API key (Edge TTS is the default engine).
 
