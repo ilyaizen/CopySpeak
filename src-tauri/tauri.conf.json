@@ -28,6 +28,7 @@
       "../scripts/install-*.ps1": "scripts/",
       "../scripts/install-*.sh": "scripts/",
       "../scripts/uninstall-*.ps1": "scripts/",
+      "../scripts/uninstall-*.sh": "scripts/",
       "../scripts/lib/*.ps1": "scripts/lib/",
       "../scripts/lib/*.sh": "scripts/lib/",
       "../scripts/piper/*.py": "scripts/piper/",

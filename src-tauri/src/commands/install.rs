@@ -41,15 +41,32 @@ fn strip_ansi(line: &str) -> String {
 }
 
 /// Map a CopySpeak engine id to its installer script filename under `scripts/`.
+/// `.ps1` on Windows, `.sh` on Linux (the platform's `uninstall-engine` twin
+/// lives next to them and is named directly at the uninstall call site).
 fn installer_script_for(engine: &str) -> Result<&'static str, String> {
-    match engine {
-        "uv" => Ok("install-uv.ps1"),
-        "kitten" | "kittentts" | "kitten-tts" => Ok("install-kittentts.ps1"),
-        "qwen" | "qwen3" | "qwen3-tts" => Ok("install-qwen.ps1"),
-        "piper" => Ok("install-piper.ps1"),
-        "kokoro" | "kokoro-tts" => Ok("install-kokoro.ps1"),
-        "pocket" | "pocket-tts" => Ok("install-pocket.ps1"),
-        other => Err(format!("unknown engine installer: {other}")),
+    #[cfg(target_os = "windows")]
+    {
+        match engine {
+            "uv" => Ok("install-uv.ps1"),
+            "kitten" | "kittentts" | "kitten-tts" => Ok("install-kittentts.ps1"),
+            "qwen" | "qwen3" | "qwen3-tts" => Ok("install-qwen.ps1"),
+            "piper" => Ok("install-piper.ps1"),
+            "kokoro" | "kokoro-tts" => Ok("install-kokoro.ps1"),
+            "pocket" | "pocket-tts" => Ok("install-pocket.ps1"),
+            other => Err(format!("unknown engine installer: {other}")),
+        }
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        match engine {
+            "uv" => Ok("install-uv.sh"),
+            "kitten" | "kittentts" | "kitten-tts" => Ok("install-kittentts.sh"),
+            "qwen" | "qwen3" | "qwen3-tts" => Ok("install-qwen.sh"),
+            "piper" => Ok("install-piper.sh"),
+            "kokoro" | "kokoro-tts" => Ok("install-kokoro.sh"),
+            "pocket" | "pocket-tts" => Ok("install-pocket.sh"),
+            other => Err(format!("unknown engine installer: {other}")),
+        }
     }
 }
 
@@ -179,6 +196,83 @@ fn spawn_streamed(
     Ok(())
 }
 
+/// Spawn a bash installer script with piped stdio and stream stdout/stderr as
+/// `install-progress` events. Linux twin of the Windows `spawn_streamed` —
+/// same event shape, so the frontend pipeline is unchanged.
+#[cfg(not(target_os = "windows"))]
+fn spawn_streamed(
+    app: tauri::AppHandle,
+    engine: String,
+    script_path: &PathBuf,
+    extra_args: &[String],
+) -> Result<(), String> {
+    let mut cmd = Command::new("bash");
+    cmd.arg(&script_path.display().to_string());
+    cmd.args(extra_args);
+    // stdin closed: any `read` in the script must fail fast. The shared
+    // installer lib checks COPYSPEAK_NONINTERACTIVE and takes the default
+    // for every prompt instead of blocking on the dead stdin.
+    cmd.env("COPYSPEAK_NONINTERACTIVE", "1");
+    cmd.stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .stdin(Stdio::null());
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to launch script: {e}"))?;
+    let stdout = child.stdout.take().expect("piped stdout");
+    let stderr = child.stderr.take().expect("piped stderr");
+
+    // stderr drains on its own thread; both streams share the event.
+    let app_err = app.clone();
+    let engine_err = engine.clone();
+    std::thread::spawn(move || {
+        for line in std::io::BufReader::new(stderr)
+            .lines()
+            .map_while(Result::ok)
+        {
+            let _ = app_err.emit(
+                "install-progress",
+                InstallProgress {
+                    engine: engine_err.clone(),
+                    line: Some(strip_ansi(&line)),
+                    done: false,
+                    exit_code: None,
+                },
+            );
+        }
+    });
+
+    std::thread::spawn(move || {
+        for line in std::io::BufReader::new(stdout)
+            .lines()
+            .map_while(Result::ok)
+        {
+            let _ = app.emit(
+                "install-progress",
+                InstallProgress {
+                    engine: engine.clone(),
+                    line: Some(strip_ansi(&line)),
+                    done: false,
+                    exit_code: None,
+                },
+            );
+        }
+        let exit_code = child.wait().ok().and_then(|s| s.code());
+        let _ = app.emit(
+            "install-progress",
+            InstallProgress {
+                engine,
+                line: None,
+                done: true,
+                exit_code,
+            },
+        );
+    });
+
+    Ok(())
+}
+
 /// Launch an engine installer by id, streaming stdout/stderr as
 /// `install-progress` events. Returns immediately after spawning; completion
 /// is signalled by a terminal event (`done: true`). When `voice` is supplied
@@ -193,36 +287,47 @@ pub fn install_engine(
     voice: Option<Vec<String>>,
     cuda: bool,
 ) -> Result<(), String> {
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = (app, voice, cuda);
-        return Err("Engine installers are Windows-only.".into());
-    }
+    let filename = installer_script_for(&engine)?;
+    let script_path = resolve_script(&app, filename)?;
+    log::info!(
+        "Launching streamed installer for '{engine}': {}",
+        script_path.display()
+    );
 
-    #[cfg(target_os = "windows")]
-    {
-        let filename = installer_script_for(&engine)?;
-        let script_path = resolve_script(&app, filename)?;
-        log::info!(
-            "Launching streamed installer for '{engine}': {}",
-            script_path.display()
-        );
+    let args = installer_args(voice.as_deref(), cuda);
 
-        let args = installer_args(voice.as_deref(), cuda);
-
-        spawn_streamed(app, engine, &script_path, &args)
-    }
+    spawn_streamed(app, engine, &script_path, &args)
 }
 
+/// PowerShell's `-File` wants `-Voices a,b -Cuda`. The bash installers take
+/// long flags with space-separated repeated values: `--voices a b c --cuda`.
 fn installer_args(voices: Option<&[String]>, cuda: bool) -> Vec<String> {
-    let mut args = match voices {
-        Some(voices) if !voices.is_empty() => vec!["-Voices".into(), voices.join(",")],
-        _ => Vec::new(),
-    };
-    if cuda {
-        args.push("-Cuda".into());
+    #[cfg(target_os = "windows")]
+    {
+        let mut args = match voices {
+            Some(voices) if !voices.is_empty() => vec!["-Voices".into(), voices.join(",")],
+            _ => Vec::new(),
+        };
+        if cuda {
+            args.push("-Cuda".into());
+        }
+        args
     }
-    args
+    #[cfg(not(target_os = "windows"))]
+    {
+        let mut args = match voices {
+            Some(voices) if !voices.is_empty() => {
+                let mut v = vec!["--voices".to_string()];
+                v.extend(voices.iter().cloned());
+                v
+            }
+            _ => Vec::new(),
+        };
+        if cuda {
+            args.push("--cuda".into());
+        }
+        args
+    }
 }
 
 /// Uninstall a local engine, streaming progress as `install-progress` events on
@@ -232,30 +337,34 @@ fn installer_args(voices: Option<&[String]>, cuda: bool) -> Vec<String> {
 /// removing it silently would break them all.
 #[tauri::command]
 pub fn uninstall_engine(app: tauri::AppHandle, engine: String) -> Result<(), String> {
-    #[cfg(not(target_os = "windows"))]
-    {
-        let _ = app;
-        let _ = engine;
-        return Err("Engine installers are Windows-only.".into());
+    let name = canonical_engine(&engine)
+        .ok_or_else(|| format!("unknown engine to uninstall: {engine}"))?;
+    if name == "uv" {
+        return Err(
+            "uv is shared by every local engine and cannot be removed from CopySpeak.".into(),
+        );
     }
+    let uninstaller_script = uninstaller_script_for();
+    let script_path = resolve_script(&app, uninstaller_script)?;
+    log::info!(
+        "Launching streamed uninstaller for '{name}': {}",
+        script_path.display()
+    );
+    let args = vec!["--engine".to_string(), name.to_string()];
+    // Tag events with the id the caller used so its dialog state matches.
+    spawn_streamed(app, engine, &script_path, &args)
+}
 
+/// The uninstaller twin for this platform: `uninstall-engine.ps1` on Windows,
+/// `uninstall-engine.sh` on Linux.
+fn uninstaller_script_for() -> &'static str {
     #[cfg(target_os = "windows")]
     {
-        let name = canonical_engine(&engine)
-            .ok_or_else(|| format!("unknown engine to uninstall: {engine}"))?;
-        if name == "uv" {
-            return Err(
-                "uv is shared by every local engine and cannot be removed from CopySpeak.".into(),
-            );
-        }
-        let script_path = resolve_script(&app, "uninstall-engine.ps1")?;
-        log::info!(
-            "Launching streamed uninstaller for '{name}': {}",
-            script_path.display()
-        );
-        let args = vec!["-Engine".to_string(), name.to_string()];
-        // Tag events with the id the caller used so its dialog state matches.
-        spawn_streamed(app, engine, &script_path, &args)
+        "uninstall-engine.ps1"
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        "uninstall-engine.sh"
     }
 }
 
@@ -423,23 +532,33 @@ pub fn engine_status(engine: String) -> Result<EngineStatus, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{installer_args, installer_script_for};
+    use super::{installer_args, uninstaller_script_for};
     use regex::Regex;
     use std::path::Path;
 
+    /// The bash installers take long flags with space-separated voice ids;
+    /// the PowerShell installers take one comma-joined `-Voices` string.
     #[test]
-    fn installer_voices_are_one_comma_joined_argument() {
-        let voices = vec!["Aiden".to_string(), "Ryan".to_string()];
+    fn installer_voices_match_platform_cli() {
+        let voices = vec!["af_heart".to_string(), "bf_emma".to_string()];
 
+        #[cfg(target_os = "windows")]
         assert_eq!(
             installer_args(Some(&voices), true),
-            ["-Voices", "Aiden,Ryan", "-Cuda"]
+            ["-Voices", "af_heart,bf_emma", "-Cuda"]
+        );
+        #[cfg(not(target_os = "windows"))]
+        assert_eq!(
+            installer_args(Some(&voices), true),
+            ["--voices", "af_heart", "bf_emma", "--cuda"]
         );
     }
 
     /// A packaged build only ships what `bundle.resources` lists; an installer
-    /// whose wrapper directory is missing there fails at `Copy-Item` in every
-    /// release while dev runs (repo-relative) never notice.
+    /// whose wrapper directory is missing there fails at the wrapper copy in
+    /// every release while dev runs (repo-relative) never notice. Bundling is
+    /// platform-independent, so this pins the Windows `.ps1` names regardless
+    /// of which platform's installer the app would actually launch.
     #[test]
     fn every_installer_wrapper_dir_is_bundled() {
         let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -450,8 +569,15 @@ mod tests {
         let resources = conf["bundle"]["resources"].as_object().unwrap();
         let wrapper = Regex::new(r#"\$PSScriptRoot "(\w+)/[^"]+\.py""#).unwrap();
 
-        for engine in ["kitten", "qwen", "piper", "kokoro", "pocket"] {
-            let script = installer_script_for(engine).unwrap();
+        let scripts: &[(&str, &str)] = &[
+            ("kitten", "install-kittentts.ps1"),
+            ("qwen", "install-qwen.ps1"),
+            ("piper", "install-piper.ps1"),
+            ("kokoro", "install-kokoro.ps1"),
+            ("pocket", "install-pocket.ps1"),
+        ];
+
+        for (engine, script) in scripts {
             let src = std::fs::read_to_string(manifest.join("../scripts").join(script)).unwrap();
             let dirs: Vec<String> = wrapper
                 .captures_iter(&src)
@@ -465,6 +591,22 @@ mod tests {
                     "{script} copies from scripts/{dir}/ but tauri.conf.json does not bundle {glob}"
                 );
             }
+            let _ = engine;
         }
+    }
+
+    /// The uninstall command resolves this file from the same resource set as
+    /// the installers; it must exist in the repo next to them on this platform.
+    #[test]
+    fn uninstaller_twin_exists_on_this_platform() {
+        let manifest = Path::new(env!("CARGO_MANIFEST_DIR"));
+        assert!(
+            manifest
+                .join("../scripts")
+                .join(uninstaller_script_for())
+                .exists(),
+            "{} missing from scripts/",
+            uninstaller_script_for()
+        );
     }
 }
