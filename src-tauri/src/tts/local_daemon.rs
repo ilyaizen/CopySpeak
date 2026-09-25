@@ -236,7 +236,14 @@ fn start(key: String, command: &str, serve_args: &[String]) -> Result<Daemon, St
     if let Some(stderr) = child.stderr.take() {
         std::thread::spawn(move || {
             for line in BufReader::new(stderr).lines().map_while(Result::ok) {
-                log::debug!("[local-daemon] {}", line);
+                // Release builds log at info: the resolved ONNX `providers:`
+                // line is the engines-page CPU/GPU verdict source, so it must
+                // survive the level filter. Everything else stays debug.
+                if line.contains("providers:") {
+                    log::info!("[local-daemon] {}", line);
+                } else {
+                    log::debug!("[local-daemon] {}", line);
+                }
             }
         });
     }

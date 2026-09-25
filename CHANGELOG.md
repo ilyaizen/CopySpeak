@@ -7,10 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-09-25
+
+### Added
+
+- **Kokoro is the default engine on a fresh install** — onboarding now recommends Kokoro (natural offline voices, no API key) and can install it right there with streamed progress; Edge-TTS remains a zero-download fallback, and existing installs keep their current engine (config schema v6 adds the bundled Kokoro profile without touching active settings).
+- **Engines page shows install + runtime status** — each local engine shows an Installed / Not installed badge, and ONNX engines (Kokoro, Kitten) report whether the last run executed on CPU or GPU (CUDA), read from the daemon's resolved execution providers.
+- **Real Linux engine install/uninstall** — the Settings → Engines installer now works on Linux: streamed progress, voice selection (`--voices a b c --cuda`), and a matching uninstaller script (`scripts/uninstall-engine.sh`, bundled with the app).
+
 ### Fixed
 
 - **GPU Kokoro finds cuDNN** — the wrapper now also puts the NVIDIA wheel DLL directories on `PATH`, fixing "LoadLibrary failed for cudnn64_9.dll" on `--device cuda`. Existing installs pick up the fixed wrapper by re-running the Kokoro install.
 - **GPU installs of ONNX engines drop the CPU runtime** — kokoro-onnx, kittentts and piper-tts pull in the CPU `onnxruntime` wheel, which shares its files with `onnxruntime-gpu`, so the GPU build could be silently overwritten. GPU installs now exclude the CPU wheel and reinstall the GPU one.
+- **Kokoro on CPU works after a GPU install** — with only the GPU runtime installed, kokoro-onnx tried CUDA even in CPU mode and failed the engine test on "cudnn64_9.dll". The wrapper now pins the CPU provider unless `--device cuda` is set.
+- **GPU installs ship the cuFFT the CUDA provider loads** — the installers pinned CUDA 12's cuFFT (`cufft64_11`) while onnxruntime-gpu loads CUDA 13's `cufft64_12`; they now install `nvidia-cufft`.
+- **Linux GPU installs use the pinned CUDA runtime set and load it** — the Linux installer pins the same wheel versions as Windows, and the Kokoro, Kitten and Piper wrappers preload the NVIDIA wheel libraries on `--device cuda`. Piper on Windows also gets the `PATH` half of the cuDNN fix.
 
 ## [0.2.7] - 2026-09-23
 

@@ -44,7 +44,7 @@ _WORD = re.compile(r"\S+")
 
 
 def enable_cuda_dlls() -> None:
-    """Windows: put the nvidia-* wheel DLL directories on the DLL search paths.
+    """Put the nvidia-* wheel CUDA libraries where onnxruntime finds them.
 
     onnxruntime-gpu and torch do not locate cuDNN/cuBLAS on their own. Since
     Python 3.8 the process PATH is ignored for extension-module dependencies —
@@ -54,11 +54,13 @@ def enable_cuda_dlls() -> None:
     wheel layout (nvidia/<pkg>/bin) and CUDA 13, which consolidates under
     nvidia/cu13/bin/<arch>.
 
-    A no-op off Windows and when the nvidia-* wheels are not installed; the
-    caller then fails loudly at session creation rather than silently on CPU.
+    Linux: the onnxruntime-gpu wheel has no RPATH into the nvidia-* wheels, so
+    ORT's own preload_dlls() dlopens them (it knows the CUDA 13 nvidia/cu13/lib
+    layout). It prints, and stdout is the daemon protocol, so it goes to stderr.
+
+    A no-op when the nvidia-* wheels are not installed; the caller then fails
+    loudly at session creation rather than silently on CPU.
     """
-    if os.name != "nt":
-        return
     try:
         import nvidia
     except ImportError:
@@ -68,6 +70,12 @@ def enable_cuda_dlls() -> None:
             file=sys.stderr,
             flush=True,
         )
+        return
+    if os.name != "nt":
+        import onnxruntime
+
+        with contextlib.redirect_stdout(sys.stderr):
+            onnxruntime.preload_dlls()
         return
     root = list(nvidia.__path__)[0]
     dirs = []
