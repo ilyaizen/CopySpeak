@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-09-25
+
+### Added
+
+- **Kokoro is the default engine on a fresh install** — onboarding now recommends Kokoro (natural offline voices, no API key) and can install it right there with streamed progress; Edge-TTS remains a zero-download fallback, and existing installs keep their current engine (config schema v6 adds the bundled Kokoro profile without touching active settings).
+- **Engines page shows install + runtime status** — each local engine shows an Installed / Not installed badge, and ONNX engines (Kokoro, Kitten) report whether the last run executed on CPU or GPU (CUDA), read from the daemon's resolved execution providers.
+- **Real Linux engine install/uninstall** — the Settings → Engines installer now works on Linux: streamed progress, voice selection (`--voices a b c --cuda`), and a matching uninstaller script (`scripts/uninstall-engine.sh`, bundled with the app).
+
 ### Fixed
 
 - **GPU Kokoro finds cuDNN** — the wrapper now also puts the NVIDIA wheel DLL directories on `PATH`, fixing "LoadLibrary failed for cudnn64_9.dll" on `--device cuda`. Existing installs pick up the fixed wrapper by re-running the Kokoro install.
