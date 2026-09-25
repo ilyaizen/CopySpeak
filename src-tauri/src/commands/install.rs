@@ -490,6 +490,66 @@ pub struct EngineStatus {
     voices: Vec<String>,
 }
 
+/// Runtime verdict for the engines page: is the engine installed, and when it
+/// last ran, did ONNX execute on CPU or CUDA?
+#[derive(Clone, Serialize)]
+pub struct EngineRuntimeStatus {
+    installed: bool,
+    /// "cpu" | "cuda" — resolved from the newest `providers:` line in the app
+    /// log. `None` when the engine never ran (no line yet).
+    provider: Option<String>,
+}
+
+/// Parse the ONNX execution provider from a daemon `providers: [...]` log line.
+/// E.g. `providers: ['CPUExecutionProvider']` -> "cpu";
+/// `providers: ['CUDAExecutionProvider', 'CPUExecutionProvider']` -> "cuda".
+fn provider_verdict(line: &str) -> Option<String> {
+    let lower = line.to_lowercase();
+    if lower.contains("cudaexecutionprovider") {
+        Some("cuda".into())
+    } else if lower.contains("cpuexecutionprovider") {
+        Some("cpu".into())
+    } else {
+        None
+    }
+}
+
+/// Scan `path` (newest-first across the rotated app logs: rCURRENT then
+/// timestamped .log.gz siblings would need gunzip — current logs suffice,
+/// a provider verdict older than the current file is stale anyway) for the
+/// LAST `providers:` line, returning its CPU/CUDA verdict.
+fn latest_provider_from_logs(dir: &std::path::Path) -> Option<String> {
+    let current = dir.join("app_rCURRENT.log");
+    let content = std::fs::read_to_string(&current).ok()?;
+    content
+        .lines()
+        .filter(|l| l.contains("providers:") && l.contains("[local-daemon]"))
+        .filter_map(provider_verdict)
+        .next_back()
+}
+
+/// Engines-page runtime status for one local engine. Cheap: one
+/// `engine_status`-style disk probe + one log-file read.
+#[tauri::command]
+pub fn engine_runtime_status(engine: String) -> Result<EngineRuntimeStatus, String> {
+    let name = canonical_engine(&engine).ok_or_else(|| format!("unknown engine: {engine}"))?;
+
+    let installed = engine_status(engine.clone())?.installed;
+    // ONNX engines report their provider via the daemon stderr `providers:`
+    // line. Torch-based engines (qwen, pocket) have no such line — the
+    // verdict stays None there (CUDA proof for them is the allocator log).
+    let provider = if installed && matches!(name, "kokoro" | "kitten") {
+        latest_provider_from_logs(&crate::logging::logs_dir())
+    } else {
+        None
+    };
+
+    Ok(EngineRuntimeStatus {
+        installed,
+        provider,
+    })
+}
+
 /// Probe whether a local engine is actually installed.
 ///
 /// Each engine is checked the way it is *used*, not the way it was installed —

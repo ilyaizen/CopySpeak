@@ -27,10 +27,12 @@ pub enum TtsEngine {
 
 impl Default for TtsEngine {
     fn default() -> Self {
-        // Edge-TTS is the fresh-install default: free, no API key, works
-        // instantly (issue #43). Cloud/local engines are opted into via
-        // onboarding or Settings; existing configs are never migrated.
-        TtsEngine::Edge
+        // Kokoro is the fresh-install default: natural offline voices, no API
+        // key; onboarding streams the one-time ~335 MB install. Edge-TTS
+        // remains the zero-download fallback (issue #43 commands never touch
+        // full get_config). Existing configs are never migrated to a new
+        // active engine — the bundled profile migration only ADDS the profile.
+        TtsEngine::Kokoro
     }
 }
 
@@ -1042,6 +1044,46 @@ pub(crate) fn migrate_add_qwen_profile_v5(tts: &mut TtsConfig) {
     tts.schema_version = 5;
 }
 
+/// Stable id for the bundled first-class Kokoro profile.
+pub(crate) const KOKORO_DEFAULT_PROFILE_ID: &str = "profile-kokoro-default";
+
+/// The voice every fresh install starts on. Must exist in
+/// `models/voices-v1.0.bin` and in the catalog (Heart, en, female).
+pub(crate) const KOKORO_DEFAULT_VOICE: &str = "af_heart";
+
+fn default_kokoro_profile() -> VoiceProfile {
+    let engine = TtsEngine::Kokoro;
+    let voice = KOKORO_DEFAULT_VOICE.to_string();
+    let voice_label = catalog_voice_label(&engine, &voice);
+    VoiceProfile {
+        id: KOKORO_DEFAULT_PROFILE_ID.into(),
+        name: "Kokoro".into(),
+        description: None,
+        engine,
+        voice,
+        voice_label,
+        speed: 1.0,
+        pitch: 1.0,
+        effects: ProfileEffects::default(),
+        text_processing: ProfileTextProcessing::default(),
+        engine_options: ProfileEngineOptions::Kokoro(KokoroEngineOptions::default()),
+    }
+}
+
+/// v5 -> v6: make Kokoro reachable as a first-class bundled profile (and the
+/// fresh-install default) without changing existing profiles or the active
+/// engine. Idempotent by profile id.
+pub(crate) fn migrate_add_kokoro_profile_v6(tts: &mut TtsConfig) {
+    if !tts
+        .profiles
+        .iter()
+        .any(|p| p.id == KOKORO_DEFAULT_PROFILE_ID)
+    {
+        tts.profiles.push(default_kokoro_profile());
+    }
+    tts.schema_version = 6;
+}
+
 impl Default for TtsConfig {
     fn default() -> Self {
         let cartesia_profile = default_cartesia_profile();
@@ -1050,13 +1092,20 @@ impl Default for TtsConfig {
         // onboarding needs nothing (issue #43). Existing configs on disk are
         // unaffected — defaults only apply when no config file exists.
         Self {
-            schema_version: 5,
-            active_backend: TtsEngine::Edge,
-            active_profile_id: VoiceProfile::default().id,
+            schema_version: 6,
+            // Fresh installs start on Kokoro (bundled profile
+            // profile-kokoro-default): keyless offline voices, installed
+            // from onboarding with streamed progress. The Edge "default"
+            // profile stays first in the vec as the zero-download fallback.
+            // Existing configs on disk are unaffected — defaults only apply
+            // when no config file exists.
+            active_backend: TtsEngine::Kokoro,
+            active_profile_id: KOKORO_DEFAULT_PROFILE_ID.into(),
             profiles: vec![
                 VoiceProfile::default(),
                 default_kitten_profile(),
                 default_qwen_profile(),
+                default_kokoro_profile(),
                 default_elevenlabs_profile(),
                 cartesia_profile,
                 default_google_profile(),

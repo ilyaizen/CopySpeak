@@ -44,6 +44,9 @@
   let testStates = $state<Record<string, TestState>>({});
   let testMessages = $state<Record<string, string>>({});
   let uvAvailable = $state<boolean | null>(null);
+  // Bumped whenever an install/uninstall settles so the panel's runtime
+  // status chip (installed / CPU / GPU) re-probes.
+  let runtimeProbeKey = $state(0);
   // Non-null opens the streamed install/uninstall dialog for that engine.
   let installDialogEntry = $state<EngineSetupEntry | null>(null);
 
@@ -191,6 +194,7 @@
       testMessage={testMessages[selected.id] ?? ""}
       onTest={() => runTest(selected)}
       onInstall={() => runInstall(selected)}
+      {runtimeProbeKey}
     />
   </main>
 
@@ -203,6 +207,7 @@
         // verdict from before the change would be misleading.
         void checkUv();
         testStates = {};
+        runtimeProbeKey += 1;
       }}
     />
   {/if}

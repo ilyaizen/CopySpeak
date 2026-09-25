@@ -271,21 +271,51 @@ mod tests {
     // ========== TTS Profile / Migration Tests ==========
 
     #[test]
-    fn test_default_tts_config_uses_edge_profile() {
+    fn test_default_tts_config_uses_kokoro_profile() {
         let tts = TtsConfig::default();
-        assert_eq!(TtsEngine::default(), TtsEngine::Edge);
-        assert_eq!(tts.schema_version, 5);
-        assert_eq!(tts.active_backend, TtsEngine::Edge);
-        assert_eq!(tts.profiles.len(), 6);
+        assert_eq!(TtsEngine::default(), TtsEngine::Kokoro);
+        assert_eq!(tts.schema_version, 6);
+        assert_eq!(tts.active_backend, TtsEngine::Kokoro);
+        assert_eq!(tts.profiles.len(), 7);
+        // The legacy Edge "default" profile stays (zero-download fallback).
         assert_eq!(tts.profiles[0].id, "default");
         assert_eq!(tts.profiles[0].engine, TtsEngine::Edge);
+        // ...but the ACTIVE profile is the bundled Kokoro one.
+        assert_eq!(tts.active_profile_id, "profile-kokoro-default");
         assert_eq!(
             tts.profiles
                 .iter()
                 .find(|profile| profile.id == tts.active_profile_id)
                 .map(|profile| &profile.engine),
-            Some(&TtsEngine::Edge)
+            Some(&TtsEngine::Kokoro)
         );
+    }
+
+    #[test]
+    fn test_migrate_add_kokoro_profile_v6_adds_and_is_idempotent() {
+        // A v5 config (no Kokoro profile) gains one; the active engine is
+        // never touched by the migration.
+        let mut tts = TtsConfig::default();
+        tts.schema_version = 5;
+        tts.profiles.retain(|p| p.id != "profile-kokoro-default");
+        tts.active_backend = TtsEngine::Edge;
+        tts.active_profile_id = "default".into();
+        let before = tts.profiles.len();
+
+        crate::config::tts::migrate_add_kokoro_profile_v6(&mut tts);
+        assert_eq!(tts.schema_version, 6);
+        assert_eq!(tts.profiles.len(), before + 1);
+        assert!(tts
+            .profiles
+            .iter()
+            .any(|p| p.id == "profile-kokoro-default" && p.engine == TtsEngine::Kokoro));
+        assert_eq!(tts.active_backend, TtsEngine::Edge);
+        assert_eq!(tts.active_profile_id, "default");
+
+        // Idempotent.
+        crate::config::tts::migrate_add_kokoro_profile_v6(&mut tts);
+        assert_eq!(tts.profiles.len(), before + 1);
+        assert_eq!(tts.schema_version, 6);
     }
 
     #[test]

@@ -12,7 +12,8 @@
     CheckCircle2,
     XCircle,
     Eye,
-    EyeOff
+    EyeOff,
+    AlertCircle
   } from "@lucide/svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
@@ -20,9 +21,20 @@
   import { openExternal } from "$lib/utils/external-link";
   import type { AppConfig } from "$lib/types";
   import type { CredentialTarget, EngineSetupEntry, TestState } from "./engine-meta";
+  import { invoke } from "@tauri-apps/api/core";
+
+  // Runtime verdict for local engines: installed + (ONNX engines) whether the
+  // last daemon run used CPU or CUDA. Cheap probe + app-log parse on the Rust
+  // side; re-probed when the parent bumps `runtimeProbeKey` (post-install).
+  interface RuntimeStatus {
+    installed: boolean;
+    provider: string | null;
+  }
 
   // Track which fields are revealed (per credential target, keyed by field name)
   let revealedFields = $state<Record<string, boolean>>({});
+
+  let runtimeStatus = $state<RuntimeStatus | null>(null);
 
   let {
     entry,
@@ -30,7 +42,8 @@
     testState = "idle",
     testMessage = "",
     onTest,
-    onInstall
+    onInstall,
+    runtimeProbeKey = 0
   }: {
     entry: EngineSetupEntry;
     localConfig: AppConfig;
@@ -38,7 +51,21 @@
     testMessage?: string;
     onTest?: () => void;
     onInstall?: () => void;
+    /** Bump to re-probe runtime status (e.g. after an install settles). */
+    runtimeProbeKey?: number;
   } = $props();
+
+  // Only local engines with an installer have a runtime status to show.
+  $effect(() => {
+    void runtimeProbeKey;
+    if (entry.kind !== "local" || !entry.installerId || entry.id === "uv") {
+      runtimeStatus = null;
+      return;
+    }
+    void invoke<RuntimeStatus>("engine_runtime_status", { engine: entry.id })
+      .then((s) => (runtimeStatus = s))
+      .catch(() => (runtimeStatus = null));
+  });
 
   // ponytail: tts config carries per-engine structs indexed by provider name.
   // Index through a record; the typed structs are mirrored here just enough to
@@ -79,6 +106,31 @@
       {$_("engines.docs")}
     </button>
   </header>
+
+  {#if entry.kind === "local" && entry.installerId && entry.id !== "uv" && runtimeStatus}
+    <div class="mt-3 flex items-center gap-2">
+      {#if runtimeStatus.installed}
+        <span
+          class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"
+        >
+          <CheckCircle2 size={12} />
+          Installed
+          {#if runtimeStatus.provider === "cuda"}
+            · GPU (CUDA)
+          {:else if runtimeStatus.provider === "cpu"}
+            · CPU
+          {/if}
+        </span>
+      {:else}
+        <span
+          class="text-muted-foreground bg-muted inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
+        >
+          <AlertCircle size={12} />
+          Not installed
+        </span>
+      {/if}
+    </div>
+  {/if}
 
   <div class="space-y-4 py-4">
     {#if entry.credential === "api_key" || entry.credential === "api_key_endpoint"}

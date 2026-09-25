@@ -861,6 +861,7 @@ fn main() {
             commands::install_engine,
             commands::uninstall_engine,
             commands::engine_status,
+            commands::engine_runtime_status,
             commands::test_tts_engine_config,
             commands::test_local_engine,
             // Post-processing models

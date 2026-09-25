@@ -306,6 +306,13 @@ fn migrate_add_qwen_profile_v5(cfg: &mut AppConfig) {
     log::info!("Config migrated to schema v5 (add bundled Qwen profile)");
 }
 
+/// Migrate v5 → v6: add the bundled first-class Kokoro profile (the new
+/// fresh-install default). Existing profiles and the active engine untouched.
+fn migrate_add_kokoro_profile_v6(cfg: &mut AppConfig) {
+    tts::migrate_add_kokoro_profile_v6(&mut cfg.tts);
+    log::info!("Config migrated to schema v6 (add bundled Kokoro profile)");
+}
+
 /// Bring every profile's speed and pitch back inside the supported ranges.
 /// Profiles saved before speed and pitch became independent knobs could carry a
 /// pitch of up to 2.0, which is a full octave once it no longer also changes
@@ -350,6 +357,11 @@ pub fn load_or_default() -> AppConfig {
             // Migrate v4 -> v5: add the bundled first-class Qwen profile.
             if cfg.tts.schema_version < 5 {
                 migrate_add_qwen_profile_v5(&mut cfg);
+            }
+
+            // Migrate v5 -> v6: add the bundled first-class Kokoro profile.
+            if cfg.tts.schema_version < 6 {
+                migrate_add_kokoro_profile_v6(&mut cfg);
             }
 
             clamp_profile_rates(&mut cfg);
