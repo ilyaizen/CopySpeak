@@ -85,7 +85,52 @@ fn get_selected_text() -> Result<String, String> {
     crate::clipboard::get_clipboard_text().ok_or_else(|| "No text in clipboard".to_string())
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+fn get_selected_text() -> Result<String, String> {
+    use objc2_core_graphics::{
+        CGEvent, CGEventFlags, CGEventSource, CGEventSourceStateID, CGEventTapLocation, CGKeyCode,
+    };
+
+    // Simulate Cmd+C. Requires Accessibility permission (TCC) — the same
+    // grant the whole selection feature needs; without it the events post
+    // into the void and the clipboard read below fails with "No text".
+    const V_KEY_C: CGKeyCode = 8; // kVK_ANSI_C
+    const V_KEY_CMD: CGKeyCode = 55; // kVK_Command
+
+    let source = CGEventSource::new(CGEventSourceStateID::CombinedSessionState)
+        .ok_or("Failed to create CGEventSource")?;
+
+    // Cmd+Down, C Down/Up with the flag held, Cmd Up.
+    let flags = CGEventFlags::MaskCommand;
+    let tap = CGEventTapLocation::HIDEventTap;
+
+    let cmd_down = CGEvent::new_keyboard_event(Some(&source), V_KEY_CMD, true)
+        .ok_or("Failed to create Cmd-down event")?;
+    CGEvent::set_flags(Some(&cmd_down), flags);
+    CGEvent::post(tap, Some(&cmd_down));
+
+    let c_down = CGEvent::new_keyboard_event(Some(&source), V_KEY_C, true)
+        .ok_or("Failed to create C-down event")?;
+    CGEvent::set_flags(Some(&c_down), flags);
+    CGEvent::post(tap, Some(&c_down));
+
+    let c_up = CGEvent::new_keyboard_event(Some(&source), V_KEY_C, false)
+        .ok_or("Failed to create C-up event")?;
+    CGEvent::set_flags(Some(&c_up), flags);
+    CGEvent::post(tap, Some(&c_up));
+
+    let cmd_up = CGEvent::new_keyboard_event(Some(&source), V_KEY_CMD, false)
+        .ok_or("Failed to create Cmd-up event")?;
+    CGEvent::set_flags(Some(&cmd_up), flags);
+    CGEvent::post(tap, Some(&cmd_up));
+
+    // The simulated copy is asynchronous: give the clipboard watcher a beat to
+    // observe it, then read the text back.
+    std::thread::sleep(std::time::Duration::from_millis(200));
+    crate::clipboard::get_clipboard_text().ok_or_else(|| "No text in clipboard".to_string())
+}
+
+#[cfg(target_os = "linux")]
 fn get_selected_text() -> Result<String, String> {
     use std::io::Read as _;
     use wl_clipboard_rs::paste::{

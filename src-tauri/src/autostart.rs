@@ -154,10 +154,82 @@ mod linux_imp {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+mod macos_imp {
+    use super::*;
+
+    const LABEL: &str = "com.copyspeak.tts";
+
+    /// `~/Library/LaunchAgents` — per-user launchd agents.
+    fn launch_agents_dir() -> Result<PathBuf, String> {
+        let home = std::env::var_os("HOME")
+            .ok_or("HOME is not set")
+            .map(PathBuf::from)?;
+        Ok(home.join("Library").join("LaunchAgents"))
+    }
+
+    fn entry_path() -> Result<PathBuf, String> {
+        Ok(launch_agents_dir()?.join(format!("{LABEL}.plist")))
+    }
+
+    fn plist_contents() -> Result<String, String> {
+        let exe = get_current_exe_path()?.display().to_string();
+        Ok(format!(
+            "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\
+             <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \
+             \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">\n\
+             <plist version=\"1.0\">\n\
+             <dict>\n\
+             \x20 <key>Label</key><string>{LABEL}</string>\n\
+             \x20 <key>ProgramArguments</key>\n\
+             \x20 <array>\n\
+             \x20\x20 <string>{exe}</string>\n\
+             \x20 </array>\n\
+             \x20 <key>RunAtLoad</key><true/>\n\
+             </dict>\n\
+             </plist>\n"
+        ))
+    }
+
+    pub fn enable_autostart() -> Result<(), String> {
+        let path = entry_path()?;
+        let dir = path.parent().expect("entry path has a parent");
+        std::fs::create_dir_all(dir)
+            .map_err(|e| format!("Failed to create LaunchAgents dir: {e}"))?;
+        std::fs::write(&path, plist_contents()?)
+            .map_err(|e| format!("Failed to write LaunchAgent plist: {e}"))?;
+        log::info!("Enabled auto-start: {}", path.display());
+        Ok(())
+    }
+
+    pub fn disable_autostart() -> Result<(), String> {
+        let path = entry_path()?;
+        match std::fs::remove_file(&path) {
+            Ok(()) => {
+                log::info!("Disabled auto-start");
+                Ok(())
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                log::info!("Auto-start was already disabled (entry not found)");
+                Ok(())
+            }
+            Err(e) => Err(format!("Failed to remove LaunchAgent plist: {e}")),
+        }
+    }
+
+    pub fn is_autostart_enabled() -> Result<bool, String> {
+        Ok(entry_path()?.exists())
+    }
+}
+
+#[cfg(target_os = "linux")]
 use linux_imp::is_autostart_enabled as is_autostart_enabled_impl;
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "linux")]
 use linux_imp::{disable_autostart, enable_autostart};
+#[cfg(target_os = "macos")]
+use macos_imp::is_autostart_enabled as is_autostart_enabled_impl;
+#[cfg(target_os = "macos")]
+use macos_imp::{disable_autostart, enable_autostart};
 #[cfg(target_os = "windows")]
 use windows_imp::is_autostart_enabled as is_autostart_enabled_impl;
 #[cfg(target_os = "windows")]

@@ -29,6 +29,9 @@ lazy_static = "1"
 gtk = "0.18"
 glib = "0.18"
 gtk-layer-shell = { version = "0.8.2", features = ["v0_6"] }
+# Wayland clipboard (wlr-data-control protocol): read/write plus the change
+# listener the double-copy trigger polls.
+wl-clipboard-rs = "0.9"
 
 [dev-dependencies]
 wiremock = "0.6"
@@ -61,10 +64,14 @@ windows = { version = "0.58", features = [
     "Win32_UI_Shell_PropertiesSystem",
 ] }
 
-[target.'cfg(not(windows))'.dependencies]
-# Wayland clipboard (wlr-data-control protocol): read/write plus the change
-# listener the double-copy trigger polls.
-wl-clipboard-rs = "0.9"
+[target.'cfg(target_os = "macos")'.dependencies]
+# NSPasteboard access for the mac clipboard transport (read/write + changeCount).
+# objc2-foundation is already in the tree via Tauri; pinning the same majors
+# keeps this at zero extra compile cost.
+objc2-app-kit = { version = "0.3", features = ["NSPasteboard"] }
+objc2-foundation = { version = "0.3", features = ["NSString"] }
+# CGEvent posting for speak-selected-text (macOS equivalent of SendInput Ctrl+C).
+objc2-core-graphics = { version = "0.3", features = ["CGEvent", "CGEventTypes", "CGRemoteOperation"] }
 
 [features]
 default = ["custom-protocol"]

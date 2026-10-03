@@ -5,7 +5,9 @@
 // speak-request emission live here so both platforms behave identically and
 // the trigger rules exist in exactly one place.
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(target_os = "linux")]
 mod wayland;
 #[cfg(target_os = "windows")]
 mod win32;
@@ -41,7 +43,11 @@ pub fn get_clipboard_text() -> Option<String> {
     {
         win32::read_clipboard_text()
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
+    {
+        macos::read_clipboard_text()
+    }
+    #[cfg(target_os = "linux")]
     {
         wayland::read_clipboard_text()
     }
@@ -54,7 +60,11 @@ pub fn set_clipboard_text(text: &str) -> Result<(), String> {
     {
         win32::set_clipboard_text(text)
     }
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
+    {
+        macos::set_clipboard_text(text)
+    }
+    #[cfg(target_os = "linux")]
     {
         wayland::set_clipboard_text(text)
     }
@@ -66,7 +76,9 @@ pub fn set_clipboard_text(text: &str) -> Result<(), String> {
 pub fn run_clipboard_listener(app: AppHandle, is_listening: Arc<AtomicBool>) {
     #[cfg(target_os = "windows")]
     win32::run_clipboard_listener(app, is_listening);
-    #[cfg(not(target_os = "windows"))]
+    #[cfg(target_os = "macos")]
+    macos::run_clipboard_listener(app, is_listening);
+    #[cfg(target_os = "linux")]
     wayland::run_clipboard_listener(app, is_listening);
 }
 
