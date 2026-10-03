@@ -116,6 +116,8 @@ export interface TtsConfig {
   google: GoogleTtsConfig;
   microsoft: MicrosoftTtsConfig;
   http?: HttpTtsConfig;
+  /** Idle-shutdown timeout for resident local daemons, seconds. 0 = never. */
+  daemon_idle_timeout_secs?: number;
 }
 
 // ── Edge-TTS ──────────────────────────────────────────────────────────────────
@@ -213,51 +215,20 @@ export interface EngineCatalogEntry {
   voices: VoiceCatalogEntry[];
 }
 
-export type PostProcessingProvider =
-  | "groq"
-  | "openai"
-  | "anthropic"
-  | "gemini"
-  | "openrouter"
-  | "ollama"
-  | "xai"
-  | "aws"
-  | "cerebras"
-  | "custom";
+export type DuckMode = "lower" | "mute";
 
-export interface PostProcessingPromptPreset {
-  label: string;
-  prompt: string;
-}
-
-export interface LlmProviderConfig {
-  api_key: string;
-  model: string;
-  endpoint: string;
-}
-
-export interface PostProcessingConfig {
+export interface DuckConfig {
   enabled: boolean;
-  provider: PostProcessingProvider;
-  prompt: string;
-  selected_prompt_label: string;
-  prompt_presets: PostProcessingPromptPreset[];
-  groq: LlmProviderConfig;
-  openai: LlmProviderConfig;
-  anthropic: LlmProviderConfig;
-  gemini: LlmProviderConfig;
-  openrouter: LlmProviderConfig;
-  ollama: LlmProviderConfig;
-  xai: LlmProviderConfig;
-  aws: LlmProviderConfig;
-  cerebras: LlmProviderConfig;
-  custom: LlmProviderConfig;
+  mode: DuckMode;
+  level_percent: number;
+  fade_ms: number;
 }
 
 export interface PlaybackConfig {
   on_retrigger: RetriggerMode;
   volume: number;
   streaming_enabled: boolean;
+  duck: DuckConfig;
 }
 
 export type HudThemePreset = "dark" | "light" | "custom";
@@ -356,11 +327,19 @@ export interface HotkeyConfig {
 
 export type EffectId = "none" | "walkie_talkie" | "game_boy";
 
-export interface PostProcessConfig {
-  enabled: boolean;
+export interface PostProcessProvider {
+  id: string;
+  label: string;
+  base_url: string;
   api_key: string;
   model: string;
+}
+
+export interface PostProcessConfig {
+  enabled: boolean;
+  provider_id: string;
   prompt: string;
+  providers: PostProcessProvider[];
 }
 
 export interface AppConfig {

@@ -18,6 +18,8 @@ mod hud;
 mod hud_layershell;
 mod logging;
 mod pagination;
+mod audio_duck;
+mod playback_signal;
 mod post_process;
 mod sanitize;
 mod secrets;
@@ -300,8 +302,8 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Emitter, Manager, State,
 };
-// `Listener` provides `app.listen`; only the non-Windows hud:stop block uses it.
-#[cfg(not(target_os = "windows"))]
+// `Listener` provides `app.listen`; used by the non-Windows hud:stop block
+// and the playback-finished hook that unblocks control-server wait requests.
 use tauri::Listener;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
@@ -340,6 +342,7 @@ fn main() {
         .setup(|app| {
             // --- Load config ---
             let cfg = config::load_or_default();
+            tts::local_daemon::set_idle_timeout(cfg.tts.daemon_idle_timeout_secs);
             app.manage(std::sync::Mutex::new(cfg));
 
             // --- Wayland: configure the HUD as a layer surface (BEFORE first map) ---
@@ -677,6 +680,22 @@ fn main() {
                 });
             }
             let app_handle_for_monitor = app.handle().clone();
+            // Unblock control-server /speak --wait callers when any playback
+            // run reaches its terminal state (natural end or user stop).
+            app.listen("playback-finished", move |_| {
+                crate::playback_signal::signal_finished();
+                crate::audio_duck::restore();
+            });
+            // Duck other apps once audio is actually audible (not during
+            // synthesis wait). Config is read at start so toggling applies live.
+            let app_handle_for_duck = app.handle().clone();
+            app.listen("playback-started", move |_| {
+                let cfg: State<std::sync::Mutex<config::AppConfig>> = app_handle_for_duck.state();
+                let duck = cfg.lock().unwrap().playback.duck.clone();
+                crate::audio_duck::duck(&duck);
+            });
+            // A previous run may have crashed while ducked.
+            crate::audio_duck::restore_leftover();
             std::thread::spawn(move || loop {
                 std::thread::sleep(std::time::Duration::from_millis(100));
                 let player: State<std::sync::Mutex<audio::AudioPlayer>> =
@@ -813,7 +832,7 @@ fn main() {
             commands::check_cartesia_credentials,
             commands::check_openai_credentials,
             commands::has_engine_credentials,
-            commands::check_groq_credentials,
+            commands::check_post_process_credentials,
             commands::list_elevenlabs_voices,
             commands::get_elevenlabs_voice_by_id,
             commands::get_elevenlabs_output_formats,
@@ -865,11 +884,16 @@ fn main() {
             commands::test_tts_engine_config,
             commands::test_local_engine,
             // Post-processing models
-            commands::list_post_processing_models,
+            commands::list_post_process_models,
             // Browser companion bridge (commands live in browser_bridge.rs)
             crate::browser_bridge::browser_reading_progress,
             crate::browser_bridge::browser_reading_finished,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running CopySpeak");
+        .build(tauri::generate_context!())
+        .expect("error while building CopySpeak")
+        .run(|_app, event| {
+            if let tauri::RunEvent::Exit = event {
+                crate::audio_duck::restore_blocking();
+            }
+        });
 }

@@ -766,7 +766,7 @@ impl<'de> Deserialize<'de> for ProfileEngineOptions {
             other => {
                 return Err(D::Error::custom(format!(
                     "engine_options must be an object, got {other}"
-                )))
+                )));
             }
         };
         // Tagged objects resolve directly; untagged legacy bags are deferred to
@@ -918,6 +918,15 @@ pub struct TtsConfig {
     pub edge: EdgeTtsConfig,
     #[serde(default, skip_serializing)]
     pub http: HttpTtsConfig,
+    /// Idle-shutdown timeout for resident local daemons, in seconds. 0 = never
+    /// shut down. Global (all DAEMON_ENGINES); applied live via
+    /// `tts::local_daemon::set_idle_timeout`. Default: 10 minutes.
+    #[serde(default = "default_daemon_idle_timeout_secs")]
+    pub daemon_idle_timeout_secs: u64,
+}
+
+fn default_daemon_idle_timeout_secs() -> u64 {
+    crate::tts::local_daemon::DEFAULT_IDLE_TIMEOUT_SECS
 }
 
 fn default_elevenlabs_profile() -> VoiceProfile {
@@ -1133,6 +1142,7 @@ impl Default for TtsConfig {
             microsoft: MicrosoftTtsConfig::default(),
             edge: EdgeTtsConfig::default(),
             http: HttpTtsConfig::default(),
+            daemon_idle_timeout_secs: default_daemon_idle_timeout_secs(),
         }
     }
 }

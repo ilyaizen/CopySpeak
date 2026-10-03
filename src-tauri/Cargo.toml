@@ -1,6 +1,6 @@
 [package]
 name = "copyspeak"
-version = "0.2.8"
+version = "0.2.9"
 edition = "2021"
 description = "CopySpeak - AI text-to-speech orchestrator"
 
@@ -54,6 +54,11 @@ windows = { version = "0.58", features = [
     "Win32_System_Pipes",
     "Win32_System_IO",
     "Win32_Security",
+    "Win32_Media_Audio",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_UI_Shell_PropertiesSystem",
 ] }
 
 [target.'cfg(not(windows))'.dependencies]

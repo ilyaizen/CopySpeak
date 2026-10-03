@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { writeFile } from "node:fs/promises";
+
 const base = process.env.COPYSPEAK_CONTROL_ADDR?.startsWith("http")
   ? process.env.COPYSPEAK_CONTROL_ADDR
   : `http://${process.env.COPYSPEAK_CONTROL_ADDR || "127.0.0.1:43117"}`;
@@ -57,7 +59,7 @@ const [cmd, subcmd, ...rest] = process.argv.slice(2);
 if (!cmd || has([cmd], ["-h", "--help"])) {
   console.log(`copyspeak health
 copyspeak speak --profile pi "hello"
-copyspeak speak -p pi --stdin
+copyspeak speak -p pi --stdin [--wait] [--ack <path>]
 copyspeak profiles list|use <id>|show <id>
 copyspeak engines list
 copyspeak voices list --engine elevenlabs`);
@@ -71,21 +73,50 @@ if (cmd === "health") {
   const profile = argValue(args, ["--profile", "-p"]);
   const stdin = has(args, ["--stdin"]);
   const persist = has(args, ["--persist", "--set-active"]);
+  const wait = has(args, ["--wait"]);
+  const ack = argValue(args, ["--ack"]);
   const text = stdin
     ? await readStdin()
     : args
         .filter((arg, index) => {
           const previous = args[index - 1];
           return (
-            !["--profile", "-p"].includes(previous) && !arg.startsWith("--") && arg !== profile
+            !["--profile", "-p", "--ack"].includes(previous) &&
+            !arg.startsWith("--") &&
+            arg !== profile
           );
         })
         .join(" ");
   if (!text.trim()) die("text is required");
   await request("/speak", {
     method: "POST",
-    body: JSON.stringify({ text, profile, persist_selection: persist || undefined })
+    body: JSON.stringify({
+      text,
+      profile,
+      persist_selection: persist || undefined,
+      wait: wait || undefined
+    })
   });
+  if (ack) {
+    // Hermes' command-TTS contract needs a non-empty audio file even though
+    // CopySpeak already spoke; write a tiny valid silent WAV (~10 ms).
+    const silence = Buffer.alloc(320); // 100 samples, 16 kHz mono 16-bit
+    const header = Buffer.alloc(44);
+    header.write("RIFF", 0, "ascii");
+    header.writeUInt32LE(36 + silence.length, 4);
+    header.write("WAVE", 8, "ascii");
+    header.write("fmt ", 12, "ascii");
+    header.writeUInt32LE(16, 16);
+    header.writeUInt16LE(1, 20); // PCM
+    header.writeUInt16LE(1, 22); // mono
+    header.writeUInt32LE(16000, 24);
+    header.writeUInt32LE(32000, 28); // byte rate
+    header.writeUInt16LE(2, 32); // block align
+    header.writeUInt16LE(16, 34); // bits per sample
+    header.write("data", 36, "ascii");
+    header.writeUInt32LE(silence.length, 40);
+    await writeFile(ack, Buffer.concat([header, silence]));
+  }
   console.log("ok");
 } else if (cmd === "profiles") {
   if (subcmd === "list") {

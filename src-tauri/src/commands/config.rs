@@ -2,9 +2,9 @@
 // Also includes general app state commands (listening, debug mode, clipboard).
 
 use crate::audio::AudioPlayer;
-use crate::config::{self, AppConfig, LlmProviderConfig, PostProcessingProvider};
+use crate::config::{self, AppConfig};
 use crate::secrets;
-use reqwest::header::{HeaderMap, HeaderValue, AUTHORIZATION};
+use reqwest::header::{HeaderValue, AUTHORIZATION};
 use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -87,23 +87,31 @@ pub fn get_config(config: State<'_, Mutex<AppConfig>>) -> AppConfig {
 }
 
 #[tauri::command]
-pub async fn list_post_processing_models(
-    provider: PostProcessingProvider,
-    config: LlmProviderConfig,
+pub async fn list_post_process_models(
+    base_url: String,
+    api_key: String,
 ) -> Result<Vec<String>, String> {
-    let endpoint = models_endpoint(&provider, &config)?;
-    let mut headers = HeaderMap::new();
-    if !config.api_key.trim().is_empty() {
-        headers.insert(
+    let endpoint = format!(
+        "{}/models",
+        base_url
+            .trim()
+            .trim_end_matches("/chat/completions")
+            .trim_end_matches("/responses")
+            .trim_end_matches('/')
+    );
+
+    let client = reqwest::Client::new();
+    let mut builder = client.get(&endpoint);
+    let api_key = crate::secrets::resolve(&api_key, &["POST_PROCESS_API_KEY"]);
+    if !api_key.trim().is_empty() {
+        builder = builder.header(
             AUTHORIZATION,
-            HeaderValue::from_str(&format!("Bearer {}", config.api_key.trim()))
-                .map_err(|e| e.to_string())?,
+            HeaderValue::from_str(&format!("Bearer {}", api_key.trim()))
+                .map_err(|e| format!("Invalid API key header: {e}"))?,
         );
     }
 
-    let value: Value = reqwest::Client::new()
-        .get(endpoint)
-        .headers(headers)
+    let value: Value = builder
         .send()
         .await
         .map_err(|e| format!("Model refresh failed: {e}"))?
@@ -126,26 +134,6 @@ pub async fn list_post_processing_models(
     models.sort();
     models.dedup();
     Ok(models)
-}
-
-fn models_endpoint(
-    provider: &PostProcessingProvider,
-    config: &LlmProviderConfig,
-) -> Result<String, String> {
-    match provider {
-        PostProcessingProvider::Anthropic | PostProcessingProvider::Gemini => Err(
-            "Model refresh is only available for OpenAI-compatible Post-Processing APIs."
-                .to_string(),
-        ),
-        _ => Ok(config
-            .endpoint
-            .trim()
-            .trim_end_matches("/chat/completions")
-            .trim_end_matches("/responses")
-            .trim_end_matches('/')
-            .to_string()
-            + "/models"),
-    }
 }
 
 /// The last global-hotkey registration failure, if the current hotkey did not
@@ -214,12 +202,18 @@ pub fn set_config(
             cfg.hotkey.clone(),
         )
     };
+    let old_daemon_idle_timeout = {
+        let cfg = config.lock().unwrap();
+        cfg.tts.daemon_idle_timeout_secs
+    };
     let mode_changed = old_mode != new_config.playback.on_retrigger;
     let volume_changed = old_volume != new_config.playback.volume;
     let autostart_changed = old_autostart != new_config.general.start_with_windows;
     let debug_mode_changed = old_debug_mode != new_config.general.debug_mode;
     let listen_enabled_changed = old_listen_enabled != new_config.trigger.listen_enabled;
     let hotkey_changed = old_hotkey != new_config.hotkey;
+    let daemon_idle_timeout_changed =
+        old_daemon_idle_timeout != new_config.tts.daemon_idle_timeout_secs;
 
     if crate::logging::is_debug_mode() {
         log::debug!(
@@ -290,6 +284,15 @@ pub fn set_config(
         if let Err(e) = crate::register_hotkey(&app, &new_hotkey) {
             log::error!("[Config] Failed to re-register hotkey: {}", e);
         }
+    }
+
+    if daemon_idle_timeout_changed {
+        let secs = {
+            let cfg = config.lock().unwrap();
+            cfg.tts.daemon_idle_timeout_secs
+        };
+        crate::tts::local_daemon::set_idle_timeout(secs);
+        log::info!("[LocalDaemon] idle timeout set to {}s", secs);
     }
 
     // Emit config-changed event so frontend can react

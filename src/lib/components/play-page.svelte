@@ -31,6 +31,7 @@
       command: "kokoro-tts",
       args_template: [],
       voice: "adam",
+      daemon_idle_timeout_secs: 600,
       openai: {
         api_key: "",
         model: "tts-1",
@@ -71,7 +72,8 @@
     playback: {
       on_retrigger: "interrupt",
       volume: 100,
-      streaming_enabled: true
+      streaming_enabled: true,
+      duck: { enabled: true, mode: "lower", level_percent: 20, fade_ms: 150 }
     },
     hud: {
       enabled: false,
@@ -140,9 +142,17 @@
     },
     post_process: {
       enabled: false,
-      api_key: "",
-      model: "openai/gpt-oss-20b",
-      prompt: ""
+      provider_id: "groq",
+      prompt: "",
+      providers: [
+        {
+          id: "groq",
+          label: "Groq",
+          base_url: "https://api.groq.com/openai/v1",
+          api_key: "",
+          model: "openai/gpt-oss-20b"
+        }
+      ]
     }
   };
 

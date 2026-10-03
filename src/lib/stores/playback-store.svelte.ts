@@ -76,6 +76,10 @@ class PlaybackStore {
   // current word into the page selection (see src-tauri/src/browser_bridge.rs).
   private _browserReadingActive = false;
 
+  // `playback-started` fires once per run, when audio first becomes audible; the
+  // Rust side ducks other apps on it and restores on `playback-finished`.
+  private _startedEmitted = false;
+
   constructor() {
     // Initialize fragment queue with handlers
     this._fragmentQueue = new FragmentQueue({
@@ -105,6 +109,7 @@ class PlaybackStore {
     this._audioEl = el;
     if (el) {
       el.onplay = () => {
+        this.emitPlaybackStarted();
         this.isPlaying = true;
         this.isPaused = false;
         this.startCaptionClock();
@@ -358,6 +363,7 @@ class PlaybackStore {
       void invoke("browser_reading_finished", { status: "completed" }).catch(() => {});
     }
     void this._emit?.("hud:stop", null);
+    this.emitPlaybackFinished();
   }
 
   /**
@@ -391,6 +397,7 @@ class PlaybackStore {
       this.totalFragments = payload.fragment_total;
       this.isPlaying = true;
       this.isPaused = false;
+      this.emitPlaybackStarted();
     }
     if (payload.text !== undefined) {
       this._streamCaptions.set(payload.fragment_index, {
@@ -465,9 +472,26 @@ class PlaybackStore {
     this.isPlaying = false;
     this.isPaused = false;
     void this._emit?.("hud:stop", null);
+    this.emitPlaybackFinished();
     setTimeout(() => {
       this._stopping = false;
     }, 0);
+  }
+
+  /**
+   * Terminal-state signal for Rust waiters (control-server --wait): a
+   * blocking /speak resolves when this fires, for natural ends and user
+   * stops alike.
+   */
+  private emitPlaybackStarted(): void {
+    if (this._startedEmitted) return;
+    this._startedEmitted = true;
+    void this._emit?.("playback-started", null);
+  }
+
+  private emitPlaybackFinished(): void {
+    this._startedEmitted = false;
+    void this._emit?.("playback-finished", null);
   }
 
   handleTogglePause() {

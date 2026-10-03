@@ -29,9 +29,10 @@
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc;
 use std::sync::{Mutex, MutexGuard, OnceLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use super::stream::{AudioFormatMeta, ChunkItem, ChunkStream};
 
@@ -197,6 +198,10 @@ struct Slot {
     pending: Option<String>,
     /// Key whose wrapper could not serve, so we stop paying the startup cost.
     unsupported: Option<String>,
+    /// When the daemon last entered the pool (placed or returned). `None`
+    /// while checked out (streaming) or while a start is pending, so the
+    /// reaper only ever ages daemons that are idle IN the pool.
+    idle_since: Option<Instant>,
 }
 
 static SLOTS: OnceLock<Mutex<HashMap<String, Slot>>> = OnceLock::new();
@@ -266,9 +271,90 @@ fn start(key: String, command: &str, serve_args: &[String]) -> Result<Daemon, St
     })
 }
 
+/// Idle-shutdown timeout for pooled daemons, in seconds. 0 = never reap.
+/// Global by design (one knob for every engine); read live from this static
+/// so a settings change applies on the next reaper cycle without a restart.
+/// `prewarm` keeps it in sync with the loaded/saved config.
+static IDLE_TIMEOUT_SECS: AtomicU64 = AtomicU64::new(DEFAULT_IDLE_TIMEOUT_SECS);
+
+/// Default: 10 minutes. Frees the 1-4 GB of VRAM/RAM a resident model holds
+/// between reads without cold-starting on every casual pause.
+pub const DEFAULT_IDLE_TIMEOUT_SECS: u64 = 600;
+
+/// How often the reaper wakes to check for expired daemons.
+const REAP_INTERVAL: Duration = Duration::from_secs(30);
+
+/// Pure expiry decision, kept free of clocks and locks so tests can drive it
+/// with fixed instants: a daemon is reaped when it has been idle in the pool
+/// for longer than the timeout, and never when the timeout is disabled.
+fn idle_expired(idle_since: Option<Instant>, now: Instant, timeout_secs: u64) -> bool {
+    match idle_since {
+        Some(idle_since) => {
+            timeout_secs > 0 && now.duration_since(idle_since) >= Duration::from_secs(timeout_secs)
+        }
+        None => false,
+    }
+}
+
+/// Lazily spawn the one reaper thread. Called by `prewarm`, so nothing runs
+/// until a local engine actually asks for a daemon; the OnceLock makes every
+/// later call a no-op.
+fn ensure_reaper() {
+    static SPAWNED: OnceLock<()> = OnceLock::new();
+    SPAWNED.get_or_init(|| {
+        std::thread::spawn(|| {
+            loop {
+                std::thread::sleep(REAP_INTERVAL);
+                reap_expired();
+            }
+        });
+    });
+}
+
+/// Take every daemon whose slot has idled past the timeout, then kill the
+/// processes AFTER releasing the lock — `Daemon::drop` waits on the child, and
+/// holding the mutex across that would stall every synthesis path.
+fn reap_expired() {
+    let timeout_secs = IDLE_TIMEOUT_SECS.load(Ordering::Relaxed);
+    if timeout_secs == 0 {
+        return;
+    }
+    let now = Instant::now();
+    let expired: Vec<(String, Daemon)> = {
+        let mut guard = slots();
+        let mut expired = Vec::new();
+        for (engine, slot) in guard.iter_mut() {
+            if slot.daemon.is_some()
+                && !slot.busy
+                && idle_expired(slot.idle_since, now, timeout_secs)
+            {
+                if let Some(daemon) = slot.daemon.take() {
+                    slot.idle_since = None;
+                    expired.push((engine.clone(), daemon));
+                }
+            }
+        }
+        expired
+    };
+    for (engine, daemon) in expired {
+        log::info!(
+            "[LocalDaemon] {engine} idle {}s — unloading model to free memory",
+            timeout_secs
+        );
+        drop(daemon);
+    }
+}
+
+/// Publish the idle timeout from config. Called at startup (config load) and
+/// from the set_config path so a settings change applies without a restart.
+pub fn set_idle_timeout(secs: u64) {
+    IDLE_TIMEOUT_SECS.store(secs, Ordering::Relaxed);
+}
+
 /// Start the daemon in the background unless one is already running (or starting,
 /// or streaming) for this configuration. Safe to call repeatedly.
 pub fn prewarm(engine: &str, command: String, serve_args: Vec<String>) {
+    ensure_reaper();
     let key = key_of(&command, &serve_args);
     let engine = engine.to_string();
 
@@ -295,6 +381,8 @@ pub fn prewarm(engine: &str, command: String, serve_args: Vec<String>) {
             Ok(daemon) => {
                 // Assigning drops (and kills) any daemon left from a prior config.
                 slot.daemon = Some(daemon);
+                // Idle clock starts when the model enters the pool.
+                slot.idle_since = Some(Instant::now());
                 log::info!("[LocalDaemon] {engine} ready — model resident in RAM");
             }
             Err(e) => {
@@ -375,6 +463,8 @@ pub fn try_stream(
         match usable.then(|| slot.daemon.take()).flatten() {
             Some(daemon) => {
                 slot.busy = true;
+                // Checked out for the whole stream — not idle in the pool.
+                slot.idle_since = None;
                 daemon
             }
             None => {
@@ -428,6 +518,7 @@ pub fn try_stream(
         slot.busy = false;
         if healthy {
             slot.daemon = Some(daemon); // back in the pool, model still resident
+            slot.idle_since = Some(Instant::now()); // idle clock restarts
         }
         // Otherwise `daemon` drops here and is killed; the next call re-warms.
     });
@@ -590,9 +681,11 @@ mod tests {
         // A v1 wrapper answers with the temp-file protocol, which would hang.
         assert!(check_handshake("READY").unwrap_err().contains("v1"));
         assert!(check_handshake("").unwrap_err().contains("without READY"));
-        assert!(check_handshake("Traceback...")
-            .unwrap_err()
-            .contains("unexpected"));
+        assert!(
+            check_handshake("Traceback...")
+                .unwrap_err()
+                .contains("unexpected")
+        );
     }
 
     #[test]
@@ -600,5 +693,38 @@ mod tests {
         assert!(!is_ready("nosuch"));
         shutdown();
         assert!(!is_ready("nosuch"));
+    }
+
+    #[test]
+    fn idle_beyond_timeout_is_expired() {
+        let placed = Instant::now() - Duration::from_secs(700);
+        assert!(idle_expired(Some(placed), Instant::now(), 600));
+        // Exactly at the boundary counts as expired: at a 30 s scan interval
+        // the daemon has then been holding VRAM for the full window already.
+        let boundary = Instant::now() - Duration::from_secs(600);
+        assert!(idle_expired(Some(boundary), Instant::now(), 600));
+    }
+
+    #[test]
+    fn idle_under_timeout_survives() {
+        let placed = Instant::now() - Duration::from_secs(599);
+        assert!(!idle_expired(Some(placed), Instant::now(), 600));
+        assert!(!idle_expired(Some(Instant::now()), Instant::now(), 600));
+    }
+
+    #[test]
+    fn zero_timeout_never_expires() {
+        let placed = Instant::now() - Duration::from_secs(86_400);
+        assert!(!idle_expired(Some(placed), Instant::now(), 0));
+    }
+
+    #[test]
+    fn checked_out_slot_has_no_idle_clock_and_never_expires() {
+        let placed = Instant::now() - Duration::from_secs(86_400);
+        assert!(!idle_expired(None, Instant::now(), 600));
+        // Document the pairing the reaper relies on: a checked-out slot is
+        // (daemon: Some, busy: true, idle_since: None) — busy alone would also
+        // shield it, but the None makes the invariant explicit.
+        assert!(!idle_expired(None, placed + Duration::from_secs(1), 600));
     }
 }

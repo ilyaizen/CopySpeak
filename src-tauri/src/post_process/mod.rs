@@ -1,12 +1,14 @@
-// LLM post-processing: sends sanitized text through Groq Cloud's chat
-// completions API to produce a concise, listener-friendly rewrite before TTS.
+// LLM post-processing: sends sanitized text through the active post-process
+// provider's OpenAI-compatible chat completions API to produce a concise,
+// listener-friendly rewrite before TTS.
 //
 // Failure policy: this module never silently swallows errors. `process()`
 // surfaces them; `try_process()` is the single fallback wrapper that callers
 // in the synthesis pipeline use to keep TTS running on LLM failure.
 
-use crate::config::{PostProcessConfig, GROQ_BASE_URL};
+use crate::config::{PostProcessConfig, PostProcessProvider};
 use log::warn;
+use reqwest::header::{HeaderValue, AUTHORIZATION};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -37,16 +39,23 @@ struct ResponseMessage {
     content: Option<String>,
 }
 
-/// Run the configured Groq prompt against `text`. Returns `Ok(processed)` on
-/// success. Caller is responsible for the fallback — this never silently
-/// returns the original.
+/// Run the configured prompt against `text` using the active provider's
+/// OpenAI-compatible endpoint. Returns `Ok(processed)` on success. Caller is
+/// responsible for the fallback — this never silently returns the original.
 pub async fn process(text: &str, cfg: &PostProcessConfig) -> Result<String, String> {
-    let api_key = crate::secrets::resolve(&cfg.api_key, &["POST_PROCESS_API_KEY"]);
-    if api_key.trim().is_empty() {
-        return Err("Groq API key is empty".into());
+    let provider = cfg
+        .active_provider()
+        .ok_or_else(|| "No post-process provider configured".to_string())?;
+    let api_key = crate::secrets::resolve(&provider.api_key, &["POST_PROCESS_API_KEY"]);
+    // Ollama and other local endpoints legitimately run without a key.
+    if api_key.trim().is_empty() && !is_local_provider(provider) {
+        return Err(format!("{} API key is empty", provider.label));
     }
-    if cfg.model.trim().is_empty() {
-        return Err("Groq model is empty".into());
+    if provider.model.trim().is_empty() {
+        return Err(format!("{} model is empty", provider.label));
+    }
+    if provider.base_url.trim().is_empty() {
+        return Err(format!("{} base URL is empty", provider.label));
     }
 
     let user_content = build_prompt(&cfg.prompt, text);
@@ -56,32 +65,38 @@ pub async fn process(text: &str, cfg: &PostProcessConfig) -> Result<String, Stri
         .map_err(|e| format!("HTTP client build failed: {e}"))?;
 
     let req = ChatRequest {
-        model: &cfg.model,
+        model: &provider.model,
         messages: vec![ChatMessage {
             role: "user",
             content: &user_content,
         }],
     };
 
-    let url = format!("{}/chat/completions", GROQ_BASE_URL);
-    let resp = client
-        .post(&url)
-        .bearer_auth(&api_key)
+    let url = format!("{}/chat/completions", provider.base_url.trim());
+    let mut builder = client.post(&url);
+    if !api_key.trim().is_empty() {
+        builder = builder.header(
+            AUTHORIZATION,
+            HeaderValue::from_str(&format!("Bearer {}", api_key.trim()))
+                .map_err(|e| format!("Invalid API key header: {e}"))?,
+        );
+    }
+    let resp = builder
         .json(&req)
         .send()
         .await
-        .map_err(|e| format!("Groq HTTP send failed: {e}"))?;
+        .map_err(|e| format!("{} HTTP send failed: {e}", provider.label))?;
 
     let status = resp.status();
     if !status.is_success() {
         let body = resp.text().await.unwrap_or_default();
-        return Err(format!("Groq API {status}: {body}"));
+        return Err(format!("{} API {status}: {body}", provider.label));
     }
 
     let parsed: ChatResponse = resp
         .json()
         .await
-        .map_err(|e| format!("Groq response parse failed: {e}"))?;
+        .map_err(|e| format!("{} response parse failed: {e}", provider.label))?;
 
     parsed
         .choices
@@ -90,7 +105,13 @@ pub async fn process(text: &str, cfg: &PostProcessConfig) -> Result<String, Stri
         .and_then(|c| c.message.content)
         .map(|s| s.trim().to_string())
         .filter(|s| !s.is_empty())
-        .ok_or_else(|| "Groq returned empty content".into())
+        .ok_or_else(|| format!("{} returned empty content", provider.label))
+}
+
+/// Local runtimes (loopback addresses) don't need credentials; anything else
+/// is treated as a hosted API that requires a key.
+fn is_local_provider(provider: &PostProcessProvider) -> bool {
+    provider.base_url.contains("localhost") || provider.base_url.contains("127.0.0.1")
 }
 
 /// Convenience wrapper used at synthesis sites. Returns the input unchanged

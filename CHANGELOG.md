@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.9] - 2026-10-03
+
+### Added
+
+- **Duck other apps while reading** — new Settings → Playback option lowers (or mutes) other apps' audio while CopySpeak speaks, then restores it. On by default, Windows only. Ducks per app, so CopySpeak itself stays audible; leaves any volume you change mid-read alone, ducks apps that start playing mid-read, and recovers the original volumes after a crash on next launch. Configurable level (default 20%), lower vs mute, and fade time.
+- **Custom post-processing providers with live model lists** — the LLM post-processing provider list is now a registry: Groq, OpenAI, Z.AI, OpenRouter, Ollama and Cerebras are seeded, and any OpenAI-compatible endpoint can be added, edited or removed. The model dropdown is filled live from the provider's `/models` endpoint, and keyless local endpoints (localhost) are allowed. Existing Groq settings migrate automatically.
+- **Idle shutdown for local engines** — resident local daemons (Kokoro, Qwen3, Kitten) now exit after a period without synthesis (default 10 minutes, set under Engines → Idle shutdown; Never/1/5/10/30 min), freeing RAM/VRAM between reads. The next read cold-starts the engine.
+- **Blocking `/speak` for Hermes** — the control server's `/speak` accepts `wait` and returns once playback finishes; `copyspeak --wait --ack` writes a short silent WAV on success so command-provider integrations can treat it as a finished synthesis.
+
+### Fixed
+
+- **`/speak --wait` no longer hangs until the 600 s cap** — the playback-finished event now actually reaches the control server, so blocking calls end when speech ends or is stopped.
+
+### Changed
+
+- Removed the unused post-processing enum system and its dead UI; the post-processing credential check now validates the active provider.
+
 ## [0.2.8] - 2026-09-25
 
 ### Added

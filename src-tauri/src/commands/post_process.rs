@@ -1,52 +1,62 @@
-// Credential validation for the LLM post-processing provider (Groq Cloud).
+// Credential validation for the active LLM post-processing provider.
 
 use crate::commands::CredentialCheckResult;
-use crate::config::{AppConfig, GROQ_BASE_URL};
+use crate::config::AppConfig;
 use std::sync::Mutex;
 use tauri::State;
 
-/// Validate a Groq API key via GET /models (no completion credits consumed).
+/// Validate the active provider's API key via GET {base_url}/models
+/// (no completion credits consumed).
 #[tauri::command]
-pub fn check_groq_credentials(
+pub fn check_post_process_credentials(
     config: State<'_, Mutex<AppConfig>>,
 ) -> Result<CredentialCheckResult, String> {
     if crate::logging::is_debug_mode() {
-        log::debug!("[IPC] check_groq_credentials called");
+        log::debug!("[IPC] check_post_process_credentials called");
     }
 
-    let api_key = crate::secrets::resolve(
-        &config.lock().unwrap().post_process.api_key,
-        &["POST_PROCESS_API_KEY"],
-    );
+    let cfg = config.lock().unwrap();
+    let provider = match cfg.post_process.active_provider() {
+        Some(p) => p.clone(),
+        None => {
+            return Ok(CredentialCheckResult {
+                success: false,
+                message: "No post-process provider configured.".into(),
+                error_type: Some("provider_missing".into()),
+            });
+        }
+    };
+    let label = provider.label.clone();
+    let api_key = crate::secrets::resolve(&provider.api_key, &["POST_PROCESS_API_KEY"]);
 
     if api_key.trim().is_empty() {
         return Ok(CredentialCheckResult {
             success: false,
-            message: "API key is empty. Enter your Groq API key.".into(),
+            message: format!("API key is empty. Enter your {} API key.", label),
             error_type: Some("api_key_missing".into()),
         });
     }
 
     let client = reqwest::blocking::Client::new();
     match client
-        .get(format!("{}/models", GROQ_BASE_URL))
+        .get(format!("{}/models", provider.base_url.trim()))
         .bearer_auth(&api_key)
         .send()
     {
         Ok(resp) => match resp.status().as_u16() {
             200 => Ok(CredentialCheckResult {
                 success: true,
-                message: "Groq API key is valid.".into(),
+                message: format!("{} API key is valid.", label),
                 error_type: None,
             }),
             401 | 403 => Ok(CredentialCheckResult {
                 success: false,
-                message: "Authentication failed. Check your Groq API key.".into(),
+                message: format!("Authentication failed. Check your {} API key.", label),
                 error_type: Some("auth_failed".into()),
             }),
             status => Ok(CredentialCheckResult {
                 success: false,
-                message: format!("Groq API returned unexpected status: {}", status),
+                message: format!("{} API returned unexpected status: {}", label, status),
                 error_type: Some("http_error".into()),
             }),
         },

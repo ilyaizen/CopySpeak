@@ -5,7 +5,7 @@
 /// exports). Tracks the app version (VERSION in src/lib/version.ts) and is
 /// refreshed by scripts/version-bumper.mjs alongside the other versioned
 /// files; load_or_default re-stamps loaded configs so old files catch up.
-const CONFIG_VERSION: &str = "0.2.8";
+const CONFIG_VERSION: &str = "0.2.9";
 
 /// The current config file version stamp (see `CONFIG_VERSION`).
 pub fn config_version() -> &'static str {
@@ -19,7 +19,6 @@ mod hud;
 mod output;
 mod playback;
 mod post_process;
-mod post_processing;
 mod sanitization;
 mod trigger;
 mod tts;
@@ -40,7 +39,6 @@ pub use hud::*;
 pub use output::*;
 pub use playback::*;
 pub use post_process::*;
-pub use post_processing::*;
 pub use sanitization::*;
 pub use trigger::*;
 pub use tts::*;
@@ -221,6 +219,7 @@ impl Default for AppConfig {
                 on_retrigger: RetriggerMode::Queue,
                 volume: 100,
                 streaming_enabled: true,
+                duck: DuckConfig::default(),
                 playback_speed: 1.0,
                 pitch: 1.0,
             },
@@ -342,6 +341,10 @@ pub fn load_or_default() -> AppConfig {
 
             // Migrate legacy single-engine TTS config into the profile model.
             cfg.tts = migrate_tts_config(cfg.tts);
+
+            // Fold legacy single-provider post-process fields (Groq-only era)
+            // into the provider registry; repair dangling selections.
+            cfg.post_process.normalize();
 
             // Migrate v2 → v3: move playback speed/pitch and global effects
             // into the active profile (sole source of truth going forward).
