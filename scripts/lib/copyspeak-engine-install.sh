@@ -87,12 +87,20 @@ require_uv() {
     log C_GREEN "  Found uv: $(uv --version)"
 }
 
-# "${XDG_DATA_HOME:-$HOME/.local/share}/CopySpeak/engines"
+# "${XDG_DATA_HOME:-$HOME/.local/share}/CopySpeak/engines" (Linux)
+# "$HOME/Library/Application Support/CopySpeak/engines" (macOS)
 #
-# Matches dirs::data_local_dir on Linux, which the Tauri app's engine_dir
-# setting uses (XDG_DATA_HOME wins when set, else $HOME/.local/share).
+# Matches dirs::data_local_dir on each platform, which the Tauri app's
+# engine_dir setting uses (XDG_DATA_HOME wins when set, else $HOME/.local/share).
 copyspeak_engine_root() {
-    printf '%s\n' "${XDG_DATA_HOME:-$HOME/.local/share}/CopySpeak/engines"
+    case "$(uname -s)" in
+        Darwin)
+            printf '%s\n' "$HOME/Library/Application Support/CopySpeak/engines"
+            ;;
+        *)
+            printf '%s\n' "${XDG_DATA_HOME:-$HOME/.local/share}/CopySpeak/engines"
+            ;;
+    esac
 }
 
 # Create (or reset with force=1) a uv project directory for one engine.

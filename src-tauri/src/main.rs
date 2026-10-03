@@ -308,6 +308,13 @@ use tauri::Listener;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 fn main() {
+    // Linux: GTK derives the Wayland app_id / X11 WM_CLASS from
+    // g_get_prgname() (tao never propagates the gtk app id to the window
+    // class), so without this the bare binary's lowercase file name
+    // ("copyspeak") leaks into compositors, docks, and .desktop matching.
+    #[cfg(target_os = "linux")]
+    glib::set_prgname(Some("CopySpeak"));
+
     if let Err(e) = logging::init_logging() {
         eprintln!("Failed to initialize logging: {}", e);
     }

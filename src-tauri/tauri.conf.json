@@ -45,6 +45,7 @@
   },
   "app": {
     "withGlobalTauri": true,
+    "enableGTKAppId": true,
     "security": {
       "devCsp": null
     },
