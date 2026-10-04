@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.10] - 2026-10-03
+
+### Changed
+
+- **Cross-platform terminology** — the Windows-only app identity is gone: `general.start_with_windows` is now `general.launch_on_login` (old config files migrate automatically; the autostart backend still matches each platform — registry Run key on Windows, XDG autostart on Linux, LaunchAgent on macOS), the settings toggle reads "Launch at login", and landing copy no longer claims Windows-only.
+
+### Added
+
+- **macOS (Intel) port shipping** — 0.2.9's macOS backend (clipboard trigger via NSPasteboard polling, selection capture, LaunchAgent autostart) is now the releasable 0.2.10 target.
+
 ## [0.2.9] - 2026-10-03
 
 ### Added
