@@ -91,7 +91,7 @@
       }
     },
     general: {
-      start_with_windows: false,
+      launch_on_login: false,
       start_minimized: true,
       debug_mode: false,
       close_behavior: "minimize-to-tray",

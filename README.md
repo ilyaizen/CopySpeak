@@ -1,6 +1,6 @@
 # CopySpeak
 
-**Current Version:** 0.2.9
+**Current Version:** 0.2.10
 
 A modern desktop app that reads clipboard text aloud using AI Text-to-Speech engines. Trigger speech by quickly copying the same text twice in a row — works out of the box with no API key (Edge TTS is the default engine).
 
@@ -92,14 +92,14 @@ bun run tauri dev
 
 ## Tech Stack
 
-| Component       | Technology                     |
-| --------------- | ------------------------------ |
-| Platforms       | Windows, Linux (x86_64)        |
-| Backend         | Rust (Tauri v2)                |
-| Frontend        | Svelte 5, TypeScript, Vite     |
-| Package Manager | Bun                            |
-| Audio           | rodio                          |
-| UI              | shadcn-svelte, Tailwind CSS v4 |
+| Component       | Technology                             |
+| --------------- | -------------------------------------- |
+| Platforms       | Windows, Linux (x86_64), macOS (Intel) |
+| Backend         | Rust (Tauri v2)                        |
+| Frontend        | Svelte 5, TypeScript, Vite             |
+| Package Manager | Bun                                    |
+| Audio           | rodio                                  |
+| UI              | shadcn-svelte, Tailwind CSS v4         |
 
 ## Project Structure
 

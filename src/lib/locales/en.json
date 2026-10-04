@@ -89,7 +89,7 @@
     "general": {
       "language": "Language",
       "languageDescription": "Select your preferred language",
-      "startWithWindows": "Start with Windows",
+      "launchOnLogin": "Launch at login",
       "startMinimized": "Start minimized to tray",
       "showNotifications": "Show notifications",
       "closeBehavior": "Close button behavior",
@@ -108,7 +108,7 @@
       "streaming": "Stream audio",
       "streamingDescription": "Start playback as audio arrives. Supported cloud engines: ElevenLabs and Cartesia. When disabled, use batch synthesis and wait for each request to finish before playback.",
       "duck": "Duck other apps",
-      "duckDescription": "Lower other apps' audio while CopySpeak speaks, then restore it. Windows only.",
+      "duckDescription": "Lower other apps' audio while CopySpeak speaks, then restore it. Windows only for now.",
       "duckMode": "Duck mode",
       "duckModeLower": "Lower",
       "duckModeMute": "Mute",
@@ -649,8 +649,8 @@
     "hero": {
       "title": "CopySpeak",
       "subtitle": "Modern AI TTS Orchestrator",
-      "description": "A lightweight Windows app that reads clipboard text aloud using AI text-to-speech engines.",
-      "download": "Download for Windows",
+      "description": "A lightweight cross-platform app that reads clipboard text aloud using AI text-to-speech engines.",
+      "download": "Download for your platform",
       "github": "View on GitHub",
       "version": "v{version}"
     },

@@ -48,7 +48,7 @@ pub fn reset_config(
 
     // Sync autostart setting
     if let Err(e) =
-        crate::autostart::sync_autostart_with_config(default_config.general.start_with_windows)
+        crate::autostart::sync_autostart_with_config(default_config.general.launch_on_login)
     {
         log::error!("Failed to sync autostart after reset: {}", e);
     }
@@ -196,7 +196,7 @@ pub fn set_config(
         (
             cfg.playback.on_retrigger.clone(),
             cfg.playback.volume,
-            cfg.general.start_with_windows,
+            cfg.general.launch_on_login,
             cfg.general.debug_mode,
             cfg.trigger.listen_enabled,
             cfg.hotkey.clone(),
@@ -208,7 +208,7 @@ pub fn set_config(
     };
     let mode_changed = old_mode != new_config.playback.on_retrigger;
     let volume_changed = old_volume != new_config.playback.volume;
-    let autostart_changed = old_autostart != new_config.general.start_with_windows;
+    let autostart_changed = old_autostart != new_config.general.launch_on_login;
     let debug_mode_changed = old_debug_mode != new_config.general.debug_mode;
     let listen_enabled_changed = old_listen_enabled != new_config.trigger.listen_enabled;
     let hotkey_changed = old_hotkey != new_config.hotkey;
@@ -256,7 +256,7 @@ pub fn set_config(
     if autostart_changed {
         let enabled = {
             let cfg = config.lock().unwrap();
-            cfg.general.start_with_windows
+            cfg.general.launch_on_login
         };
         if let Err(e) = crate::autostart::sync_autostart_with_config(enabled) {
             log::error!("Failed to sync autostart: {}", e);

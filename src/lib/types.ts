@@ -256,7 +256,7 @@ export type CloseBehavior = "minimize-to-tray" | "exit";
 export type AppearanceMode = "system" | "light" | "dark";
 
 export interface GeneralConfig {
-  start_with_windows: boolean;
+  launch_on_login: boolean;
   start_minimized: boolean;
   debug_mode: boolean;
   close_behavior: CloseBehavior;

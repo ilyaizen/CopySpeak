@@ -182,7 +182,7 @@
 
 <svelte:head>
   {#if isWeb}
-    <title>CopySpeak - AI Text-to-Speech for Windows</title>
+    <title>CopySpeak - AI Text-to-Speech</title>
   {/if}
 </svelte:head>
 

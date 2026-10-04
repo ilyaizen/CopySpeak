@@ -31,7 +31,9 @@ impl Default for AppearanceMode {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GeneralConfig {
-    pub start_with_windows: bool,
+    // `launch_on_login` was `start_with_windows` before 0.2.10; alias keeps old configs valid.
+    #[serde(alias = "start_with_windows")]
+    pub launch_on_login: bool,
     pub start_minimized: bool,
     #[serde(default)]
     pub debug_mode: bool,

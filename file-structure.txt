@@ -48,8 +48,7 @@
 │   └── install-linux.sh
 ├── docs
 │   ├── CONTRIBUTING.md
-│   ├── COPYSPEAK_PI_VOICE.md
-│   ├── COPYSPEAK_PI_VOICE_2.md
+│   ├── agent-voice.md
 │   ├── engines.md
 │   └── profile-engine-settings.md
 ├── scripts
@@ -94,6 +93,7 @@
 │   ├── test-engine.ps1
 │   ├── test-installer-lib.ps1
 │   ├── uninstall-engine.ps1
+│   ├── uninstall-engine.sh
 │   └── version-bumper.mjs
 ├── src
 │   ├── lib
@@ -198,6 +198,8 @@
 │   │   │   │   ├── pcm-stream.ts
 │   │   │   │   ├── time-stretch.test.ts
 │   │   │   │   └── time-stretch.ts
+│   │   │   ├── auto-save.svelte.ts
+│   │   │   ├── auto-save.test.ts
 │   │   │   ├── history-store.svelte.ts
 │   │   │   ├── hud-store.svelte.ts
 │   │   │   ├── index.ts
@@ -323,9 +325,11 @@
 │   │   ├── history.rs
 │   │   ├── history_manager.rs
 │   │   ├── hud.rs
+│   │   ├── hud_layershell.rs
 │   │   ├── logging.rs
 │   │   ├── main.rs
 │   │   ├── pagination.rs
+│   │   ├── playback_signal.rs
 │   │   ├── post_processing.rs
 │   │   ├── secrets.rs
 │   │   ├── telemetry.rs

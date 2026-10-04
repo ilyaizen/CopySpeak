@@ -1,6 +1,6 @@
 # AGENTS.md
 
-CopySpeak: A lightwieight and modern AI text-to-speech orchestrator for Windows that reads clipboard text aloud when double-copied. Stack: Svelte 5, Tauri 2.
+CopySpeak: A lightweight and modern cross-platform AI text-to-speech orchestrator that reads clipboard text aloud when double-copied. Stack: Svelte 5, Tauri 2.
 
 ## Rules
 
@@ -78,6 +78,8 @@ Keep the active log short — it loads every session; long context makes you les
 - Drop CPU `onnxruntime` from GPU engine projects with `[tool.uv] exclude-dependencies` + `uv sync --reinstall-package onnxruntime-gpu`; `uv remove` is a no-op (transitive dep) and both wheels write the same `onnxruntime/` files.
 - Wrapper fixes reach an installed engine only when its installer re-runs (for wrapper-only fixes, `cp` the repo file into `engines/<e>/scripts/`), and shared wrapper functions must be backported to EVERY engine — `diff` the engine wrappers against each other when touching one.
 - Duck other apps per-session and skip our whole process tree, not our PID: playback is in the webview, so the audio session belongs to a `msedgewebview2` child; persist originals to `duck-state.json` because per-app mixer volumes survive a crash.
+- Use three-way `cfg(target_os = ...)` (windows/macos/linux) for platform seams; `cfg(not(windows))` makes macOS compile Linux-only code (wl-clipboard, gtk-layer-shell) that cannot build or run on darwin.
+- Verify a subsystem is actually wired before extending it — grep `mod` declarations and component mounts; the parity checklist once described a post-processing enum system that was never compiled or mounted.
 
 <!-- rtk-instructions v2 -->
 

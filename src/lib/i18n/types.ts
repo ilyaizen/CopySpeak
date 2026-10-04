@@ -88,7 +88,7 @@ export type TranslationKeys =
   | "settings.actions.tryAgain"
   | "settings.general.language"
   | "settings.general.languageDescription"
-  | "settings.general.startWithWindows"
+  | "settings.general.launchOnLogin"
   | "settings.general.startMinimized"
   | "settings.general.showNotifications"
   | "settings.general.closeBehavior"

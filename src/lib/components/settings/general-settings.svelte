@@ -12,8 +12,8 @@
 </script>
 
 <div class="space-y-4">
-  <SettingRow label="Start with Windows" tooltip="Launch CopySpeak when Windows starts">
-    <Switch id="start-windows" bind:checked={localConfig.general.start_with_windows} />
+  <SettingRow label="Launch at login" tooltip="Launch CopySpeak when you log in">
+    <Switch id="launch-on-login" bind:checked={localConfig.general.launch_on_login} />
   </SettingRow>
 
   <SettingRow label="Start Minimized" tooltip="Start the application minimized to system tray">
