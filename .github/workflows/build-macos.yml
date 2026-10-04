@@ -16,9 +16,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [macos-13]
+        platform: [macos-15-intel]
         include:
-          - platform: macos-13
+          - platform: macos-15-intel
             target: x86_64-apple-darwin
 
     runs-on: ${{ matrix.platform }}
