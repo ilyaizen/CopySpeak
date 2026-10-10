@@ -17,8 +17,13 @@ export interface FragmentQueueHandlers {
   onQueueComplete: () => void;
 }
 
+/** How many already-played fragments are retained for cross-boundary rewind. */
+const MAX_REWIND_FRAGMENTS = 3;
+
 export class FragmentQueue {
   private _queue: QueuedFragment[] = [];
+  /** Most recently played fragments, oldest first, for {@link previousFragment}. */
+  private _played: QueuedFragment[] = [];
   private _isProcessing = false;
   private _handlers: FragmentQueueHandlers;
 
@@ -89,9 +94,10 @@ export class FragmentQueue {
    * Auto-advances to next queued fragment or stops if queue is empty
    */
   handleFragmentEnded(): void {
-    // Remove the just-completed fragment from queue
+    // Retain the just-completed fragment for cross-boundary rewind
     if (this._queue.length > 0) {
-      this._queue.shift();
+      this._played.push(this._queue.shift()!);
+      if (this._played.length > MAX_REWIND_FRAGMENTS) this._played.shift();
     }
 
     if (this._queue.length > 0) {
@@ -105,10 +111,24 @@ export class FragmentQueue {
   }
 
   /**
+   * Re-queue the most recently played fragment ahead of the current one for a
+   * backward skip across the fragment boundary. Returns it, or null when
+   * nothing played earlier is still retained. When the returned fragment ends,
+   * normal auto-advance resumes with the interrupted fragment.
+   */
+  previousFragment(): QueuedFragment | null {
+    const previous = this._played.pop();
+    if (!previous) return null;
+    this._queue.unshift(previous);
+    return previous;
+  }
+
+  /**
    * Clear the queue and stop processing
    */
   clear(): void {
     this._queue = [];
+    this._played = [];
     this._isProcessing = false;
   }
 

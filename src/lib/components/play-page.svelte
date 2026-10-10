@@ -276,13 +276,62 @@
     // Stop playback immediately in the frontend
     playbackStore.handleStop();
 
-    // Also notify backend to ensure complete stop
-    if (isTauri) {
+    if (!isTauri) return;
+    // A stop while synthesis is running must also free the engine — fragments
+    // nobody will play otherwise keep generating (and burning GPU/CPU). The
+    // flag keeps the pending speak_now promise's abort rejection out of `error`.
+    if (playbackStore.isSynthesizing) {
+      abortRequested = true;
+    }
+    try {
+      await invoke("stop_speaking");
+    } catch (error) {
+      console.error("Failed to stop speaking:", error);
+    }
+    if (abortRequested) {
       try {
-        await invoke("stop_speaking");
+        await invoke("abort_synthesis");
+        toast.success($_("toast.success.synthesisAborted"));
       } catch (error) {
-        console.error("Failed to stop speaking:", error);
+        console.error("Failed to abort synthesis:", error);
       }
+    }
+  }
+
+  // Transport shortcuts. Skipped while typing in the textarea or while a
+  // button has focus (Space must keep activating the button natively).
+  function handleKeydown(event: KeyboardEvent) {
+    // SAFETY: keydown targets in this window are DOM elements; only tag names
+    // and isContentEditable are read.
+    const target = event.target as HTMLElement | null;
+    if (
+      target &&
+      (target.tagName === "TEXTAREA" ||
+        target.tagName === "INPUT" ||
+        target.tagName === "SELECT" ||
+        target.tagName === "BUTTON" ||
+        target.isContentEditable)
+    ) {
+      return;
+    }
+    if (!playbackStore.isPlaying && !playbackStore.isPaused) return;
+    switch (event.key) {
+      case " ":
+        event.preventDefault();
+        playbackStore.handleTogglePause();
+        break;
+      case "ArrowLeft":
+        event.preventDefault();
+        playbackStore.skipBackward();
+        break;
+      case "ArrowRight":
+        event.preventDefault();
+        playbackStore.skipForward();
+        break;
+      case "Escape":
+        event.preventDefault();
+        void handleStop();
+        break;
     }
   }
 
@@ -305,24 +354,6 @@
       }
     } finally {
       generating = false;
-    }
-  }
-
-  async function handleAbort() {
-    abortRequested = true;
-
-    // Stop playback immediately
-    playbackStore.handleStop();
-
-    // Abort synthesis in backend
-    if (isTauri) {
-      try {
-        await invoke("abort_synthesis");
-        toast.success($_("toast.success.synthesisAborted"));
-      } catch (error) {
-        console.error("Failed to abort synthesis:", error);
-        toast.error("Failed to abort synthesis");
-      }
     }
   }
 
@@ -398,15 +429,12 @@
   });
 </script>
 
+<svelte:window onkeydown={handleKeydown} />
+
 <div class="flex min-w-0 flex-1 flex-col gap-4">
   <div class="grid min-w-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_14rem]">
     <section aria-labelledby="reader-heading" class="flex min-w-0 flex-col gap-3">
-      <div>
-        <h2 id="reader-heading" class="sr-only">Read aloud</h2>
-        <p id="reader-hint" class="text-muted-foreground text-sm">
-          Paste text here, or copy it twice anywhere.
-        </p>
-      </div>
+      <h2 id="reader-heading" class="sr-only">Read aloud</h2>
       {#if caption}
         <div
           bind:this={readingView}
@@ -429,7 +457,6 @@
         <label for="reading-text" class="sr-only">Text to read aloud</label>
         <Textarea
           id="reading-text"
-          aria-describedby="reader-hint"
           class="field-sizing-fixed min-h-48 flex-1 resize-none p-4 text-base leading-relaxed"
           placeholder={$_("play.placeholder")}
           bind:value={manualText}
@@ -438,11 +465,14 @@
       <div class="flex flex-wrap items-center gap-2">
         <PlaybackControls
           {isPlaying}
+          isPaused={playbackStore.isPaused}
           isSynthesizing={playbackStore.isSynthesizing}
           {playMode}
           onPlay={handlePlay}
+          onTogglePause={() => playbackStore.handleTogglePause()}
           onStop={handleStop}
-          onAbort={handleAbort}
+          onSkipBack={() => playbackStore.skipBackward()}
+          onSkipForward={() => playbackStore.skipForward()}
         />
         {#if manualText}
           <Button variant="ghost" onclick={() => (manualText = "")}>{$_("play.clear")}</Button>
@@ -453,10 +483,7 @@
       </div>
     </section>
     {#if config}
-      <aside
-        aria-label="Reading controls"
-        class="border-border min-w-0 border-t pt-3 md:border-t-0 md:border-l md:pt-0 md:pl-4"
-      >
+      <aside aria-label="Reading controls" class="flex min-w-0 flex-col">
         <QuickSettings bind:config />
       </aside>
     {/if}

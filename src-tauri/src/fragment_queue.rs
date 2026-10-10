@@ -82,11 +82,16 @@ impl FragmentQueue {
         );
     }
 
-    /// Clear all fragments from the queue.
+    /// Clear all fragments from the queue and reset the transport state.
+    ///
+    /// `speak_queued` clears before refilling, so a stop flag left set here
+    /// would bail every subsequent queued reading at its first fragment check.
     pub fn clear(&self) {
         let mut fragments = self.fragments.lock().unwrap();
         fragments.clear();
         self.current_index.store(usize::MAX, Ordering::SeqCst);
+        self.clear_stop_flag();
+        self.set_status(QueueStatus::Idle);
         log::debug!("[FragmentQueue] Queue cleared");
     }
 
@@ -473,5 +478,21 @@ mod tests {
 
         queue.clear_stop_flag();
         assert!(!queue.should_stop());
+    }
+
+    #[test]
+    fn test_clear_resets_stop_flag_and_status() {
+        let queue = FragmentQueue::new();
+        queue.add_fragment(create_test_fragment("Test", 0, 1));
+
+        queue.stop();
+        assert!(queue.should_stop());
+        assert_eq!(queue.status(), QueueStatus::Stopped);
+
+        // speak_queued clears before refilling; a flag left set here would
+        // silently no-op every later queued reading.
+        queue.clear();
+        assert!(!queue.should_stop());
+        assert_eq!(queue.status(), QueueStatus::Idle);
     }
 }

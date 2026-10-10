@@ -36,7 +36,9 @@
 </script>
 
 <!-- Compact settings panel for quick access to the most-used playback and listening controls -->
-<div class="border-border divide-border grid min-w-0 grid-cols-1 divide-y border-y">
+<div
+  class="bg-card border-border divide-border flex min-w-0 flex-col divide-y rounded-lg border p-3 shadow-sm"
+>
   <!-- Show clipboard listener errors (e.g. permission denied, backend failure) -->
   {#if error}
     <p class="text-destructive text-xs">{error}</p>

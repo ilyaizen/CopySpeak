@@ -22,6 +22,9 @@ import { hudStore } from "./hud-store.svelte.js";
 import { validCaptionAlignment, type CaptionAlignment } from "$lib/models/captions.js";
 import type { HudCaptionPayload } from "$lib/types/hud.js";
 
+/** Wall seconds the skip buttons and arrow keys move by. */
+export const SKIP_SECONDS = 5;
+
 class PlaybackStore {
   isPlaying = $state(false);
   isPaused = $state(false);
@@ -83,26 +86,22 @@ class PlaybackStore {
   constructor() {
     // Initialize fragment queue with handlers
     this._fragmentQueue = new FragmentQueue({
-      onFragmentPlay: async (fragment: QueuedFragment) => {
-        console.log(
-          "[PlaybackStore] onFragmentPlay: index",
-          fragment.index,
-          "total",
-          fragment.total
-        );
-        this.currentFragmentIndex = fragment.index;
-        this.totalFragments = fragment.total;
-        this._fragmentText = fragment.text;
-        this._fragmentCaptions = validCaptionAlignment(fragment.captions)
-          ? fragment.captions
-          : null;
-        await this.handleAudioReady(fragment.audioBase64);
-      },
+      onFragmentPlay: (fragment: QueuedFragment) => this._activateFragment(fragment),
       onQueueComplete: () => {
         console.log("[PlaybackStore] onQueueComplete");
         this.finishPlayback();
       }
     });
+  }
+
+  /** Point the audible pipeline at a fragment: caption state, decode, render, play. */
+  private _activateFragment(fragment: QueuedFragment): Promise<void> {
+    console.log("[PlaybackStore] activating fragment:", fragment.index, "of", fragment.total);
+    this.currentFragmentIndex = fragment.index;
+    this.totalFragments = fragment.total;
+    this._fragmentText = fragment.text;
+    this._fragmentCaptions = validCaptionAlignment(fragment.captions) ? fragment.captions : null;
+    return this.handleAudioReady(fragment.audioBase64);
   }
 
   setAudioElement(el: HTMLAudioElement | null) {
@@ -494,7 +493,70 @@ class PlaybackStore {
     void this._emit?.("playback-finished", null);
   }
 
+  /**
+   * Rewind by wall seconds. Stays entirely in the webview: the PCM scheduler
+   * rebuilds its source timeline, the audio element seeks its media clock -
+   * no Tauri round-trip, so the action is instant on both paths.
+   */
+  skipBackward(seconds: number = SKIP_SECONDS): void {
+    if (this._pcmScheduler) {
+      this._pcmScheduler.skipBackward(seconds);
+      return;
+    }
+    const el = this._audioEl;
+    if (!el || !this.isPlaying) return;
+    const delta = seconds * (el.playbackRate || 1);
+    if (el.currentTime - delta >= 0 || !Number.isFinite(el.duration)) {
+      el.currentTime = Math.max(0, el.currentTime - delta);
+      return;
+    }
+    // Cross the fragment boundary: replay the previous fragment from its tail.
+    const deficit = delta - el.currentTime;
+    const previous = this._fragmentQueue.previousFragment();
+    if (!previous) {
+      el.currentTime = 0;
+      return;
+    }
+    void this._playPreviousFragment(previous, deficit);
+  }
+
+  /**
+   * Fast-forward by wall seconds. Hitting the element's duration advances to
+   * the next queued fragment naturally via its ended handler.
+   */
+  skipForward(seconds: number = SKIP_SECONDS): void {
+    if (this._pcmScheduler) {
+      this._pcmScheduler.skipForward(seconds);
+      return;
+    }
+    const el = this._audioEl;
+    if (!el || !this.isPlaying) return;
+    const delta = seconds * (el.playbackRate || 1);
+    if (Number.isFinite(el.duration)) {
+      el.currentTime = Math.min(el.currentTime + delta, el.duration);
+    } else {
+      el.currentTime += delta;
+    }
+  }
+
+  /**
+   * Rewind across a fragment boundary: replay a retained earlier fragment and
+   * seek into its tail by `deficit` wall seconds. The interrupted fragment
+   * then auto-advances afterwards from its start (small boundary overlap,
+   * accepted); a deficit larger than the retained fragment clamps to its start.
+   */
+  private async _playPreviousFragment(fragment: QueuedFragment, deficit: number): Promise<void> {
+    await this._activateFragment(fragment);
+    const el = this._audioEl;
+    if (!el || deficit <= 0) return;
+    const seek = Number.isFinite(el.duration) ? Math.max(0, el.duration - deficit) : 0;
+    if (seek > 0) el.currentTime = seek;
+  }
+
   handleTogglePause() {
+    // Nothing audible (or loading): toggling would play() the idle element and
+    // resurrect stale audio from a previous run.
+    if (!this.isPlaying && !this.isPaused) return;
     if (this._pcmScheduler) {
       if (this.isPaused) {
         this._pcmScheduler.resume();

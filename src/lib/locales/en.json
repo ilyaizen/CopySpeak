@@ -553,7 +553,9 @@
     "pauseTooltip": "Pause",
     "resumeTooltip": "Resume",
     "stopTooltip": "Stop",
-    "abortTooltip": "Abort synthesis or playback"
+    "abortTooltip": "Abort synthesis or playback",
+    "skipBackTooltip": "Back 5 seconds",
+    "skipFwdTooltip": "Forward 5 seconds"
   },
   "history": {
     "title": "History",

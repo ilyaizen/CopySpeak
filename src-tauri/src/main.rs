@@ -771,38 +771,6 @@ fn main() {
                 let _ = window.set_focus();
             }
         }))
-        .plugin(
-            tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(move |app, _shortcut, event| {
-                    if event.state() == ShortcutState::Pressed {
-                        log::info!("Global hotkey triggered: speak from clipboard");
-                        let app_handle = app.clone();
-                        tauri::async_runtime::spawn(async move {
-                            let config: State<std::sync::Mutex<config::AppConfig>> =
-                                app_handle.state();
-                            let player: State<std::sync::Mutex<audio::AudioPlayer>> =
-                                app_handle.state();
-                            let history: State<std::sync::Mutex<history::HistoryLog>> =
-                                app_handle.state();
-                            let telemetry_state: State<std::sync::Mutex<telemetry::TelemetryLog>> =
-                                app_handle.state();
-                            if let Err(e) = commands::speak_now(
-                                app_handle.clone(),
-                                config,
-                                player,
-                                history,
-                                telemetry_state,
-                                None,
-                            )
-                            .await
-                            {
-                                log::error!("Failed to speak from hotkey: {}", e);
-                            }
-                        });
-                    }
-                })
-                .build(),
-        )
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
             commands::set_config,

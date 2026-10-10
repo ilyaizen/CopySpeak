@@ -452,6 +452,8 @@ export type TranslationKeys =
   | "play.resumeTooltip"
   | "play.stopTooltip"
   | "play.abortTooltip"
+  | "play.skipBackTooltip"
+  | "play.skipFwdTooltip"
   | "history.title"
   | "history.loading"
   | "history.empty"

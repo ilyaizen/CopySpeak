@@ -301,3 +301,78 @@ it("keeps streaming captions on the audible fragment and rejects chunks after St
   expect(receive).not.toHaveBeenCalled();
   expect(emitTo).not.toHaveBeenCalled();
 });
+
+it("does not resurrect idle audio when pause is toggled with nothing playing", () => {
+  expect(playbackStore.isPlaying).toBe(false);
+  playbackStore.handleTogglePause();
+  expect(playSpy).not.toHaveBeenCalled();
+  expect(playbackStore.isPaused).toBe(false);
+});
+
+it("delegates skips to the PCM scheduler while streaming", async () => {
+  vi.stubGlobal(
+    "AudioContext",
+    class {
+      state = "running";
+      currentTime = 0;
+      destination = {};
+      createGain = () => ({ gain: { value: 1 }, connect() {}, disconnect() {} });
+      resume = vi.fn();
+      suspend = vi.fn();
+      close = vi.fn();
+    }
+  );
+  const backward = vi
+    .spyOn(PcmStreamScheduler.prototype, "skipBackward")
+    .mockImplementation(() => {});
+  const forward = vi
+    .spyOn(PcmStreamScheduler.prototype, "skipForward")
+    .mockImplementation(() => {});
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  playbackStore.handleStreamChunk({
+    audio_base64: "",
+    sample_rate: 24000,
+    channels: 1,
+    bits_per_sample: 16,
+    fragment_index: 0,
+    fragment_total: 1,
+    is_final: false
+  });
+  expect(playbackStore.isPlaying).toBe(true);
+  playbackStore.skipBackward();
+  expect(backward).toHaveBeenCalledWith(5);
+  playbackStore.skipForward();
+  expect(forward).toHaveBeenCalledWith(5);
+  playbackStore.handleStop();
+});
+
+it("skips the element clock by wall seconds on the element path", async () => {
+  vi.spyOn(audio, "duration", "get").mockReturnValue(10);
+  await sendAudio();
+  expect(playbackStore.isPlaying).toBe(true);
+  audio.currentTime = 4;
+  playbackStore.skipForward();
+  expect(audio.currentTime).toBe(9);
+  playbackStore.skipForward();
+  expect(audio.currentTime).toBe(10);
+  audio.currentTime = 1;
+  playbackStore.skipBackward();
+  expect(audio.currentTime).toBe(0);
+});
+
+it("rewinds across a fragment boundary through the retained previous fragment", async () => {
+  vi.spyOn(audio, "duration", "get").mockReturnValue(2);
+  await sendAudio(0);
+  await sendAudio(1);
+  audio.dispatchEvent(new Event("ended"));
+  await vi.waitFor(() => expect(playbackStore.currentFragmentIndex).toBe(1));
+  audio.currentTime = 0.5;
+  // One second back from 0.5s into the fragment: 0.5s inside it, 0.5s owed to
+  // the retained previous fragment, played from its tail.
+  playbackStore.skipBackward(1);
+  await vi.waitFor(() => expect(audio.currentTime).toBeCloseTo(1.5));
+  expect(playbackStore.currentFragmentIndex).toBe(0);
+  // When the rewind target ends, the interrupted fragment follows from its start.
+  audio.dispatchEvent(new Event("ended"));
+  await vi.waitFor(() => expect(playbackStore.currentFragmentIndex).toBe(1));
+});

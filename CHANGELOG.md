@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Full transport controls on the Play page** — rewind 5 s, play/pause, stop, and fast-forward 5 s buttons (Space toggles pause, ←/→ skip ±5 s, Escape stops; ignored while typing). Skip works on both playback paths: streamed audio rebuilds its source timeline from a rolling 30 s history, and file-based playback seeks the media clock, stepping back into the previous fragment when a rewind crosses a fragment boundary. Stop now also aborts in-flight synthesis so local engines stop burning GPU/CPU immediately.
+
+### Fixed
+
+- **±5 s skip lands where you are, not where the buffer started** — skip targets were computed from a playhead that collapsed to 0 whenever synthesis lagged playback (stalls, the final drain, right after a skip), so a skip pressed near the end of a reading could replay it from the beginning. Fast-forward debt also consumed the wrong span at non-1× speeds.
+- **Global hotkey no longer fires twice** — the shortcut plugin was registered twice with identical handlers, so one key press could start two readings.
+- **A stopped queue no longer blocks later clipboard readings** — `stop_queue` left a stale stop flag that silently no-op'd every subsequent double-copy / browser reading until restart.
+
+### Changed
+
+- **Cleaner Play page** — the "Paste text here, or copy it twice anywhere." hint and the 1 px separator lines (the sidebar divider and the horizontal rules around the quick settings) are gone; the quick settings now spread evenly down the sidebar instead of packing behind dividers.
+- **Snappier playback edges** — streamed readings now finish the moment their last audio drains instead of idling ~2 s before the HUD hides and blocking `/speak --wait` calls resolve, and first audio starts after ~150 ms of buffering instead of ~250 ms.
+
 ## [0.2.10] - 2026-10-03
 
 ### Changed

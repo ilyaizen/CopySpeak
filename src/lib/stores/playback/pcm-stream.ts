@@ -4,7 +4,12 @@
  * Consumes raw PCM chunks forwarded by the backend as `audio-stream-chunk`
  * Tauri events and schedules them as sequential AudioBufferSourceNodes on the
  * shared AudioContext so speech starts while synthesis is still running
- * (~250ms prebuffer) and continues back-to-back without clicks or gaps.
+ * (~150ms prebuffer) and continues back-to-back without clicks or gaps.
+ *
+ * Rendered buffers are retained in a rolling history so playback can skip:
+ * backward/forward both rebuild the source timeline from a target position,
+ * replaying the already-stretched audio (which keeps the rate it was rendered
+ * at) and letting not-yet-arrived chunks continue seamlessly afterwards.
  */
 import { TimeStretcher, type PcmChannel } from "./time-stretch";
 
@@ -46,8 +51,24 @@ interface ScheduledPosition {
   start: number;
   /** Native seconds consumed per wall second - the speed this audio was rendered at. */
   rate: number;
+  /** Position where this source begins on the virtual media timeline (wall seconds). */
+  mediaStart: number;
   /** Source chunk, for re-stretching if the rate changes before this starts. */
   native: PendingChunk | null;
+}
+
+/**
+ * One rendered buffer retained for skipping. `pos` is the record of its first
+ * playthrough and never mutates, so rebuilds can always derive fresh positions
+ * from the original span; `mediaStart`/`mediaEnd` place it on the media
+ * timeline, which (unlike AudioContext time) keeps moving forward across
+ * skips instead of being re-anchored by them.
+ */
+interface HistoryEntry {
+  buffer: AudioBuffer;
+  mediaStart: number;
+  mediaEnd: number;
+  pos: ScheduledPosition;
 }
 
 export interface PcmStreamSchedulerOptions {
@@ -58,7 +79,7 @@ export interface PcmStreamSchedulerOptions {
 }
 
 /** Audio buffered before the first source node is scheduled. */
-const PREBUFFER_SECONDS = 0.25;
+const PREBUFFER_SECONDS = 0.15;
 /** Small safety offset so the first sample is not scheduled in the past. */
 const START_DELAY_SECONDS = 0.03;
 /**
@@ -67,6 +88,8 @@ const START_DELAY_SECONDS = 0.03;
  * path emits no pagination:complete).
  */
 const IDLE_COMPLETE_MS = 2000;
+/** Wall seconds of rendered audio kept around for rewind. */
+const REWIND_HISTORY_SECONDS = 30;
 
 /** Decode standard base64 into bytes (mirrors the browser atob path). */
 function base64ToBytes(base64: string, prefix: Uint8Array | null): Uint8Array {
@@ -106,9 +129,27 @@ export function pcm16LeToFloat32Channels(
 }
 
 /**
+ * Derive the not-yet-rendered remainder of a history entry's source chunk
+ * after the first `fraction` of its wall span was trimmed by a rebuild, so a
+ * later rate change re-stretches only the audio that is actually left.
+ */
+function trimmedNative(native: PendingChunk | null, fraction: number): PendingChunk | null {
+  if (!native || fraction <= 0) return native;
+  const frames = native.channels[0]?.length ?? 0;
+  const startFrame = Math.floor(frames * fraction);
+  if (startFrame >= frames) return null;
+  return {
+    channels: native.channels.map((channel) => channel.subarray(startFrame)),
+    duration: native.duration - startFrame / native.sampleRate,
+    sampleRate: native.sampleRate,
+    fragmentIndex: native.fragmentIndex
+  };
+}
+
+/**
  * Schedules streamed PCM chunks as gap-free sequential AudioBufferSourceNodes.
  *
- * Chunks accumulate until ~250ms is buffered, then playback starts; every
+ * Chunks accumulate until ~150ms is buffered, then playback starts; every
  * later chunk is scheduled at a running nextStartTime cursor that self-heals
  * to currentTime after an underrun. Volume routes through a GainNode.
  *
@@ -117,6 +158,11 @@ export function pcm16LeToFloat32Channels(
  * natural rate. Positions are tracked in *native* seconds - `duration` and
  * `offset` describe the source audio, and `rate` is the speed the audio was
  * rendered at, which is what converts wall time back to caption time.
+ *
+ * Skips operate on a virtual media timeline (cumulative wall seconds of stream
+ * content): {@link skipBackward} and {@link skipForward} stop the live sources
+ * and reschedule the retained history from the target position, so captions
+ * and position reporting stay exact across repeated skips.
  */
 export class PcmStreamScheduler {
   private readonly _ctx: AudioContext;
@@ -129,6 +175,23 @@ export class PcmStreamScheduler {
   private _activeSources = new Map<AudioBufferSourceNode, ScheduledPosition>();
   /** Ended sources still in the output pipeline, audible for up to outputLatency. */
   private _endedPositions: ScheduledPosition[] = [];
+  /** Rendered buffers retained for rewind, in stream order. */
+  private _history: HistoryEntry[] = [];
+  private _historyWall = 0;
+  /**
+   * Media-timeline position where the next scheduled output begins: cumulative
+   * wall seconds of stream content, advanced by both playback and skips.
+   */
+  private _mediaEnd = 0;
+  /**
+   * Where the playhead rests when no scheduled source covers "now" (synthesis
+   * stall, final drain, or the START_DELAY window after a rebuild). Without it
+   * {@link _mediaNow} collapses to 0 there and a skip would jump to the
+   * timeline start instead of moving relative to the stalled position.
+   */
+  private _stallPosition = 0;
+  /** Wall seconds of audio still to be dropped from arriving chunks (fast-forward past the buffered frontier). */
+  private _skipDebtWall = 0;
   private _started = false;
   private _nextStartTime = 0;
   private _firstChunkAt: number | null = null;
@@ -220,7 +283,7 @@ export class PcmStreamScheduler {
    * on pause; no progress is reported in an underrun.
    */
   getPlaybackPosition(): { fragmentIndex: number; positionMs: number } | null {
-    const audible = this._ctx.currentTime - Math.max(0, this._ctx.outputLatency || 0);
+    const audible = this._audibleNow();
     this._endedPositions = this._endedPositions.filter(
       (position) => position.start + position.duration / position.rate > audible
     );
@@ -236,10 +299,143 @@ export class PcmStreamScheduler {
     return null;
   }
 
+  /** Rewind by the given wall seconds, clamped to the retained history. */
+  skipBackward(seconds: number): void {
+    if (!Number.isFinite(seconds) || seconds <= 0) return;
+    if (!this._started || this._history.length === 0) return;
+    const target = Math.max(this._mediaNow() - seconds, this._history[0].mediaStart);
+    this._rebuildFrom(target);
+  }
+
+  /**
+   * Fast-forward by the given wall seconds. Skipped-past audio stays in
+   * history, so a matching rewind returns to where the skip started. Skipping
+   * past the buffered frontier banks the remainder as debt that drops
+   * arriving audio, so rapid presses accumulate instead of being lost.
+   */
+  skipForward(seconds: number): void {
+    if (!Number.isFinite(seconds) || seconds <= 0) return;
+    if (!this._started || this._history.length === 0) {
+      this._skipDebtWall += seconds;
+      return;
+    }
+    const target = this._mediaNow() + seconds;
+    if (target >= this._mediaEnd - 1e-9) {
+      this._skipDebtWall += target - this._mediaEnd;
+      this._rebuildFrom(this._mediaEnd);
+    } else {
+      this._rebuildFrom(target);
+    }
+  }
+
+  /** AudioContext time of the audio reaching the speakers. */
+  private _audibleNow(): number {
+    return this._ctx.currentTime - Math.max(0, this._ctx.outputLatency || 0);
+  }
+
+  /** Current position on the media timeline, from the sources covering "now". */
+  private _mediaNow(): number {
+    const audible = this._audibleNow();
+    let now = this._stallPosition;
+    for (const position of [...this._endedPositions, ...this._activeSources.values()]) {
+      // Sources scheduled ahead of the playhead do not advance "now".
+      if (position.start > audible) continue;
+      const wall = position.duration / position.rate;
+      const played = Math.max(0, Math.min(audible - position.start, wall));
+      now = Math.max(now, position.mediaStart + played);
+    }
+    return now;
+  }
+
+  /**
+   * Stop the live sources and reschedule the retained history from
+   * `mediaTarget` onward as a contiguous timeline starting now. History
+   * entries and their original positions are never mutated, so repeated skips
+   * (including rewinding back over a forward skip) stay exact.
+   */
+  private _rebuildFrom(mediaTarget: number): void {
+    for (const source of this._activeSources.keys()) {
+      source.onended = null;
+      try {
+        source.stop();
+      } catch {
+        // Already stopped or never started - nothing to do.
+      }
+    }
+    this._activeSources.clear();
+    this._endedPositions = [];
+    // The rebuild anchors the playhead here; until the rescheduled sources
+    // become audible, this is the position skips must operate from.
+    this._stallPosition = mediaTarget;
+
+    const index = this._history.findIndex((entry) => entry.mediaEnd > mediaTarget + 1e-9);
+    if (index === -1) {
+      // Target sits at or past the buffered frontier: resume from an empty
+      // timeline; arriving chunks (minus skip debt) continue from the cursor.
+      this._nextStartTime = this._ctx.currentTime + START_DELAY_SECONDS;
+    } else {
+      const first = this._history[index];
+      const firstWall = first.mediaEnd - first.mediaStart;
+      const intoWall = Math.max(0, Math.min(mediaTarget - first.mediaStart, firstWall));
+      let at = this._ctx.currentTime + START_DELAY_SECONDS;
+      for (let i = index; i < this._history.length; i++) {
+        const entry = this._history[i];
+        const into = i === index ? intoWall : 0;
+        const wall = entry.mediaEnd - entry.mediaStart;
+        const fraction = wall > 0 ? into / wall : 0;
+        const position: ScheduledPosition = {
+          fragmentIndex: entry.pos.fragmentIndex,
+          offset: entry.pos.offset + entry.pos.duration * fraction,
+          duration: entry.pos.duration * (1 - fraction),
+          start: at,
+          rate: entry.pos.rate,
+          mediaStart: entry.mediaStart + into,
+          native: trimmedNative(entry.pos.native, fraction)
+        };
+        const source = this._ctx.createBufferSource();
+        source.buffer = entry.buffer;
+        source.connect(this._gain);
+        source.onended = () => this._handleSourceEnded(source);
+        source.start(at, into);
+        this._activeSources.set(source, position);
+        at += wall - into;
+      }
+      this._nextStartTime = at;
+      this._started = true;
+    }
+    if (this._finished && !this.isActive()) this._complete();
+  }
+
+  /** Retain a rendered buffer for skipping, evicting fully-played audio past the cap. */
+  private _pushHistory(buffer: AudioBuffer, position: ScheduledPosition, mediaStart: number): void {
+    const entry: HistoryEntry = {
+      buffer,
+      mediaStart,
+      mediaEnd: mediaStart + position.duration / position.rate,
+      pos: position
+    };
+    this._history.push(entry);
+    this._historyWall += entry.mediaEnd - entry.mediaStart;
+    if (this._historyWall <= REWIND_HISTORY_SECONDS) return;
+    const played = this._mediaNow();
+    while (this._historyWall > REWIND_HISTORY_SECONDS && this._history.length > 1) {
+      const oldest = this._history[0];
+      // Never evict audio that has not finished playing: rebuild relies on the
+      // retained timeline being contiguous up to the scheduling frontier.
+      if (oldest.mediaEnd > played) break;
+      this._history.shift();
+      this._historyWall -= oldest.mediaEnd - oldest.mediaStart;
+    }
+  }
+
   /** Feed one decoded chunk event from the backend. */
   handleChunk(payload: StreamChunkPayload): void {
     if (payload.is_final) {
       this.handleFragmentEnd();
+      // The terminal marker is authoritative (the backend emits it on the last
+      // fragment only): complete as soon as the scheduled audio drains rather
+      // than idling out on the fallback timer.
+      this.markQueueComplete();
       return;
     }
     if (payload.fragment_duration_ms !== undefined && !payload.audio_base64) {
@@ -374,6 +570,11 @@ export class PcmStreamScheduler {
     }
     this._activeSources.clear();
     this._endedPositions = [];
+    this._history = [];
+    this._historyWall = 0;
+    this._mediaEnd = 0;
+    this._stallPosition = 0;
+    this._skipDebtWall = 0;
     this._pending = [];
     this._pendingDuration = 0;
     this._started = false;
@@ -452,6 +653,26 @@ export class PcmStreamScheduler {
     native: PendingChunk | null
   ): void {
     if (!channels || channels[0].length === 0) return;
+    const mediaStart = this._mediaEnd;
+    let dropWall = 0;
+    if (this._skipDebtWall > 0) {
+      // Fast-forward debt: drop the leading audio this output covers. Rendered
+      // buffers play at wall rate, so `debt` wall seconds = debt * sampleRate
+      // frames; the native offset accounting still advances (wall * speed), so
+      // captions for the skipped region resolve and the stream continues at the
+      // right position.
+      const frames = channels[0].length;
+      const dropFrames = Math.min(frames, Math.floor(this._skipDebtWall * sampleRate));
+      dropWall = dropFrames / sampleRate;
+      this._skipDebtWall -= dropWall;
+      this._emittedNative += (dropFrames / sampleRate) * this._speed;
+      if (dropFrames >= frames) {
+        this._mediaEnd = mediaStart + dropWall;
+        if (this._finished && !this.isActive()) this._complete();
+        return;
+      }
+      channels = channels.map((channel) => channel.subarray(dropFrames));
+    }
     const buffer = this._ctx.createBuffer(channels.length, channels[0].length, sampleRate);
     for (let c = 0; c < channels.length; c++) {
       buffer.copyToChannel(channels[c], c);
@@ -469,21 +690,33 @@ export class PcmStreamScheduler {
     source.onended = () => this._handleSourceEnded(source);
     source.start(at);
     const nativeDuration = buffer.duration * this._speed;
-    this._activeSources.set(source, {
+    const position: ScheduledPosition = {
       fragmentIndex: this._scheduleFragment ?? 0,
       offset: this._emittedNative,
       duration: nativeDuration,
       start: at,
       rate: this._speed,
+      mediaStart: mediaStart + dropWall,
       native
-    });
+    };
+    this._activeSources.set(source, position);
     this._emittedNative += nativeDuration;
     this._nextStartTime = at + buffer.duration;
+    this._mediaEnd = mediaStart + dropWall + buffer.duration;
+    this._pushHistory(buffer, position, mediaStart + dropWall);
   }
 
   private _handleSourceEnded(source: AudioBufferSourceNode): void {
     const position = this._activeSources.get(source);
-    if (position) this._endedPositions.push(position);
+    if (position) {
+      // Once the caption clock prunes this source from _endedPositions, this is
+      // the only record of where the playhead sits during a stall.
+      this._stallPosition = Math.max(
+        this._stallPosition,
+        position.mediaStart + position.duration / position.rate
+      );
+      this._endedPositions.push(position);
+    }
     this._activeSources.delete(source);
     if (this._finished && !this.isActive()) {
       this._complete();
