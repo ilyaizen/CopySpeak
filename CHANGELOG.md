@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Full transport controls on the Play page** — rewind 5 s, play/pause, stop, and fast-forward 5 s buttons (Space toggles pause, ←/→ skip ±5 s, Escape stops; ignored while typing). Skip works on both playback paths: streamed audio rebuilds its source timeline from a rolling 30 s history, and file-based playback seeks the media clock, stepping back into the previous fragment when a rewind crosses a fragment boundary. Stop now also aborts in-flight synthesis so local engines stop burning GPU/CPU immediately.
 
+- **Spanish (`es`) interface language** — selectable in Settings and on the landing page. Translations are managed in Crowdin (`crowdin.yml`); the Spanish text is a draft until reviewers approve it there.
+
 ### Fixed
 
 - **±5 s skip lands where you are, not where the buffer started** — skip targets were computed from a playhead that collapsed to 0 whenever synthesis lagged playback (stalls, the final drain, right after a skip), so a skip pressed near the end of a reading could replay it from the beginning. Fast-forward debt also consumed the wrong span at non-1× speeds.

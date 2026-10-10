@@ -35,3 +35,4 @@ DO_NOT_TOUCH/
 /browser-extension/test-results/
 /scripts/debug-beep-fuzz.ts
 nul
+.crowdin/

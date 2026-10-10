@@ -1,0 +1,7 @@
+# Crowdin CLI config. Project ID is not secret, so it lives here. Token comes from `crowdin login` (~/.crowdin.yml), never from this file.
+# en.json is the source; es is written to src/lib/locales/es.json.
+project_id: "920987"
+
+files:
+  - source: "/src/lib/locales/en.json"
+    translation: "/src/lib/locales/%two_letters_code%.json"

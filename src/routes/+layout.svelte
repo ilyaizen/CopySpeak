@@ -16,6 +16,7 @@
   import { playbackStore } from "$lib/stores/playback-store.svelte";
   import { setLocale, waitForI18nReady } from "$lib/i18n";
   import { isRtl } from "$lib/i18n/store";
+  import { isSupportedLocale } from "$lib/i18n/utils";
   import ThemeToggle from "$lib/components/theme-toggle.svelte";
   import { saveBar } from "$lib/stores/save-bar.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
@@ -99,16 +100,12 @@
         setMode("dark");
       }
 
-      // Sync locale
-      const savedLocale = config.general.locale;
-      // Only English is supported at the moment because other locales are managed externally
-      // and may have unstable keys during pre-production.
-      if (savedLocale === "en") {
+      // Sync locale; anything outside the supported list falls back to en
+      const savedLocale: string = config.general.locale;
+      if (isSupportedLocale(savedLocale)) {
         setLocale(savedLocale);
       } else {
-        if (savedLocale) {
-          console.warn(`Locale ${savedLocale} is not supported yet, falling back to en`);
-        }
+        console.warn(`Locale ${savedLocale} is not supported, falling back to en`);
         setLocale("en");
       }
 

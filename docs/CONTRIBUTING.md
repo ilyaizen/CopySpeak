@@ -271,24 +271,22 @@ Documentation improvements are highly valued! You can contribute by:
 
 ## 🌍 Internationalization (i18n)
 
-### DO NOT TOUCH Directory
+### Adding or Changing Strings
 
-**⚠️ CRITICAL: Do NOT modify or touch files in `src/lib/locales/DO_NOT_TOUCH/`**
+UI strings live in `src/lib/locales/en.json`, the source of truth. Translations are managed in [Crowdin](https://crowdin.com/project/copyspeak).
 
-This directory contains non-English translations (Arabic, Spanish, Hebrew) that are managed externally. During pre-production, translation keys change frequently as the app evolves.
+- Add or change English strings only in `en.json`, then run `node scripts/generate-i18n-types.js`.
+- Do not hand-edit other locale files such as `src/lib/locales/es.json`. Crowdin overwrites them on download.
+- A key missing from a locale falls back to English.
 
-**Why this matters:**
+### Syncing with Crowdin (maintainers)
 
-- Translation keys are unstable during development
-- External translators handle these files
-- Any manual edits will be overwritten
+Set `CROWDIN_PROJECT_ID` and `CROWDIN_PERSONAL_TOKEN` in the environment. The config lives in `crowdin.yml`, and the token is never stored in the repo.
 
-**If you need to add new translatable strings:**
+- `crowdin upload sources` pushes `en.json` after English changes.
+- `crowdin download translations` writes finished translations into `src/lib/locales/`.
 
-- Add new keys only to the English locale file (`en.json`)
-- Do NOT manually update non-English files in DO_NOT_TOUCH
-
-The system will automatically sync translations once keys stabilize for release.
+A new locale also needs a `register()` call in `src/lib/i18n/index.ts` and an entry in `getSupportedLocales()` in `src/lib/i18n/utils.ts`.
 
 ## 🤝 Community Guidelines
 

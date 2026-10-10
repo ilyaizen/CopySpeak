@@ -2,13 +2,13 @@ import { init, register, locale as localeStore, isLoading } from "svelte-i18n";
 import { get } from "svelte/store";
 import type { SupportedLocale } from "$lib/types";
 
-// Register translation dictionaries
-// NOTE: Non-English translations are managed externally in src-web/src/lib/locales/DO_NOT_TOUCH/
-// During pre-production, translation keys change frequently - only English is stable
+// Register translation catalogs. en.json is the source of truth; other locales are downloaded
+// from Crowdin into src/lib/locales/<code>.json. Keys missing from a locale fall back to en.
+// Keep in sync with getSupportedLocales() in utils.ts.
 register("en", () => import("$lib/locales/en.json"));
-// register("es", () => import("$lib/locales/DO_NOT_TOUCH/es.json"));
-// register("ar", () => import("$lib/locales/DO_NOT_TOUCH/ar.json"));
-// register("he", () => import("$lib/locales/DO_NOT_TOUCH/he.json"));
+register("es", () => import("$lib/locales/es.json"));
+// register("ar", () => import("$lib/locales/ar.json"));
+// register("he", () => import("$lib/locales/he.json"));
 
 // Initialize with default locale
 // Actual locale will be set from AppConfig after load
@@ -22,6 +22,7 @@ export { localeStore as locale };
 
 // Helper function to set locale programmatically
 export function setLocale(newLocale: SupportedLocale): void {
+  document.documentElement.lang = newLocale;
   void localeStore.set(newLocale);
 }
 
