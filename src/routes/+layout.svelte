@@ -14,9 +14,8 @@
   import { TooltipProvider } from "#lib/components/ui/tooltip/index.js";
   import GlobalPlayer from "#lib/components/global-player.svelte";
   import { playbackStore } from "#lib/stores/playback-store.svelte";
-  import { setLocale, waitForI18nReady } from "#lib/i18n";
+  import { waitForI18nReady } from "#lib/i18n";
   import { isRtl } from "#lib/i18n/store";
-  import { isSupportedLocale } from "#lib/i18n/utils";
   import ThemeToggle from "#lib/components/theme-toggle.svelte";
   import { saveBar } from "#lib/stores/save-bar.svelte";
   import { Button } from "#lib/components/ui/button/index.js";
@@ -98,15 +97,6 @@
         setMode("light");
       } else if (appearance === "dark") {
         setMode("dark");
-      }
-
-      // Sync locale; anything outside the supported list falls back to en
-      const savedLocale: string = config.general.locale;
-      if (isSupportedLocale(savedLocale)) {
-        setLocale(savedLocale);
-      } else {
-        console.warn(`Locale ${savedLocale} is not supported, falling back to en`);
-        setLocale("en");
       }
 
       const { volume } = config.playback;
