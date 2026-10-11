@@ -576,6 +576,7 @@ pub async fn speak_now(
     history: State<'_, Mutex<HistoryLog>>,
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     text: Option<String>,
+    condense: Option<bool>,
 ) -> Result<(), String> {
     speak_now_internal(
         app,
@@ -586,6 +587,7 @@ pub async fn speak_now(
         text,
         None,
         true,
+        condense.unwrap_or(false),
     )
     .await
 }
@@ -610,6 +612,7 @@ pub async fn regenerate_now(
         Some(text),
         None,
         false,
+        false,
     )
     .await
 }
@@ -633,6 +636,7 @@ pub async fn speak_now_with_profile(
         text,
         profile_id,
         true,
+        false,
     )
     .await
 }
@@ -646,6 +650,7 @@ async fn speak_now_internal(
     text: Option<String>,
     _profile_id: Option<String>,
     reuse_saved_audio: bool,
+    condense: bool,
 ) -> Result<(), String> {
     let text = get_text_or_clipboard(text)?;
     // Play page, hotkey, tray, selection and control server all land here;
@@ -673,6 +678,7 @@ async fn speak_now_internal(
         output_config,
         pagination_config,
         post_process_config,
+        sanitization,
         streaming_enabled,
     ) = {
         let cfg = config.lock().unwrap();
@@ -682,13 +688,16 @@ async fn speak_now_internal(
             cfg.output.clone(),
             cfg.pagination.clone(),
             cfg.post_process.clone(),
+            cfg.sanitization.clone(),
             cfg.playback.streaming_enabled,
         )
     };
 
     // Optional LLM post-processing (e.g., Groq) — best-effort; falls back to
-    // the input text on any failure so synthesis is never blocked.
-    let text = crate::post_process::try_process(text, &post_process_config).await;
+    // the input text on any failure so synthesis is never blocked. Re-runs
+    // sanitization on the condenser OUTPUT (see try_process).
+    let text =
+        crate::post_process::try_process(text, &post_process_config, &sanitization, condense).await;
     let _ = app.emit("reading-started", &text);
 
     log_tts_debug("TTS", &format!("{:?}", active_backend), &text);
@@ -1124,13 +1133,21 @@ pub async fn speak_queued(
         return Err("Nothing to speak".into());
     }
 
-    let (active_backend, tts_config, pagination_config, post_process_config, streaming_enabled) = {
+    let (
+        active_backend,
+        tts_config,
+        pagination_config,
+        post_process_config,
+        sanitization,
+        streaming_enabled,
+    ) = {
         let cfg = config.lock().unwrap();
         (
             cfg.tts.active_backend.clone(),
             cfg.tts.clone(),
             cfg.pagination.clone(),
             cfg.post_process.clone(),
+            cfg.sanitization.clone(),
             cfg.playback.streaming_enabled,
         )
     };
@@ -1141,7 +1158,10 @@ pub async fn speak_queued(
     crate::ABORT_REQUESTED.store(false, Ordering::Relaxed);
 
     // Optional LLM post-processing — best-effort; falls back on failure.
-    let text = crate::post_process::try_process(text, &post_process_config).await;
+    // speak_queued callers (double-copy, browser readings) never request
+    // condensing; re-sanitizes condenser output like speak_now does.
+    let text =
+        crate::post_process::try_process(text, &post_process_config, &sanitization, false).await;
     let _ = app.emit("reading-started", &text);
 
     log_tts_debug("Queue", &format!("{:?}", active_backend), &text);
@@ -1552,7 +1572,13 @@ pub async fn speak_history_entry(
         );
         let _ = app.emit("history-updated", ());
     } else {
-        save_speech_cache(&speech_cache_dir(), &wav_bytes, &engine_str_val, &voice, &text);
+        save_speech_cache(
+            &speech_cache_dir(),
+            &wav_bytes,
+            &engine_str_val,
+            &voice,
+            &text,
+        );
     }
 
     // Show HUD with waveform visualization
@@ -1815,7 +1841,10 @@ mod cache_tests {
         }
         let cached = |i: usize| read_speech_cache(&dir, "edge", "ava", &format!("text {i}"));
         assert!(cached(0).is_none(), "oldest entry is evicted");
-        assert_eq!(cached(CACHE_LIMIT).unwrap().bytes, vec![CACHE_LIMIT as u8; 4]);
+        assert_eq!(
+            cached(CACHE_LIMIT).unwrap().bytes,
+            vec![CACHE_LIMIT as u8; 4]
+        );
         assert_eq!(std::fs::read_dir(&dir).unwrap().count(), CACHE_LIMIT);
         std::fs::remove_dir_all(&dir).unwrap();
     }

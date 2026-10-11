@@ -35,6 +35,18 @@ pub struct PostProcessConfig {
     pub provider_id: String,
     pub prompt: String,
     pub providers: Vec<PostProcessProvider>,
+    /// Minimum input length (in characters) before the condenser runs;
+    /// shorter text is spoken verbatim. 0 = condense everything.
+    #[serde(default = "default_min_chars")]
+    pub min_chars: usize,
+    /// When true, condensing runs only for requests that explicitly ask for
+    /// it (the control server's `condense` field or the CLI `--condense`
+    /// flag); when false, every qualifying text is condensed globally.
+    #[serde(default = "default_require_request_flag")]
+    pub require_request_flag: bool,
+    /// HTTP timeout for the condenser request, in seconds. 0 = no timeout.
+    #[serde(default = "default_timeout_secs")]
+    pub timeout_secs: u64,
     // Legacy single-provider fields (Groq-only era). Folded into `providers`
     // by normalize() and blanked; skip-serialized once empty so a folded
     // config no longer carries them on disk.
@@ -46,6 +58,18 @@ pub struct PostProcessConfig {
 
 fn default_provider_id() -> String {
     "groq".to_string()
+}
+
+fn default_min_chars() -> usize {
+    200
+}
+
+fn default_require_request_flag() -> bool {
+    false
+}
+
+fn default_timeout_secs() -> u64 {
+    5
 }
 
 fn default_providers() -> Vec<PostProcessProvider> {
@@ -153,6 +177,9 @@ impl Default for PostProcessConfig {
             provider_id: default_provider_id(),
             prompt: default_post_process_prompt(),
             providers: default_providers(),
+            min_chars: default_min_chars(),
+            require_request_flag: default_require_request_flag(),
+            timeout_secs: default_timeout_secs(),
             api_key: String::new(),
             model: String::new(),
         }
@@ -253,6 +280,27 @@ mod tests {
         let cfg: PostProcessConfig = serde_json::from_str(r#"{ "enabled": true }"#).unwrap();
         assert!(cfg.prompt.contains("${output}"));
         assert_eq!(cfg.providers.len(), 6);
+    }
+
+    /// Old configs (written before min_chars/require_request_flag/timeout_secs
+    /// existed) must deserialize unchanged to the documented defaults.
+    #[test]
+    fn legacy_config_gains_gating_defaults() {
+        let cfg: PostProcessConfig = serde_json::from_str(r#"{ "enabled": true }"#).unwrap();
+        assert_eq!(cfg.min_chars, 200);
+        assert!(!cfg.require_request_flag);
+        assert_eq!(cfg.timeout_secs, 5);
+    }
+
+    #[test]
+    fn gating_fields_round_trip_and_override() {
+        let cfg: PostProcessConfig = serde_json::from_str(
+            r#"{ "enabled": true, "min_chars": 0, "require_request_flag": true, "timeout_secs": 0 }"#,
+        )
+        .unwrap();
+        assert_eq!(cfg.min_chars, 0);
+        assert!(cfg.require_request_flag);
+        assert_eq!(cfg.timeout_secs, 0); // 0 = never (daemon_idle_timeout_secs convention)
     }
 
     #[test]

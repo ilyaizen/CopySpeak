@@ -340,6 +340,12 @@ export interface PostProcessConfig {
   provider_id: string;
   prompt: string;
   providers: PostProcessProvider[];
+  /** Minimum input length (chars) before the condenser runs; 0 = always. */
+  min_chars: number;
+  /** Condense only requests that explicitly ask (control server / CLI). */
+  require_request_flag: boolean;
+  /** Condenser HTTP timeout in seconds; 0 = none. Config-file-only. */
+  timeout_secs: number;
 }
 
 export interface AppConfig {

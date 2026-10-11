@@ -144,6 +144,9 @@
       enabled: false,
       provider_id: "groq",
       prompt: "",
+      min_chars: 200,
+      require_request_flag: false,
+      timeout_secs: 5,
       providers: [
         {
           id: "groq",

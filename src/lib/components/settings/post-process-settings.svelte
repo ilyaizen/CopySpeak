@@ -137,6 +137,36 @@ Text:
   {#if localConfig.post_process.enabled}
     <div class="border-border mt-4 space-y-4 border-t pt-4">
       <SettingRow
+        label={$_("settings.postProcess.minChars")}
+        tooltip={$_("settings.postProcess.minCharsTooltip")}
+      >
+        <Input
+          type="number"
+          value={String(localConfig.post_process.min_chars)}
+          onchange={(e) => {
+            if (!localConfig) return;
+            // SAFETY: handler is bound to this <input type="number">; its
+            // target is always an HTMLInputElement.
+            const raw = (e.target as HTMLInputElement).value;
+            const parsed = Number(raw);
+            localConfig.post_process.min_chars =
+              raw === "" || Number.isNaN(parsed) ? 200 : Math.max(0, Math.floor(parsed));
+          }}
+          class="w-24"
+        />
+      </SettingRow>
+
+      <SettingRow
+        label={$_("settings.postProcess.requireRequestFlag")}
+        tooltip={$_("settings.postProcess.requireRequestFlagTooltip")}
+      >
+        <Switch
+          id="post-process-require-request-flag"
+          bind:checked={localConfig.post_process.require_request_flag}
+        />
+      </SettingRow>
+
+      <SettingRow
         label={$_("settings.postProcess.provider")}
         tooltip={$_("settings.postProcess.providerTooltip")}
       >

@@ -507,6 +507,7 @@ fn main() {
                                     history,
                                     telemetry_state,
                                     None,
+                                    None,
                                 )
                                 .await
                                 {
@@ -750,6 +751,7 @@ fn main() {
                                 player,
                                 history,
                                 telemetry_state,
+                                None,
                                 None,
                             )
                             .await

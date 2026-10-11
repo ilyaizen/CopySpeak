@@ -6,7 +6,7 @@
 // surfaces them; `try_process()` is the single fallback wrapper that callers
 // in the synthesis pipeline use to keep TTS running on LLM failure.
 
-use crate::config::{PostProcessConfig, PostProcessProvider};
+use crate::config::{PostProcessConfig, PostProcessProvider, SanitizationConfig};
 use log::warn;
 use reqwest::header::{HeaderValue, AUTHORIZATION};
 use reqwest::Client;
@@ -60,7 +60,15 @@ pub async fn process(text: &str, cfg: &PostProcessConfig) -> Result<String, Stri
 
     let user_content = build_prompt(&cfg.prompt, text);
 
-    let client = Client::builder()
+    // timeout_secs > 0 bounds the whole request; 0 = never (the
+    // daemon_idle_timeout_secs convention). Without a timeout a stalled
+    // provider hangs the speak path indefinitely.
+    let builder = if cfg.timeout_secs > 0 {
+        Client::builder().timeout(std::time::Duration::from_secs(cfg.timeout_secs))
+    } else {
+        Client::builder()
+    };
+    let client = builder
         .build()
         .map_err(|e| format!("HTTP client build failed: {e}"))?;
 
@@ -114,15 +122,35 @@ fn is_local_provider(provider: &PostProcessProvider) -> bool {
     provider.base_url.contains("localhost") || provider.base_url.contains("127.0.0.1")
 }
 
+/// Whether this request wants condensing. `require_request_flag: false`
+/// (global mode) condenses every qualifying text; `true` condenses only
+/// callers that explicitly set the flag (control server `condense`, CLI
+/// `--condense`).
+fn condense_requested(cfg: &PostProcessConfig, request_flag: bool) -> bool {
+    !cfg.require_request_flag || request_flag
+}
+
 /// Convenience wrapper used at synthesis sites. Returns the input unchanged
-/// when post-processing is disabled or on any failure; logs a warning so
-/// problems are visible without breaking the spoken output.
-pub async fn try_process(text: String, cfg: &PostProcessConfig) -> String {
-    if !cfg.enabled {
+/// when post-processing is disabled, gated off (length/request flag), or on
+/// any failure; logs a warning so problems are visible without breaking the
+/// spoken output. The sanitized input is re-sanitized on the LLM OUTPUT: the
+/// condenser can reintroduce markup/symbols, and its text goes straight to
+/// the engine.
+pub async fn try_process(
+    text: String,
+    cfg: &PostProcessConfig,
+    sanitization: &SanitizationConfig,
+    request_flag: bool,
+) -> String {
+    if !cfg.enabled || !condense_requested(cfg, request_flag) {
+        return text;
+    }
+    if text.chars().count() < cfg.min_chars {
         return text;
     }
     match process(&text, cfg).await {
         Ok(processed) => {
+            let processed = crate::sanitize::sanitize_text(&processed, sanitization);
             log::info!(
                 "[PostProcess] {} chars -> {} chars",
                 text.len(),
@@ -162,5 +190,52 @@ mod tests {
     fn build_prompt_appends_when_no_placeholder() {
         let out = build_prompt("Rewrite", "BODY");
         assert_eq!(out, "Rewrite\n\nBODY");
+    }
+
+    #[test]
+    fn condense_requested_global_mode_ignores_flag() {
+        let cfg = PostProcessConfig {
+            require_request_flag: false,
+            ..Default::default()
+        };
+        assert!(condense_requested(&cfg, false));
+        assert!(condense_requested(&cfg, true));
+    }
+
+    #[test]
+    fn condense_requested_strict_mode_needs_flag() {
+        let cfg = PostProcessConfig {
+            require_request_flag: true,
+            ..Default::default()
+        };
+        assert!(!condense_requested(&cfg, false));
+        assert!(condense_requested(&cfg, true));
+    }
+
+    /// Below min_chars the condenser must not run: short text returns
+    /// verbatim with no network call (the test text is under 200 chars and
+    /// the provider would fail loudly if contacted).
+    #[tokio::test]
+    async fn try_process_skips_text_below_min_chars() {
+        let cfg = PostProcessConfig {
+            enabled: true,
+            min_chars: 200,
+            ..Default::default()
+        };
+        let sanitization = SanitizationConfig::default();
+        let out = try_process("short clip".to_string(), &cfg, &sanitization, true).await;
+        assert_eq!(out, "short clip");
+    }
+
+    #[tokio::test]
+    async fn try_process_noop_when_disabled() {
+        let cfg = PostProcessConfig {
+            enabled: false,
+            ..Default::default()
+        };
+        let sanitization = SanitizationConfig::default();
+        let text = "x".repeat(500);
+        let out = try_process(text.clone(), &cfg, &sanitization, true).await;
+        assert_eq!(out, text);
     }
 }

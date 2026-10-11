@@ -181,6 +181,7 @@ pub async fn speak_selected_text(
         history,
         telemetry_state,
         Some(selected),
+        None,
     )
     .await
 }
