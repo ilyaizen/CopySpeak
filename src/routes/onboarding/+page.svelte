@@ -3,7 +3,7 @@
   import { goto } from "$app/navigation";
   import { invoke } from "@tauri-apps/api/core";
   import { toast } from "svelte-sonner";
-  import { Button } from "$lib/components/ui/button/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
   import { _ } from "svelte-i18n";
   import {
     Sparkles,
@@ -16,7 +16,7 @@
     AlertCircle,
     RotateCw
   } from "@lucide/svelte";
-  import { installStore } from "$lib/stores/install-store.svelte";
+  import { installStore } from "#lib/stores/install-store.svelte";
 
   // Issue #43 structural fix: onboarding never calls the full `get_config`
   // (its invoke() promise hangs on fresh installs). Everything here runs
@@ -221,8 +221,8 @@
                 type="button"
                 onclick={() => (selectedEngine = choice.id)}
                 class={selectedEngine === choice.id
-                  ? "border-primary ring-primary bg-primary/5 rounded-lg border p-4 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
-                  : "border-border hover:border-primary/60 rounded-lg border p-4 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"}
+                  ? "border-primary ring-primary bg-primary/5 rounded-lg border p-4 text-start transition-all focus-visible:ring-2 focus-visible:outline-none"
+                  : "border-border hover:border-primary/60 rounded-lg border p-4 text-start transition-all focus-visible:ring-2 focus-visible:outline-none"}
               >
                 <div class="flex items-center justify-between gap-3">
                   <div class="flex items-center gap-2">
@@ -288,7 +288,7 @@
                     <p class="text-destructive text-sm">Install failed.</p>
                   </div>
                   <Button variant="outline" size="sm" onclick={startKokoroInstall}>
-                    <RotateCw size={12} class="mr-1" />
+                    <RotateCw size={12} class="me-1" />
                     Retry
                   </Button>
                 </div>
@@ -327,10 +327,10 @@
             {#if isSaving}
               {$_("common.saving")}
             {:else if isInstalling}
-              <Loader2 size={14} class="mr-2 animate-spin" />
+              <Loader2 size={14} class="me-2 animate-spin" />
               Installing…
             {:else if selectedEngine === "kokoro" && !kokoroInstalled}
-              <Download size={14} class="mr-2" />
+              <Download size={14} class="me-2" />
               Install Kokoro & Get Started
             {:else}
               {$_("onboarding.complete")}

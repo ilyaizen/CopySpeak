@@ -1,9 +1,9 @@
-import type { HistoryItem, HistoryStatistics } from "$lib/types";
+import type { HistoryItem, HistoryStatistics } from "#lib/types";
 import {
   generateHistoryHtmlPage,
   generateCompactHtmlReport,
   type HtmlExportOptions
-} from "$lib/models/history";
+} from "#lib/models/history";
 
 export interface ExportProgress {
   stage: "generating" | "downloading" | "complete" | "error";

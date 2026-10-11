@@ -6,7 +6,7 @@ import { PcmStreamScheduler } from "./playback/pcm-stream";
 const { listeners } = vi.hoisted(() => ({
   listeners: new Map<string, (event: { payload: unknown }) => Promise<void>>()
 }));
-vi.mock("$lib/services/tauri.js", () => ({ isTauri: true }));
+vi.mock("#lib/services/tauri.js", () => ({ isTauri: true }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(async (name, callback) => {
     listeners.set(name, callback);

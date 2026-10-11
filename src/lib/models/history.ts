@@ -15,8 +15,8 @@ import type {
   HistoryState,
   AudioFormat,
   TtsEngine
-} from "$lib/types";
-import type { EngineCatalogEntry, VoiceProfile } from "$lib/types";
+} from "#lib/types";
+import type { EngineCatalogEntry, VoiceProfile } from "#lib/types";
 
 /** Restore only settings that history actually records. */
 export function historyProfile(item: HistoryItem, profiles: VoiceProfile[]): VoiceProfile {

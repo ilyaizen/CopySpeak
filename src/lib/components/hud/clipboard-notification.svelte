@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Progress from "$lib/components/ui/progress/progress.svelte";
+  import Progress from "#lib/components/ui/progress/progress.svelte";
 
   let { durationMs }: { durationMs: number } = $props();
 

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { Switch } from "$lib/components/ui/switch/index.js";
-  import { Slider } from "$lib/components/ui/slider/index.js";
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
-  import { listeningStore } from "$lib/stores/listening-store.svelte";
-  import type { AppConfig } from "$lib/types";
+  import { Switch } from "#lib/components/ui/switch/index.js";
+  import { Slider } from "#lib/components/ui/slider/index.js";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
+  import { listeningStore } from "#lib/stores/listening-store.svelte";
+  import type { AppConfig } from "#lib/types";
 
   interface Props {
     config?: AppConfig;
@@ -88,7 +88,7 @@
           step={1}
           bind:value={config.playback.volume}
         />
-        <span class="text-muted-foreground w-9 text-right text-xs tabular-nums"
+        <span class="text-muted-foreground w-9 text-end text-xs tabular-nums"
           >{config.playback.volume}%</span
         >
       </div>
@@ -110,7 +110,7 @@
             speedLive = null;
           }}
         />
-        <span class="text-muted-foreground w-9 text-right text-xs tabular-nums"
+        <span class="text-muted-foreground w-9 text-end text-xs tabular-nums"
           >{(speedLive ?? profileSpeed).toFixed(2)}x</span
         >
       </div>
@@ -132,7 +132,7 @@
             pitchLive = null;
           }}
         />
-        <span class="text-muted-foreground w-9 text-right text-xs tabular-nums"
+        <span class="text-muted-foreground w-9 text-end text-xs tabular-nums"
           >{(pitchLive ?? profilePitch).toFixed(2)}x</span
         >
       </div>

@@ -4,7 +4,7 @@
 </script>
 
 <script lang="ts">
-  import { cn } from "$lib/utils.js";
+  import { cn } from "#lib/utils.js";
   import { getContext, onMount, tick } from "svelte";
 
   let { class: className, value, children, ...restProps }: TabsContentProps = $props();

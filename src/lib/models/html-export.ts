@@ -7,7 +7,7 @@
  * separation of concerns and better maintainability.
  */
 
-import type { HistoryItem, HistoryStatistics } from "$lib/types";
+import type { HistoryItem, HistoryStatistics } from "#lib/types";
 import { formatHistoryDate, formatHistoryDateISO } from "./history";
 import {
   createTemplateContext,

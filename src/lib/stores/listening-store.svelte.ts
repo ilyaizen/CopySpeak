@@ -5,7 +5,7 @@
  * Shared between quick-settings.svelte and app-footer.svelte.
  */
 
-import { isTauri } from "$lib/services/tauri.js";
+import { isTauri } from "#lib/services/tauri.js";
 
 let invoke: typeof import("@tauri-apps/api/core").invoke | null = null;
 let listenFn: typeof import("@tauri-apps/api/event").listen | null = null;

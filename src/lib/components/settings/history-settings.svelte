@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
-  import { Switch } from "$lib/components/ui/switch/index.js";
-  import { Slider } from "$lib/components/ui/slider/index.js";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import InfoTooltip from "$lib/components/ui/info-tooltip.svelte";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
+  import { Switch } from "#lib/components/ui/switch/index.js";
+  import { Slider } from "#lib/components/ui/slider/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import InfoTooltip from "#lib/components/ui/info-tooltip.svelte";
   import {
     AlertDialog,
     AlertDialogAction,
@@ -14,8 +14,8 @@
     AlertDialogHeader,
     AlertDialogTitle,
     AlertDialogTrigger
-  } from "$lib/components/ui/alert-dialog/index.js";
-  import type { AutoDeleteMode } from "$lib/types";
+  } from "#lib/components/ui/alert-dialog/index.js";
+  import type { AutoDeleteMode } from "#lib/types";
   import { _ } from "svelte-i18n";
 
   let { localConfig = $bindable(), onRunCleanup } = $props();
@@ -64,7 +64,7 @@
     </h4>
 
     <div class="space-y-4">
-      <label class="flex items-center space-x-2">
+      <label class="flex items-center gap-2">
         <input
           type="radio"
           name="auto_delete"
@@ -94,7 +94,7 @@
         />
       {/if}
 
-      <label class="flex items-center space-x-2">
+      <label class="flex items-center gap-2">
         <input
           type="radio"
           name="auto_delete"
@@ -106,7 +106,7 @@
         <span class="text-sm">{$_("settings.history.autoDeleteNever")}</span>
       </label>
 
-      <label class="flex items-center space-x-2">
+      <label class="flex items-center gap-2">
         <input
           type="radio"
           name="auto_delete"

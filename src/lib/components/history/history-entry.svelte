@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { cn } from "$lib/utils.js";
-  import { Button } from "$lib/components/ui/button/index.js";
+  import { cn } from "#lib/utils.js";
+  import { Button } from "#lib/components/ui/button/index.js";
   import {
     Copy,
     Check,
@@ -11,9 +11,9 @@
     RotateCcw,
     Trash2
   } from "@lucide/svelte";
-  import { formatHistoryDate } from "$lib/models/history.js";
-  import type { HistoryItem } from "$lib/types";
-  import { isTauri } from "$lib/services/tauri.js";
+  import { formatHistoryDate } from "#lib/models/history.js";
+  import type { HistoryItem } from "#lib/types";
+  import { isTauri } from "#lib/services/tauri.js";
 
   let invoke: typeof import("@tauri-apps/api/core").invoke | null = null;
 
@@ -187,31 +187,31 @@
   <div class="grid grid-cols-2 gap-2 text-xs">
     <div>
       <span class="text-muted-foreground">Engine:</span>
-      <span class="text-card-foreground ml-1 font-medium capitalize">
+      <span class="text-card-foreground ms-1 font-medium capitalize">
         {entry.tts_engine}
       </span>
     </div>
     <div>
       <span class="text-muted-foreground">Voice:</span>
-      <span class="text-card-foreground ml-1 font-medium">
+      <span class="text-card-foreground ms-1 font-medium">
         {entry.voice}
       </span>
     </div>
     <div>
       <span class="text-muted-foreground">Duration:</span>
-      <span class="text-card-foreground ml-1 font-medium">
+      <span class="text-card-foreground ms-1 font-medium">
         {formatDuration(entry.duration_ms ?? 0)}
       </span>
     </div>
     <div>
       <span class="text-muted-foreground">Length:</span>
-      <span class="text-card-foreground ml-1 font-medium">
+      <span class="text-card-foreground ms-1 font-medium">
         {entry.text_length.toLocaleString()} chars
       </span>
     </div>
     <div>
       <span class="text-muted-foreground">Attempts:</span>
-      <span class="text-card-foreground ml-1 font-medium">
+      <span class="text-card-foreground ms-1 font-medium">
         {entry.attempts}
       </span>
     </div>
@@ -223,7 +223,7 @@
         {#if entry.app_name}
           <div>
             <span class="text-muted-foreground">App:</span>
-            <span class="text-card-foreground ml-1">
+            <span class="text-card-foreground ms-1">
               {entry.app_name}
             </span>
           </div>
@@ -231,7 +231,7 @@
         {#if entry.output_path}
           <div>
             <span class="text-muted-foreground">Output:</span>
-            <span class="text-card-foreground ml-1 block max-w-50 truncate">
+            <span class="text-card-foreground ms-1 block max-w-50 truncate">
               {entry.output_path}
             </span>
           </div>

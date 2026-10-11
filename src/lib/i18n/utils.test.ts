@@ -1,7 +1,8 @@
 import { expect, it } from "vite-plus/test";
-import en from "$lib/locales/en.json";
-import es from "$lib/locales/es.json";
-import { isSupportedLocale } from "./utils";
+import en from "#lib/locales/en.json";
+import es from "#lib/locales/es.json";
+import he from "#lib/locales/he.json";
+import { isRtlLocale, isSupportedLocale } from "./utils";
 
 type Catalog = { [key: string]: Catalog | string };
 
@@ -18,12 +19,22 @@ function flattenKeys(catalog: Catalog, prefix = ""): string[] {
 it("accepts only supported locale codes", () => {
   expect(isSupportedLocale("en")).toBe(true);
   expect(isSupportedLocale("es")).toBe(true);
+  expect(isSupportedLocale("he")).toBe(true);
   expect(isSupportedLocale("")).toBe(false);
   expect(isSupportedLocale("xx")).toBe(false);
 });
 
-it("keeps translated catalogs free of keys English does not define", () => {
-  const englishKeys = new Set(flattenKeys(en));
-  const orphans = flattenKeys(es).filter((key) => !englishKeys.has(key));
-  expect(orphans).toEqual([]);
+it("marks only right-to-left locales as rtl", () => {
+  expect(isRtlLocale("he")).toBe(true);
+  expect(isRtlLocale("en")).toBe(false);
+  expect(isRtlLocale("es")).toBe(false);
 });
+
+const translated = { es, he } satisfies Record<string, Catalog>;
+for (const [code, catalog] of Object.entries(translated)) {
+  it(`keeps ${code} free of keys English does not define`, () => {
+    const englishKeys = new Set(flattenKeys(en));
+    const orphans = flattenKeys(catalog).filter((key) => !englishKeys.has(key));
+    expect(orphans).toEqual([]);
+  });
+}

@@ -12,11 +12,11 @@
   import { _ } from "svelte-i18n";
   import { toast } from "svelte-sonner";
   import { Download, X, Loader2, Check, AlertCircle, RotateCw, Trash2 } from "@lucide/svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { portal } from "$lib/utils";
-  import { installStore, type VoiceStatus } from "$lib/stores/install-store.svelte";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { portal } from "#lib/utils";
+  import { installStore, type VoiceStatus } from "#lib/stores/install-store.svelte";
   import type { EngineSetupEntry } from "./engine-meta";
-  import type { VoiceCatalogEntry, EngineCatalogEntry } from "$lib/types";
+  import type { VoiceCatalogEntry, EngineCatalogEntry } from "#lib/types";
 
   let {
     entry,
@@ -203,7 +203,7 @@
               {/if}
               <span class="min-w-0 flex-1">
                 <span class="font-medium">{v.label}</span>
-                <span class="text-muted-foreground ml-1 text-xs">{v.gender ?? ""}</span>
+                <span class="text-muted-foreground ms-1 text-xs">{v.gender ?? ""}</span>
               </span>
 
               {#if st === "installed"}
@@ -222,7 +222,7 @@
                   <AlertCircle size={14} />
                   {#if mode === "per-voice"}
                     <Button variant="ghost" size="sm" onclick={() => retry(v.id)} disabled={busy}>
-                      <RotateCw size={12} class="mr-1" />{$_("engines.retry")}
+                      <RotateCw size={12} class="me-1" />{$_("engines.retry")}
                     </Button>
                   {/if}
                 </span>
@@ -270,11 +270,11 @@
     <div class="border-border flex items-center justify-between gap-2 border-t p-4">
       <span class="text-muted-foreground text-xs">
         {#if busy}
-          <Loader2 size={12} class="mr-1 inline animate-spin" />{$_("engine.setup.installing")}
+          <Loader2 size={12} class="me-1 inline animate-spin" />{$_("engine.setup.installing")}
         {:else if finished && run?.exitCode === 0}
-          <Check size={12} class="mr-1 inline text-emerald-500" />{$_("engines.installDone")}
+          <Check size={12} class="me-1 inline text-emerald-500" />{$_("engines.installDone")}
         {:else if finished}
-          <AlertCircle size={12} class="text-destructive mr-1 inline" />{$_(
+          <AlertCircle size={12} class="text-destructive me-1 inline" />{$_(
             "engines.installFailed"
           )}
         {/if}
@@ -289,7 +289,7 @@
             onclick={() => (confirmingUninstall = true)}
             class="text-destructive"
           >
-            <Trash2 size={14} class="mr-2" />
+            <Trash2 size={14} class="me-2" />
             {$_("engines.uninstall")}
           </Button>
         {/if}
@@ -299,9 +299,9 @@
           disabled={busy || (mode === "per-voice" && selected.size === 0)}
         >
           {#if busy}
-            <Loader2 size={14} class="mr-2 animate-spin" />
+            <Loader2 size={14} class="me-2 animate-spin" />
           {:else}
-            <Download size={14} class="mr-2" />
+            <Download size={14} class="me-2" />
           {/if}
           {isInstalled && mode !== "per-voice"
             ? $_("engines.reinstall")

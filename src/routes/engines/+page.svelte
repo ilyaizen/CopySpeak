@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { invoke } from "$lib/services/tauri";
+  import { invoke } from "#lib/services/tauri";
   import { toast } from "svelte-sonner";
   import { _ } from "svelte-i18n";
-  import { hideSaveBar } from "$lib/stores/save-bar.svelte";
-  import { syncSaveBarOrAutoSave, flushAutoSave } from "$lib/stores/auto-save.svelte";
-  import EngineSetup from "$lib/components/engine/engine-setup.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
+  import { hideSaveBar } from "#lib/stores/save-bar.svelte";
+  import { syncSaveBarOrAutoSave, flushAutoSave } from "#lib/stores/auto-save.svelte";
+  import EngineSetup from "#lib/components/engine/engine-setup.svelte";
+  import { Button } from "#lib/components/ui/button/index.js";
   import { Loader2 } from "@lucide/svelte";
-  import type { AppConfig } from "$lib/types";
+  import type { AppConfig } from "#lib/types";
 
   let localConfig = $state<AppConfig | null>(null);
   let originalConfig = $state<AppConfig | null>(null);

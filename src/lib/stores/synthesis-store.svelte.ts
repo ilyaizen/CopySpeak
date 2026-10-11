@@ -1,5 +1,5 @@
 import { writable } from "svelte/store";
-import { isTauri } from "$lib/services/tauri.js";
+import { isTauri } from "#lib/services/tauri.js";
 
 export const synthesisStore = writable({
   isSynthesizing: false

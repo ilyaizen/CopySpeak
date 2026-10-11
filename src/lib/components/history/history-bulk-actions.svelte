@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
   import { Trash2, Download, CheckSquare, Square, X } from "@lucide/svelte";
 
   let {
@@ -80,7 +80,7 @@
           onclick={onClearSelection}
           class="h-7 px-2 text-xs"
         >
-          <X class="mr-1 h-3 w-3" />
+          <X class="me-1 h-3 w-3" />
           Clear selection
         </Button>
       {/if}
@@ -89,7 +89,7 @@
     {#if selectedCount > 0}
       <div class="flex items-center gap-2">
         <Button variant="outline" size="sm" {disabled} onclick={onExportSelected} class="h-7">
-          <Download class="mr-1 h-3 w-3" />
+          <Download class="me-1 h-3 w-3" />
           Export ({selectedCount})
         </Button>
 
@@ -101,10 +101,10 @@
           class="h-7"
         >
           {#if showDeleteConfirm}
-            <CheckSquare class="mr-1 h-3 w-3" />
+            <CheckSquare class="me-1 h-3 w-3" />
             Confirm delete
           {:else}
-            <Trash2 class="mr-1 h-3 w-3" />
+            <Trash2 class="me-1 h-3 w-3" />
             Delete ({selectedCount})
           {/if}
         </Button>

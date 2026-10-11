@@ -1,15 +1,15 @@
 <script lang="ts">
   import { RefreshCw, Trash2 } from "@lucide/svelte";
 
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Select } from "$lib/components/ui/select/index.js";
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
-  import { Switch } from "$lib/components/ui/switch/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { Input } from "#lib/components/ui/input/index.js";
+  import { Select } from "#lib/components/ui/select/index.js";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
+  import { Switch } from "#lib/components/ui/switch/index.js";
   import { invoke } from "@tauri-apps/api/core";
   import { toast } from "svelte-sonner";
   import { _ } from "svelte-i18n";
-  import type { AppConfig, PostProcessConfig } from "$lib/types";
+  import type { AppConfig, PostProcessConfig } from "#lib/types";
 
   let { localConfig = $bindable() }: { localConfig: AppConfig } = $props();
 

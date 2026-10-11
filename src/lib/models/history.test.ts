@@ -6,7 +6,7 @@ import {
   historyTimeAgo,
   historyProfile
 } from "./history";
-import type { EngineCatalogEntry, VoiceProfile } from "$lib/types";
+import type { EngineCatalogEntry, VoiceProfile } from "#lib/types";
 
 it("shows elapsed time at minute, hour, and day boundaries", () => {
   const now = 200_000_000;

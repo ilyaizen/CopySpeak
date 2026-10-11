@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
-  import { Button } from "$lib/components/ui/button/index.js";
+  import { Input } from "#lib/components/ui/input/index.js";
+  import { Label } from "#lib/components/ui/label/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
   import { Search, Calendar, X, Filter } from "@lucide/svelte";
-  import type { HistoryFilters, HistoryItem } from "$lib/types";
+  import type { HistoryFilters, HistoryItem } from "#lib/types";
 
   let props = $props<{
     items: HistoryItem[];
@@ -54,7 +54,7 @@
       </div>
       {#if hasFilters}
         <Button variant="ghost" size="sm" onclick={resetFilters} class="h-7 px-2 text-xs">
-          <X class="mr-1 h-3 w-3" />
+          <X class="me-1 h-3 w-3" />
           Clear
         </Button>
       {/if}
@@ -72,13 +72,13 @@
             bind:value={searchText}
             placeholder="Search in text content..."
             onkeydown={handleSearchKeyDown}
-            class="pr-8"
+            class="pe-8"
           />
           {#if searchText}
             <Button
               variant="ghost"
               size="icon-sm"
-              class="absolute top-1 right-1 h-7 w-7"
+              class="absolute end-1 top-1 h-7 w-7"
               onclick={() => (searchText = "")}
             >
               <X class="h-3 w-3" />
@@ -99,7 +99,7 @@
               <Button
                 variant="ghost"
                 size="icon-sm"
-                class="absolute top-1 right-1 h-7 w-7"
+                class="absolute end-1 top-1 h-7 w-7"
                 onclick={() => (dateFrom = "")}
               >
                 <X class="h-3 w-3" />
@@ -119,7 +119,7 @@
               <Button
                 variant="ghost"
                 size="icon-sm"
-                class="absolute top-1 right-1 h-7 w-7"
+                class="absolute end-1 top-1 h-7 w-7"
                 onclick={() => (dateTo = "")}
               >
                 <X class="h-3 w-3" />

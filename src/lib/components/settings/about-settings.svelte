@@ -1,16 +1,16 @@
 <script lang="ts">
-  import { Label } from "$lib/components/ui/label/index.js";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
-  import { Switch } from "$lib/components/ui/switch/index.js";
-  import { Badge } from "$lib/components/ui/badge/index.js";
-  import InfoTooltip from "$lib/components/ui/info-tooltip.svelte";
-  import UpdateChecker from "$lib/components/update-checker.svelte";
-  import { openExternal } from "$lib/utils/external-link";
+  import { Label } from "#lib/components/ui/label/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
+  import { Switch } from "#lib/components/ui/switch/index.js";
+  import { Badge } from "#lib/components/ui/badge/index.js";
+  import InfoTooltip from "#lib/components/ui/info-tooltip.svelte";
+  import UpdateChecker from "#lib/components/update-checker.svelte";
+  import { openExternal } from "#lib/utils/external-link";
   import { invoke } from "@tauri-apps/api/core";
-  import { VERSION } from "$lib/version";
+  import { VERSION } from "#lib/version";
   import { _ } from "svelte-i18n";
-  import type { AppConfig } from "$lib/types";
+  import type { AppConfig } from "#lib/types";
 
   let {
     localConfig = $bindable(),

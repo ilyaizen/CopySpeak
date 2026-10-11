@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { Input } from "#lib/components/ui/input/index.js";
   import {
     AlertDialog,
     AlertDialogAction,
@@ -12,15 +12,15 @@
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle
-  } from "$lib/components/ui/alert-dialog/index.js";
+  } from "#lib/components/ui/alert-dialog/index.js";
   import {
     Dialog,
     DialogContent,
     DialogDescription,
     DialogHeader,
     DialogTitle
-  } from "$lib/components/ui/dialog/index.js";
-  import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
+  } from "#lib/components/ui/dialog/index.js";
+  import * as DropdownMenu from "#lib/components/ui/dropdown-menu/index.js";
   import {
     Play,
     RotateCcw,
@@ -35,12 +35,12 @@
   } from "@lucide/svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { revealItemInDir } from "@tauri-apps/plugin-opener";
-  import { Spinner } from "$lib/components/ui/spinner/index.js";
-  import { historyStore } from "$lib/stores/history-store.svelte.js";
-  import { playbackStore } from "$lib/stores/playback-store.svelte";
-  import { groupHistoryReadings, historyVoiceLabel, historyTimeAgo } from "$lib/models/history";
-  import type { AppConfig, EngineCatalogEntry, VoiceProfile } from "$lib/types";
-  import { isTauri } from "$lib/services/tauri";
+  import { Spinner } from "#lib/components/ui/spinner/index.js";
+  import { historyStore } from "#lib/stores/history-store.svelte.js";
+  import { playbackStore } from "#lib/stores/playback-store.svelte";
+  import { groupHistoryReadings, historyVoiceLabel, historyTimeAgo } from "#lib/models/history";
+  import type { AppConfig, EngineCatalogEntry, VoiceProfile } from "#lib/types";
+  import { isTauri } from "#lib/services/tauri";
   import { _ } from "svelte-i18n";
 
   type Reading = ReturnType<typeof groupHistoryReadings>[number];

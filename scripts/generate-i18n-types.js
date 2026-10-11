@@ -53,7 +53,7 @@ function generateTypes(keys) {
  * \`\`\`svelte
  * <script>
  *   import { _ } from 'svelte-i18n';
- *   import type { TranslationKeys } from '$lib/i18n/types';
+ *   import type { TranslationKeys } from '#lib/i18n/types';
  *   
  *   const key: TranslationKeys = 'settings.categories.general';
  * </script>

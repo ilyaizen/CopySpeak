@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn } from "$lib/utils.js";
+  import { cn } from "#lib/utils.js";
   import { Loader2, type LucideProps } from "@lucide/svelte";
 
   let {

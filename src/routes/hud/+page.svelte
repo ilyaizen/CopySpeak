@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import HudOverlay from "$lib/components/hud-overlay.svelte";
+  import HudOverlay from "#lib/components/hud-overlay.svelte";
 
   onMount(async () => {
     // Mark body so the Tailwind base layer skips bg-background for this window
