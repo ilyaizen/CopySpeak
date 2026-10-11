@@ -7,7 +7,7 @@
  * dismissed; the dialog and the engine-setup chip are pure views over this.
  */
 
-import { isTauri } from "$lib/services/tauri.js";
+import { isTauri } from "#lib/services/tauri.js";
 
 export type VoiceStatus = "pending" | "installing" | "done" | "failed";
 

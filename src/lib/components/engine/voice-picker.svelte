@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { cn, portal } from "$lib/utils.js";
+  import { cn, portal } from "#lib/utils.js";
   import { Check, ChevronDown, Pencil, RefreshCw, Search } from "@lucide/svelte";
-  import type { VoiceCatalogEntry } from "$lib/types";
+  import type { VoiceCatalogEntry } from "#lib/types";
 
   let {
     voices,
@@ -145,7 +145,7 @@
     open && "ring-ring ring-1"
   )}
 >
-  <span class="truncate text-left">
+  <span class="truncate text-start">
     {#if selected}
       <span>{selected.label}</span>
     {:else}
@@ -161,13 +161,13 @@
       <div class="border-border relative border-b">
         <Search
           size={14}
-          class="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2"
+          class="text-muted-foreground pointer-events-none absolute start-2.5 top-1/2 -translate-y-1/2"
         />
         <input
           bind:this={searchRef}
           bind:value={query}
           placeholder="Search voices…"
-          class="w-full rounded-t-md py-2 pr-3 pl-8 text-sm outline-none"
+          class="w-full rounded-t-md py-2 ps-8 pe-3 text-sm outline-none"
         />
       </div>
 
@@ -180,7 +180,7 @@
               open = false;
               query = "";
             }}
-            class="text-muted-foreground hover:bg-muted hover:text-foreground flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
+            class="text-muted-foreground hover:bg-muted hover:text-foreground flex w-full items-center gap-2 px-3 py-1.5 text-start text-sm"
           >
             <Pencil size={14} class="shrink-0" />
             <span class="flex-1 truncate">Custom / manual id…</span>
@@ -229,7 +229,7 @@
     onclick={() => choose(v.id)}
     title={v.description ?? v.label}
     class={cn(
-      "flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm",
+      "flex w-full items-center gap-2 px-3 py-1.5 text-start text-sm",
       v.id === value ? "bg-muted" : "hover:bg-muted"
     )}
   >

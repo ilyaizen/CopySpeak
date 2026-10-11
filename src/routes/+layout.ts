@@ -5,9 +5,9 @@
 export const prerender = true;
 export const ssr = false;
 
-import { waitForI18nReady } from "$lib/i18n";
-import { browser } from "$app/environment";
-import type { SupportedLocale } from "$lib/types";
+import { waitForI18nReady } from "#lib/i18n";
+import { browser } from "$app/env";
+import type { SupportedLocale } from "#lib/types";
 
 // Load initial locale before app renders
 export async function load() {

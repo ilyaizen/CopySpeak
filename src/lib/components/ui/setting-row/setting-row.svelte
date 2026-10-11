@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Label } from "$lib/components/ui/label/index.js";
-  import InfoTooltip from "$lib/components/ui/info-tooltip.svelte";
+  import { Label } from "#lib/components/ui/label/index.js";
+  import InfoTooltip from "#lib/components/ui/info-tooltip.svelte";
   import type { Snippet } from "svelte";
 
   let {

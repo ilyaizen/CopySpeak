@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { playbackStore } from "$lib/stores/playback-store.svelte";
+  import { playbackStore } from "#lib/stores/playback-store.svelte";
 
   let audioEl = $state<HTMLAudioElement | null>(null);
 

@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { invoke } from "$lib/services/tauri";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { invoke } from "#lib/services/tauri";
   import { toast } from "svelte-sonner";
   import { goto } from "$app/navigation";
-  import type { AppConfig } from "$lib/types";
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
+  import type { AppConfig } from "#lib/types";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Upload, Download, RotateCcw, Copy } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
-  import { portal } from "$lib/utils";
+  import { portal } from "#lib/utils";
 
   let {
     localConfig,
@@ -156,15 +156,15 @@
 <SettingRow label="Import / Export" tooltip="Export, import, or reset your settings">
   <div class="flex gap-2">
     <Button variant="outline" size="sm" onclick={openExportDialog}>
-      <Upload class="mr-1.5" size={14} />
+      <Upload class="me-1.5" size={14} />
       Export
     </Button>
     <Button variant="outline" size="sm" onclick={openImportDialog}>
-      <Download class="mr-1.5" size={14} />
+      <Download class="me-1.5" size={14} />
       Import
     </Button>
     <Button variant="destructive" size="sm" onclick={() => (showResetDialog = true)}>
-      <RotateCcw class="mr-1.5" size={14} />
+      <RotateCcw class="me-1.5" size={14} />
       Reset
     </Button>
   </div>
@@ -191,11 +191,11 @@
       <div class="border-border flex justify-end gap-2 border-t p-4">
         <Button variant="outline" onclick={closeExportDialog}>Close</Button>
         <Button variant="outline" onclick={copyToClipboard}>
-          <Copy class="mr-2" size={16} />
+          <Copy class="me-2" size={16} />
           Copy
         </Button>
         <Button onclick={downloadJson}>
-          <Upload class="mr-2" size={16} />
+          <Upload class="me-2" size={16} />
           Download
         </Button>
       </div>
@@ -224,7 +224,7 @@
               onclick={() =>
                 document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}
             >
-              <Download class="mr-2" size={16} />
+              <Download class="me-2" size={16} />
               Choose File
             </Button>
           </label>
@@ -248,7 +248,7 @@
           {#if isImporting}
             Importing...
           {:else}
-            <Download class="mr-2" size={16} />
+            <Download class="me-2" size={16} />
             Import Settings
           {/if}
         </Button>

@@ -5,8 +5,8 @@
   import { Play, Settings, Clock, AudioLines, Cpu } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
   import { invoke } from "@tauri-apps/api/core";
-  import { isTauri } from "$lib/services/tauri.js";
-  import type { AppConfig } from "$lib/types";
+  import { isTauri } from "#lib/services/tauri.js";
+  import type { AppConfig } from "#lib/types";
 
   let historyEnabled = $state(false);
   // let effectsEnabled = $state(false);

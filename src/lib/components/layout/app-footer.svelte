@@ -1,18 +1,18 @@
 <script lang="ts">
   import { onDestroy, onMount } from "svelte";
-  import { cn } from "$lib/utils.js";
-  import { listeningStore } from "$lib/stores/listening-store.svelte";
-  import { VERSION } from "$lib/version";
-  import type { AppConfig, VoiceProfile } from "$lib/types";
-  import { isTauri } from "$lib/services/tauri.js";
+  import { cn } from "#lib/utils.js";
+  import { listeningStore } from "#lib/stores/listening-store.svelte";
+  import { VERSION } from "#lib/version";
+  import type { AppConfig, VoiceProfile } from "#lib/types";
+  import { isTauri } from "#lib/services/tauri.js";
   import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger
-  } from "$lib/components/ui/dropdown-menu";
+  } from "#lib/components/ui/dropdown-menu";
   import { Check } from "@lucide/svelte";
-  import { Spinner } from "$lib/components/ui/spinner/index.js";
+  import { Spinner } from "#lib/components/ui/spinner/index.js";
   import { toast } from "svelte-sonner";
   import UpdateChecker from "../update-checker.svelte";
   import { _ } from "svelte-i18n";

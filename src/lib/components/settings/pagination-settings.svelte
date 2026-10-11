@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
-  import { Select } from "$lib/components/ui/select/index.js";
-  import type { AppConfig } from "$lib/types";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
+  import { Select } from "#lib/components/ui/select/index.js";
+  import type { AppConfig } from "#lib/types";
   import { _ } from "svelte-i18n";
 
   let { localConfig = $bindable() }: { localConfig: AppConfig } = $props();

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
   import { Copy, Download, Upload, X } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
-  import { portal } from "$lib/utils";
-  import type { VoiceProfile, TtsEngine, EffectId } from "$lib/types";
+  import { portal } from "#lib/utils";
+  import type { VoiceProfile, TtsEngine, EffectId } from "#lib/types";
 
   type DialogMode = "export" | "import" | "delete";
 
@@ -165,11 +165,11 @@
       <div class="border-border flex justify-end gap-2 border-t p-4">
         <Button variant="outline" onclick={onClose}>Close</Button>
         <Button variant="outline" onclick={copyToClipboard}>
-          <Copy class="mr-2" size={16} />
+          <Copy class="me-2" size={16} />
           Copy
         </Button>
         <Button onclick={downloadJson}>
-          <Download class="mr-2" size={16} />
+          <Download class="me-2" size={16} />
           Download
         </Button>
       </div>
@@ -182,7 +182,7 @@
             class="w-full"
             onclick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}
           >
-            <Upload class="mr-2" size={16} />
+            <Upload class="me-2" size={16} />
             Choose File
           </Button>
         </label>
@@ -201,7 +201,7 @@
       <div class="border-border flex justify-end gap-2 border-t p-4">
         <Button variant="outline" onclick={onClose}>Cancel</Button>
         <Button onclick={validateAndImport} disabled={!importJson.trim()}>
-          <Upload class="mr-2" size={16} />
+          <Upload class="me-2" size={16} />
           Import Profile
         </Button>
       </div>

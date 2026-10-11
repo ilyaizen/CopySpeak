@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Progress from "$lib/components/ui/progress/progress.svelte";
-  import { hudStore } from "$lib/stores/hud-store.svelte.js";
+  import Progress from "#lib/components/ui/progress/progress.svelte";
+  import { hudStore } from "#lib/stores/hud-store.svelte.js";
 
   let {
     estimatedDurationMs,

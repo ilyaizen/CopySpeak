@@ -4,11 +4,11 @@
   import { relaunch } from "@tauri-apps/plugin-process";
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
-  import { cn } from "$lib/utils.js";
+  import { cn } from "#lib/utils.js";
   import { Download } from "@lucide/svelte";
-  import { Spinner } from "$lib/components/ui/spinner/index.js";
-  import type { AppConfig } from "$lib/types";
-  import { VERSION } from "$lib/version";
+  import { Spinner } from "#lib/components/ui/spinner/index.js";
+  import type { AppConfig } from "#lib/types";
+  import { VERSION } from "#lib/version";
 
   let {
     autoCheckOnMount = true,
@@ -213,9 +213,9 @@
     )}
   >
     {#if isChecking || isInstalling}
-      <Spinner class="mr-1 inline h-3 w-3" />
+      <Spinner class="me-1 inline h-3 w-3" />
     {:else if updateAvailable}
-      <Download class="mr-1 inline h-3 w-3" />
+      <Download class="me-1 inline h-3 w-3" />
     {:else}
       <!-- No icon when no update available and not checking -->
     {/if}

@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
-  import { Switch } from "$lib/components/ui/switch/index.js";
-  import HotkeyCapture from "$lib/components/hotkey-capture.svelte";
-  import type { AppConfig } from "$lib/types";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
+  import { Switch } from "#lib/components/ui/switch/index.js";
+  import HotkeyCapture from "#lib/components/hotkey-capture.svelte";
+  import type { AppConfig } from "#lib/types";
 
   let {
     localConfig = $bindable(),

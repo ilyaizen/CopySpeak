@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
-  import { Select } from "$lib/components/ui/select/index.js";
-  import { Slider } from "$lib/components/ui/slider/index.js";
-  import { Switch } from "$lib/components/ui/switch/index.js";
-  import type { AppConfig } from "$lib/types";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
+  import { Select } from "#lib/components/ui/select/index.js";
+  import { Slider } from "#lib/components/ui/slider/index.js";
+  import { Switch } from "#lib/components/ui/switch/index.js";
+  import type { AppConfig } from "#lib/types";
   import { _ } from "svelte-i18n";
 
   let {
@@ -55,7 +55,7 @@
     tooltip={$_("settings.playback.volumeDescription")}
   >
     <div class="flex items-center gap-3">
-      <span class="text-muted-foreground w-10 text-right text-sm tabular-nums"
+      <span class="text-muted-foreground w-10 text-end text-sm tabular-nums"
         >{localConfig.playback.volume}%</span
       >
       <Slider
@@ -103,7 +103,7 @@
         tooltip={$_("settings.playback.duckLevelDescription")}
       >
         <div class="flex items-center gap-3">
-          <span class="text-muted-foreground w-10 text-right text-sm tabular-nums"
+          <span class="text-muted-foreground w-10 text-end text-sm tabular-nums"
             >{localConfig.playback.duck.level_percent}%</span
           >
           <Slider
@@ -123,7 +123,7 @@
       tooltip={$_("settings.playback.duckFadeDescription")}
     >
       <div class="flex items-center gap-3">
-        <span class="text-muted-foreground w-14 text-right text-sm tabular-nums"
+        <span class="text-muted-foreground w-14 text-end text-sm tabular-nums"
           >{localConfig.playback.duck.fade_ms}</span
         >
         <Slider

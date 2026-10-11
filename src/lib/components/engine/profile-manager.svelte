@@ -1,15 +1,15 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
   import {
     DropdownMenu,
     DropdownMenuTrigger,
     DropdownMenuContent,
     DropdownMenuItem
-  } from "$lib/components/ui/dropdown-menu/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Select } from "$lib/components/ui/select/index.js";
-  import { Slider } from "$lib/components/ui/slider/index.js";
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
+  } from "#lib/components/ui/dropdown-menu/index.js";
+  import { Input } from "#lib/components/ui/input/index.js";
+  import { Select } from "#lib/components/ui/select/index.js";
+  import { Slider } from "#lib/components/ui/slider/index.js";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { invoke } from "@tauri-apps/api/core";
   import {
     Copy,
@@ -33,7 +33,7 @@
     EffectId,
     VoiceCatalogEntry,
     VoiceProfile
-  } from "$lib/types";
+  } from "#lib/types";
 
   let { localConfig = $bindable() } = $props<{ localConfig: AppConfig }>();
 
@@ -755,7 +755,7 @@
         <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Sound</p>
         <SettingRow label="Speed">
           <div class="flex w-56 items-center gap-2">
-            <span class="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
+            <span class="text-muted-foreground w-12 shrink-0 text-end text-xs tabular-nums">
               {(speedLive ?? active.speed).toFixed(2)}x
             </span>
             <Slider
@@ -773,7 +773,7 @@
         </SettingRow>
         <SettingRow label="Pitch">
           <div class="flex w-56 items-center gap-2">
-            <span class="text-muted-foreground w-12 shrink-0 text-right text-xs tabular-nums">
+            <span class="text-muted-foreground w-12 shrink-0 text-end text-xs tabular-nums">
               {(pitchLive ?? active.pitch).toFixed(2)}x
             </span>
             <Slider

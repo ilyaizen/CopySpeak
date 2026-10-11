@@ -12,7 +12,7 @@ import {
   type TemplateContext,
   type ThemeColors
 } from "./html-templates";
-import type { HistoryItem, HistoryStatistics } from "$lib/types";
+import type { HistoryItem, HistoryStatistics } from "#lib/types";
 
 // Example 1: Basic HTML Export
 export function basicHtmlExport(items: HistoryItem[]): string {

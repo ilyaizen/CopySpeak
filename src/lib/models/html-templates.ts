@@ -3,7 +3,7 @@
  * Provides a clean separation between HTML structure and data
  */
 
-import type { HistoryItem, HistoryStatistics } from "$lib/types";
+import type { HistoryItem, HistoryStatistics } from "#lib/types";
 import { formatHistoryDate, formatHistoryDateISO } from "./history";
 
 /**

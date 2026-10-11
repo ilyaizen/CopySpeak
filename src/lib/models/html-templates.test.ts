@@ -10,7 +10,7 @@ import {
   LIGHT_THEME,
   DARK_THEME
 } from "./html-templates";
-import type { HistoryItem, HistoryStatistics } from "$lib/types";
+import type { HistoryItem, HistoryStatistics } from "#lib/types";
 
 describe("HTML Template Backend", () => {
   const mockHistoryItem: HistoryItem = {

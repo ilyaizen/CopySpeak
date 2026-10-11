@@ -1,28 +1,28 @@
 <script lang="ts">
-  import GeneralSettings from "$lib/components/settings/general-settings.svelte";
-  import AppearanceSettings from "$lib/components/settings/appearance-settings.svelte";
-  import PlaybackSettings from "$lib/components/settings/playback-settings.svelte";
-  import PaginationSettings from "$lib/components/settings/pagination-settings.svelte";
-  import HotkeySettings from "$lib/components/settings/hotkey-settings.svelte";
-  import SanitizationSettings from "$lib/components/settings/sanitization-settings.svelte";
-  import PostProcessSettings from "$lib/components/settings/post-process-settings.svelte";
-  import HistorySettings from "$lib/components/settings/history-settings.svelte";
-  import ImportExportSettings from "$lib/components/settings/import-export-settings.svelte";
-  import AboutSettings from "$lib/components/settings/about-settings.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Switch } from "$lib/components/ui/switch/index.js";
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Select } from "$lib/components/ui/select/index.js";
-  import { invoke } from "$lib/services/tauri";
+  import GeneralSettings from "#lib/components/settings/general-settings.svelte";
+  import AppearanceSettings from "#lib/components/settings/appearance-settings.svelte";
+  import PlaybackSettings from "#lib/components/settings/playback-settings.svelte";
+  import PaginationSettings from "#lib/components/settings/pagination-settings.svelte";
+  import HotkeySettings from "#lib/components/settings/hotkey-settings.svelte";
+  import SanitizationSettings from "#lib/components/settings/sanitization-settings.svelte";
+  import PostProcessSettings from "#lib/components/settings/post-process-settings.svelte";
+  import HistorySettings from "#lib/components/settings/history-settings.svelte";
+  import ImportExportSettings from "#lib/components/settings/import-export-settings.svelte";
+  import AboutSettings from "#lib/components/settings/about-settings.svelte";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { Switch } from "#lib/components/ui/switch/index.js";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
+  import { Input } from "#lib/components/ui/input/index.js";
+  import { Select } from "#lib/components/ui/select/index.js";
+  import { invoke } from "#lib/services/tauri";
   import { toast } from "svelte-sonner";
   import { onMount, onDestroy } from "svelte";
   import { tick } from "svelte";
   import { _ } from "svelte-i18n";
-  import { hideSaveBar } from "$lib/stores/save-bar.svelte";
-  import { syncSaveBarOrAutoSave, flushAutoSave } from "$lib/stores/auto-save.svelte";
+  import { hideSaveBar } from "#lib/stores/save-bar.svelte";
+  import { syncSaveBarOrAutoSave, flushAutoSave } from "#lib/stores/auto-save.svelte";
 
-  import type { AppConfig, HudPosition } from "$lib/types";
+  import type { AppConfig, HudPosition } from "#lib/types";
 
   let localConfig = $state<AppConfig | null>(null);
   let originalConfig = $state<AppConfig | null>(null);
@@ -228,9 +228,9 @@
           <div class="flex flex-wrap gap-1 md:flex-col">
             {#each tabs as tab}
               <button
-                class="rounded-md px-2 py-1.5 text-left text-sm font-medium whitespace-nowrap transition-colors md:w-full {activeTab ===
+                class="rounded-md px-2 py-1.5 text-start text-sm font-medium whitespace-nowrap transition-colors md:w-full {activeTab ===
                 tab.id
-                  ? 'bg-primary/10 text-primary border-primary border-l-2'
+                  ? 'bg-primary/10 text-primary border-primary border-s-2'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
                 onclick={() => scrollToTab(tab.id)}
               >

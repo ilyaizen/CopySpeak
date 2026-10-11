@@ -1,14 +1,15 @@
 import { init, register, locale as localeStore, isLoading } from "svelte-i18n";
 import { get } from "svelte/store";
-import type { SupportedLocale } from "$lib/types";
+import type { SupportedLocale } from "#lib/types";
+import { isRtlLocale } from "#lib/i18n/utils";
 
 // Register translation catalogs. en.json is the source of truth; other locales are downloaded
 // from Crowdin into src/lib/locales/<code>.json. Keys missing from a locale fall back to en.
 // Keep in sync with getSupportedLocales() in utils.ts.
-register("en", () => import("$lib/locales/en.json"));
-register("es", () => import("$lib/locales/es.json"));
-// register("ar", () => import("$lib/locales/ar.json"));
-// register("he", () => import("$lib/locales/he.json"));
+register("en", () => import("#lib/locales/en.json"));
+register("es", () => import("#lib/locales/es.json"));
+// register("ar", () => import("#lib/locales/ar.json"));
+register("he", () => import("#lib/locales/he.json"));
 
 // Initialize with default locale
 // Actual locale will be set from AppConfig after load
@@ -23,6 +24,8 @@ export { localeStore as locale };
 // Helper function to set locale programmatically
 export function setLocale(newLocale: SupportedLocale): void {
   document.documentElement.lang = newLocale;
+  // On <html> so portaled UI (dialogs, tooltips, toasts) inherits direction too
+  document.documentElement.dir = isRtlLocale(newLocale) ? "rtl" : "ltr";
   void localeStore.set(newLocale);
 }
 

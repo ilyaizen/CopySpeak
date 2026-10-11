@@ -1,6 +1,8 @@
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, lazyPlugins } from "vite-plus";
 import { sveltekit } from "@sveltejs/kit/vite";
+import adapter from "@sveltejs/adapter-static";
+import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -82,7 +84,19 @@ export default defineConfig({
       ...agentToolingIgnores
     ]
   },
-  plugins: lazyPlugins(() => [tailwindcss(), sveltekit()]),
+  plugins: lazyPlugins(() => [
+    tailwindcss(),
+    sveltekit({
+      preprocess: vitePreprocess(),
+      adapter: adapter({
+        pages: "dist",
+        assets: "dist",
+        fallback: "index.html",
+        precompress: false,
+        strict: false
+      })
+    })
+  ]),
   define: {
     "import.meta.env.VITE_IS_VERCEL": process.env.VERCEL === "1" || process.env.VERCEL === "true"
   },

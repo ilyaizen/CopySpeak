@@ -29,7 +29,7 @@ export interface StreamChunkPayload {
   /** Caption metadata sent with the first chunk and at each fragment's end. */
   text?: string;
   fragment_duration_ms?: number;
-  captions?: import("$lib/models/captions").CaptionAlignment | null;
+  captions?: import("#lib/models/captions").CaptionAlignment | null;
 }
 
 /** One decoded chunk of native-rate PCM, still unstretched. */

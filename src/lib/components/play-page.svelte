@@ -1,20 +1,20 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { replaceState } from "$app/navigation";
-  import PlaybackControls from "$lib/components/playback-controls.svelte";
-  import QuickSettings from "$lib/components/quick-settings.svelte";
-  import RecentHistory from "$lib/components/recent-history.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Textarea } from "$lib/components/ui/textarea/index.js";
-  import { playbackStore } from "$lib/stores/playback-store.svelte";
-  import { historyStore } from "$lib/stores/history-store.svelte";
+  import PlaybackControls from "#lib/components/playback-controls.svelte";
+  import QuickSettings from "#lib/components/quick-settings.svelte";
+  import RecentHistory from "#lib/components/recent-history.svelte";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { Textarea } from "#lib/components/ui/textarea/index.js";
+  import { playbackStore } from "#lib/stores/playback-store.svelte";
+  import { historyStore } from "#lib/stores/history-store.svelte";
   import { toast } from "svelte-sonner";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
-  import { isTauri } from "$lib/services/tauri.js";
-  import type { AppConfig } from "$lib/types";
-  import { groupHistoryReadings, historyProfile } from "$lib/models/history";
-  import { activeCaptionWord, buildCaptions, spokenUntil } from "$lib/models/captions";
+  import { isTauri } from "#lib/services/tauri.js";
+  import type { AppConfig } from "#lib/types";
+  import { groupHistoryReadings, historyProfile } from "#lib/models/history";
+  import { activeCaptionWord, buildCaptions, spokenUntil } from "#lib/models/captions";
   import { _ } from "svelte-i18n";
 
   const mockConfig: AppConfig = {
@@ -477,7 +477,7 @@
         {#if manualText}
           <Button variant="ghost" onclick={() => (manualText = "")}>{$_("play.clear")}</Button>
         {/if}
-        <span class="text-muted-foreground ml-auto text-xs whitespace-nowrap tabular-nums">
+        <span class="text-muted-foreground ms-auto text-xs whitespace-nowrap tabular-nums">
           {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
         </span>
       </div>

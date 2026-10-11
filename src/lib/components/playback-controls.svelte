@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Spinner } from "$lib/components/ui/spinner/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { Spinner } from "#lib/components/ui/spinner/index.js";
   import { FastForward, Pause, Play, RotateCcw, Rewind, Square } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
 

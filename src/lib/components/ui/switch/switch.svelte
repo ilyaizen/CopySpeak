@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import { cn } from "$lib/utils.js";
+  import { cn } from "#lib/utils.js";
   import type { HTMLButtonAttributes } from "svelte/elements";
 
   export type SwitchProps = Omit<HTMLButtonAttributes, "onchange"> & {

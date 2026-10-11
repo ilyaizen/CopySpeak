@@ -190,7 +190,7 @@ bun install mode-watcher
 
 ### 1. Button Component
 
-```css
+```text
 base: "rounded-none ...", /* Changed from rounded-md */
 size: {
 	default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -201,27 +201,27 @@ size: {
 
 ### 2. Switch Component
 
-```css
+```text
 base: "rounded-none ...", /* Changed from rounded-full */
 thumb: "rounded-none ...", /* Changed from rounded-full */
 ```
 
 ### 3. Tabs Component
 
-```css
+```text
 TabsList: "rounded-none ...", /* Changed from rounded-lg */
 TabsTrigger: "rounded-none ...", /* Changed from rounded-md */
 ```
 
 ### 4. Input Component
 
-```css
+```text
 base: "rounded-none ..."; /* Changed from rounded-md */
 ```
 
 ### 5. Select Component
 
-```css
+```text
 base: "rounded-none ..."; /* Changed from rounded-md */
 ```
 

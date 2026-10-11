@@ -7,8 +7,8 @@ import type {
   ClipboardCopiedPayload,
   AmplitudePayload,
   HudCaptionPayload
-} from "$lib/types/hud.js";
-import { sameCaptionAlignment } from "$lib/models/captions.js";
+} from "#lib/types/hud.js";
+import { sameCaptionAlignment } from "#lib/models/captions.js";
 
 // Core state
 let barValues = $state<number[]>([]);

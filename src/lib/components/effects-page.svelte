@@ -1,14 +1,14 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { invoke } from "$lib/services/tauri";
-  import { isTauri } from "$lib/services/tauri";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Select } from "$lib/components/ui/select/index.js";
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
+  import { invoke } from "#lib/services/tauri";
+  import { isTauri } from "#lib/services/tauri";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { Select } from "#lib/components/ui/select/index.js";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { toast } from "svelte-sonner";
   import { _ } from "svelte-i18n";
   import { Wand2 } from "@lucide/svelte";
-  import type { AppConfig, EffectId } from "$lib/types";
+  import type { AppConfig, EffectId } from "#lib/types";
 
   const PREVIEW_TEXT =
     "This is a quick preview of the selected audio effect. How does it sound to you?";

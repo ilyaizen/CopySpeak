@@ -1,4 +1,4 @@
-import type { SupportedLocale } from "$lib/types";
+import type { SupportedLocale } from "#lib/types";
 
 // List of RTL (Right-to-Left) locales
 export const RTL_LOCALES: readonly SupportedLocale[] = ["ar", "he"];
@@ -14,9 +14,9 @@ type LocaleNames = { [K in SupportedLocale]?: string };
 export function getLocaleDisplayName(locale: SupportedLocale): string {
   const names: LocaleNames = {
     en: "English",
-    es: "Español"
-    // ar: "العربية",
-    // he: "עברית"
+    es: "Español",
+    he: "עברית"
+    // ar: "العربية"
   };
   return names[locale] || locale;
 }
@@ -26,9 +26,9 @@ export function getLocaleDisplayName(locale: SupportedLocale): string {
 export function getSupportedLocales(): Array<{ value: SupportedLocale; label: string }> {
   return [
     { value: "en", label: "English" },
-    { value: "es", label: "Español" }
-    // { value: "ar", label: "العربية" },
-    // { value: "he", label: "עברית" }
+    { value: "es", label: "Español" },
+    { value: "he", label: "עברית" }
+    // { value: "ar", label: "العربية" }
   ];
 }
 

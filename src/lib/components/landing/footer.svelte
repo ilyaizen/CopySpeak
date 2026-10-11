@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Github from "$lib/components/icons/github.svelte";
-  import { VERSION } from "$lib/version";
+  import Github from "#lib/components/icons/github.svelte";
+  import { VERSION } from "#lib/version";
   // import LanguageSwitcher from "./language-switcher.svelte";
 
   const GITHUB_URL = "https://github.com/ilyaizen/CopySpeak";
@@ -34,7 +34,7 @@
       </div>
     </div>
 
-    <div class="text-muted-foreground mt-6 text-center text-xs sm:text-left">
+    <div class="text-muted-foreground mt-6 text-center text-xs sm:text-start">
       Made with Rust, Svelte, and AI.
     </div>
   </div>

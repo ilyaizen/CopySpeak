@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { locale, setLocale } from "$lib/i18n";
-  import { getSupportedLocales } from "$lib/i18n/utils";
-  import type { SupportedLocale } from "$lib/types";
+  import { locale, setLocale } from "#lib/i18n";
+  import { getSupportedLocales } from "#lib/i18n/utils";
+  import type { SupportedLocale } from "#lib/types";
 
   const languages = getSupportedLocales();
 

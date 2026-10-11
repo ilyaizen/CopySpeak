@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
-  import { Switch } from "$lib/components/ui/switch/index.js";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
+  import { Switch } from "#lib/components/ui/switch/index.js";
   import { _ } from "svelte-i18n";
 
   let {
     localConfig = $bindable()
   }: {
-    localConfig: import("$lib/types").AppConfig;
+    localConfig: import("#lib/types").AppConfig;
   } = $props();
 
   function updateSanitization(updates: Partial<any>) {
@@ -14,14 +14,14 @@
   }
 
   function updateMarkdown(
-    field: keyof import("$lib/types").MarkdownSanitizationConfig,
+    field: keyof import("#lib/types").MarkdownSanitizationConfig,
     value: boolean
   ) {
     localConfig.sanitization.markdown[field] = value;
   }
 
   const markdownToggles: {
-    key: keyof import("$lib/types").MarkdownSanitizationConfig;
+    key: keyof import("#lib/types").MarkdownSanitizationConfig;
     labelKey: string;
     tooltipKey: string;
   }[] = [
@@ -76,7 +76,7 @@
       </SettingRow>
 
       {#if localConfig.sanitization.markdown.enabled}
-        <div class="border-border ml-2 space-y-3 border-l-2 pl-4">
+        <div class="border-border ms-2 space-y-3 border-s-2 ps-4">
           {#each markdownToggles as toggle}
             <SettingRow
               label={$_(`settings.sanitization.${toggle.labelKey}`)}

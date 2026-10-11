@@ -9,9 +9,9 @@
  * sequentially as they arrive from the backend.
  */
 
-import { isTauri } from "$lib/services/tauri.js";
+import { isTauri } from "#lib/services/tauri.js";
 import { invoke } from "@tauri-apps/api/core";
-import type { AppConfig, EffectId } from "$lib/types";
+import type { AppConfig, EffectId } from "#lib/types";
 import { applyFadeIn, audioBufferToWavBlob, detectAudioMimeType } from "./playback/audio-utils.js";
 import { AudioAnalyser, type EmitPayload } from "./playback/analyser.js";
 import { PcmStreamScheduler, type StreamChunkPayload } from "./playback/pcm-stream.js";
@@ -19,8 +19,8 @@ import { stretchBuffer } from "./playback/time-stretch.js";
 import { getEffect } from "./playback/effects/registry.js";
 import { FragmentQueue, type QueuedFragment } from "./playback/fragment-queue.js";
 import { hudStore } from "./hud-store.svelte.js";
-import { validCaptionAlignment, type CaptionAlignment } from "$lib/models/captions.js";
-import type { HudCaptionPayload } from "$lib/types/hud.js";
+import { validCaptionAlignment, type CaptionAlignment } from "#lib/models/captions.js";
+import type { HudCaptionPayload } from "#lib/types/hud.js";
 
 /** Wall seconds the skip buttons and arrow keys move by. */
 export const SKIP_SECONDS = 5;

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Kbd from "$lib/components/ui/kbd/kbd.svelte";
-  import KbdGroup from "$lib/components/ui/kbd/kbd-group.svelte";
+  import Kbd from "#lib/components/ui/kbd/kbd.svelte";
+  import KbdGroup from "#lib/components/ui/kbd/kbd-group.svelte";
   import { X } from "@lucide/svelte";
 
   interface Props {

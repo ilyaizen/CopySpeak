@@ -1,6 +1,6 @@
 <script lang="ts">
   import { _ } from "svelte-i18n";
-  import { Badge } from "$lib/components/ui/badge/index.js";
+  import { Badge } from "#lib/components/ui/badge/index.js";
   import { Cpu, Headphones, History, Settings, Wand2, Zap } from "@lucide/svelte";
 
   const features = $derived([

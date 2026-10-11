@@ -7,9 +7,9 @@
   import { invoke } from "@tauri-apps/api/core";
   import { toast } from "svelte-sonner";
   import { _ } from "svelte-i18n";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Select } from "$lib/components/ui/select/index.js";
-  import { SettingRow } from "$lib/components/ui/setting-row/index.js";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { Select } from "#lib/components/ui/select/index.js";
+  import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import EnginePanel from "./engine-panel.svelte";
   import InstallDialog from "./install-dialog.svelte";
   import {
@@ -19,7 +19,7 @@
     type EngineSetupEntry,
     type TestState
   } from "./engine-meta";
-  import type { AppConfig } from "$lib/types";
+  import type { AppConfig } from "#lib/types";
 
   let {
     localConfig = $bindable(),
@@ -161,9 +161,9 @@
       </p>
       {#each CLOUD_ENGINES as entry (entry.id)}
         <button
-          class="block w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {selectedId ===
+          class="block w-full rounded-md px-2 py-1.5 text-start text-sm transition-colors {selectedId ===
           entry.id
-            ? 'border-primary bg-primary/10 text-primary border-l-2 font-medium'
+            ? 'border-primary bg-primary/10 text-primary border-s-2 font-medium'
             : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
           onclick={() => (selectedId = entry.id)}
         >
@@ -177,9 +177,9 @@
       </p>
       {#each LOCAL_ENGINES as entry (entry.id)}
         <button
-          class="block w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {selectedId ===
+          class="block w-full rounded-md px-2 py-1.5 text-start text-sm transition-colors {selectedId ===
           entry.id
-            ? 'border-primary bg-primary/10 text-primary border-l-2 font-medium'
+            ? 'border-primary bg-primary/10 text-primary border-s-2 font-medium'
             : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
           onclick={() => (selectedId = entry.id)}
         >
@@ -187,9 +187,9 @@
         </button>
       {/each}
       <button
-        class="block w-full rounded-md px-2 py-1.5 text-left text-sm transition-colors {selectedId ===
+        class="block w-full rounded-md px-2 py-1.5 text-start text-sm transition-colors {selectedId ===
         UV_ENTRY.id
-          ? 'border-primary bg-primary/10 text-primary border-l-2 font-medium'
+          ? 'border-primary bg-primary/10 text-primary border-s-2 font-medium'
           : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
         onclick={() => (selectedId = UV_ENTRY.id)}
       >

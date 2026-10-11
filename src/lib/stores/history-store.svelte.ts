@@ -60,14 +60,14 @@ function backendToHistoryItem(entry: BackendHistoryEntry): HistoryItem {
  * Uses Svelte 5 runes for reactive state management
  */
 
-import type { HistoryItem, HistoryState, HistoryFilters, HistorySortOptions } from "$lib/types";
+import type { HistoryItem, HistoryState, HistoryFilters, HistorySortOptions } from "#lib/types";
 import { playbackStore } from "./playback-store.svelte";
 import {
   createEmptyHistoryState,
   filterHistoryItems,
   sortHistoryItems,
   calculateHistoryStatistics
-} from "$lib/models/history";
+} from "#lib/models/history";
 
 /**
  * Creates a history store with reactive state management

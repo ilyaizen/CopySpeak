@@ -3,23 +3,23 @@
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import { ModeWatcher, setMode } from "mode-watcher";
-  import { invoke, isTauri } from "$lib/services/tauri";
-  import AppHeader from "$lib/components/layout/app-header.svelte";
-  import AppFooter from "$lib/components/layout/app-footer.svelte";
-  import MotionWrapper from "$lib/components/layout/motion-wrapper.svelte";
-  import { startHistoryEventListeners, stopHistoryEventListeners } from "$lib/utils/history-events";
-  import type { AppConfig } from "$lib/types";
+  import { invoke, isTauri } from "#lib/services/tauri";
+  import AppHeader from "#lib/components/layout/app-header.svelte";
+  import AppFooter from "#lib/components/layout/app-footer.svelte";
+  import MotionWrapper from "#lib/components/layout/motion-wrapper.svelte";
+  import { startHistoryEventListeners, stopHistoryEventListeners } from "#lib/utils/history-events";
+  import type { AppConfig } from "#lib/types";
   import "./+layout.css";
-  import { Sonner } from "$lib/components/ui/sonner/index.js";
-  import { TooltipProvider } from "$lib/components/ui/tooltip/index.js";
-  import GlobalPlayer from "$lib/components/global-player.svelte";
-  import { playbackStore } from "$lib/stores/playback-store.svelte";
-  import { setLocale, waitForI18nReady } from "$lib/i18n";
-  import { isRtl } from "$lib/i18n/store";
-  import { isSupportedLocale } from "$lib/i18n/utils";
-  import ThemeToggle from "$lib/components/theme-toggle.svelte";
-  import { saveBar } from "$lib/stores/save-bar.svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
+  import { Sonner } from "#lib/components/ui/sonner/index.js";
+  import { TooltipProvider } from "#lib/components/ui/tooltip/index.js";
+  import GlobalPlayer from "#lib/components/global-player.svelte";
+  import { playbackStore } from "#lib/stores/playback-store.svelte";
+  import { setLocale, waitForI18nReady } from "#lib/i18n";
+  import { isRtl } from "#lib/i18n/store";
+  import { isSupportedLocale } from "#lib/i18n/utils";
+  import ThemeToggle from "#lib/components/theme-toggle.svelte";
+  import { saveBar } from "#lib/stores/save-bar.svelte";
+  import { Button } from "#lib/components/ui/button/index.js";
   import { _ } from "svelte-i18n";
 
   let { children } = $props();
@@ -244,7 +244,7 @@
 
     {#if saveBar.visible}
       <div
-        class="border-border bg-card fixed right-4 bottom-12 z-[60] flex items-center gap-3 border px-4 py-2.5 shadow-lg"
+        class="border-border bg-card fixed end-4 bottom-12 z-[60] flex items-center gap-3 border px-4 py-2.5 shadow-lg"
       >
         <Button
           size="sm"

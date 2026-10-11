@@ -15,11 +15,11 @@
     EyeOff,
     AlertCircle
   } from "@lucide/svelte";
-  import { Button } from "$lib/components/ui/button/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
-  import { openExternal } from "$lib/utils/external-link";
-  import type { AppConfig } from "$lib/types";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { Input } from "#lib/components/ui/input/index.js";
+  import { Label } from "#lib/components/ui/label/index.js";
+  import { openExternal } from "#lib/utils/external-link";
+  import type { AppConfig } from "#lib/types";
   import type { CredentialTarget, EngineSetupEntry, TestState } from "./engine-meta";
   import { invoke } from "@tauri-apps/api/core";
 
@@ -198,7 +198,7 @@
     {#if entry.installerId}
       <div class="flex flex-wrap items-center gap-3">
         <Button variant="outline" size="sm" onclick={() => onInstall?.()}>
-          <Download size={14} class="mr-2" />
+          <Download size={14} class="me-2" />
           {$_("engine.setup.installManage")}
         </Button>
         <span class="text-muted-foreground text-xs">{$_("engines.installerSmokeTestHint")}</span>
@@ -209,7 +209,7 @@
       <div class="border-border flex flex-wrap items-center gap-3 border-t pt-3">
         <Button size="sm" disabled={testState === "testing"} onclick={() => onTest?.()}>
           {#if testState === "testing"}
-            <Loader2 size={14} class="mr-2 animate-spin" />
+            <Loader2 size={14} class="me-2 animate-spin" />
             {$_("engine.testing")}
           {:else if entry.kind === "local"}
             {$_("engine.localEngine.testEngine")}

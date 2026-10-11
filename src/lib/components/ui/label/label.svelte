@@ -1,5 +1,5 @@
 <script lang="ts" module>
-  import { cn } from "$lib/utils.js";
+  import { cn } from "#lib/utils.js";
   import type { HTMLLabelAttributes } from "svelte/elements";
   import { tv } from "tailwind-variants";
 

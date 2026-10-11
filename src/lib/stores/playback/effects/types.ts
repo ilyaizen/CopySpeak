@@ -2,7 +2,7 @@
 // another, using an AudioContext supplied by the pipeline (so effects can
 // decode bundled samples like clicks without owning their own context).
 
-import type { EffectId } from "$lib/types";
+import type { EffectId } from "#lib/types";
 
 export type { EffectId };
 

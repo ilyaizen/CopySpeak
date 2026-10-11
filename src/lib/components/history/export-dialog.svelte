@@ -8,12 +8,12 @@
     AlertDialogFooter,
     AlertDialogAction,
     AlertDialogCancel
-  } from "$lib/components/ui/alert-dialog/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
+  } from "#lib/components/ui/alert-dialog/index.js";
+  import { Input } from "#lib/components/ui/input/index.js";
+  import { Label } from "#lib/components/ui/label/index.js";
   import { Calendar, Download, FileText, X } from "@lucide/svelte";
-  import type { HistoryExportOptions } from "$lib/types";
-  import { cn } from "$lib/utils.js";
+  import type { HistoryExportOptions } from "#lib/types";
+  import { cn } from "#lib/utils.js";
 
   interface Props {
     open?: boolean;
@@ -104,7 +104,7 @@
             {#if dateFrom}
               <button
                 type="button"
-                class="hover:bg-muted text-muted-foreground hover:text-foreground absolute top-1 right-1 flex h-7 w-7 items-center justify-center rounded"
+                class="hover:bg-muted text-muted-foreground hover:text-foreground absolute end-1 top-1 flex h-7 w-7 items-center justify-center rounded"
                 onclick={() => (dateFrom = "")}
               >
                 <X class="h-3 w-3" />
@@ -129,7 +129,7 @@
             {#if dateTo}
               <button
                 type="button"
-                class="hover:bg-muted text-muted-foreground hover:text-foreground absolute top-1 right-1 flex h-7 w-7 items-center justify-center rounded"
+                class="hover:bg-muted text-muted-foreground hover:text-foreground absolute end-1 top-1 flex h-7 w-7 items-center justify-center rounded"
                 onclick={() => (dateTo = "")}
               >
                 <X class="h-3 w-3" />
@@ -184,7 +184,7 @@
         disabled={!hasValidDates}
         class={cn(!hasValidDates && "cursor-not-allowed opacity-50")}
       >
-        <Download class="mr-2 h-4 w-4" />
+        <Download class="me-2 h-4 w-4" />
         Export
       </AlertDialogAction>
     </AlertDialogFooter>

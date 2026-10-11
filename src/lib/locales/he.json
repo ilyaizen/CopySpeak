@@ -1,0 +1,706 @@
+{
+  "app": {
+    "title": "CopySpeak",
+    "tagline": "המרת טקסט לדיבור ב-AI ללוח ההעתקה שלך"
+  },
+  "nav": {
+    "play": "הפעל",
+    "engine": "מנוע",
+    "settings": "הגדרות"
+  },
+  "header": {
+    "play": "הפעל",
+    "voices": "קולות",
+    "engines": "מנועים",
+    "history": "היסטוריה",
+    "settings": "הגדרות",
+    "tagline": "המרת טקסט לדיבור ב-AI ללוח ההעתקה שלך"
+  },
+  "common": {
+    "loading": "טוען...",
+    "save": "שמור",
+    "cancel": "ביטול",
+    "reset": "איפוס לברירת מחדל",
+    "test": "בדוק",
+    "close": "סגור",
+    "back": "חזרה",
+    "next": "הבא",
+    "done": "סיום",
+    "yes": "כן",
+    "no": "לא",
+    "ok": "אישור",
+    "error": "שגיאה",
+    "success": "הצלחה",
+    "warning": "אזהרה",
+    "info": "מידע"
+  },
+  "settings": {
+    "title": "הגדרות",
+    "tabs": {
+      "general": "כללי",
+      "history": "היסטוריה",
+      "effects": "אפקטים",
+      "advanced": "מתקדם",
+      "about": "אודות"
+    },
+    "sections": {
+      "general": "כללי",
+      "startup": "הפעלה",
+      "appearance": "מראה",
+      "playback": "השמעה",
+      "hud": "שכבת HUD",
+      "history": "היסטוריה",
+      "triggers": "גורמים מפעילים",
+      "hotkeys": "מקשי קיצור",
+      "pagination": "מתקדם",
+      "sanitization": "ניקוי",
+      "postProcess": "עיבוד סופי באמצעות LLM",
+      "effects": "אפקטים",
+      "appInfo": "מידע על האפליקציה",
+      "importExport": "ייבוא / ייצוא"
+    },
+    "categories": {
+      "general": "כללי",
+      "playback": "השמעה",
+      "triggers": "גורמים מפעילים",
+      "pagination": "עימוד",
+      "sanitization": "ניקוי",
+      "history": "היסטוריה",
+      "hud": "שכבת HUD",
+      "about": "אודות"
+    },
+    "descriptions": {
+      "general": "התנהגות בהפעלה ובקרות החלון",
+      "playback": "הגדרות עוצמה וייצוא שמע",
+      "triggers": "זיהוי העתקה והגבלות טקסט",
+      "pagination": "פיצול טקסטים ארוכים לקטעים להשמעה הדרגתית של TTS",
+      "sanitization": "ניקוי ונרמול טקסט",
+      "history": "היסטוריית יצירות ואחסון",
+      "hud": "הדמיית גלי קול ומיקום",
+      "about": "מידע על הגרסה וקרדיטים"
+    },
+    "actions": {
+      "save": "שמור שינויים",
+      "cancel": "ביטול",
+      "reset": "איפוס לברירת מחדל",
+      "test": "בדוק",
+      "tryAgain": "נסה שוב"
+    },
+    "general": {
+      "language": "שפה",
+      "languageDescription": "בחר את השפה המועדפת עליך",
+      "launchOnLogin": "הפעל בעת כניסה למערכת",
+      "startMinimized": "הפעל ממוזער לאזור ההודעות",
+      "showNotifications": "הצג התראות",
+      "closeBehavior": "התנהגות כפתור הסגירה",
+      "appearance": "מראה",
+      "debugMode": "מצב ניפוי שגיאות",
+      "updateChecks": "בדוק עדכונים אוטומטית",
+      "autoSave": "שמור שינויים אוטומטית",
+      "autoSaveDescription": "שמור עריכות אוטומטית 800 מילישניות לאחר השינוי האחרון בהגדרות, במנועים ובקולות — ללא סרגל שמירה וביטול"
+    },
+    "playback": {
+      "title": "הגדרות השמעה",
+      "onRetrigger": "התנהגות בהפעלה חוזרת",
+      "onRetriggerDescription": "מה קורה כאשר TTS מופעל בזמן שהאפליקציה כבר מדברת",
+      "volume": "עוצמת קול",
+      "volumeDescription": "עוצמת ההשמעה (0-100%)",
+      "streaming": "הזרמת שמע",
+      "streamingDescription": "התחל השמעה ברגע שהשמע מגיע. מנועי ענן נתמכים: ElevenLabs ו-Cartesia. כאשר מבוטל, השתמש בסינתזה אצווה והמתן לסיום כל בקשה לפני ההשמעה.",
+      "duck": "הנמכת אפליקציות אחרות",
+      "duckDescription": "הנמך את השמע של אפליקציות אחרות בזמן ש-CopySpeak מדבר, ואז שחזר אותו. כרגע Windows בלבד.",
+      "duckMode": "מצב הנמכה",
+      "duckModeLower": "הנמך",
+      "duckModeMute": "השתק",
+      "duckLevel": "רמת הנמכה",
+      "duckLevelDescription": "הרמה שאליה יורדות אפליקציות אחרות, באחוזים מהרמה הנוכחית שלהן",
+      "duckFade": "דהייה (מילישניות)",
+      "duckFadeDescription": "משך הדהייה בהנמכה ובשחזור; 0 למעבר מיידי",
+      "playbackSpeed": "מהירות",
+      "playbackSpeedDescription": "מהירות ההשמעה (0.5x - 2x)",
+      "pitch": "גובה צליל",
+      "pitchDescription": "שינוי גובה צליל (0.5x - 2x)",
+      "stopAndRestart": "עצור והפעל מחדש",
+      "queueAfterCurrent": "הוסף לתור אחרי הנוכחי",
+      "ignoreNewTrigger": "התעלם מגורם מפעיל חדש"
+    },
+    "triggers": {
+      "title": "הגדרות גורמים מפעילים",
+      "listen": "האזנה להעתקה כפולה",
+      "listenDescription": "נטר את לוח ההעתקה לאירועי העתקה כפולה",
+      "doubleCopyWindow": "חלון זיהוי העתקה כפולה (מילישניות)",
+      "doubleCopyWindowDescription": "פרק הזמן שבו העתקה שנייה מפעילה TTS (100-5000 מילישניות)",
+      "maxTextLength": "אורך טקסט מרבי",
+      "maxTextLengthDescription": "מספר התווים המרבי להקראה (טקסט ארוך יותר ייחתך עם אזהרה)"
+    },
+    "pagination": {
+      "title": "הגדרות עימוד",
+      "enabled": "אפשר עימוד",
+      "description": "פצל טקסטים ארוכים לקטעים להשמעה הדרגתית של TTS",
+      "fragmentSize": "גודל קטע (תווים)",
+      "fragmentSizeDescription": "מספר התווים המרבי לכל קטע טקסט (100-10000)"
+    },
+    "hud": {
+      "enabled": "אפשר HUD",
+      "enabledDescription": "הצג שכבת גלי קול במהלך ההשמעה",
+      "overlay": "שכבת HUD",
+      "position": "מיקום",
+      "testHud": "בדוק תצוגת HUD",
+      "topLeft": "למעלה משמאל",
+      "topCenter": "למעלה במרכז",
+      "topRight": "למעלה מימין",
+      "bottomLeft": "למטה משמאל",
+      "bottomCenter": "למטה במרכז",
+      "bottomRight": "למטה מימין"
+    },
+    "history": {
+      "title": "הגדרות היסטוריה",
+      "enabled": "אפשר היסטוריה",
+      "enabledDescription": "שמור יומן של כל פעולות TTS",
+      "storageMode": "מצב אחסון",
+      "persistent": "קבוע",
+      "temporary": "זמני",
+      "generationsFolder": "תיקיית יצירות",
+      "generationsFolderDescription": "התיקייה לשמירת יצירות TTS. השאר ריק לברירת המחדל.",
+      "generationsFolderPlaceholder": "ברירת מחדל: Documents/CopySpeak",
+      "autoDeleteTitle": "מחיקה אוטומטית של יצירות",
+      "autoDeleteKeepLatest": "שמור את האחרונות",
+      "autoDeleteNever": "אף פעם",
+      "autoDeleteAfterDays": "אחרי",
+      "days": "ימים",
+      "manualCleanupTitle": "ניקוי ידני",
+      "manualCleanupDescription": "הרץ ניקוי עכשיו כדי להסיר רשומות ישנות וקבצים יתומים",
+      "runCleanup": "הרץ ניקוי עכשיו",
+      "cleanupDialog": {
+        "title": "להריץ ניקוי היסטוריה?",
+        "description": "פעולה זו תאכוף את כללי המחיקה האוטומטית הנוכחיים",
+        "orphanedFiles": "הסר קבצי שמע יתומים שאינם מופיעים בהיסטוריה",
+        "cannotUndo": "לא ניתן לבטל פעולה זו.",
+        "cancel": "ביטול",
+        "confirm": "הרץ ניקוי"
+      },
+      "cleanupOrphaned": "נקה קבצים יתומים"
+    },
+    "sanitization": {
+      "title": "הגדרות ניקוי",
+      "enabled": "אפשר ניקוי",
+      "enabledDescription": "הסר עיצוב לא רצוי מטקסט הלוח לפני TTS",
+      "markdown": "הסר תחביר Markdown",
+      "markdownDescription": "הסר את כל עיצובי ה-Markdown (כותרות, מודגש, נטוי, בלוקי קוד, קישורים, רשימות, ציטוטים)",
+      "stripCodeBlocks": "בלוקי קוד",
+      "stripCodeBlocksDescription": "הסר בלוקי קוד מוקפים (שלוש גרשיים הפוכות)",
+      "stripInlineCode": "קוד בשורה",
+      "stripInlineCodeDescription": "הסר קוד בשורה עם גרש הפוך בודד. כבוי כברירת מחדל כדי לשמר `מונחים` בטקסט טכני",
+      "stripHeaders": "כותרות",
+      "stripHeadersDescription": "הסר סימני כותרת # של Markdown, שמור את תוכן הטקסט",
+      "stripLinks": "קישורים",
+      "stripLinksDescription": "הסר את תחביר הקישור של Markdown, שמור את טקסט הקישור",
+      "stripBoldItalic": "מודגש ונטוי",
+      "stripBoldItalicDescription": "הסר את הסימונים **מודגש** ו-*נטוי*",
+      "stripLists": "רשימות",
+      "stripListsDescription": "הסר סמני רשימה עם נקודות ומספרים",
+      "stripBlockquotes": "ציטוטים",
+      "stripBlockquotesDescription": "הסר את הקידומת > של ציטוטים",
+      "ttsNormalization": "הרחבת קיצורים חזותיים",
+      "ttsNormalizationDescription": "הפוך כתובות URL, לוכסנים, קיצורים, יחידות מידה וסמלים לטקסט נוח להקראה"
+    },
+    "postProcess": {
+      "title": "עיבוד סופי באמצעות LLM",
+      "description": "כתוב מחדש טקסט שהועתק באמצעות ספק LLM תואם OpenAI, לדיבור תמציתי וקל להאזנה.",
+      "enabled": "אפשר עיבוד סופי",
+      "enabledDescription": "הרץ את הטקסט המנוקה דרך מודל הצ'אט של הספק הפעיל לפני TTS. כשל יחזיר את הטקסט המקורי.",
+      "apiKey": "מפתח API",
+      "apiKeyPlaceholder": "gsk_...",
+      "apiKeyHelp": "צור מפתח ב-console.groq.com",
+      "testKey": "בדוק",
+      "testOk": "מפתח ה-API של Groq תקף",
+      "testFail": "מפתח לא תקף",
+      "provider": "ספק",
+      "providerTooltip": "כל נקודת קצה תואמת OpenAI תעבוד. הוסף ספק משלך עם הכפתור +.",
+      "name": "שם",
+      "nameTooltip": "שם התצוגה של ספק זה.",
+      "baseUrl": "כתובת בסיס",
+      "baseUrlTooltip": "שורש ה-API התואם OpenAI, למשל https://api.groq.com/openai/v1",
+      "addProvider": "הוסף ספק",
+      "deleteProvider": "מחק ספק",
+      "deleteProviderTooltip": "הסר ספק זה מהרשימה. ניתן להוסיף מחדש ספקים מובנים על ידי איפוס ההגדרות.",
+      "refreshModels": "שלוף רשימת מודלים",
+      "modelsEmpty": "נקודת הקצה לא החזירה מודלים.",
+      "model": "מודל",
+      "modelTooltip": "מודלים קטנים מהירים יותר; מודלים גדולים עוקבים אחר הוראות באופן אמין יותר.",
+      "prompt": "תבנית הנחיה",
+      "promptHelp": "השתמש ב-${output} במקום שבו יוכנס הטקסט שהועתק.",
+      "restoreDefault": "שחזר הנחיית ברירת מחדל"
+    },
+    "effects": {
+      "enabled": "אפשר אפקטים",
+      "enabledDescription": "הצג את לשונית האפקטים בתפריט הראשי והחל עיבוד על השמעת TTS",
+      "active": "אפקט פעיל",
+      "activeDescription": "אפקט שמע המוחל על כל השמעת TTS",
+      "options": {
+        "none": "ללא",
+        "walkieTalkie": "ווקי-טוקי",
+        "gameBoy": "Game Boy בן 8 סיביות"
+      }
+    },
+    "about": {
+      "version": "גרסה",
+      "versionDescription": "גרסת CopySpeak הנוכחית",
+      "sourceCode": "קוד מקור",
+      "sourceCodeDescription": "צפה ב-CopySpeak ב-GitHub",
+      "github": "GitHub",
+      "acknowledgments": "קרדיטים",
+      "openai": {
+        "title": "OpenAI TTS",
+        "description": "המרת טקסט לדיבור נוירונית איכותית",
+        "detail": "CopySpeak משתמש ב-API של OpenAI להמרת טקסט לדיבור, לסינתזת קול איכותית."
+      },
+      "elevenlabs": {
+        "title": "ElevenLabs",
+        "description": "סינתזת קול AI מתקדמת",
+        "detail": "מנוע TTS פרימיום עם יכולות שכפול קול ריאליסטיות."
+      },
+      "kokoro": {
+        "title": "Kokoro TTS",
+        "description": "TTS מקומי בקוד פתוח",
+        "detail": "מנוע המרת טקסט לדיבור קל משקל וקוד פתוח לעיבוד מקומי."
+      },
+      "piper": {
+        "title": "Piper",
+        "description": "TTS נוירוני מהיר",
+        "detail": "מערכת המרת טקסט לדיבור נוירונית מקומית ומהירה, עם השהיה נמוכה."
+      },
+      "cartesia": {
+        "title": "Cartesia",
+        "description": "TTS בענן עם השהיה נמוכה (Sonic 3.5)",
+        "detail": "API בענן המופעל על ידי מודל Sonic 3.5. דורש מפתח API."
+      },
+      "kitten": {
+        "title": "Kitten TTS",
+        "description": "ONNX מקומי קל משקל במיוחד",
+        "detail": "ארבעה דגמי ONNX לבחירה בגודל 25–80MB, עם 8 קולות מובנים, מותאמים למעבד עם האצת GPU אופציונלית."
+      },
+      "qwen": {
+        "title": "Qwen3-TTS",
+        "description": "TTS מקומי רב-לשוני",
+        "detail": "Qwen3-TTS CustomVoice מקומי עם 9 קולות מובנים והאצת GPU אופציונלית."
+      },
+      "pocket": {
+        "title": "Pocket TTS",
+        "description": "TTS מקומי קומפקטי",
+        "detail": "Kyutai Pocket: מודל בן 100 מיליון פרמטרים שנבנה לרוץ על המעבד, עם קולות בשש שפות."
+      },
+      "edge": {
+        "title": "Edge-TTS",
+        "description": "TTS נוירוני של Microsoft Edge (חינם)",
+        "detail": "קולות נוירוניים חינמיים ואיכותיים משירות ה-TTS המקוון של Microsoft Edge. לא נדרש מפתח API."
+      },
+      "google": {
+        "title": "Google Gemini TTS",
+        "description": "TTS בענן מבוסס Gemini של Google",
+        "detail": "TTS בענן המופעל על ידי מודלי Gemini של Google. דורש מפתח Google AI API."
+      },
+      "microsoft": {
+        "title": "Microsoft Foundry AI",
+        "description": "TTS ארגוני בענן דרך Microsoft Foundry",
+        "detail": "קולות נוירוניים ברמה ארגונית דרך שירותי הדיבור של Microsoft Foundry. דורש מפתח API ונקודת קצה."
+      },
+      "http": {
+        "title": "מנוע HTTP מותאם אישית",
+        "description": "קצה עורפי כללי של HTTP/REST ל-TTS",
+        "detail": "מנוע להבאת קצה עורפי משלך, שקורא לכל נקודת קצה HTTP עם תבניות כתובת והרשאות הניתנות להגדרה."
+      }
+    }
+  },
+  "engine": {
+    "title": "מנוע",
+    "selectEngine": "בחר מנוע TTS",
+    "testing": "בודק...",
+    "kitten": {
+      "title": "Kitten TTS",
+      "description": "מקומי: ארבעה דגמי ONNX לבחירה (25–80MB) עם 8 קולות טבעיים. מותאם למעבד, עם האצת GPU אופציונלית."
+    },
+    "qwen": {
+      "title": "Qwen3-TTS",
+      "description": "מקומי: Qwen3-TTS רב-לשוני (CustomVoice) עם 9 קולות מובנים. הדגם יורד בשימוש הראשון."
+    },
+    "piper": {
+      "title": "Piper TTS",
+      "description": "מקומי: TTS נוירוני מהיר וקל עם מעל 20 קולות באנגלית. עובד לחלוטין במצב לא מקוון — ללא חשבון או אינטרנט."
+    },
+    "kokoro": {
+      "title": "Kokoro TTS",
+      "description": "מקומי: TTS איכותי ללא חיבור עם קולות טבעיים וכיסוי רחב של מבטאים. שומר את הדגם בזיכרון RAM; תומך בהאצת GPU."
+    },
+    "pocket": {
+      "title": "Pocket TTS",
+      "description": "מקומי: Kyutai Pocket — מודל בן 100 מיליון פרמטרים שנבנה למעבד, עם קולות בשש שפות. תומך בהאצת GPU."
+    },
+    "cartesia": {
+      "title": "Cartesia",
+      "description": "ענן: TTS טבעי עם השהיה נמוכה, המופעל על ידי Sonic 3.5. דורש מפתח API וחיבור לאינטרנט.",
+      "apiKey": "מפתח API",
+      "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
+      "check": "בדוק",
+      "testEngine": "בדוק מנוע"
+    },
+    "elevenlabs": {
+      "title": "ElevenLabs",
+      "description": "ענן: סינתזת קול AI פרימיום עם טווח רגשי, מעל 1000 קולות ותמיכה רב-לשונית.",
+      "apiKey": "מפתח API",
+      "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
+      "check": "בדוק",
+      "testEngine": "בדוק מנוע"
+    },
+    "openai": {
+      "title": "OpenAI",
+      "description": "ענן: קולות טבעיים איכותיים דרך OpenAI API. דורש מפתח API וחיבור לאינטרנט.",
+      "apiKey": "מפתח API",
+      "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
+      "check": "בדוק",
+      "testEngine": "בדוק מנוע"
+    },
+    "edge": {
+      "title": "Edge TTS",
+      "description": "ענן: קולות הקראה של Microsoft Edge. חינם, ללא מפתח API, אך דורש חיבור לאינטרנט."
+    },
+    "google": {
+      "title": "Google",
+      "description": "ענן: יצירת דיבור באמצעות Gemini API. דורש מפתח Google AI API.",
+      "apiKey": "מפתח API"
+    },
+    "microsoft": {
+      "title": "Microsoft Foundry",
+      "description": "ענן: Microsoft Foundry Speech. דורש נקודת קצה אזורית ומפתח API.",
+      "apiKey": "מפתח API",
+      "endpoint": "נקודת קצה"
+    },
+    "http": {
+      "title": "HTTP",
+      "description": "ענן: שליחת בקשות סינתזה לנקודת קצה HTTP מותאמת אישית, שמוגדרת לכל פרופיל."
+    },
+    "uv": {
+      "title": "uv",
+      "description": "תנאי מוקדם לכל מנוע מקומי. המתקינים משתמשים ב-uv כדי להוריד ולהריץ חבילות Python של TTS."
+    },
+    "setup": {
+      "uvMissing": "uv אינו מותקן. מנועים מקומיים זקוקים לו כדי לפעול.",
+      "installUv": "התקן uv",
+      "install": "התקן",
+      "installing": "מתקין...",
+      "tryAgain": "נסה שוב",
+      "openInstaller": "הרץ מתקין",
+      "installManage": "התקנה / ניהול"
+    },
+    "badges": {
+      "active": "פעיל",
+      "default": "ברירת מחדל",
+      "offline": "לא מקוון",
+      "free": "חינם",
+      "cloud": "ענן",
+      "paid": "בתשלום",
+      "freemium": "Freemium"
+    },
+    "info": {
+      "engineInformation": "מידע על המנוע"
+    },
+    "loading": "טוען הגדרות מנוע...",
+    "saveBar": {
+      "saving": "שומר...",
+      "cancel": "ביטול",
+      "saveChanges": "שמור שינויים"
+    },
+    "testVoice": {
+      "title": "בדוק קול",
+      "playing": "מנגן...",
+      "description": "מנגן משפט קצר עם המנוע הנוכחי"
+    },
+    "localEngine": {
+      "voice": "קול",
+      "kittenInstall": "הרץ את ./install-kittentts.ps1 מתיקיית הפרויקט כדי להתקין את Kitten TTS. הדגמים יורדים אוטומטית בשימוש הראשון (כ-25–80MB, לפי הווריאנט).",
+      "pocketInstall": "הרץ את ./install-pocket.ps1 מתיקיית הפרויקט כדי להתקין את Pocket TTS. נוצר פרויקט uv עבור pocket-tts; משקלי הדגם יורדים בשימוש הראשון.",
+      "piperModels": "קבצי הדגם (.onnx + .onnx.json) חייבים להיות ממוקמים ב-{dataDir}. הורד מ-",
+      "commandPreview": "תצוגה מקדימה של הפקודה",
+      "tempDirectory": "נפתר לתיקייה הזמנית של המערכת בזמן ריצה.",
+      "testEngine": "בדוק מנוע",
+      "testing": "בודק...",
+      "engineWorking": "המנוע פועל",
+      "engineFailed": "בדיקת המנוע נכשלה"
+    },
+    "openaiEngine": {
+      "model": "דגם",
+      "modelTooltip": "דגם OpenAI TTS לשימוש בסינתזת הדיבור",
+      "voice": "קול",
+      "voiceTooltip": "סגנון קול לסינתזת הדיבור"
+    },
+    "cartesiaEngine": {
+      "model": "דגם",
+      "modelTooltip": "דגם Cartesia Sonic לשימוש בסינתזת הדיבור",
+      "manualVoiceId": "מזהה קול ידני",
+      "manualVoiceIdTooltip": "הפעל כדי להדביק מזהה קול מותאם אישית של Cartesia, במקום לבחור קול מוכר.",
+      "voice": "קול",
+      "voiceTooltip": "שם הקול של Cartesia שייבחר לשימוש בסינתזת הדיבור",
+      "voiceId": "מזהה קול",
+      "voiceIdTooltip": "מזהה קול של Cartesia. Katie הוא קול אנגלית אמריקאית המומלץ כברירת מחדל.",
+      "format": "פורמט",
+      "formatTooltip": "מיכל פלט השמע"
+    },
+    "elevenlabsEngine": {
+      "manualVoiceId": "מזהה קול ידני",
+      "manualVoiceIdTooltip": "החלף כדי להזין מזהה קול ידנית, במקום לבחור מהרשימה",
+      "voiceId": "מזהה קול",
+      "voiceIdPlaceholder": "למשל: 21m00Tcm4TlvDq8ikWAM",
+      "verify": "אמת",
+      "verified": "מאומת",
+      "cached": "שמור במטמון",
+      "findVoices": "מצא מזהי קול ב-",
+      "voice": "קול",
+      "voiceTooltip": "בחר מספריית הקולות שלך ב-ElevenLabs",
+      "load": "טען",
+      "setupApiKeyFirst": "הגדר קודם את מפתח ה-API",
+      "clickLoadToFetch": "לחץ על \"טען\" כדי לשלוף את הקולות הזמינים",
+      "setupApiKeyInSettings": "הגדר קודם את מפתח ה-API בהגדרות",
+      "model": "דגם",
+      "modelTooltip": "דגם AI לסינתזת דיבור",
+      "format": "פורמט",
+      "formatTooltip": "פורמט פלט השמע",
+      "voiceSettings": "הגדרות קול",
+      "stability": "יציבות",
+      "stabilityTooltip": "ערכים גבוהים יותר הופכים את הקול לעקבי יותר; ערכים נמוכים יותר לדינמיים יותר",
+      "similarity": "דמיון",
+      "similarityTooltip": "ערכים גבוהים יותר הופכים את הקול לדומה יותר לדובר המקורי",
+      "style": "סגנון",
+      "styleTooltip": "ערכים גבוהים יותר הופכים את הקול לאקספרסיבי יותר (0 לכיבוי)",
+      "speakerBoost": "הגברת דובר",
+      "speakerBoostTooltip": "משפר את הבהירות ואיכות פלט הקול"
+    },
+    "apiSetup": {
+      "title": "הגדרת {engine} API",
+      "description": "הזן את מפתח ה-API שלך כדי לאפשר המרת טקסט לדיבור של {engine}.",
+      "apiKey": "מפתח API",
+      "placeholderOpenai": "sk-...",
+      "placeholderElevenlabs": "xi-...",
+      "placeholderCartesia": "sk_car_...",
+      "placeholderGoogle": "AIza...",
+      "placeholderMicrosoft": "________________",
+      "endpointLabel": "נקודת קצה",
+      "endpointPlaceholder": "https://<region>.tts.speech.microsoft.com/",
+      "installButton": "התקן",
+      "installing": "מתקין...",
+      "checkButton": "בדוק",
+      "testButton": "בדוק",
+      "valid": "מפתח ה-API תקף",
+      "invalid": "בדיקת מפתח ה-API נכשלה",
+      "testPassed": "בדיקת המנוע עברה",
+      "testFailed": "בדיקת המנוע נכשלה",
+      "cancel": "ביטול",
+      "save": "שמור"
+    },
+    "error": {
+      "loadFailed": "טעינת הגדרות המנוע נכשלה",
+      "loadDescription": "אירעה שגיאה בטעינת תצורת המנוע שלך."
+    }
+  },
+  "engines": {
+    "title": "מנועים",
+    "subtitle": "הגדר מפתחות API, התקן מנועים מקומיים, ובדוק שכל מנוע פועל. הגדרות הקול נמצאות בעמוד הקולות.",
+    "cloud": "ענן",
+    "local": "מקומי",
+    "docs": "תיעוד",
+    "noCredentialNeeded": "לא נדרש מפתח API.",
+    "daemonIdleTimeout": "כיבוי במצב סרק",
+    "daemonIdleTimeoutHint": "כבה מנוע מקומי פעיל לאחר פרק הזמן הזה ללא קריאה, כדי לשחרר את הזיכרון. הקריאה הבאה תפעיל אותו מחדש (הפעלה קרה).",
+    "installerSmokeTestHint": "התקן, ואז לחץ על בדוק כדי לוודא שהמנוע מייצר שמע.",
+    "installCuda": "התקן זמן ריצה של GPU של NVIDIA",
+    "installCudaHint": "הפעל כאשר הפרופיל משתמש בהאצת GPU. התקנה מחדש משנה את זמן הריצה של המנוע.",
+    "installFailed": "ההתקנה נכשלה",
+    "saveBeforeTestFailed": "שמור את השינויים לפני הבדיקה.",
+    "installDone": "ההתקנה הושלמה",
+    "retry": "נסה שוב",
+    "reinstall": "התקן מחדש",
+    "voiceInstalled": "הותקן",
+    "sharedModelHint": "הורדת דגם משותף אחת; כל הקולות המופיעים כלולים.",
+    "installedAllVoices": "הותקן — כל הקולות זמינים.",
+    "piperPerVoiceHint": "בחר קולות להורדה (כל אחד הוא דגם נפרד).",
+    "uninstall": "הסר התקנה",
+    "uninstallDone": "ההתקנה הוסרה",
+    "uninstallFailed": "הסרת ההתקנה נכשלה",
+    "uninstallConfirm": "להסיר את קבצי המנוע והקבצים הבינאריים שלו? הדגמים שהורדו יימחקו. פרופילים שמשתמשים בו יפסיקו לפעול עד להתקנה מחדש.",
+    "binaryHint": "מתקין קובץ הרצה משורת פקודה. אין הורדת דגם.",
+    "binaryInstalled": "הותקן ומוכן."
+  },
+  "play": {
+    "title": "הפעל",
+    "placeholder": "הקלד או הדבק טקסט ליצירה.",
+    "clear": "נקה",
+    "play": "הפעל",
+    "pause": "השהה",
+    "resume": "המשך",
+    "stop": "עצור",
+    "replay": "הפעל שוב",
+    "abort": "בטל",
+    "listening": "מקשיב",
+    "paused": "מושהה",
+    "processing": "מעבד...",
+    "history": "היסטוריה אחרונה",
+    "noHistory": "אין עדיין היסטוריה",
+    "truncated": "הטקסט נחתך",
+    "truncatedDescription": "הטקסט נחתך מ-{original} ל-{truncated} תווים (מקסימום: {max})",
+    "characters": "{count} תווים",
+    "replayTooltip": "הפעל שוב את השמע האחרון",
+    "playLatestTooltip": "הפעל את האחרון מההיסטוריה",
+    "playTooltip": "הפעל",
+    "pauseTooltip": "השהה",
+    "resumeTooltip": "המשך",
+    "stopTooltip": "עצור",
+    "abortTooltip": "בטל סינתזה או השמעה",
+    "skipBackTooltip": "אחורה 5 שניות",
+    "skipFwdTooltip": "קדימה 5 שניות"
+  },
+  "history": {
+    "title": "היסטוריה",
+    "loading": "טוען...",
+    "empty": "אין עדיין פריטים בהיסטוריה",
+    "fragments": "{count} קטעים",
+    "playSaved": "הפעל שמע שמור",
+    "reSynthesize": "סנתז מחדש והפעל",
+    "reSynthesizeTooltip": "סנתז מחדש עם ההגדרות הנוכחיות",
+    "delete": "מחק מההיסטוריה",
+    "deleteAllFragments": "מחק את כל הקטעים",
+    "playAll": "הפעל הכול",
+    "playAllTooltip": "הפעל את כל הקטעים לפי הסדר",
+    "playThisFragment": "הפעל קטע זה",
+    "noAudioFile": "אין קובץ שמע",
+    "deleteEntry": "למחוק רשומה?",
+    "deleteBatch": "למחוק את כל הקטעים?",
+    "deleteBatchDescription": "פעולה זו תמחק לצמיתות את כל הקטעים בקבוצה זו ואת קובצי השמע שלהם. לא ניתן לבטל פעולה זו.",
+    "deleteEntryWithFile": "פעולה זו תמחק לצמיתות את רשומת ההיסטוריה ואת קובץ השמע שלה. לא ניתן לבטל פעולה זו.",
+    "deleteEntryOnly": "פעולה זו תמחק לצמיתות את רשומת ההיסטוריה. לא ניתן לבטל פעולה זו.",
+    "cancel": "ביטול",
+    "confirmDelete": "מחק",
+    "toast": {
+      "playing": "מנגן שמע מההיסטוריה",
+      "playingFragments": "מנגן את כל הקטעים",
+      "reSynthesizing": "מסנתז ומנגן מחדש",
+      "deleted": "נמחק מההיסטוריה",
+      "deletedBatch": "הקבוצה נמחקה מההיסטוריה",
+      "failedToPlay": "ההשמעה נכשלה",
+      "failedToReSpeak": "הקראה מחדש נכשלה",
+      "failedToDelete": "המחיקה נכשלה"
+    }
+  },
+  "toast": {
+    "success": {
+      "engineSaved": "המנוע נשמר בהצלחה",
+      "settingsSaved": "ההגדרות נשמרו",
+      "welcome": "ברוך הבא ל-CopySpeak!",
+      "configSaved": "התצורה נשמרה! בואו נתחיל.",
+      "hudTest": "בדיקת HUD הופעלה",
+      "historyCleanup": "ניקוי ההיסטוריה הושלם",
+      "installerLaunched": "מתקין Kitten TTS הופעל בחלון חדש",
+      "settingsCopied": "ההגדרות הועתקו ללוח",
+      "settingsDownloaded": "ההגדרות הורדו",
+      "settingsImported": "ההגדרות יובאו בהצלחה",
+      "settingsReset": "ההגדרות אופסו — מתחילים הגדרה מחדש",
+      "synthesisAborted": "הסינתזה בוטלה"
+    },
+    "error": {
+      "loadSettings": "טעינת ההגדרות נכשלה",
+      "saveSettings": "שמירת ההגדרות נכשלה",
+      "loadConfig": "טעינת התצורה נכשלה",
+      "saveConfig": "שמירת ההגדרות נכשלה",
+      "voiceTest": "בדיקת הקול נכשלה",
+      "hudTest": "בדיקת HUD נכשלה",
+      "cleanup": "הניקוי נכשל",
+      "installer": "הפעלת המתקין נכשלה",
+      "switchEngine": "החלפת המנוע נכשלה"
+    },
+    "info": {
+      "httpEngineRemoved": "מנוע HTTP הוסר. עברנו למנוע המקומי."
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "ברוך הבא ל-CopySpeak",
+      "subtitle": "הגדר את מנוע ההמרה של טקסט לדיבור כדי להתחיל, או דלג והגדר אותו מאוחר יותר."
+    },
+    "engineConfig": "הגדרת מנוע",
+    "engineDescription": "הגדר את מנוע ה-TTS שלך. ניתן לשנות זאת מאוחר יותר בלשונית המנוע.",
+    "recommendation": {
+      "title": "אנו ממליצים על Kitten TTS כדי להתחיל",
+      "description": "Kitten TTS הוא מנוע TTS חדש וקל במיוחד (25–80MB) שפועל על המעבד ללא צורך ב-GPU. לחץ על הכפתור למטה כדי להתקין אותו אוטומטית — ללא הגדרה ידנית."
+    },
+    "install": "התקן את Kitten TTS",
+    "installing": "מתקין...",
+    "skip": "דלג לעכשיו",
+    "complete": "התחל",
+    "loading": "טוען תצורה...",
+    "installed": "הותקן!",
+    "openTerminal": "פתח טרמינל PowerShell",
+    "checkingEngine": "בודק מנוע...",
+    "helpText": "תמיד תוכל להגדיר את המנוע מאוחר יותר מלשונית המנוע."
+  },
+  "effects": {
+    "title": "אפקטים קוליים",
+    "description": "החל אפקט עיבוד על השמעת TTS. האפקטים מוחלים בזמן אמת ואינם משנים שמע שמור.",
+    "preview": "תצוגה מקדימה",
+    "previewing": "מציג תצוגה מקדימה...",
+    "activeTooltip": "האפקט שמוחל על כל השמעת TTS. ניתן להחליף מיד, ללא הפעלה מחדש."
+  },
+  "landing": {
+    "hero": {
+      "title": "CopySpeak",
+      "subtitle": "מתזמר TTS מודרני מבוסס AI",
+      "description": "אפליקציה קלה ורב-פלטפורמית שמקריאה בקול טקסט מהלוח, באמצעות מנועי המרת טקסט לדיבור מבוססי AI.",
+      "download": "הורד לפלטפורמה שלך",
+      "github": "צפה ב-GitHub",
+      "version": "v{version}"
+    },
+    "features": {
+      "title": "תכונות",
+      "doubleCopy": {
+        "title": "טריגר העתקה כפולה",
+        "description": "העתק טקסט פעמיים תוך 1.5 שניות כדי להפעיל דיבור מיידית. ללא צורך במקשי קיצור."
+      },
+      "engines": {
+        "title": "9 מנועי TTS",
+        "description": "Edge TTS, OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP, ומנועי CLI מקומיים (Piper, Kokoro, Kitten)."
+      },
+      "hud": {
+        "title": "שכבת HUD",
+        "description": "תצוגת מידע צפה עם הדמיית גלי קול בזמן אמת במהלך ההשמעה."
+      },
+      "history": {
+        "title": "היסטוריה",
+        "description": "היסטוריית יצירות TTS קבועה, עם השמעה, ניהול קבוצות וייצוא שמע."
+      },
+      "sanitization": {
+        "title": "ניקוי טקסט",
+        "description": "הסרה אוטומטית של Markdown, הרחבת כתובות URL ונרמול טקסט לדיבור ברור יותר."
+      },
+      "configurable": {
+        "title": "הגדרות רבות",
+        "description": "מהירות השמעה, עוצמה, גובה צליל, גורמים מפעילים, מראה ועוד. ערכות נושא כהה ובהירה."
+      }
+    },
+    "screenshots": {
+      "title": "צילומי מסך",
+      "subtitle": "ראה את CopySpeak בפעולה",
+      "caption": "CopySpeak v0.1.8 — ממשק ראשי עם לשונית ההשמעה"
+    },
+    "footer": {
+      "github": "GitHub",
+      "license": "רישיון MIT",
+      "madeWith": "נכתב עם Rust, Svelte ו-AI."
+    }
+  },
+  "footer": {
+    "listening": "מקשיב",
+    "paused": "מושהה",
+    "switchEngine": "החלף מנוע TTS. המנוע הנוכחי: {engine}",
+    "available": "זמין",
+    "unavailable": "לא זמין - בדוק הגדרות",
+    "error": "שגיאה בבדיקת הזמינות",
+    "notChecked": "לא נבדק - לחץ כדי להחליף"
+  }
+}

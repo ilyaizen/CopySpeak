@@ -1,14 +1,14 @@
 import { expect, it, vi } from "vite-plus/test";
 import { fireEvent, render } from "@testing-library/svelte";
-import { waitForI18nReady } from "$lib/i18n";
+import { waitForI18nReady } from "#lib/i18n";
 import RecentHistory from "./recent-history.svelte";
-import { historyStore } from "$lib/stores/history-store.svelte.js";
+import { historyStore } from "#lib/stores/history-store.svelte.js";
 
 vi.mock("$app/navigation", () => ({ goto: vi.fn() }));
-vi.mock("$lib/services/tauri", () => ({ isTauri: false }));
+vi.mock("#lib/services/tauri", () => ({ isTauri: false }));
 vi.mock("@tauri-apps/plugin-opener", () => ({ revealItemInDir: vi.fn() }));
-vi.mock("$lib/stores/playback-store.svelte", () => ({ playbackStore: {} }));
-vi.mock("$lib/stores/history-store.svelte.js", () => ({
+vi.mock("#lib/stores/playback-store.svelte", () => ({ playbackStore: {} }));
+vi.mock("#lib/stores/history-store.svelte.js", () => ({
   historyStore: {
     playEntry: vi.fn(),
     items: Array.from({ length: 6 }, (_, index) => ({

@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import { isTauri } from "$lib/services/tauri.js";
-  import { hudStore } from "$lib/stores/hud-store.svelte.js";
-  import { useHudEvents } from "$lib/composables/use-hud-events.js";
-  import { createTimer, clearTimer, createTimeout, clearTimeoutState } from "$lib/utils/timer.js";
+  import { isTauri } from "#lib/services/tauri.js";
+  import { hudStore } from "#lib/stores/hud-store.svelte.js";
+  import { useHudEvents } from "#lib/composables/use-hud-events.js";
+  import { createTimer, clearTimer, createTimeout, clearTimeoutState } from "#lib/utils/timer.js";
   import { ClipboardNotification, HudSynthesisProgress, HudPlaybackContent } from "./hud/index.js";
 
   // Timer state

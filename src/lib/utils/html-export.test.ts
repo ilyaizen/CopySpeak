@@ -9,7 +9,7 @@ import {
   generateDefaultFilename,
   sanitizeFilename
 } from "./html-export";
-import type { HistoryItem, HistoryStatistics } from "$lib/types";
+import type { HistoryItem, HistoryStatistics } from "#lib/types";
 
 describe("HTML Export Utilities", () => {
   let mockUrl: string;

@@ -1,5 +1,5 @@
-import { isTauri } from "$lib/services/tauri.js";
-import { hudStore } from "$lib/stores/hud-store.svelte.js";
+import { isTauri } from "#lib/services/tauri.js";
+import { hudStore } from "#lib/stores/hud-store.svelte.js";
 import type {
   HudStartPayload,
   HudSynthesizingPayload,
@@ -9,7 +9,7 @@ import type {
   ClipboardCopiedPayload,
   AmplitudePayload,
   HudCaptionPayload
-} from "$lib/types/hud.js";
+} from "#lib/types/hud.js";
 
 interface Unlisteners {
   start?: () => void;

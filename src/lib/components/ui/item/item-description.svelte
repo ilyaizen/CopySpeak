@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { cn, type WithElementRef } from "$lib/utils.js";
+  import { cn, type WithElementRef } from "#lib/utils.js";
   import type { HTMLAttributes } from "svelte/elements";
 
   let {
@@ -14,7 +14,7 @@
   bind:this={ref}
   data-slot="item-description"
   class={cn(
-    "text-muted-foreground [&>a:hover]:text-primary line-clamp-2 text-left text-sm leading-normal font-normal group-data-[size=xs]/item:text-xs [&>a]:underline [&>a]:underline-offset-4",
+    "text-muted-foreground [&>a:hover]:text-primary line-clamp-2 text-start text-sm leading-normal font-normal group-data-[size=xs]/item:text-xs [&>a]:underline [&>a]:underline-offset-4",
     className
   )}
   {...restProps}
