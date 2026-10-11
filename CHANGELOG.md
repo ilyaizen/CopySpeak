@@ -13,11 +13,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Spanish (`es`) interface language** — selectable in Settings and on the landing page. Translations are managed in Crowdin (`crowdin.yml`); the Spanish text is a draft until reviewers approve it there.
 
+- **Hebrew (`he`) interface language with right-to-left layout** — selectable in Settings and on the landing page. The layout mirrors for RTL: text alignment, margins, and borders flip with the language. Translations are managed in Crowdin; the Hebrew text is a draft until reviewers approve it there.
+
 ### Fixed
 
 - **±5 s skip lands where you are, not where the buffer started** — skip targets were computed from a playhead that collapsed to 0 whenever synthesis lagged playback (stalls, the final drain, right after a skip), so a skip pressed near the end of a reading could replay it from the beginning. Fast-forward debt also consumed the wrong span at non-1× speeds.
 - **Global hotkey no longer fires twice** — the shortcut plugin was registered twice with identical handlers, so one key press could start two readings.
 - **A stopped queue no longer blocks later clipboard readings** — `stop_queue` left a stale stop flag that silently no-op'd every subsequent double-copy / browser reading until restart.
+- **Saved language applies before the first frame** — the app painted in English (left to right) and then switched to the saved language after startup. The locale now loads before the first render.
 
 ### Changed
 
