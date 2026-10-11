@@ -83,6 +83,7 @@ Keep the active log short — it loads every session; long context makes you les
 - Use three-way `cfg(target_os = ...)` (windows/macos/linux) for platform seams; `cfg(not(windows))` makes macOS compile Linux-only code (wl-clipboard, gtk-layer-shell) that cannot build or run on darwin.
 - Verify a subsystem is actually wired before extending it — grep `mod` declarations and component mounts; the parity checklist once described a post-processing enum system that was never compiled or mounted.
 - Type test catalog maps with `satisfies Record<string, Catalog>`, not a `: Record<…>` annotation; `vp check`'s anti-slop `no-known-value-widening` rejects the annotation.
+- Run `bun run check && bun run test` yourself before merging a PR; all three workflows are `workflow_dispatch`, so PRs and `main` pushes trigger no CI.
 
 <!-- rtk-instructions v2 -->
 
