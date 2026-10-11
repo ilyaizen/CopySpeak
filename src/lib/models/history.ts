@@ -490,7 +490,7 @@ export function createEmptyHistoryState(): HistoryState {
     events: [],
     statistics: calculateHistoryStatistics([]),
     config: {
-      enabled: true,
+      enabled: false,
       storage_mode: "temp",
       persistent_dir: null,
       auto_delete: { keep_latest: 50 },

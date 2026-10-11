@@ -127,7 +127,7 @@ pub struct HistoryConfig {
 impl Default for HistoryConfig {
     fn default() -> Self {
         Self {
-            enabled: true,
+            enabled: false,
             storage_mode: StorageMode::Persistent,
             persistent_dir: None,
             auto_delete: AutoDeleteMode::KeepLatest(15),

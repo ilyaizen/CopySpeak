@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Cleaner Play page** — the "Paste text here, or copy it twice anywhere." hint and the 1 px separator lines (the sidebar divider and the horizontal rules around the quick settings) are gone; the quick settings now spread evenly down the sidebar instead of packing behind dividers.
 - **Snappier playback edges** — streamed readings now finish the moment their last audio drains instead of idling ~2 s before the HUD hides and blocking `/speak --wait` calls resolve, and first audio starts after ~150 ms of buffering instead of ~250 ms.
+- **History is off by default for new installs** — existing configs keep their saved setting. With history off, no reading is logged, and repeated readings of the same text still skip synthesis: the newest 15 clips are kept in CopySpeak's cache folder instead of the history folder. Readings made while history is off are no longer written to `history.json`, which is kept as-is.
 
 ## [0.2.10] - 2026-10-03
 

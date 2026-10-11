@@ -84,6 +84,7 @@ Keep the active log short — it loads every session; long context makes you les
 - Verify a subsystem is actually wired before extending it — grep `mod` declarations and component mounts; the parity checklist once described a post-processing enum system that was never compiled or mounted.
 - Type test catalog maps with `satisfies Record<string, Catalog>`, not a `: Record<…>` annotation; `vp check`'s anti-slop `no-known-value-widening` rejects the annotation.
 - Run `bun run check && bun run test` yourself before merging a PR; all three workflows are `workflow_dispatch`, so PRs and `main` pushes trigger no CI.
+- Branch every synthesis save site on `history.enabled`: on logs and saves to the history folder, off calls `save_speech_cache` and logs nothing; `find_cached_speech` must read the same store.
 
 <!-- rtk-instructions v2 -->
 

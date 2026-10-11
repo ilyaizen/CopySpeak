@@ -130,7 +130,7 @@
       fragment_size: 600
     },
     history: {
-      enabled: true,
+      enabled: false,
       storage_mode: "persistent",
       persistent_dir: null,
       auto_delete: { keep_latest: 50 },

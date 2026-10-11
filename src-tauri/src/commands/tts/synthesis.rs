@@ -396,15 +396,106 @@ fn cache_audio(app: &AppHandle, speech: &SpeechAudio, text: &str) {
     cache.captions = speech.captions.clone();
 }
 
-/// Saved audio (and caption sidecar) of the newest successful history entry
-/// with this exact text, engine and voice. `None` when no entry matches or its
-/// file is gone or unreadable — the caller then synthesizes as usual.
+/// Same-text cache used while history is off: audio files in their own folder,
+/// never logged. The newest `CACHE_LIMIT` files survive.
+const CACHE_LIMIT: usize = 15;
+
+fn speech_cache_dir() -> std::path::PathBuf {
+    dirs::cache_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("CopySpeak")
+        .join("speech-cache")
+}
+
+/// ponytail: 64-bit DefaultHasher key, not stable across Rust releases. A
+/// collision would replay the wrong audio; a release change only misses.
+/// Upgrade to a stored-key check if either bites.
+fn speech_cache_file(
+    dir: &std::path::Path,
+    engine: &str,
+    voice: &str,
+    text: &str,
+) -> std::path::PathBuf {
+    use std::hash::{Hash, Hasher};
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    (engine, voice, text).hash(&mut hasher);
+    dir.join(format!("{:016x}.audio", hasher.finish()))
+}
+
+fn save_speech_cache(
+    dir: &std::path::Path,
+    speech: &SpeechAudio,
+    engine: &str,
+    voice: &str,
+    text: &str,
+) {
+    let path = speech_cache_file(dir, engine, voice, text);
+    let path_str = path.to_string_lossy();
+    let written = std::fs::create_dir_all(dir).and_then(|()| std::fs::write(&path, &speech.bytes));
+    if let Err(e) = written {
+        log::warn!("[TTS] Cannot cache audio: {e}");
+        return;
+    }
+    match &speech.captions {
+        Some(captions) => {
+            if let Err(error) = write_sidecar(&path_str, captions) {
+                log::warn!("Cannot save caption sidecar: {error}");
+            }
+        }
+        None => crate::tts::captions::remove_sidecar(&path_str),
+    }
+    evict_speech_cache(dir);
+}
+
+/// Drop the oldest cached audio, and its captions, past `CACHE_LIMIT`.
+fn evict_speech_cache(dir: &std::path::Path) {
+    let Ok(entries) = std::fs::read_dir(dir) else {
+        return;
+    };
+    let mut files: Vec<(std::time::SystemTime, std::path::PathBuf)> = entries
+        .flatten()
+        .map(|entry| entry.path())
+        .filter(|path| path.extension().is_some_and(|ext| ext == "audio"))
+        .filter_map(|path| Some((std::fs::metadata(&path).ok()?.modified().ok()?, path)))
+        .collect();
+    files.sort();
+    let excess = files.len().saturating_sub(CACHE_LIMIT);
+    for (_, path) in files.into_iter().take(excess) {
+        if let Err(e) = std::fs::remove_file(&path) {
+            log::warn!("[TTS] Cannot evict cached audio: {e}");
+        }
+        crate::tts::captions::remove_sidecar(&path.to_string_lossy());
+    }
+}
+
+fn read_speech_cache(
+    dir: &std::path::Path,
+    engine: &str,
+    voice: &str,
+    text: &str,
+) -> Option<SpeechAudio> {
+    let path = speech_cache_file(dir, engine, voice, text);
+    let bytes = std::fs::read(&path).ok()?;
+    Some(SpeechAudio {
+        bytes,
+        captions: read_sidecar(&path.to_string_lossy()),
+    })
+}
+
+/// Saved audio (and caption sidecar) for this exact text, engine and voice.
+/// With history on, that is the newest successful history entry; with history
+/// off, the same-text cache. `None` when nothing matches or the file is gone
+/// or unreadable — the caller then synthesizes as usual.
 fn find_cached_speech(
     history: &Mutex<HistoryLog>,
+    history_on: bool,
     text: &str,
     engine: &str,
     voice: &str,
 ) -> Option<SpeechAudio> {
+    if !history_on {
+        return read_speech_cache(&speech_cache_dir(), engine, voice, text);
+    }
     let path = history
         .lock()
         .unwrap()
@@ -437,12 +528,13 @@ fn find_cached_speech(
 /// fragment `speak_queued` would split it into, joined in order.
 fn find_cached_reading(
     history: &Mutex<HistoryLog>,
+    history_on: bool,
     text: &str,
     pagination_config: &crate::config::PaginationConfig,
     engine: &str,
     voice: &str,
 ) -> Option<SpeechAudio> {
-    if let Some(speech) = find_cached_speech(history, text, engine, voice) {
+    if let Some(speech) = find_cached_speech(history, history_on, text, engine, voice) {
         return Some(speech);
     }
     let fragments = pagination::paginate_text(text, pagination_config);
@@ -451,7 +543,10 @@ fn find_cached_reading(
     }
     let parts = fragments
         .into_iter()
-        .map(|f| Some((find_cached_speech(history, &f.text, engine, voice)?, f.text)))
+        .map(|f| {
+            let speech = find_cached_speech(history, history_on, &f.text, engine, voice)?;
+            Some((speech, f.text))
+        })
         .collect::<Option<Vec<_>>>()?;
     crate::tts::captions::concat_speech(parts)
         .map_err(|e| log::warn!("[TTS] Cannot join saved fragments: {e}. Re-synthesizing."))
@@ -604,9 +699,11 @@ async fn speak_now_internal(
     let backend: Box<dyn TtsBackend> = create_backend_from_effective(&eff, &tts_config);
     let engine_str_for_cache = engine_str(&active_backend);
 
+    let history_on = config.lock().unwrap().history.enabled;
     let cached = if reuse_saved_audio {
         find_cached_reading(
             &history,
+            history_on,
             &text,
             &pagination_config,
             &engine_str_for_cache,
@@ -866,7 +963,7 @@ async fn synthesize_paginated(
 /// Handle file output mode
 fn handle_file_output(
     app: &AppHandle,
-    _config: &State<'_, Mutex<AppConfig>>,
+    config: &State<'_, Mutex<AppConfig>>,
     history: &State<'_, Mutex<HistoryLog>>,
     speech: &SpeechAudio,
     text: &str,
@@ -918,18 +1015,29 @@ fn handle_file_output(
         .map(|e| e.duration_ms)
         .unwrap_or(0);
 
-    add_history_with_metadata(
-        history,
-        text,
-        &engine_str(active_backend),
-        voice,
-        audio_duration_ms,
-        Some(output_path.to_string_lossy().into_owned()),
-        None,
-        synthesis_ms,
-        None,
-    );
-    let _ = app.emit("history-updated", ());
+    let history_on = config.lock().unwrap().history.enabled;
+    if history_on {
+        add_history_with_metadata(
+            history,
+            text,
+            &engine_str(active_backend),
+            voice,
+            audio_duration_ms,
+            Some(output_path.to_string_lossy().into_owned()),
+            None,
+            synthesis_ms,
+            None,
+        );
+        let _ = app.emit("history-updated", ());
+    } else {
+        save_speech_cache(
+            &speech_cache_dir(),
+            speech,
+            &engine_str(active_backend),
+            voice,
+            text,
+        );
+    }
 
     Ok(())
 }
@@ -956,20 +1064,31 @@ fn handle_playback_output(
     let voice_name = voice_display_name(active_backend, tts_config, voice, voice_label);
     let audio_ext = backend_arc.file_extension().to_string();
 
-    let history_path = save_to_history_storage(config, speech, &engine_id, &voice_name, &audio_ext);
-
-    add_history_with_metadata(
-        history,
-        text,
-        &engine_str(active_backend),
-        voice,
-        envelope.duration_ms,
-        history_path,
-        None,
-        synthesis_ms,
-        None,
-    );
-    let _ = app.emit("history-updated", ());
+    let history_on = config.lock().unwrap().history.enabled;
+    if history_on {
+        let history_path =
+            save_to_history_storage(config, speech, &engine_id, &voice_name, &audio_ext);
+        add_history_with_metadata(
+            history,
+            text,
+            &engine_str(active_backend),
+            voice,
+            envelope.duration_ms,
+            history_path,
+            None,
+            synthesis_ms,
+            None,
+        );
+        let _ = app.emit("history-updated", ());
+    } else {
+        save_speech_cache(
+            &speech_cache_dir(),
+            speech,
+            &engine_str(active_backend),
+            voice,
+            text,
+        );
+    }
 
     // Cache audio for replay
     cache_audio(app, speech, text);
@@ -1102,12 +1221,13 @@ pub async fn speak_queued(
     let engine_str_val = engine_str(&active_backend);
     let engine_id_val = engine_identifier(&active_backend);
 
-    // Repeated text replays saved audio — only when history holds every
-    // fragment, so a reading never mixes saved and fresh parts nor leaves a
-    // partial batch in history.
+    // Repeated text replays saved audio — only when the saved-audio store holds
+    // every fragment, so a reading never mixes saved and fresh parts nor leaves
+    // a partial batch in history.
+    let history_on = config.lock().unwrap().history.enabled;
     let mut saved: Option<std::vec::IntoIter<SpeechAudio>> = fragments
         .iter()
-        .map(|f| find_cached_speech(&history, &f.text, &engine_str_val, &voice))
+        .map(|f| find_cached_speech(&history, history_on, &f.text, &engine_str_val, &voice))
         .collect::<Option<Vec<_>>>()
         .map(Vec::into_iter);
     let replaying = saved.is_some();
@@ -1233,8 +1353,18 @@ pub async fn speak_queued(
             hud::show_hud(&app, envelope.clone(), Some(text.clone()));
         }
 
-        // Save to history (a replay is already there)
-        if !replaying {
+        // Save to history (a replay is already there). With history off the
+        // audio goes to the same-text cache instead, and nothing is logged.
+        if !replaying && !history_on {
+            save_speech_cache(
+                &speech_cache_dir(),
+                &wav_bytes,
+                &engine_str_val,
+                &voice,
+                &fragment.text,
+            );
+        }
+        if !replaying && history_on {
             let audio_ext = backend_arc.file_extension().to_string();
             let voice_name = voice_display_name(
                 &active_backend,
@@ -1348,9 +1478,9 @@ pub async fn speak_history_entry(
         return Err("Nothing to speak".to_string());
     }
 
-    let tts_config = {
+    let (tts_config, history_on) = {
         let cfg = config.lock().unwrap();
-        cfg.tts.clone()
+        (cfg.tts.clone(), cfg.history.enabled)
     };
 
     let active_backend = active_engine(&tts_config);
@@ -1405,22 +1535,25 @@ pub async fn speak_history_entry(
     // Extract envelope
     let envelope = extract_envelope_or_default(&wav_bytes.bytes);
 
-    // Save to history
-    let history_path =
-        save_to_history_storage(&config, &wav_bytes, &engine_id, &voice_name, &audio_ext);
-
-    add_history_with_metadata(
-        &history,
-        &text,
-        &engine_str_val,
-        &voice,
-        envelope.duration_ms,
-        history_path,
-        None,
-        synthesis_ms,
-        None,
-    );
-    let _ = app.emit("history-updated", ());
+    if history_on {
+        // Save to history
+        let history_path =
+            save_to_history_storage(&config, &wav_bytes, &engine_id, &voice_name, &audio_ext);
+        add_history_with_metadata(
+            &history,
+            &text,
+            &engine_str_val,
+            &voice,
+            envelope.duration_ms,
+            history_path,
+            None,
+            synthesis_ms,
+            None,
+        );
+        let _ = app.emit("history-updated", ());
+    } else {
+        save_speech_cache(&speech_cache_dir(), &wav_bytes, &engine_str_val, &voice, &text);
+    }
 
     // Show HUD with waveform visualization
     hud::show_hud(&app, envelope, Some(text.clone()));
@@ -1648,10 +1781,10 @@ mod cache_tests {
         assert_eq!(fragments.len(), 2);
         let history = Mutex::new(HistoryLog::new());
         let first = saved(&history, &fragments[0].text, "ava");
-        assert!(find_cached_reading(&history, text, &pagination, "edge", "ava").is_none());
+        assert!(find_cached_reading(&history, true, text, &pagination, "edge", "ava").is_none());
 
         let second = saved(&history, &fragments[1].text, "ava");
-        let joined = find_cached_reading(&history, text, &pagination, "edge", "ava").unwrap();
+        let joined = find_cached_reading(&history, true, text, &pagination, "edge", "ava").unwrap();
         assert_eq!(
             crate::audio::wav::parse_wav_header(&joined.bytes)
                 .unwrap()
@@ -1659,10 +1792,31 @@ mod cache_tests {
             8,
             "both fragments' samples, in order"
         );
-        assert!(find_cached_reading(&history, text, &pagination, "edge", "other").is_none());
+        assert!(find_cached_reading(&history, true, text, &pagination, "edge", "other").is_none());
 
         std::fs::remove_file(&second).unwrap();
-        assert!(find_cached_reading(&history, text, &pagination, "edge", "ava").is_none());
+        assert!(find_cached_reading(&history, true, text, &pagination, "edge", "ava").is_none());
         std::fs::remove_file(&first).unwrap();
+    }
+
+    #[test]
+    fn same_text_cache_keeps_only_the_newest_entries() {
+        let dir =
+            std::env::temp_dir().join(format!("copyspeak-speech-cache-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        for i in 0..=CACHE_LIMIT {
+            let speech = SpeechAudio {
+                bytes: vec![i as u8; 4],
+                captions: None,
+            };
+            save_speech_cache(&dir, &speech, "edge", "ava", &format!("text {i}"));
+            // Coarse mtime clocks can tie; keep write order observable.
+            std::thread::sleep(std::time::Duration::from_millis(15));
+        }
+        let cached = |i: usize| read_speech_cache(&dir, "edge", "ava", &format!("text {i}"));
+        assert!(cached(0).is_none(), "oldest entry is evicted");
+        assert_eq!(cached(CACHE_LIMIT).unwrap().bytes, vec![CACHE_LIMIT as u8; 4]);
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), CACHE_LIMIT);
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 }
