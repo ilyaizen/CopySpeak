@@ -17,10 +17,13 @@ use std::sync::Arc;
 use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager};
 
-/// Payload emitted to the frontend when TTS should trigger.
+/// Payload emitted to the frontend when TTS should trigger. The frontend
+/// hands `trigger` back to `speak_queued` unchanged.
 #[derive(Clone, serde::Serialize)]
 pub struct SpeakRequest {
     pub text: String,
+    /// Present only while a browser companion follows trigger speaks.
+    pub trigger: Option<crate::browser_bridge::SpeakTrigger>,
 }
 
 /// Payload emitted when clipboard content changes.
@@ -194,11 +197,24 @@ impl TriggerContext {
                 final_text.chars().count()
             );
 
+            // The copied text, before sanitize and truncation, is what a page
+            // selection can match; only sent when a companion is following.
+            let trigger = crate::browser_bridge::follows_triggers(&self.app).then(|| {
+                crate::browser_bridge::SpeakTrigger {
+                    source: crate::browser_bridge::TriggerSource::DoubleCopy,
+                    raw_text: text.to_string(),
+                }
+            });
+
             // Emit the full text — the frontend will call speak_queued,
             // which handles pagination and sequential fragment playback.
-            let _ = self
-                .app
-                .emit("speak-request", SpeakRequest { text: final_text });
+            let _ = self.app.emit(
+                "speak-request",
+                SpeakRequest {
+                    text: final_text,
+                    trigger,
+                },
+            );
         } else {
             if crate::logging::is_debug_mode() {
                 log::debug!(

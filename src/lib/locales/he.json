@@ -290,11 +290,6 @@
         "description": "TTS מקומי קומפקטי",
         "detail": "Kyutai Pocket: מודל בן 100 מיליון פרמטרים שנבנה לרוץ על המעבד, עם קולות בשש שפות."
       },
-      "edge": {
-        "title": "Edge-TTS",
-        "description": "TTS נוירוני של Microsoft Edge (חינם)",
-        "detail": "קולות נוירוניים חינמיים ואיכותיים משירות ה-TTS המקוון של Microsoft Edge. לא נדרש מפתח API."
-      },
       "google": {
         "title": "Google Gemini TTS",
         "description": "TTS בענן מבוסס Gemini של Google",
@@ -359,10 +354,6 @@
       "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
       "check": "בדוק",
       "testEngine": "בדוק מנוע"
-    },
-    "edge": {
-      "title": "Edge TTS",
-      "description": "ענן: קולות הקראה של Microsoft Edge. חינם, ללא מפתח API, אך דורש חיבור לאינטרנט."
     },
     "google": {
       "title": "Google",
@@ -664,7 +655,7 @@
       },
       "engines": {
         "title": "9 מנועי TTS",
-        "description": "Edge TTS, OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP, ומנועי CLI מקומיים (Piper, Kokoro, Kitten)."
+        "description": "OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP, ומנועי CLI מקומיים (Piper, Kokoro, Kitten)."
       },
       "hud": {
         "title": "שכבת HUD",

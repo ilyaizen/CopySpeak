@@ -15,7 +15,13 @@
 // sanitizer invented simply has no source span, and a fragment whose engine
 // sent no usable captions falls back to passage-only while the rest of the
 // reading keeps highlighting.
+//
+// Trigger speaks (double-copy, hotkey) run the same projection as a read-only
+// mirror: the desktop speak path is untouched, the bridge only announces the
+// speak (`trigger-started`) and streams `state` frames keyed by `trigger_id`,
+// and the page decides whether its live selection is the spoken text.
 
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 #[cfg(not(target_os = "windows"))]
@@ -42,10 +48,64 @@ use crate::tts::captions::{CaptionAlignment, WordTiming};
 
 const PIPE_NAME: &str = r"\\.\pipe\copyspeak-browser";
 const MAX_FRAME: usize = 256 * 1024;
+/// Largest text (UTF-16 units) a page selection can carry, the same bound the
+/// extension and native host put on captured readings.
+const MAX_TEXT_UNITS: usize = 65536;
 /// Sentinel for "no active fragment".
 const NO_FRAGMENT: usize = usize::MAX;
 /// How often the state ticker re-evaluates the projected word.
 const TICK_MS: u64 = 50;
+
+/// What started a speak the browser companion can follow in the page.
+/// The tray is deliberately absent: it speaks the clipboard, not a selection.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum TriggerSource {
+    DoubleCopy,
+    Hotkey,
+}
+
+/// A trigger speak's page identity: its source and the text exactly as the
+/// user copied it, before sanitize, truncation and condense. Word offsets on
+/// the pipe index into `raw_text`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SpeakTrigger {
+    pub source: TriggerSource,
+    pub raw_text: String,
+}
+
+static TRIGGER_SEQ: AtomicU64 = AtomicU64::new(0);
+
+/// Fresh id for a trigger speak: unique per app run, ASCII, and well under
+/// the native host's 128-character id bound.
+pub fn new_trigger_id() -> String {
+    let millis = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    format!(
+        "trigger-{millis}-{}",
+        TRIGGER_SEQ.fetch_add(1, Ordering::Relaxed)
+    )
+}
+
+/// Which id family a session's `state` frames carry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SessionKind {
+    /// Extension-initiated reading, keyed by `reading_id`.
+    Reading,
+    /// Desktop trigger speak mirrored to the page, keyed by `trigger_id`.
+    Trigger,
+}
+
+impl SessionKind {
+    fn id_field(self) -> &'static str {
+        match self {
+            SessionKind::Reading => "reading_id",
+            SessionKind::Trigger => "trigger_id",
+        }
+    }
+}
 
 /// Lifecycle status, stored as u8 so it can live in an AtomicU8.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -103,10 +163,15 @@ struct FragmentEntry {
     captions: Option<CaptionAlignment>,
     /// True once captions arrived and their text matched `expected_text`.
     captions_ok: bool,
+    /// False for a discovered tile whose text the spoken text does not
+    /// contain: it keeps the fragment numbering but never takes captions.
+    placed: bool,
 }
 
 struct BrowserSession {
-    reading_id: String,
+    /// `reading_id` or `trigger_id`, per `kind`; the sessions map key.
+    id: String,
+    kind: SessionKind,
     sequence: AtomicU64,
     /// Sanitized text CopySpeak actually speaks.
     spoken_text: String,
@@ -123,6 +188,23 @@ struct BrowserSession {
     /// the global pipe handle instead).
     #[cfg(not(target_os = "windows"))]
     stream: Mutex<Option<SafeHandle>>,
+}
+
+impl BrowserSession {
+    /// Mark `index` as the audible fragment. A trigger's clip is audible only
+    /// when its own tile holds the same text; any other clip leaves the session
+    /// silent until its own audio starts.
+    fn announce_audible(&self, index: usize, text: Option<&str>) {
+        let own = text.is_some_and(|text| {
+            self.fragments
+                .lock()
+                .unwrap()
+                .get(index)
+                .is_some_and(|entry| entry.expected_text == text)
+        });
+        let audible = if own { index } else { NO_FRAGMENT };
+        self.active_fragment.store(audible, Ordering::Relaxed);
+    }
 }
 
 // HANDLE wrapper for Send+Sync
@@ -265,6 +347,13 @@ pub struct BrowserBridge {
     /// Unix sockets need no global handle — state flows through the session's
     /// own stream, so the field does not exist there.
     pipe_handle: Mutex<Option<SafeHandle>>,
+    /// Unix only: the connected host stream, for frames sent outside a
+    /// request (`trigger-started`) and for trigger sessions' state.
+    #[cfg(not(target_os = "windows"))]
+    client: Mutex<Option<SafeHandle>>,
+    /// True while a native host is connected.
+    connected: AtomicBool,
+    /// The extension's "Highlight when I double-copy" setting (`hello`).
     automatic_mode: AtomicBool,
 }
 
@@ -274,8 +363,36 @@ impl BrowserBridge {
             sessions: Mutex::new(HashMap::new()),
             #[cfg(target_os = "windows")]
             pipe_handle: Mutex::new(None),
+            #[cfg(not(target_os = "windows"))]
+            client: Mutex::new(None),
+            connected: AtomicBool::new(false),
             automatic_mode: AtomicBool::new(false),
         }
+    }
+
+    /// True when a connected companion asked to follow trigger speaks. Gates
+    /// every trigger frame: an extension without the setting (or an older
+    /// one, which disconnects on unknown event types) never receives them.
+    fn follows_triggers(&self) -> bool {
+        self.connected.load(Ordering::Relaxed) && self.automatic_mode.load(Ordering::Relaxed)
+    }
+}
+
+/// See [`BrowserBridge::follows_triggers`].
+pub fn follows_triggers(app: &AppHandle) -> bool {
+    app.state::<BrowserBridge>().follows_triggers()
+}
+
+/// Native host connected (`Some`) or gone (`None`). A disconnect also forgets
+/// the client's settings; the next connection re-sends `hello`.
+fn set_client(bridge: &BrowserBridge, client: Option<SafeHandle>) {
+    bridge.connected.store(client.is_some(), Ordering::Relaxed);
+    if client.is_none() {
+        bridge.automatic_mode.store(false, Ordering::Relaxed);
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        *bridge.client.lock().unwrap() = client;
     }
 }
 
@@ -305,6 +422,10 @@ pub fn start_browser_bridge(app: AppHandle) -> Result<(), String> {
     let app_for_stream = app.clone();
     app.listen("audio-stream-chunk", move |event| {
         handle_stream_chunk_event(&app_for_stream, event.payload());
+    });
+    let app_for_audible = app.clone();
+    app.listen("playback-fragment-audible", move |event| {
+        handle_audible_fragment(&app_for_audible, event.payload());
     });
 
     #[cfg(target_os = "windows")]
@@ -384,9 +505,13 @@ fn start_unix_socket(app: AppHandle) -> Result<(), String> {
             match stream {
                 Ok(stream) => {
                     log::info!("[Browser] Native host connected");
-                    if let Err(e) = handle_session(app.clone(), SafeHandle(stream)) {
+                    let stream = SafeHandle(stream);
+                    let bridge = app.state::<BrowserBridge>();
+                    set_client(&bridge, Some(stream.clone()));
+                    if let Err(e) = handle_session(app.clone(), stream) {
                         log::warn!("[Browser] Session error: {}", e);
                     }
+                    set_client(&bridge, None);
                     log::info!("[Browser] Native host disconnected");
                 }
                 Err(e) => {
@@ -443,6 +568,28 @@ fn handle_stream_chunk_event(app: &AppHandle, payload: &str) {
     }
 }
 
+/// The webview announces each clip as it becomes audible. A speak queued
+/// behind another clip is not audible until its own clip plays, so until then
+/// the other clip's clock must not drive it (see `announce_audible`).
+fn handle_audible_fragment(app: &AppHandle, payload: &str) {
+    let Ok(event) = serde_json::from_str::<Value>(payload) else {
+        return;
+    };
+    let Some(index) = event
+        .get("index")
+        .and_then(|v| v.as_u64())
+        .map(|v| v as usize)
+    else {
+        return;
+    };
+    let text = event.get("text").and_then(|v| v.as_str());
+    let bridge = app.state::<BrowserBridge>();
+    let sessions = bridge.sessions.lock().unwrap();
+    for session in sessions.values().filter(|s| s.kind == SessionKind::Trigger) {
+        session.announce_audible(index, text);
+    }
+}
+
 fn record_fragment_captions(
     app: &AppHandle,
     index: usize,
@@ -457,9 +604,81 @@ fn record_fragment_captions(
         return;
     };
     drop(sessions);
+    record_on(&session, index, text, captions);
+}
 
+/// One synthesis event onto one session's fragment table.
+fn record_on(
+    session: &BrowserSession,
+    index: usize,
+    text: Option<&str>,
+    captions: Option<CaptionAlignment>,
+) {
     let mut fragments = session.fragments.lock().unwrap();
+    if session.kind == SessionKind::Trigger {
+        discover_tile(&mut fragments, &session.spoken_text, index, text);
+    }
     apply_fragment_event(&mut fragments, index, text, captions);
+}
+
+/// Trigger speaks have no pre-built tile table: the speak path (saved-audio
+/// replay, streamed pages, one batch clip) decides which fragments reach the
+/// player. Learn each tile from the first event that names its index, by
+/// finding its text in the spoken text after the previous tile. Text the
+/// spoken text does not contain gets an unplaced tile, so that fragment
+/// degrades to passage-only instead of guessing offsets.
+fn discover_tile(
+    fragments: &mut Vec<FragmentEntry>,
+    spoken: &str,
+    index: usize,
+    text: Option<&str>,
+) {
+    let Some(text) = text else {
+        return;
+    };
+    if index != fragments.len() {
+        return;
+    }
+    let from = fragments.last().map_or(0, |entry| entry.text_end);
+    let from_byte = byte_offset(spoken, from);
+    let found = (!text.is_empty())
+        .then(|| spoken[from_byte..].find(text))
+        .flatten();
+    let entry = match found {
+        Some(offset) => {
+            let text_start = from + spoken[from_byte..from_byte + offset].encode_utf16().count();
+            FragmentEntry {
+                text_start,
+                text_end: text_start + text.encode_utf16().count(),
+                expected_text: text.to_string(),
+                captions: None,
+                captions_ok: false,
+                placed: true,
+            }
+        }
+        None => FragmentEntry {
+            text_start: from,
+            text_end: from,
+            expected_text: text.to_string(),
+            captions: None,
+            captions_ok: false,
+            placed: false,
+        },
+    };
+    fragments.push(entry);
+}
+
+/// Byte offset of a UTF-16 offset that falls on a char boundary of `text`
+/// (tile ends always do); the text's length when it is at or past the end.
+fn byte_offset(text: &str, utf16: usize) -> usize {
+    let mut units = 0;
+    for (byte, ch) in text.char_indices() {
+        if units >= utf16 {
+            return byte;
+        }
+        units += ch.len_utf16();
+    }
+    text.len()
 }
 
 /// Core caption/tile bookkeeping for one synthesis event, as it maps onto the
@@ -475,7 +694,7 @@ fn apply_fragment_event(
     text: Option<&str>,
     captions: Option<CaptionAlignment>,
 ) {
-    let Some(entry) = fragments.get_mut(index) else {
+    let Some(entry) = fragments.get_mut(index).filter(|entry| entry.placed) else {
         return;
     };
     // Caption-only chunk events arrive with `text: None`, so only verify the
@@ -596,12 +815,15 @@ fn accept_connections(app: AppHandle, pipe: SafeHandle) -> Result<(), String> {
             }
 
             log::info!("[Browser] Native host connected");
+            let bridge = app.state::<BrowserBridge>();
+            set_client(&bridge, Some(pipe.clone()));
 
             // Handle messages until disconnect.
             if let Err(e) = handle_session(app.clone(), pipe.clone()) {
                 log::warn!("[Browser] Session error: {}", e);
             }
 
+            set_client(&bridge, None);
             DisconnectNamedPipe(pipe.0).ok();
         }
     }
@@ -670,7 +892,7 @@ fn handle_message(app: AppHandle, pipe: &SafeHandle, message: Value) -> Result<(
             bridge.automatic_mode.store(automatic, Ordering::Relaxed);
             log::info!("[Browser] Hello: automatic={}", automatic);
         }
-        "start" | "capture" => {
+        "start" => {
             let request_id = message
                 .get("request_id")
                 .and_then(|v| v.as_str())
@@ -695,8 +917,11 @@ fn handle_message(app: AppHandle, pipe: &SafeHandle, message: Value) -> Result<(
             start_browser_reading(app, pipe, request_id, raw_text)?;
         }
         "control" => {
-            let reading_id = message
+            // Readings and trigger speaks share one control path: every action
+            // lands in the webview playback store, never the Rodio commands.
+            let session_id = message
                 .get("reading_id")
+                .or_else(|| message.get("trigger_id"))
                 .and_then(|v| v.as_str())
                 .ok_or("Missing reading_id")?;
             let action = message
@@ -708,6 +933,12 @@ fn handle_message(app: AppHandle, pipe: &SafeHandle, message: Value) -> Result<(
                 "pause" | "resume" => {
                     let _ = app.emit("playback-toggle-pause", ());
                 }
+                "skip-back" => {
+                    let _ = app.emit("playback-skip-backward", ());
+                }
+                "skip-forward" => {
+                    let _ = app.emit("playback-skip-forward", ());
+                }
                 "stop" => {
                     let _ = app.emit("playback-stop", ());
                     // The playback store also reports the cancelled status via
@@ -715,7 +946,7 @@ fn handle_message(app: AppHandle, pipe: &SafeHandle, message: Value) -> Result<(
                     // session ends even if the webview is unresponsive.
                     let session_arc = {
                         let sessions = bridge.sessions.lock().unwrap();
-                        sessions.get(reading_id).cloned()
+                        sessions.get(session_id).cloned()
                     };
                     if let Some(session) = session_arc {
                         finish_session(&app, &session, SessionStatus::Cancelled);
@@ -724,23 +955,6 @@ fn handle_message(app: AppHandle, pipe: &SafeHandle, message: Value) -> Result<(
                 _ => {
                     log::warn!("[Browser] Unknown control action: {}", action);
                 }
-            }
-        }
-        "snapshot" => {
-            let reading_id = message
-                .get("reading_id")
-                .and_then(|v| v.as_str())
-                .ok_or("Missing reading_id")?;
-
-            let snapshot = {
-                let sessions = bridge.sessions.lock().unwrap();
-                sessions
-                    .get(reading_id)
-                    .map(|s| (s.clone(), project_state(s)))
-            };
-            if let Some((session, (status, word, reason))) = snapshot {
-                let seq = session.sequence.fetch_add(1, Ordering::Relaxed) + 1;
-                let _ = send_state(&bridge, reading_id, seq, status, word, reason);
             }
         }
         _ => {
@@ -758,8 +972,6 @@ fn start_browser_reading(
     request_id: String,
     raw_text: String,
 ) -> Result<(), String> {
-    let bridge = app.state::<BrowserBridge>();
-
     // Sanitize exactly like a desktop reading; the browser extension keeps
     // highlighting the RAW selection through the exact whitespace map.
     let spoken_text = {
@@ -790,12 +1002,14 @@ fn start_browser_reading(
             expected_text: fragment.text.clone(),
             captions: None,
             captions_ok: false,
+            placed: true,
         });
     }
     let reading_id = format!("browser-{}", request_id);
 
     let session = Arc::new(BrowserSession {
-        reading_id: reading_id.clone(),
+        id: reading_id.clone(),
+        kind: SessionKind::Reading,
         sequence: AtomicU64::new(0),
         spoken_text,
         source_map,
@@ -808,15 +1022,14 @@ fn start_browser_reading(
         stream: Mutex::new(Some(pipe.clone())),
     });
 
-    bridge
-        .sessions
-        .lock()
-        .unwrap()
-        .insert(reading_id.clone(), session.clone());
+    install_session(&app, session.clone());
 
     // Tell the frontend a browser reading is active so the playback store
     // reports audible-clock positions to us.
-    let _ = app.emit("browser-reading", json!({ "active": true }));
+    let _ = app.emit(
+        "browser-reading",
+        json!({ "active": true, "session_id": reading_id }),
+    );
 
     // Send acceptance.
     send_accepted(pipe, &request_id, &reading_id)?;
@@ -846,6 +1059,7 @@ fn start_browser_reading(
             queue,
             telemetry_state,
             Some(text_clone),
+            None,
         )
         .await;
 
@@ -865,21 +1079,117 @@ fn start_browser_reading(
     Ok(())
 }
 
+/// One companion session at a time: a new reading or trigger cancels whatever
+/// the page was following, so captions and progress never land on a stale one.
+fn install_session(app: &AppHandle, session: Arc<BrowserSession>) {
+    let bridge = app.state::<BrowserBridge>();
+    let previous: Vec<_> = bridge.sessions.lock().unwrap().values().cloned().collect();
+    for old in previous {
+        finish_session(app, &old, SessionStatus::Cancelled);
+    }
+    bridge
+        .sessions
+        .lock()
+        .unwrap()
+        .insert(session.id.clone(), session);
+}
+
+/// Mirror a trigger speak to the companion: announce it with
+/// `trigger-started`, then project the audible word into `raw_text` exactly
+/// like a browser reading. Observer only — the speak runs unchanged whether
+/// or not this does anything. Call once the final spoken text (after
+/// sanitize and condense) is known and before synthesis emits audio.
+pub fn begin_trigger(app: &AppHandle, trigger_id: &str, trigger: &SpeakTrigger, spoken_text: &str) {
+    if !follows_triggers(app) {
+        return;
+    }
+    let raw_text = &trigger.raw_text;
+    if raw_text.trim().is_empty()
+        || raw_text.encode_utf16().count() > MAX_TEXT_UNITS
+        || spoken_text.trim().is_empty()
+    {
+        return;
+    }
+    let bridge = app.state::<BrowserBridge>();
+    let session = Arc::new(BrowserSession {
+        id: trigger_id.to_string(),
+        kind: SessionKind::Trigger,
+        sequence: AtomicU64::new(0),
+        spoken_text: spoken_text.to_string(),
+        source_map: align(raw_text, spoken_text),
+        fragments: Mutex::new(Vec::new()),
+        active_fragment: AtomicUsize::new(NO_FRAGMENT),
+        position_ms: AtomicU64::new(0),
+        status: AtomicU8::new(SessionStatus::Buffering as u8),
+        cancelled: AtomicBool::new(false),
+        #[cfg(not(target_os = "windows"))]
+        stream: Mutex::new(bridge.client.lock().unwrap().clone()),
+    });
+    install_session(app, session.clone());
+
+    if let Err(e) = send_to_host(&bridge, &trigger_started_message(trigger_id, trigger)) {
+        log::warn!("[Browser] trigger-started not delivered: {}", e);
+        session.cancelled.store(true, Ordering::Relaxed);
+        bridge.sessions.lock().unwrap().remove(trigger_id);
+        return;
+    }
+    log::info!(
+        "[Browser] Trigger started: trigger_id={} source={:?} chars={}",
+        trigger_id,
+        trigger.source,
+        raw_text.chars().count()
+    );
+    let _ = app.emit(
+        "browser-reading",
+        json!({ "active": true, "session_id": trigger_id }),
+    );
+    spawn_state_ticker(app.clone(), session);
+}
+
+/// Announces a trigger speak. Additive to protocol v1: no existing event
+/// changes, and only extensions that asked for triggers receive it.
+fn trigger_started_message(trigger_id: &str, trigger: &SpeakTrigger) -> Value {
+    json!({
+        "v": 1,
+        "type": "trigger-started",
+        "trigger_id": trigger_id,
+        "source": trigger.source,
+        "raw_text": trigger.raw_text
+    })
+}
+
+/// The trigger's speak failed before playback could finish it: end the
+/// mirror with `error`. No-op when no session was started for it.
+pub fn fail_trigger(app: &AppHandle, trigger_id: &str) {
+    let bridge = app.state::<BrowserBridge>();
+    let session = bridge.sessions.lock().unwrap().get(trigger_id).cloned();
+    if let Some(session) = session {
+        finish_session(app, &session, SessionStatus::Error);
+    }
+}
+
 /// Frontend audible-clock progress for the active browser reading.
 #[tauri::command]
 pub async fn browser_reading_progress(
     app: AppHandle,
+    session_id: String,
     fragment_index: usize,
     position_ms: u64,
     paused: bool,
 ) -> Result<(), String> {
     let bridge = app.state::<BrowserBridge>();
     let sessions = bridge.sessions.lock().unwrap();
-    let Some(session) = sessions.values().next().cloned() else {
+    let Some(session) = sessions.get(&session_id).cloned() else {
         return Ok(());
     };
     drop(sessions);
 
+    // A trigger follows only its own audible clip; another clip's clock is ignored.
+    if session.kind == SessionKind::Trigger
+        && session.active_fragment.load(Ordering::Relaxed) != fragment_index
+    {
+        return Ok(());
+    }
     session.position_ms.store(position_ms, Ordering::Relaxed);
     session
         .active_fragment
@@ -901,14 +1211,18 @@ pub async fn browser_reading_progress(
 
 /// Frontend reports the reading reached a terminal state.
 #[tauri::command]
-pub async fn browser_reading_finished(app: AppHandle, status: String) -> Result<(), String> {
+pub async fn browser_reading_finished(
+    app: AppHandle,
+    session_id: String,
+    status: String,
+) -> Result<(), String> {
     let session_status = match status.as_str() {
         "completed" => SessionStatus::Completed,
         _ => SessionStatus::Cancelled,
     };
     let bridge = app.state::<BrowserBridge>();
     let sessions = bridge.sessions.lock().unwrap();
-    let Some(session) = sessions.values().next().cloned() else {
+    let Some(session) = sessions.get(&session_id).cloned() else {
         return Ok(());
     };
     drop(sessions);
@@ -923,21 +1237,17 @@ fn finish_session(app: &AppHandle, session: &Arc<BrowserSession>, status: Sessio
         return;
     }
     session.status.store(status as u8, Ordering::Relaxed);
-    let _ = app.emit("browser-reading", json!({ "active": false }));
+    let _ = app.emit(
+        "browser-reading",
+        json!({ "active": false, "session_id": session.id }),
+    );
 
     let bridge = app.state::<BrowserBridge>();
     let seq = session.sequence.fetch_add(1, Ordering::Relaxed) + 1;
     // Terminal frames report the reading's final highlight verdict.
     let reason = degrade_reason(session);
-    let _ = send_state(
-        &bridge,
-        &session.reading_id,
-        seq,
-        status.as_str(),
-        None,
-        reason,
-    );
-    bridge.sessions.lock().unwrap().remove(&session.reading_id);
+    let _ = send_state(&bridge, session, seq, status.as_str(), None, reason);
+    bridge.sessions.lock().unwrap().remove(&session.id);
 }
 
 /// Background loop that pushes `state` messages whenever the projected word
@@ -967,17 +1277,8 @@ fn spawn_state_ticker(app: AppHandle, session: Arc<BrowserSession>) {
             let changed = last_status != Some(status_u8) || last_word.as_ref() != Some(&word);
             if changed {
                 let seq = session.sequence.fetch_add(1, Ordering::Relaxed) + 1;
-                if send_state(
-                    &bridge,
-                    &session.reading_id,
-                    seq,
-                    status,
-                    word.clone(),
-                    reason,
-                )
-                .is_err()
-                {
-                    // Pipe is gone; stop ticking. The next connection re-snapshots.
+                if send_state(&bridge, &session, seq, status, word.clone(), reason).is_err() {
+                    // Pipe is gone; stop ticking.
                     return;
                 }
                 last_status = Some(status_u8);
@@ -1052,7 +1353,11 @@ fn send_accepted(pipe: &SafeHandle, request_id: &str, reading_id: &str) -> Resul
         "v": 1,
         "type": "accepted",
         "request_id": request_id,
-        "reading_id": reading_id
+        "reading_id": reading_id,
+        // Capability: this app takes `skip-back`/`skip-forward` controls.
+        // Older extensions ignore the field; older apps never send it, so
+        // the pill hides skip buttons the host would reject.
+        "skip": true
     });
     send_frame(pipe, &message)
 }
@@ -1074,26 +1379,15 @@ fn send_rejected(pipe: &SafeHandle, request_id: &str, reason: &str) -> Result<()
 
 fn send_state(
     bridge: &State<'_, BrowserBridge>,
-    reading_id: &str,
+    session: &BrowserSession,
     seq: u64,
     status: &str,
     word: Option<(usize, usize)>,
     reason: Option<&str>,
 ) -> Result<(), String> {
-    let message = json!({
-        "v": 1,
-        "type": "state",
-        "reading_id": reading_id,
-        "seq": seq,
-        "status": status,
-        "word": word.map(|(start, end)| json!({"start": start, "end": end})),
-        // Derived from the reason so the two can never contradict.
-        "word_available": reason.is_none(),
-        "word_degrade_reason": reason
-    });
+    let message = state_message(session, seq, status, word, reason);
     // Windows: the ticker has no stream of its own; it writes through the
-    // global pipe handle. Unix: state flows through the session's own socket,
-    // so look the session up by id instead.
+    // global pipe handle. Unix: state flows through the session's own socket.
     #[cfg(target_os = "windows")]
     {
         if let Some(pipe_handle) = bridge.pipe_handle.lock().unwrap().as_ref() {
@@ -1103,16 +1397,47 @@ fn send_state(
     }
     #[cfg(not(target_os = "windows"))]
     {
-        let stream = {
-            let sessions = bridge.sessions.lock().unwrap();
-            sessions
-                .get(reading_id)
-                .map(|s| s.stream.lock().unwrap().clone())
-        };
+        let _ = bridge;
+        let stream = session.stream.lock().unwrap().clone();
         match stream {
-            Some(Some(stream)) => send_frame(&stream, &message),
-            _ => Ok(()),
+            Some(stream) => send_frame(&stream, &message),
+            None => Ok(()),
         }
+    }
+}
+
+/// One `state` frame, keyed `reading_id` or `trigger_id` by session kind.
+fn state_message(
+    session: &BrowserSession,
+    seq: u64,
+    status: &str,
+    word: Option<(usize, usize)>,
+    reason: Option<&str>,
+) -> Value {
+    let mut message = json!({
+        "v": 1,
+        "type": "state",
+        "seq": seq,
+        "status": status,
+        "word": word.map(|(start, end)| json!({"start": start, "end": end})),
+        // Derived from the reason so the two can never contradict.
+        "word_available": reason.is_none(),
+        "word_degrade_reason": reason
+    });
+    message[session.kind.id_field()] = json!(session.id);
+    message
+}
+
+/// Write a frame to the connected host outside any request (no-op when none
+/// is connected).
+fn send_to_host(bridge: &BrowserBridge, message: &Value) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    let host = bridge.pipe_handle.lock().unwrap().clone();
+    #[cfg(not(target_os = "windows"))]
+    let host = bridge.client.lock().unwrap().clone();
+    match host {
+        Some(host) => send_frame(&host, message),
+        None => Ok(()),
     }
 }
 
@@ -1178,6 +1503,7 @@ mod tests {
             expected_text: text.to_string(),
             captions: None,
             captions_ok: false,
+            placed: true,
         }
     }
 
@@ -1196,7 +1522,8 @@ mod tests {
             })
             .collect();
         BrowserSession {
-            reading_id: "r".into(),
+            id: "r".into(),
+            kind: SessionKind::Reading,
             sequence: AtomicU64::new(0),
             spoken_text: spoken.to_string(),
             source_map: align(raw, spoken),
@@ -1541,5 +1868,228 @@ mod tests {
             (caps.words[0].text_start, caps.words[0].text_end),
             (0, content_u16)
         );
+    }
+
+    // ── Trigger speaks (double-copy / hotkey mirror) ──
+
+    /// A trigger session as `begin_trigger` builds it: no tiles until
+    /// synthesis events name them.
+    fn trigger_session(raw: &str, spoken: &str) -> BrowserSession {
+        BrowserSession {
+            id: "trigger-1".into(),
+            kind: SessionKind::Trigger,
+            ..session_with(raw, spoken, vec![], None)
+        }
+    }
+
+    /// A speak queued behind another clip: until its own clip is audible,
+    /// the session has no audible fragment, whatever clip is playing.
+    #[test]
+    fn trigger_follows_only_its_own_audible_clip() {
+        let session = trigger_session("Hello world.", "Hello world.");
+        record_on(&session, 0, Some("Hello world."), None);
+        let audible = || session.active_fragment.load(Ordering::Relaxed);
+
+        session.announce_audible(0, Some("Earlier clip."));
+        assert_eq!(audible(), NO_FRAGMENT, "another speak's clip is not ours");
+        session.announce_audible(0, None);
+        assert_eq!(audible(), NO_FRAGMENT, "an unnamed clip is not ours");
+        session.announce_audible(0, Some("Hello world."));
+        assert_eq!(audible(), 0, "our own clip is audible");
+    }
+
+    fn captions_for(text: &str, word: &str) -> CaptionAlignment {
+        let byte = text.find(word).unwrap();
+        let start = text[..byte].encode_utf16().count();
+        CaptionAlignment {
+            text: text.to_string(),
+            words: vec![self::word(start, start + word.encode_utf16().count())],
+        }
+    }
+
+    fn utf16_slice(text: &str, (start, end): (usize, usize)) -> String {
+        let units: Vec<u16> = text.encode_utf16().collect();
+        String::from_utf16_lossy(&units[start..end])
+    }
+
+    #[test]
+    fn trigger_ids_are_unique_and_host_safe() {
+        let (a, b) = (new_trigger_id(), new_trigger_id());
+        assert_ne!(a, b);
+        for id in [a, b] {
+            assert!(id.starts_with("trigger-") && id.is_ascii() && id.len() <= 128);
+        }
+    }
+
+    #[test]
+    fn trigger_started_frame_names_source_and_raw_text() {
+        for (source, wire) in [
+            (TriggerSource::DoubleCopy, "double_copy"),
+            (TriggerSource::Hotkey, "hotkey"),
+        ] {
+            let trigger = SpeakTrigger {
+                source,
+                raw_text: "Copied\r\ntext".into(),
+            };
+            let frame = trigger_started_message("trigger-9", &trigger);
+            assert_eq!(frame["v"], 1);
+            assert_eq!(frame["type"], "trigger-started");
+            assert_eq!(frame["trigger_id"], "trigger-9");
+            assert_eq!(frame["source"], wire);
+            assert_eq!(frame["raw_text"], "Copied\r\ntext");
+        }
+    }
+
+    /// The webview hands the double-copy context back to speak_queued as-is.
+    #[test]
+    fn speak_trigger_round_trips_through_the_webview() {
+        let wire = json!({ "source": "double_copy", "raw_text": "a b" });
+        let trigger: SpeakTrigger = serde_json::from_value(wire.clone()).unwrap();
+        assert_eq!(trigger.source, TriggerSource::DoubleCopy);
+        assert_eq!(serde_json::to_value(&trigger).unwrap(), wire);
+    }
+
+    #[test]
+    fn state_frames_are_keyed_by_session_kind() {
+        let reading = session_with("a", "a", vec![("a", 0, 1)], None);
+        let frame = state_message(&reading, 1, "playing", None, None);
+        assert_eq!(frame["reading_id"], "r");
+        assert!(frame.get("trigger_id").is_none());
+
+        let trigger = trigger_session("a", "a");
+        let frame = state_message(&trigger, 2, "playing", Some((0, 1)), None);
+        assert_eq!(frame["trigger_id"], "trigger-1");
+        assert!(frame.get("reading_id").is_none());
+        assert_eq!(frame["word"], json!({ "start": 0, "end": 1 }));
+    }
+
+    #[test]
+    fn triggers_need_a_connected_host_with_double_copy_highlighting_on() {
+        let bridge = BrowserBridge::new();
+        bridge.automatic_mode.store(true, Ordering::Relaxed);
+        assert!(!bridge.follows_triggers(), "no host connected");
+        bridge.connected.store(true, Ordering::Relaxed);
+        assert!(bridge.follows_triggers());
+        bridge.automatic_mode.store(false, Ordering::Relaxed);
+        assert!(!bridge.follows_triggers(), "setting off");
+        bridge.automatic_mode.store(true, Ordering::Relaxed);
+        set_client(&bridge, None);
+        assert!(!bridge.follows_triggers());
+        assert!(
+            !bridge.automatic_mode.load(Ordering::Relaxed),
+            "a disconnect forgets the setting until the next hello"
+        );
+    }
+
+    /// Streamed pages arrive one event per fragment; each tile is found after
+    /// the previous one, and the audible word lands in the RAW copied text
+    /// (CRLF and blank lines included).
+    #[test]
+    fn discovered_tiles_project_words_into_the_raw_text() {
+        let raw = "First line here.\r\n\r\nSecond line here.";
+        let spoken = "First line here. Second line here.";
+        let session = trigger_session(raw, spoken);
+        let (one, two) = ("First line here.", "Second line here.");
+        record_on(&session, 0, Some(one), Some(captions_for(one, "line")));
+        record_on(&session, 1, Some(two), None);
+        record_on(&session, 1, None, Some(captions_for(two, "line")));
+
+        session.active_fragment.store(1, Ordering::Relaxed);
+        let span = current_word(&session).unwrap();
+        assert_eq!(utf16_slice(raw, span), "line");
+        assert_eq!(
+            span.0,
+            raw.rfind("line").unwrap(),
+            "the second fragment's word"
+        );
+        assert_eq!(degrade_reason(&session), None);
+    }
+
+    /// Batch synthesis and saved-audio replay send the whole text as one clip.
+    #[test]
+    fn single_clip_tile_covers_the_whole_spoken_text() {
+        let spoken = "One clip with every word.";
+        let session = trigger_session(spoken, spoken);
+        record_on(
+            &session,
+            0,
+            Some(spoken),
+            Some(captions_for(spoken, "every")),
+        );
+        let fragments = session.fragments.lock().unwrap();
+        assert_eq!(
+            (fragments[0].text_start, fragments[0].text_end),
+            (0, spoken.encode_utf16().count())
+        );
+        drop(fragments);
+        assert_eq!(
+            utf16_slice(spoken, current_word(&session).unwrap()),
+            "every"
+        );
+    }
+
+    /// A fragment whose text the spoken text does not contain cannot be
+    /// placed: it degrades to passage-only, and the next fragment still maps.
+    #[test]
+    fn unplaceable_fragment_degrades_alone() {
+        let spoken = "Alpha words. Beta words.";
+        let session = trigger_session(spoken, spoken);
+        record_on(&session, 0, Some("Rewritten alpha."), None);
+        record_on(
+            &session,
+            0,
+            None,
+            Some(captions_for("Rewritten alpha.", "alpha")),
+        );
+        assert_eq!(degrade_reason(&session), Some("captions_unavailable"));
+        assert!(current_word(&session).is_none());
+
+        record_on(
+            &session,
+            1,
+            Some("Beta words."),
+            Some(captions_for("Beta words.", "Beta")),
+        );
+        session.active_fragment.store(1, Ordering::Relaxed);
+        assert_eq!(utf16_slice(spoken, current_word(&session).unwrap()), "Beta");
+    }
+
+    /// Condense shortens the spoken text; its words still index the RAW
+    /// copied text through the same alignment sanitize edits ride. Kept runs
+    /// map word for word; a rewritten run highlights the source run it
+    /// replaced, never text outside it.
+    #[test]
+    fn condensed_trigger_words_index_into_the_raw_text() {
+        let raw = "So basically, what happened was the quick brown fox jumps over the lazy dog, \
+                   which, as you can imagine, surprised everyone in the whole village.";
+        let spoken = "The quick brown fox jumps over the lazy dog, surprising the village.";
+        let session = trigger_session(raw, spoken);
+
+        record_on(&session, 0, Some(spoken), Some(captions_for(spoken, "fox")));
+        let span = current_word(&session).unwrap();
+        assert_eq!(utf16_slice(raw, span), "fox");
+        assert_eq!(span.0, raw.find("fox").unwrap());
+
+        let rewritten = captions_for(spoken, "surprising");
+        session.fragments.lock().unwrap()[0].captions = Some(rewritten);
+        let replaced = utf16_slice(raw, current_word(&session).unwrap());
+        assert!(
+            replaced.starts_with("which") && replaced.ends_with("whole"),
+            "{replaced:?}"
+        );
+    }
+
+    /// Engines without timing metadata: states still flow, without words.
+    #[test]
+    fn missing_timing_sends_states_without_word_events() {
+        let spoken = "No timing here.";
+        let session = trigger_session(spoken, spoken);
+        record_on(&session, 0, Some(spoken), None);
+        let (status, word, reason) = project_state(&session);
+        assert_eq!(status, "playing");
+        assert!(word.is_none());
+        let frame = state_message(&session, 1, status, word, reason);
+        assert_eq!(frame["word"], Value::Null);
+        assert_eq!(frame["word_available"], false);
     }
 }

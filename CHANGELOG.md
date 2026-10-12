@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **Edge-TTS is hidden everywhere in the UI** — Microsoft killed the free Read-Aloud protocol the `edge-tts` CLI speaks (2026-10-10, [rany2/edge-tts#490](https://github.com/rany2/edge-tts/issues/490); every released edge-tts version 403s and no fixed release exists yet). Edge is gone from onboarding, the Engines page, the About page, and the profile editor's engine dropdown; existing Edge profiles are retired on config load (an active Edge profile switches to the bundled Kokoro profile). The engine code stays in the tree and comes back with a pin bump in `src-tauri/src/tts/edge.rs` once upstream ships a fixed release.
+
 ### Added
 
 - **Full transport controls on the Play page** — rewind 5 s, play/pause, stop, and fast-forward 5 s buttons (Space toggles pause, ←/→ skip ±5 s, Escape stops; ignored while typing). Skip works on both playback paths: streamed audio rebuilds its source timeline from a rolling 30 s history, and file-based playback seeks the media clock, stepping back into the previous fragment when a rewind crosses a fragment boundary. Stop now also aborts in-flight synthesis so local engines stop burning GPU/CPU immediately.

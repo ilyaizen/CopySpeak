@@ -13,7 +13,6 @@ pitch + effect as one swappable unit.
 
 | Engine             | Type   | API key        | Offline | Live captions | Installer                       | Setup test               |
 | ------------------ | ------ | -------------- | ------- | ------------- | ------------------------------- | ------------------------ |
-| Edge-TTS           | cloud  | no             | no      | yes           | — (`uv tool install edge-tts`)  | `test_tts_engine_config` |
 | Cartesia (Sonic)   | cloud  | yes            | no      | yes           | —                               | `test_tts_engine_config` |
 | ElevenLabs         | cloud  | yes            | no      | yes           | —                               | `test_tts_engine_config` |
 | OpenAI             | cloud  | yes            | no      | no            | —                               | `test_tts_engine_config` |
@@ -30,9 +29,12 @@ pitch + effect as one swappable unit.
 
 Each cloud tab on the Engine page takes an API key (Microsoft also takes an
 endpoint). Click **Test Setup** to synthesize a short clip with the engine's
-default voice and confirm the credential works. Edge-TTS is the exception:
-it needs no key, but its CLI must be on PATH first
-(`uv tool install edge-tts`).
+default voice and confirm the credential works.
+
+> Edge-TTS was removed from the app in 2026-10: Microsoft killed the free
+> Read-Aloud protocol the `edge-tts` CLI speaks
+> ([rany2/edge-tts#490](https://github.com/rany2/edge-tts/issues/490)). It comes
+> back when upstream ships a fixed release.
 
 | Engine            | Where to get credentials                      |
 | ----------------- | --------------------------------------------- |
@@ -74,6 +76,9 @@ Common flags: `-Force` (reinstall), `-SmokeTest` (synthesize one clip),
 
 (Edge-TTS is uv-managed too but has no installer script — install its CLI
 with `uv tool install edge-tts`.)
+
+> Edge-TTS is currently removed from the app (upstream service dead, 2026-10);
+> the note above applies only if/when it returns.
 
 Manual run (if you prefer the terminal):
 

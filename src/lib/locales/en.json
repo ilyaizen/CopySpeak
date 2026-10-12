@@ -209,6 +209,10 @@
       "description": "Rewrite copied text with an OpenAI-compatible LLM provider for concise, listener-friendly speech.",
       "enabled": "Enable Post-Processing",
       "enabledDescription": "Run sanitized text through the active provider's chat model before TTS. Failures fall back to the original text.",
+      "minChars": "Minimum Length",
+      "minCharsTooltip": "Condense only text at least this many characters long; shorter text is spoken verbatim. 0 condenses everything.",
+      "requireRequestFlag": "Only On Request",
+      "requireRequestFlagTooltip": "Condense only when a caller explicitly asks (control server condense field or CLI --condense). Off: every qualifying text is condensed.",
       "apiKey": "API Key",
       "apiKeyPlaceholder": "gsk_...",
       "apiKeyHelp": "Create a key at console.groq.com",
@@ -290,11 +294,6 @@
         "description": "Compact local TTS",
         "detail": "Kyutai Pocket: a 100M-parameter model built to run on the CPU, with voices in six languages."
       },
-      "edge": {
-        "title": "Edge-TTS",
-        "description": "Microsoft Edge neural TTS (free)",
-        "detail": "Free, high-quality neural voices from Microsoft Edge's online TTS service. No API key required."
-      },
       "google": {
         "title": "Google Gemini TTS",
         "description": "Google's Gemini-based cloud TTS",
@@ -359,10 +358,6 @@
       "apiKeyDescription": "Your API key is stored locally and never shared.",
       "check": "Check",
       "testEngine": "Test Engine"
-    },
-    "edge": {
-      "title": "Edge TTS",
-      "description": "Cloud: Microsoft Edge read-aloud voices. Free, no API key required, but needs an internet connection."
     },
     "google": {
       "title": "Google",
@@ -664,7 +659,7 @@
       },
       "engines": {
         "title": "9 TTS Engines",
-        "description": "Edge TTS, OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP, and local CLI engines (Piper, Kokoro, Kitten)."
+        "description": "OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP, and local CLI engines (Piper, Kokoro, Kitten)."
       },
       "hud": {
         "title": "HUD Overlay",

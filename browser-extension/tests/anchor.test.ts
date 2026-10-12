@@ -1,6 +1,6 @@
 import { describe, test, expect } from "bun:test";
 import { JSDOM } from "jsdom";
-import { captureSelection } from "../src/anchor";
+import { captureSelection, matchCopiedText } from "../src/anchor";
 
 function fixture(html: string, first: string, start: number, last: string, end: number) {
   const dom = new JSDOM(`<main>${html}</main>`);
@@ -65,5 +65,41 @@ describe("selection anchor", () => {
     expect(anchor.range(1, 2)).toBeNull(); // inside surrogate
     expect(anchor.clearIfUnchanged()).toBe(true);
     expect(selection.rangeCount).toBe(0);
+  });
+});
+describe("copied-text match", () => {
+  test("matches the clipboard form of a multi-block selection and remaps word spans", () => {
+    const { d } = fixture(
+      "<p>First   para\n  here.</p><p>Second para.</p>",
+      "p:first-child",
+      0,
+      "p:last-child",
+      12
+    );
+    const captured = captureSelection(d)!;
+    // Windows clipboard: CRLF, a blank line between paragraphs, collapsed spaces.
+    const copied = "First para here.\r\n\r\nSecond para.";
+    const toCaptured = matchCopiedText(captured.text, copied)!;
+    expect(toCaptured).not.toBeNull();
+    const word = (text: string, needle: string) => {
+      const start = text.lastIndexOf(needle);
+      return [start, start + needle.length] as const;
+    };
+    const [start, end] = word(copied, "para");
+    const span = toCaptured(start, end)!;
+    expect(captured.text.slice(...span)).toBe("para");
+    expect(span[0]).toBe(captured.text.lastIndexOf("para"));
+    // A span with edge whitespace covers only its words.
+    const passage = toCaptured(0, copied.length)!;
+    expect(captured.text.slice(...passage)).toBe(captured.text);
+    expect(toCaptured(5, 6)).toBeNull(); // whitespace only
+    expect(toCaptured(0, copied.length + 1)).toBeNull();
+  });
+  test("refuses text that differs in anything but whitespace", () => {
+    expect(matchCopiedText("one two", "one two three")).toBeNull();
+    expect(matchCopiedText("one two three", "one two")).toBeNull();
+    expect(matchCopiedText("one two", "one tw0")).toBeNull();
+    expect(matchCopiedText("  ", "\r\n")).toBeNull();
+    expect(matchCopiedText("a b", "a b")).not.toBeNull();
   });
 });

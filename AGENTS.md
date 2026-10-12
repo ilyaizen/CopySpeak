@@ -47,6 +47,7 @@ Keep the active log short — it loads every session; long context makes you les
 - Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
 - Re-sync `playbackStore` from its own `config-changed` listener; pages that only `set_config` never update it.
 - Treat `git diff --check` as a check; do not run it before explicit confirmation.
+- Gate trigger-session word events on `playback-fragment-audible`: the webview binds the newest session but reports the playing clip's clock under it, so a queued speak must not project words until its own tile is audible.
 - Local engine wrappers speak daemon protocol v2 (`READY 2`) and emit 16-bit signed LE PCM; `pcm-stream.ts` drops any other `bits_per_sample`.
 - Gate streaming playback off when the active profile has an effect: warm daemons stream via `CliTtsBackend::supports_streaming`, and the PCM scheduler has no effect chain — only the `audio-fragment-ready` path applies effects.
 - Adding a `TtsEngine` variant: update the catalog test's engine list and entry count, plus the `Record<TtsEngine, number>` fixtures in `html-templates.test.ts` and `html-export.test.ts`.
@@ -64,7 +65,7 @@ Keep the active log short — it loads every session; long context makes you les
 - Filter Kokoro's misaki phonemes through the model vocab before inference; misaki emits unpronounceable punctuation as literal phonemes, and only a missing _letter_ phoneme is a real pronunciation gap worth aborting on.
 - Captions dying on every surface at once means the active engine's provider stopped emitting timing metadata: check the logs for "Disabling ... captions", verify other engines still write `.captions.json`, and run the `#[ignore]`d `live_caption_probe` before releases.
 - The app loads secrets from `<exe-dir>/.env` (`src-tauri/target/debug/.env` in dev), not the repo-root `.env`.
-- `bun run bump` derives the new version only from `src/lib/version.ts`; verify all eight ✅ lines after bumping.
+- `bun run bump` derives the new version only from `src/lib/version.ts`; verify all six ✅ lines after bumping. It never touches `browser-extension/` — bump the extension's `manifest.json` + `package.json` by hand on its own cadence.
 - Pass `draft: true` to `softprops/action-gh-release` when attaching extra assets to tauri-action's draft release, or the step publishes the release unreviewed.
 - "Beeps" in generated audio: suspect unpronounceable glyphs in the text before the playback code; keep `remove_unpronounceable`'s symbol ranges ahead of what vendors confound.
 - Run `rustfmt` only on touched Rust files; `cargo fmt --all` marks unrelated CRLF-tracked Rust files modified on this worktree.
@@ -85,6 +86,8 @@ Keep the active log short — it loads every session; long context makes you les
 - Type test catalog maps with `satisfies Record<string, Catalog>`, not a `: Record<…>` annotation; `vp check`'s anti-slop `no-known-value-widening` rejects the annotation.
 - Run `bun run check && bun run test` yourself before merging a PR; all three workflows are `workflow_dispatch`, so PRs and `main` pushes trigger no CI.
 - Branch every synthesis save site on `history.enabled`: on logs and saves to the history folder, off calls `save_speech_cache` and logs nothing; `find_cached_speech` must read the same store.
+- Gate every browser-protocol addition on a capability: the native host's `ClientMessage` is `deny_unknown_fields` and drops the relay on any unknown field or action, and older extensions disconnect on any app event type they cannot parse.
+- Match a page selection to copied text ignoring whitespace (`matchCopiedText`): the Windows clipboard has CRLF and Chrome's blank lines between paragraphs, while `captureSelection` keeps source whitespace and joins blocks with one `\n`.
 
 <!-- rtk-instructions v2 -->
 

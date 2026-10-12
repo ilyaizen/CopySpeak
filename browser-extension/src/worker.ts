@@ -2,34 +2,72 @@ import {
   parseEvent,
   parseCaptureReply,
   ReadingOwner,
+  TriggerOwner,
   type CopyCommand,
-  type NativeEvent
+  type NativeEvent,
+  type TriggerStarted
 } from "./protocol";
 
 // Deliverables are worker-built objects given to chrome.tabs.sendMessage, which
-// types its payload through an unresolved generic; hand-roll the two variants it
+// types its payload through an unresolved generic; hand-roll the variants it
 // actually sends and let deliver() stamp the document token.
-type DeliverableMessage = { type: "disconnect" } | { type: "native"; event: NativeEvent };
-type Route = {
-  tabId: number;
-  frameId: number;
-  documentId: string;
-  token: string;
+type DeliverableMessage =
+  | { type: "disconnect"; trigger_id?: string }
+  | { type: "native"; event: NativeEvent };
+type Frame = { tabId: number; frameId: number; documentId: string; token: string };
+type Route = Frame & {
   owner: ReadingOwner;
   timer: ReturnType<typeof setTimeout> | null;
 };
+// A desktop trigger speak (double-copy / hotkey) being followed: the frames
+// whose selection matched its text, and its latest state for late claimers.
+type Trigger = { owner: TriggerOwner; claims: Frame[]; last: NativeEvent | null };
 let route: Route | null = null;
+let trigger: Trigger | null = null;
 let port: chrome.runtime.Port | null = null;
 let automatic = false;
 let invocation = 0;
 const badge = (text: string, title: string) =>
   Promise.all([chrome.action.setBadgeText({ text }), chrome.action.setTitle({ title })]);
-async function deliver(r: Route, message: DeliverableMessage) {
+async function deliver(r: Frame, message: DeliverableMessage) {
   await chrome.tabs.sendMessage(
     r.tabId,
     { ...message, document_token: r.token },
     { documentId: r.documentId }
   );
+}
+const permittedOrigins = async () =>
+  (await chrome.permissions.getAll()).origins?.filter((origin) => /^https?:\/\//.test(origin)) ??
+  [];
+/** Offer a new trigger speak to every frame of every permitted tab; frames whose selection matches claim it. */
+async function announce(e: TriggerStarted) {
+  dropTrigger();
+  trigger = { owner: new TriggerOwner(e.trigger_id), claims: [], last: null };
+  const origins = await permittedOrigins();
+  if (!automatic || !origins.length) return;
+  const tabs = await chrome.tabs.query({ url: origins });
+  await Promise.all(
+    tabs.map(async (tab) => {
+      if (tab.id === undefined) return;
+      await chrome.tabs.sendMessage(tab.id, { type: "trigger", event: e }).catch(() => {});
+    })
+  );
+}
+/** Forget the followed trigger; its frames clear their highlights. */
+function dropTrigger() {
+  const old = trigger;
+  trigger = null;
+  if (!old) return;
+  for (const claim of old.claims)
+    void deliver(claim, { type: "disconnect", trigger_id: old.owner.triggerId }).catch(() => {});
+}
+/** Relay a trigger state to every frame that claimed it. */
+function relayTrigger(e: NativeEvent) {
+  const t = trigger;
+  if (!t || !t.owner.apply(e)) return;
+  t.last = e;
+  for (const claim of t.claims) void deliver(claim, { type: "native", event: e }).catch(() => {});
+  if (t.owner.ended) trigger = null;
 }
 async function release(disconnected = false) {
   const old = route;
@@ -54,6 +92,7 @@ function connect() {
   p.onDisconnect.addListener(() => {
     if (port !== p) return;
     port = null;
+    dropTrigger();
     void release(true);
   });
   p.onMessage.addListener(async (value) => {
@@ -62,11 +101,16 @@ function connect() {
     if (!e) {
       p.disconnect();
       port = null;
+      dropTrigger();
       await release(true);
       return;
     }
-    if (e.type === "probe") {
-      if (automatic) await capture(undefined, e.request_id);
+    if (e.type === "trigger-started") {
+      await announce(e);
+      return;
+    }
+    if (e.type === "state" && "trigger_id" in e) {
+      relayTrigger(e);
       return;
     }
     const r = route;
@@ -90,18 +134,12 @@ function connect() {
   p.postMessage({ v: 1, type: "hello", automatic });
   return p;
 }
-async function capture(tab?: chrome.tabs.Tab, probe?: string, paragraphDocument?: string) {
+async function capture(tab?: chrome.tabs.Tab, paragraphDocument?: string) {
   const generation = ++invocation;
   try {
     if (!tab) tab = (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
     if (tab?.id === undefined) return;
-    if (probe) {
-      if (!(await chrome.windows.getLastFocused()).focused) return;
-      if (!tab.url || !/^https?:/.test(tab.url)) return;
-      if (!(await chrome.permissions.contains({ origins: [new URL(tab.url).origin + "/*"] })))
-        return;
-    }
-    const requestId = probe ?? crypto.randomUUID();
+    const requestId = crypto.randomUUID();
     const frames = await chrome.scripting.executeScript({
       target: paragraphDocument
         ? { tabId: tab.id, documentIds: [paragraphDocument] }
@@ -128,7 +166,6 @@ async function capture(tab?: chrome.tabs.Tab, probe?: string, paragraphDocument?
             {
               type: "capture",
               request_id: requestId,
-              probe: !!probe,
               paragraph: !!paragraphDocument
             },
             { documentId: frame.documentId }
@@ -155,15 +192,12 @@ async function capture(tab?: chrome.tabs.Tab, probe?: string, paragraphDocument?
       timer: null
     };
     route = r;
-    r.timer = setTimeout(
-      () => {
-        if (route === r) void release(true);
-      },
-      probe ? 1500 : 15000
-    );
+    r.timer = setTimeout(() => {
+      if (route === r) void release(true);
+    }, 15000);
     connect().postMessage({
       v: 1,
-      type: probe ? "capture" : "start",
+      type: "start",
       request_id: requestId,
       text: result.text
     });
@@ -214,11 +248,51 @@ chrome.runtime.onMessage.addListener((message: CopyCommand, sender, respond) => 
         !(await chrome.permissions.contains({ origins: [new URL(sender.url!).origin + "/*"] }))
       )
         return;
-      await capture(tab, undefined, documentId);
+      await capture(tab, documentId);
     });
     return;
   }
+  if (message.type === "trigger-claim") {
+    const t = trigger;
+    const tabId = sender.tab?.id;
+    const { frameId, documentId } = sender;
+    if (
+      !t ||
+      t.owner.ended ||
+      message.trigger_id !== t.owner.triggerId ||
+      tabId === undefined ||
+      frameId === undefined ||
+      !documentId
+    ) {
+      respond(false);
+      return;
+    }
+    const frame: Frame = { tabId, frameId, documentId, token: message.document_token };
+    t.claims.push(frame);
+    // States sent before the claim landed: catch the frame up.
+    if (t.last) void deliver(frame, { type: "native", event: t.last }).catch(() => {});
+    respond(true);
+    return;
+  }
   if (message.type !== "control") return;
+  if ("trigger_id" in message) {
+    const t = trigger;
+    const claimant = t?.claims.some(
+      (c) =>
+        c.tabId === sender.tab?.id &&
+        c.frameId === sender.frameId &&
+        c.documentId === sender.documentId &&
+        c.token === message.document_token
+    );
+    if (!t || !claimant || message.trigger_id !== t.owner.triggerId) return;
+    port?.postMessage({
+      v: 1,
+      type: "control",
+      trigger_id: t.owner.triggerId,
+      action: message.action
+    });
+    return;
+  }
   if (
     !r ||
     sender.tab?.id !== r.tabId ||
@@ -273,15 +347,16 @@ function initialize() {
 }
 async function applySettings() {
   const settings = await chrome.storage.local.get(["automatic", "hoverRead"]);
-  const origins =
-    (await chrome.permissions.getAll()).origins?.filter((origin) => /^https?:\/\//.test(origin)) ??
-    [];
-  automatic = settings.automatic === true && origins.length > 0;
+  const origins = await permittedOrigins();
+  // On unless turned off; it still needs at least one permitted website.
+  automatic = settings.automatic !== false && origins.length > 0;
   port?.postMessage({ v: 1, type: "hello", automatic });
   if (automatic) connect();
   else if (!route) await release();
   const scripts = await chrome.scripting.getRegisteredContentScripts({ ids: ["paragraph-hover"] });
-  if (settings.hoverRead === true && origins.length) {
+  // Hover reading and trigger highlighting both need the content script
+  // already present in permitted pages (a trigger arrives with no user gesture).
+  if ((settings.hoverRead === true || automatic) && origins.length) {
     const script = {
       id: "paragraph-hover",
       matches: origins,

@@ -22,6 +22,9 @@ struct SpeakRequest {
     text: String,
     engine: Option<String>,
     effect: Option<String>,
+    /// Ask the post-process condenser for this request even when the global
+    /// `require_request_flag` gate would otherwise skip it (Hermes callers).
+    condense: Option<bool>,
     /// Block until webview playback finishes (or the user stops it) before
     /// answering; serializes sentence-by-sentence Hermes callers.
     wait: Option<bool>,
@@ -258,6 +261,9 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
         history,
         telemetry_state,
         Some(text),
+        Some(request.condense.unwrap_or(false)),
+        // Control-server speaks never surface in pages.
+        None,
     )
     .await
 }
@@ -426,23 +432,30 @@ ab",
     fn speak_request_wait_defaults_to_false() {
         let request = serde_json::json!({ "text": "hello" });
         match parse_request(&speak_request(&request)) {
-            Ok(ControlRequest::Speak(speak)) => assert_eq!(speak.wait, None),
+            Ok(ControlRequest::Speak(speak)) => {
+                assert_eq!(speak.wait, None);
+                assert_eq!(speak.condense, None);
+            }
             _ => panic!("expected a speak request"),
         }
     }
 
     /// Legacy callers send profile/persist_selection fields the server drops;
-    /// parsing must keep accepting them alongside the new wait field.
+    /// parsing must keep accepting them alongside the new condense/wait fields.
     #[test]
     fn speak_request_tolerates_unknown_fields() {
         let request = serde_json::json!({
             "text": "hello",
             "profile": "pi",
             "persist_selection": true,
+            "condense": true,
             "wait": false
         });
         match parse_request(&speak_request(&request)) {
-            Ok(ControlRequest::Speak(speak)) => assert_eq!(speak.wait, Some(false)),
+            Ok(ControlRequest::Speak(speak)) => {
+                assert_eq!(speak.condense, Some(true));
+                assert_eq!(speak.wait, Some(false));
+            }
             _ => panic!("expected a speak request"),
         }
     }

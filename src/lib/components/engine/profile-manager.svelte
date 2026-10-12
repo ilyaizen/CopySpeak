@@ -45,7 +45,6 @@
     "cartesia",
     "google",
     "microsoft",
-    "edge",
     "kitten",
     "qwen",
     "piper",

@@ -507,6 +507,9 @@ fn main() {
                                     history,
                                     telemetry_state,
                                     None,
+                                    None,
+                                    // Tray speaks the clipboard, not a selection.
+                                    None,
                                 )
                                 .await
                                 {
@@ -751,6 +754,8 @@ fn main() {
                                 history,
                                 telemetry_state,
                                 None,
+                                None,
+                                Some(browser_bridge::TriggerSource::Hotkey),
                             )
                             .await
                             {
@@ -782,7 +787,6 @@ fn main() {
             commands::speak_now,
             commands::regenerate_now,
             commands::replay_cached,
-            commands::speak_selected_text,
             commands::speak_queued,
             commands::abort_synthesis,
             commands::stop_speaking,

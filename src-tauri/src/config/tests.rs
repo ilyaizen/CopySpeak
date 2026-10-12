@@ -276,11 +276,13 @@ mod tests {
         assert_eq!(TtsEngine::default(), TtsEngine::Kokoro);
         assert_eq!(tts.schema_version, 6);
         assert_eq!(tts.active_backend, TtsEngine::Kokoro);
-        assert_eq!(tts.profiles.len(), 7);
-        // The legacy Edge "default" profile stays (zero-download fallback).
-        assert_eq!(tts.profiles[0].id, "default");
-        assert_eq!(tts.profiles[0].engine, TtsEngine::Edge);
-        // ...but the ACTIVE profile is the bundled Kokoro one.
+        // No Edge seed profile: the engine is retired (upstream service dead).
+        assert!(!tts
+            .profiles
+            .iter()
+            .any(|profile| profile.engine == TtsEngine::Edge));
+        assert_eq!(tts.profiles.len(), 6);
+        // The ACTIVE profile is the bundled Kokoro one.
         assert_eq!(tts.active_profile_id, "profile-kokoro-default");
         assert_eq!(
             tts.profiles
@@ -298,8 +300,8 @@ mod tests {
         let mut tts = TtsConfig::default();
         tts.schema_version = 5;
         tts.profiles.retain(|p| p.id != "profile-kokoro-default");
-        tts.active_backend = TtsEngine::Edge;
-        tts.active_profile_id = "default".into();
+        tts.active_backend = TtsEngine::Kitten;
+        tts.active_profile_id = crate::config::tts::KITTEN_DEFAULT_PROFILE_ID.into();
         let before = tts.profiles.len();
 
         crate::config::tts::migrate_add_kokoro_profile_v6(&mut tts);
@@ -309,8 +311,11 @@ mod tests {
             .profiles
             .iter()
             .any(|p| p.id == "profile-kokoro-default" && p.engine == TtsEngine::Kokoro));
-        assert_eq!(tts.active_backend, TtsEngine::Edge);
-        assert_eq!(tts.active_profile_id, "default");
+        assert_eq!(tts.active_backend, TtsEngine::Kitten);
+        assert_eq!(
+            tts.active_profile_id,
+            crate::config::tts::KITTEN_DEFAULT_PROFILE_ID
+        );
 
         // Idempotent.
         crate::config::tts::migrate_add_kokoro_profile_v6(&mut tts);
@@ -387,9 +392,66 @@ mod tests {
 
     #[test]
     fn default_profile_speed_and_pitch_are_neutral() {
-        let profile = VoiceProfile::default();
+        let profile = TtsConfig::default()
+            .profiles
+            .into_iter()
+            .find(|p| p.id == crate::config::tts::KOKORO_DEFAULT_PROFILE_ID)
+            .expect("default config bundles the Kokoro profile");
         assert_eq!(profile.speed, 1.0);
         assert_eq!(profile.pitch, 1.0);
+    }
+
+    #[test]
+    fn migrate_retire_edge_profiles_strips_edge_and_retargets_active() {
+        use crate::config::tts::{migrate_retire_edge_profiles, KOKORO_DEFAULT_PROFILE_ID};
+
+        // A v5-era config: active Edge profile, no Kokoro profile yet.
+        let mut tts = TtsConfig::default();
+        tts.profiles.retain(|p| p.id != KOKORO_DEFAULT_PROFILE_ID);
+        let mut edge_profile = default_kokoro_profile();
+        edge_profile.id = "default".into();
+        edge_profile.engine = TtsEngine::Edge;
+        edge_profile.voice = "en-US-AvaMultilingualNeural".into();
+        edge_profile.voice_label = None;
+        tts.profiles.push(edge_profile);
+        tts.active_backend = TtsEngine::Edge;
+        tts.active_profile_id = "default".into();
+
+        migrate_retire_edge_profiles(&mut tts);
+
+        assert!(!tts.profiles.iter().any(|p| p.engine == TtsEngine::Edge));
+        assert_eq!(tts.active_profile_id, KOKORO_DEFAULT_PROFILE_ID);
+        assert_eq!(tts.active_backend, TtsEngine::Kokoro);
+        assert!(tts
+            .profiles
+            .iter()
+            .any(|p| p.id == KOKORO_DEFAULT_PROFILE_ID));
+
+        // Idempotent: a second pass is a no-op.
+        migrate_retire_edge_profiles(&mut tts);
+        assert_eq!(tts.active_profile_id, KOKORO_DEFAULT_PROFILE_ID);
+        assert_eq!(tts.active_backend, TtsEngine::Kokoro);
+    }
+
+    #[test]
+    fn migrate_retire_edge_profiles_leaves_non_edge_active() {
+        use crate::config::tts::migrate_retire_edge_profiles;
+
+        let mut tts = TtsConfig::default();
+        // Simulate a stale sibling Edge profile alongside a Kokoro active.
+        let mut edge_profile = default_kokoro_profile();
+        edge_profile.id = "default".into();
+        edge_profile.engine = TtsEngine::Edge;
+        tts.profiles.push(edge_profile);
+
+        migrate_retire_edge_profiles(&mut tts);
+
+        assert!(!tts.profiles.iter().any(|p| p.engine == TtsEngine::Edge));
+        assert_eq!(
+            tts.active_profile_id,
+            crate::config::tts::KOKORO_DEFAULT_PROFILE_ID
+        );
+        assert_eq!(tts.active_backend, TtsEngine::Kokoro);
     }
 
     #[test]

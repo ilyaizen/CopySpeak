@@ -16,3 +16,8 @@ fn validates_protocol_and_selection_bounds() {
  assert!(ClientMessage::parse(serde_json::json!({"v":1,"type":"start","request_id":"r","text":"hello"})).is_ok());
  for value in [serde_json::json!({"v":2,"type":"start","request_id":"r","text":"hello"}),serde_json::json!({"v":1,"type":"start","request_id":"r","text":" "}),serde_json::json!({"v":1,"type":"control","reading_id":"r","action":"execute"})] {assert!(ClientMessage::parse(value).is_err());}
 }
+#[test]
+fn controls_name_one_reading_or_trigger_and_accept_skips() {
+ for value in [serde_json::json!({"v":1,"type":"control","reading_id":"r","action":"pause"}),serde_json::json!({"v":1,"type":"control","trigger_id":"trigger-1-0","action":"stop"}),serde_json::json!({"v":1,"type":"control","reading_id":"r","action":"skip-back"}),serde_json::json!({"v":1,"type":"control","trigger_id":"t","action":"skip-forward"})] {assert!(ClientMessage::parse(value).is_ok());}
+ for value in [serde_json::json!({"v":1,"type":"control","action":"pause"}),serde_json::json!({"v":1,"type":"control","reading_id":"r","trigger_id":"t","action":"pause"}),serde_json::json!({"v":1,"type":"control","trigger_id":"","action":"stop"}),serde_json::json!({"v":1,"type":"control","reading_id":"r","action":"skip_back"}),serde_json::json!({"v":1,"type":"hello","automatic":true,"triggers":true})] {assert!(ClientMessage::parse(value).is_err());}
+}

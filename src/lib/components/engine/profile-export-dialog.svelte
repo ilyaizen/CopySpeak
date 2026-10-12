@@ -28,8 +28,7 @@
     "elevenlabs",
     "cartesia",
     "google",
-    "microsoft",
-    "edge"
+    "microsoft"
   ];
   const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy"];
 

@@ -74,10 +74,15 @@ class PlaybackStore {
   private _fragmentQueue: FragmentQueue;
   private _pcmScheduler: PcmStreamScheduler | null = null;
 
-  // Browser companion: while a browser-initiated reading is active, the
-  // audible-clock position is reported to the Rust bridge, which projects the
-  // current word into the page selection (see src-tauri/src/browser_bridge.rs).
-  private _browserReadingActive = false;
+  // Browser companion: while a page follows this audio (a browser-initiated
+  // reading or a mirrored double-copy/hotkey speak), the audible-clock position
+  // is reported to the Rust bridge, which projects the current word into the
+  // page selection (see src-tauri/src/browser_bridge.rs). Reports name the
+  // session so a late report never lands on its successor.
+  private _browserSessionId: string | null = null;
+  // Stream fragment entry last announced as audible (identity, not index: the
+  // same index recurs across speaks).
+  private _announcedStream: object | null = null;
 
   // `playback-started` fires once per run, when audio first becomes audible; the
   // Rust side ducks other apps on it and restores on `playback-finished`.
@@ -101,6 +106,7 @@ class PlaybackStore {
     this.totalFragments = fragment.total;
     this._fragmentText = fragment.text;
     this._fragmentCaptions = validCaptionAlignment(fragment.captions) ? fragment.captions : null;
+    void this._emit?.("playback-fragment-audible", { index: fragment.index, text: fragment.text });
     return this.handleAudioReady(fragment.audioBase64);
   }
 
@@ -145,6 +151,13 @@ class PlaybackStore {
       const position = this._pcmScheduler.getPlaybackPosition();
       const fragment = position ? this._streamCaptions.get(position.fragmentIndex) : null;
       if (position && fragment) {
+        if (fragment !== this._announcedStream) {
+          this._announcedStream = fragment;
+          void this._emit?.("playback-fragment-audible", {
+            index: position.fragmentIndex,
+            text: fragment.text
+          });
+        }
         caption = {
           text: fragment.captions?.text ?? fragment.text,
           captions: fragment.captions,
@@ -180,13 +193,14 @@ class PlaybackStore {
     void this._emitTo?.("hud", "hud:caption", caption);
     // Report the audible clock to the browser bridge. Best-effort: the bridge
     // may not exist (older app build) or no reading may be active.
-    if (this._browserReadingActive) {
+    if (this._browserSessionId !== null) {
       const fragmentIndex = this._pcmScheduler
         ? (this._pcmScheduler.getPlaybackPosition()?.fragmentIndex ??
           this.currentFragmentIndex ??
           0)
         : (this.currentFragmentIndex ?? 0);
       void invoke("browser_reading_progress", {
+        sessionId: this._browserSessionId,
         fragmentIndex,
         positionMs: Math.round(caption.position_ms),
         paused: caption.paused
@@ -357,12 +371,17 @@ class PlaybackStore {
     this.currentFragmentIndex = null;
     this.totalFragments = null;
     this._pcmScheduler = null;
-    if (this._browserReadingActive) {
-      this._browserReadingActive = false;
-      void invoke("browser_reading_finished", { status: "completed" }).catch(() => {});
-    }
+    this.reportBrowserFinished("completed");
     void this._emit?.("hud:stop", null);
     this.emitPlaybackFinished();
+  }
+
+  /** Tell the bridge the followed audio ended, so the page clears its highlight. */
+  private reportBrowserFinished(status: "completed" | "cancelled"): void {
+    const sessionId = this._browserSessionId;
+    if (sessionId === null) return;
+    this._browserSessionId = null;
+    void invoke("browser_reading_finished", { sessionId, status }).catch(() => {});
   }
 
   /**
@@ -470,6 +489,7 @@ class PlaybackStore {
     }
     this.isPlaying = false;
     this.isPaused = false;
+    this.reportBrowserFinished("cancelled");
     void this._emit?.("hud:stop", null);
     this.emitPlaybackFinished();
     setTimeout(() => {
@@ -678,11 +698,24 @@ class PlaybackStore {
         this.handleTogglePause();
       });
 
-      // Browser companion: the Rust bridge tells us a browser-initiated
-      // reading started/ended so we only report positions while relevant.
-      const unBrowserReading = await listen<{ active: boolean }>("browser-reading", (e) => {
-        this._browserReadingActive = e.payload.active === true;
+      // Page controls (browser companion pill) relayed by the Rust bridge.
+      const unSkipBackward = await listen("playback-skip-backward", () => {
+        this.skipBackward();
       });
+      const unSkipForward = await listen("playback-skip-forward", () => {
+        this.skipForward();
+      });
+
+      // Browser companion: the Rust bridge tells us a followed session
+      // started/ended so we only report positions while relevant. An end
+      // notice for an already-replaced session leaves its successor alone.
+      const unBrowserReading = await listen<{ active: boolean; session_id: string }>(
+        "browser-reading",
+        (e) => {
+          if (e.payload.active === true) this._browserSessionId = e.payload.session_id;
+          else if (e.payload.session_id === this._browserSessionId) this._browserSessionId = null;
+        }
+      );
 
       // Effects/speed/pitch chosen outside the Play page (Effects page, profile
       // switch) only ever reach the backend config; re-sync here so the next
@@ -720,6 +753,8 @@ class PlaybackStore {
         unPaginationComplete,
         unPlaybackStop,
         unTogglePause,
+        unSkipBackward,
+        unSkipForward,
         unBrowserReading,
         unConfigChanged,
         unSynthesis,
