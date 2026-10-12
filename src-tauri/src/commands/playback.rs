@@ -52,6 +52,7 @@ pub fn replay_cached(
             is_final: true,
             text,
             captions,
+            session_id: None,
         },
     ) {
         log::warn!("Failed to emit audio-ready: {}", e);
@@ -238,6 +239,7 @@ pub fn play_history_entry(
             is_final: true,
             text,
             captions,
+            session_id: None,
         },
     ) {
         log::warn!("Failed to emit audio-ready: {}", e);

@@ -789,6 +789,7 @@ pub async fn play_history_batch(
                 is_final: index == total - 1,
                 text: entry.text.clone(),
                 captions: crate::tts::captions::read_sidecar(&output_path),
+                session_id: None,
             },
         );
 

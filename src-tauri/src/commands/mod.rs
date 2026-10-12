@@ -55,6 +55,9 @@ pub struct AudioFragmentEvent {
     /// Text being spoken in this fragment
     pub text: String,
     pub captions: Option<crate::tts::captions::CaptionAlignment>,
+    /// Browser-companion session this clip belongs to, when one follows it
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
 }
 
 /// Event carrying one PCM chunk of streaming synthesis audio.
@@ -74,6 +77,8 @@ pub struct AudioStreamChunkEvent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fragment_duration_ms: Option<u64>,
     pub captions: Option<crate::tts::captions::CaptionAlignment>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
 }
 
 /// Event emitted during synthesis to show progress with ETA.

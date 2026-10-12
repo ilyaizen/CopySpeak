@@ -64,7 +64,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-async function sendAudio(index?: number) {
+async function sendAudio(index?: number, sessionId?: string) {
   const name = index === undefined ? "audio-ready" : "audio-fragment-ready";
   await listeners.get(name)!({
     payload:
@@ -75,7 +75,8 @@ async function sendAudio(index?: number) {
             fragment_index: index,
             fragment_total: 2,
             is_final: index === 1,
-            text: `Part ${index}`
+            text: `Part ${index}`,
+            session_id: sessionId ?? null
           }
   });
 }
@@ -401,10 +402,7 @@ it("drives pause, resume, clamped skips and stop from page control events", asyn
 it("reports a followed page session by id, and only the current one", async () => {
   const calls = () => vi.mocked(invoke).mock.calls;
   vi.mocked(invoke).mockClear();
-  await listeners.get("browser-reading")!({
-    payload: { active: true, session_id: "trigger-1" }
-  });
-  await sendAudio(0);
+  await sendAudio(0, "trigger-1");
   expect(calls()).toContainEqual([
     "browser_reading_progress",
     expect.objectContaining({ sessionId: "trigger-1", fragmentIndex: 0 })
@@ -416,11 +414,9 @@ it("reports a followed page session by id, and only the current one", async () =
   ]);
 
   // A late end notice for a replaced session leaves its successor followed.
-  await listeners.get("browser-reading")!({ payload: { active: true, session_id: "a" } });
-  await listeners.get("browser-reading")!({ payload: { active: true, session_id: "b" } });
-  await listeners.get("browser-reading")!({ payload: { active: false, session_id: "a" } });
   vi.mocked(invoke).mockClear();
-  await sendAudio(0);
+  await sendAudio(0, "b");
+  await listeners.get("browser-reading")!({ payload: { active: false, session_id: "a" } });
   audio.dispatchEvent(new Event("ended"));
   expect(calls()).toContainEqual([
     "browser_reading_finished",
@@ -434,4 +430,73 @@ it("announces each fragment as it becomes audible, with its text", async () => {
   await vi.waitFor(() =>
     expect(emit).toHaveBeenCalledWith("playback-fragment-audible", { index: 0, text: "Part 0" })
   );
+});
+
+// Repro: a queued trigger B starts while A's clip still plays. A's queue drains
+// before B's audio arrives, so that drain must not complete anything.
+it("does not complete a queued trigger when the earlier clip drains before its audio arrives", async () => {
+  const calls = () => vi.mocked(invoke).mock.calls;
+  vi.mocked(invoke).mockClear();
+  await sendAudio(0, "trigger-a");
+  // The bridge cancels A when B starts; B's clip has not arrived yet.
+  await listeners.get("browser-reading")!({ payload: { active: false, session_id: "trigger-a" } });
+  audio.dispatchEvent(new Event("ended"));
+  expect(calls().filter(([name]) => name === "browser_reading_finished")).toEqual([]);
+});
+
+it("keeps following a queued trigger after the earlier clip drains, once its audio arrives", async () => {
+  const calls = () => vi.mocked(invoke).mock.calls;
+  await sendAudio(0, "trigger-a");
+  await listeners.get("browser-reading")!({ payload: { active: false, session_id: "trigger-a" } });
+  audio.dispatchEvent(new Event("ended"));
+  vi.mocked(invoke).mockClear();
+  await sendAudio(0, "trigger-b");
+  expect(calls()).toContainEqual([
+    "browser_reading_progress",
+    expect.objectContaining({ sessionId: "trigger-b", fragmentIndex: 0 })
+  ]);
+  audio.dispatchEvent(new Event("ended"));
+  expect(calls()).toContainEqual([
+    "browser_reading_finished",
+    { sessionId: "trigger-b", status: "completed" }
+  ]);
+});
+
+it("binds a streamed clip to the session it belongs to once audible", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal(
+    "AudioContext",
+    class {
+      state = "running";
+      currentTime = 0;
+      destination = {};
+      createGain = () => ({ gain: { value: 1 }, connect() {}, disconnect() {} });
+      resume = vi.fn();
+      suspend = vi.fn();
+      close = vi.fn();
+    }
+  );
+  vi.spyOn(PcmStreamScheduler.prototype, "handleChunk").mockImplementation(() => {});
+  vi.spyOn(PcmStreamScheduler.prototype, "getPlaybackPosition").mockReturnValue({
+    fragmentIndex: 0,
+    positionMs: 100
+  });
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  vi.mocked(invoke).mockClear();
+  playbackStore.handleStreamChunk({
+    audio_base64: "",
+    sample_rate: 24000,
+    channels: 1,
+    bits_per_sample: 16,
+    fragment_index: 0,
+    fragment_total: 1,
+    is_final: false,
+    text: "streamed",
+    session_id: "trigger-s"
+  });
+  expect(invoke).toHaveBeenCalledWith(
+    "browser_reading_progress",
+    expect.objectContaining({ sessionId: "trigger-s", fragmentIndex: 0 })
+  );
+  playbackStore.handleStop();
 });

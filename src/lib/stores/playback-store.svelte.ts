@@ -66,7 +66,12 @@ class PlaybackStore {
   private _lastCaption: HudCaptionPayload | null = null;
   private _streamCaptions = new Map<
     number,
-    { text: string; durationMs: number; captions?: CaptionAlignment | null }
+    {
+      text: string;
+      durationMs: number;
+      captions?: CaptionAlignment | null;
+      sessionId?: string | null;
+    }
   >();
 
   // Modular components
@@ -77,8 +82,10 @@ class PlaybackStore {
   // Browser companion: while a page follows this audio (a browser-initiated
   // reading or a mirrored double-copy/hotkey speak), the audible-clock position
   // is reported to the Rust bridge, which projects the current word into the
-  // page selection (see src-tauri/src/browser_bridge.rs). Reports name the
-  // session so a late report never lands on its successor.
+  // page selection (see src-tauri/src/browser_bridge.rs). The binding is the
+  // session of the clip now audible (set as each clip activates), never the
+  // last session announced: a queued speak's announcement lands while an
+  // earlier clip still plays, and its completion must not fire on that drain.
   private _browserSessionId: string | null = null;
   // Stream fragment entry last announced as audible (identity, not index: the
   // same index recurs across speaks).
@@ -106,6 +113,7 @@ class PlaybackStore {
     this.totalFragments = fragment.total;
     this._fragmentText = fragment.text;
     this._fragmentCaptions = validCaptionAlignment(fragment.captions) ? fragment.captions : null;
+    this._browserSessionId = fragment.sessionId ?? null;
     void this._emit?.("playback-fragment-audible", { index: fragment.index, text: fragment.text });
     return this.handleAudioReady(fragment.audioBase64);
   }
@@ -153,6 +161,7 @@ class PlaybackStore {
       if (position && fragment) {
         if (fragment !== this._announcedStream) {
           this._announcedStream = fragment;
+          this._browserSessionId = fragment.sessionId ?? null;
           void this._emit?.("playback-fragment-audible", {
             index: position.fragmentIndex,
             text: fragment.text
@@ -331,6 +340,7 @@ class PlaybackStore {
     is_final: boolean;
     text: string;
     captions?: CaptionAlignment | null;
+    session_id?: string | null;
   }): Promise<void> {
     console.log(
       "[PlaybackStore] handleFragmentReady: index",
@@ -346,7 +356,8 @@ class PlaybackStore {
       index: payload.fragment_index,
       total: payload.fragment_total,
       text: payload.text,
-      captions: payload.captions
+      captions: payload.captions,
+      sessionId: payload.session_id ?? null
     });
     console.log(
       "[PlaybackStore] Queue length:",
@@ -421,7 +432,8 @@ class PlaybackStore {
       this._streamCaptions.set(payload.fragment_index, {
         text: payload.text,
         durationMs: 0,
-        captions: this._streamCaptions.get(payload.fragment_index)?.captions
+        captions: this._streamCaptions.get(payload.fragment_index)?.captions,
+        sessionId: payload.session_id ?? null
       });
     }
     const caption = this._streamCaptions.get(payload.fragment_index);
@@ -667,6 +679,7 @@ class PlaybackStore {
         is_final: boolean;
         text: string;
         captions?: CaptionAlignment | null;
+        session_id?: string | null;
       }>("audio-fragment-ready", async (e) => {
         console.log(
           "[PlaybackStore] audio-fragment-ready received, index:",
@@ -706,14 +719,16 @@ class PlaybackStore {
         this.skipForward();
       });
 
-      // Browser companion: the Rust bridge tells us a followed session
-      // started/ended so we only report positions while relevant. An end
-      // notice for an already-replaced session leaves its successor alone.
+      // Browser companion: the Rust bridge says when a followed session is
+      // cancelled or replaced, so we stop reporting it. An end notice for an
+      // already-replaced session leaves its successor alone. Sessions bind
+      // only when their own clip becomes audible (see _activateFragment).
       const unBrowserReading = await listen<{ active: boolean; session_id: string }>(
         "browser-reading",
         (e) => {
-          if (e.payload.active === true) this._browserSessionId = e.payload.session_id;
-          else if (e.payload.session_id === this._browserSessionId) this._browserSessionId = null;
+          if (!e.payload.active && e.payload.session_id === this._browserSessionId) {
+            this._browserSessionId = null;
+          }
         }
       );
 
