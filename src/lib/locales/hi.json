@@ -1,0 +1,701 @@
+{
+  "app": {
+    "title": "CopySpeak",
+    "tagline": "आपके क्लिपबोर्ड के लिए AI टेक्स्ट-टू-स्पीच"
+  },
+  "nav": {
+    "play": "चलाएँ",
+    "engine": "इंजन",
+    "settings": "सेटिंग्स"
+  },
+  "header": {
+    "play": "चलाएँ",
+    "voices": "आवाज़ें",
+    "engines": "इंजन",
+    "history": "इतिहास",
+    "settings": "सेटिंग्स",
+    "tagline": "आपके क्लिपबोर्ड के लिए AI टेक्स्ट-टू-स्पीच"
+  },
+  "common": {
+    "loading": "लोड हो रहा है...",
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "reset": "डिफ़ॉल्ट पर रीसेट करें",
+    "test": "परखें",
+    "close": "बंद करें",
+    "back": "वापस",
+    "next": "आगे",
+    "done": "हो गया",
+    "yes": "हाँ",
+    "no": "नहीं",
+    "ok": "ठीक है",
+    "error": "त्रुटि",
+    "success": "सफल",
+    "warning": "चेतावनी",
+    "info": "जानकारी"
+  },
+  "settings": {
+    "title": "सेटिंग्स",
+    "tabs": {
+      "general": "सामान्य",
+      "history": "इतिहास",
+      "effects": "इफ़ेक्ट",
+      "advanced": "उन्नत",
+      "about": "परिचय"
+    },
+    "sections": {
+      "general": "सामान्य",
+      "startup": "स्टार्टअप",
+      "appearance": "रूप-रंग",
+      "playback": "प्लेबैक",
+      "hud": "HUD ओवरले",
+      "history": "इतिहास",
+      "triggers": "ट्रिगर",
+      "hotkeys": "हॉटकी",
+      "pagination": "उन्नत",
+      "sanitization": "टेक्स्ट सफ़ाई",
+      "postProcess": "LLM पोस्ट-प्रोसेसिंग",
+      "effects": "इफ़ेक्ट",
+      "appInfo": "ऐप जानकारी",
+      "importExport": "आयात / निर्यात"
+    },
+    "categories": {
+      "general": "सामान्य",
+      "playback": "प्लेबैक",
+      "triggers": "ट्रिगर",
+      "pagination": "विभाजन",
+      "sanitization": "टेक्स्ट सफ़ाई",
+      "history": "इतिहास",
+      "hud": "HUD ओवरले",
+      "about": "परिचय"
+    },
+    "descriptions": {
+      "general": "स्टार्टअप व्यवहार और विंडो नियंत्रण",
+      "playback": "वॉल्यूम और ऑडियो निर्यात सेटिंग्स",
+      "triggers": "कॉपी पहचान और टेक्स्ट सीमाएँ",
+      "pagination": "क्रमिक TTS प्लेबैक के लिए लंबे टेक्स्ट को खंडों में बाँटें",
+      "sanitization": "टेक्स्ट सफ़ाई और सामान्यीकरण",
+      "history": "जनरेशन इतिहास और स्टोरेज",
+      "hud": "वेवफ़ॉर्म दृश्य और स्थिति",
+      "about": "संस्करण जानकारी और आभार"
+    },
+    "actions": {
+      "save": "बदलाव सहेजें",
+      "cancel": "रद्द करें",
+      "reset": "डिफ़ॉल्ट पर रीसेट करें",
+      "test": "परखें",
+      "tryAgain": "फिर से कोशिश करें"
+    },
+    "general": {
+      "language": "भाषा",
+      "languageDescription": "अपनी पसंदीदा भाषा चुनें",
+      "launchOnLogin": "लॉगिन पर शुरू करें",
+      "startMinimized": "ट्रे में छोटा करके शुरू करें",
+      "showNotifications": "सूचनाएँ दिखाएँ",
+      "closeBehavior": "बंद करें बटन का व्यवहार",
+      "appearance": "रूप-रंग",
+      "debugMode": "डीबग मोड",
+      "updateChecks": "अपडेट अपने-आप जाँचें",
+      "autoSave": "बदलाव अपने-आप सहेजें",
+      "autoSaveDescription": "सेटिंग्स, इंजन और आवाज़ें पेज पर आख़िरी बदलाव के 800ms बाद अपने-आप सहेजें — सहेजें/रद्द करें बार के बिना"
+    },
+    "playback": {
+      "title": "प्लेबैक सेटिंग्स",
+      "onRetrigger": "दोबारा ट्रिगर होने पर",
+      "onRetriggerDescription": "बोलते समय TTS फिर से ट्रिगर होने पर क्या हो",
+      "volume": "वॉल्यूम",
+      "volumeDescription": "ऑडियो प्लेबैक वॉल्यूम (0-100%)",
+      "streaming": "ऑडियो स्ट्रीम करें",
+      "streamingDescription": "ऑडियो आते ही प्लेबैक शुरू करें। समर्थित क्लाउड इंजन: ElevenLabs और Cartesia। बंद होने पर बैच सिंथेसिस होता है और प्लेबैक से पहले हर अनुरोध पूरा होने का इंतज़ार किया जाता है।",
+      "duck": "अन्य ऐप्स की आवाज़ धीमी करें",
+      "duckDescription": "CopySpeak के बोलते समय अन्य ऐप्स का ऑडियो धीमा करें, फिर वापस लाएँ। फ़िलहाल केवल Windows पर।",
+      "duckMode": "धीमा करने का मोड",
+      "duckModeLower": "धीमा",
+      "duckModeMute": "म्यूट",
+      "duckLevel": "धीमा करने का स्तर",
+      "duckLevelDescription": "अन्य ऐप्स का वॉल्यूम, उनके अपने स्तर के प्रतिशत के रूप में",
+      "duckFade": "फ़ेड (ms)",
+      "duckFadeDescription": "धीमा करने और वापस लाने की फ़ेड अवधि; तुरंत के लिए 0",
+      "playbackSpeed": "गति",
+      "playbackSpeedDescription": "प्लेबैक गति (0.5x - 2x)",
+      "pitch": "पिच",
+      "pitchDescription": "पिच बदलाव (0.5x - 2x)",
+      "stopAndRestart": "रोकें और फिर शुरू करें",
+      "queueAfterCurrent": "मौजूदा के बाद कतार में लगाएँ",
+      "ignoreNewTrigger": "नया ट्रिगर अनदेखा करें"
+    },
+    "triggers": {
+      "title": "ट्रिगर सेटिंग्स",
+      "listen": "डबल-कॉपी सुनें",
+      "listenDescription": "डबल-कॉपी के लिए क्लिपबोर्ड पर नज़र रखें",
+      "doubleCopyWindow": "डबल-कॉपी पहचान अवधि (ms)",
+      "doubleCopyWindowDescription": "वह समय जिसके भीतर दूसरी कॉपी TTS ट्रिगर करती है (100-5000ms)",
+      "maxTextLength": "अधिकतम टेक्स्ट लंबाई",
+      "maxTextLengthDescription": "बोले जाने वाले अधिकतम अक्षर (लंबा टेक्स्ट चेतावनी के साथ काट दिया जाएगा)"
+    },
+    "pagination": {
+      "title": "विभाजन सेटिंग्स",
+      "enabled": "विभाजन चालू करें",
+      "description": "क्रमिक TTS प्लेबैक के लिए लंबे टेक्स्ट को खंडों में बाँटें",
+      "fragmentSize": "खंड आकार (अक्षर)",
+      "fragmentSizeDescription": "प्रति टेक्स्ट खंड अधिकतम अक्षर (100-10000)"
+    },
+    "hud": {
+      "enabled": "HUD चालू करें",
+      "enabledDescription": "प्लेबैक के दौरान वेवफ़ॉर्म ओवरले दिखाएँ",
+      "overlay": "HUD ओवरले",
+      "position": "स्थिति",
+      "testHud": "HUD डिस्प्ले परखें",
+      "topLeft": "ऊपर बाएँ",
+      "topCenter": "ऊपर बीच में",
+      "topRight": "ऊपर दाएँ",
+      "bottomLeft": "नीचे बाएँ",
+      "bottomCenter": "नीचे बीच में",
+      "bottomRight": "नीचे दाएँ"
+    },
+    "history": {
+      "title": "इतिहास सेटिंग्स",
+      "enabled": "इतिहास चालू करें",
+      "enabledDescription": "सभी TTS कार्यों का लॉग रखें",
+      "storageMode": "स्टोरेज मोड",
+      "persistent": "स्थायी",
+      "temporary": "अस्थायी",
+      "generationsFolder": "जनरेशन फ़ोल्डर",
+      "generationsFolderDescription": "TTS जनरेशन सहेजने की डायरेक्टरी। डिफ़ॉल्ट के लिए खाली छोड़ें।",
+      "generationsFolderPlaceholder": "डिफ़ॉल्ट: Documents/CopySpeak",
+      "autoDeleteTitle": "जनरेशन अपने-आप हटाएँ",
+      "autoDeleteKeepLatest": "नवीनतम रखें",
+      "autoDeleteNever": "कभी नहीं",
+      "autoDeleteAfterDays": "इतने दिन बाद",
+      "days": "दिन",
+      "manualCleanupTitle": "मैन्युअल सफ़ाई",
+      "manualCleanupDescription": "पुरानी प्रविष्टियाँ और अनाथ फ़ाइलें हटाने के लिए अभी सफ़ाई चलाएँ",
+      "runCleanup": "अभी सफ़ाई करें",
+      "cleanupDialog": {
+        "title": "इतिहास की सफ़ाई करें?",
+        "description": "इससे मौजूदा अपने-आप हटाने के नियम लागू होंगे",
+        "orphanedFiles": "इतिहास में संदर्भित न होने वाली अनाथ ऑडियो फ़ाइलें हटाएँ",
+        "cannotUndo": "यह कार्रवाई पूर्ववत नहीं की जा सकती।",
+        "cancel": "रद्द करें",
+        "confirm": "सफ़ाई करें"
+      },
+      "cleanupOrphaned": "अनाथ फ़ाइलें साफ़ करें"
+    },
+    "sanitization": {
+      "title": "सफ़ाई सेटिंग्स",
+      "enabled": "सफ़ाई चालू करें",
+      "enabledDescription": "TTS से पहले क्लिपबोर्ड टेक्स्ट से अनचाही फ़ॉर्मैटिंग हटाएँ",
+      "markdown": "Markdown सिंटैक्स हटाएँ",
+      "markdownDescription": "सारी Markdown फ़ॉर्मैटिंग हटाएँ (हेडर, बोल्ड, इटैलिक, कोड ब्लॉक, लिंक, सूचियाँ, उद्धरण)",
+      "stripCodeBlocks": "कोड ब्लॉक",
+      "stripCodeBlocksDescription": "फ़ेंस्ड कोड ब्लॉक (तीन बैकटिक) हटाएँ",
+      "stripInlineCode": "इनलाइन कोड",
+      "stripInlineCodeDescription": "एक बैकटिक वाला इनलाइन कोड हटाएँ — तकनीकी टेक्स्ट में `शब्दों` को बचाने के लिए डिफ़ॉल्ट रूप से बंद",
+      "stripHeaders": "हेडर",
+      "stripHeadersDescription": "# Markdown हेडर हटाएँ, टेक्स्ट रखें",
+      "stripLinks": "लिंक",
+      "stripLinksDescription": "Markdown लिंक सिंटैक्स हटाएँ, लिंक टेक्स्ट रखें",
+      "stripBoldItalic": "बोल्ड और इटैलिक",
+      "stripBoldItalicDescription": "**बोल्ड** और *इटैलिक* चिह्न हटाएँ",
+      "stripLists": "सूचियाँ",
+      "stripListsDescription": "बुलेट और क्रमांकित सूची चिह्न हटाएँ",
+      "stripBlockquotes": "उद्धरण",
+      "stripBlockquotesDescription": "> उद्धरण उपसर्ग हटाएँ",
+      "ttsNormalization": "दृश्य संक्षेप विस्तारित करें",
+      "ttsNormalizationDescription": "URL, स्लैश, संक्षिप्ताक्षर, मीट्रिक इकाइयों और चिह्नों को बोलने योग्य टेक्स्ट में बदलें"
+    },
+    "postProcess": {
+      "title": "LLM पोस्ट-प्रोसेसिंग",
+      "description": "कॉपी किए गए टेक्स्ट को OpenAI-संगत LLM प्रदाता से संक्षिप्त, सुनने में आसान भाषा में दोबारा लिखें।",
+      "enabled": "पोस्ट-प्रोसेसिंग चालू करें",
+      "enabledDescription": "TTS से पहले साफ़ किया गया टेक्स्ट सक्रिय प्रदाता के चैट मॉडल से गुज़ारें। विफल होने पर मूल टेक्स्ट इस्तेमाल होगा।",
+      "minChars": "न्यूनतम लंबाई",
+      "minCharsTooltip": "केवल कम से कम इतने अक्षरों वाला टेक्स्ट संक्षिप्त करें; छोटा टेक्स्ट जैसा है वैसा बोला जाता है। 0 सब कुछ संक्षिप्त करता है।",
+      "requireRequestFlag": "केवल अनुरोध पर",
+      "requireRequestFlagTooltip": "केवल तब संक्षिप्त करें जब कॉलर स्पष्ट रूप से कहे (कंट्रोल सर्वर का condense फ़ील्ड या CLI --condense)। बंद: हर योग्य टेक्स्ट संक्षिप्त होगा।",
+      "apiKey": "API कुंजी",
+      "apiKeyPlaceholder": "gsk_...",
+      "apiKeyHelp": "console.groq.com पर कुंजी बनाएँ",
+      "testKey": "परखें",
+      "testOk": "Groq API कुंजी मान्य है",
+      "testFail": "अमान्य कुंजी",
+      "provider": "प्रदाता",
+      "providerTooltip": "कोई भी OpenAI-संगत एंडपॉइंट काम करता है। + बटन से अपना जोड़ें।",
+      "name": "नाम",
+      "nameTooltip": "इस प्रदाता का प्रदर्शित नाम।",
+      "baseUrl": "बेस URL",
+      "baseUrlTooltip": "OpenAI-संगत API रूट, जैसे https://api.groq.com/openai/v1",
+      "addProvider": "प्रदाता जोड़ें",
+      "deleteProvider": "प्रदाता हटाएँ",
+      "deleteProviderTooltip": "इस प्रदाता को सूची से हटाएँ। बिल्ट-इन प्रविष्टियाँ सेटिंग्स रीसेट करके वापस जोड़ी जा सकती हैं।",
+      "refreshModels": "मॉडल सूची लाएँ",
+      "modelsEmpty": "एंडपॉइंट ने कोई मॉडल नहीं लौटाया।",
+      "model": "मॉडल",
+      "modelTooltip": "छोटे मॉडल तेज़ होते हैं; बड़े मॉडल निर्देशों का अधिक भरोसेमंद ढंग से पालन करते हैं।",
+      "prompt": "प्रॉम्प्ट टेम्पलेट",
+      "promptHelp": "जहाँ कॉपी किया गया टेक्स्ट डालना हो, वहाँ ${output} लिखें।",
+      "restoreDefault": "डिफ़ॉल्ट प्रॉम्प्ट वापस लाएँ"
+    },
+    "effects": {
+      "enabled": "इफ़ेक्ट चालू करें",
+      "enabledDescription": "मुख्य मेनू में इफ़ेक्ट टैब दिखाएँ और TTS प्लेबैक पर पोस्ट-प्रोसेसिंग लागू करें",
+      "active": "सक्रिय इफ़ेक्ट",
+      "activeDescription": "हर TTS प्लेबैक पर लागू होने वाला ऑडियो इफ़ेक्ट",
+      "options": {
+        "none": "कोई नहीं",
+        "walkieTalkie": "वॉकी-टॉकी",
+        "gameBoy": "8-बिट Game Boy"
+      }
+    },
+    "about": {
+      "version": "संस्करण",
+      "versionDescription": "CopySpeak का मौजूदा संस्करण",
+      "sourceCode": "सोर्स कोड",
+      "sourceCodeDescription": "GitHub पर CopySpeak देखें",
+      "github": "GitHub",
+      "acknowledgments": "आभार",
+      "openai": {
+        "title": "OpenAI TTS",
+        "description": "उच्च गुणवत्ता वाला न्यूरल टेक्स्ट-टू-स्पीच",
+        "detail": "उच्च गुणवत्ता वाले वॉइस सिंथेसिस के लिए CopySpeak OpenAI के टेक्स्ट-टू-स्पीच API का उपयोग करता है।"
+      },
+      "elevenlabs": {
+        "title": "ElevenLabs",
+        "description": "उन्नत AI वॉइस सिंथेसिस",
+        "detail": "यथार्थवादी वॉइस क्लोनिंग क्षमता वाला प्रीमियम TTS इंजन।"
+      },
+      "kokoro": {
+        "title": "Kokoro TTS",
+        "description": "ओपन-सोर्स लोकल TTS",
+        "detail": "लोकल प्रोसेसिंग के लिए हल्का, ओपन-सोर्स टेक्स्ट-टू-स्पीच इंजन।"
+      },
+      "piper": {
+        "title": "Piper",
+        "description": "तेज़ न्यूरल TTS",
+        "detail": "कम लेटेंसी वाला तेज़, लोकल न्यूरल टेक्स्ट-टू-स्पीच सिस्टम।"
+      },
+      "cartesia": {
+        "title": "Cartesia",
+        "description": "कम लेटेंसी वाला क्लाउड TTS (Sonic 3.5)",
+        "detail": "Sonic 3.5 मॉडल पर आधारित क्लाउड API। API कुंजी आवश्यक है।"
+      },
+      "kitten": {
+        "title": "Kitten TTS",
+        "description": "बेहद हल्का लोकल ONNX TTS",
+        "detail": "चुनने योग्य चार 25–80MB ONNX मॉडल, 8 बिल्ट-इन आवाज़ों के साथ, CPU के लिए अनुकूलित और वैकल्पिक GPU त्वरण।"
+      },
+      "qwen": {
+        "title": "Qwen3-TTS",
+        "description": "बहुभाषी लोकल TTS",
+        "detail": "9 बिल्ट-इन आवाज़ों और वैकल्पिक GPU त्वरण वाला लोकल Qwen3-TTS CustomVoice।"
+      },
+      "pocket": {
+        "title": "Pocket TTS",
+        "description": "कॉम्पैक्ट लोकल TTS",
+        "detail": "Kyutai Pocket: CPU पर चलने के लिए बना 10 करोड़ पैरामीटर वाला मॉडल, छह भाषाओं में आवाज़ों के साथ।"
+      },
+      "google": {
+        "title": "Google Gemini TTS",
+        "description": "Google का Gemini-आधारित क्लाउड TTS",
+        "detail": "Google के Gemini मॉडल पर चलने वाला क्लाउड TTS। Google AI API कुंजी आवश्यक है।"
+      },
+      "microsoft": {
+        "title": "Microsoft Foundry AI",
+        "description": "Microsoft Foundry के ज़रिए एंटरप्राइज़ क्लाउड TTS",
+        "detail": "Microsoft Foundry स्पीच सेवाओं के ज़रिए एंटरप्राइज़-स्तर की न्यूरल आवाज़ें। API कुंजी और एंडपॉइंट आवश्यक हैं।"
+      },
+      "http": {
+        "title": "कस्टम HTTP इंजन",
+        "description": "सामान्य HTTP/REST TTS बैकएंड",
+        "detail": "अपना बैकएंड लाने वाला इंजन, जो कॉन्फ़िगर करने योग्य URL टेम्पलेट और प्रमाणीकरण के साथ किसी भी HTTP एंडपॉइंट को कॉल करता है।"
+      }
+    }
+  },
+  "engine": {
+    "title": "इंजन",
+    "selectEngine": "TTS इंजन चुनें",
+    "testing": "परखा जा रहा है...",
+    "kitten": {
+      "title": "Kitten TTS",
+      "description": "लोकल: चुनने योग्य चार ONNX मॉडल (25–80MB), 8 स्वाभाविक आवाज़ों के साथ। CPU के लिए अनुकूलित, वैकल्पिक GPU त्वरण।"
+    },
+    "qwen": {
+      "title": "Qwen3-TTS",
+      "description": "लोकल: 9 बिल्ट-इन आवाज़ों वाला बहुभाषी Qwen3-TTS CustomVoice। मॉडल पहली बार उपयोग पर डाउनलोड होता है।"
+    },
+    "piper": {
+      "title": "Piper TTS",
+      "description": "लोकल: 20+ अंग्रेज़ी आवाज़ों वाला तेज़, हल्का न्यूरल TTS। पूरी तरह ऑफ़लाइन काम करता है — कोई खाता या इंटरनेट ज़रूरी नहीं।"
+    },
+    "kokoro": {
+      "title": "Kokoro TTS",
+      "description": "लोकल: स्वाभाविक आवाज़ों और व्यापक लहजों वाला उच्च गुणवत्ता ऑफ़लाइन TTS। मॉडल RAM में रखता है; GPU त्वरण समर्थित।"
+    },
+    "pocket": {
+      "title": "Pocket TTS",
+      "description": "लोकल: Kyutai Pocket — CPU के लिए बना 10 करोड़ पैरामीटर वाला मॉडल, छह भाषाओं में आवाज़ों के साथ। GPU त्वरण समर्थित।"
+    },
+    "cartesia": {
+      "title": "Cartesia",
+      "description": "क्लाउड: Sonic 3.5 पर आधारित कम लेटेंसी वाला स्वाभाविक TTS। API कुंजी और इंटरनेट कनेक्शन आवश्यक।",
+      "apiKey": "API कुंजी",
+      "apiKeyDescription": "आपकी API कुंजी लोकल रूप से सहेजी जाती है और कभी साझा नहीं की जाती।",
+      "check": "जाँचें",
+      "testEngine": "इंजन परखें"
+    },
+    "elevenlabs": {
+      "title": "ElevenLabs",
+      "description": "क्लाउड: भावनात्मक विविधता, 1000+ आवाज़ों और बहुभाषी समर्थन वाला प्रीमियम AI वॉइस सिंथेसिस।",
+      "apiKey": "API कुंजी",
+      "apiKeyDescription": "आपकी API कुंजी लोकल रूप से सहेजी जाती है और कभी साझा नहीं की जाती।",
+      "check": "जाँचें",
+      "testEngine": "इंजन परखें"
+    },
+    "openai": {
+      "title": "OpenAI",
+      "description": "क्लाउड: OpenAI API के ज़रिए उच्च गुणवत्ता वाली स्वाभाविक आवाज़ें। API कुंजी और इंटरनेट कनेक्शन आवश्यक।",
+      "apiKey": "API कुंजी",
+      "apiKeyDescription": "आपकी API कुंजी लोकल रूप से सहेजी जाती है और कभी साझा नहीं की जाती।",
+      "check": "जाँचें",
+      "testEngine": "इंजन परखें"
+    },
+    "google": {
+      "title": "Google",
+      "description": "क्लाउड: Gemini API से स्पीच जनरेशन। Google AI API कुंजी आवश्यक।",
+      "apiKey": "API कुंजी"
+    },
+    "microsoft": {
+      "title": "Microsoft Foundry",
+      "description": "क्लाउड: Microsoft Foundry Speech। क्षेत्रीय एंडपॉइंट और API कुंजी आवश्यक।",
+      "apiKey": "API कुंजी",
+      "endpoint": "एंडपॉइंट"
+    },
+    "http": {
+      "title": "HTTP",
+      "description": "क्लाउड: प्रोफ़ाइल के अनुसार कॉन्फ़िगर किए गए कस्टम HTTP एंडपॉइंट पर सिंथेसिस अनुरोध भेजें।"
+    },
+    "uv": {
+      "title": "uv",
+      "description": "हर लोकल इंजन के लिए ज़रूरी। इंस्टॉलर Python TTS पैकेज लाने और चलाने के लिए uv का उपयोग करते हैं।"
+    },
+    "setup": {
+      "uvMissing": "uv इंस्टॉल नहीं है। लोकल इंजनों को चलने के लिए इसकी ज़रूरत है।",
+      "installUv": "uv इंस्टॉल करें",
+      "install": "इंस्टॉल करें",
+      "installing": "इंस्टॉल हो रहा है...",
+      "tryAgain": "फिर से कोशिश करें",
+      "openInstaller": "इंस्टॉलर चलाएँ",
+      "installManage": "इंस्टॉल / प्रबंधित करें"
+    },
+    "badges": {
+      "active": "सक्रिय",
+      "default": "डिफ़ॉल्ट",
+      "offline": "ऑफ़लाइन",
+      "free": "मुफ़्त",
+      "cloud": "क्लाउड",
+      "paid": "सशुल्क",
+      "freemium": "फ़्रीमियम"
+    },
+    "info": {
+      "engineInformation": "इंजन जानकारी"
+    },
+    "loading": "इंजन सेटिंग्स लोड हो रही हैं...",
+    "saveBar": {
+      "saving": "सहेजा जा रहा है...",
+      "cancel": "रद्द करें",
+      "saveChanges": "बदलाव सहेजें"
+    },
+    "testVoice": {
+      "title": "आवाज़ परखें",
+      "playing": "चल रहा है...",
+      "description": "मौजूदा इंजन से एक छोटा वाक्य चलाता है"
+    },
+    "localEngine": {
+      "voice": "आवाज़",
+      "kittenInstall": "Kitten TTS इंस्टॉल करने के लिए प्रोजेक्ट रूट से ./install-kittentts.ps1 चलाएँ। मॉडल पहली बार उपयोग पर अपने-आप डाउनलोड होते हैं (वेरिएंट के अनुसार ~25-80MB)।",
+      "pocketInstall": "Pocket TTS इंस्टॉल करने के लिए प्रोजेक्ट रूट से ./install-pocket.ps1 चलाएँ। pocket-tts के लिए एक uv प्रोजेक्ट बनाता है; मॉडल वेट पहली बार उपयोग पर डाउनलोड होते हैं।",
+      "piperModels": "मॉडल फ़ाइलें (.onnx + .onnx.json) {dataDir} में रखनी होंगी। यहाँ से डाउनलोड करें:",
+      "commandPreview": "कमांड पूर्वावलोकन",
+      "tempDirectory": "रनटाइम पर आपकी सिस्टम टेम्प डायरेक्टरी में बदल जाता है।",
+      "testEngine": "इंजन परखें",
+      "testing": "परखा जा रहा है...",
+      "engineWorking": "इंजन काम कर रहा है",
+      "engineFailed": "इंजन परीक्षण विफल"
+    },
+    "openaiEngine": {
+      "model": "मॉडल",
+      "modelTooltip": "स्पीच सिंथेसिस के लिए OpenAI TTS मॉडल",
+      "voice": "आवाज़",
+      "voiceTooltip": "स्पीच सिंथेसिस के लिए आवाज़ की शैली"
+    },
+    "cartesiaEngine": {
+      "model": "मॉडल",
+      "modelTooltip": "स्पीच सिंथेसिस के लिए Cartesia Sonic मॉडल",
+      "manualVoiceId": "मैन्युअल वॉइस ID",
+      "manualVoiceIdTooltip": "किसी ज्ञात आवाज़ को चुनने के बजाय कस्टम Cartesia वॉइस ID पेस्ट करने के लिए इसे चालू करें।",
+      "voice": "आवाज़",
+      "voiceTooltip": "स्पीच सिंथेसिस के लिए निर्धारित Cartesia आवाज़ का नाम",
+      "voiceId": "वॉइस ID",
+      "voiceIdTooltip": "Cartesia वॉइस ID। Katie डिफ़ॉल्ट अनुशंसित अमेरिकी अंग्रेज़ी आवाज़ है।",
+      "format": "फ़ॉर्मैट",
+      "formatTooltip": "ऑडियो आउटपुट कंटेनर"
+    },
+    "elevenlabsEngine": {
+      "manualVoiceId": "मैन्युअल वॉइस ID",
+      "manualVoiceIdTooltip": "सूची से चुनने के बजाय वॉइस ID हाथ से डालने के लिए टॉगल करें",
+      "voiceId": "वॉइस ID",
+      "voiceIdPlaceholder": "जैसे, 21m00Tcm4TlvDq8ikWAM",
+      "verify": "सत्यापित करें",
+      "verified": "सत्यापित",
+      "cached": "कैश किया गया",
+      "findVoices": "वॉइस ID यहाँ खोजें:",
+      "voice": "आवाज़",
+      "voiceTooltip": "अपनी ElevenLabs वॉइस लाइब्रेरी से चुनें",
+      "load": "लोड करें",
+      "setupApiKeyFirst": "पहले अपनी API कुंजी सेट करें",
+      "clickLoadToFetch": "उपलब्ध आवाज़ें लाने के लिए \"लोड करें\" पर क्लिक करें",
+      "setupApiKeyInSettings": "पहले सेटिंग्स में अपनी API कुंजी सेट करें",
+      "model": "मॉडल",
+      "modelTooltip": "स्पीच सिंथेसिस के लिए AI मॉडल",
+      "format": "फ़ॉर्मैट",
+      "formatTooltip": "ऑडियो आउटपुट फ़ॉर्मैट",
+      "voiceSettings": "आवाज़ सेटिंग्स",
+      "stability": "स्थिरता",
+      "stabilityTooltip": "अधिक मान से आवाज़ अधिक एकसमान, कम मान से अधिक परिवर्तनशील होती है",
+      "similarity": "समानता",
+      "similarityTooltip": "अधिक मान से आवाज़ मूल वक्ता से अधिक मिलती है",
+      "style": "शैली",
+      "styleTooltip": "अधिक मान से आवाज़ अधिक भावपूर्ण होती है (बंद करने के लिए 0)",
+      "speakerBoost": "स्पीकर बूस्ट",
+      "speakerBoostTooltip": "आवाज़ की स्पष्टता और गुणवत्ता बढ़ाता है"
+    },
+    "apiSetup": {
+      "title": "{engine} API सेटअप",
+      "description": "{engine} टेक्स्ट-टू-स्पीच चालू करने के लिए अपनी API कुंजी डालें।",
+      "apiKey": "API कुंजी",
+      "placeholderOpenai": "sk-...",
+      "placeholderElevenlabs": "xi-...",
+      "placeholderCartesia": "sk_car_...",
+      "placeholderGoogle": "AIza...",
+      "placeholderMicrosoft": "________________",
+      "endpointLabel": "एंडपॉइंट",
+      "endpointPlaceholder": "https://<region>.tts.speech.microsoft.com/",
+      "installButton": "इंस्टॉल करें",
+      "installing": "इंस्टॉल हो रहा है...",
+      "checkButton": "जाँचें",
+      "testButton": "परखें",
+      "valid": "API कुंजी मान्य",
+      "invalid": "API कुंजी जाँच विफल",
+      "testPassed": "इंजन परीक्षण सफल",
+      "testFailed": "इंजन परीक्षण विफल",
+      "cancel": "रद्द करें",
+      "save": "सहेजें"
+    },
+    "error": {
+      "loadFailed": "इंजन सेटिंग्स लोड नहीं हो सकीं",
+      "loadDescription": "आपका इंजन कॉन्फ़िगरेशन लोड करते समय त्रुटि हुई।"
+    }
+  },
+  "engines": {
+    "title": "इंजन",
+    "subtitle": "API कुंजियाँ सेट करें, लोकल इंजन इंस्टॉल करें और परखें कि हर इंजन काम करता है। आवाज़ सेटिंग्स आवाज़ें पेज पर हैं।",
+    "cloud": "क्लाउड",
+    "local": "लोकल",
+    "docs": "दस्तावेज़",
+    "noCredentialNeeded": "API कुंजी की ज़रूरत नहीं।",
+    "daemonIdleTimeout": "निष्क्रियता पर बंद",
+    "daemonIdleTimeoutHint": "इतने समय तक कुछ न पढ़ने पर स्थायी रूप से चल रहे लोकल इंजन को बंद करें और उसकी मेमोरी खाली करें। अगली बार पढ़ने पर यह फिर शुरू होगा (~कोल्ड स्टार्ट)।",
+    "installerSmokeTestHint": "इंस्टॉल करें, फिर परखें दबाकर जाँचें कि इंजन ऑडियो बनाता है।",
+    "installCuda": "NVIDIA GPU रनटाइम इंस्टॉल करें",
+    "installCudaHint": "प्रोफ़ाइल GPU त्वरण का उपयोग करे तो इसे चालू करें। दोबारा इंस्टॉल करने से इंजन का रनटाइम बदल जाता है।",
+    "installFailed": "इंस्टॉल विफल",
+    "saveBeforeTestFailed": "परखने से पहले अपने बदलाव सहेजें।",
+    "installDone": "इंस्टॉल पूरा",
+    "retry": "फिर कोशिश करें",
+    "reinstall": "दोबारा इंस्टॉल करें",
+    "voiceInstalled": "इंस्टॉल है",
+    "sharedModelHint": "एक साझा मॉडल डाउनलोड; सूची की सभी आवाज़ें शामिल हैं।",
+    "installedAllVoices": "इंस्टॉल है — सभी आवाज़ें उपलब्ध।",
+    "piperPerVoiceHint": "डाउनलोड करने के लिए आवाज़ें चुनें (हर आवाज़ एक अलग मॉडल है)।",
+    "uninstall": "अनइंस्टॉल करें",
+    "uninstallDone": "अनइंस्टॉल हो गया",
+    "uninstallFailed": "अनइंस्टॉल विफल",
+    "uninstallConfirm": "इस इंजन की फ़ाइलें और बाइनरी हटाएँ? डाउनलोड किए गए मॉडल मिटा दिए जाएँगे। इसका उपयोग करने वाली प्रोफ़ाइल दोबारा इंस्टॉल करने तक काम नहीं करेंगी।",
+    "binaryHint": "एक कमांड-लाइन बाइनरी इंस्टॉल करता है। कोई मॉडल डाउनलोड नहीं।",
+    "binaryInstalled": "इंस्टॉल है और तैयार है।"
+  },
+  "play": {
+    "title": "चलाएँ",
+    "placeholder": "जनरेट करने के लिए टेक्स्ट लिखें या पेस्ट करें।",
+    "clear": "साफ़ करें",
+    "play": "चलाएँ",
+    "pause": "रोकें",
+    "resume": "जारी रखें",
+    "stop": "बंद करें",
+    "replay": "फिर से चलाएँ",
+    "abort": "निरस्त करें",
+    "listening": "सुन रहा है",
+    "paused": "रुका हुआ",
+    "processing": "प्रोसेस हो रहा है...",
+    "history": "हाल का इतिहास",
+    "noHistory": "अभी कोई इतिहास नहीं",
+    "truncated": "टेक्स्ट काटा गया",
+    "truncatedDescription": "टेक्स्ट {original} से {truncated} अक्षरों तक काटा गया (अधिकतम: {max})",
+    "characters": "{count} अक्षर",
+    "replayTooltip": "पिछला ऑडियो फिर से चलाएँ",
+    "playLatestTooltip": "इतिहास से नवीनतम चलाएँ",
+    "playTooltip": "चलाएँ",
+    "pauseTooltip": "रोकें",
+    "resumeTooltip": "जारी रखें",
+    "stopTooltip": "बंद करें",
+    "abortTooltip": "सिंथेसिस या प्लेबैक निरस्त करें",
+    "skipBackTooltip": "5 सेकंड पीछे",
+    "skipFwdTooltip": "5 सेकंड आगे"
+  },
+  "history": {
+    "title": "इतिहास",
+    "loading": "लोड हो रहा है...",
+    "empty": "अभी इतिहास में कुछ नहीं",
+    "fragments": "{count} खंड",
+    "playSaved": "सहेजा गया ऑडियो चलाएँ",
+    "reSynthesize": "फिर से सिंथेसाइज़ करें और चलाएँ",
+    "reSynthesizeTooltip": "मौजूदा सेटिंग्स से फिर से सिंथेसाइज़ करें",
+    "delete": "इतिहास से हटाएँ",
+    "deleteAllFragments": "सभी खंड हटाएँ",
+    "playAll": "सभी चलाएँ",
+    "playAllTooltip": "सभी खंड क्रम से चलाएँ",
+    "playThisFragment": "यह खंड चलाएँ",
+    "noAudioFile": "कोई ऑडियो फ़ाइल नहीं",
+    "deleteEntry": "प्रविष्टि हटाएँ?",
+    "deleteBatch": "सभी खंड हटाएँ?",
+    "deleteBatchDescription": "इससे इस बैच के सभी खंड और उनकी ऑडियो फ़ाइलें स्थायी रूप से हट जाएँगी। यह कार्रवाई पूर्ववत नहीं की जा सकती।",
+    "deleteEntryWithFile": "इससे इतिहास प्रविष्टि और उसकी ऑडियो फ़ाइल स्थायी रूप से हट जाएँगी। यह कार्रवाई पूर्ववत नहीं की जा सकती।",
+    "deleteEntryOnly": "इससे इतिहास प्रविष्टि स्थायी रूप से हट जाएगी। यह कार्रवाई पूर्ववत नहीं की जा सकती।",
+    "cancel": "रद्द करें",
+    "confirmDelete": "हटाएँ",
+    "toast": {
+      "playing": "इतिहास से ऑडियो चल रहा है",
+      "playingFragments": "सभी खंड चल रहे हैं",
+      "reSynthesizing": "फिर से सिंथेसाइज़ करके चलाया जा रहा है",
+      "deleted": "इतिहास से हटाया गया",
+      "deletedBatch": "बैच इतिहास से हटाया गया",
+      "failedToPlay": "चलाने में विफल",
+      "failedToReSpeak": "फिर से बोलने में विफल",
+      "failedToDelete": "हटाने में विफल"
+    }
+  },
+  "toast": {
+    "success": {
+      "engineSaved": "इंजन सफलतापूर्वक सहेजा गया",
+      "settingsSaved": "सेटिंग्स सहेजी गईं",
+      "welcome": "CopySpeak में आपका स्वागत है!",
+      "configSaved": "कॉन्फ़िगरेशन सहेजा गया! चलिए शुरू करें।",
+      "hudTest": "HUD परीक्षण ट्रिगर हुआ",
+      "historyCleanup": "इतिहास की सफ़ाई पूरी हुई",
+      "installerLaunched": "Kitten TTS इंस्टॉलर नई विंडो में शुरू हुआ",
+      "settingsCopied": "सेटिंग्स क्लिपबोर्ड पर कॉपी हुईं",
+      "settingsDownloaded": "सेटिंग्स डाउनलोड हुईं",
+      "settingsImported": "सेटिंग्स सफलतापूर्वक आयात हुईं",
+      "settingsReset": "सेटिंग्स रीसेट हुईं — नया सेटअप शुरू",
+      "synthesisAborted": "सिंथेसिस निरस्त किया गया"
+    },
+    "error": {
+      "loadSettings": "सेटिंग्स लोड नहीं हो सकीं",
+      "saveSettings": "सेटिंग्स सहेजी नहीं जा सकीं",
+      "loadConfig": "कॉन्फ़िगरेशन लोड नहीं हो सका",
+      "saveConfig": "सेटिंग्स सहेजी नहीं जा सकीं",
+      "voiceTest": "आवाज़ परीक्षण विफल",
+      "hudTest": "HUD परीक्षण विफल",
+      "cleanup": "सफ़ाई विफल",
+      "installer": "इंस्टॉलर नहीं चल सका",
+      "switchEngine": "इंजन बदला नहीं जा सका"
+    },
+    "info": {
+      "httpEngineRemoved": "HTTP इंजन हटा दिया गया है। लोकल इंजन पर स्विच किया गया।"
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "CopySpeak में आपका स्वागत है",
+      "subtitle": "शुरू करने के लिए अपना टेक्स्ट-टू-स्पीच इंजन कॉन्फ़िगर करें, या अभी छोड़ें और बाद में सेट करें।"
+    },
+    "engineConfig": "इंजन कॉन्फ़िगरेशन",
+    "engineDescription": "अपना TTS इंजन सेट करें। आप इसे बाद में इंजन टैब में बदल सकते हैं।",
+    "recommendation": {
+      "title": "शुरुआत के लिए हम Kitten TTS की सलाह देते हैं",
+      "description": "Kitten TTS एक नया, बेहद हल्का TTS इंजन (25-80MB) है जो GPU के बिना CPU पर चलता है। इसे अपने-आप इंस्टॉल करने के लिए नीचे दिए बटन पर क्लिक करें — कोई मैन्युअल सेटअप नहीं।"
+    },
+    "install": "Kitten TTS इंस्टॉल करें",
+    "installing": "इंस्टॉल हो रहा है...",
+    "skip": "अभी छोड़ें",
+    "complete": "शुरू करें",
+    "loading": "कॉन्फ़िगरेशन लोड हो रहा है...",
+    "installed": "इंस्टॉल हो गया!",
+    "openTerminal": "PowerShell टर्मिनल खोलें",
+    "checkingEngine": "इंजन जाँचा जा रहा है...",
+    "helpText": "आप बाद में कभी भी इंजन टैब से अपना इंजन कॉन्फ़िगर कर सकते हैं।"
+  },
+  "effects": {
+    "title": "ऑडियो इफ़ेक्ट",
+    "description": "TTS प्लेबैक पर पोस्ट-प्रोसेसिंग इफ़ेक्ट लागू करें। इफ़ेक्ट रीयल टाइम में लागू होते हैं और सहेजे गए ऑडियो को नहीं बदलते।",
+    "preview": "पूर्वावलोकन",
+    "previewing": "पूर्वावलोकन चल रहा है...",
+    "activeTooltip": "हर TTS प्लेबैक पर लागू होने वाला इफ़ेक्ट। बिना रीस्टार्ट किए तुरंत बदलें।"
+  },
+  "landing": {
+    "hero": {
+      "title": "CopySpeak",
+      "subtitle": "आधुनिक AI TTS ऑर्केस्ट्रेटर",
+      "description": "एक हल्का क्रॉस-प्लेटफ़ॉर्म ऐप जो AI टेक्स्ट-टू-स्पीच इंजनों से क्लिपबोर्ड का टेक्स्ट ज़ोर से पढ़ता है।",
+      "download": "अपने प्लेटफ़ॉर्म के लिए डाउनलोड करें",
+      "github": "GitHub पर देखें",
+      "version": "v{version}"
+    },
+    "features": {
+      "title": "विशेषताएँ",
+      "doubleCopy": {
+        "title": "डबल-कॉपी ट्रिगर",
+        "description": "तुरंत बोलने के लिए 1.5 सेकंड के भीतर टेक्स्ट दो बार कॉपी करें। किसी हॉटकी की ज़रूरत नहीं।"
+      },
+      "engines": {
+        "title": "9 TTS इंजन",
+        "description": "OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP और लोकल CLI इंजन (Piper, Kokoro, Kitten)।"
+      },
+      "hud": {
+        "title": "HUD ओवरले",
+        "description": "प्लेबैक के दौरान रीयल-टाइम वेवफ़ॉर्म वाला तैरता हेड-अप डिस्प्ले।"
+      },
+      "history": {
+        "title": "इतिहास",
+        "description": "प्लेबैक, बैच प्रबंधन और ऑडियो निर्यात के साथ स्थायी TTS जनरेशन इतिहास।"
+      },
+      "sanitization": {
+        "title": "टेक्स्ट सफ़ाई",
+        "description": "साफ़ आवाज़ के लिए अपने-आप Markdown हटाना, URL विस्तार और टेक्स्ट सामान्यीकरण।"
+      },
+      "configurable": {
+        "title": "भरपूर कॉन्फ़िगरेशन",
+        "description": "प्लेबैक गति, वॉल्यूम, पिच, ट्रिगर, रूप-रंग और भी बहुत कुछ। डार्क और लाइट थीम।"
+      }
+    },
+    "screenshots": {
+      "title": "स्क्रीनशॉट",
+      "subtitle": "CopySpeak को काम करते देखें",
+      "caption": "CopySpeak v0.1.8 — चलाएँ टैब के साथ मुख्य इंटरफ़ेस"
+    },
+    "footer": {
+      "github": "GitHub",
+      "license": "MIT लाइसेंस",
+      "madeWith": "Rust, Svelte और AI से बना।"
+    }
+  },
+  "footer": {
+    "listening": "सुन रहा है",
+    "paused": "रुका हुआ",
+    "switchEngine": "TTS इंजन बदलें। मौजूदा इंजन: {engine}",
+    "available": "उपलब्ध",
+    "unavailable": "अनुपलब्ध - कॉन्फ़िगरेशन जाँचें",
+    "error": "उपलब्धता जाँचने में त्रुटि",
+    "notChecked": "जाँचा नहीं गया - बदलने के लिए क्लिक करें"
+  }
+}

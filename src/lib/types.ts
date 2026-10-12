@@ -25,7 +25,7 @@ export type ValidationError =
 
 export type ValidationResult = ValidationError[];
 
-export type SupportedLocale = "en" | "es" | "ar" | "he";
+export type SupportedLocale = "en" | "es" | "ar" | "he" | "de" | "fr" | "hi" | "ru" | "zh";
 
 export type HudPresetPosition =
   | "top-left"

@@ -1,0 +1,701 @@
+{
+  "app": {
+    "title": "CopySpeak",
+    "tagline": "تحويل النص إلى كلام بالذكاء الاصطناعي لحافظتك"
+  },
+  "nav": {
+    "play": "تشغيل",
+    "engine": "المحرك",
+    "settings": "الإعدادات"
+  },
+  "header": {
+    "play": "تشغيل",
+    "voices": "الأصوات",
+    "engines": "المحركات",
+    "history": "السجل",
+    "settings": "الإعدادات",
+    "tagline": "تحويل النص إلى كلام بالذكاء الاصطناعي لحافظتك"
+  },
+  "common": {
+    "loading": "جارٍ التحميل...",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "reset": "استعادة الإعدادات الافتراضية",
+    "test": "اختبار",
+    "close": "إغلاق",
+    "back": "رجوع",
+    "next": "التالي",
+    "done": "تم",
+    "yes": "نعم",
+    "no": "لا",
+    "ok": "موافق",
+    "error": "خطأ",
+    "success": "نجاح",
+    "warning": "تحذير",
+    "info": "معلومات"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "tabs": {
+      "general": "عام",
+      "history": "السجل",
+      "effects": "المؤثرات",
+      "advanced": "متقدم",
+      "about": "حول"
+    },
+    "sections": {
+      "general": "عام",
+      "startup": "بدء التشغيل",
+      "appearance": "المظهر",
+      "playback": "التشغيل",
+      "hud": "طبقة HUD",
+      "history": "السجل",
+      "triggers": "المشغِّلات",
+      "hotkeys": "اختصارات لوحة المفاتيح",
+      "pagination": "متقدم",
+      "sanitization": "تنظيف النص",
+      "postProcess": "المعالجة اللاحقة بنموذج LLM",
+      "effects": "المؤثرات",
+      "appInfo": "معلومات التطبيق",
+      "importExport": "استيراد / تصدير"
+    },
+    "categories": {
+      "general": "عام",
+      "playback": "التشغيل",
+      "triggers": "المشغِّلات",
+      "pagination": "التقسيم",
+      "sanitization": "تنظيف النص",
+      "history": "السجل",
+      "hud": "طبقة HUD",
+      "about": "حول"
+    },
+    "descriptions": {
+      "general": "سلوك بدء التشغيل والتحكم في النافذة",
+      "playback": "إعدادات مستوى الصوت وتصدير الصوت",
+      "triggers": "اكتشاف النسخ وحدود النص",
+      "pagination": "تقسيم النصوص الطويلة إلى أجزاء لتشغيلها تدريجيًا",
+      "sanitization": "تنظيف النص وتوحيده",
+      "history": "سجل التوليد والتخزين",
+      "hud": "عرض الموجة الصوتية وموضعها",
+      "about": "معلومات الإصدار والشكر"
+    },
+    "actions": {
+      "save": "حفظ التغييرات",
+      "cancel": "إلغاء",
+      "reset": "استعادة الإعدادات الافتراضية",
+      "test": "اختبار",
+      "tryAgain": "إعادة المحاولة"
+    },
+    "general": {
+      "language": "اللغة",
+      "languageDescription": "اختر لغتك المفضلة",
+      "launchOnLogin": "التشغيل عند تسجيل الدخول",
+      "startMinimized": "البدء مصغّرًا في علبة النظام",
+      "showNotifications": "إظهار الإشعارات",
+      "closeBehavior": "سلوك زر الإغلاق",
+      "appearance": "المظهر",
+      "debugMode": "وضع التصحيح",
+      "updateChecks": "التحقق من التحديثات تلقائيًا",
+      "autoSave": "حفظ التغييرات تلقائيًا",
+      "autoSaveDescription": "حفظ التعديلات تلقائيًا بعد 800 مللي ثانية من آخر تغيير في صفحات الإعدادات والمحركات والأصوات — دون شريط حفظ/إلغاء"
+    },
+    "playback": {
+      "title": "إعدادات التشغيل",
+      "onRetrigger": "عند إعادة التشغيل",
+      "onRetriggerDescription": "ما يحدث عند تشغيل القراءة أثناء قراءة جارية",
+      "volume": "مستوى الصوت",
+      "volumeDescription": "مستوى صوت التشغيل (0-100%)",
+      "streaming": "بث الصوت",
+      "streamingDescription": "بدء التشغيل فور وصول الصوت. المحركات السحابية المدعومة: ElevenLabs وCartesia. عند التعطيل يُستخدم التوليف الدفعي وتُنتظر نهاية كل طلب قبل التشغيل.",
+      "duck": "خفض صوت التطبيقات الأخرى",
+      "duckDescription": "يخفض صوت التطبيقات الأخرى أثناء حديث CopySpeak ثم يعيده. على Windows فقط حاليًا.",
+      "duckMode": "وضع الخفض",
+      "duckModeLower": "خفض",
+      "duckModeMute": "كتم",
+      "duckLevel": "مستوى الخفض",
+      "duckLevelDescription": "مستوى الصوت الذي تنخفض إليه التطبيقات الأخرى، كنسبة مئوية من مستواها",
+      "duckFade": "التلاشي (مللي ثانية)",
+      "duckFadeDescription": "مدة التلاشي عند الخفض والاستعادة؛ 0 للتطبيق الفوري",
+      "playbackSpeed": "السرعة",
+      "playbackSpeedDescription": "سرعة التشغيل (0.5x - 2x)",
+      "pitch": "طبقة الصوت",
+      "pitchDescription": "إزاحة طبقة الصوت (0.5x - 2x)",
+      "stopAndRestart": "الإيقاف وإعادة البدء",
+      "queueAfterCurrent": "الإضافة إلى قائمة الانتظار بعد الحالي",
+      "ignoreNewTrigger": "تجاهل التشغيل الجديد"
+    },
+    "triggers": {
+      "title": "إعدادات المشغِّلات",
+      "listen": "الاستماع للنسخ المزدوج",
+      "listenDescription": "مراقبة الحافظة لاكتشاف النسخ المزدوج",
+      "doubleCopyWindow": "نافذة اكتشاف النسخ المزدوج (مللي ثانية)",
+      "doubleCopyWindowDescription": "المدة التي يؤدي خلالها النسخ الثاني إلى بدء القراءة (100-5000 مللي ثانية)",
+      "maxTextLength": "الحد الأقصى لطول النص",
+      "maxTextLengthDescription": "الحد الأقصى للأحرف المقروءة (يُقتطع النص الأطول مع تحذير)"
+    },
+    "pagination": {
+      "title": "إعدادات التقسيم",
+      "enabled": "تفعيل التقسيم",
+      "description": "تقسيم النصوص الطويلة إلى أجزاء لتشغيلها تدريجيًا",
+      "fragmentSize": "حجم الجزء (بالأحرف)",
+      "fragmentSizeDescription": "الحد الأقصى للأحرف في كل جزء (100-10000)"
+    },
+    "hud": {
+      "enabled": "تفعيل HUD",
+      "enabledDescription": "إظهار طبقة الموجة الصوتية أثناء التشغيل",
+      "overlay": "طبقة HUD",
+      "position": "الموضع",
+      "testHud": "اختبار عرض HUD",
+      "topLeft": "أعلى اليسار",
+      "topCenter": "أعلى الوسط",
+      "topRight": "أعلى اليمين",
+      "bottomLeft": "أسفل اليسار",
+      "bottomCenter": "أسفل الوسط",
+      "bottomRight": "أسفل اليمين"
+    },
+    "history": {
+      "title": "إعدادات السجل",
+      "enabled": "تفعيل السجل",
+      "enabledDescription": "الاحتفاظ بسجل لجميع عمليات القراءة",
+      "storageMode": "وضع التخزين",
+      "persistent": "دائم",
+      "temporary": "مؤقت",
+      "generationsFolder": "مجلد التوليدات",
+      "generationsFolderDescription": "المجلد الذي تُحفظ فيه التوليدات الصوتية. اتركه فارغًا لاستخدام الافتراضي.",
+      "generationsFolderPlaceholder": "الافتراضي: Documents/CopySpeak",
+      "autoDeleteTitle": "الحذف التلقائي للتوليدات",
+      "autoDeleteKeepLatest": "الاحتفاظ بالأحدث",
+      "autoDeleteNever": "أبدًا",
+      "autoDeleteAfterDays": "بعد",
+      "days": "أيام",
+      "manualCleanupTitle": "التنظيف اليدوي",
+      "manualCleanupDescription": "تشغيل التنظيف الآن لإزالة الإدخالات القديمة والملفات اليتيمة",
+      "runCleanup": "التنظيف الآن",
+      "cleanupDialog": {
+        "title": "تنظيف السجل؟",
+        "description": "سيؤدي هذا إلى تطبيق قواعد الحذف التلقائي الحالية",
+        "orphanedFiles": "إزالة الملفات الصوتية اليتيمة غير المرتبطة بالسجل",
+        "cannotUndo": "لا يمكن التراجع عن هذا الإجراء.",
+        "cancel": "إلغاء",
+        "confirm": "تنظيف"
+      },
+      "cleanupOrphaned": "تنظيف الملفات اليتيمة"
+    },
+    "sanitization": {
+      "title": "إعدادات التنظيف",
+      "enabled": "تفعيل التنظيف",
+      "enabledDescription": "إزالة التنسيق غير المرغوب من نص الحافظة قبل القراءة",
+      "markdown": "إزالة صيغة Markdown",
+      "markdownDescription": "إزالة كل تنسيقات Markdown (العناوين، الغامق، المائل، كتل الشيفرة، الروابط، القوائم، الاقتباسات)",
+      "stripCodeBlocks": "كتل الشيفرة",
+      "stripCodeBlocksDescription": "إزالة كتل الشيفرة المسوّرة (ثلاث علامات backtick)",
+      "stripInlineCode": "الشيفرة المضمّنة",
+      "stripInlineCodeDescription": "إزالة الشيفرة المضمّنة بعلامة backtick واحدة — معطّل افتراضيًا للحفاظ على `المصطلحات` في النصوص التقنية",
+      "stripHeaders": "العناوين",
+      "stripHeadersDescription": "إزالة عناوين Markdown بعلامة #، مع الإبقاء على النص",
+      "stripLinks": "الروابط",
+      "stripLinksDescription": "إزالة صيغة روابط Markdown، مع الإبقاء على نص الرابط",
+      "stripBoldItalic": "الغامق والمائل",
+      "stripBoldItalicDescription": "إزالة علامات **الغامق** و*المائل*",
+      "stripLists": "القوائم",
+      "stripListsDescription": "إزالة علامات التعداد النقطي والرقمي",
+      "stripBlockquotes": "الاقتباسات",
+      "stripBlockquotesDescription": "إزالة بادئات الاقتباس >",
+      "ttsNormalization": "توسيع الاختصارات المرئية",
+      "ttsNormalizationDescription": "تحويل الروابط والشرطات المائلة والاختصارات والوحدات المترية والرموز إلى نص سهل النطق"
+    },
+    "postProcess": {
+      "title": "المعالجة اللاحقة بنموذج LLM",
+      "description": "إعادة صياغة النص المنسوخ عبر مزوّد LLM متوافق مع OpenAI ليصبح كلامًا موجزًا وسهل الاستماع.",
+      "enabled": "تفعيل المعالجة اللاحقة",
+      "enabledDescription": "تمرير النص المنظّف عبر نموذج الدردشة لدى المزوّد النشط قبل القراءة. عند الفشل يُستخدم النص الأصلي.",
+      "minChars": "الحد الأدنى للطول",
+      "minCharsTooltip": "تكثيف النص الذي لا يقل عن هذا العدد من الأحرف فقط؛ يُقرأ النص الأقصر كما هو. القيمة 0 تكثّف كل شيء.",
+      "requireRequestFlag": "عند الطلب فقط",
+      "requireRequestFlagTooltip": "التكثيف فقط عندما يطلبه المستدعي صراحةً (حقل condense في خادم التحكم أو CLI --condense). عند التعطيل: يُكثَّف كل نص مؤهَّل.",
+      "apiKey": "مفتاح API",
+      "apiKeyPlaceholder": "gsk_...",
+      "apiKeyHelp": "أنشئ مفتاحًا على console.groq.com",
+      "testKey": "اختبار",
+      "testOk": "مفتاح Groq API صالح",
+      "testFail": "مفتاح غير صالح",
+      "provider": "المزوّد",
+      "providerTooltip": "تعمل أي نقطة نهاية متوافقة مع OpenAI. أضف مزوّدك عبر الزر +.",
+      "name": "الاسم",
+      "nameTooltip": "الاسم المعروض لهذا المزوّد.",
+      "baseUrl": "عنوان URL الأساسي",
+      "baseUrlTooltip": "جذر API متوافق مع OpenAI، مثل https://api.groq.com/openai/v1",
+      "addProvider": "إضافة مزوّد",
+      "deleteProvider": "حذف المزوّد",
+      "deleteProviderTooltip": "إزالة هذا المزوّد من القائمة. يمكن إعادة الإدخالات المدمجة بإعادة ضبط الإعدادات.",
+      "refreshModels": "جلب قائمة النماذج",
+      "modelsEmpty": "لم تُرجع نقطة النهاية أي نماذج.",
+      "model": "النموذج",
+      "modelTooltip": "النماذج الأصغر أسرع؛ والأكبر تتبع التعليمات بموثوقية أعلى.",
+      "prompt": "قالب الموجّه",
+      "promptHelp": "استخدم ${output} في الموضع الذي يجب إدراج النص المنسوخ فيه.",
+      "restoreDefault": "استعادة الموجّه الافتراضي"
+    },
+    "effects": {
+      "enabled": "تفعيل المؤثرات",
+      "enabledDescription": "إظهار تبويب المؤثرات في القائمة الرئيسية وتطبيق المعالجة اللاحقة على التشغيل",
+      "active": "المؤثر النشط",
+      "activeDescription": "المؤثر الصوتي المطبَّق على كل تشغيل",
+      "options": {
+        "none": "بلا",
+        "walkieTalkie": "جهاز لاسلكي",
+        "gameBoy": "Game Boy بدقة 8 بت"
+      }
+    },
+    "about": {
+      "version": "الإصدار",
+      "versionDescription": "إصدار CopySpeak الحالي",
+      "sourceCode": "الشيفرة المصدرية",
+      "sourceCodeDescription": "عرض CopySpeak على GitHub",
+      "github": "GitHub",
+      "acknowledgments": "شكر وتقدير",
+      "openai": {
+        "title": "OpenAI TTS",
+        "description": "تحويل عصبي عالي الجودة للنص إلى كلام",
+        "detail": "يستخدم CopySpeak واجهة OpenAI لتحويل النص إلى كلام لتوليف صوتي عالي الجودة."
+      },
+      "elevenlabs": {
+        "title": "ElevenLabs",
+        "description": "توليف صوتي متقدم بالذكاء الاصطناعي",
+        "detail": "محرك TTS مميز بقدرات واقعية لاستنساخ الأصوات."
+      },
+      "kokoro": {
+        "title": "Kokoro TTS",
+        "description": "TTS محلي مفتوح المصدر",
+        "detail": "محرك خفيف مفتوح المصدر لتحويل النص إلى كلام بمعالجة محلية."
+      },
+      "piper": {
+        "title": "Piper",
+        "description": "TTS عصبي سريع",
+        "detail": "نظام محلي سريع لتحويل النص إلى كلام عصبيًا بزمن استجابة منخفض."
+      },
+      "cartesia": {
+        "title": "Cartesia",
+        "description": "TTS سحابي منخفض الكمون (Sonic 3.5)",
+        "detail": "واجهة API سحابية تعمل بنموذج Sonic 3.5. تتطلب مفتاح API."
+      },
+      "kitten": {
+        "title": "Kitten TTS",
+        "description": "TTS محلي بتقنية ONNX فائق الخفة",
+        "detail": "أربعة نماذج ONNX قابلة للاختيار (25–80 ميغابايت) مع 8 أصوات مدمجة، محسّنة للمعالج مع تسريع GPU اختياري."
+      },
+      "qwen": {
+        "title": "Qwen3-TTS",
+        "description": "TTS محلي متعدد اللغات",
+        "detail": "Qwen3-TTS CustomVoice محلي مع 9 أصوات مدمجة وتسريع GPU اختياري."
+      },
+      "pocket": {
+        "title": "Pocket TTS",
+        "description": "TTS محلي مدمج",
+        "detail": "Kyutai Pocket: نموذج بـ100 مليون معامل مصمم للعمل على المعالج، بأصوات في ست لغات."
+      },
+      "google": {
+        "title": "Google Gemini TTS",
+        "description": "TTS سحابي من Google مبني على Gemini",
+        "detail": "TTS سحابي يعمل بنماذج Gemini من Google. يتطلب مفتاح Google AI API."
+      },
+      "microsoft": {
+        "title": "Microsoft Foundry AI",
+        "description": "TTS سحابي للمؤسسات عبر Microsoft Foundry",
+        "detail": "أصوات عصبية بمستوى المؤسسات عبر خدمات الكلام في Microsoft Foundry. يتطلب مفتاح API ونقطة نهاية."
+      },
+      "http": {
+        "title": "محرك HTTP مخصص",
+        "description": "واجهة خلفية TTS عامة عبر HTTP/REST",
+        "detail": "محرك لواجهتك الخلفية الخاصة يستدعي أي نقطة نهاية HTTP بقوالب URL ومصادقة قابلة للتهيئة."
+      }
+    }
+  },
+  "engine": {
+    "title": "المحرك",
+    "selectEngine": "اختر محرك TTS",
+    "testing": "جارٍ الاختبار...",
+    "kitten": {
+      "title": "Kitten TTS",
+      "description": "محلي: أربعة نماذج ONNX قابلة للاختيار (25–80 ميغابايت) مع 8 أصوات طبيعية. محسّن للمعالج مع تسريع GPU اختياري."
+    },
+    "qwen": {
+      "title": "Qwen3-TTS",
+      "description": "محلي: Qwen3-TTS CustomVoice متعدد اللغات مع 9 أصوات مدمجة. يُنزَّل النموذج عند أول استخدام."
+    },
+    "piper": {
+      "title": "Piper TTS",
+      "description": "محلي: TTS عصبي سريع وخفيف بأكثر من 20 صوتًا إنجليزيًا. يعمل دون اتصال بالكامل — بلا حساب أو إنترنت."
+    },
+    "kokoro": {
+      "title": "Kokoro TTS",
+      "description": "محلي: TTS عالي الجودة دون اتصال بأصوات طبيعية ولهجات متنوعة. يُبقي نموذجه في الذاكرة؛ ويدعم تسريع GPU."
+    },
+    "pocket": {
+      "title": "Pocket TTS",
+      "description": "محلي: Kyutai Pocket — نموذج بـ100 مليون معامل مصمم للمعالج، بأصوات في ست لغات. يدعم تسريع GPU."
+    },
+    "cartesia": {
+      "title": "Cartesia",
+      "description": "سحابي: TTS طبيعي منخفض الكمون يعمل بـ Sonic 3.5. يتطلب مفتاح API واتصالًا بالإنترنت.",
+      "apiKey": "مفتاح API",
+      "apiKeyDescription": "يُخزَّن مفتاح API محليًا ولا تتم مشاركته أبدًا.",
+      "check": "تحقق",
+      "testEngine": "اختبار المحرك"
+    },
+    "elevenlabs": {
+      "title": "ElevenLabs",
+      "description": "سحابي: توليف صوتي مميز بالذكاء الاصطناعي بنطاق عاطفي واسع وأكثر من 1000 صوت ودعم لغات متعددة.",
+      "apiKey": "مفتاح API",
+      "apiKeyDescription": "يُخزَّن مفتاح API محليًا ولا تتم مشاركته أبدًا.",
+      "check": "تحقق",
+      "testEngine": "اختبار المحرك"
+    },
+    "openai": {
+      "title": "OpenAI",
+      "description": "سحابي: أصوات طبيعية عالية الجودة عبر OpenAI API. يتطلب مفتاح API واتصالًا بالإنترنت.",
+      "apiKey": "مفتاح API",
+      "apiKeyDescription": "يُخزَّن مفتاح API محليًا ولا تتم مشاركته أبدًا.",
+      "check": "تحقق",
+      "testEngine": "اختبار المحرك"
+    },
+    "google": {
+      "title": "Google",
+      "description": "سحابي: توليد الكلام عبر Gemini API. يتطلب مفتاح Google AI API.",
+      "apiKey": "مفتاح API"
+    },
+    "microsoft": {
+      "title": "Microsoft Foundry",
+      "description": "سحابي: Microsoft Foundry Speech. يتطلب نقطة نهاية إقليمية ومفتاح API.",
+      "apiKey": "مفتاح API",
+      "endpoint": "نقطة النهاية"
+    },
+    "http": {
+      "title": "HTTP",
+      "description": "سحابي: إرسال طلبات التوليف إلى نقطة نهاية HTTP مخصصة تُهيَّأ لكل ملف تعريف."
+    },
+    "uv": {
+      "title": "uv",
+      "description": "متطلب أساسي لكل محرك محلي. تستخدم برامج التثبيت uv لجلب حزم Python TTS وتشغيلها."
+    },
+    "setup": {
+      "uvMissing": "uv غير مثبّت. تحتاجه المحركات المحلية لتعمل.",
+      "installUv": "تثبيت uv",
+      "install": "تثبيت",
+      "installing": "جارٍ التثبيت...",
+      "tryAgain": "إعادة المحاولة",
+      "openInstaller": "تشغيل برنامج التثبيت",
+      "installManage": "تثبيت / إدارة"
+    },
+    "badges": {
+      "active": "نشط",
+      "default": "افتراضي",
+      "offline": "دون اتصال",
+      "free": "مجاني",
+      "cloud": "سحابي",
+      "paid": "مدفوع",
+      "freemium": "مجاني جزئيًا"
+    },
+    "info": {
+      "engineInformation": "معلومات المحرك"
+    },
+    "loading": "جارٍ تحميل إعدادات المحرك...",
+    "saveBar": {
+      "saving": "جارٍ الحفظ...",
+      "cancel": "إلغاء",
+      "saveChanges": "حفظ التغييرات"
+    },
+    "testVoice": {
+      "title": "اختبار الصوت",
+      "playing": "جارٍ التشغيل...",
+      "description": "يشغّل عبارة قصيرة بالمحرك الحالي"
+    },
+    "localEngine": {
+      "voice": "الصوت",
+      "kittenInstall": "شغّل ./install-kittentts.ps1 من جذر المشروع لتثبيت Kitten TTS. تُنزَّل النماذج تلقائيًا عند أول استخدام (~25-80 ميغابايت حسب الإصدار).",
+      "pocketInstall": "شغّل ./install-pocket.ps1 من جذر المشروع لتثبيت Pocket TTS. يُنشئ مشروع uv لـ pocket-tts؛ وتُنزَّل أوزان النموذج عند أول استخدام.",
+      "piperModels": "يجب وضع ملفات النموذج (.onnx + .onnx.json) في {dataDir}. نزّلها من",
+      "commandPreview": "معاينة الأمر",
+      "tempDirectory": "يُستبدل أثناء التشغيل بمجلد النظام المؤقت.",
+      "testEngine": "اختبار المحرك",
+      "testing": "جارٍ الاختبار...",
+      "engineWorking": "المحرك يعمل",
+      "engineFailed": "فشل اختبار المحرك"
+    },
+    "openaiEngine": {
+      "model": "النموذج",
+      "modelTooltip": "نموذج OpenAI TTS المستخدم لتوليف الكلام",
+      "voice": "الصوت",
+      "voiceTooltip": "نمط الصوت لتوليف الكلام"
+    },
+    "cartesiaEngine": {
+      "model": "النموذج",
+      "modelTooltip": "نموذج Cartesia Sonic المستخدم لتوليف الكلام",
+      "manualVoiceId": "معرّف صوت يدوي",
+      "manualVoiceIdTooltip": "فعّل هذا للصق معرّف صوت Cartesia مخصص بدلًا من اختيار صوت معروف.",
+      "voice": "الصوت",
+      "voiceTooltip": "اسم صوت Cartesia المحدد لتوليف الكلام",
+      "voiceId": "معرّف الصوت",
+      "voiceIdTooltip": "معرّف صوت Cartesia. Katie هو الصوت الإنجليزي الأمريكي الافتراضي الموصى به.",
+      "format": "التنسيق",
+      "formatTooltip": "حاوية إخراج الصوت"
+    },
+    "elevenlabsEngine": {
+      "manualVoiceId": "معرّف صوت يدوي",
+      "manualVoiceIdTooltip": "بدّل لإدخال معرّف الصوت يدويًا بدلًا من اختياره من القائمة",
+      "voiceId": "معرّف الصوت",
+      "voiceIdPlaceholder": "مثال: 21m00Tcm4TlvDq8ikWAM",
+      "verify": "تحقق",
+      "verified": "تم التحقق",
+      "cached": "مخزَّن مؤقتًا",
+      "findVoices": "ابحث عن معرّفات الأصوات في",
+      "voice": "الصوت",
+      "voiceTooltip": "اختر من مكتبة أصوات ElevenLabs الخاصة بك",
+      "load": "تحميل",
+      "setupApiKeyFirst": "أعدّ مفتاح API أولًا",
+      "clickLoadToFetch": "انقر على «تحميل» لجلب الأصوات المتاحة",
+      "setupApiKeyInSettings": "أعدّ مفتاح API في الإعدادات أولًا",
+      "model": "النموذج",
+      "modelTooltip": "نموذج الذكاء الاصطناعي لتوليف الكلام",
+      "format": "التنسيق",
+      "formatTooltip": "تنسيق إخراج الصوت",
+      "voiceSettings": "إعدادات الصوت",
+      "stability": "الثبات",
+      "stabilityTooltip": "القيم الأعلى تجعل الصوت أكثر ثباتًا، والأقل أكثر تنوعًا",
+      "similarity": "التشابه",
+      "similarityTooltip": "القيم الأعلى تجعل الصوت أقرب إلى المتحدث الأصلي",
+      "style": "الأسلوب",
+      "styleTooltip": "القيم الأعلى تجعل الصوت أكثر تعبيرًا (0 للتعطيل)",
+      "speakerBoost": "تعزيز المتحدث",
+      "speakerBoostTooltip": "يحسّن وضوح الصوت وجودته"
+    },
+    "apiSetup": {
+      "title": "إعداد واجهة {engine} API",
+      "description": "أدخل مفتاح API لتفعيل تحويل النص إلى كلام عبر {engine}.",
+      "apiKey": "مفتاح API",
+      "placeholderOpenai": "sk-...",
+      "placeholderElevenlabs": "xi-...",
+      "placeholderCartesia": "sk_car_...",
+      "placeholderGoogle": "AIza...",
+      "placeholderMicrosoft": "________________",
+      "endpointLabel": "نقطة النهاية",
+      "endpointPlaceholder": "https://<region>.tts.speech.microsoft.com/",
+      "installButton": "تثبيت",
+      "installing": "جارٍ التثبيت...",
+      "checkButton": "تحقق",
+      "testButton": "اختبار",
+      "valid": "مفتاح API صالح",
+      "invalid": "فشل التحقق من مفتاح API",
+      "testPassed": "نجح اختبار المحرك",
+      "testFailed": "فشل اختبار المحرك",
+      "cancel": "إلغاء",
+      "save": "حفظ"
+    },
+    "error": {
+      "loadFailed": "تعذّر تحميل إعدادات المحرك",
+      "loadDescription": "حدث خطأ أثناء تحميل تهيئة المحرك."
+    }
+  },
+  "engines": {
+    "title": "المحركات",
+    "subtitle": "أعدّ مفاتيح API، وثبّت المحركات المحلية، واختبر عمل كل محرك. إعدادات الصوت موجودة في صفحة الأصوات.",
+    "cloud": "سحابي",
+    "local": "محلي",
+    "docs": "التوثيق",
+    "noCredentialNeeded": "لا يلزم مفتاح API.",
+    "daemonIdleTimeout": "الإيقاف عند الخمول",
+    "daemonIdleTimeoutHint": "إيقاف المحرك المحلي المقيم بعد هذه المدة دون قراءة لتحرير ذاكرته. القراءة التالية تعيد تشغيله (~بدء بارد).",
+    "installerSmokeTestHint": "ثبّت ثم اضغط اختبار للتحقق من أن المحرك يولّد الصوت.",
+    "installCuda": "تثبيت بيئة تشغيل NVIDIA GPU",
+    "installCudaHint": "فعّل هذا عندما يستخدم ملف التعريف تسريع GPU. تؤدي إعادة التثبيت إلى تغيير بيئة تشغيل المحرك.",
+    "installFailed": "فشل التثبيت",
+    "saveBeforeTestFailed": "احفظ تغييراتك قبل الاختبار.",
+    "installDone": "اكتمل التثبيت",
+    "retry": "إعادة المحاولة",
+    "reinstall": "إعادة التثبيت",
+    "voiceInstalled": "مثبّت",
+    "sharedModelHint": "تنزيل نموذج مشترك واحد؛ يشمل كل الأصوات المدرجة.",
+    "installedAllVoices": "مثبّت — كل الأصوات متاحة.",
+    "piperPerVoiceHint": "اختر الأصوات المراد تنزيلها (كل صوت نموذج منفصل).",
+    "uninstall": "إلغاء التثبيت",
+    "uninstallDone": "تم إلغاء التثبيت",
+    "uninstallFailed": "فشل إلغاء التثبيت",
+    "uninstallConfirm": "إزالة ملفات هذا المحرك وملفاته التنفيذية؟ ستُحذف النماذج المنزَّلة. ستتوقف ملفات التعريف التي تستخدمه عن العمل حتى تعيد تثبيته.",
+    "binaryHint": "يثبّت ملفًا تنفيذيًا لسطر الأوامر. دون تنزيل نموذج.",
+    "binaryInstalled": "مثبّت وجاهز."
+  },
+  "play": {
+    "title": "تشغيل",
+    "placeholder": "اكتب نصًا أو الصقه لتوليده.",
+    "clear": "مسح",
+    "play": "تشغيل",
+    "pause": "إيقاف مؤقت",
+    "resume": "استئناف",
+    "stop": "إيقاف",
+    "replay": "إعادة التشغيل",
+    "abort": "إلغاء",
+    "listening": "في وضع الاستماع",
+    "paused": "متوقف مؤقتًا",
+    "processing": "جارٍ المعالجة...",
+    "history": "السجل الأخير",
+    "noHistory": "لا يوجد سجل بعد",
+    "truncated": "تم اقتطاع النص",
+    "truncatedDescription": "تم اقتطاع النص من {original} إلى {truncated} حرفًا (الحد الأقصى: {max})",
+    "characters": "{count} حرف",
+    "replayTooltip": "إعادة تشغيل آخر صوت",
+    "playLatestTooltip": "تشغيل الأحدث من السجل",
+    "playTooltip": "تشغيل",
+    "pauseTooltip": "إيقاف مؤقت",
+    "resumeTooltip": "استئناف",
+    "stopTooltip": "إيقاف",
+    "abortTooltip": "إلغاء التوليف أو التشغيل",
+    "skipBackTooltip": "رجوع 5 ثوانٍ",
+    "skipFwdTooltip": "تقديم 5 ثوانٍ"
+  },
+  "history": {
+    "title": "السجل",
+    "loading": "جارٍ التحميل...",
+    "empty": "لا توجد عناصر في السجل بعد",
+    "fragments": "{count} أجزاء",
+    "playSaved": "تشغيل الصوت المحفوظ",
+    "reSynthesize": "إعادة التوليف والتشغيل",
+    "reSynthesizeTooltip": "إعادة التوليف بالإعدادات الحالية",
+    "delete": "حذف من السجل",
+    "deleteAllFragments": "حذف كل الأجزاء",
+    "playAll": "تشغيل الكل",
+    "playAllTooltip": "تشغيل كل الأجزاء بالترتيب",
+    "playThisFragment": "تشغيل هذا الجزء",
+    "noAudioFile": "لا يوجد ملف صوتي",
+    "deleteEntry": "حذف الإدخال؟",
+    "deleteBatch": "حذف كل الأجزاء؟",
+    "deleteBatchDescription": "سيؤدي هذا إلى حذف كل أجزاء هذه الدفعة وملفاتها الصوتية نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
+    "deleteEntryWithFile": "سيؤدي هذا إلى حذف إدخال السجل وملفه الصوتي نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
+    "deleteEntryOnly": "سيؤدي هذا إلى حذف إدخال السجل نهائيًا. لا يمكن التراجع عن هذا الإجراء.",
+    "cancel": "إلغاء",
+    "confirmDelete": "حذف",
+    "toast": {
+      "playing": "جارٍ تشغيل صوت من السجل",
+      "playingFragments": "جارٍ تشغيل كل الأجزاء",
+      "reSynthesizing": "جارٍ إعادة التوليف والتشغيل",
+      "deleted": "تم الحذف من السجل",
+      "deletedBatch": "تم حذف الدفعة من السجل",
+      "failedToPlay": "فشل التشغيل",
+      "failedToReSpeak": "فشلت إعادة القراءة",
+      "failedToDelete": "فشل الحذف"
+    }
+  },
+  "toast": {
+    "success": {
+      "engineSaved": "تم حفظ المحرك بنجاح",
+      "settingsSaved": "تم حفظ الإعدادات",
+      "welcome": "مرحبًا بك في CopySpeak!",
+      "configSaved": "تم حفظ التهيئة! لنبدأ.",
+      "hudTest": "تم تشغيل اختبار HUD",
+      "historyCleanup": "اكتمل تنظيف السجل",
+      "installerLaunched": "تم تشغيل برنامج تثبيت Kitten TTS في نافذة جديدة",
+      "settingsCopied": "تم نسخ الإعدادات إلى الحافظة",
+      "settingsDownloaded": "تم تنزيل الإعدادات",
+      "settingsImported": "تم استيراد الإعدادات بنجاح",
+      "settingsReset": "تمت إعادة ضبط الإعدادات — بدء إعداد جديد",
+      "synthesisAborted": "تم إلغاء التوليف"
+    },
+    "error": {
+      "loadSettings": "تعذّر تحميل الإعدادات",
+      "saveSettings": "تعذّر حفظ الإعدادات",
+      "loadConfig": "تعذّر تحميل التهيئة",
+      "saveConfig": "تعذّر حفظ الإعدادات",
+      "voiceTest": "فشل اختبار الصوت",
+      "hudTest": "فشل اختبار HUD",
+      "cleanup": "فشل التنظيف",
+      "installer": "تعذّر تشغيل برنامج التثبيت",
+      "switchEngine": "تعذّر تبديل المحرك"
+    },
+    "info": {
+      "httpEngineRemoved": "تمت إزالة محرك HTTP. تم التبديل إلى المحرك المحلي."
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "مرحبًا بك في CopySpeak",
+      "subtitle": "هيّئ محرك تحويل النص إلى كلام للبدء، أو تخطَّ هذه الخطوة وأعدّه لاحقًا."
+    },
+    "engineConfig": "تهيئة المحرك",
+    "engineDescription": "أعدّ محرك TTS. يمكنك تغييره لاحقًا من تبويب المحرك.",
+    "recommendation": {
+      "title": "ننصح بالبدء بـ Kitten TTS",
+      "description": "Kitten TTS محرك TTS جديد فائق الخفة (25-80 ميغابايت) يعمل على المعالج دون الحاجة إلى GPU. انقر على الزر أدناه لتثبيته تلقائيًا — دون أي إعداد يدوي."
+    },
+    "install": "تثبيت Kitten TTS",
+    "installing": "جارٍ التثبيت...",
+    "skip": "التخطي الآن",
+    "complete": "ابدأ",
+    "loading": "جارٍ تحميل التهيئة...",
+    "installed": "تم التثبيت!",
+    "openTerminal": "فتح طرفية PowerShell",
+    "checkingEngine": "جارٍ فحص المحرك...",
+    "helpText": "يمكنك دائمًا تهيئة المحرك لاحقًا من تبويب المحرك."
+  },
+  "effects": {
+    "title": "المؤثرات الصوتية",
+    "description": "تطبيق مؤثر معالجة لاحقة على التشغيل. تُطبَّق المؤثرات في الوقت الفعلي ولا تعدّل الصوت المحفوظ.",
+    "preview": "معاينة",
+    "previewing": "جارٍ المعاينة...",
+    "activeTooltip": "المؤثر المطبَّق على كل تشغيل. يمكن التبديل فورًا دون إعادة التشغيل."
+  },
+  "landing": {
+    "hero": {
+      "title": "CopySpeak",
+      "subtitle": "منسّق حديث لتحويل النص إلى كلام بالذكاء الاصطناعي",
+      "description": "تطبيق خفيف متعدد المنصات يقرأ نص الحافظة بصوت عالٍ باستخدام محركات ذكاء اصطناعي لتحويل النص إلى كلام.",
+      "download": "التنزيل لمنصتك",
+      "github": "العرض على GitHub",
+      "version": "v{version}"
+    },
+    "features": {
+      "title": "الميزات",
+      "doubleCopy": {
+        "title": "التشغيل بالنسخ المزدوج",
+        "description": "انسخ النص مرتين خلال 1.5 ثانية لبدء القراءة فورًا. لا حاجة إلى اختصارات لوحة المفاتيح."
+      },
+      "engines": {
+        "title": "9 محركات TTS",
+        "description": "OpenAI وElevenLabs وCartesia وGoogle وMicrosoft وHTTP ومحركات CLI محلية (Piper وKokoro وKitten)."
+      },
+      "hud": {
+        "title": "طبقة HUD",
+        "description": "شاشة عرض عائمة بموجة صوتية حية أثناء التشغيل."
+      },
+      "history": {
+        "title": "السجل",
+        "description": "سجل دائم لتوليدات TTS مع التشغيل وإدارة الدفعات وتصدير الصوت."
+      },
+      "sanitization": {
+        "title": "تنظيف النص",
+        "description": "إزالة Markdown تلقائيًا وتوسيع الروابط وتوحيد النص لكلام أوضح."
+      },
+      "configurable": {
+        "title": "قابل للتخصيص بدرجة كبيرة",
+        "description": "سرعة التشغيل ومستوى الصوت وطبقته والمشغِّلات والمظهر وغير ذلك. سمات داكنة وفاتحة."
+      }
+    },
+    "screenshots": {
+      "title": "لقطات الشاشة",
+      "subtitle": "شاهد CopySpeak أثناء العمل",
+      "caption": "CopySpeak v0.1.8 — الواجهة الرئيسية مع تبويب التشغيل"
+    },
+    "footer": {
+      "github": "GitHub",
+      "license": "رخصة MIT",
+      "madeWith": "صُنع باستخدام Rust وSvelte والذكاء الاصطناعي."
+    }
+  },
+  "footer": {
+    "listening": "في وضع الاستماع",
+    "paused": "متوقف مؤقتًا",
+    "switchEngine": "تبديل محرك TTS. المحرك الحالي: {engine}",
+    "available": "متاح",
+    "unavailable": "غير متاح - تحقق من التهيئة",
+    "error": "خطأ في التحقق من التوفر",
+    "notChecked": "لم يُفحص - انقر للتبديل"
+  }
+}

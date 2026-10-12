@@ -1,0 +1,701 @@
+{
+  "app": {
+    "title": "CopySpeak",
+    "tagline": "Synthèse vocale IA pour votre presse-papiers"
+  },
+  "nav": {
+    "play": "Lecture",
+    "engine": "Moteur",
+    "settings": "Paramètres"
+  },
+  "header": {
+    "play": "Lecture",
+    "voices": "Voix",
+    "engines": "Moteurs",
+    "history": "Historique",
+    "settings": "Paramètres",
+    "tagline": "Synthèse vocale IA pour votre presse-papiers"
+  },
+  "common": {
+    "loading": "Chargement...",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "reset": "Rétablir les valeurs par défaut",
+    "test": "Tester",
+    "close": "Fermer",
+    "back": "Retour",
+    "next": "Suivant",
+    "done": "Terminé",
+    "yes": "Oui",
+    "no": "Non",
+    "ok": "OK",
+    "error": "Erreur",
+    "success": "Succès",
+    "warning": "Avertissement",
+    "info": "Info"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "tabs": {
+      "general": "Général",
+      "history": "Historique",
+      "effects": "Effets",
+      "advanced": "Avancé",
+      "about": "À propos"
+    },
+    "sections": {
+      "general": "Général",
+      "startup": "Démarrage",
+      "appearance": "Apparence",
+      "playback": "Lecture",
+      "hud": "Superposition HUD",
+      "history": "Historique",
+      "triggers": "Déclencheurs",
+      "hotkeys": "Raccourcis clavier",
+      "pagination": "Avancé",
+      "sanitization": "Nettoyage du texte",
+      "postProcess": "Post-traitement LLM",
+      "effects": "Effets",
+      "appInfo": "Infos sur l'application",
+      "importExport": "Importer / Exporter"
+    },
+    "categories": {
+      "general": "Général",
+      "playback": "Lecture",
+      "triggers": "Déclencheurs",
+      "pagination": "Découpage",
+      "sanitization": "Nettoyage du texte",
+      "history": "Historique",
+      "hud": "Superposition HUD",
+      "about": "À propos"
+    },
+    "descriptions": {
+      "general": "Comportement au démarrage et contrôles de la fenêtre",
+      "playback": "Volume et export audio",
+      "triggers": "Détection de copie et limites de texte",
+      "pagination": "Découper les textes longs en fragments pour une lecture TTS progressive",
+      "sanitization": "Nettoyage et normalisation du texte",
+      "history": "Historique des générations et stockage",
+      "hud": "Visualisation de la forme d'onde et positionnement",
+      "about": "Informations de version et remerciements"
+    },
+    "actions": {
+      "save": "Enregistrer les modifications",
+      "cancel": "Annuler",
+      "reset": "Rétablir les valeurs par défaut",
+      "test": "Tester",
+      "tryAgain": "Réessayer"
+    },
+    "general": {
+      "language": "Langue",
+      "languageDescription": "Choisissez votre langue préférée",
+      "launchOnLogin": "Lancer à l'ouverture de session",
+      "startMinimized": "Démarrer réduit dans la zone de notification",
+      "showNotifications": "Afficher les notifications",
+      "closeBehavior": "Comportement du bouton Fermer",
+      "appearance": "Apparence",
+      "debugMode": "Mode débogage",
+      "updateChecks": "Rechercher automatiquement les mises à jour",
+      "autoSave": "Enregistrement automatique",
+      "autoSaveDescription": "Enregistre automatiquement 800 ms après la dernière modification dans Paramètres, Moteurs et Voix — sans barre Enregistrer/Annuler"
+    },
+    "playback": {
+      "title": "Paramètres de lecture",
+      "onRetrigger": "Comportement en cas de nouveau déclenchement",
+      "onRetriggerDescription": "Ce qui se passe quand la TTS est déclenchée pendant une lecture en cours",
+      "volume": "Volume",
+      "volumeDescription": "Volume de lecture audio (0-100 %)",
+      "streaming": "Diffuser l'audio en continu",
+      "streamingDescription": "Lance la lecture dès l'arrivée de l'audio. Moteurs cloud pris en charge : ElevenLabs et Cartesia. Désactivé : synthèse par lots, chaque requête est attendue avant la lecture.",
+      "duck": "Atténuer les autres applications",
+      "duckDescription": "Baisse le son des autres applications pendant que CopySpeak parle, puis le rétablit. Windows uniquement pour l'instant.",
+      "duckMode": "Mode d'atténuation",
+      "duckModeLower": "Baisser",
+      "duckModeMute": "Couper",
+      "duckLevel": "Niveau d'atténuation",
+      "duckLevelDescription": "Volume auquel descendent les autres applications, en pourcentage de leur propre niveau",
+      "duckFade": "Fondu (ms)",
+      "duckFadeDescription": "Durée du fondu lors de l'atténuation et du rétablissement ; 0 pour instantané",
+      "playbackSpeed": "Vitesse",
+      "playbackSpeedDescription": "Vitesse de lecture (0,5x - 2x)",
+      "pitch": "Hauteur",
+      "pitchDescription": "Décalage de hauteur (0,5x - 2x)",
+      "stopAndRestart": "Arrêter et recommencer",
+      "queueAfterCurrent": "Mettre en file après la lecture en cours",
+      "ignoreNewTrigger": "Ignorer le nouveau déclenchement"
+    },
+    "triggers": {
+      "title": "Paramètres des déclencheurs",
+      "listen": "Écouter la double copie",
+      "listenDescription": "Surveiller le presse-papiers pour détecter les doubles copies",
+      "doubleCopyWindow": "Fenêtre de détection de double copie (ms)",
+      "doubleCopyWindowDescription": "Délai pendant lequel une seconde copie déclenche la TTS (100-5000 ms)",
+      "maxTextLength": "Longueur maximale du texte",
+      "maxTextLengthDescription": "Nombre maximal de caractères à lire (un texte plus long sera tronqué avec un avertissement)"
+    },
+    "pagination": {
+      "title": "Paramètres de découpage",
+      "enabled": "Activer le découpage",
+      "description": "Découper les textes longs en fragments pour une lecture TTS progressive",
+      "fragmentSize": "Taille des fragments (caractères)",
+      "fragmentSizeDescription": "Nombre maximal de caractères par fragment (100-10000)"
+    },
+    "hud": {
+      "enabled": "Activer le HUD",
+      "enabledDescription": "Afficher la forme d'onde en superposition pendant la lecture",
+      "overlay": "Superposition HUD",
+      "position": "Position",
+      "testHud": "Tester l'affichage HUD",
+      "topLeft": "En haut à gauche",
+      "topCenter": "En haut au centre",
+      "topRight": "En haut à droite",
+      "bottomLeft": "En bas à gauche",
+      "bottomCenter": "En bas au centre",
+      "bottomRight": "En bas à droite"
+    },
+    "history": {
+      "title": "Paramètres de l'historique",
+      "enabled": "Activer l'historique",
+      "enabledDescription": "Conserver un journal de toutes les opérations TTS",
+      "storageMode": "Mode de stockage",
+      "persistent": "Persistant",
+      "temporary": "Temporaire",
+      "generationsFolder": "Dossier des générations",
+      "generationsFolderDescription": "Dossier où enregistrer les générations TTS. Laisser vide pour la valeur par défaut.",
+      "generationsFolderPlaceholder": "Par défaut : Documents/CopySpeak",
+      "autoDeleteTitle": "Suppression automatique des générations",
+      "autoDeleteKeepLatest": "Garder les plus récentes",
+      "autoDeleteNever": "Jamais",
+      "autoDeleteAfterDays": "Après",
+      "days": "jours",
+      "manualCleanupTitle": "Nettoyage manuel",
+      "manualCleanupDescription": "Lancer le nettoyage maintenant pour supprimer les anciennes entrées et les fichiers orphelins",
+      "runCleanup": "Nettoyer maintenant",
+      "cleanupDialog": {
+        "title": "Nettoyer l'historique ?",
+        "description": "Les règles actuelles de suppression automatique seront appliquées",
+        "orphanedFiles": "Supprimer les fichiers audio orphelins non référencés dans l'historique",
+        "cannotUndo": "Cette action est irréversible.",
+        "cancel": "Annuler",
+        "confirm": "Nettoyer"
+      },
+      "cleanupOrphaned": "Nettoyer les fichiers orphelins"
+    },
+    "sanitization": {
+      "title": "Paramètres de nettoyage",
+      "enabled": "Activer le nettoyage",
+      "enabledDescription": "Retirer la mise en forme indésirable du texte copié avant la TTS",
+      "markdown": "Supprimer la syntaxe Markdown",
+      "markdownDescription": "Retirer toute mise en forme Markdown (titres, gras, italique, blocs de code, liens, listes, citations)",
+      "stripCodeBlocks": "Blocs de code",
+      "stripCodeBlocksDescription": "Retirer les blocs de code délimités (triples accents graves)",
+      "stripInlineCode": "Code en ligne",
+      "stripInlineCodeDescription": "Retirer le code en ligne entre accents graves simples — désactivé par défaut pour préserver les `termes` des textes techniques",
+      "stripHeaders": "Titres",
+      "stripHeadersDescription": "Retirer les titres Markdown #, garder le texte",
+      "stripLinks": "Liens",
+      "stripLinksDescription": "Retirer la syntaxe des liens Markdown, garder le texte du lien",
+      "stripBoldItalic": "Gras et italique",
+      "stripBoldItalicDescription": "Retirer les marqueurs **gras** et *italique*",
+      "stripLists": "Listes",
+      "stripListsDescription": "Retirer les puces et numéros de liste",
+      "stripBlockquotes": "Citations",
+      "stripBlockquotesDescription": "Retirer les préfixes de citation >",
+      "ttsNormalization": "Développer les abréviations visuelles",
+      "ttsNormalizationDescription": "Convertir URL, barres obliques, abréviations, unités métriques et symboles en texte facile à prononcer"
+    },
+    "postProcess": {
+      "title": "Post-traitement LLM",
+      "description": "Réécrire le texte copié avec un fournisseur LLM compatible OpenAI pour une lecture concise et agréable à écouter.",
+      "enabled": "Activer le post-traitement",
+      "enabledDescription": "Passer le texte nettoyé au modèle de chat du fournisseur actif avant la TTS. En cas d'échec, le texte original est utilisé.",
+      "minChars": "Longueur minimale",
+      "minCharsTooltip": "Ne condenser que les textes d'au moins ce nombre de caractères ; les textes plus courts sont lus tels quels. 0 condense tout.",
+      "requireRequestFlag": "Uniquement sur demande",
+      "requireRequestFlagTooltip": "Ne condenser que si l'appelant le demande explicitement (champ condense du serveur de contrôle ou CLI --condense). Désactivé : tout texte admissible est condensé.",
+      "apiKey": "Clé API",
+      "apiKeyPlaceholder": "gsk_...",
+      "apiKeyHelp": "Créez une clé sur console.groq.com",
+      "testKey": "Tester",
+      "testOk": "La clé API Groq est valide",
+      "testFail": "Clé non valide",
+      "provider": "Fournisseur",
+      "providerTooltip": "Tout point de terminaison compatible OpenAI fonctionne. Ajoutez le vôtre avec le bouton +.",
+      "name": "Nom",
+      "nameTooltip": "Nom affiché de ce fournisseur.",
+      "baseUrl": "URL de base",
+      "baseUrlTooltip": "Racine d'API compatible OpenAI, p. ex. https://api.groq.com/openai/v1",
+      "addProvider": "Ajouter un fournisseur",
+      "deleteProvider": "Supprimer le fournisseur",
+      "deleteProviderTooltip": "Retirer ce fournisseur de la liste. Les entrées intégrées peuvent être rétablies en réinitialisant les paramètres.",
+      "refreshModels": "Récupérer la liste des modèles",
+      "modelsEmpty": "Le point de terminaison n'a renvoyé aucun modèle.",
+      "model": "Modèle",
+      "modelTooltip": "Les petits modèles sont plus rapides ; les grands suivent les instructions de façon plus fiable.",
+      "prompt": "Modèle de prompt",
+      "promptHelp": "Utilisez ${output} là où le texte copié doit être inséré.",
+      "restoreDefault": "Rétablir le prompt par défaut"
+    },
+    "effects": {
+      "enabled": "Activer les effets",
+      "enabledDescription": "Afficher l'onglet Effets dans le menu principal et appliquer un post-traitement à la lecture TTS",
+      "active": "Effet actif",
+      "activeDescription": "Effet audio appliqué à chaque lecture TTS",
+      "options": {
+        "none": "Aucun",
+        "walkieTalkie": "Talkie-walkie",
+        "gameBoy": "Game Boy 8 bits"
+      }
+    },
+    "about": {
+      "version": "Version",
+      "versionDescription": "Version actuelle de CopySpeak",
+      "sourceCode": "Code source",
+      "sourceCodeDescription": "Voir CopySpeak sur GitHub",
+      "github": "GitHub",
+      "acknowledgments": "Remerciements",
+      "openai": {
+        "title": "OpenAI TTS",
+        "description": "Synthèse vocale neuronale de haute qualité",
+        "detail": "CopySpeak utilise l'API de synthèse vocale d'OpenAI pour une voix de haute qualité."
+      },
+      "elevenlabs": {
+        "title": "ElevenLabs",
+        "description": "Synthèse vocale IA avancée",
+        "detail": "Moteur TTS premium avec clonage de voix réaliste."
+      },
+      "kokoro": {
+        "title": "Kokoro TTS",
+        "description": "TTS locale open source",
+        "detail": "Moteur de synthèse vocale léger et open source pour un traitement local."
+      },
+      "piper": {
+        "title": "Piper",
+        "description": "TTS neuronale rapide",
+        "detail": "Système de synthèse vocale neuronale local et rapide, à faible latence."
+      },
+      "cartesia": {
+        "title": "Cartesia",
+        "description": "TTS cloud à faible latence (Sonic 3.5)",
+        "detail": "API cloud reposant sur le modèle Sonic 3.5. Nécessite une clé API."
+      },
+      "kitten": {
+        "title": "Kitten TTS",
+        "description": "TTS ONNX locale ultra-légère",
+        "detail": "Quatre modèles ONNX au choix (25–80 Mo) avec 8 voix intégrées, optimisés pour le CPU avec accélération GPU en option."
+      },
+      "qwen": {
+        "title": "Qwen3-TTS",
+        "description": "TTS locale multilingue",
+        "detail": "Qwen3-TTS CustomVoice en local, avec 9 voix intégrées et accélération GPU en option."
+      },
+      "pocket": {
+        "title": "Pocket TTS",
+        "description": "TTS locale compacte",
+        "detail": "Kyutai Pocket : un modèle de 100 M de paramètres conçu pour le CPU, avec des voix en six langues."
+      },
+      "google": {
+        "title": "Google Gemini TTS",
+        "description": "TTS cloud de Google basée sur Gemini",
+        "detail": "TTS cloud reposant sur les modèles Gemini de Google. Nécessite une clé API Google AI."
+      },
+      "microsoft": {
+        "title": "Microsoft Foundry AI",
+        "description": "TTS cloud d'entreprise via Microsoft Foundry",
+        "detail": "Voix neuronales de niveau entreprise via les services vocaux Microsoft Foundry. Nécessite une clé API et un point de terminaison."
+      },
+      "http": {
+        "title": "Moteur HTTP personnalisé",
+        "description": "Back-end TTS HTTP/REST générique",
+        "detail": "Moteur pour votre propre back-end, qui appelle n'importe quel point de terminaison HTTP avec des modèles d'URL et une authentification configurables."
+      }
+    }
+  },
+  "engine": {
+    "title": "Moteur",
+    "selectEngine": "Choisir le moteur TTS",
+    "testing": "Test en cours...",
+    "kitten": {
+      "title": "Kitten TTS",
+      "description": "Local : quatre modèles ONNX au choix (25–80 Mo) avec 8 voix naturelles. Optimisé pour le CPU avec accélération GPU en option."
+    },
+    "qwen": {
+      "title": "Qwen3-TTS",
+      "description": "Local : Qwen3-TTS CustomVoice multilingue avec 9 voix intégrées. Le modèle est téléchargé à la première utilisation."
+    },
+    "piper": {
+      "title": "Piper TTS",
+      "description": "Local : TTS neuronale rapide et légère avec plus de 20 voix anglaises. Fonctionne entièrement hors ligne — sans compte ni connexion Internet."
+    },
+    "kokoro": {
+      "title": "Kokoro TTS",
+      "description": "Local : TTS hors ligne de haute qualité aux voix naturelles et aux nombreux accents. Garde son modèle en RAM ; prend en charge l'accélération GPU."
+    },
+    "pocket": {
+      "title": "Pocket TTS",
+      "description": "Local : Kyutai Pocket — un modèle de 100 M de paramètres conçu pour le CPU, avec des voix en six langues. Prend en charge l'accélération GPU."
+    },
+    "cartesia": {
+      "title": "Cartesia",
+      "description": "Cloud : TTS naturelle à faible latence reposant sur Sonic 3.5. Nécessite une clé API et une connexion Internet.",
+      "apiKey": "Clé API",
+      "apiKeyDescription": "Votre clé API est stockée localement et n'est jamais partagée.",
+      "check": "Vérifier",
+      "testEngine": "Tester le moteur"
+    },
+    "elevenlabs": {
+      "title": "ElevenLabs",
+      "description": "Cloud : synthèse vocale IA premium avec palette émotionnelle, plus de 1000 voix et prise en charge multilingue.",
+      "apiKey": "Clé API",
+      "apiKeyDescription": "Votre clé API est stockée localement et n'est jamais partagée.",
+      "check": "Vérifier",
+      "testEngine": "Tester le moteur"
+    },
+    "openai": {
+      "title": "OpenAI",
+      "description": "Cloud : voix naturelles de haute qualité via l'API OpenAI. Nécessite une clé API et une connexion Internet.",
+      "apiKey": "Clé API",
+      "apiKeyDescription": "Votre clé API est stockée localement et n'est jamais partagée.",
+      "check": "Vérifier",
+      "testEngine": "Tester le moteur"
+    },
+    "google": {
+      "title": "Google",
+      "description": "Cloud : génération vocale via l'API Gemini. Nécessite une clé API Google AI.",
+      "apiKey": "Clé API"
+    },
+    "microsoft": {
+      "title": "Microsoft Foundry",
+      "description": "Cloud : Microsoft Foundry Speech. Nécessite un point de terminaison régional et une clé API.",
+      "apiKey": "Clé API",
+      "endpoint": "Point de terminaison"
+    },
+    "http": {
+      "title": "HTTP",
+      "description": "Cloud : envoie les requêtes de synthèse à un point de terminaison HTTP personnalisé configuré par profil."
+    },
+    "uv": {
+      "title": "uv",
+      "description": "Prérequis pour tous les moteurs locaux. Les installateurs utilisent uv pour récupérer et exécuter les paquets TTS Python."
+    },
+    "setup": {
+      "uvMissing": "uv n'est pas installé. Les moteurs locaux en ont besoin pour fonctionner.",
+      "installUv": "Installer uv",
+      "install": "Installer",
+      "installing": "Installation...",
+      "tryAgain": "Réessayer",
+      "openInstaller": "Lancer l'installateur",
+      "installManage": "Installer / Gérer"
+    },
+    "badges": {
+      "active": "Actif",
+      "default": "Par défaut",
+      "offline": "Hors ligne",
+      "free": "Gratuit",
+      "cloud": "Cloud",
+      "paid": "Payant",
+      "freemium": "Freemium"
+    },
+    "info": {
+      "engineInformation": "Informations sur le moteur"
+    },
+    "loading": "Chargement des paramètres du moteur...",
+    "saveBar": {
+      "saving": "Enregistrement...",
+      "cancel": "Annuler",
+      "saveChanges": "Enregistrer les modifications"
+    },
+    "testVoice": {
+      "title": "Tester la voix",
+      "playing": "Lecture...",
+      "description": "Lit une courte phrase avec le moteur actuel"
+    },
+    "localEngine": {
+      "voice": "Voix",
+      "kittenInstall": "Exécutez ./install-kittentts.ps1 depuis la racine du projet pour installer Kitten TTS. Les modèles sont téléchargés automatiquement à la première utilisation (~25-80 Mo selon la variante).",
+      "pocketInstall": "Exécutez ./install-pocket.ps1 depuis la racine du projet pour installer Pocket TTS. Crée un projet uv pour pocket-tts ; les poids du modèle sont téléchargés à la première utilisation.",
+      "piperModels": "Les fichiers de modèle (.onnx + .onnx.json) doivent être placés dans {dataDir}. Téléchargement :",
+      "commandPreview": "Aperçu de la commande",
+      "tempDirectory": "correspond au dossier temporaire du système à l'exécution.",
+      "testEngine": "Tester le moteur",
+      "testing": "Test en cours...",
+      "engineWorking": "Le moteur fonctionne",
+      "engineFailed": "Échec du test du moteur"
+    },
+    "openaiEngine": {
+      "model": "Modèle",
+      "modelTooltip": "Modèle TTS OpenAI utilisé pour la synthèse vocale",
+      "voice": "Voix",
+      "voiceTooltip": "Style de voix pour la synthèse vocale"
+    },
+    "cartesiaEngine": {
+      "model": "Modèle",
+      "modelTooltip": "Modèle Cartesia Sonic utilisé pour la synthèse vocale",
+      "manualVoiceId": "ID de voix manuel",
+      "manualVoiceIdTooltip": "Activez cette option pour coller un ID de voix Cartesia personnalisé au lieu de choisir une voix connue.",
+      "voice": "Voix",
+      "voiceTooltip": "Nom de voix Cartesia résolu utilisé pour la synthèse vocale",
+      "voiceId": "ID de voix",
+      "voiceIdTooltip": "ID de voix Cartesia. Katie est la voix anglaise américaine recommandée par défaut.",
+      "format": "Format",
+      "formatTooltip": "Conteneur audio de sortie"
+    },
+    "elevenlabsEngine": {
+      "manualVoiceId": "ID de voix manuel",
+      "manualVoiceIdTooltip": "Activez pour saisir l'ID de voix manuellement au lieu de le choisir dans la liste",
+      "voiceId": "ID de voix",
+      "voiceIdPlaceholder": "p. ex. 21m00Tcm4TlvDq8ikWAM",
+      "verify": "Vérifier",
+      "verified": "Vérifié",
+      "cached": "En cache",
+      "findVoices": "Trouvez des ID de voix sur",
+      "voice": "Voix",
+      "voiceTooltip": "Choisissez dans votre bibliothèque de voix ElevenLabs",
+      "load": "Charger",
+      "setupApiKeyFirst": "Configurez d'abord votre clé API",
+      "clickLoadToFetch": "Cliquez sur « Charger » pour récupérer les voix disponibles",
+      "setupApiKeyInSettings": "Configurez d'abord votre clé API dans les Paramètres",
+      "model": "Modèle",
+      "modelTooltip": "Modèle d'IA pour la synthèse vocale",
+      "format": "Format",
+      "formatTooltip": "Format audio de sortie",
+      "voiceSettings": "Paramètres de la voix",
+      "stability": "Stabilité",
+      "stabilityTooltip": "Des valeurs élevées rendent la voix plus constante, des valeurs basses plus variable",
+      "similarity": "Similarité",
+      "similarityTooltip": "Des valeurs élevées rapprochent la voix du locuteur d'origine",
+      "style": "Style",
+      "styleTooltip": "Des valeurs élevées rendent la voix plus expressive (0 pour désactiver)",
+      "speakerBoost": "Renforcement du locuteur",
+      "speakerBoostTooltip": "Améliore la clarté et la qualité de la voix"
+    },
+    "apiSetup": {
+      "title": "Configuration de l'API {engine}",
+      "description": "Saisissez votre clé API pour activer la synthèse vocale {engine}.",
+      "apiKey": "Clé API",
+      "placeholderOpenai": "sk-...",
+      "placeholderElevenlabs": "xi-...",
+      "placeholderCartesia": "sk_car_...",
+      "placeholderGoogle": "AIza...",
+      "placeholderMicrosoft": "________________",
+      "endpointLabel": "Point de terminaison",
+      "endpointPlaceholder": "https://<region>.tts.speech.microsoft.com/",
+      "installButton": "Installer",
+      "installing": "Installation...",
+      "checkButton": "Vérifier",
+      "testButton": "Tester",
+      "valid": "Clé API valide",
+      "invalid": "Échec de la vérification de la clé API",
+      "testPassed": "Test du moteur réussi",
+      "testFailed": "Échec du test du moteur",
+      "cancel": "Annuler",
+      "save": "Enregistrer"
+    },
+    "error": {
+      "loadFailed": "Impossible de charger les paramètres du moteur",
+      "loadDescription": "Une erreur s'est produite lors du chargement de la configuration du moteur."
+    }
+  },
+  "engines": {
+    "title": "Moteurs",
+    "subtitle": "Configurez les clés API, installez les moteurs locaux et vérifiez que chaque moteur fonctionne. Les réglages de voix se trouvent sur la page Voix.",
+    "cloud": "Cloud",
+    "local": "Local",
+    "docs": "Docs",
+    "noCredentialNeeded": "Aucune clé API requise.",
+    "daemonIdleTimeout": "Arrêt après inactivité",
+    "daemonIdleTimeoutHint": "Arrête un moteur local résident après cette durée sans lecture, libérant sa mémoire. La lecture suivante le redémarre (~démarrage à froid).",
+    "installerSmokeTestHint": "Installez, puis cliquez sur Tester pour vérifier que le moteur produit de l'audio.",
+    "installCuda": "Installer le runtime GPU NVIDIA",
+    "installCudaHint": "Activez cette option si le profil utilise l'accélération GPU. Une réinstallation change le runtime du moteur.",
+    "installFailed": "Échec de l'installation",
+    "saveBeforeTestFailed": "Enregistrez vos modifications avant le test.",
+    "installDone": "Installation terminée",
+    "retry": "Réessayer",
+    "reinstall": "Réinstaller",
+    "voiceInstalled": "Installée",
+    "sharedModelHint": "Un seul téléchargement de modèle partagé ; toutes les voix listées sont incluses.",
+    "installedAllVoices": "Installé — toutes les voix sont disponibles.",
+    "piperPerVoiceHint": "Choisissez les voix à télécharger (chacune est un modèle distinct).",
+    "uninstall": "Désinstaller",
+    "uninstallDone": "Désinstallé",
+    "uninstallFailed": "Échec de la désinstallation",
+    "uninstallConfirm": "Supprimer les fichiers et binaires de ce moteur ? Les modèles téléchargés seront effacés. Les profils qui l'utilisent ne fonctionneront plus jusqu'à la réinstallation.",
+    "binaryHint": "Installe un binaire en ligne de commande. Aucun téléchargement de modèle.",
+    "binaryInstalled": "Installé et prêt."
+  },
+  "play": {
+    "title": "Lecture",
+    "placeholder": "Saisissez ou collez le texte à générer.",
+    "clear": "Effacer",
+    "play": "Lire",
+    "pause": "Pause",
+    "resume": "Reprendre",
+    "stop": "Arrêter",
+    "replay": "Rejouer",
+    "abort": "Interrompre",
+    "listening": "À l'écoute",
+    "paused": "En pause",
+    "processing": "Traitement...",
+    "history": "Historique récent",
+    "noHistory": "Aucun historique pour l'instant",
+    "truncated": "Texte tronqué",
+    "truncatedDescription": "Texte tronqué de {original} à {truncated} caractères (max : {max})",
+    "characters": "{count} car.",
+    "replayTooltip": "Rejouer le dernier audio",
+    "playLatestTooltip": "Lire le plus récent de l'historique",
+    "playTooltip": "Lire",
+    "pauseTooltip": "Pause",
+    "resumeTooltip": "Reprendre",
+    "stopTooltip": "Arrêter",
+    "abortTooltip": "Interrompre la synthèse ou la lecture",
+    "skipBackTooltip": "Reculer de 5 secondes",
+    "skipFwdTooltip": "Avancer de 5 secondes"
+  },
+  "history": {
+    "title": "Historique",
+    "loading": "Chargement...",
+    "empty": "Aucun élément dans l'historique",
+    "fragments": "{count} fragments",
+    "playSaved": "Lire l'audio enregistré",
+    "reSynthesize": "Resynthétiser et lire",
+    "reSynthesizeTooltip": "Resynthétiser avec les paramètres actuels",
+    "delete": "Supprimer de l'historique",
+    "deleteAllFragments": "Supprimer tous les fragments",
+    "playAll": "Tout lire",
+    "playAllTooltip": "Lire tous les fragments dans l'ordre",
+    "playThisFragment": "Lire ce fragment",
+    "noAudioFile": "Aucun fichier audio",
+    "deleteEntry": "Supprimer l'entrée ?",
+    "deleteBatch": "Supprimer tous les fragments ?",
+    "deleteBatchDescription": "Tous les fragments de ce lot et leurs fichiers audio seront définitivement supprimés. Cette action est irréversible.",
+    "deleteEntryWithFile": "L'entrée de l'historique et son fichier audio seront définitivement supprimés. Cette action est irréversible.",
+    "deleteEntryOnly": "L'entrée de l'historique sera définitivement supprimée. Cette action est irréversible.",
+    "cancel": "Annuler",
+    "confirmDelete": "Supprimer",
+    "toast": {
+      "playing": "Lecture de l'audio de l'historique",
+      "playingFragments": "Lecture de tous les fragments",
+      "reSynthesizing": "Resynthèse et lecture",
+      "deleted": "Supprimé de l'historique",
+      "deletedBatch": "Lot supprimé de l'historique",
+      "failedToPlay": "Échec de la lecture",
+      "failedToReSpeak": "Échec de la nouvelle lecture",
+      "failedToDelete": "Échec de la suppression"
+    }
+  },
+  "toast": {
+    "success": {
+      "engineSaved": "Moteur enregistré",
+      "settingsSaved": "Paramètres enregistrés",
+      "welcome": "Bienvenue dans CopySpeak !",
+      "configSaved": "Configuration enregistrée ! C'est parti.",
+      "hudTest": "Test du HUD déclenché",
+      "historyCleanup": "Nettoyage de l'historique terminé",
+      "installerLaunched": "Installateur de Kitten TTS lancé dans une nouvelle fenêtre",
+      "settingsCopied": "Paramètres copiés dans le presse-papiers",
+      "settingsDownloaded": "Paramètres téléchargés",
+      "settingsImported": "Paramètres importés",
+      "settingsReset": "Paramètres réinitialisés — nouvelle configuration",
+      "synthesisAborted": "Synthèse interrompue"
+    },
+    "error": {
+      "loadSettings": "Impossible de charger les paramètres",
+      "saveSettings": "Impossible d'enregistrer les paramètres",
+      "loadConfig": "Impossible de charger la configuration",
+      "saveConfig": "Impossible d'enregistrer les paramètres",
+      "voiceTest": "Échec du test de voix",
+      "hudTest": "Échec du test du HUD",
+      "cleanup": "Échec du nettoyage",
+      "installer": "Impossible de lancer l'installateur",
+      "switchEngine": "Impossible de changer de moteur"
+    },
+    "info": {
+      "httpEngineRemoved": "Le moteur HTTP a été supprimé. Passage au moteur local."
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Bienvenue dans CopySpeak",
+      "subtitle": "Configurez votre moteur de synthèse vocale pour commencer, ou passez cette étape et faites-le plus tard."
+    },
+    "engineConfig": "Configuration du moteur",
+    "engineDescription": "Configurez votre moteur TTS. Vous pourrez le modifier plus tard dans l'onglet Moteur.",
+    "recommendation": {
+      "title": "Pour commencer, nous recommandons Kitten TTS",
+      "description": "Kitten TTS est un nouveau moteur TTS ultra-léger (25-80 Mo) qui fonctionne sur le CPU sans GPU. Cliquez sur le bouton ci-dessous pour l'installer automatiquement — aucune configuration manuelle requise."
+    },
+    "install": "Installer Kitten TTS",
+    "installing": "Installation...",
+    "skip": "Passer pour l'instant",
+    "complete": "Commencer",
+    "loading": "Chargement de la configuration...",
+    "installed": "Installé !",
+    "openTerminal": "Ouvrir un terminal PowerShell",
+    "checkingEngine": "Vérification du moteur...",
+    "helpText": "Vous pourrez toujours configurer votre moteur plus tard dans l'onglet Moteur."
+  },
+  "effects": {
+    "title": "Effets audio",
+    "description": "Appliquer un effet de post-traitement à la lecture TTS. Les effets s'appliquent en temps réel et ne modifient pas l'audio enregistré.",
+    "preview": "Aperçu",
+    "previewing": "Aperçu en cours...",
+    "activeTooltip": "L'effet appliqué à chaque lecture TTS. Changement instantané, sans redémarrage."
+  },
+  "landing": {
+    "hero": {
+      "title": "CopySpeak",
+      "subtitle": "Orchestrateur TTS IA moderne",
+      "description": "Une application multiplateforme légère qui lit à voix haute le texte du presse-papiers grâce à des moteurs de synthèse vocale IA.",
+      "download": "Télécharger pour votre plateforme",
+      "github": "Voir sur GitHub",
+      "version": "v{version}"
+    },
+    "features": {
+      "title": "Fonctionnalités",
+      "doubleCopy": {
+        "title": "Déclenchement par double copie",
+        "description": "Copiez un texte deux fois en moins de 1,5 seconde pour le faire lire instantanément. Aucun raccourci clavier nécessaire."
+      },
+      "engines": {
+        "title": "9 moteurs TTS",
+        "description": "OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP et moteurs CLI locaux (Piper, Kokoro, Kitten)."
+      },
+      "hud": {
+        "title": "Superposition HUD",
+        "description": "Affichage tête haute flottant avec forme d'onde en temps réel pendant la lecture."
+      },
+      "history": {
+        "title": "Historique",
+        "description": "Historique persistant des générations TTS avec lecture, gestion par lots et export audio."
+      },
+      "sanitization": {
+        "title": "Nettoyage du texte",
+        "description": "Suppression automatique du Markdown, développement des URL et normalisation du texte pour une voix plus claire."
+      },
+      "configurable": {
+        "title": "Hautement configurable",
+        "description": "Vitesse de lecture, volume, hauteur, déclencheurs, apparence et plus encore. Thèmes sombre et clair."
+      }
+    },
+    "screenshots": {
+      "title": "Captures d'écran",
+      "subtitle": "CopySpeak en action",
+      "caption": "CopySpeak v0.1.8 — Interface principale avec l'onglet Lecture"
+    },
+    "footer": {
+      "github": "GitHub",
+      "license": "Licence MIT",
+      "madeWith": "Conçu avec Rust, Svelte et l'IA."
+    }
+  },
+  "footer": {
+    "listening": "À l'écoute",
+    "paused": "En pause",
+    "switchEngine": "Changer de moteur TTS. Moteur actuel : {engine}",
+    "available": "Disponible",
+    "unavailable": "Indisponible - vérifiez la configuration",
+    "error": "Erreur lors de la vérification de la disponibilité",
+    "notChecked": "Non vérifié - cliquez pour changer"
+  }
+}

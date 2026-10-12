@@ -1,7 +1,13 @@
 import { expect, it } from "vite-plus/test";
+import ar from "#lib/locales/ar.json";
+import de from "#lib/locales/de.json";
 import en from "#lib/locales/en.json";
 import es from "#lib/locales/es.json";
+import fr from "#lib/locales/fr.json";
 import he from "#lib/locales/he.json";
+import hi from "#lib/locales/hi.json";
+import ru from "#lib/locales/ru.json";
+import zh from "#lib/locales/zh.json";
 import { isRtlLocale, isSupportedLocale } from "./utils";
 
 type Catalog = { [key: string]: Catalog | string };
@@ -30,7 +36,7 @@ it("marks only right-to-left locales as rtl", () => {
   expect(isRtlLocale("es")).toBe(false);
 });
 
-const translated = { es, he } satisfies Record<string, Catalog>;
+const translated = { es, he, ar, de, fr, hi, ru, zh } satisfies Record<string, Catalog>;
 for (const [code, catalog] of Object.entries(translated)) {
   it(`keeps ${code} free of keys English does not define`, () => {
     const englishKeys = new Set(flattenKeys(en));

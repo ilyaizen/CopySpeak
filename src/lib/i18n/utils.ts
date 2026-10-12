@@ -15,8 +15,13 @@ export function getLocaleDisplayName(locale: SupportedLocale): string {
   const names: LocaleNames = {
     en: "English",
     es: "Español",
-    he: "עברית"
-    // ar: "العربية"
+    ar: "العربية",
+    he: "עברית",
+    de: "Deutsch",
+    fr: "Français",
+    hi: "हिन्दी",
+    ru: "Русский",
+    zh: "中文"
   };
   return names[locale] || locale;
 }
@@ -27,8 +32,13 @@ export function getSupportedLocales(): Array<{ value: SupportedLocale; label: st
   return [
     { value: "en", label: "English" },
     { value: "es", label: "Español" },
-    { value: "he", label: "עברית" }
-    // { value: "ar", label: "العربية" }
+    { value: "ar", label: "العربية" },
+    { value: "he", label: "עברית" },
+    { value: "de", label: "Deutsch" },
+    { value: "fr", label: "Français" },
+    { value: "hi", label: "हिन्दी" },
+    { value: "ru", label: "Русский" },
+    { value: "zh", label: "中文" }
   ];
 }
 

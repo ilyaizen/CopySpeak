@@ -1,0 +1,701 @@
+{
+  "app": {
+    "title": "CopySpeak",
+    "tagline": "KI-Sprachausgabe für Ihre Zwischenablage"
+  },
+  "nav": {
+    "play": "Abspielen",
+    "engine": "Engine",
+    "settings": "Einstellungen"
+  },
+  "header": {
+    "play": "Abspielen",
+    "voices": "Stimmen",
+    "engines": "Engines",
+    "history": "Verlauf",
+    "settings": "Einstellungen",
+    "tagline": "KI-Sprachausgabe für Ihre Zwischenablage"
+  },
+  "common": {
+    "loading": "Wird geladen...",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "reset": "Auf Standard zurücksetzen",
+    "test": "Testen",
+    "close": "Schließen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "done": "Fertig",
+    "yes": "Ja",
+    "no": "Nein",
+    "ok": "OK",
+    "error": "Fehler",
+    "success": "Erfolg",
+    "warning": "Warnung",
+    "info": "Info"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "tabs": {
+      "general": "Allgemein",
+      "history": "Verlauf",
+      "effects": "Effekte",
+      "advanced": "Erweitert",
+      "about": "Info"
+    },
+    "sections": {
+      "general": "Allgemein",
+      "startup": "Start",
+      "appearance": "Darstellung",
+      "playback": "Wiedergabe",
+      "hud": "HUD-Overlay",
+      "history": "Verlauf",
+      "triggers": "Auslöser",
+      "hotkeys": "Tastenkürzel",
+      "pagination": "Erweitert",
+      "sanitization": "Textbereinigung",
+      "postProcess": "LLM-Nachbearbeitung",
+      "effects": "Effekte",
+      "appInfo": "App-Info",
+      "importExport": "Import / Export"
+    },
+    "categories": {
+      "general": "Allgemein",
+      "playback": "Wiedergabe",
+      "triggers": "Auslöser",
+      "pagination": "Aufteilung",
+      "sanitization": "Textbereinigung",
+      "history": "Verlauf",
+      "hud": "HUD-Overlay",
+      "about": "Info"
+    },
+    "descriptions": {
+      "general": "Startverhalten und Fenstersteuerung",
+      "playback": "Lautstärke und Audio-Export",
+      "triggers": "Kopiererkennung und Textlimits",
+      "pagination": "Lange Texte für die schrittweise TTS-Wiedergabe in Fragmente aufteilen",
+      "sanitization": "Textbereinigung und Normalisierung",
+      "history": "Generierungsverlauf und Speicherung",
+      "hud": "Wellenform-Anzeige und Positionierung",
+      "about": "Versionsinformationen und Danksagungen"
+    },
+    "actions": {
+      "save": "Änderungen speichern",
+      "cancel": "Abbrechen",
+      "reset": "Auf Standard zurücksetzen",
+      "test": "Testen",
+      "tryAgain": "Erneut versuchen"
+    },
+    "general": {
+      "language": "Sprache",
+      "languageDescription": "Bevorzugte Sprache auswählen",
+      "launchOnLogin": "Bei Anmeldung starten",
+      "startMinimized": "Minimiert im Infobereich starten",
+      "showNotifications": "Benachrichtigungen anzeigen",
+      "closeBehavior": "Verhalten der Schließen-Schaltfläche",
+      "appearance": "Darstellung",
+      "debugMode": "Debug-Modus",
+      "updateChecks": "Automatisch nach Updates suchen",
+      "autoSave": "Änderungen automatisch speichern",
+      "autoSaveDescription": "Änderungen in Einstellungen, Engines und Stimmen 800 ms nach der letzten Änderung automatisch speichern — ohne Speichern/Abbrechen-Leiste"
+    },
+    "playback": {
+      "title": "Wiedergabeeinstellungen",
+      "onRetrigger": "Verhalten bei erneutem Auslösen",
+      "onRetriggerDescription": "Was passiert, wenn TTS während einer laufenden Ausgabe erneut ausgelöst wird",
+      "volume": "Lautstärke",
+      "volumeDescription": "Wiedergabelautstärke (0–100 %)",
+      "streaming": "Audio streamen",
+      "streamingDescription": "Wiedergabe starten, sobald Audio eintrifft. Unterstützte Cloud-Engines: ElevenLabs und Cartesia. Wenn deaktiviert, wird per Batch synthetisiert und jede Anfrage vor der Wiedergabe abgewartet.",
+      "duck": "Andere Apps absenken",
+      "duckDescription": "Senkt den Ton anderer Apps, während CopySpeak spricht, und stellt ihn danach wieder her. Derzeit nur unter Windows.",
+      "duckMode": "Absenkmodus",
+      "duckModeLower": "Leiser",
+      "duckModeMute": "Stumm",
+      "duckLevel": "Absenkpegel",
+      "duckLevelDescription": "Lautstärke, auf die andere Apps sinken, in Prozent ihres eigenen Pegels",
+      "duckFade": "Überblendung (ms)",
+      "duckFadeDescription": "Überblenddauer beim Absenken und Wiederherstellen; 0 für sofort",
+      "playbackSpeed": "Geschwindigkeit",
+      "playbackSpeedDescription": "Wiedergabegeschwindigkeit (0,5x – 2x)",
+      "pitch": "Tonhöhe",
+      "pitchDescription": "Tonhöhenverschiebung (0,5x – 2x)",
+      "stopAndRestart": "Stoppen und neu starten",
+      "queueAfterCurrent": "Nach aktueller einreihen",
+      "ignoreNewTrigger": "Neuen Auslöser ignorieren"
+    },
+    "triggers": {
+      "title": "Auslöser-Einstellungen",
+      "listen": "Auf Doppelkopieren reagieren",
+      "listenDescription": "Zwischenablage auf doppeltes Kopieren überwachen",
+      "doubleCopyWindow": "Erkennungsfenster für Doppelkopieren (ms)",
+      "doubleCopyWindowDescription": "Zeitfenster, in dem ein zweites Kopieren TTS auslöst (100–5000 ms)",
+      "maxTextLength": "Maximale Textlänge",
+      "maxTextLengthDescription": "Maximale Anzahl zu sprechender Zeichen (längerer Text wird mit Warnung gekürzt)"
+    },
+    "pagination": {
+      "title": "Aufteilungseinstellungen",
+      "enabled": "Aufteilung aktivieren",
+      "description": "Lange Texte für die schrittweise TTS-Wiedergabe in Fragmente aufteilen",
+      "fragmentSize": "Fragmentgröße (Zeichen)",
+      "fragmentSizeDescription": "Maximale Zeichen pro Textfragment (100–10000)"
+    },
+    "hud": {
+      "enabled": "HUD aktivieren",
+      "enabledDescription": "Wellenform-Overlay während der Wiedergabe anzeigen",
+      "overlay": "HUD-Overlay",
+      "position": "Position",
+      "testHud": "HUD-Anzeige testen",
+      "topLeft": "Oben links",
+      "topCenter": "Oben mittig",
+      "topRight": "Oben rechts",
+      "bottomLeft": "Unten links",
+      "bottomCenter": "Unten mittig",
+      "bottomRight": "Unten rechts"
+    },
+    "history": {
+      "title": "Verlaufseinstellungen",
+      "enabled": "Verlauf aktivieren",
+      "enabledDescription": "Protokoll aller TTS-Vorgänge führen",
+      "storageMode": "Speichermodus",
+      "persistent": "Dauerhaft",
+      "temporary": "Temporär",
+      "generationsFolder": "Ordner für Generierungen",
+      "generationsFolderDescription": "Verzeichnis zum Speichern der TTS-Generierungen. Leer lassen für Standard.",
+      "generationsFolderPlaceholder": "Standard: Documents/CopySpeak",
+      "autoDeleteTitle": "Generierungen automatisch löschen",
+      "autoDeleteKeepLatest": "Neueste behalten",
+      "autoDeleteNever": "Nie",
+      "autoDeleteAfterDays": "Nach",
+      "days": "Tagen",
+      "manualCleanupTitle": "Manuelle Bereinigung",
+      "manualCleanupDescription": "Jetzt bereinigen, um alte Einträge und verwaiste Dateien zu entfernen",
+      "runCleanup": "Jetzt bereinigen",
+      "cleanupDialog": {
+        "title": "Verlauf bereinigen?",
+        "description": "Dies wendet die aktuellen Regeln zum automatischen Löschen an",
+        "orphanedFiles": "Verwaiste Audiodateien entfernen, auf die im Verlauf nicht verwiesen wird",
+        "cannotUndo": "Diese Aktion kann nicht rückgängig gemacht werden.",
+        "cancel": "Abbrechen",
+        "confirm": "Bereinigen"
+      },
+      "cleanupOrphaned": "Verwaiste Dateien bereinigen"
+    },
+    "sanitization": {
+      "title": "Bereinigungseinstellungen",
+      "enabled": "Bereinigung aktivieren",
+      "enabledDescription": "Unerwünschte Formatierung vor der TTS aus dem Zwischenablagetext entfernen",
+      "markdown": "Markdown-Syntax entfernen",
+      "markdownDescription": "Sämtliche Markdown-Formatierung entfernen (Überschriften, Fett, Kursiv, Codeblöcke, Links, Listen, Zitate)",
+      "stripCodeBlocks": "Codeblöcke",
+      "stripCodeBlocksDescription": "Umzäunte Codeblöcke (dreifache Backticks) entfernen",
+      "stripInlineCode": "Inline-Code",
+      "stripInlineCodeDescription": "Inline-Code in einfachen Backticks entfernen — standardmäßig aus, damit `Begriffe` in Fachtexten erhalten bleiben",
+      "stripHeaders": "Überschriften",
+      "stripHeadersDescription": "#-Markdown-Überschriften entfernen, Text beibehalten",
+      "stripLinks": "Links",
+      "stripLinksDescription": "Markdown-Link-Syntax entfernen, Linktext beibehalten",
+      "stripBoldItalic": "Fett & Kursiv",
+      "stripBoldItalicDescription": "**Fett**- und *Kursiv*-Markierungen entfernen",
+      "stripLists": "Listen",
+      "stripListsDescription": "Aufzählungs- und Nummerierungszeichen entfernen",
+      "stripBlockquotes": "Zitate",
+      "stripBlockquotesDescription": "> Zitatpräfixe entfernen",
+      "ttsNormalization": "Visuelle Kurzschreibweisen ausschreiben",
+      "ttsNormalizationDescription": "URLs, Schrägstriche, Abkürzungen, metrische Einheiten und Symbole in gut sprechbaren Text umwandeln"
+    },
+    "postProcess": {
+      "title": "LLM-Nachbearbeitung",
+      "description": "Kopierten Text mit einem OpenAI-kompatiblen LLM-Anbieter in knappe, gut hörbare Sprache umschreiben.",
+      "enabled": "Nachbearbeitung aktivieren",
+      "enabledDescription": "Bereinigten Text vor der TTS durch das Chatmodell des aktiven Anbieters schicken. Bei Fehlern wird der Originaltext verwendet.",
+      "minChars": "Mindestlänge",
+      "minCharsTooltip": "Nur Text ab dieser Zeichenanzahl verdichten; kürzerer Text wird wörtlich gesprochen. 0 verdichtet alles.",
+      "requireRequestFlag": "Nur auf Anfrage",
+      "requireRequestFlagTooltip": "Nur verdichten, wenn ein Aufrufer es ausdrücklich verlangt (condense-Feld des Steuerservers oder CLI --condense). Aus: Jeder passende Text wird verdichtet.",
+      "apiKey": "API-Schlüssel",
+      "apiKeyPlaceholder": "gsk_...",
+      "apiKeyHelp": "Schlüssel unter console.groq.com erstellen",
+      "testKey": "Testen",
+      "testOk": "Groq-API-Schlüssel ist gültig",
+      "testFail": "Ungültiger Schlüssel",
+      "provider": "Anbieter",
+      "providerTooltip": "Jeder OpenAI-kompatible Endpunkt funktioniert. Eigene mit der Schaltfläche + hinzufügen.",
+      "name": "Name",
+      "nameTooltip": "Anzeigename dieses Anbieters.",
+      "baseUrl": "Basis-URL",
+      "baseUrlTooltip": "OpenAI-kompatibler API-Stamm, z. B. https://api.groq.com/openai/v1",
+      "addProvider": "Anbieter hinzufügen",
+      "deleteProvider": "Anbieter löschen",
+      "deleteProviderTooltip": "Diesen Anbieter aus der Liste entfernen. Integrierte Einträge lassen sich durch Zurücksetzen der Einstellungen wiederherstellen.",
+      "refreshModels": "Modellliste abrufen",
+      "modelsEmpty": "Der Endpunkt hat keine Modelle geliefert.",
+      "model": "Modell",
+      "modelTooltip": "Kleinere Modelle sind schneller; größere befolgen Anweisungen zuverlässiger.",
+      "prompt": "Prompt-Vorlage",
+      "promptHelp": "${output} an der Stelle einsetzen, an der der kopierte Text stehen soll.",
+      "restoreDefault": "Standard-Prompt wiederherstellen"
+    },
+    "effects": {
+      "enabled": "Effekte aktivieren",
+      "enabledDescription": "Tab „Effekte“ im Hauptmenü anzeigen und Nachbearbeitung auf die TTS-Wiedergabe anwenden",
+      "active": "Aktiver Effekt",
+      "activeDescription": "Audioeffekt, der auf jede TTS-Wiedergabe angewendet wird",
+      "options": {
+        "none": "Keiner",
+        "walkieTalkie": "Walkie-Talkie",
+        "gameBoy": "8-Bit-Game-Boy"
+      }
+    },
+    "about": {
+      "version": "Version",
+      "versionDescription": "Aktuelle CopySpeak-Version",
+      "sourceCode": "Quellcode",
+      "sourceCodeDescription": "CopySpeak auf GitHub ansehen",
+      "github": "GitHub",
+      "acknowledgments": "Danksagungen",
+      "openai": {
+        "title": "OpenAI TTS",
+        "description": "Hochwertige neuronale Sprachausgabe",
+        "detail": "CopySpeak nutzt die Text-to-Speech-API von OpenAI für hochwertige Sprachsynthese."
+      },
+      "elevenlabs": {
+        "title": "ElevenLabs",
+        "description": "Fortschrittliche KI-Sprachsynthese",
+        "detail": "Premium-TTS-Engine mit realistischem Stimmenklonen."
+      },
+      "kokoro": {
+        "title": "Kokoro TTS",
+        "description": "Lokale Open-Source-TTS",
+        "detail": "Schlanke Open-Source-Sprachausgabe für die lokale Verarbeitung."
+      },
+      "piper": {
+        "title": "Piper",
+        "description": "Schnelle neuronale TTS",
+        "detail": "Schnelles, lokales neuronales Text-to-Speech-System mit geringer Latenz."
+      },
+      "cartesia": {
+        "title": "Cartesia",
+        "description": "Cloud-TTS mit geringer Latenz (Sonic 3.5)",
+        "detail": "Cloud-API auf Basis des Modells Sonic 3.5. Erfordert einen API-Schlüssel."
+      },
+      "kitten": {
+        "title": "Kitten TTS",
+        "description": "Ultraleichte lokale ONNX-TTS",
+        "detail": "Vier wählbare ONNX-Modelle (25–80 MB) mit 8 integrierten Stimmen, für die CPU optimiert, optional mit GPU-Beschleunigung."
+      },
+      "qwen": {
+        "title": "Qwen3-TTS",
+        "description": "Mehrsprachige lokale TTS",
+        "detail": "Lokales Qwen3-TTS CustomVoice mit 9 integrierten Stimmen und optionaler GPU-Beschleunigung."
+      },
+      "pocket": {
+        "title": "Pocket TTS",
+        "description": "Kompakte lokale TTS",
+        "detail": "Kyutai Pocket: ein Modell mit 100 Mio. Parametern für die CPU, mit Stimmen in sechs Sprachen."
+      },
+      "google": {
+        "title": "Google Gemini TTS",
+        "description": "Cloud-TTS von Google auf Gemini-Basis",
+        "detail": "Cloud-TTS auf Basis der Gemini-Modelle von Google. Erfordert einen Google-AI-API-Schlüssel."
+      },
+      "microsoft": {
+        "title": "Microsoft Foundry AI",
+        "description": "Enterprise-Cloud-TTS über Microsoft Foundry",
+        "detail": "Neuronale Stimmen in Enterprise-Qualität über die Sprachdienste von Microsoft Foundry. Erfordert API-Schlüssel und Endpunkt."
+      },
+      "http": {
+        "title": "Benutzerdefinierte HTTP-Engine",
+        "description": "Generisches HTTP/REST-TTS-Backend",
+        "detail": "Engine für ein eigenes Backend, die beliebige HTTP-Endpunkte mit konfigurierbaren URL-Vorlagen und Authentifizierung aufruft."
+      }
+    }
+  },
+  "engine": {
+    "title": "Engine",
+    "selectEngine": "TTS-Engine auswählen",
+    "testing": "Wird getestet...",
+    "kitten": {
+      "title": "Kitten TTS",
+      "description": "Lokal: Vier wählbare ONNX-Modelle (25–80 MB) mit 8 natürlichen Stimmen. Für die CPU optimiert, optional mit GPU-Beschleunigung."
+    },
+    "qwen": {
+      "title": "Qwen3-TTS",
+      "description": "Lokal: Mehrsprachiges Qwen3-TTS CustomVoice mit 9 integrierten Stimmen. Das Modell wird bei der ersten Nutzung heruntergeladen."
+    },
+    "piper": {
+      "title": "Piper TTS",
+      "description": "Lokal: Schnelle, schlanke neuronale TTS mit über 20 englischen Stimmen. Funktioniert komplett offline — ohne Konto oder Internet."
+    },
+    "kokoro": {
+      "title": "Kokoro TTS",
+      "description": "Lokal: Hochwertige Offline-TTS mit natürlich klingenden Stimmen und vielen Akzenten. Hält das Modell im RAM; unterstützt GPU-Beschleunigung."
+    },
+    "pocket": {
+      "title": "Pocket TTS",
+      "description": "Lokal: Kyutai Pocket — ein Modell mit 100 Mio. Parametern für die CPU, mit Stimmen in sechs Sprachen. Unterstützt GPU-Beschleunigung."
+    },
+    "cartesia": {
+      "title": "Cartesia",
+      "description": "Cloud: Natürliche TTS mit geringer Latenz auf Basis von Sonic 3.5. Erfordert API-Schlüssel und Internetverbindung.",
+      "apiKey": "API-Schlüssel",
+      "apiKeyDescription": "Ihr API-Schlüssel wird lokal gespeichert und niemals weitergegeben.",
+      "check": "Prüfen",
+      "testEngine": "Engine testen"
+    },
+    "elevenlabs": {
+      "title": "ElevenLabs",
+      "description": "Cloud: Premium-KI-Sprachsynthese mit emotionaler Bandbreite, über 1000 Stimmen und Mehrsprachigkeit.",
+      "apiKey": "API-Schlüssel",
+      "apiKeyDescription": "Ihr API-Schlüssel wird lokal gespeichert und niemals weitergegeben.",
+      "check": "Prüfen",
+      "testEngine": "Engine testen"
+    },
+    "openai": {
+      "title": "OpenAI",
+      "description": "Cloud: Hochwertige natürliche Stimmen über die OpenAI-API. Erfordert API-Schlüssel und Internetverbindung.",
+      "apiKey": "API-Schlüssel",
+      "apiKeyDescription": "Ihr API-Schlüssel wird lokal gespeichert und niemals weitergegeben.",
+      "check": "Prüfen",
+      "testEngine": "Engine testen"
+    },
+    "google": {
+      "title": "Google",
+      "description": "Cloud: Sprachgenerierung über die Gemini-API. Erfordert einen Google-AI-API-Schlüssel.",
+      "apiKey": "API-Schlüssel"
+    },
+    "microsoft": {
+      "title": "Microsoft Foundry",
+      "description": "Cloud: Microsoft Foundry Speech. Erfordert regionalen Endpunkt und API-Schlüssel.",
+      "apiKey": "API-Schlüssel",
+      "endpoint": "Endpunkt"
+    },
+    "http": {
+      "title": "HTTP",
+      "description": "Cloud: Syntheseanfragen an einen pro Profil konfigurierten HTTP-Endpunkt senden."
+    },
+    "uv": {
+      "title": "uv",
+      "description": "Voraussetzung für jede lokale Engine. Die Installer nutzen uv, um Python-TTS-Pakete zu laden und auszuführen."
+    },
+    "setup": {
+      "uvMissing": "uv ist nicht installiert. Lokale Engines benötigen es.",
+      "installUv": "uv installieren",
+      "install": "Installieren",
+      "installing": "Wird installiert...",
+      "tryAgain": "Erneut versuchen",
+      "openInstaller": "Installer ausführen",
+      "installManage": "Installieren / Verwalten"
+    },
+    "badges": {
+      "active": "Aktiv",
+      "default": "Standard",
+      "offline": "Offline",
+      "free": "Kostenlos",
+      "cloud": "Cloud",
+      "paid": "Kostenpflichtig",
+      "freemium": "Freemium"
+    },
+    "info": {
+      "engineInformation": "Engine-Informationen"
+    },
+    "loading": "Engine-Einstellungen werden geladen...",
+    "saveBar": {
+      "saving": "Wird gespeichert...",
+      "cancel": "Abbrechen",
+      "saveChanges": "Änderungen speichern"
+    },
+    "testVoice": {
+      "title": "Stimme testen",
+      "playing": "Wird abgespielt...",
+      "description": "Spielt einen kurzen Satz mit der aktuellen Engine ab"
+    },
+    "localEngine": {
+      "voice": "Stimme",
+      "kittenInstall": "Führen Sie ./install-kittentts.ps1 im Projektstamm aus, um Kitten TTS zu installieren. Modelle werden bei der ersten Nutzung automatisch heruntergeladen (~25–80 MB je nach Variante).",
+      "pocketInstall": "Führen Sie ./install-pocket.ps1 im Projektstamm aus, um Pocket TTS zu installieren. Legt ein uv-Projekt für pocket-tts an; die Modellgewichte werden bei der ersten Nutzung heruntergeladen.",
+      "piperModels": "Modelldateien (.onnx + .onnx.json) müssen in {dataDir} abgelegt werden. Download unter",
+      "commandPreview": "Befehlsvorschau",
+      "tempDirectory": "wird zur Laufzeit zum temporären Systemverzeichnis aufgelöst.",
+      "testEngine": "Engine testen",
+      "testing": "Wird getestet...",
+      "engineWorking": "Engine funktioniert",
+      "engineFailed": "Engine-Test fehlgeschlagen"
+    },
+    "openaiEngine": {
+      "model": "Modell",
+      "modelTooltip": "OpenAI-TTS-Modell für die Sprachsynthese",
+      "voice": "Stimme",
+      "voiceTooltip": "Stimmstil für die Sprachsynthese"
+    },
+    "cartesiaEngine": {
+      "model": "Modell",
+      "modelTooltip": "Cartesia-Sonic-Modell für die Sprachsynthese",
+      "manualVoiceId": "Manuelle Stimm-ID",
+      "manualVoiceIdTooltip": "Aktivieren, um eine eigene Cartesia-Stimm-ID einzufügen, statt eine bekannte Stimme zu wählen.",
+      "voice": "Stimme",
+      "voiceTooltip": "Aufgelöster Cartesia-Stimmname für die Sprachsynthese",
+      "voiceId": "Stimm-ID",
+      "voiceIdTooltip": "Cartesia-Stimm-ID. Katie ist die empfohlene amerikanisch-englische Standardstimme.",
+      "format": "Format",
+      "formatTooltip": "Audio-Containerformat"
+    },
+    "elevenlabsEngine": {
+      "manualVoiceId": "Manuelle Stimm-ID",
+      "manualVoiceIdTooltip": "Umschalten, um die Stimm-ID manuell einzugeben statt sie aus der Liste zu wählen",
+      "voiceId": "Stimm-ID",
+      "voiceIdPlaceholder": "z. B. 21m00Tcm4TlvDq8ikWAM",
+      "verify": "Prüfen",
+      "verified": "Geprüft",
+      "cached": "Zwischengespeichert",
+      "findVoices": "Stimm-IDs finden unter",
+      "voice": "Stimme",
+      "voiceTooltip": "Aus Ihrer ElevenLabs-Stimmenbibliothek wählen",
+      "load": "Laden",
+      "setupApiKeyFirst": "Richten Sie zuerst Ihren API-Schlüssel ein",
+      "clickLoadToFetch": "Klicken Sie auf „Laden“, um verfügbare Stimmen abzurufen",
+      "setupApiKeyInSettings": "Richten Sie zuerst Ihren API-Schlüssel in den Einstellungen ein",
+      "model": "Modell",
+      "modelTooltip": "KI-Modell für die Sprachsynthese",
+      "format": "Format",
+      "formatTooltip": "Audio-Ausgabeformat",
+      "voiceSettings": "Stimmeinstellungen",
+      "stability": "Stabilität",
+      "stabilityTooltip": "Höhere Werte machen die Stimme gleichmäßiger, niedrigere variabler",
+      "similarity": "Ähnlichkeit",
+      "similarityTooltip": "Höhere Werte machen die Stimme dem Originalsprecher ähnlicher",
+      "style": "Stil",
+      "styleTooltip": "Höhere Werte machen die Stimme ausdrucksstärker (0 zum Deaktivieren)",
+      "speakerBoost": "Sprecher-Boost",
+      "speakerBoostTooltip": "Verbessert Klarheit und Qualität der Sprachausgabe"
+    },
+    "apiSetup": {
+      "title": "{engine}-API einrichten",
+      "description": "Geben Sie Ihren API-Schlüssel ein, um die Sprachausgabe von {engine} zu aktivieren.",
+      "apiKey": "API-Schlüssel",
+      "placeholderOpenai": "sk-...",
+      "placeholderElevenlabs": "xi-...",
+      "placeholderCartesia": "sk_car_...",
+      "placeholderGoogle": "AIza...",
+      "placeholderMicrosoft": "________________",
+      "endpointLabel": "Endpunkt",
+      "endpointPlaceholder": "https://<region>.tts.speech.microsoft.com/",
+      "installButton": "Installieren",
+      "installing": "Wird installiert...",
+      "checkButton": "Prüfen",
+      "testButton": "Testen",
+      "valid": "API-Schlüssel gültig",
+      "invalid": "API-Schlüsselprüfung fehlgeschlagen",
+      "testPassed": "Engine-Test bestanden",
+      "testFailed": "Engine-Test fehlgeschlagen",
+      "cancel": "Abbrechen",
+      "save": "Speichern"
+    },
+    "error": {
+      "loadFailed": "Engine-Einstellungen konnten nicht geladen werden",
+      "loadDescription": "Beim Laden Ihrer Engine-Konfiguration ist ein Fehler aufgetreten."
+    }
+  },
+  "engines": {
+    "title": "Engines",
+    "subtitle": "API-Schlüssel einrichten, lokale Engines installieren und prüfen, ob jede Engine funktioniert. Stimmeinstellungen finden Sie auf der Seite Stimmen.",
+    "cloud": "Cloud",
+    "local": "Lokal",
+    "docs": "Doku",
+    "noCredentialNeeded": "Kein API-Schlüssel erforderlich.",
+    "daemonIdleTimeout": "Leerlauf-Abschaltung",
+    "daemonIdleTimeoutHint": "Eine residente lokale Engine nach dieser Zeit ohne Vorlesen beenden und ihren Speicher freigeben. Das nächste Vorlesen startet sie neu (~Kaltstart).",
+    "installerSmokeTestHint": "Installieren und dann auf Testen klicken, um zu prüfen, ob die Engine Audio erzeugt.",
+    "installCuda": "NVIDIA-GPU-Laufzeit installieren",
+    "installCudaHint": "Aktivieren, wenn das Profil GPU-Beschleunigung nutzt. Eine Neuinstallation ändert die Laufzeit der Engine.",
+    "installFailed": "Installation fehlgeschlagen",
+    "saveBeforeTestFailed": "Speichern Sie Ihre Änderungen vor dem Test.",
+    "installDone": "Installation abgeschlossen",
+    "retry": "Wiederholen",
+    "reinstall": "Neu installieren",
+    "voiceInstalled": "Installiert",
+    "sharedModelHint": "Ein gemeinsamer Modell-Download; alle aufgeführten Stimmen sind enthalten.",
+    "installedAllVoices": "Installiert — alle Stimmen verfügbar.",
+    "piperPerVoiceHint": "Stimmen zum Herunterladen auswählen (jede ist ein eigenes Modell).",
+    "uninstall": "Deinstallieren",
+    "uninstallDone": "Deinstalliert",
+    "uninstallFailed": "Deinstallation fehlgeschlagen",
+    "uninstallConfirm": "Dateien und Binärdateien dieser Engine entfernen? Heruntergeladene Modelle werden gelöscht. Profile, die sie nutzen, funktionieren erst nach einer Neuinstallation wieder.",
+    "binaryHint": "Installiert eine Kommandozeilen-Binärdatei. Kein Modell-Download.",
+    "binaryInstalled": "Installiert und bereit."
+  },
+  "play": {
+    "title": "Abspielen",
+    "placeholder": "Text zum Generieren eingeben oder einfügen.",
+    "clear": "Leeren",
+    "play": "Abspielen",
+    "pause": "Pause",
+    "resume": "Fortsetzen",
+    "stop": "Stopp",
+    "replay": "Wiederholen",
+    "abort": "Abbrechen",
+    "listening": "Lauscht",
+    "paused": "Pausiert",
+    "processing": "Wird verarbeitet...",
+    "history": "Letzter Verlauf",
+    "noHistory": "Noch kein Verlauf",
+    "truncated": "Text gekürzt",
+    "truncatedDescription": "Text von {original} auf {truncated} Zeichen gekürzt (max.: {max})",
+    "characters": "{count} Zeichen",
+    "replayTooltip": "Letztes Audio wiederholen",
+    "playLatestTooltip": "Neuesten Eintrag aus dem Verlauf abspielen",
+    "playTooltip": "Abspielen",
+    "pauseTooltip": "Pause",
+    "resumeTooltip": "Fortsetzen",
+    "stopTooltip": "Stopp",
+    "abortTooltip": "Synthese oder Wiedergabe abbrechen",
+    "skipBackTooltip": "5 Sekunden zurück",
+    "skipFwdTooltip": "5 Sekunden vor"
+  },
+  "history": {
+    "title": "Verlauf",
+    "loading": "Wird geladen...",
+    "empty": "Noch keine Verlaufseinträge",
+    "fragments": "{count} Fragmente",
+    "playSaved": "Gespeichertes Audio abspielen",
+    "reSynthesize": "Neu synthetisieren und abspielen",
+    "reSynthesizeTooltip": "Mit aktuellen Einstellungen neu synthetisieren",
+    "delete": "Aus Verlauf löschen",
+    "deleteAllFragments": "Alle Fragmente löschen",
+    "playAll": "Alle abspielen",
+    "playAllTooltip": "Alle Fragmente der Reihe nach abspielen",
+    "playThisFragment": "Dieses Fragment abspielen",
+    "noAudioFile": "Keine Audiodatei",
+    "deleteEntry": "Eintrag löschen?",
+    "deleteBatch": "Alle Fragmente löschen?",
+    "deleteBatchDescription": "Dadurch werden alle Fragmente dieses Stapels samt Audiodateien dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteEntryWithFile": "Dadurch werden der Verlaufseintrag und seine Audiodatei dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteEntryOnly": "Dadurch wird der Verlaufseintrag dauerhaft gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "cancel": "Abbrechen",
+    "confirmDelete": "Löschen",
+    "toast": {
+      "playing": "Audio aus dem Verlauf wird abgespielt",
+      "playingFragments": "Alle Fragmente werden abgespielt",
+      "reSynthesizing": "Wird neu synthetisiert und abgespielt",
+      "deleted": "Aus Verlauf gelöscht",
+      "deletedBatch": "Stapel aus Verlauf gelöscht",
+      "failedToPlay": "Abspielen fehlgeschlagen",
+      "failedToReSpeak": "Erneutes Vorlesen fehlgeschlagen",
+      "failedToDelete": "Löschen fehlgeschlagen"
+    }
+  },
+  "toast": {
+    "success": {
+      "engineSaved": "Engine erfolgreich gespeichert",
+      "settingsSaved": "Einstellungen gespeichert",
+      "welcome": "Willkommen bei CopySpeak!",
+      "configSaved": "Konfiguration gespeichert! Los geht's.",
+      "hudTest": "HUD-Test ausgelöst",
+      "historyCleanup": "Verlaufsbereinigung abgeschlossen",
+      "installerLaunched": "Kitten-TTS-Installer in neuem Fenster gestartet",
+      "settingsCopied": "Einstellungen in die Zwischenablage kopiert",
+      "settingsDownloaded": "Einstellungen heruntergeladen",
+      "settingsImported": "Einstellungen erfolgreich importiert",
+      "settingsReset": "Einstellungen zurückgesetzt — Einrichtung beginnt neu",
+      "synthesisAborted": "Synthese abgebrochen"
+    },
+    "error": {
+      "loadSettings": "Einstellungen konnten nicht geladen werden",
+      "saveSettings": "Einstellungen konnten nicht gespeichert werden",
+      "loadConfig": "Konfiguration konnte nicht geladen werden",
+      "saveConfig": "Einstellungen konnten nicht gespeichert werden",
+      "voiceTest": "Stimmtest fehlgeschlagen",
+      "hudTest": "HUD-Test fehlgeschlagen",
+      "cleanup": "Bereinigung fehlgeschlagen",
+      "installer": "Installer konnte nicht ausgeführt werden",
+      "switchEngine": "Engine konnte nicht gewechselt werden"
+    },
+    "info": {
+      "httpEngineRemoved": "Die HTTP-Engine wurde entfernt. Zur lokalen Engine gewechselt."
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Willkommen bei CopySpeak",
+      "subtitle": "Richten Sie Ihre Sprachausgabe-Engine ein, um loszulegen, oder überspringen Sie dies und richten Sie sie später ein."
+    },
+    "engineConfig": "Engine-Konfiguration",
+    "engineDescription": "Richten Sie Ihre TTS-Engine ein. Sie können dies später im Tab Engine ändern.",
+    "recommendation": {
+      "title": "Für den Einstieg empfehlen wir Kitten TTS",
+      "description": "Kitten TTS ist eine neue, ultraleichte TTS-Engine (25–80 MB), die auf der CPU läuft und keine GPU benötigt. Klicken Sie unten, um sie automatisch zu installieren — keine manuelle Einrichtung nötig."
+    },
+    "install": "Kitten TTS installieren",
+    "installing": "Wird installiert...",
+    "skip": "Vorerst überspringen",
+    "complete": "Loslegen",
+    "loading": "Konfiguration wird geladen...",
+    "installed": "Installiert!",
+    "openTerminal": "PowerShell-Terminal öffnen",
+    "checkingEngine": "Engine wird geprüft...",
+    "helpText": "Sie können Ihre Engine jederzeit später im Tab Engine konfigurieren."
+  },
+  "effects": {
+    "title": "Audioeffekte",
+    "description": "Einen Nachbearbeitungseffekt auf die TTS-Wiedergabe anwenden. Effekte wirken in Echtzeit und verändern kein gespeichertes Audio.",
+    "preview": "Vorschau",
+    "previewing": "Vorschau läuft...",
+    "activeTooltip": "Der Effekt, der auf jede TTS-Wiedergabe angewendet wird. Sofort umschaltbar ohne Neustart."
+  },
+  "landing": {
+    "hero": {
+      "title": "CopySpeak",
+      "subtitle": "Moderner KI-TTS-Orchestrator",
+      "description": "Eine schlanke plattformübergreifende App, die Text aus der Zwischenablage mit KI-Sprachausgabe-Engines vorliest.",
+      "download": "Für Ihre Plattform herunterladen",
+      "github": "Auf GitHub ansehen",
+      "version": "v{version}"
+    },
+    "features": {
+      "title": "Funktionen",
+      "doubleCopy": {
+        "title": "Auslösen per Doppelkopieren",
+        "description": "Text innerhalb von 1,5 Sekunden zweimal kopieren, um die Sprachausgabe sofort zu starten. Keine Tastenkürzel nötig."
+      },
+      "engines": {
+        "title": "9 TTS-Engines",
+        "description": "OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP und lokale CLI-Engines (Piper, Kokoro, Kitten)."
+      },
+      "hud": {
+        "title": "HUD-Overlay",
+        "description": "Schwebendes Head-up-Display mit Echtzeit-Wellenform während der Wiedergabe."
+      },
+      "history": {
+        "title": "Verlauf",
+        "description": "Dauerhafter TTS-Generierungsverlauf mit Wiedergabe, Stapelverwaltung und Audio-Export."
+      },
+      "sanitization": {
+        "title": "Textbereinigung",
+        "description": "Automatisches Entfernen von Markdown, Ausschreiben von URLs und Textnormalisierung für klarere Sprache."
+      },
+      "configurable": {
+        "title": "Umfassend konfigurierbar",
+        "description": "Wiedergabegeschwindigkeit, Lautstärke, Tonhöhe, Auslöser, Darstellung und mehr. Dunkles und helles Design."
+      }
+    },
+    "screenshots": {
+      "title": "Screenshots",
+      "subtitle": "CopySpeak in Aktion",
+      "caption": "CopySpeak v0.1.8 — Hauptoberfläche mit Tab Abspielen"
+    },
+    "footer": {
+      "github": "GitHub",
+      "license": "MIT-Lizenz",
+      "madeWith": "Entwickelt mit Rust, Svelte und KI."
+    }
+  },
+  "footer": {
+    "listening": "Lauscht",
+    "paused": "Pausiert",
+    "switchEngine": "TTS-Engine wechseln. Aktuelle Engine: {engine}",
+    "available": "Verfügbar",
+    "unavailable": "Nicht verfügbar – Konfiguration prüfen",
+    "error": "Fehler bei der Verfügbarkeitsprüfung",
+    "notChecked": "Nicht geprüft – zum Wechseln klicken"
+  }
+}

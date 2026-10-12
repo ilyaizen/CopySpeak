@@ -8,8 +8,13 @@ import { isRtlLocale } from "#lib/i18n/utils";
 // Keep in sync with getSupportedLocales() in utils.ts.
 register("en", () => import("#lib/locales/en.json"));
 register("es", () => import("#lib/locales/es.json"));
-// register("ar", () => import("#lib/locales/ar.json"));
+register("ar", () => import("#lib/locales/ar.json"));
 register("he", () => import("#lib/locales/he.json"));
+register("de", () => import("#lib/locales/de.json"));
+register("fr", () => import("#lib/locales/fr.json"));
+register("hi", () => import("#lib/locales/hi.json"));
+register("ru", () => import("#lib/locales/ru.json"));
+register("zh", () => import("#lib/locales/zh.json"));
 
 // Initialize with default locale
 // Actual locale will be set from AppConfig after load

@@ -1,0 +1,701 @@
+{
+  "app": {
+    "title": "CopySpeak",
+    "tagline": "为剪贴板打造的 AI 文字转语音"
+  },
+  "nav": {
+    "play": "播放",
+    "engine": "引擎",
+    "settings": "设置"
+  },
+  "header": {
+    "play": "播放",
+    "voices": "语音",
+    "engines": "引擎",
+    "history": "历史记录",
+    "settings": "设置",
+    "tagline": "为剪贴板打造的 AI 文字转语音"
+  },
+  "common": {
+    "loading": "加载中...",
+    "save": "保存",
+    "cancel": "取消",
+    "reset": "恢复默认",
+    "test": "测试",
+    "close": "关闭",
+    "back": "返回",
+    "next": "下一步",
+    "done": "完成",
+    "yes": "是",
+    "no": "否",
+    "ok": "确定",
+    "error": "错误",
+    "success": "成功",
+    "warning": "警告",
+    "info": "信息"
+  },
+  "settings": {
+    "title": "设置",
+    "tabs": {
+      "general": "常规",
+      "history": "历史记录",
+      "effects": "效果",
+      "advanced": "高级",
+      "about": "关于"
+    },
+    "sections": {
+      "general": "常规",
+      "startup": "启动",
+      "appearance": "外观",
+      "playback": "播放",
+      "hud": "HUD 浮层",
+      "history": "历史记录",
+      "triggers": "触发",
+      "hotkeys": "快捷键",
+      "pagination": "高级",
+      "sanitization": "文本清理",
+      "postProcess": "LLM 后处理",
+      "effects": "效果",
+      "appInfo": "应用信息",
+      "importExport": "导入 / 导出"
+    },
+    "categories": {
+      "general": "常规",
+      "playback": "播放",
+      "triggers": "触发",
+      "pagination": "分段",
+      "sanitization": "文本清理",
+      "history": "历史记录",
+      "hud": "HUD 浮层",
+      "about": "关于"
+    },
+    "descriptions": {
+      "general": "启动行为与窗口控制",
+      "playback": "音量与音频导出设置",
+      "triggers": "复制检测与文本限制",
+      "pagination": "将长文本拆分为片段，逐段进行 TTS 播放",
+      "sanitization": "文本清理与规范化",
+      "history": "生成历史与存储",
+      "hud": "波形显示与位置",
+      "about": "版本信息与致谢"
+    },
+    "actions": {
+      "save": "保存更改",
+      "cancel": "取消",
+      "reset": "恢复默认",
+      "test": "测试",
+      "tryAgain": "重试"
+    },
+    "general": {
+      "language": "语言",
+      "languageDescription": "选择界面语言",
+      "launchOnLogin": "登录时启动",
+      "startMinimized": "启动时最小化到托盘",
+      "showNotifications": "显示通知",
+      "closeBehavior": "关闭按钮行为",
+      "appearance": "外观",
+      "debugMode": "调试模式",
+      "updateChecks": "自动检查更新",
+      "autoSave": "自动保存更改",
+      "autoSaveDescription": "在“设置”“引擎”“语音”页面上，最后一次修改 800 毫秒后自动保存——不显示保存/取消栏"
+    },
+    "playback": {
+      "title": "播放设置",
+      "onRetrigger": "重复触发时",
+      "onRetriggerDescription": "正在朗读时再次触发 TTS 的处理方式",
+      "volume": "音量",
+      "volumeDescription": "音频播放音量（0-100%）",
+      "streaming": "流式音频",
+      "streamingDescription": "音频一到达即开始播放。支持的云引擎：ElevenLabs 和 Cartesia。关闭时使用批量合成，等每个请求完成后再播放。",
+      "duck": "压低其他应用音量",
+      "duckDescription": "CopySpeak 朗读时降低其他应用的音量，结束后恢复。目前仅支持 Windows。",
+      "duckMode": "压低模式",
+      "duckModeLower": "降低",
+      "duckModeMute": "静音",
+      "duckLevel": "压低程度",
+      "duckLevelDescription": "其他应用降至的音量，按其自身音量的百分比计算",
+      "duckFade": "淡变（毫秒）",
+      "duckFadeDescription": "压低与恢复时的淡变时长；0 表示立即",
+      "playbackSpeed": "语速",
+      "playbackSpeedDescription": "播放速度（0.5x - 2x）",
+      "pitch": "音调",
+      "pitchDescription": "音调偏移（0.5x - 2x）",
+      "stopAndRestart": "停止并重新开始",
+      "queueAfterCurrent": "排在当前之后",
+      "ignoreNewTrigger": "忽略新的触发"
+    },
+    "triggers": {
+      "title": "触发设置",
+      "listen": "监听双击复制",
+      "listenDescription": "监视剪贴板中的双击复制事件",
+      "doubleCopyWindow": "双击复制检测窗口（毫秒）",
+      "doubleCopyWindowDescription": "在此时间内再次复制即触发 TTS（100-5000 毫秒）",
+      "maxTextLength": "最大文本长度",
+      "maxTextLengthDescription": "朗读的最大字符数（超出部分将被截断并给出警告）"
+    },
+    "pagination": {
+      "title": "分段设置",
+      "enabled": "启用分段",
+      "description": "将长文本拆分为片段，逐段进行 TTS 播放",
+      "fragmentSize": "片段大小（字符）",
+      "fragmentSizeDescription": "每个文本片段的最大字符数（100-10000）"
+    },
+    "hud": {
+      "enabled": "启用 HUD",
+      "enabledDescription": "播放时显示波形浮层",
+      "overlay": "HUD 浮层",
+      "position": "位置",
+      "testHud": "测试 HUD 显示",
+      "topLeft": "左上",
+      "topCenter": "顶部居中",
+      "topRight": "右上",
+      "bottomLeft": "左下",
+      "bottomCenter": "底部居中",
+      "bottomRight": "右下"
+    },
+    "history": {
+      "title": "历史记录设置",
+      "enabled": "启用历史记录",
+      "enabledDescription": "记录所有 TTS 操作",
+      "storageMode": "存储模式",
+      "persistent": "永久",
+      "temporary": "临时",
+      "generationsFolder": "生成文件夹",
+      "generationsFolderDescription": "保存 TTS 生成内容的目录。留空则使用默认位置。",
+      "generationsFolderPlaceholder": "默认：Documents/CopySpeak",
+      "autoDeleteTitle": "自动删除生成内容",
+      "autoDeleteKeepLatest": "保留最新",
+      "autoDeleteNever": "从不",
+      "autoDeleteAfterDays": "超过",
+      "days": "天",
+      "manualCleanupTitle": "手动清理",
+      "manualCleanupDescription": "立即清理，删除旧条目和孤立文件",
+      "runCleanup": "立即清理",
+      "cleanupDialog": {
+        "title": "清理历史记录？",
+        "description": "将按当前的自动删除规则执行",
+        "orphanedFiles": "删除历史记录中未引用的孤立音频文件",
+        "cannotUndo": "此操作无法撤销。",
+        "cancel": "取消",
+        "confirm": "开始清理"
+      },
+      "cleanupOrphaned": "清理孤立文件"
+    },
+    "sanitization": {
+      "title": "文本清理设置",
+      "enabled": "启用文本清理",
+      "enabledDescription": "在 TTS 之前去除剪贴板文本中不需要的格式",
+      "markdown": "去除 Markdown 语法",
+      "markdownDescription": "去除所有 Markdown 格式（标题、粗体、斜体、代码块、链接、列表、引用）",
+      "stripCodeBlocks": "代码块",
+      "stripCodeBlocksDescription": "去除围栏代码块（三个反引号）",
+      "stripInlineCode": "行内代码",
+      "stripInlineCodeDescription": "去除单反引号行内代码——默认关闭，以保留技术文本中的 `术语`",
+      "stripHeaders": "标题",
+      "stripHeadersDescription": "去除 # Markdown 标题，保留文字内容",
+      "stripLinks": "链接",
+      "stripLinksDescription": "去除 Markdown 链接语法，保留链接文字",
+      "stripBoldItalic": "粗体和斜体",
+      "stripBoldItalicDescription": "去除 **粗体** 和 *斜体* 标记",
+      "stripLists": "列表",
+      "stripListsDescription": "去除项目符号和编号列表标记",
+      "stripBlockquotes": "引用",
+      "stripBlockquotesDescription": "去除 > 引用前缀",
+      "ttsNormalization": "展开视觉简写",
+      "ttsNormalizationDescription": "将网址、斜杠、缩写、公制单位和符号转换为便于朗读的文本"
+    },
+    "postProcess": {
+      "title": "LLM 后处理",
+      "description": "使用兼容 OpenAI 的 LLM 服务商改写复制的文本，使朗读更简洁、更易听。",
+      "enabled": "启用后处理",
+      "enabledDescription": "在 TTS 之前，将清理后的文本交给当前服务商的聊天模型处理。失败时回退为原文。",
+      "minChars": "最小长度",
+      "minCharsTooltip": "仅精简不少于此字符数的文本；较短的文本按原文朗读。0 表示全部精简。",
+      "requireRequestFlag": "仅在请求时",
+      "requireRequestFlagTooltip": "仅当调用方明确要求时才精简（控制服务器的 condense 字段或 CLI --condense）。关闭时：所有符合条件的文本都会精简。",
+      "apiKey": "API 密钥",
+      "apiKeyPlaceholder": "gsk_...",
+      "apiKeyHelp": "在 console.groq.com 创建密钥",
+      "testKey": "测试",
+      "testOk": "Groq API 密钥有效",
+      "testFail": "密钥无效",
+      "provider": "服务商",
+      "providerTooltip": "任何兼容 OpenAI 的端点均可使用。用 + 按钮添加你自己的服务商。",
+      "name": "名称",
+      "nameTooltip": "此服务商的显示名称。",
+      "baseUrl": "基础 URL",
+      "baseUrlTooltip": "兼容 OpenAI 的 API 根地址，例如 https://api.groq.com/openai/v1",
+      "addProvider": "添加服务商",
+      "deleteProvider": "删除服务商",
+      "deleteProviderTooltip": "从列表中移除此服务商。内置条目可通过重置设置恢复。",
+      "refreshModels": "获取模型列表",
+      "modelsEmpty": "端点未返回任何模型。",
+      "model": "模型",
+      "modelTooltip": "较小的模型更快；较大的模型更可靠地遵循指令。",
+      "prompt": "提示词模板",
+      "promptHelp": "在需要插入复制文本的位置使用 ${output}。",
+      "restoreDefault": "恢复默认提示词"
+    },
+    "effects": {
+      "enabled": "启用效果",
+      "enabledDescription": "在主菜单中显示“效果”标签页，并对 TTS 播放应用后处理",
+      "active": "当前效果",
+      "activeDescription": "应用于每次 TTS 播放的音频效果",
+      "options": {
+        "none": "无",
+        "walkieTalkie": "对讲机",
+        "gameBoy": "8 位 Game Boy"
+      }
+    },
+    "about": {
+      "version": "版本",
+      "versionDescription": "当前 CopySpeak 版本",
+      "sourceCode": "源代码",
+      "sourceCodeDescription": "在 GitHub 上查看 CopySpeak",
+      "github": "GitHub",
+      "acknowledgments": "致谢",
+      "openai": {
+        "title": "OpenAI TTS",
+        "description": "高质量神经网络文字转语音",
+        "detail": "CopySpeak 使用 OpenAI 的文字转语音 API 实现高质量语音合成。"
+      },
+      "elevenlabs": {
+        "title": "ElevenLabs",
+        "description": "先进的 AI 语音合成",
+        "detail": "高级 TTS 引擎，具备逼真的声音克隆能力。"
+      },
+      "kokoro": {
+        "title": "Kokoro TTS",
+        "description": "开源本地 TTS",
+        "detail": "轻量级开源文字转语音引擎，可在本地处理。"
+      },
+      "piper": {
+        "title": "Piper",
+        "description": "快速神经网络 TTS",
+        "detail": "快速、低延迟的本地神经网络文字转语音系统。"
+      },
+      "cartesia": {
+        "title": "Cartesia",
+        "description": "低延迟云端 TTS（Sonic 3.5）",
+        "detail": "基于 Sonic 3.5 模型的云 API。需要 API 密钥。"
+      },
+      "kitten": {
+        "title": "Kitten TTS",
+        "description": "超轻量本地 ONNX TTS",
+        "detail": "四种可选的 25–80MB ONNX 模型，内置 8 种语音，针对 CPU 优化，可选 GPU 加速。"
+      },
+      "qwen": {
+        "title": "Qwen3-TTS",
+        "description": "多语言本地 TTS",
+        "detail": "本地 Qwen3-TTS CustomVoice，内置 9 种语音，可选 GPU 加速。"
+      },
+      "pocket": {
+        "title": "Pocket TTS",
+        "description": "小巧的本地 TTS",
+        "detail": "Kyutai Pocket：专为 CPU 运行打造的 1 亿参数模型，提供六种语言的语音。"
+      },
+      "google": {
+        "title": "Google Gemini TTS",
+        "description": "Google 基于 Gemini 的云端 TTS",
+        "detail": "由 Google Gemini 模型驱动的云端 TTS。需要 Google AI API 密钥。"
+      },
+      "microsoft": {
+        "title": "Microsoft Foundry AI",
+        "description": "通过 Microsoft Foundry 提供的企业级云端 TTS",
+        "detail": "通过 Microsoft Foundry 语音服务提供企业级神经网络语音。需要 API 密钥和端点。"
+      },
+      "http": {
+        "title": "自定义 HTTP 引擎",
+        "description": "通用 HTTP/REST TTS 后端",
+        "detail": "自带后端引擎，可调用任意 HTTP 端点，URL 模板和认证方式均可配置。"
+      }
+    }
+  },
+  "engine": {
+    "title": "引擎",
+    "selectEngine": "选择 TTS 引擎",
+    "testing": "测试中...",
+    "kitten": {
+      "title": "Kitten TTS",
+      "description": "本地：四种可选 ONNX 模型（25–80MB），内置 8 种自然语音。针对 CPU 优化，可选 GPU 加速。"
+    },
+    "qwen": {
+      "title": "Qwen3-TTS",
+      "description": "本地：多语言 Qwen3-TTS CustomVoice，内置 9 种语音。首次使用时下载模型。"
+    },
+    "piper": {
+      "title": "Piper TTS",
+      "description": "本地：快速、轻量的神经网络 TTS，提供 20 多种英语语音。完全离线运行——无需账号或网络。"
+    },
+    "kokoro": {
+      "title": "Kokoro TTS",
+      "description": "本地：高质量离线 TTS，语音自然，口音覆盖广。模型常驻内存；支持 GPU 加速。"
+    },
+    "pocket": {
+      "title": "Pocket TTS",
+      "description": "本地：Kyutai Pocket——专为 CPU 打造的 1 亿参数模型，提供六种语言的语音。支持 GPU 加速。"
+    },
+    "cartesia": {
+      "title": "Cartesia",
+      "description": "云端：由 Sonic 3.5 驱动的低延迟自然 TTS。需要 API 密钥和网络连接。",
+      "apiKey": "API 密钥",
+      "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会被分享。",
+      "check": "检查",
+      "testEngine": "测试引擎"
+    },
+    "elevenlabs": {
+      "title": "ElevenLabs",
+      "description": "云端：高级 AI 语音合成，情感丰富，拥有 1000 多种语音并支持多语言。",
+      "apiKey": "API 密钥",
+      "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会被分享。",
+      "check": "检查",
+      "testEngine": "测试引擎"
+    },
+    "openai": {
+      "title": "OpenAI",
+      "description": "云端：通过 OpenAI API 提供高质量自然语音。需要 API 密钥和网络连接。",
+      "apiKey": "API 密钥",
+      "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会被分享。",
+      "check": "检查",
+      "testEngine": "测试引擎"
+    },
+    "google": {
+      "title": "Google",
+      "description": "云端：Gemini API 语音生成。需要 Google AI API 密钥。",
+      "apiKey": "API 密钥"
+    },
+    "microsoft": {
+      "title": "Microsoft Foundry",
+      "description": "云端：Microsoft Foundry Speech。需要区域端点和 API 密钥。",
+      "apiKey": "API 密钥",
+      "endpoint": "端点"
+    },
+    "http": {
+      "title": "HTTP",
+      "description": "云端：将合成请求发送到按配置文件设置的自定义 HTTP 端点。"
+    },
+    "uv": {
+      "title": "uv",
+      "description": "所有本地引擎的前提条件。安装程序使用 uv 获取并运行 Python TTS 包。"
+    },
+    "setup": {
+      "uvMissing": "未安装 uv。本地引擎需要它才能运行。",
+      "installUv": "安装 uv",
+      "install": "安装",
+      "installing": "正在安装...",
+      "tryAgain": "重试",
+      "openInstaller": "运行安装程序",
+      "installManage": "安装 / 管理"
+    },
+    "badges": {
+      "active": "使用中",
+      "default": "默认",
+      "offline": "离线",
+      "free": "免费",
+      "cloud": "云端",
+      "paid": "付费",
+      "freemium": "免费增值"
+    },
+    "info": {
+      "engineInformation": "引擎信息"
+    },
+    "loading": "正在加载引擎设置...",
+    "saveBar": {
+      "saving": "正在保存...",
+      "cancel": "取消",
+      "saveChanges": "保存更改"
+    },
+    "testVoice": {
+      "title": "测试语音",
+      "playing": "正在播放...",
+      "description": "用当前引擎播放一句简短的话"
+    },
+    "localEngine": {
+      "voice": "语音",
+      "kittenInstall": "在项目根目录运行 ./install-kittentts.ps1 以安装 Kitten TTS。模型会在首次使用时自动下载（约 25-80MB，视版本而定）。",
+      "pocketInstall": "在项目根目录运行 ./install-pocket.ps1 以安装 Pocket TTS。将为 pocket-tts 创建一个 uv 项目；模型权重在首次使用时下载。",
+      "piperModels": "模型文件（.onnx + .onnx.json）必须放在 {dataDir} 中。下载地址：",
+      "commandPreview": "命令预览",
+      "tempDirectory": "运行时解析为系统临时目录。",
+      "testEngine": "测试引擎",
+      "testing": "测试中...",
+      "engineWorking": "引擎工作正常",
+      "engineFailed": "引擎测试失败"
+    },
+    "openaiEngine": {
+      "model": "模型",
+      "modelTooltip": "用于语音合成的 OpenAI TTS 模型",
+      "voice": "语音",
+      "voiceTooltip": "语音合成所用的声音风格"
+    },
+    "cartesiaEngine": {
+      "model": "模型",
+      "modelTooltip": "用于语音合成的 Cartesia Sonic 模型",
+      "manualVoiceId": "手动输入语音 ID",
+      "manualVoiceIdTooltip": "启用后可粘贴自定义 Cartesia 语音 ID，而不是从已知语音中选择。",
+      "voice": "语音",
+      "voiceTooltip": "用于语音合成的已解析 Cartesia 语音名称",
+      "voiceId": "语音 ID",
+      "voiceIdTooltip": "Cartesia 语音 ID。Katie 是默认推荐的美式英语语音。",
+      "format": "格式",
+      "formatTooltip": "音频输出容器"
+    },
+    "elevenlabsEngine": {
+      "manualVoiceId": "手动输入语音 ID",
+      "manualVoiceIdTooltip": "切换为手动输入语音 ID，而不是从列表中选择",
+      "voiceId": "语音 ID",
+      "voiceIdPlaceholder": "例如 21m00Tcm4TlvDq8ikWAM",
+      "verify": "验证",
+      "verified": "已验证",
+      "cached": "已缓存",
+      "findVoices": "查找语音 ID：",
+      "voice": "语音",
+      "voiceTooltip": "从你的 ElevenLabs 语音库中选择",
+      "load": "加载",
+      "setupApiKeyFirst": "请先设置 API 密钥",
+      "clickLoadToFetch": "点击“加载”获取可用语音",
+      "setupApiKeyInSettings": "请先在设置中配置 API 密钥",
+      "model": "模型",
+      "modelTooltip": "用于语音合成的 AI 模型",
+      "format": "格式",
+      "formatTooltip": "音频输出格式",
+      "voiceSettings": "语音设置",
+      "stability": "稳定性",
+      "stabilityTooltip": "值越高语音越稳定，值越低变化越多",
+      "similarity": "相似度",
+      "similarityTooltip": "值越高越接近原始说话人",
+      "style": "风格",
+      "styleTooltip": "值越高语音越富表现力（设为 0 关闭）",
+      "speakerBoost": "说话人增强",
+      "speakerBoostTooltip": "提升语音输出的清晰度和质量"
+    },
+    "apiSetup": {
+      "title": "{engine} API 设置",
+      "description": "输入你的 API 密钥以启用 {engine} 文字转语音。",
+      "apiKey": "API 密钥",
+      "placeholderOpenai": "sk-...",
+      "placeholderElevenlabs": "xi-...",
+      "placeholderCartesia": "sk_car_...",
+      "placeholderGoogle": "AIza...",
+      "placeholderMicrosoft": "________________",
+      "endpointLabel": "端点",
+      "endpointPlaceholder": "https://<region>.tts.speech.microsoft.com/",
+      "installButton": "安装",
+      "installing": "正在安装...",
+      "checkButton": "检查",
+      "testButton": "测试",
+      "valid": "API 密钥有效",
+      "invalid": "API 密钥检查失败",
+      "testPassed": "引擎测试通过",
+      "testFailed": "引擎测试失败",
+      "cancel": "取消",
+      "save": "保存"
+    },
+    "error": {
+      "loadFailed": "无法加载引擎设置",
+      "loadDescription": "加载引擎配置时出错。"
+    }
+  },
+  "engines": {
+    "title": "引擎",
+    "subtitle": "设置 API 密钥、安装本地引擎，并测试每个引擎是否正常工作。语音设置位于“语音”页面。",
+    "cloud": "云端",
+    "local": "本地",
+    "docs": "文档",
+    "noCredentialNeeded": "无需 API 密钥。",
+    "daemonIdleTimeout": "空闲关闭",
+    "daemonIdleTimeoutHint": "常驻的本地引擎在这段时间内没有朗读时将关闭以释放内存。下次朗读会重新启动它（约为冷启动时间）。",
+    "installerSmokeTestHint": "安装后点击“测试”，确认引擎能合成音频。",
+    "installCuda": "安装 NVIDIA GPU 运行时",
+    "installCudaHint": "当配置文件使用 GPU 加速时启用。重新安装会更改引擎的运行时。",
+    "installFailed": "安装失败",
+    "saveBeforeTestFailed": "请先保存更改再测试。",
+    "installDone": "安装完成",
+    "retry": "重试",
+    "reinstall": "重新安装",
+    "voiceInstalled": "已安装",
+    "sharedModelHint": "只需下载一个共享模型；包含所列的全部语音。",
+    "installedAllVoices": "已安装——所有语音均可用。",
+    "piperPerVoiceHint": "选择要下载的语音（每个语音都是独立的模型）。",
+    "uninstall": "卸载",
+    "uninstallDone": "已卸载",
+    "uninstallFailed": "卸载失败",
+    "uninstallConfirm": "删除此引擎的文件和程序？已下载的模型将被删除。使用该引擎的配置文件在重新安装前将无法工作。",
+    "binaryHint": "安装一个命令行程序。无需下载模型。",
+    "binaryInstalled": "已安装，可以使用。"
+  },
+  "play": {
+    "title": "播放",
+    "placeholder": "输入或粘贴要生成的文本。",
+    "clear": "清空",
+    "play": "播放",
+    "pause": "暂停",
+    "resume": "继续",
+    "stop": "停止",
+    "replay": "重播",
+    "abort": "中止",
+    "listening": "监听中",
+    "paused": "已暂停",
+    "processing": "处理中...",
+    "history": "最近记录",
+    "noHistory": "暂无历史记录",
+    "truncated": "文本已截断",
+    "truncatedDescription": "文本已从 {original} 个字符截断为 {truncated} 个（上限：{max}）",
+    "characters": "{count} 个字符",
+    "replayTooltip": "重播上一段音频",
+    "playLatestTooltip": "播放历史记录中的最新一条",
+    "playTooltip": "播放",
+    "pauseTooltip": "暂停",
+    "resumeTooltip": "继续",
+    "stopTooltip": "停止",
+    "abortTooltip": "中止合成或播放",
+    "skipBackTooltip": "后退 5 秒",
+    "skipFwdTooltip": "前进 5 秒"
+  },
+  "history": {
+    "title": "历史记录",
+    "loading": "加载中...",
+    "empty": "暂无历史记录",
+    "fragments": "{count} 个片段",
+    "playSaved": "播放已保存的音频",
+    "reSynthesize": "重新合成并播放",
+    "reSynthesizeTooltip": "使用当前设置重新合成",
+    "delete": "从历史记录中删除",
+    "deleteAllFragments": "删除所有片段",
+    "playAll": "全部播放",
+    "playAllTooltip": "按顺序播放所有片段",
+    "playThisFragment": "播放此片段",
+    "noAudioFile": "无音频文件",
+    "deleteEntry": "删除此条目？",
+    "deleteBatch": "删除所有片段？",
+    "deleteBatchDescription": "这将永久删除此批次中的所有片段及其音频文件。此操作无法撤销。",
+    "deleteEntryWithFile": "这将永久删除该历史条目及其音频文件。此操作无法撤销。",
+    "deleteEntryOnly": "这将永久删除该历史条目。此操作无法撤销。",
+    "cancel": "取消",
+    "confirmDelete": "删除",
+    "toast": {
+      "playing": "正在播放历史记录中的音频",
+      "playingFragments": "正在播放所有片段",
+      "reSynthesizing": "正在重新合成并播放",
+      "deleted": "已从历史记录中删除",
+      "deletedBatch": "已从历史记录中删除该批次",
+      "failedToPlay": "播放失败",
+      "failedToReSpeak": "重新朗读失败",
+      "failedToDelete": "删除失败"
+    }
+  },
+  "toast": {
+    "success": {
+      "engineSaved": "引擎已保存",
+      "settingsSaved": "设置已保存",
+      "welcome": "欢迎使用 CopySpeak！",
+      "configSaved": "配置已保存！开始使用吧。",
+      "hudTest": "已触发 HUD 测试",
+      "historyCleanup": "历史记录清理完成",
+      "installerLaunched": "Kitten TTS 安装程序已在新窗口中启动",
+      "settingsCopied": "设置已复制到剪贴板",
+      "settingsDownloaded": "设置已下载",
+      "settingsImported": "设置导入成功",
+      "settingsReset": "设置已重置——重新开始设置",
+      "synthesisAborted": "合成已中止"
+    },
+    "error": {
+      "loadSettings": "无法加载设置",
+      "saveSettings": "无法保存设置",
+      "loadConfig": "无法加载配置",
+      "saveConfig": "无法保存设置",
+      "voiceTest": "语音测试失败",
+      "hudTest": "HUD 测试失败",
+      "cleanup": "清理失败",
+      "installer": "无法运行安装程序",
+      "switchEngine": "无法切换引擎"
+    },
+    "info": {
+      "httpEngineRemoved": "HTTP 引擎已移除，已切换到本地引擎。"
+    }
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "欢迎使用 CopySpeak",
+      "subtitle": "配置文字转语音引擎即可开始，也可以跳过，稍后再设置。"
+    },
+    "engineConfig": "引擎配置",
+    "engineDescription": "设置你的 TTS 引擎。之后可在“引擎”标签页中更改。",
+    "recommendation": {
+      "title": "推荐从 Kitten TTS 开始",
+      "description": "Kitten TTS 是一款新的超轻量 TTS 引擎（25-80MB），无需 GPU 即可在 CPU 上运行。点击下方按钮即可自动安装——无需手动设置。"
+    },
+    "install": "安装 Kitten TTS",
+    "installing": "正在安装...",
+    "skip": "暂时跳过",
+    "complete": "开始使用",
+    "loading": "正在加载配置...",
+    "installed": "已安装！",
+    "openTerminal": "打开 PowerShell 终端",
+    "checkingEngine": "正在检查引擎...",
+    "helpText": "你随时可以在“引擎”标签页中配置引擎。"
+  },
+  "effects": {
+    "title": "音频效果",
+    "description": "为 TTS 播放应用后处理效果。效果实时生效，不会修改已保存的音频。",
+    "preview": "试听",
+    "previewing": "试听中...",
+    "activeTooltip": "应用于每次 TTS 播放的效果。即时切换，无需重启。"
+  },
+  "landing": {
+    "hero": {
+      "title": "CopySpeak",
+      "subtitle": "现代 AI TTS 编排器",
+      "description": "一款轻量的跨平台应用，使用 AI 文字转语音引擎朗读剪贴板中的文本。",
+      "download": "下载适合你平台的版本",
+      "github": "在 GitHub 上查看",
+      "version": "v{version}"
+    },
+    "features": {
+      "title": "功能",
+      "doubleCopy": {
+        "title": "双击复制触发",
+        "description": "1.5 秒内复制文本两次，即可立即朗读。无需快捷键。"
+      },
+      "engines": {
+        "title": "9 种 TTS 引擎",
+        "description": "OpenAI、ElevenLabs、Cartesia、Google、Microsoft、HTTP 以及本地 CLI 引擎（Piper、Kokoro、Kitten）。"
+      },
+      "hud": {
+        "title": "HUD 浮层",
+        "description": "播放时显示带实时波形的悬浮抬头显示。"
+      },
+      "history": {
+        "title": "历史记录",
+        "description": "永久保存的 TTS 生成历史，支持播放、批次管理和音频导出。"
+      },
+      "sanitization": {
+        "title": "文本清理",
+        "description": "自动去除 Markdown、展开网址并规范化文本，让朗读更清晰。"
+      },
+      "configurable": {
+        "title": "高度可配置",
+        "description": "播放速度、音量、音调、触发方式、外观等均可调整。支持深色和浅色主题。"
+      }
+    },
+    "screenshots": {
+      "title": "截图",
+      "subtitle": "看看 CopySpeak 的实际效果",
+      "caption": "CopySpeak v0.1.8——带“播放”标签页的主界面"
+    },
+    "footer": {
+      "github": "GitHub",
+      "license": "MIT 许可证",
+      "madeWith": "使用 Rust、Svelte 和 AI 打造。"
+    }
+  },
+  "footer": {
+    "listening": "监听中",
+    "paused": "已暂停",
+    "switchEngine": "切换 TTS 引擎。当前引擎：{engine}",
+    "available": "可用",
+    "unavailable": "不可用——请检查配置",
+    "error": "检查可用性时出错",
+    "notChecked": "未检查——点击切换"
+  }
+}
