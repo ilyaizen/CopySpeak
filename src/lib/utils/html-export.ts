@@ -1,3 +1,5 @@
+import { _ } from "svelte-i18n";
+import { get } from "svelte/store";
 import type { HistoryItem, HistoryStatistics } from "#lib/types";
 import {
   generateHistoryHtmlPage,
@@ -42,7 +44,7 @@ export async function exportHistoryToHtml(
     onProgress?.({
       stage: "generating",
       percent: 0,
-      message: "Generating HTML content..."
+      message: get(_)("htmlExport.generating")
     });
 
     const htmlOptions: HtmlExportOptions = {
@@ -84,13 +86,13 @@ export async function exportHistoryToHtml(
     onProgress?.({
       stage: "generating",
       percent: 80,
-      message: "HTML generated successfully"
+      message: get(_)("htmlExport.generated")
     });
 
     onProgress?.({
       stage: "downloading",
       percent: 85,
-      message: "Preparing download..."
+      message: get(_)("htmlExport.preparing")
     });
 
     const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
@@ -106,13 +108,17 @@ export async function exportHistoryToHtml(
     onProgress?.({
       stage: "complete",
       percent: 100,
-      message: "Export complete"
+      message: get(_)("htmlExport.complete")
     });
   } catch (error) {
     onProgress?.({
       stage: "error",
       percent: 0,
-      message: `Export failed: ${error instanceof Error ? error.message : "Unknown error"}`
+      message: get(_)("htmlExport.failed", {
+        values: {
+          error: error instanceof Error ? error.message : get(_)("htmlExport.unknownError")
+        }
+      })
     });
     throw error;
   }

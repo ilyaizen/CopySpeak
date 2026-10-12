@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import { Button } from "#lib/components/ui/button/index.js";
   import {
     DropdownMenu,
@@ -311,7 +312,7 @@
       }
       voicesByEngine = next;
     } catch (err) {
-      toast.error(`Could not load engine catalog: ${err}`);
+      toast.error($_("profiles.toast.catalogFailed", { values: { error: String(err) } }));
     } finally {
       catalogLoading = false;
     }
@@ -323,9 +324,9 @@
       // SAFETY: list_tts_voices serializes the Rust catalog as VoiceCatalogEntry[].
       const voices = (await invoke("list_tts_voices", { engine })) as VoiceCatalogEntry[];
       voicesByEngine = { ...voicesByEngine, [engine]: voices };
-      toast.success(`Loaded ${voices.length} voice${voices.length === 1 ? "" : "s"}`);
+      toast.success($_("profiles.toast.voicesLoaded", { values: { count: voices.length } }));
     } catch (err) {
-      toast.error(`Voice refresh failed: ${err}`);
+      toast.error($_("profiles.toast.voiceRefreshFailed", { values: { error: String(err) } }));
     } finally {
       voicesLoadingFor = null;
     }
@@ -527,7 +528,7 @@
     copy.name = `${active.name} copy`;
     localConfig.tts.profiles = [...profiles, copy];
     selectProfile(copy.id);
-    toast.success("Profile duplicated");
+    toast.success($_("profiles.toast.duplicated"));
   }
 
   function deleteActive() {
@@ -540,7 +541,7 @@
     localConfig.tts.profiles = profiles.filter((p: VoiceProfile) => p.id !== active.id);
     selectProfile(localConfig.tts.profiles[0]?.id ?? "default");
     dialogMode = null;
-    toast.success("Profile deleted");
+    toast.success($_("profiles.toast.deleted"));
   }
 
   function openExportDialog() {
@@ -559,7 +560,7 @@
     localConfig.tts.profiles = [...profiles, imported];
     selectProfile(imported.id);
     dialogMode = null;
-    toast.success(`Imported "${imported.name}"`);
+    toast.success($_("profiles.toast.imported", { values: { name: imported.name } }));
   }
 
   function newFromPreset(preset: (typeof BUILTIN_PROFILE_PRESETS)[number]) {
@@ -577,7 +578,7 @@
     };
     localConfig.tts.profiles = [...profiles, profile];
     selectProfile(profile.id);
-    toast.success(`Created "${profile.name}"`);
+    toast.success($_("profiles.toast.created", { values: { name: profile.name } }));
   }
 
   function applyLocalTemplate(id: string) {
@@ -601,7 +602,7 @@
   <!-- Header: title + actions -->
   <div class="border-border flex flex-wrap items-center justify-between gap-3 border-b pb-4">
     <div>
-      <h2 class="text-lg font-semibold">Voice Profiles</h2>
+      <h2 class="text-lg font-semibold">{$_("profiles.title")}</h2>
       <p class="text-muted-foreground mt-1 text-sm">
         Named presets bundling engine, voice, speed, pitch and effect.
       </p>
@@ -610,8 +611,8 @@
       <DropdownMenu>
         <DropdownMenuTrigger
           class="border-input bg-background hover:bg-accent inline-flex h-8 items-center justify-center rounded-md border px-2"
-          title="New profile from template"
-          aria-label="New profile from template"
+          title={$_("profiles.newFromTemplate")}
+          aria-label={$_("profiles.newFromTemplate")}
         >
           <Plus size={14} />
         </DropdownMenuTrigger>
@@ -623,13 +624,13 @@
           {/each}
         </DropdownMenuContent>
       </DropdownMenu>
-      <Button variant="outline" size="sm" onclick={duplicateActive} title="Duplicate">
+      <Button variant="outline" size="sm" onclick={duplicateActive} title={$_("common.duplicate")}>
         <Copy size={14} />
       </Button>
-      <Button variant="outline" size="sm" onclick={openExportDialog} title="Export">
+      <Button variant="outline" size="sm" onclick={openExportDialog} title={$_("common.export")}>
         <Download size={14} />
       </Button>
-      <Button variant="outline" size="sm" onclick={openImportDialog} title="Import">
+      <Button variant="outline" size="sm" onclick={openImportDialog} title={$_("common.import")}>
         <Upload size={14} />
       </Button>
       <Button
@@ -637,7 +638,7 @@
         size="sm"
         onclick={deleteActive}
         disabled={!active || active.id === "default"}
-        title="Delete"
+        title={$_("common.delete")}
       >
         <Trash2 size={14} />
       </Button>
@@ -645,7 +646,7 @@
   </div>
 
   <div class="space-y-1 border-b py-4">
-    <SettingRow label="Active Profile">
+    <SettingRow label={$_("profiles.activeProfile")}>
       <Select
         options={profileOptions}
         value={activeId}
@@ -662,7 +663,7 @@
         <p class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
           Identity
         </p>
-        <SettingRow label="Name">
+        <SettingRow label={$_("common.name")}>
           <Input bind:value={localConfig.tts.profiles[activeIndex].name} class="w-56" />
         </SettingRow>
       </section>
@@ -672,7 +673,7 @@
         <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
           Engine & Voice
         </p>
-        <SettingRow label="Engine">
+        <SettingRow label={$_("common.engine")}>
           <div class="w-56 space-y-1">
             <Select
               options={engineOptions}
@@ -699,10 +700,7 @@
         </SettingRow>
 
         {#if active.engine === "local"}
-          <SettingRow
-            label="Start from"
-            tooltip="Prefill command/arguments/voice from a known engine. Editing afterward never changes the template."
-          >
+          <SettingRow label={$_("profiles.startFrom")} tooltip={$_("profiles.templateTooltip")}>
             <Select
               options={LOCAL_TEMPLATES.map((t) => ({ value: t.id, label: t.label }))}
               value="blank"
@@ -713,7 +711,7 @@
         {/if}
 
         {#if showPicker}
-          <SettingRow label="Voice" tooltip="Known voices from the engine catalog or provider API.">
+          <SettingRow label={$_("common.voice")} tooltip={$_("profiles.voiceTooltip")}>
             <VoicePicker
               voices={activeVoiceCatalog}
               value={active.voice}
@@ -741,7 +739,7 @@
           <Input
             bind:ref={manualRef}
             value={localConfig.tts.profiles[activeIndex].voice}
-            placeholder="provider default"
+            placeholder={$_("profiles.providerDefault")}
             disabled={manualLocked}
             onchange={(e) => setVoice(activeIndex, (e.target as HTMLInputElement).value)}
             class="w-56"
@@ -751,8 +749,10 @@
 
       <!-- Sound -->
       <section class="border-border space-y-3 border-b pb-5">
-        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Sound</p>
-        <SettingRow label="Speed">
+        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+          {$_("profiles.sound")}
+        </p>
+        <SettingRow label={$_("common.speed")}>
           <div class="flex w-56 items-center gap-2">
             <span class="text-muted-foreground w-12 shrink-0 text-end text-xs tabular-nums">
               {(speedLive ?? active.speed).toFixed(2)}x
@@ -770,7 +770,7 @@
             />
           </div>
         </SettingRow>
-        <SettingRow label="Pitch">
+        <SettingRow label={$_("common.pitch")}>
           <div class="flex w-56 items-center gap-2">
             <span class="text-muted-foreground w-12 shrink-0 text-end text-xs tabular-nums">
               {(pitchLive ?? active.pitch).toFixed(2)}x
@@ -788,7 +788,7 @@
             />
           </div>
         </SettingRow>
-        <SettingRow label="Effect">
+        <SettingRow label={$_("common.effect")}>
           <Select
             options={effectOptions}
             value={active.effects.active_effect}

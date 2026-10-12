@@ -55,7 +55,7 @@
       await navigator.clipboard.writeText(exportJson);
       toast.success($_("toast.success.settingsCopied"));
     } catch (e) {
-      toast.error("Failed to copy to clipboard");
+      toast.error($_("toast.error.copyToClipboard"));
     }
   }
 
@@ -147,13 +147,16 @@
       await goto("/onboarding");
     } catch (e) {
       console.error("Failed to reset config:", e);
-      toast.error(`Failed to reset settings: ${e}`);
+      toast.error($_("toast.error.resetSettings", { values: { error: String(e) } }));
     }
   }
 </script>
 
 <!-- Settings: unified Export / Import / Reset -->
-<SettingRow label="Import / Export" tooltip="Export, import, or reset your settings">
+<SettingRow
+  label={$_("settings.sections.importExport")}
+  tooltip={$_("settings.importExport.tooltip")}
+>
   <div class="flex gap-2">
     <Button variant="outline" size="sm" onclick={openExportDialog}>
       <Upload class="me-1.5" size={14} />
@@ -177,8 +180,8 @@
       class="bg-card border-border flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border"
     >
       <div class="border-border border-b p-4">
-        <h3 class="text-lg font-semibold">Export Settings</h3>
-        <p class="text-muted-foreground text-sm">Copy the JSON below or download it as a file</p>
+        <h3 class="text-lg font-semibold">{$_("settings.importExport.exportTitle")}</h3>
+        <p class="text-muted-foreground text-sm">{$_("settings.importExport.exportDescription")}</p>
       </div>
 
       <div class="flex-1 overflow-hidden p-4">
@@ -189,7 +192,7 @@
       </div>
 
       <div class="border-border flex justify-end gap-2 border-t p-4">
-        <Button variant="outline" onclick={closeExportDialog}>Close</Button>
+        <Button variant="outline" onclick={closeExportDialog}>{$_("common.close")}</Button>
         <Button variant="outline" onclick={copyToClipboard}>
           <Copy class="me-2" size={16} />
           Copy
@@ -210,8 +213,8 @@
       class="bg-card border-border flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border"
     >
       <div class="border-border border-b p-4">
-        <h3 class="text-lg font-semibold">Import Settings</h3>
-        <p class="text-muted-foreground text-sm">Paste settings JSON below or upload a file</p>
+        <h3 class="text-lg font-semibold">{$_("settings.importExport.importTitle")}</h3>
+        <p class="text-muted-foreground text-sm">{$_("settings.importExport.importDescription")}</p>
       </div>
 
       <div class="flex-1 space-y-4 overflow-hidden p-4">
@@ -232,7 +235,7 @@
 
         <textarea
           class="bg-background border-border focus:ring-ring h-48 w-full resize-none rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
-          placeholder="Paste settings JSON here..."
+          placeholder={$_("settings.importExport.pastePlaceholder")}
           bind:value={importJson}></textarea>
 
         {#if importError}
@@ -243,7 +246,7 @@
       </div>
 
       <div class="border-border flex justify-end gap-2 border-t p-4">
-        <Button variant="outline" onclick={closeImportDialog}>Cancel</Button>
+        <Button variant="outline" onclick={closeImportDialog}>{$_("common.cancel")}</Button>
         <Button onclick={validateAndImport} disabled={isImporting || !importJson.trim()}>
           {#if isImporting}
             Importing...
@@ -261,14 +264,18 @@
 {#if showResetDialog}
   <div use:portal class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
     <div class="bg-card border-border w-full max-w-sm rounded-lg border p-6">
-      <h3 class="mb-2 text-lg font-semibold">Reset All Settings?</h3>
+      <h3 class="mb-2 text-lg font-semibold">{$_("settings.importExport.resetTitle")}</h3>
       <p class="text-muted-foreground mb-6">
         This will restore all settings to their default values and open the initial setup wizard.
         This action cannot be undone.
       </p>
       <div class="flex justify-end gap-2">
-        <Button variant="outline" onclick={() => (showResetDialog = false)}>Cancel</Button>
-        <Button variant="destructive" onclick={handleReset}>Reset &amp; Restart Setup</Button>
+        <Button variant="outline" onclick={() => (showResetDialog = false)}
+          >{$_("common.cancel")}</Button
+        >
+        <Button variant="destructive" onclick={handleReset}
+          >{$_("settings.importExport.resetConfirm")}</Button
+        >
       </div>
     </div>
   </div>

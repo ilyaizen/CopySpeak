@@ -12,7 +12,7 @@
 <section class="border-border bg-background border-b px-6 py-16 sm:py-24">
   <div class="mx-auto max-w-4xl text-center">
     <div class="mb-8 flex justify-center">
-      <img src="/app-logo.png" alt="CopySpeak Logo" class="h-24 w-24 sm:h-32 sm:w-32" />
+      <img src="/app-logo.png" alt={$_("app.logoAlt")} class="h-24 w-24 sm:h-32 sm:w-32" />
     </div>
 
     <h1 class="text-foreground font-mono text-4xl font-bold tracking-tight sm:text-6xl">

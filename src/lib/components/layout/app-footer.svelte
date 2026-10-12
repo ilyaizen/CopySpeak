@@ -79,7 +79,7 @@
       await checkActiveProfileAvailability(true);
     } catch (e) {
       console.error("Failed to switch profile:", e);
-      toast.error(`Failed to switch profile: ${e}`);
+      toast.error($_("toast.error.switchProfile", { values: { error: String(e) } }));
     }
   }
 

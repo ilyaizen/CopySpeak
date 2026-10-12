@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import Progress from "#lib/components/ui/progress/progress.svelte";
 
   let { durationMs }: { durationMs: number } = $props();
@@ -8,7 +9,7 @@
 </script>
 
 <div class="clipboard-notification">
-  <span class="clipboard-title">Clipboard Copied</span>
+  <span class="clipboard-title">{$_("hud.clipboardCopied")}</span>
   <Progress value={100} max={100} class="progress-bar" style="--duration: {durationSec}s" />
 </div>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { Slider } from "#lib/components/ui/slider/index.js";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
@@ -45,26 +46,30 @@
   {/if}
   {#if config}
     <!-- Double-copy listener toggle — uses onchange (not bind) because state lives in the store, not config -->
-    <SettingRow label="Double-copy" tooltip="Monitor clipboard for double-copy">
+    <SettingRow label={$_("quick.doubleCopy")} tooltip={$_("quick.doubleCopyTooltip")}>
       <Switch
         id="listen-double-copy"
-        aria-label="Double-copy"
+        aria-label={$_("quick.doubleCopy")}
         checked={isListening}
         onchange={handleToggle}
       />
     </SettingRow>
     <!-- Global hotkey toggle — binds directly to config since it's a persistent preference -->
     <SettingRow
-      label="Hotkey"
+      label={$_("common.hotkey")}
       tooltip={config.hotkey.shortcut || "Speak clipboard with a keyboard shortcut"}
     >
-      <Switch id="qs-hotkey" aria-label="Hotkey" bind:checked={config.hotkey.enabled} />
+      <Switch
+        id="qs-hotkey"
+        aria-label={$_("common.hotkey")}
+        bind:checked={config.hotkey.enabled}
+      />
     </SettingRow>
     <!-- Effects toggle — binds to active profile's effects -->
-    <SettingRow label="Effects" tooltip="Apply audio effect to TTS playback">
+    <SettingRow label={$_("common.effects")} tooltip={$_("quick.effectsTooltip")}>
       <Switch
         id="qs-effects"
-        aria-label="Effects"
+        aria-label={$_("common.effects")}
         disabled={!activeProfile}
         checked={profileEffectsEnabled}
         onchange={() => {
@@ -78,11 +83,11 @@
       />
     </SettingRow>
     <!-- Volume slider — 0–100% range with integer steps for precise control -->
-    <SettingRow label="Volume">
+    <SettingRow label={$_("common.volume")}>
       <div class="flex w-28 items-center gap-2">
         <Slider
           id="qs-volume"
-          aria-label="Volume"
+          aria-label={$_("common.volume")}
           min={0}
           max={100}
           step={1}
@@ -94,11 +99,11 @@
       </div>
     </SettingRow>
     <!-- Speed slider — reads from active profile -->
-    <SettingRow label="Speed">
+    <SettingRow label={$_("common.speed")}>
       <div class="flex w-28 items-center gap-2">
         <Slider
           id="qs-speed"
-          aria-label="Speed"
+          aria-label={$_("common.speed")}
           disabled={!activeProfile}
           min={0.5}
           max={1.5}
@@ -116,11 +121,11 @@
       </div>
     </SettingRow>
     <!-- Pitch slider — reads from active profile -->
-    <SettingRow label="Pitch">
+    <SettingRow label={$_("common.pitch")}>
       <div class="flex w-28 items-center gap-2">
         <Slider
           id="qs-pitch"
-          aria-label="Pitch"
+          aria-label={$_("common.pitch")}
           disabled={!activeProfile}
           min={0.75}
           max={1.25}

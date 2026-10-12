@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Switch } from "#lib/components/ui/switch/index.js";
   import HotkeyCapture from "#lib/components/hotkey-capture.svelte";
@@ -22,14 +23,14 @@
 </script>
 
 <div class="space-y-4">
-  <SettingRow label="Enable Global Hotkey" tooltip="Trigger TTS from any application">
+  <SettingRow label={$_("settings.hotkey.enable")} tooltip={$_("settings.hotkey.enableTooltip")}>
     <Switch id="hotkey-enabled" bind:checked={localConfig.hotkey.enabled} />
   </SettingRow>
 
   {#if localConfig.hotkey.enabled}
     <SettingRow
-      label="Global Hotkey"
-      tooltip="Press a key combination to set. Requires at least one modifier (Ctrl, Alt, Shift, Win)."
+      label={$_("settings.hotkey.globalHotkey")}
+      tooltip={$_("settings.hotkey.globalHotkeyTooltip")}
     >
       <HotkeyCapture
         value={localConfig.hotkey.shortcut}

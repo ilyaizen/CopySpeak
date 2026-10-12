@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "CopySpeak",
-    "tagline": "आपके क्लिपबोर्ड के लिए AI टेक्स्ट-टू-स्पीच"
+    "tagline": "आपके क्लिपबोर्ड के लिए AI टेक्स्ट-टू-स्पीच",
+    "logoAlt": "CopySpeak लोगो"
   },
   "nav": {
     "play": "चलाएँ",
@@ -14,7 +15,8 @@
     "engines": "इंजन",
     "history": "इतिहास",
     "settings": "सेटिंग्स",
-    "tagline": "आपके क्लिपबोर्ड के लिए AI टेक्स्ट-टू-स्पीच"
+    "tagline": "आपके क्लिपबोर्ड के लिए AI टेक्स्ट-टू-स्पीच",
+    "navAria": "मुख्य नेविगेशन"
   },
   "common": {
     "loading": "लोड हो रहा है...",
@@ -32,7 +34,23 @@
     "error": "त्रुटि",
     "success": "सफल",
     "warning": "चेतावनी",
-    "info": "जानकारी"
+    "info": "जानकारी",
+    "delete": "हटाएं",
+    "duplicate": "डुप्लिकेट करें",
+    "export": "निर्यात",
+    "import": "आयात",
+    "name": "नाम",
+    "engine": "इंजन",
+    "voice": "आवाज़",
+    "speed": "गति",
+    "pitch": "पिच",
+    "effect": "प्रभाव",
+    "effects": "प्रभाव",
+    "hotkey": "हॉटकी",
+    "volume": "वॉल्यूम",
+    "toggleTheme": "थीम बदलें",
+    "tryAgain": "फिर से कोशिश करें",
+    "moreInfo": "अधिक जानकारी"
   },
   "settings": {
     "title": "सेटिंग्स",
@@ -97,7 +115,12 @@
       "debugMode": "डीबग मोड",
       "updateChecks": "अपडेट अपने-आप जाँचें",
       "autoSave": "बदलाव अपने-आप सहेजें",
-      "autoSaveDescription": "सेटिंग्स, इंजन और आवाज़ें पेज पर आख़िरी बदलाव के 800ms बाद अपने-आप सहेजें — सहेजें/रद्द करें बार के बिना"
+      "autoSaveDescription": "सेटिंग्स, इंजन और आवाज़ें पेज पर आख़िरी बदलाव के 800ms बाद अपने-आप सहेजें — सहेजें/रद्द करें बार के बिना",
+      "launchOnLoginTooltip": "लॉग इन करने पर CopySpeak लॉन्च करें",
+      "startMinimizedLabel": "छोटा करके शुरू करें",
+      "startMinimizedTooltip": "एप्लिकेशन को सिस्टम ट्रे में छोटा करके शुरू करें",
+      "minimizeToTray": "बंद करने पर ट्रे में छोटा करें",
+      "minimizeToTrayTooltip": "विंडो बंद करने पर एप्लिकेशन बंद करने के बजाय सिस्टम ट्रे में छोटा करें"
     },
     "playback": {
       "title": "प्लेबैक सेटिंग्स",
@@ -308,7 +331,34 @@
         "title": "कस्टम HTTP इंजन",
         "description": "सामान्य HTTP/REST TTS बैकएंड",
         "detail": "अपना बैकएंड लाने वाला इंजन, जो कॉन्फ़िगर करने योग्य URL टेम्पलेट और प्रमाणीकरण के साथ किसी भी HTTP एंडपॉइंट को कॉल करता है।"
-      }
+      },
+      "checkUpdates": "अपडेट जाँचें",
+      "checkUpdatesTooltip": "स्टार्टअप पर स्वचालित रूप से नए संस्करण जाँचें",
+      "updateStatus": "अपडेट स्थिति",
+      "debugMode": "डीबग मोड",
+      "debugModeTooltip": "विस्तृत लॉगिंग और अतिरिक्त स्थिति जानकारी सक्षम करें",
+      "refreshing": "ताज़ा किया जा रहा है...",
+      "noLogs": "कोई लॉग उपलब्ध नहीं"
+    },
+    "importExport": {
+      "tooltip": "अपनी सेटिंग्स निर्यात, आयात या रीसेट करें",
+      "exportTitle": "सेटिंग्स निर्यात करें",
+      "exportDescription": "नीचे दिया JSON कॉपी करें या फ़ाइल के रूप में डाउनलोड करें",
+      "importTitle": "सेटिंग्स आयात करें",
+      "importDescription": "नीचे सेटिंग्स JSON चिपकाएँ या फ़ाइल अपलोड करें",
+      "pastePlaceholder": "सेटिंग्स JSON यहाँ चिपकाएँ...",
+      "resetTitle": "सभी सेटिंग्स रीसेट करें?",
+      "resetConfirm": "रीसेट करें और सेटअप फिर से शुरू करें"
+    },
+    "appearance": {
+      "theme": "थीम",
+      "themeTooltip": "अपनी पसंदीदा रंग थीम चुनें"
+    },
+    "hotkey": {
+      "enable": "वैश्विक हॉटकी सक्षम करें",
+      "enableTooltip": "किसी भी एप्लिकेशन से TTS शुरू करें",
+      "globalHotkey": "वैश्विक हॉटकी",
+      "globalHotkeyTooltip": "सेट करने के लिए कुंजी संयोजन दबाएँ। कम से कम एक मॉडिफ़ायर आवश्यक है (Ctrl, Alt, Shift, Win)।"
     }
   },
   "engine": {
@@ -550,7 +600,12 @@
     "stopTooltip": "बंद करें",
     "abortTooltip": "सिंथेसिस या प्लेबैक निरस्त करें",
     "skipBackTooltip": "5 सेकंड पीछे",
-    "skipFwdTooltip": "5 सेकंड आगे"
+    "skipFwdTooltip": "5 सेकंड आगे",
+    "readAloud": "ज़ोर से पढ़ें",
+    "nowReadingAria": "अभी पढ़ा जा रहा है",
+    "textLabel": "ज़ोर से पढ़े जाने वाला टेक्स्ट",
+    "controlsAria": "पढ़ने के नियंत्रण",
+    "restored": "टेक्स्ट, आवाज़ और गति पुनर्स्थापित हुए। पिच और प्रभाव वर्तमान प्रोफ़ाइल का उपयोग करते हैं।"
   },
   "history": {
     "title": "इतिहास",
@@ -582,7 +637,21 @@
       "failedToPlay": "चलाने में विफल",
       "failedToReSpeak": "फिर से बोलने में विफल",
       "failedToDelete": "हटाने में विफल"
-    }
+    },
+    "deleteEntryTooltip": "प्रविष्टि हटाएं",
+    "confirmDeleteEntry": "इस इतिहास प्रविष्टि को हटाएँ? यह क्रिया पूर्ववत नहीं की जा सकती।",
+    "meta": {
+      "engine": "इंजन:",
+      "voice": "आवाज़:",
+      "duration": "अवधि:",
+      "length": "लंबाई:",
+      "attempts": "प्रयास:",
+      "app": "ऐप:",
+      "output": "आउटपुट:"
+    },
+    "searchPlaceholder": "टेक्स्ट सामग्री में खोजें...",
+    "filters": "फ़िल्टर",
+    "activeFilters": "सक्रिय फ़िल्टर:"
   },
   "toast": {
     "success": {
@@ -597,7 +666,8 @@
       "settingsDownloaded": "सेटिंग्स डाउनलोड हुईं",
       "settingsImported": "सेटिंग्स सफलतापूर्वक आयात हुईं",
       "settingsReset": "सेटिंग्स रीसेट हुईं — नया सेटअप शुरू",
-      "synthesisAborted": "सिंथेसिस निरस्त किया गया"
+      "synthesisAborted": "सिंथेसिस निरस्त किया गया",
+      "voicesSaved": "आवाज़ें सफलतापूर्वक सहेजी गईं"
     },
     "error": {
       "loadSettings": "सेटिंग्स लोड नहीं हो सकीं",
@@ -608,7 +678,19 @@
       "hudTest": "HUD परीक्षण विफल",
       "cleanup": "सफ़ाई विफल",
       "installer": "इंस्टॉलर नहीं चल सका",
-      "switchEngine": "इंजन बदला नहीं जा सका"
+      "switchEngine": "इंजन बदला नहीं जा सका",
+      "kokoroInstallFailed": "Kokoro इंस्टॉल विफल — कोई अन्य इंजन चुनें, या इंस्टॉल फिर से आज़माएँ।",
+      "kokoroInstallStart": "Kokoro इंस्टॉल शुरू नहीं हो सका: {error}",
+      "saveFailed": "सेटिंग्स सहेजना विफल रहा: {error}",
+      "cleanupFailed": "सफ़ाई विफल रही: {error}",
+      "hotkeyRegistration": "हॉटकी पंजीकरण विफल रहा: {error}",
+      "switchProfile": "प्रोफ़ाइल बदलना विफल रहा: {error}",
+      "resetSettings": "सेटिंग्स रीसेट करना विफल रहा: {error}",
+      "copyToClipboard": "क्लिपबोर्ड पर कॉपी करना विफल रहा",
+      "voicesSave": "सहेजना विफल रहा: {error}",
+      "effectsLoad": "प्रभाव लोड करना विफल रहा: {error}",
+      "effectSave": "प्रभाव सहेजना विफल रहा: {error}",
+      "previewFailed": "पूर्वावलोकन विफल रहा: {error}"
     },
     "info": {
       "httpEngineRemoved": "HTTP इंजन हटा दिया गया है। लोकल इंजन पर स्विच किया गया।"
@@ -633,7 +715,10 @@
     "installed": "इंस्टॉल हो गया!",
     "openTerminal": "PowerShell टर्मिनल खोलें",
     "checkingEngine": "इंजन जाँचा जा रहा है...",
-    "helpText": "आप बाद में कभी भी इंजन टैब से अपना इंजन कॉन्फ़िगर कर सकते हैं।"
+    "helpText": "आप बाद में कभी भी इंजन टैब से अपना इंजन कॉन्फ़िगर कर सकते हैं।",
+    "chooseEngine": "अपना वॉइस इंजन चुनें",
+    "installingKokoro": "Kokoro इंस्टॉल हो रहा है… (~335 MB, एक बार)",
+    "installFailed": "इंस्टॉल विफल रहा।"
   },
   "effects": {
     "title": "ऑडियो इफ़ेक्ट",
@@ -681,7 +766,8 @@
     "screenshots": {
       "title": "स्क्रीनशॉट",
       "subtitle": "CopySpeak को काम करते देखें",
-      "caption": "CopySpeak v0.1.8 — चलाएँ टैब के साथ मुख्य इंटरफ़ेस"
+      "caption": "CopySpeak v0.1.8 — चलाएँ टैब के साथ मुख्य इंटरफ़ेस",
+      "alt": "CopySpeak का स्क्रीनशॉट"
     },
     "footer": {
       "github": "GitHub",
@@ -697,5 +783,108 @@
     "unavailable": "अनुपलब्ध - कॉन्फ़िगरेशन जाँचें",
     "error": "उपलब्धता जाँचने में त्रुटि",
     "notChecked": "जाँचा नहीं गया - बदलने के लिए क्लिक करें"
+  },
+  "profiles": {
+    "title": "आवाज़ प्रोफ़ाइल",
+    "sound": "ध्वनि",
+    "newFromTemplate": "टेम्पलेट से नई प्रोफ़ाइल",
+    "activeProfile": "सक्रिय प्रोफ़ाइल",
+    "startFrom": "इससे शुरू करें",
+    "voiceTooltip": "इंजन कैटलॉग या प्रदाता API से ज्ञात आवाज़ें।",
+    "providerDefault": "प्रदाता का डिफ़ॉल्ट",
+    "importPlaceholder": "प्रोफ़ाइल JSON यहाँ चिपकाएँ...",
+    "toast": {
+      "copied": "क्लिपबोर्ड पर कॉपी हुआ",
+      "copyFailed": "कॉपी करना विफल रहा",
+      "downloaded": "डाउनलोड हो गया",
+      "duplicated": "प्रोफ़ाइल डुप्लिकेट किया गया",
+      "deleted": "प्रोफ़ाइल हटाई गई",
+      "imported": "\"{name}\" आयात किया गया",
+      "created": "\"{name}\" बनाया गया",
+      "catalogFailed": "इंजन कैटलॉग लोड नहीं हो सका: {error}",
+      "voicesLoaded": "लोड की गई आवाज़ें: {count}",
+      "voiceRefreshFailed": "आवाज़ों को ताज़ा करना विफल रहा: {error}"
+    },
+    "templateTooltip": "किसी ज्ञात इंजन से कमांड/आर्गुमेंट/आवाज़ पहले से भरें। बाद में संपादन से टेम्पलेट कभी नहीं बदलता।"
+  },
+  "voicePicker": {
+    "select": "आवाज़ चुनें…",
+    "search": "आवाज़ें खोजें…",
+    "customId": "कस्टम / मैन्युअल आईडी…"
+  },
+  "hotkey": {
+    "set": "सेट करें",
+    "setAria": "वैश्विक हॉटकी सेट करें",
+    "clearAria": "हॉटकी साफ़ करें"
+  },
+  "quick": {
+    "doubleCopy": "डबल-कॉपी",
+    "doubleCopyTooltip": "डबल-कॉपी के लिए क्लिपबोर्ड की निगरानी करें",
+    "effectsTooltip": "TTS प्लेबैक पर ऑडियो प्रभाव लागू करें"
+  },
+  "recent": {
+    "viewAll": "पूरा इतिहास देखें",
+    "allEngines": "सभी इंजन",
+    "allStatuses": "सभी स्थितियाँ",
+    "savedAudio": "सहेजा गया ऑडियो",
+    "failed": "विफल",
+    "searchAria": "इतिहास खोजें",
+    "searchPlaceholder": "टेक्स्ट, नाम या आवाज़ खोजें…",
+    "filterEngineAria": "इंजन के अनुसार फ़िल्टर करें",
+    "filterStatusAria": "स्थिति के अनुसार फ़िल्टर करें",
+    "selectAllAria": "दिखाई देने वाली सभी रीडिंग चुनें",
+    "restoreTitle": "टेक्स्ट, आवाज़ और गति पुनर्स्थापित करें",
+    "generationFailed": "निर्माण विफल रहा",
+    "rename": "नाम बदलें",
+    "copyText": "टेक्स्ट कॉपी करें",
+    "revealFile": "फ़ाइल दिखाएँ",
+    "regenerate": "फिर से बनाएँ",
+    "renameTitle": "रीडिंग का नाम बदलें",
+    "renameDescription": "इस रीडिंग को एक नाम दें। केवल टेक्स्ट दिखाने के लिए खाली छोड़ें। ऑडियो फ़ाइल के नाम वही रहेंगे।",
+    "saveName": "नाम सहेजें",
+    "deleteSelectedDescription": "चयनित रीडिंग और उनके सभी सहेजे गए ऑडियो भाग हटाएँ? यह क्रिया पूर्ववत नहीं की जा सकती।"
+  },
+  "batch": {
+    "title": "बैच TTS प्रोसेसर",
+    "texts": "टेक्स्ट अंश (प्रति पंक्ति एक)",
+    "textsPlaceholder": "टेक्स्ट अंश दर्ज करें, प्रति पंक्ति एक...",
+    "outputDirectory": "आउटपुट निर्देशिका",
+    "filenamePrefix": "फ़ाइल नाम उपसर्ग",
+    "audioFormat": "ऑडियो प्रारूप",
+    "results": "परिणाम"
+  },
+  "voices": {
+    "loadFailed": "लोड करना विफल रहा"
+  },
+  "hud": {
+    "clipboardCopied": "क्लिपबोर्ड कॉपी हुआ",
+    "processing": "प्रोसेस हो रहा है..."
+  },
+  "htmlExport": {
+    "generating": "HTML सामग्री बनाई जा रही है...",
+    "generated": "HTML सफलतापूर्वक बनाया गया",
+    "preparing": "डाउनलोड तैयार किया जा रहा है...",
+    "complete": "निर्यात पूरा हुआ",
+    "failed": "निर्यात विफल: {error}",
+    "unknownError": "अज्ञात त्रुटि"
+  },
+  "update": {
+    "errors": {
+      "unreachable": "अपडेट सर्वर तक नहीं पहुँच सकते",
+      "signature": "अपडेट हस्ताक्षर अमान्य है",
+      "network": "नेटवर्क त्रुटि",
+      "checkFailed": "अपडेट जाँच विफल रही",
+      "installFailed": "अपडेट इंस्टॉल करना विफल रहा"
+    },
+    "status": {
+      "disabled": "अपडेट बंद हैं",
+      "downloading": "डाउनलोड हो रहा है {percent}%",
+      "installing": "इंस्टॉल हो रहा है...",
+      "preparing": "तैयार किया जा रहा है...",
+      "checking": "जाँच हो रही है...",
+      "upToDate": "अप टू डेट",
+      "available": "अपडेट उपलब्ध है",
+      "check": "अपडेट जाँचें"
+    }
   }
 }

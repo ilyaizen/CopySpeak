@@ -33,7 +33,7 @@
         activeEffect = activeProfile?.effects?.active_effect ?? "none";
       }
     } catch (e) {
-      toast.error(`Failed to load effects: ${e}`);
+      toast.error($_("toast.error.effectsLoad", { values: { error: String(e) } }));
     }
   });
 
@@ -51,7 +51,7 @@
     try {
       await invoke("set_config", { newConfig: config });
     } catch (e) {
-      toast.error(`Failed to save effect: ${e}`);
+      toast.error($_("toast.error.effectSave", { values: { error: String(e) } }));
     }
   }
 
@@ -61,7 +61,7 @@
     try {
       await invoke("speak_now", { text: PREVIEW_TEXT });
     } catch (e) {
-      toast.error(`Preview failed: ${e}`);
+      toast.error($_("toast.error.previewFailed", { values: { error: String(e) } }));
     } finally {
       isPreviewing = false;
     }

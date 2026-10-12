@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "CopySpeak",
-    "tagline": "为剪贴板打造的 AI 文字转语音"
+    "tagline": "为剪贴板打造的 AI 文字转语音",
+    "logoAlt": "CopySpeak 徽标"
   },
   "nav": {
     "play": "播放",
@@ -14,7 +15,8 @@
     "engines": "引擎",
     "history": "历史记录",
     "settings": "设置",
-    "tagline": "为剪贴板打造的 AI 文字转语音"
+    "tagline": "为剪贴板打造的 AI 文字转语音",
+    "navAria": "主导航"
   },
   "common": {
     "loading": "加载中...",
@@ -32,7 +34,23 @@
     "error": "错误",
     "success": "成功",
     "warning": "警告",
-    "info": "信息"
+    "info": "信息",
+    "delete": "删除",
+    "duplicate": "复制",
+    "export": "导出",
+    "import": "导入",
+    "name": "名称",
+    "engine": "引擎",
+    "voice": "语音",
+    "speed": "速度",
+    "pitch": "音调",
+    "effect": "效果",
+    "effects": "效果",
+    "hotkey": "快捷键",
+    "volume": "音量",
+    "toggleTheme": "切换主题",
+    "tryAgain": "重试",
+    "moreInfo": "更多信息"
   },
   "settings": {
     "title": "设置",
@@ -97,7 +115,12 @@
       "debugMode": "调试模式",
       "updateChecks": "自动检查更新",
       "autoSave": "自动保存更改",
-      "autoSaveDescription": "在“设置”“引擎”“语音”页面上，最后一次修改 800 毫秒后自动保存——不显示保存/取消栏"
+      "autoSaveDescription": "在“设置”“引擎”“语音”页面上，最后一次修改 800 毫秒后自动保存——不显示保存/取消栏",
+      "launchOnLoginTooltip": "登录时启动 CopySpeak",
+      "startMinimizedLabel": "启动时最小化",
+      "startMinimizedTooltip": "启动时将应用最小化到系统托盘",
+      "minimizeToTray": "关闭时最小化到托盘",
+      "minimizeToTrayTooltip": "关闭窗口时最小化到系统托盘，而不是退出"
     },
     "playback": {
       "title": "播放设置",
@@ -308,7 +331,34 @@
         "title": "自定义 HTTP 引擎",
         "description": "通用 HTTP/REST TTS 后端",
         "detail": "自带后端引擎，可调用任意 HTTP 端点，URL 模板和认证方式均可配置。"
-      }
+      },
+      "checkUpdates": "检查更新",
+      "checkUpdatesTooltip": "启动时自动检查新版本",
+      "updateStatus": "更新状态",
+      "debugMode": "调试模式",
+      "debugModeTooltip": "启用详细日志和额外的状态信息",
+      "refreshing": "正在刷新...",
+      "noLogs": "没有可用的日志"
+    },
+    "importExport": {
+      "tooltip": "导出、导入或重置设置",
+      "exportTitle": "导出设置",
+      "exportDescription": "复制下方的 JSON，或将其下载为文件",
+      "importTitle": "导入设置",
+      "importDescription": "在下方粘贴设置 JSON，或上传文件",
+      "pastePlaceholder": "在此粘贴设置 JSON...",
+      "resetTitle": "重置所有设置？",
+      "resetConfirm": "重置并重新开始设置"
+    },
+    "appearance": {
+      "theme": "主题",
+      "themeTooltip": "选择你喜欢的配色主题"
+    },
+    "hotkey": {
+      "enable": "启用全局快捷键",
+      "enableTooltip": "在任意应用中触发 TTS",
+      "globalHotkey": "全局快捷键",
+      "globalHotkeyTooltip": "按下组合键进行设置。至少需要一个修饰键（Ctrl、Alt、Shift、Win）。"
     }
   },
   "engine": {
@@ -550,7 +600,12 @@
     "stopTooltip": "停止",
     "abortTooltip": "中止合成或播放",
     "skipBackTooltip": "后退 5 秒",
-    "skipFwdTooltip": "前进 5 秒"
+    "skipFwdTooltip": "前进 5 秒",
+    "readAloud": "朗读",
+    "nowReadingAria": "正在朗读",
+    "textLabel": "要朗读的文本",
+    "controlsAria": "朗读控制",
+    "restored": "已恢复文本、语音和速度。音调和效果使用当前配置文件。"
   },
   "history": {
     "title": "历史记录",
@@ -582,7 +637,21 @@
       "failedToPlay": "播放失败",
       "failedToReSpeak": "重新朗读失败",
       "failedToDelete": "删除失败"
-    }
+    },
+    "deleteEntryTooltip": "删除条目",
+    "confirmDeleteEntry": "删除此历史记录条目？此操作无法撤销。",
+    "meta": {
+      "engine": "引擎：",
+      "voice": "语音：",
+      "duration": "时长：",
+      "length": "长度：",
+      "attempts": "尝试次数：",
+      "app": "应用：",
+      "output": "输出："
+    },
+    "searchPlaceholder": "在文本内容中搜索...",
+    "filters": "筛选",
+    "activeFilters": "当前筛选："
   },
   "toast": {
     "success": {
@@ -597,7 +666,8 @@
       "settingsDownloaded": "设置已下载",
       "settingsImported": "设置导入成功",
       "settingsReset": "设置已重置——重新开始设置",
-      "synthesisAborted": "合成已中止"
+      "synthesisAborted": "合成已中止",
+      "voicesSaved": "语音已成功保存"
     },
     "error": {
       "loadSettings": "无法加载设置",
@@ -608,7 +678,19 @@
       "hudTest": "HUD 测试失败",
       "cleanup": "清理失败",
       "installer": "无法运行安装程序",
-      "switchEngine": "无法切换引擎"
+      "switchEngine": "无法切换引擎",
+      "kokoroInstallFailed": "Kokoro 安装失败——请选择其他引擎，或重试安装。",
+      "kokoroInstallStart": "Kokoro 安装无法启动：{error}",
+      "saveFailed": "保存设置失败：{error}",
+      "cleanupFailed": "清理失败：{error}",
+      "hotkeyRegistration": "快捷键注册失败：{error}",
+      "switchProfile": "切换配置文件失败：{error}",
+      "resetSettings": "重置设置失败：{error}",
+      "copyToClipboard": "复制到剪贴板失败",
+      "voicesSave": "保存失败：{error}",
+      "effectsLoad": "加载效果失败：{error}",
+      "effectSave": "保存效果失败：{error}",
+      "previewFailed": "预览失败：{error}"
     },
     "info": {
       "httpEngineRemoved": "HTTP 引擎已移除，已切换到本地引擎。"
@@ -633,7 +715,10 @@
     "installed": "已安装！",
     "openTerminal": "打开 PowerShell 终端",
     "checkingEngine": "正在检查引擎...",
-    "helpText": "你随时可以在“引擎”标签页中配置引擎。"
+    "helpText": "你随时可以在“引擎”标签页中配置引擎。",
+    "chooseEngine": "选择语音引擎",
+    "installingKokoro": "正在安装 Kokoro…（约 335 MB，仅需一次）",
+    "installFailed": "安装失败。"
   },
   "effects": {
     "title": "音频效果",
@@ -681,7 +766,8 @@
     "screenshots": {
       "title": "截图",
       "subtitle": "看看 CopySpeak 的实际效果",
-      "caption": "CopySpeak v0.1.8——带“播放”标签页的主界面"
+      "caption": "CopySpeak v0.1.8——带“播放”标签页的主界面",
+      "alt": "CopySpeak 截图"
     },
     "footer": {
       "github": "GitHub",
@@ -697,5 +783,108 @@
     "unavailable": "不可用——请检查配置",
     "error": "检查可用性时出错",
     "notChecked": "未检查——点击切换"
+  },
+  "profiles": {
+    "title": "语音配置文件",
+    "sound": "声音",
+    "newFromTemplate": "从模板新建配置文件",
+    "activeProfile": "当前配置文件",
+    "startFrom": "起始于",
+    "voiceTooltip": "来自引擎目录或服务商 API 的已知语音。",
+    "providerDefault": "服务商默认值",
+    "importPlaceholder": "在此粘贴配置文件 JSON...",
+    "toast": {
+      "copied": "已复制到剪贴板",
+      "copyFailed": "复制失败",
+      "downloaded": "已下载",
+      "duplicated": "配置文件已复制",
+      "deleted": "配置文件已删除",
+      "imported": "已导入“{name}”",
+      "created": "已创建“{name}”",
+      "catalogFailed": "无法加载引擎目录：{error}",
+      "voicesLoaded": "已加载语音：{count}",
+      "voiceRefreshFailed": "刷新语音失败：{error}"
+    },
+    "templateTooltip": "从已知引擎预填命令/参数/语音。之后的编辑不会更改模板。"
+  },
+  "voicePicker": {
+    "select": "选择语音…",
+    "search": "搜索语音…",
+    "customId": "自定义 / 手动 ID…"
+  },
+  "hotkey": {
+    "set": "设置",
+    "setAria": "设置全局快捷键",
+    "clearAria": "清除快捷键"
+  },
+  "quick": {
+    "doubleCopy": "双击复制",
+    "doubleCopyTooltip": "监控剪贴板的双击复制",
+    "effectsTooltip": "对 TTS 播放应用音频效果"
+  },
+  "recent": {
+    "viewAll": "查看全部历史记录",
+    "allEngines": "所有引擎",
+    "allStatuses": "所有状态",
+    "savedAudio": "已保存的音频",
+    "failed": "失败",
+    "searchAria": "搜索历史记录",
+    "searchPlaceholder": "搜索文本、名称或语音…",
+    "filterEngineAria": "按引擎筛选",
+    "filterStatusAria": "按状态筛选",
+    "selectAllAria": "选择所有可见的朗读记录",
+    "restoreTitle": "恢复文本、语音和速度",
+    "generationFailed": "生成失败",
+    "rename": "重命名",
+    "copyText": "复制文本",
+    "revealFile": "显示文件",
+    "regenerate": "重新生成",
+    "renameTitle": "重命名朗读记录",
+    "renameDescription": "为此朗读记录命名。留空则仅显示其文本。音频文件名保持不变。",
+    "saveName": "保存名称",
+    "deleteSelectedDescription": "删除所选朗读记录及其所有已保存的音频片段？此操作无法撤销。"
+  },
+  "batch": {
+    "title": "批量 TTS 处理器",
+    "texts": "文本片段（每行一条）",
+    "textsPlaceholder": "输入文本片段，每行一条...",
+    "outputDirectory": "输出目录",
+    "filenamePrefix": "文件名前缀",
+    "audioFormat": "音频格式",
+    "results": "结果"
+  },
+  "voices": {
+    "loadFailed": "加载失败"
+  },
+  "hud": {
+    "clipboardCopied": "已复制到剪贴板",
+    "processing": "处理中..."
+  },
+  "htmlExport": {
+    "generating": "正在生成 HTML 内容...",
+    "generated": "HTML 生成成功",
+    "preparing": "正在准备下载...",
+    "complete": "导出完成",
+    "failed": "导出失败：{error}",
+    "unknownError": "未知错误"
+  },
+  "update": {
+    "errors": {
+      "unreachable": "无法连接更新服务器",
+      "signature": "更新签名无效",
+      "network": "网络错误",
+      "checkFailed": "检查更新失败",
+      "installFailed": "安装更新失败"
+    },
+    "status": {
+      "disabled": "已禁用更新",
+      "downloading": "正在下载 {percent}%",
+      "installing": "正在安装...",
+      "preparing": "准备中...",
+      "checking": "检查中...",
+      "upToDate": "已是最新",
+      "available": "有可用更新",
+      "check": "检查更新"
+    }
   }
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import { Input } from "#lib/components/ui/input/index.js";
   import { Label } from "#lib/components/ui/label/index.js";
   import { Button } from "#lib/components/ui/button/index.js";
@@ -50,7 +51,7 @@
     <div class="mb-4 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <Filter class="text-muted-foreground h-4 w-4" />
-        <h3 class="text-card-foreground text-sm font-medium">Filters</h3>
+        <h3 class="text-card-foreground text-sm font-medium">{$_("history.filters")}</h3>
       </div>
       {#if hasFilters}
         <Button variant="ghost" size="sm" onclick={resetFilters} class="h-7 px-2 text-xs">
@@ -70,7 +71,7 @@
           <Input
             id="search-text"
             bind:value={searchText}
-            placeholder="Search in text content..."
+            placeholder={$_("history.searchPlaceholder")}
             onkeydown={handleSearchKeyDown}
             class="pe-8"
           />
@@ -132,7 +133,7 @@
       {#if hasFilters}
         <div class="border-border border-t pt-3">
           <div class="text-muted-foreground space-y-1 text-xs">
-            <p>Active filters:</p>
+            <p>{$_("history.activeFilters")}</p>
             <ul class="m-0 flex list-none flex-wrap gap-2 p-0">
               {#if searchText}
                 <li

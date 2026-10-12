@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "CopySpeak",
-    "tagline": "AI text-to-speech for your clipboard"
+    "tagline": "AI text-to-speech for your clipboard",
+    "logoAlt": "CopySpeak logo"
   },
   "nav": {
     "play": "Play",
@@ -14,7 +15,8 @@
     "engines": "Engines",
     "history": "History",
     "settings": "Settings",
-    "tagline": "AI text-to-speech for your clipboard"
+    "tagline": "AI text-to-speech for your clipboard",
+    "navAria": "Main navigation"
   },
   "common": {
     "loading": "Loading...",
@@ -32,7 +34,23 @@
     "error": "Error",
     "success": "Success",
     "warning": "Warning",
-    "info": "Info"
+    "info": "Info",
+    "delete": "Delete",
+    "duplicate": "Duplicate",
+    "export": "Export",
+    "import": "Import",
+    "name": "Name",
+    "engine": "Engine",
+    "voice": "Voice",
+    "speed": "Speed",
+    "pitch": "Pitch",
+    "effect": "Effect",
+    "effects": "Effects",
+    "hotkey": "Hotkey",
+    "volume": "Volume",
+    "toggleTheme": "Toggle theme",
+    "tryAgain": "Try again",
+    "moreInfo": "More info"
   },
   "settings": {
     "title": "Settings",
@@ -97,7 +115,12 @@
       "debugMode": "Debug mode",
       "updateChecks": "Check for updates automatically",
       "autoSave": "Auto-save changes",
-      "autoSaveDescription": "Save edits automatically 800ms after the last change on Settings, Engines, and Voices — no Save/Cancel bar"
+      "autoSaveDescription": "Save edits automatically 800ms after the last change on Settings, Engines, and Voices — no Save/Cancel bar",
+      "launchOnLoginTooltip": "Launch CopySpeak when you log in",
+      "startMinimizedLabel": "Start Minimized",
+      "startMinimizedTooltip": "Start the application minimized to system tray",
+      "minimizeToTray": "Minimize to Tray on Close",
+      "minimizeToTrayTooltip": "Minimize to system tray instead of exiting when closing the window"
     },
     "playback": {
       "title": "Playback Settings",
@@ -308,7 +331,34 @@
         "title": "Custom HTTP Engine",
         "description": "Generic HTTP/REST TTS backend",
         "detail": "Bring-your-own-backend engine that calls any HTTP endpoint with configurable URL templates and auth."
-      }
+      },
+      "checkUpdates": "Check for Updates",
+      "checkUpdatesTooltip": "Automatically check for new versions on startup",
+      "updateStatus": "Update Status",
+      "debugMode": "Debug Mode",
+      "debugModeTooltip": "Enable verbose logging and additional status info",
+      "refreshing": "refreshing...",
+      "noLogs": "No logs available"
+    },
+    "importExport": {
+      "tooltip": "Export, import, or reset your settings",
+      "exportTitle": "Export Settings",
+      "exportDescription": "Copy the JSON below or download it as a file",
+      "importTitle": "Import Settings",
+      "importDescription": "Paste settings JSON below or upload a file",
+      "pastePlaceholder": "Paste settings JSON here...",
+      "resetTitle": "Reset All Settings?",
+      "resetConfirm": "Reset & Restart Setup"
+    },
+    "appearance": {
+      "theme": "Theme",
+      "themeTooltip": "Choose your preferred color theme"
+    },
+    "hotkey": {
+      "enable": "Enable Global Hotkey",
+      "enableTooltip": "Trigger TTS from any application",
+      "globalHotkey": "Global Hotkey",
+      "globalHotkeyTooltip": "Press a key combination to set. Requires at least one modifier (Ctrl, Alt, Shift, Win)."
     }
   },
   "engine": {
@@ -550,7 +600,12 @@
     "stopTooltip": "Stop",
     "abortTooltip": "Abort synthesis or playback",
     "skipBackTooltip": "Back 5 seconds",
-    "skipFwdTooltip": "Forward 5 seconds"
+    "skipFwdTooltip": "Forward 5 seconds",
+    "readAloud": "Read aloud",
+    "nowReadingAria": "Now reading",
+    "textLabel": "Text to read aloud",
+    "controlsAria": "Reading controls",
+    "restored": "Text, voice and speed restored. Pitch and effects use the current profile."
   },
   "history": {
     "title": "History",
@@ -582,7 +637,21 @@
       "failedToPlay": "Failed to play",
       "failedToReSpeak": "Failed to re-speak",
       "failedToDelete": "Failed to delete"
-    }
+    },
+    "deleteEntryTooltip": "Delete entry",
+    "confirmDeleteEntry": "Delete this history entry? This action cannot be undone.",
+    "meta": {
+      "engine": "Engine:",
+      "voice": "Voice:",
+      "duration": "Duration:",
+      "length": "Length:",
+      "attempts": "Attempts:",
+      "app": "App:",
+      "output": "Output:"
+    },
+    "searchPlaceholder": "Search in text content...",
+    "filters": "Filters",
+    "activeFilters": "Active filters:"
   },
   "toast": {
     "success": {
@@ -597,7 +666,8 @@
       "settingsDownloaded": "Settings downloaded",
       "settingsImported": "Settings imported successfully",
       "settingsReset": "Settings reset — starting fresh setup",
-      "synthesisAborted": "Synthesis aborted"
+      "synthesisAborted": "Synthesis aborted",
+      "voicesSaved": "Voices saved successfully"
     },
     "error": {
       "loadSettings": "Failed to load settings",
@@ -608,7 +678,19 @@
       "hudTest": "HUD test failed",
       "cleanup": "Cleanup failed",
       "installer": "Failed to run installer",
-      "switchEngine": "Failed to switch engine"
+      "switchEngine": "Failed to switch engine",
+      "kokoroInstallFailed": "Kokoro install failed — pick another engine, or retry the install.",
+      "kokoroInstallStart": "Kokoro install failed to start: {error}",
+      "saveFailed": "Failed to save settings: {error}",
+      "cleanupFailed": "Cleanup failed: {error}",
+      "hotkeyRegistration": "Hotkey registration failed: {error}",
+      "switchProfile": "Failed to switch profile: {error}",
+      "resetSettings": "Failed to reset settings: {error}",
+      "copyToClipboard": "Failed to copy to clipboard",
+      "voicesSave": "Failed to save: {error}",
+      "effectsLoad": "Failed to load effects: {error}",
+      "effectSave": "Failed to save effect: {error}",
+      "previewFailed": "Preview failed: {error}"
     },
     "info": {
       "httpEngineRemoved": "HTTP engine has been removed. Switched to Local engine."
@@ -633,7 +715,10 @@
     "installed": "Installed!",
     "openTerminal": "Open PowerShell terminal",
     "checkingEngine": "Checking engine...",
-    "helpText": "You can always configure your engine later from the Engine tab."
+    "helpText": "You can always configure your engine later from the Engine tab.",
+    "chooseEngine": "Choose your voice engine",
+    "installingKokoro": "Installing Kokoro… (~335 MB, one time)",
+    "installFailed": "Install failed."
   },
   "effects": {
     "title": "Audio Effects",
@@ -681,7 +766,8 @@
     "screenshots": {
       "title": "Screenshots",
       "subtitle": "See CopySpeak in action",
-      "caption": "CopySpeak v0.1.8 — Main interface with Play tab"
+      "caption": "CopySpeak v0.1.8 — Main interface with Play tab",
+      "alt": "CopySpeak screenshot"
     },
     "footer": {
       "github": "GitHub",
@@ -697,5 +783,108 @@
     "unavailable": "Unavailable - check configuration",
     "error": "Error checking availability",
     "notChecked": "Not checked - click to switch"
+  },
+  "profiles": {
+    "title": "Voice Profiles",
+    "sound": "Sound",
+    "newFromTemplate": "New profile from template",
+    "activeProfile": "Active Profile",
+    "startFrom": "Start from",
+    "voiceTooltip": "Known voices from the engine catalog or provider API.",
+    "providerDefault": "provider default",
+    "importPlaceholder": "Paste profile JSON here...",
+    "toast": {
+      "copied": "Copied to clipboard",
+      "copyFailed": "Failed to copy",
+      "downloaded": "Downloaded",
+      "duplicated": "Profile duplicated",
+      "deleted": "Profile deleted",
+      "imported": "Imported \"{name}\"",
+      "created": "Created \"{name}\"",
+      "catalogFailed": "Could not load engine catalog: {error}",
+      "voicesLoaded": "Voices loaded: {count}",
+      "voiceRefreshFailed": "Voice refresh failed: {error}"
+    },
+    "templateTooltip": "Prefill command/arguments/voice from a known engine. Editing afterward never changes the template."
+  },
+  "voicePicker": {
+    "select": "Select voice…",
+    "search": "Search voices…",
+    "customId": "Custom / manual id…"
+  },
+  "hotkey": {
+    "set": "Set",
+    "setAria": "Set global hotkey",
+    "clearAria": "Clear hotkey"
+  },
+  "quick": {
+    "doubleCopy": "Double-copy",
+    "doubleCopyTooltip": "Monitor clipboard for double-copy",
+    "effectsTooltip": "Apply audio effect to TTS playback"
+  },
+  "recent": {
+    "viewAll": "View all history",
+    "allEngines": "All engines",
+    "allStatuses": "All statuses",
+    "savedAudio": "Saved audio",
+    "failed": "Failed",
+    "searchAria": "Search history",
+    "searchPlaceholder": "Search text, name or voice…",
+    "filterEngineAria": "Filter by engine",
+    "filterStatusAria": "Filter by status",
+    "selectAllAria": "Select all visible readings",
+    "restoreTitle": "Restore text, voice and speed",
+    "generationFailed": "Generation failed",
+    "rename": "Rename",
+    "copyText": "Copy text",
+    "revealFile": "Reveal file",
+    "regenerate": "Regenerate",
+    "renameTitle": "Rename reading",
+    "renameDescription": "Give this reading a name. Leave blank to show only its text. Audio filenames stay the same.",
+    "saveName": "Save name",
+    "deleteSelectedDescription": "Delete the selected readings and all their saved audio parts? This cannot be undone."
+  },
+  "batch": {
+    "title": "Batch TTS Processor",
+    "texts": "Text Snippets (one per line)",
+    "textsPlaceholder": "Enter text snippets, one per line...",
+    "outputDirectory": "Output Directory",
+    "filenamePrefix": "Filename Prefix",
+    "audioFormat": "Audio Format",
+    "results": "Results"
+  },
+  "voices": {
+    "loadFailed": "Failed to load"
+  },
+  "hud": {
+    "clipboardCopied": "Clipboard Copied",
+    "processing": "Processing..."
+  },
+  "htmlExport": {
+    "generating": "Generating HTML content...",
+    "generated": "HTML generated successfully",
+    "preparing": "Preparing download...",
+    "complete": "Export complete",
+    "failed": "Export failed: {error}",
+    "unknownError": "Unknown error"
+  },
+  "update": {
+    "errors": {
+      "unreachable": "Cannot reach update server",
+      "signature": "Update signature invalid",
+      "network": "Network error",
+      "checkFailed": "Update check failed",
+      "installFailed": "Failed to install update"
+    },
+    "status": {
+      "disabled": "Updates disabled",
+      "downloading": "Downloading {percent}%",
+      "installing": "Installing...",
+      "preparing": "Preparing...",
+      "checking": "Checking...",
+      "upToDate": "Up to date",
+      "available": "Update available",
+      "check": "Check for updates"
+    }
   }
 }

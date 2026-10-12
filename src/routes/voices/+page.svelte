@@ -26,7 +26,7 @@
       originalConfig = JSON.parse(JSON.stringify(config));
     } catch (e) {
       console.error("Failed to load config:", e);
-      toast.error("Failed to load configuration");
+      toast.error($_("toast.error.loadConfig"));
     } finally {
       isLoading = false;
     }
@@ -37,10 +37,10 @@
     try {
       await invoke("set_config", { newConfig: localConfig });
       originalConfig = JSON.parse(JSON.stringify(localConfig));
-      toast.success("Voices saved successfully");
+      toast.success($_("toast.success.voicesSaved"));
     } catch (e) {
       console.error("Failed to save config:", e);
-      toast.error(`Failed to save: ${e}`);
+      toast.error($_("toast.error.voicesSave", { values: { error: String(e) } }));
     }
   }
 
@@ -98,8 +98,8 @@
   {:else}
     <div class="flex min-h-[60vh] items-center justify-center px-6">
       <div class="mx-auto w-full max-w-sm text-center">
-        <h2 class="mb-2 text-xl font-semibold">Failed to load</h2>
-        <Button onclick={loadConfig}>Try again</Button>
+        <h2 class="mb-2 text-xl font-semibold">{$_("voices.loadFailed")}</h2>
+        <Button onclick={loadConfig}>{$_("common.tryAgain")}</Button>
       </div>
     </div>
   {/if}

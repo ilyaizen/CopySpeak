@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import { cn } from "#lib/utils.js";
   import { Button } from "#lib/components/ui/button/index.js";
   import {
@@ -103,7 +104,7 @@
       return;
     }
 
-    if (!confirm(`Delete this history entry? This action cannot be undone.`)) {
+    if (!confirm($_("history.confirmDeleteEntry"))) {
       return;
     }
 
@@ -171,7 +172,7 @@
         size="sm"
         class="text-destructive hover:text-destructive h-7 w-7 p-0"
         onclick={handleDelete}
-        title="Delete entry"
+        title={$_("history.deleteEntryTooltip")}
       >
         <Trash2 class="h-4 w-4" />
       </Button>
@@ -186,31 +187,31 @@
 
   <div class="grid grid-cols-2 gap-2 text-xs">
     <div>
-      <span class="text-muted-foreground">Engine:</span>
+      <span class="text-muted-foreground">{$_("history.meta.engine")}</span>
       <span class="text-card-foreground ms-1 font-medium capitalize">
         {entry.tts_engine}
       </span>
     </div>
     <div>
-      <span class="text-muted-foreground">Voice:</span>
+      <span class="text-muted-foreground">{$_("history.meta.voice")}</span>
       <span class="text-card-foreground ms-1 font-medium">
         {entry.voice}
       </span>
     </div>
     <div>
-      <span class="text-muted-foreground">Duration:</span>
+      <span class="text-muted-foreground">{$_("history.meta.duration")}</span>
       <span class="text-card-foreground ms-1 font-medium">
         {formatDuration(entry.duration_ms ?? 0)}
       </span>
     </div>
     <div>
-      <span class="text-muted-foreground">Length:</span>
+      <span class="text-muted-foreground">{$_("history.meta.length")}</span>
       <span class="text-card-foreground ms-1 font-medium">
         {entry.text_length.toLocaleString()} chars
       </span>
     </div>
     <div>
-      <span class="text-muted-foreground">Attempts:</span>
+      <span class="text-muted-foreground">{$_("history.meta.attempts")}</span>
       <span class="text-card-foreground ms-1 font-medium">
         {entry.attempts}
       </span>
@@ -222,7 +223,7 @@
       <div class="space-y-1 text-xs">
         {#if entry.app_name}
           <div>
-            <span class="text-muted-foreground">App:</span>
+            <span class="text-muted-foreground">{$_("history.meta.app")}</span>
             <span class="text-card-foreground ms-1">
               {entry.app_name}
             </span>
@@ -230,7 +231,7 @@
         {/if}
         {#if entry.output_path}
           <div>
-            <span class="text-muted-foreground">Output:</span>
+            <span class="text-muted-foreground">{$_("history.meta.output")}</span>
             <span class="text-card-foreground ms-1 block max-w-50 truncate">
               {entry.output_path}
             </span>

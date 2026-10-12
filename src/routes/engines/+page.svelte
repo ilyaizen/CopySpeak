@@ -28,7 +28,7 @@
       originalConfig = JSON.parse(JSON.stringify(config));
     } catch (e) {
       console.error("Failed to load config:", e);
-      toast.error("Failed to load configuration");
+      toast.error($_("toast.error.loadConfig"));
     } finally {
       isLoading = false;
     }

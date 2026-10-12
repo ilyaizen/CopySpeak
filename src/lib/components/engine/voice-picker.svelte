@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import { cn, portal } from "#lib/utils.js";
   import { Check, ChevronDown, Pencil, RefreshCw, Search } from "@lucide/svelte";
   import type { VoiceCatalogEntry } from "#lib/types";
@@ -149,7 +150,7 @@
     {#if selected}
       <span>{selected.label}</span>
     {:else}
-      <span class="text-muted-foreground">Select voice…</span>
+      <span class="text-muted-foreground">{$_("voicePicker.select")}</span>
     {/if}
   </span>
   <ChevronDown size={14} class="text-muted-foreground shrink-0" />
@@ -166,7 +167,7 @@
         <input
           bind:this={searchRef}
           bind:value={query}
-          placeholder="Search voices…"
+          placeholder={$_("voicePicker.search")}
           class="w-full rounded-t-md py-2 ps-8 pe-3 text-sm outline-none"
         />
       </div>
@@ -183,7 +184,7 @@
             class="text-muted-foreground hover:bg-muted hover:text-foreground flex w-full items-center gap-2 px-3 py-1.5 text-start text-sm"
           >
             <Pencil size={14} class="shrink-0" />
-            <span class="flex-1 truncate">Custom / manual id…</span>
+            <span class="flex-1 truncate">{$_("voicePicker.customId")}</span>
           </button>
         {/if}
         {#if filtered.length === 0}

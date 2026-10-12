@@ -76,7 +76,7 @@
   <div class="flex min-w-0 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
     <div class="flex items-center gap-3">
       <a href="/" class="flex items-center gap-3">
-        <img src="/app-logo.png" alt="CopySpeak Logo" class="h-10 w-10" />
+        <img src="/app-logo.png" alt={$_("app.logoAlt")} class="h-10 w-10" />
         <div>
           <h1 class="text-foreground font-mono text-xl font-semibold tracking-tight">CopySpeak</h1>
           <p class="text-muted-foreground text-xs">{$_("header.tagline")}</p>
@@ -84,7 +84,7 @@
       </a>
     </div>
     <div class="max-w-full min-w-0">
-      <nav aria-label="Main navigation" class="flex flex-wrap items-center gap-1">
+      <nav aria-label={$_("header.navAria")} class="flex flex-wrap items-center gap-1">
         {#each navItems as item}
           {@const isActive =
             item.href === "/" ? page.url.pathname === "/" : page.url.pathname.startsWith(item.href)}

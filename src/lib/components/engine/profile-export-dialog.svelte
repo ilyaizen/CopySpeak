@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Copy, Download, Upload, X } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
@@ -72,9 +73,9 @@
   async function copyToClipboard() {
     try {
       await navigator.clipboard.writeText(exportJson);
-      toast.success("Copied to clipboard");
+      toast.success($_("profiles.toast.copied"));
     } catch {
-      toast.error("Failed to copy");
+      toast.error($_("profiles.toast.copyFailed"));
     }
   }
 
@@ -87,7 +88,7 @@
     a.download = `${profile.id}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Downloaded");
+    toast.success($_("profiles.toast.downloaded"));
   }
 
   function handleFileSelect(event: Event) {
@@ -162,7 +163,7 @@
           value={exportJson}></textarea>
       </div>
       <div class="border-border flex justify-end gap-2 border-t p-4">
-        <Button variant="outline" onclick={onClose}>Close</Button>
+        <Button variant="outline" onclick={onClose}>{$_("common.close")}</Button>
         <Button variant="outline" onclick={copyToClipboard}>
           <Copy class="me-2" size={16} />
           Copy
@@ -188,7 +189,7 @@
 
         <textarea
           class="bg-background border-border focus:ring-ring h-48 w-full resize-none rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
-          placeholder="Paste profile JSON here..."
+          placeholder={$_("profiles.importPlaceholder")}
           bind:value={importJson}></textarea>
 
         {#if importError}
@@ -198,7 +199,7 @@
         {/if}
       </div>
       <div class="border-border flex justify-end gap-2 border-t p-4">
-        <Button variant="outline" onclick={onClose}>Cancel</Button>
+        <Button variant="outline" onclick={onClose}>{$_("common.cancel")}</Button>
         <Button onclick={validateAndImport} disabled={!importJson.trim()}>
           <Upload class="me-2" size={16} />
           Import Profile
@@ -211,8 +212,8 @@
         </p>
       </div>
       <div class="border-border flex justify-end gap-2 border-t p-4">
-        <Button variant="outline" onclick={onClose}>Cancel</Button>
-        <Button variant="destructive" onclick={onDelete}>Delete</Button>
+        <Button variant="outline" onclick={onClose}>{$_("common.cancel")}</Button>
+        <Button variant="destructive" onclick={onDelete}>{$_("common.delete")}</Button>
       </div>
     {/if}
   </div>
