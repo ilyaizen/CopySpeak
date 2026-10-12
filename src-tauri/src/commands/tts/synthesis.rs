@@ -117,8 +117,8 @@ fn add_history_with_metadata(
 }
 
 /// Emit audio-ready event with base64 encoded audio
-fn emit_audio_ready(app: &AppHandle, speech: &SpeechAudio, text: &str) {
-    emit_audio_fragment(app, speech, 0, 1, text.to_owned());
+fn emit_audio_ready(app: &AppHandle, speech: &SpeechAudio, text: &str, session_id: Option<&str>) {
+    emit_audio_fragment(app, speech, 0, 1, text.to_owned(), session_id);
 }
 
 /// Emit audio-fragment-ready event for streaming playback
@@ -128,6 +128,7 @@ fn emit_audio_fragment(
     index: usize,
     total: usize,
     text: String,
+    session_id: Option<&str>,
 ) {
     let wav_bytes = &speech.bytes;
     if crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
@@ -145,6 +146,7 @@ fn emit_audio_fragment(
             is_final,
             text,
             captions: speech.captions.clone(),
+            session_id: session_id.map(str::to_owned),
         },
     ) {
         log::warn!("Failed to emit audio-fragment-ready: {}", e);
@@ -162,6 +164,7 @@ fn emit_audio_stream_chunk(
     text: Option<&str>,
     fragment_duration_ms: Option<u64>,
     captions: Option<&CaptionAlignment>,
+    session_id: Option<&str>,
 ) {
     if crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
         return;
@@ -178,6 +181,7 @@ fn emit_audio_stream_chunk(
         text: text.map(str::to_owned),
         fragment_duration_ms,
         captions: captions.cloned(),
+        session_id: session_id.map(str::to_owned),
     };
     if let Err(e) = app.emit("audio-stream-chunk", event) {
         log::warn!("Failed to emit audio-stream-chunk: {}", e);
@@ -294,6 +298,7 @@ async fn synthesize_streaming_and_emit(
     voice: String,
     fragment_index: usize,
     emit_final: bool,
+    session_id: Option<String>,
 ) -> Result<SpeechAudio, String> {
     let app = app.clone();
     tokio::task::spawn_blocking(move || {
@@ -345,6 +350,7 @@ async fn synthesize_streaming_and_emit(
                 (chunk_idx == 0).then_some(text.as_str()),
                 duration_ms,
                 captions,
+                session_id.as_deref(),
             );
         })
     })
@@ -556,14 +562,14 @@ fn find_cached_reading(
 
 /// Play audio that history already holds: no new entry, file or telemetry
 /// sample, since nothing was synthesized.
-fn replay_saved_audio(app: &AppHandle, speech: &SpeechAudio, text: &str) {
+fn replay_saved_audio(app: &AppHandle, speech: &SpeechAudio, text: &str, session_id: Option<&str>) {
     cache_audio(app, speech, text);
     hud::show_hud(
         app,
         extract_envelope_or_default(&speech.bytes),
         Some(text.to_string()),
     );
-    emit_audio_ready(app, speech, text);
+    emit_audio_ready(app, speech, text, session_id);
 }
 
 // ── speak_now ───────────────────────────────────────────────────────────────
@@ -672,6 +678,7 @@ async fn speak_now_internal(
         let raw_text = text.clone();
         (SpeakTrigger { source, raw_text }, id)
     });
+    let session_id = trigger.as_ref().map(|(_, id)| id.clone());
     // Play page, hotkey, tray, selection and control server all land here;
     // unsanitized web text (tabs, NBSPs) breaks engine tokenizers like Kokoro's.
     let text = {
@@ -802,6 +809,7 @@ async fn speak_now_internal(
             estimated_ms,
             confidence,
             streaming_playback,
+            session_id.clone(),
         )
         .await?;
         (wav, streaming_playback)
@@ -813,6 +821,7 @@ async fn speak_now_internal(
             voice.clone(),
             0,
             true,
+            session_id.clone(),
         )
         .await?;
         (wav, true)
@@ -865,7 +874,7 @@ async fn speak_now_internal(
     }
 
     if cache_hit {
-        replay_saved_audio(&app, &wav_bytes, &text);
+        replay_saved_audio(&app, &wav_bytes, &text, session_id.as_deref());
         return Ok(());
     }
 
@@ -883,6 +892,7 @@ async fn speak_now_internal(
         synthesis_ms,
         already_streamed,
         eff.voice_label.as_deref(),
+        session_id.as_deref(),
     )
 }
 
@@ -898,6 +908,7 @@ async fn synthesize_paginated(
     _total_estimate: Option<u64>,
     _avg_confidence: f32,
     streaming: bool,
+    session_id: Option<String>,
 ) -> Result<SpeechAudio, String> {
     let pagination_config = crate::config::PaginationConfig::default();
     let fragments = pagination::paginate_text(text, &pagination_config);
@@ -912,6 +923,7 @@ async fn synthesize_paginated(
                 voice.to_string(),
                 0,
                 true,
+                session_id,
             )
             .await
         } else {
@@ -972,6 +984,7 @@ async fn synthesize_paginated(
                 voice.to_string(),
                 i,
                 i + 1 == fragments.len(),
+                session_id.clone(),
             )
             .await
         } else {
@@ -1090,6 +1103,7 @@ fn handle_playback_output(
     synthesis_ms: u64,
     already_streamed: bool,
     voice_label: Option<&str>,
+    session_id: Option<&str>,
 ) -> Result<(), String> {
     let wav_bytes = &speech.bytes;
     let envelope = extract_envelope_or_default(wav_bytes);
@@ -1133,7 +1147,7 @@ fn handle_playback_output(
     // Emit audio to frontend for browser-native playback. Skipped when PCM
     // chunks were already forwarded by the streaming synthesis path.
     if !already_streamed {
-        emit_audio_ready(app, speech, text);
+        emit_audio_ready(app, speech, text, session_id);
     }
 
     Ok(())
@@ -1155,9 +1169,11 @@ pub async fn speak_queued(
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     text: Option<String>,
     trigger: Option<SpeakTrigger>,
+    reading_id: Option<String>,
 ) -> Result<(), String> {
     let trigger = trigger.map(|trigger| (trigger, browser_bridge::new_trigger_id()));
     let trigger_id = trigger.as_ref().map(|(_, id)| id.clone());
+    let session_id = trigger_id.clone().or(reading_id);
     let result = speak_queued_internal(
         app.clone(),
         config,
@@ -1166,6 +1182,7 @@ pub async fn speak_queued(
         telemetry_state,
         text,
         trigger,
+        session_id,
     )
     .await;
     if let (Err(_), Some(id)) = (&result, trigger_id) {
@@ -1182,6 +1199,7 @@ async fn speak_queued_internal(
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     text: Option<String>,
     trigger: Option<(SpeakTrigger, String)>,
+    session_id: Option<String>,
 ) -> Result<(), String> {
     let text = get_text_or_clipboard(text)?;
     if text.trim().is_empty() {
@@ -1391,6 +1409,7 @@ async fn speak_queued_internal(
                 voice.clone(),
                 index,
                 index + 1 == total,
+                session_id.clone(),
             )
             .await?
         } else {
@@ -1482,7 +1501,14 @@ async fn speak_queued_internal(
         // Emit audio fragment for streaming playback. Skipped when the PCM
         // chunks were already forwarded by the streaming path above.
         if !streamed {
-            emit_audio_fragment(&app, &wav_bytes, index, total, fragment.text.clone());
+            emit_audio_fragment(
+                &app,
+                &wav_bytes,
+                index,
+                total,
+                fragment.text.clone(),
+                session_id.as_deref(),
+            );
         }
 
         // Emit fragment events
@@ -1643,7 +1669,7 @@ pub async fn speak_history_entry(
     hud::show_hud(&app, envelope, Some(text.clone()));
 
     // Emit audio to frontend
-    emit_audio_ready(&app, &wav_bytes, &text);
+    emit_audio_ready(&app, &wav_bytes, &text, None);
 
     log::info!("Re-spoke history entry: {}", entry_id);
     Ok(())

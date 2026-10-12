@@ -47,7 +47,7 @@ Keep the active log short — it loads every session; long context makes you les
 - Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
 - Re-sync `playbackStore` from its own `config-changed` listener; pages that only `set_config` never update it.
 - Treat `git diff --check` as a check; do not run it before explicit confirmation.
-- Gate trigger-session word events on `playback-fragment-audible`: the webview binds the newest session but reports the playing clip's clock under it, so a queued speak must not project words until its own tile is audible.
+- Bind the browser follow to each clip's own `session_id` when it activates, never to a `browser-reading` event: a queued speak starts while an earlier clip still plays, and that clip's drain would complete the queued session. Gate trigger word events on `playback-fragment-audible` too, so a queued speak projects nothing until its own tile is audible.
 - Local engine wrappers speak daemon protocol v2 (`READY 2`) and emit 16-bit signed LE PCM; `pcm-stream.ts` drops any other `bits_per_sample`.
 - Gate streaming playback off when the active profile has an effect: warm daemons stream via `CliTtsBackend::supports_streaming`, and the PCM scheduler has no effect chain — only the `audio-fragment-ready` path applies effects.
 - Adding a `TtsEngine` variant: update the catalog test's engine list and entry count, plus the `Record<TtsEngine, number>` fixtures in `html-templates.test.ts` and `html-export.test.ts`.

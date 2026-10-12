@@ -10,6 +10,8 @@ export interface QueuedFragment {
   total: number;
   text: string;
   captions?: import("#lib/models/captions").CaptionAlignment | null;
+  /** Browser-companion session this clip belongs to, if one follows it */
+  sessionId?: string | null;
 }
 
 export interface FragmentQueueHandlers {

@@ -1024,13 +1024,6 @@ fn start_browser_reading(
 
     install_session(&app, session.clone());
 
-    // Tell the frontend a browser reading is active so the playback store
-    // reports audible-clock positions to us.
-    let _ = app.emit(
-        "browser-reading",
-        json!({ "active": true, "session_id": reading_id }),
-    );
-
     // Send acceptance.
     send_accepted(pipe, &request_id, &reading_id)?;
 
@@ -1060,6 +1053,7 @@ fn start_browser_reading(
             telemetry_state,
             Some(text_clone),
             None,
+            Some(reading_id_clone.clone()),
         )
         .await;
 
@@ -1138,10 +1132,6 @@ pub fn begin_trigger(app: &AppHandle, trigger_id: &str, trigger: &SpeakTrigger, 
         trigger_id,
         trigger.source,
         raw_text.chars().count()
-    );
-    let _ = app.emit(
-        "browser-reading",
-        json!({ "active": true, "session_id": trigger_id }),
     );
     spawn_state_ticker(app.clone(), session);
 }

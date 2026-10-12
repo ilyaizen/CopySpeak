@@ -30,6 +30,8 @@ export interface StreamChunkPayload {
   text?: string;
   fragment_duration_ms?: number;
   captions?: import("#lib/models/captions").CaptionAlignment | null;
+  /** Browser-companion session this chunk's clip belongs to, if one follows it */
+  session_id?: string | null;
 }
 
 /** One decoded chunk of native-rate PCM, still unstretched. */
