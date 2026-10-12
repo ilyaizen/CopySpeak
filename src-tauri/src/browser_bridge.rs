@@ -190,6 +190,23 @@ struct BrowserSession {
     stream: Mutex<Option<SafeHandle>>,
 }
 
+impl BrowserSession {
+    /// Mark `index` as the audible fragment. A trigger's clip is audible only
+    /// when its own tile holds the same text; any other clip leaves the session
+    /// silent until its own audio starts.
+    fn announce_audible(&self, index: usize, text: Option<&str>) {
+        let own = text.is_some_and(|text| {
+            self.fragments
+                .lock()
+                .unwrap()
+                .get(index)
+                .is_some_and(|entry| entry.expected_text == text)
+        });
+        let audible = if own { index } else { NO_FRAGMENT };
+        self.active_fragment.store(audible, Ordering::Relaxed);
+    }
+}
+
 // HANDLE wrapper for Send+Sync
 #[cfg(target_os = "windows")]
 #[derive(Clone)]
@@ -406,6 +423,10 @@ pub fn start_browser_bridge(app: AppHandle) -> Result<(), String> {
     app.listen("audio-stream-chunk", move |event| {
         handle_stream_chunk_event(&app_for_stream, event.payload());
     });
+    let app_for_audible = app.clone();
+    app.listen("playback-fragment-audible", move |event| {
+        handle_audible_fragment(&app_for_audible, event.payload());
+    });
 
     #[cfg(target_os = "windows")]
     start_windows_pipe(app)?;
@@ -544,6 +565,28 @@ fn handle_stream_chunk_event(app: &AppHandle, payload: &str) {
     });
     if let Some(index) = index {
         record_fragment_captions(app, index, text, captions);
+    }
+}
+
+/// The webview announces each clip as it becomes audible. A speak queued
+/// behind another clip is not audible until its own clip plays, so until then
+/// the other clip's clock must not drive it (see `announce_audible`).
+fn handle_audible_fragment(app: &AppHandle, payload: &str) {
+    let Ok(event) = serde_json::from_str::<Value>(payload) else {
+        return;
+    };
+    let Some(index) = event
+        .get("index")
+        .and_then(|v| v.as_u64())
+        .map(|v| v as usize)
+    else {
+        return;
+    };
+    let text = event.get("text").and_then(|v| v.as_str());
+    let bridge = app.state::<BrowserBridge>();
+    let sessions = bridge.sessions.lock().unwrap();
+    for session in sessions.values().filter(|s| s.kind == SessionKind::Trigger) {
+        session.announce_audible(index, text);
     }
 }
 
@@ -849,7 +892,7 @@ fn handle_message(app: AppHandle, pipe: &SafeHandle, message: Value) -> Result<(
             bridge.automatic_mode.store(automatic, Ordering::Relaxed);
             log::info!("[Browser] Hello: automatic={}", automatic);
         }
-        "start" | "capture" => {
+        "start" => {
             let request_id = message
                 .get("request_id")
                 .and_then(|v| v.as_str())
@@ -912,23 +955,6 @@ fn handle_message(app: AppHandle, pipe: &SafeHandle, message: Value) -> Result<(
                 _ => {
                     log::warn!("[Browser] Unknown control action: {}", action);
                 }
-            }
-        }
-        "snapshot" => {
-            let reading_id = message
-                .get("reading_id")
-                .and_then(|v| v.as_str())
-                .ok_or("Missing reading_id")?;
-
-            let snapshot = {
-                let sessions = bridge.sessions.lock().unwrap();
-                sessions
-                    .get(reading_id)
-                    .map(|s| (s.clone(), project_state(s)))
-            };
-            if let Some((session, (status, word, reason))) = snapshot {
-                let seq = session.sequence.fetch_add(1, Ordering::Relaxed) + 1;
-                let _ = send_state(&bridge, &session, seq, status, word, reason);
             }
         }
         _ => {
@@ -1158,6 +1184,12 @@ pub async fn browser_reading_progress(
     };
     drop(sessions);
 
+    // A trigger follows only its own audible clip; another clip's clock is ignored.
+    if session.kind == SessionKind::Trigger
+        && session.active_fragment.load(Ordering::Relaxed) != fragment_index
+    {
+        return Ok(());
+    }
     session.position_ms.store(position_ms, Ordering::Relaxed);
     session
         .active_fragment
@@ -1246,7 +1278,7 @@ fn spawn_state_ticker(app: AppHandle, session: Arc<BrowserSession>) {
             if changed {
                 let seq = session.sequence.fetch_add(1, Ordering::Relaxed) + 1;
                 if send_state(&bridge, &session, seq, status, word.clone(), reason).is_err() {
-                    // Pipe is gone; stop ticking. The next connection re-snapshots.
+                    // Pipe is gone; stop ticking.
                     return;
                 }
                 last_status = Some(status_u8);
@@ -1848,6 +1880,22 @@ mod tests {
             kind: SessionKind::Trigger,
             ..session_with(raw, spoken, vec![], None)
         }
+    }
+
+    /// A speak queued behind another clip: until its own clip is audible,
+    /// the session has no audible fragment, whatever clip is playing.
+    #[test]
+    fn trigger_follows_only_its_own_audible_clip() {
+        let session = trigger_session("Hello world.", "Hello world.");
+        record_on(&session, 0, Some("Hello world."), None);
+        let audible = || session.active_fragment.load(Ordering::Relaxed);
+
+        session.announce_audible(0, Some("Earlier clip."));
+        assert_eq!(audible(), NO_FRAGMENT, "another speak's clip is not ours");
+        session.announce_audible(0, None);
+        assert_eq!(audible(), NO_FRAGMENT, "an unnamed clip is not ours");
+        session.announce_audible(0, Some("Hello world."));
+        assert_eq!(audible(), 0, "our own clip is audible");
     }
 
     fn captions_for(text: &str, word: &str) -> CaptionAlignment {

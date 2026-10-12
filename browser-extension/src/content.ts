@@ -171,10 +171,6 @@ if (!scope[marker]) {
         respond({ error: "This browser does not support text highlighting." });
         return;
       }
-      if (message.probe && (!document.hasFocus() || document.visibilityState !== "visible")) {
-        respond(null);
-        return;
-      }
       // Do not read an unfocused frame, including a top frame with a focused iframe.
       if (
         !message.paragraph &&

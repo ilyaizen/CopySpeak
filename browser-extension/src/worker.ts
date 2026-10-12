@@ -105,10 +105,6 @@ function connect() {
       await release(true);
       return;
     }
-    if (e.type === "probe") {
-      if (automatic) await capture(undefined, e.request_id);
-      return;
-    }
     if (e.type === "trigger-started") {
       await announce(e);
       return;
@@ -138,18 +134,12 @@ function connect() {
   p.postMessage({ v: 1, type: "hello", automatic });
   return p;
 }
-async function capture(tab?: chrome.tabs.Tab, probe?: string, paragraphDocument?: string) {
+async function capture(tab?: chrome.tabs.Tab, paragraphDocument?: string) {
   const generation = ++invocation;
   try {
     if (!tab) tab = (await chrome.tabs.query({ active: true, lastFocusedWindow: true }))[0];
     if (tab?.id === undefined) return;
-    if (probe) {
-      if (!(await chrome.windows.getLastFocused()).focused) return;
-      if (!tab.url || !/^https?:/.test(tab.url)) return;
-      if (!(await chrome.permissions.contains({ origins: [new URL(tab.url).origin + "/*"] })))
-        return;
-    }
-    const requestId = probe ?? crypto.randomUUID();
+    const requestId = crypto.randomUUID();
     const frames = await chrome.scripting.executeScript({
       target: paragraphDocument
         ? { tabId: tab.id, documentIds: [paragraphDocument] }
@@ -176,7 +166,6 @@ async function capture(tab?: chrome.tabs.Tab, probe?: string, paragraphDocument?
             {
               type: "capture",
               request_id: requestId,
-              probe: !!probe,
               paragraph: !!paragraphDocument
             },
             { documentId: frame.documentId }
@@ -203,15 +192,12 @@ async function capture(tab?: chrome.tabs.Tab, probe?: string, paragraphDocument?
       timer: null
     };
     route = r;
-    r.timer = setTimeout(
-      () => {
-        if (route === r) void release(true);
-      },
-      probe ? 1500 : 15000
-    );
+    r.timer = setTimeout(() => {
+      if (route === r) void release(true);
+    }, 15000);
     connect().postMessage({
       v: 1,
-      type: probe ? "capture" : "start",
+      type: "start",
       request_id: requestId,
       text: result.text
     });
@@ -262,7 +248,7 @@ chrome.runtime.onMessage.addListener((message: CopyCommand, sender, respond) => 
         !(await chrome.permissions.contains({ origins: [new URL(sender.url!).origin + "/*"] }))
       )
         return;
-      await capture(tab, undefined, documentId);
+      await capture(tab, documentId);
     });
     return;
   }

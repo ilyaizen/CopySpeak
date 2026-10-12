@@ -427,3 +427,11 @@ it("reports a followed page session by id, and only the current one", async () =
     { sessionId: "b", status: "completed" }
   ]);
 });
+
+it("announces each fragment as it becomes audible, with its text", async () => {
+  vi.mocked(emit).mockClear();
+  await sendAudio(0);
+  await vi.waitFor(() =>
+    expect(emit).toHaveBeenCalledWith("playback-fragment-audible", { index: 0, text: "Part 0" })
+  );
+});

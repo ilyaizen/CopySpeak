@@ -80,6 +80,9 @@ class PlaybackStore {
   // page selection (see src-tauri/src/browser_bridge.rs). Reports name the
   // session so a late report never lands on its successor.
   private _browserSessionId: string | null = null;
+  // Stream fragment entry last announced as audible (identity, not index: the
+  // same index recurs across speaks).
+  private _announcedStream: object | null = null;
 
   // `playback-started` fires once per run, when audio first becomes audible; the
   // Rust side ducks other apps on it and restores on `playback-finished`.
@@ -103,6 +106,7 @@ class PlaybackStore {
     this.totalFragments = fragment.total;
     this._fragmentText = fragment.text;
     this._fragmentCaptions = validCaptionAlignment(fragment.captions) ? fragment.captions : null;
+    void this._emit?.("playback-fragment-audible", { index: fragment.index, text: fragment.text });
     return this.handleAudioReady(fragment.audioBase64);
   }
 
@@ -147,6 +151,13 @@ class PlaybackStore {
       const position = this._pcmScheduler.getPlaybackPosition();
       const fragment = position ? this._streamCaptions.get(position.fragmentIndex) : null;
       if (position && fragment) {
+        if (fragment !== this._announcedStream) {
+          this._announcedStream = fragment;
+          void this._emit?.("playback-fragment-audible", {
+            index: position.fragmentIndex,
+            text: fragment.text
+          });
+        }
         caption = {
           text: fragment.captions?.text ?? fragment.text,
           captions: fragment.captions,

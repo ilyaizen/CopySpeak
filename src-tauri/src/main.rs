@@ -787,7 +787,6 @@ fn main() {
             commands::speak_now,
             commands::regenerate_now,
             commands::replay_cached,
-            commands::speak_selected_text,
             commands::speak_queued,
             commands::abort_synthesis,
             commands::stop_speaking,

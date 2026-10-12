@@ -13,7 +13,6 @@ export type NativeEvent =
   // `skip`: the app takes skip-back/skip-forward controls (older apps omit it).
   | { v: 1; type: "accepted"; request_id: string; reading_id: string; skip: boolean }
   | { v: 1; type: "rejected"; request_id: string; reason: string }
-  | { v: 1; type: "probe"; request_id: string }
   | (StateFields & { reading_id: string })
   // A desktop trigger speak, mirrored: word offsets index into its raw_text.
   | (StateFields & { trigger_id: string })
@@ -34,7 +33,7 @@ export type ControlAction = "pause" | "resume" | "stop" | "skip-back" | "skip-fo
  * contract is declared here and every listener branches on these variants.
  */
 export type CopyCommand =
-  | { type: "capture"; request_id: string; probe?: boolean; paragraph?: boolean }
+  | { type: "capture"; request_id: string; paragraph?: boolean }
   | { type: "read-paragraph" }
   | { type: "site-access" }
   | { type: "refresh-site-access" }
@@ -125,9 +124,6 @@ export function parseEvent(value: WireMessage): NativeEvent | null {
     const reason = str(x.reason);
     if (requestId === null || reason === null || reason.length > 512) return null;
     return { v: 1, type: "rejected", request_id: requestId, reason };
-  }
-  if (x.type === "probe") {
-    return requestId !== null ? { v: 1, type: "probe", request_id: requestId } : null;
   }
   if (x.type !== "state") return null;
   const statusName = str(x.status);
