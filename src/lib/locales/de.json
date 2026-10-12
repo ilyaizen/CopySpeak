@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "CopySpeak",
-    "tagline": "KI-Sprachausgabe für Ihre Zwischenablage"
+    "tagline": "KI-Sprachausgabe für Ihre Zwischenablage",
+    "logoAlt": "CopySpeak-Logo"
   },
   "nav": {
     "play": "Abspielen",
@@ -14,7 +15,8 @@
     "engines": "Engines",
     "history": "Verlauf",
     "settings": "Einstellungen",
-    "tagline": "KI-Sprachausgabe für Ihre Zwischenablage"
+    "tagline": "KI-Sprachausgabe für Ihre Zwischenablage",
+    "navAria": "Hauptnavigation"
   },
   "common": {
     "loading": "Wird geladen...",
@@ -32,7 +34,23 @@
     "error": "Fehler",
     "success": "Erfolg",
     "warning": "Warnung",
-    "info": "Info"
+    "info": "Info",
+    "delete": "Löschen",
+    "duplicate": "Duplizieren",
+    "export": "Exportieren",
+    "import": "Importieren",
+    "name": "Name",
+    "engine": "Engine",
+    "voice": "Stimme",
+    "speed": "Geschwindigkeit",
+    "pitch": "Tonhöhe",
+    "effect": "Effekt",
+    "effects": "Effekte",
+    "hotkey": "Tastenkürzel",
+    "volume": "Lautstärke",
+    "toggleTheme": "Design umschalten",
+    "tryAgain": "Erneut versuchen",
+    "moreInfo": "Weitere Informationen"
   },
   "settings": {
     "title": "Einstellungen",
@@ -97,7 +115,12 @@
       "debugMode": "Debug-Modus",
       "updateChecks": "Automatisch nach Updates suchen",
       "autoSave": "Änderungen automatisch speichern",
-      "autoSaveDescription": "Änderungen in Einstellungen, Engines und Stimmen 800 ms nach der letzten Änderung automatisch speichern — ohne Speichern/Abbrechen-Leiste"
+      "autoSaveDescription": "Änderungen in Einstellungen, Engines und Stimmen 800 ms nach der letzten Änderung automatisch speichern — ohne Speichern/Abbrechen-Leiste",
+      "launchOnLoginTooltip": "CopySpeak beim Anmelden starten",
+      "startMinimizedLabel": "Minimiert starten",
+      "startMinimizedTooltip": "Die Anwendung minimiert im Infobereich starten",
+      "minimizeToTray": "Beim Schließen in den Infobereich minimieren",
+      "minimizeToTrayTooltip": "Beim Schließen des Fensters in den Infobereich minimieren, statt die Anwendung zu beenden"
     },
     "playback": {
       "title": "Wiedergabeeinstellungen",
@@ -308,7 +331,34 @@
         "title": "Benutzerdefinierte HTTP-Engine",
         "description": "Generisches HTTP/REST-TTS-Backend",
         "detail": "Engine für ein eigenes Backend, die beliebige HTTP-Endpunkte mit konfigurierbaren URL-Vorlagen und Authentifizierung aufruft."
-      }
+      },
+      "checkUpdates": "Nach Updates suchen",
+      "checkUpdatesTooltip": "Beim Start automatisch nach neuen Versionen suchen",
+      "updateStatus": "Update-Status",
+      "debugMode": "Debug-Modus",
+      "debugModeTooltip": "Ausführliche Protokollierung und zusätzliche Statusinformationen aktivieren",
+      "refreshing": "wird aktualisiert...",
+      "noLogs": "Keine Protokolle verfügbar"
+    },
+    "importExport": {
+      "tooltip": "Einstellungen exportieren, importieren oder zurücksetzen",
+      "exportTitle": "Einstellungen exportieren",
+      "exportDescription": "Das JSON unten kopieren oder als Datei herunterladen",
+      "importTitle": "Einstellungen importieren",
+      "importDescription": "Einstellungs-JSON unten einfügen oder eine Datei hochladen",
+      "pastePlaceholder": "Einstellungs-JSON hier einfügen...",
+      "resetTitle": "Alle Einstellungen zurücksetzen?",
+      "resetConfirm": "Zurücksetzen und Einrichtung neu starten"
+    },
+    "appearance": {
+      "theme": "Design",
+      "themeTooltip": "Wählen Sie Ihr bevorzugtes Farbschema"
+    },
+    "hotkey": {
+      "enable": "Globales Tastenkürzel aktivieren",
+      "enableTooltip": "TTS aus jeder Anwendung auslösen",
+      "globalHotkey": "Globales Tastenkürzel",
+      "globalHotkeyTooltip": "Drücken Sie eine Tastenkombination zum Festlegen. Mindestens eine Modifiertaste ist erforderlich (Strg, Alt, Umschalt, Win)."
     }
   },
   "engine": {
@@ -550,7 +600,12 @@
     "stopTooltip": "Stopp",
     "abortTooltip": "Synthese oder Wiedergabe abbrechen",
     "skipBackTooltip": "5 Sekunden zurück",
-    "skipFwdTooltip": "5 Sekunden vor"
+    "skipFwdTooltip": "5 Sekunden vor",
+    "readAloud": "Vorlesen",
+    "nowReadingAria": "Wird gerade gelesen",
+    "textLabel": "Text zum Vorlesen",
+    "controlsAria": "Wiedergabesteuerung",
+    "restored": "Text, Stimme und Geschwindigkeit wiederhergestellt. Tonhöhe und Effekte verwenden das aktuelle Profil."
   },
   "history": {
     "title": "Verlauf",
@@ -582,7 +637,21 @@
       "failedToPlay": "Abspielen fehlgeschlagen",
       "failedToReSpeak": "Erneutes Vorlesen fehlgeschlagen",
       "failedToDelete": "Löschen fehlgeschlagen"
-    }
+    },
+    "deleteEntryTooltip": "Eintrag löschen",
+    "confirmDeleteEntry": "Diesen Verlaufseintrag löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "meta": {
+      "engine": "Engine:",
+      "voice": "Stimme:",
+      "duration": "Dauer:",
+      "length": "Länge:",
+      "attempts": "Versuche:",
+      "app": "App:",
+      "output": "Ausgabe:"
+    },
+    "searchPlaceholder": "Im Textinhalt suchen...",
+    "filters": "Filter",
+    "activeFilters": "Aktive Filter:"
   },
   "toast": {
     "success": {
@@ -597,7 +666,8 @@
       "settingsDownloaded": "Einstellungen heruntergeladen",
       "settingsImported": "Einstellungen erfolgreich importiert",
       "settingsReset": "Einstellungen zurückgesetzt — Einrichtung beginnt neu",
-      "synthesisAborted": "Synthese abgebrochen"
+      "synthesisAborted": "Synthese abgebrochen",
+      "voicesSaved": "Stimmen erfolgreich gespeichert"
     },
     "error": {
       "loadSettings": "Einstellungen konnten nicht geladen werden",
@@ -608,7 +678,19 @@
       "hudTest": "HUD-Test fehlgeschlagen",
       "cleanup": "Bereinigung fehlgeschlagen",
       "installer": "Installer konnte nicht ausgeführt werden",
-      "switchEngine": "Engine konnte nicht gewechselt werden"
+      "switchEngine": "Engine konnte nicht gewechselt werden",
+      "kokoroInstallFailed": "Kokoro-Installation fehlgeschlagen — wählen Sie eine andere Engine oder wiederholen Sie die Installation.",
+      "kokoroInstallStart": "Kokoro-Installation konnte nicht gestartet werden: {error}",
+      "saveFailed": "Einstellungen konnten nicht gespeichert werden: {error}",
+      "cleanupFailed": "Bereinigung fehlgeschlagen: {error}",
+      "hotkeyRegistration": "Registrierung des Tastenkürzels fehlgeschlagen: {error}",
+      "switchProfile": "Profilwechsel fehlgeschlagen: {error}",
+      "resetSettings": "Einstellungen konnten nicht zurückgesetzt werden: {error}",
+      "copyToClipboard": "Kopieren in die Zwischenablage fehlgeschlagen",
+      "voicesSave": "Speichern fehlgeschlagen: {error}",
+      "effectsLoad": "Effekte konnten nicht geladen werden: {error}",
+      "effectSave": "Effekt konnte nicht gespeichert werden: {error}",
+      "previewFailed": "Vorschau fehlgeschlagen: {error}"
     },
     "info": {
       "httpEngineRemoved": "Die HTTP-Engine wurde entfernt. Zur lokalen Engine gewechselt."
@@ -633,7 +715,10 @@
     "installed": "Installiert!",
     "openTerminal": "PowerShell-Terminal öffnen",
     "checkingEngine": "Engine wird geprüft...",
-    "helpText": "Sie können Ihre Engine jederzeit später im Tab Engine konfigurieren."
+    "helpText": "Sie können Ihre Engine jederzeit später im Tab Engine konfigurieren.",
+    "chooseEngine": "Wählen Sie Ihre Sprach-Engine",
+    "installingKokoro": "Kokoro wird installiert… (~335 MB, einmalig)",
+    "installFailed": "Installation fehlgeschlagen."
   },
   "effects": {
     "title": "Audioeffekte",
@@ -681,7 +766,8 @@
     "screenshots": {
       "title": "Screenshots",
       "subtitle": "CopySpeak in Aktion",
-      "caption": "CopySpeak v0.1.8 — Hauptoberfläche mit Tab Abspielen"
+      "caption": "CopySpeak v0.1.8 — Hauptoberfläche mit Tab Abspielen",
+      "alt": "CopySpeak-Screenshot"
     },
     "footer": {
       "github": "GitHub",
@@ -697,5 +783,108 @@
     "unavailable": "Nicht verfügbar – Konfiguration prüfen",
     "error": "Fehler bei der Verfügbarkeitsprüfung",
     "notChecked": "Nicht geprüft – zum Wechseln klicken"
+  },
+  "profiles": {
+    "title": "Stimmprofile",
+    "sound": "Klang",
+    "newFromTemplate": "Neues Profil aus Vorlage",
+    "activeProfile": "Aktives Profil",
+    "startFrom": "Starten mit",
+    "voiceTooltip": "Bekannte Stimmen aus dem Engine-Katalog oder der API des Anbieters.",
+    "providerDefault": "Standard des Anbieters",
+    "importPlaceholder": "Profil-JSON hier einfügen...",
+    "toast": {
+      "copied": "In die Zwischenablage kopiert",
+      "copyFailed": "Kopieren fehlgeschlagen",
+      "downloaded": "Heruntergeladen",
+      "duplicated": "Profil dupliziert",
+      "deleted": "Profil gelöscht",
+      "imported": "\"{name}\" importiert",
+      "created": "\"{name}\" erstellt",
+      "catalogFailed": "Engine-Katalog konnte nicht geladen werden: {error}",
+      "voicesLoaded": "Geladene Stimmen: {count}",
+      "voiceRefreshFailed": "Aktualisierung der Stimmen fehlgeschlagen: {error}"
+    },
+    "templateTooltip": "Befehl, Argumente und Stimme aus einer bekannten Engine vorausfüllen. Spätere Änderungen verändern die Vorlage nie."
+  },
+  "voicePicker": {
+    "select": "Stimme auswählen…",
+    "search": "Stimmen suchen…",
+    "customId": "Eigene / manuelle ID…"
+  },
+  "hotkey": {
+    "set": "Festlegen",
+    "setAria": "Globales Tastenkürzel festlegen",
+    "clearAria": "Tastenkürzel löschen"
+  },
+  "quick": {
+    "doubleCopy": "Doppelt kopieren",
+    "doubleCopyTooltip": "Zwischenablage auf doppeltes Kopieren überwachen",
+    "effectsTooltip": "Audioeffekt auf die TTS-Wiedergabe anwenden"
+  },
+  "recent": {
+    "viewAll": "Gesamten Verlauf anzeigen",
+    "allEngines": "Alle Engines",
+    "allStatuses": "Alle Status",
+    "savedAudio": "Gespeichertes Audio",
+    "failed": "Fehlgeschlagen",
+    "searchAria": "Verlauf durchsuchen",
+    "searchPlaceholder": "Nach Text, Name oder Stimme suchen…",
+    "filterEngineAria": "Nach Engine filtern",
+    "filterStatusAria": "Nach Status filtern",
+    "selectAllAria": "Alle sichtbaren Lesungen auswählen",
+    "restoreTitle": "Text, Stimme und Geschwindigkeit wiederherstellen",
+    "generationFailed": "Generierung fehlgeschlagen",
+    "rename": "Umbenennen",
+    "copyText": "Text kopieren",
+    "revealFile": "Datei anzeigen",
+    "regenerate": "Neu generieren",
+    "renameTitle": "Lesung umbenennen",
+    "renameDescription": "Geben Sie dieser Lesung einen Namen. Leer lassen, um nur den Text anzuzeigen. Die Audiodateinamen bleiben unverändert.",
+    "saveName": "Name speichern",
+    "deleteSelectedDescription": "Die ausgewählten Lesungen und alle ihre gespeicherten Audioteile löschen? Dies kann nicht rückgängig gemacht werden."
+  },
+  "batch": {
+    "title": "TTS-Stapelverarbeitung",
+    "texts": "Textausschnitte (eine Zeile pro Eintrag)",
+    "textsPlaceholder": "Textausschnitte eingeben, einer pro Zeile...",
+    "outputDirectory": "Ausgabeordner",
+    "filenamePrefix": "Dateinamenpräfix",
+    "audioFormat": "Audioformat",
+    "results": "Ergebnisse"
+  },
+  "voices": {
+    "loadFailed": "Laden fehlgeschlagen"
+  },
+  "hud": {
+    "clipboardCopied": "Zwischenablage kopiert",
+    "processing": "Wird verarbeitet..."
+  },
+  "htmlExport": {
+    "generating": "HTML-Inhalt wird erstellt...",
+    "generated": "HTML erfolgreich erstellt",
+    "preparing": "Download wird vorbereitet...",
+    "complete": "Export abgeschlossen",
+    "failed": "Export fehlgeschlagen: {error}",
+    "unknownError": "Unbekannter Fehler"
+  },
+  "update": {
+    "errors": {
+      "unreachable": "Update-Server nicht erreichbar",
+      "signature": "Update-Signatur ungültig",
+      "network": "Netzwerkfehler",
+      "checkFailed": "Update-Prüfung fehlgeschlagen",
+      "installFailed": "Update konnte nicht installiert werden"
+    },
+    "status": {
+      "disabled": "Updates deaktiviert",
+      "downloading": "Lade herunter {percent} %",
+      "installing": "Wird installiert...",
+      "preparing": "Wird vorbereitet...",
+      "checking": "Prüfe...",
+      "upToDate": "Aktuell",
+      "available": "Update verfügbar",
+      "check": "Nach Updates suchen"
+    }
   }
 }

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import { onMount, onDestroy } from "svelte";
   import { check } from "@tauri-apps/plugin-updater";
   import { relaunch } from "@tauri-apps/plugin-process";
@@ -103,13 +104,13 @@
         console.error(`  - No release exists at https://github.com/ilyaizen/CopySpeak/releases`);
         console.error(`  - latest.json file missing from release`);
         console.error(`  - Network connectivity issues`);
-        showError("Cannot reach update server");
+        showError($_("update.errors.unreachable"));
       } else if (errorMsg.includes("signature") || errorMsg.includes("verify")) {
-        showError("Update signature invalid");
+        showError($_("update.errors.signature"));
       } else if (errorMsg.includes("network") || errorMsg.includes("fetch")) {
-        showError("Network error");
+        showError($_("update.errors.network"));
       } else {
-        showError("Update check failed");
+        showError($_("update.errors.checkFailed"));
       }
     } finally {
       isChecking = false;
@@ -161,7 +162,7 @@
       await relaunch();
     } catch (error) {
       console.error("Failed to install update:", error);
-      showError("Failed to install update");
+      showError($_("update.errors.installFailed"));
     } finally {
       isInstalling = false;
       downloadProgress = 0;
@@ -169,18 +170,20 @@
   }
 
   function getStatusText(): string {
-    if (!effectiveUpdateChecksEnabled) return "Updates disabled";
+    if (!effectiveUpdateChecksEnabled) return $_("update.status.disabled");
     if (isInstalling) {
       if (downloadProgress > 0 && downloadProgress < 100) {
-        return `Downloading ${downloadProgress}%`;
+        return $_("update.status.downloading", { values: { percent: downloadProgress } });
       }
-      return downloadProgress === 100 ? "Installing..." : "Preparing...";
+      return downloadProgress === 100
+        ? $_("update.status.installing")
+        : $_("update.status.preparing");
     }
     if (errorMessage) return errorMessage;
-    if (isChecking) return "Checking...";
-    if (showUpToDate) return "Up to date";
-    if (updateAvailable) return "Update available";
-    return "Check for updates";
+    if (isChecking) return $_("update.status.checking");
+    if (showUpToDate) return $_("update.status.upToDate");
+    if (updateAvailable) return $_("update.status.available");
+    return $_("update.status.check");
   }
 
   function handleClick() {

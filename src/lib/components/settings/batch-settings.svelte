@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import { Input } from "#lib/components/ui/input/index.js";
   import { Label } from "#lib/components/ui/label/index.js";
   import { Select } from "#lib/components/ui/select/index.js";
@@ -20,7 +21,7 @@
 </script>
 
 <div class="border-border bg-card rounded-lg border p-4 shadow-sm">
-  <h3 class="text-card-foreground mb-4 text-lg font-medium">Batch TTS Processor</h3>
+  <h3 class="text-card-foreground mb-4 text-lg font-medium">{$_("batch.title")}</h3>
   <p class="text-muted-foreground mb-4 text-sm">
     Generate audio for multiple text snippets at once. Each line becomes a separate audio file.
   </p>
@@ -28,12 +29,12 @@
   <div class="space-y-4">
     <!-- Text input -->
     <div class="space-y-2">
-      <Label for="batch-texts">Text Snippets (one per line)</Label>
+      <Label for="batch-texts">{$_("batch.texts")}</Label>
       <textarea
         id="batch-texts"
         rows={6}
         class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-20 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-        placeholder="Enter text snippets, one per line..."
+        placeholder={$_("batch.textsPlaceholder")}
         bind:value={batchTexts}
         disabled={isBatchProcessing}></textarea>
     </div>
@@ -41,7 +42,7 @@
     <!-- Output settings -->
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-2">
-        <Label for="batch-directory">Output Directory</Label>
+        <Label for="batch-directory">{$_("batch.outputDirectory")}</Label>
         <Input
           id="batch-directory"
           type="text"
@@ -52,7 +53,7 @@
       </div>
 
       <div class="space-y-2">
-        <Label for="batch-prefix">Filename Prefix</Label>
+        <Label for="batch-prefix">{$_("batch.filenamePrefix")}</Label>
         <Input
           id="batch-prefix"
           type="text"
@@ -64,7 +65,7 @@
     </div>
 
     <div class="space-y-2">
-      <Label for="batch-format">Audio Format</Label>
+      <Label for="batch-format">{$_("batch.audioFormat")}</Label>
       <Select
         id="batch-format"
         options={audioFormatOptions}
@@ -111,7 +112,7 @@
     <!-- Results -->
     {#if batchResults.length > 0}
       <div class="space-y-2">
-        <h4 class="text-sm font-medium">Results</h4>
+        <h4 class="text-sm font-medium">{$_("batch.results")}</h4>
         <div class="max-h-48 space-y-1 overflow-y-auto">
           {#each batchResults as result}
             <div
@@ -138,7 +139,7 @@
     <!-- Actions -->
     <div class="flex justify-end gap-2">
       {#if isBatchProcessing}
-        <Button variant="destructive" onclick={cancelBatch}>Cancel</Button>
+        <Button variant="destructive" onclick={cancelBatch}>{$_("common.cancel")}</Button>
       {:else}
         <Button
           variant="outline"

@@ -375,8 +375,7 @@
       config.tts.active_backend = profile.engine;
       if (isTauri) await invoke("set_config", { newConfig: config });
       if (regenerate) await handleGenerate(true);
-      else
-        toast.success("Text, voice and speed restored. Pitch and effects use the current profile.");
+      else toast.success($_("play.restored"));
     } catch (e) {
       error = `Text restored. ${e}`;
     }
@@ -437,13 +436,13 @@
 <div class="flex min-w-0 flex-1 flex-col gap-4">
   <div class="grid min-w-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_14rem]">
     <section aria-labelledby="reader-heading" class="flex min-w-0 flex-col gap-3">
-      <h2 id="reader-heading" class="sr-only">Read aloud</h2>
+      <h2 id="reader-heading" class="sr-only">{$_("play.readAloud")}</h2>
       {#if caption}
         <div
           bind:this={readingView}
           id="reading-text"
           role="region"
-          aria-label="Now reading"
+          aria-label={$_("play.nowReadingAria")}
           dir="auto"
           class="border-input dark:bg-input/30 min-h-48 flex-1 overflow-y-auto rounded-md border p-4 text-base leading-relaxed whitespace-pre-wrap shadow-xs"
         >
@@ -457,7 +456,7 @@
             >{:else}{captionText}{/each}
         </div>
       {:else}
-        <label for="reading-text" class="sr-only">Text to read aloud</label>
+        <label for="reading-text" class="sr-only">{$_("play.textLabel")}</label>
         <Textarea
           id="reading-text"
           class="field-sizing-fixed min-h-48 flex-1 resize-none p-4 text-base leading-relaxed"
@@ -486,7 +485,7 @@
       </div>
     </section>
     {#if config}
-      <aside aria-label="Reading controls" class="flex min-w-0 flex-col">
+      <aside aria-label={$_("play.controlsAria")} class="flex min-w-0 flex-col">
         <QuickSettings bind:config />
       </aside>
     {/if}

@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "CopySpeak",
-    "tagline": "Texto a voz con IA para tu portapapeles"
+    "tagline": "Texto a voz con IA para tu portapapeles",
+    "logoAlt": "Logotipo de CopySpeak"
   },
   "nav": {
     "play": "Reproducir",
@@ -14,7 +15,8 @@
     "engines": "Motores",
     "history": "Historial",
     "settings": "Configuración",
-    "tagline": "Texto a voz con IA para tu portapapeles"
+    "tagline": "Texto a voz con IA para tu portapapeles",
+    "navAria": "Navegación principal"
   },
   "common": {
     "loading": "Cargando...",
@@ -32,7 +34,23 @@
     "error": "Error",
     "success": "Éxito",
     "warning": "Advertencia",
-    "info": "Información"
+    "info": "Información",
+    "delete": "Eliminar",
+    "duplicate": "Duplicar",
+    "export": "Exportar",
+    "import": "Importar",
+    "name": "Nombre",
+    "engine": "Motor",
+    "voice": "Voz",
+    "speed": "Velocidad",
+    "pitch": "Tono",
+    "effect": "Efecto",
+    "effects": "Efectos",
+    "hotkey": "Atajo de teclado",
+    "volume": "Volumen",
+    "toggleTheme": "Cambiar tema",
+    "tryAgain": "Intentar de nuevo",
+    "moreInfo": "Más información"
   },
   "settings": {
     "title": "Configuración",
@@ -97,7 +115,12 @@
       "debugMode": "Modo de depuración",
       "updateChecks": "Buscar actualizaciones automáticamente",
       "autoSave": "Guardar cambios automáticamente",
-      "autoSaveDescription": "Guarda los cambios automáticamente 800 ms después del último cambio en Configuración, Motores y Voces, sin barra de Guardar/Cancelar"
+      "autoSaveDescription": "Guarda los cambios automáticamente 800 ms después del último cambio en Configuración, Motores y Voces, sin barra de Guardar/Cancelar",
+      "launchOnLoginTooltip": "Abrir CopySpeak al iniciar sesión",
+      "startMinimizedLabel": "Iniciar minimizado",
+      "startMinimizedTooltip": "Iniciar la aplicación minimizada en la bandeja del sistema",
+      "minimizeToTray": "Minimizar a la bandeja al cerrar",
+      "minimizeToTrayTooltip": "Minimizar a la bandeja del sistema en lugar de salir al cerrar la ventana"
     },
     "playback": {
       "title": "Ajustes de reproducción",
@@ -308,7 +331,34 @@
         "title": "Motor HTTP personalizado",
         "description": "Backend TTS genérico por HTTP/REST",
         "detail": "Motor con tu propio backend que llama a cualquier endpoint HTTP con plantillas de URL y autenticación configurables."
-      }
+      },
+      "checkUpdates": "Buscar actualizaciones",
+      "checkUpdatesTooltip": "Buscar automáticamente nuevas versiones al iniciar",
+      "updateStatus": "Estado de la actualización",
+      "debugMode": "Modo de depuración",
+      "debugModeTooltip": "Activar registros detallados e información de estado adicional",
+      "refreshing": "actualizando...",
+      "noLogs": "No hay registros disponibles"
+    },
+    "importExport": {
+      "tooltip": "Exporta, importa o restablece tu configuración",
+      "exportTitle": "Exportar configuración",
+      "exportDescription": "Copia el JSON de abajo o descárgalo como archivo",
+      "importTitle": "Importar configuración",
+      "importDescription": "Pega el JSON de configuración abajo o sube un archivo",
+      "pastePlaceholder": "Pega aquí el JSON de configuración...",
+      "resetTitle": "¿Restablecer toda la configuración?",
+      "resetConfirm": "Restablecer y reiniciar la configuración inicial"
+    },
+    "appearance": {
+      "theme": "Tema",
+      "themeTooltip": "Elige tu esquema de colores preferido"
+    },
+    "hotkey": {
+      "enable": "Activar atajo global",
+      "enableTooltip": "Activar TTS desde cualquier aplicación",
+      "globalHotkey": "Atajo global",
+      "globalHotkeyTooltip": "Pulsa una combinación de teclas para definirla. Requiere al menos un modificador (Ctrl, Alt, Mayús, Win)."
     }
   },
   "engine": {
@@ -550,7 +600,12 @@
     "stopTooltip": "Detener",
     "abortTooltip": "Abortar la síntesis o la reproducción",
     "skipBackTooltip": "Atrás 5 segundos",
-    "skipFwdTooltip": "Adelante 5 segundos"
+    "skipFwdTooltip": "Adelante 5 segundos",
+    "readAloud": "Leer en voz alta",
+    "nowReadingAria": "Leyendo ahora",
+    "textLabel": "Texto para leer en voz alta",
+    "controlsAria": "Controles de lectura",
+    "restored": "Texto, voz y velocidad restaurados. El tono y los efectos usan el perfil actual."
   },
   "history": {
     "title": "Historial",
@@ -582,7 +637,21 @@
       "failedToPlay": "No se pudo reproducir",
       "failedToReSpeak": "No se pudo volver a sintetizar",
       "failedToDelete": "No se pudo eliminar"
-    }
+    },
+    "deleteEntryTooltip": "Eliminar entrada",
+    "confirmDeleteEntry": "¿Eliminar esta entrada del historial? Esta acción no se puede deshacer.",
+    "meta": {
+      "engine": "Motor:",
+      "voice": "Voz:",
+      "duration": "Duración:",
+      "length": "Longitud:",
+      "attempts": "Intentos:",
+      "app": "App:",
+      "output": "Salida:"
+    },
+    "searchPlaceholder": "Buscar en el texto...",
+    "filters": "Filtros",
+    "activeFilters": "Filtros activos:"
   },
   "toast": {
     "success": {
@@ -597,7 +666,8 @@
       "settingsDownloaded": "Ajustes descargados",
       "settingsImported": "Ajustes importados correctamente",
       "settingsReset": "Ajustes restablecidos: empieza la configuración desde cero",
-      "synthesisAborted": "Síntesis abortada"
+      "synthesisAborted": "Síntesis abortada",
+      "voicesSaved": "Voces guardadas correctamente"
     },
     "error": {
       "loadSettings": "No se pudieron cargar los ajustes",
@@ -608,7 +678,19 @@
       "hudTest": "Falló la prueba del HUD",
       "cleanup": "La limpieza falló",
       "installer": "No se pudo ejecutar el instalador",
-      "switchEngine": "No se pudo cambiar de motor"
+      "switchEngine": "No se pudo cambiar de motor",
+      "kokoroInstallFailed": "Error al instalar Kokoro: elige otro motor o vuelve a intentar la instalación.",
+      "kokoroInstallStart": "La instalación de Kokoro no pudo iniciarse: {error}",
+      "saveFailed": "Error al guardar la configuración: {error}",
+      "cleanupFailed": "Error en la limpieza: {error}",
+      "hotkeyRegistration": "Error al registrar el atajo: {error}",
+      "switchProfile": "Error al cambiar de perfil: {error}",
+      "resetSettings": "Error al restablecer la configuración: {error}",
+      "copyToClipboard": "Error al copiar al portapapeles",
+      "voicesSave": "Error al guardar: {error}",
+      "effectsLoad": "Error al cargar los efectos: {error}",
+      "effectSave": "Error al guardar el efecto: {error}",
+      "previewFailed": "Error en la vista previa: {error}"
     },
     "info": {
       "httpEngineRemoved": "El motor HTTP se ha eliminado. Se ha cambiado al motor local."
@@ -633,7 +715,10 @@
     "installed": "¡Instalado!",
     "openTerminal": "Abrir la terminal de PowerShell",
     "checkingEngine": "Comprobando el motor...",
-    "helpText": "Siempre puedes configurar el motor más tarde desde la pestaña Motor."
+    "helpText": "Siempre puedes configurar el motor más tarde desde la pestaña Motor.",
+    "chooseEngine": "Elige tu motor de voz",
+    "installingKokoro": "Instalando Kokoro… (~335 MB, una sola vez)",
+    "installFailed": "La instalación falló."
   },
   "effects": {
     "title": "Efectos de audio",
@@ -681,7 +766,8 @@
     "screenshots": {
       "title": "Capturas",
       "subtitle": "Mira CopySpeak en acción",
-      "caption": "CopySpeak v0.1.8: interfaz principal con la pestaña Reproducir"
+      "caption": "CopySpeak v0.1.8: interfaz principal con la pestaña Reproducir",
+      "alt": "Captura de pantalla de CopySpeak"
     },
     "footer": {
       "github": "GitHub",
@@ -697,5 +783,108 @@
     "unavailable": "No disponible: revisa la configuración",
     "error": "Error al comprobar la disponibilidad",
     "notChecked": "Sin comprobar: haz clic para cambiar"
+  },
+  "profiles": {
+    "title": "Perfiles de voz",
+    "sound": "Sonido",
+    "newFromTemplate": "Nuevo perfil desde plantilla",
+    "activeProfile": "Perfil activo",
+    "startFrom": "Empezar desde",
+    "voiceTooltip": "Voces conocidas del catálogo del motor o de la API del proveedor.",
+    "providerDefault": "predeterminado del proveedor",
+    "importPlaceholder": "Pega aquí el JSON del perfil...",
+    "toast": {
+      "copied": "Copiado al portapapeles",
+      "copyFailed": "Error al copiar",
+      "downloaded": "Descargado",
+      "duplicated": "Perfil duplicado",
+      "deleted": "Perfil eliminado",
+      "imported": "Importado «{name}»",
+      "created": "Creado «{name}»",
+      "catalogFailed": "No se pudo cargar el catálogo del motor: {error}",
+      "voicesLoaded": "Voces cargadas: {count}",
+      "voiceRefreshFailed": "Error al actualizar las voces: {error}"
+    },
+    "templateTooltip": "Rellena el comando, los argumentos y la voz desde un motor conocido. Editarlo después nunca cambia la plantilla."
+  },
+  "voicePicker": {
+    "select": "Seleccionar voz…",
+    "search": "Buscar voces…",
+    "customId": "ID personalizado / manual…"
+  },
+  "hotkey": {
+    "set": "Definir",
+    "setAria": "Definir atajo global",
+    "clearAria": "Borrar atajo"
+  },
+  "quick": {
+    "doubleCopy": "Doble copia",
+    "doubleCopyTooltip": "Vigilar el portapapeles para detectar la doble copia",
+    "effectsTooltip": "Aplicar un efecto de audio a la reproducción TTS"
+  },
+  "recent": {
+    "viewAll": "Ver todo el historial",
+    "allEngines": "Todos los motores",
+    "allStatuses": "Todos los estados",
+    "savedAudio": "Audio guardado",
+    "failed": "Fallido",
+    "searchAria": "Buscar en el historial",
+    "searchPlaceholder": "Buscar texto, nombre o voz…",
+    "filterEngineAria": "Filtrar por motor",
+    "filterStatusAria": "Filtrar por estado",
+    "selectAllAria": "Seleccionar todas las lecturas visibles",
+    "restoreTitle": "Restaurar texto, voz y velocidad",
+    "generationFailed": "Error al generar",
+    "rename": "Renombrar",
+    "copyText": "Copiar texto",
+    "revealFile": "Mostrar archivo",
+    "regenerate": "Regenerar",
+    "renameTitle": "Renombrar lectura",
+    "renameDescription": "Dale un nombre a esta lectura. Déjalo en blanco para mostrar solo su texto. Los nombres de archivo de audio no cambian.",
+    "saveName": "Guardar nombre",
+    "deleteSelectedDescription": "¿Eliminar las lecturas seleccionadas y todas sus partes de audio guardadas? No se puede deshacer."
+  },
+  "batch": {
+    "title": "Procesador TTS por lotes",
+    "texts": "Fragmentos de texto (uno por línea)",
+    "textsPlaceholder": "Escribe fragmentos de texto, uno por línea...",
+    "outputDirectory": "Carpeta de salida",
+    "filenamePrefix": "Prefijo del nombre de archivo",
+    "audioFormat": "Formato de audio",
+    "results": "Resultados"
+  },
+  "voices": {
+    "loadFailed": "Error al cargar"
+  },
+  "hud": {
+    "clipboardCopied": "Portapapeles copiado",
+    "processing": "Procesando..."
+  },
+  "htmlExport": {
+    "generating": "Generando contenido HTML...",
+    "generated": "HTML generado correctamente",
+    "preparing": "Preparando la descarga...",
+    "complete": "Exportación completada",
+    "failed": "Error al exportar: {error}",
+    "unknownError": "Error desconocido"
+  },
+  "update": {
+    "errors": {
+      "unreachable": "No se puede conectar con el servidor de actualizaciones",
+      "signature": "Firma de la actualización no válida",
+      "network": "Error de red",
+      "checkFailed": "Error al buscar actualizaciones",
+      "installFailed": "Error al instalar la actualización"
+    },
+    "status": {
+      "disabled": "Actualizaciones desactivadas",
+      "downloading": "Descargando {percent} %",
+      "installing": "Instalando...",
+      "preparing": "Preparando...",
+      "checking": "Buscando...",
+      "upToDate": "Actualizado",
+      "available": "Actualización disponible",
+      "check": "Buscar actualizaciones"
+    }
   }
 }

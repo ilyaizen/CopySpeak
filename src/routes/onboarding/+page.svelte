@@ -133,7 +133,7 @@
     if (run.exitCode === 0) {
       void finish("kokoro");
     } else if (!launchFailed) {
-      toast.error("Kokoro install failed — pick another engine, or retry the install.");
+      toast.error($_("toast.error.kokoroInstallFailed"));
     }
   });
 
@@ -141,11 +141,11 @@
     isSaving = true;
     try {
       await invoke("complete_onboarding", { engine: engineId });
-      toast.success("Welcome to CopySpeak!");
+      toast.success($_("toast.success.welcome"));
       await goto("/");
     } catch (e) {
       console.error("Failed to complete onboarding:", e);
-      toast.error(`Failed to save settings: ${e}`);
+      toast.error($_("toast.error.saveFailed", { values: { error: String(e) } }));
     } finally {
       isSaving = false;
     }
@@ -159,7 +159,7 @@
       await invoke("install_engine", { engine: "kokoro", voice: KOKORO_VOICES, cuda: false });
     } catch (e) {
       launchFailed = true;
-      toast.error(`Kokoro install failed to start: ${e}`);
+      toast.error($_("toast.error.kokoroInstallStart", { values: { error: String(e) } }));
     }
   }
 
@@ -199,7 +199,7 @@
               <Volume2 class="h-5 w-5" />
             </div>
             <div class="space-y-1">
-              <h2 class="text-lg font-semibold">Choose your voice engine</h2>
+              <h2 class="text-lg font-semibold">{$_("onboarding.chooseEngine")}</h2>
               <p class="text-muted-foreground text-sm leading-relaxed">
                 You can switch engines, voices, and speed anytime in Settings.
               </p>
@@ -261,7 +261,7 @@
                 <div class="flex items-start gap-2">
                   <Loader2 size={16} class="text-muted-foreground mt-0.5 animate-spin" />
                   <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium">Installing Kokoro… (~335 MB, one time)</p>
+                    <p class="text-sm font-medium">{$_("onboarding.installingKokoro")}</p>
                     {#if lastLogLine}
                       <p
                         class="text-muted-foreground mt-1 truncate font-mono text-[11px]"
@@ -276,7 +276,7 @@
                 <div class="flex items-start justify-between gap-2">
                   <div class="flex items-start gap-2">
                     <AlertCircle size={16} class="text-destructive mt-0.5" />
-                    <p class="text-destructive text-sm">Install failed.</p>
+                    <p class="text-destructive text-sm">{$_("onboarding.installFailed")}</p>
                   </div>
                   <Button variant="outline" size="sm" onclick={startKokoroInstall}>
                     <RotateCw size={12} class="me-1" />

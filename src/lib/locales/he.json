@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "CopySpeak",
-    "tagline": "המרת טקסט לדיבור ב-AI ללוח ההעתקה שלך"
+    "tagline": "המרת טקסט לדיבור ב-AI ללוח ההעתקה שלך",
+    "logoAlt": "הלוגו של CopySpeak"
   },
   "nav": {
     "play": "הפעל",
@@ -14,7 +15,8 @@
     "engines": "מנועים",
     "history": "היסטוריה",
     "settings": "הגדרות",
-    "tagline": "המרת טקסט לדיבור ב-AI ללוח ההעתקה שלך"
+    "tagline": "המרת טקסט לדיבור ב-AI ללוח ההעתקה שלך",
+    "navAria": "ניווט ראשי"
   },
   "common": {
     "loading": "טוען...",
@@ -32,7 +34,23 @@
     "error": "שגיאה",
     "success": "הצלחה",
     "warning": "אזהרה",
-    "info": "מידע"
+    "info": "מידע",
+    "delete": "מחיקה",
+    "duplicate": "שכפול",
+    "export": "ייצוא",
+    "import": "ייבוא",
+    "name": "שם",
+    "engine": "מנוע",
+    "voice": "קול",
+    "speed": "מהירות",
+    "pitch": "גובה צליל",
+    "effect": "אפקט",
+    "effects": "אפקטים",
+    "hotkey": "מקש קיצור",
+    "volume": "עוצמה",
+    "toggleTheme": "החלפת ערכת נושא",
+    "tryAgain": "נסה שוב",
+    "moreInfo": "מידע נוסף"
   },
   "settings": {
     "title": "הגדרות",
@@ -97,7 +115,12 @@
       "debugMode": "מצב ניפוי שגיאות",
       "updateChecks": "בדוק עדכונים אוטומטית",
       "autoSave": "שמור שינויים אוטומטית",
-      "autoSaveDescription": "שמור עריכות אוטומטית 800 מילישניות לאחר השינוי האחרון בהגדרות, במנועים ובקולות — ללא סרגל שמירה וביטול"
+      "autoSaveDescription": "שמור עריכות אוטומטית 800 מילישניות לאחר השינוי האחרון בהגדרות, במנועים ובקולות — ללא סרגל שמירה וביטול",
+      "launchOnLoginTooltip": "הפעל את CopySpeak כשאתה מתחבר",
+      "startMinimizedLabel": "התחל ממוזער",
+      "startMinimizedTooltip": "הפעל את היישום ממוזער לאזור ההודעות",
+      "minimizeToTray": "מזער לאזור ההודעות בסגירה",
+      "minimizeToTrayTooltip": "מזער לאזור ההודעות במקום לצאת בעת סגירת החלון"
     },
     "playback": {
       "title": "הגדרות השמעה",
@@ -308,7 +331,34 @@
         "title": "מנוע HTTP מותאם אישית",
         "description": "קצה עורפי כללי של HTTP/REST ל-TTS",
         "detail": "מנוע להבאת קצה עורפי משלך, שקורא לכל נקודת קצה HTTP עם תבניות כתובת והרשאות הניתנות להגדרה."
-      }
+      },
+      "checkUpdates": "בדוק עדכונים",
+      "checkUpdatesTooltip": "בדוק אוטומטית גרסאות חדשות בהפעלה",
+      "updateStatus": "סטטוס עדכון",
+      "debugMode": "מצב ניפוי שגיאות",
+      "debugModeTooltip": "הפעל יומן מפורט ומידע סטטוס נוסף",
+      "refreshing": "מרענן...",
+      "noLogs": "אין יומנים זמינים"
+    },
+    "importExport": {
+      "tooltip": "ייצא, ייבא או אפס את ההגדרות שלך",
+      "exportTitle": "ייצוא הגדרות",
+      "exportDescription": "העתק את ה-JSON שלמטה או הורד אותו כקובץ",
+      "importTitle": "ייבוא הגדרות",
+      "importDescription": "הדבק למטה JSON של הגדרות או העלה קובץ",
+      "pastePlaceholder": "הדבק כאן JSON של הגדרות...",
+      "resetTitle": "לאפס את כל ההגדרות?",
+      "resetConfirm": "אפס והפעל מחדש את ההגדרה הראשונית"
+    },
+    "appearance": {
+      "theme": "ערכת נושא",
+      "themeTooltip": "בחר את ערכת הצבעים המועדפת עליך"
+    },
+    "hotkey": {
+      "enable": "הפעל מקש קיצור גלובלי",
+      "enableTooltip": "הפעל TTS מכל יישום",
+      "globalHotkey": "מקש קיצור גלובלי",
+      "globalHotkeyTooltip": "לחץ על שילוב מקשים להגדרה. נדרש לפחות מקש שינוי אחד (Ctrl, Alt, Shift, Win)."
     }
   },
   "engine": {
@@ -550,7 +600,12 @@
     "stopTooltip": "עצור",
     "abortTooltip": "בטל סינתזה או השמעה",
     "skipBackTooltip": "אחורה 5 שניות",
-    "skipFwdTooltip": "קדימה 5 שניות"
+    "skipFwdTooltip": "קדימה 5 שניות",
+    "readAloud": "קריאה בקול",
+    "nowReadingAria": "קורא כעת",
+    "textLabel": "טקסט לקריאה בקול",
+    "controlsAria": "פקדי קריאה",
+    "restored": "הטקסט, הקול והמהירות שוחזרו. גובה הצליל והאפקטים משתמשים בפרופיל הנוכחי."
   },
   "history": {
     "title": "היסטוריה",
@@ -582,7 +637,21 @@
       "failedToPlay": "ההשמעה נכשלה",
       "failedToReSpeak": "הקראה מחדש נכשלה",
       "failedToDelete": "המחיקה נכשלה"
-    }
+    },
+    "deleteEntryTooltip": "מחק רשומה",
+    "confirmDeleteEntry": "למחוק את רשומת ההיסטוריה הזו? לא ניתן לבטל פעולה זו.",
+    "meta": {
+      "engine": "מנוע:",
+      "voice": "קול:",
+      "duration": "משך:",
+      "length": "אורך:",
+      "attempts": "ניסיונות:",
+      "app": "אפליקציה:",
+      "output": "פלט:"
+    },
+    "searchPlaceholder": "חפש בתוכן הטקסט...",
+    "filters": "מסננים",
+    "activeFilters": "מסננים פעילים:"
   },
   "toast": {
     "success": {
@@ -597,7 +666,8 @@
       "settingsDownloaded": "ההגדרות הורדו",
       "settingsImported": "ההגדרות יובאו בהצלחה",
       "settingsReset": "ההגדרות אופסו — מתחילים הגדרה מחדש",
-      "synthesisAborted": "הסינתזה בוטלה"
+      "synthesisAborted": "הסינתזה בוטלה",
+      "voicesSaved": "הקולות נשמרו בהצלחה"
     },
     "error": {
       "loadSettings": "טעינת ההגדרות נכשלה",
@@ -608,7 +678,19 @@
       "hudTest": "בדיקת HUD נכשלה",
       "cleanup": "הניקוי נכשל",
       "installer": "הפעלת המתקין נכשלה",
-      "switchEngine": "החלפת המנוע נכשלה"
+      "switchEngine": "החלפת המנוע נכשלה",
+      "kokoroInstallFailed": "התקנת Kokoro נכשלה — בחר מנוע אחר, או נסה להתקין שוב.",
+      "kokoroInstallStart": "התקנת Kokoro לא הצליחה להתחיל: {error}",
+      "saveFailed": "שמירת ההגדרות נכשלה: {error}",
+      "cleanupFailed": "הניקוי נכשל: {error}",
+      "hotkeyRegistration": "רישום מקש הקיצור נכשל: {error}",
+      "switchProfile": "החלפת הפרופיל נכשלה: {error}",
+      "resetSettings": "איפוס ההגדרות נכשל: {error}",
+      "copyToClipboard": "ההעתקה ללוח נכשלה",
+      "voicesSave": "השמירה נכשלה: {error}",
+      "effectsLoad": "טעינת האפקטים נכשלה: {error}",
+      "effectSave": "שמירת האפקט נכשלה: {error}",
+      "previewFailed": "התצוגה המקדימה נכשלה: {error}"
     },
     "info": {
       "httpEngineRemoved": "מנוע HTTP הוסר. עברנו למנוע המקומי."
@@ -633,7 +715,10 @@
     "installed": "הותקן!",
     "openTerminal": "פתח טרמינל PowerShell",
     "checkingEngine": "בודק מנוע...",
-    "helpText": "תמיד תוכל להגדיר את המנוע מאוחר יותר מלשונית המנוע."
+    "helpText": "תמיד תוכל להגדיר את המנוע מאוחר יותר מלשונית המנוע.",
+    "chooseEngine": "בחר את מנוע הקול שלך",
+    "installingKokoro": "מתקין את Kokoro… (כ-335 MB, פעם אחת)",
+    "installFailed": "ההתקנה נכשלה."
   },
   "effects": {
     "title": "אפקטים קוליים",
@@ -681,7 +766,8 @@
     "screenshots": {
       "title": "צילומי מסך",
       "subtitle": "ראה את CopySpeak בפעולה",
-      "caption": "CopySpeak v0.1.8 — ממשק ראשי עם לשונית ההשמעה"
+      "caption": "CopySpeak v0.1.8 — ממשק ראשי עם לשונית ההשמעה",
+      "alt": "צילום מסך של CopySpeak"
     },
     "footer": {
       "github": "GitHub",
@@ -697,5 +783,108 @@
     "unavailable": "לא זמין - בדוק הגדרות",
     "error": "שגיאה בבדיקת הזמינות",
     "notChecked": "לא נבדק - לחץ כדי להחליף"
+  },
+  "profiles": {
+    "title": "פרופילי קול",
+    "sound": "סאונד",
+    "newFromTemplate": "פרופיל חדש מתבנית",
+    "activeProfile": "פרופיל פעיל",
+    "startFrom": "התחל מ-",
+    "voiceTooltip": "קולות ידועים מקטלוג המנוע או מ-API של הספק.",
+    "providerDefault": "ברירת המחדל של הספק",
+    "importPlaceholder": "הדבק כאן את ה-JSON של הפרופיל...",
+    "toast": {
+      "copied": "הועתק ללוח",
+      "copyFailed": "ההעתקה נכשלה",
+      "downloaded": "הורד",
+      "duplicated": "הפרופיל שוכפל",
+      "deleted": "הפרופיל נמחק",
+      "imported": "יובא \"{name}\"",
+      "created": "נוצר \"{name}\"",
+      "catalogFailed": "לא ניתן לטעון את קטלוג המנוע: {error}",
+      "voicesLoaded": "נטענו קולות: {count}",
+      "voiceRefreshFailed": "רענון הקולות נכשל: {error}"
+    },
+    "templateTooltip": "מילוי מראש של פקודה/ארגומנטים/קול ממנוע מוכר. עריכה לאחר מכן לעולם לא משנה את התבנית."
+  },
+  "voicePicker": {
+    "select": "בחר קול…",
+    "search": "חפש קולות…",
+    "customId": "מזהה מותאם / ידני…"
+  },
+  "hotkey": {
+    "set": "הגדר",
+    "setAria": "הגדר מקש קיצור גלובלי",
+    "clearAria": "נקה מקש קיצור"
+  },
+  "quick": {
+    "doubleCopy": "העתקה כפולה",
+    "doubleCopyTooltip": "עקוב אחר הלוח לזיהוי העתקה כפולה",
+    "effectsTooltip": "החל אפקט שמע על ההשמעה של TTS"
+  },
+  "recent": {
+    "viewAll": "הצג את כל ההיסטוריה",
+    "allEngines": "כל המנועים",
+    "allStatuses": "כל הסטטוסים",
+    "savedAudio": "שמע שמור",
+    "failed": "נכשל",
+    "searchAria": "חיפוש בהיסטוריה",
+    "searchPlaceholder": "חפש לפי טקסט, שם או קול…",
+    "filterEngineAria": "סנן לפי מנוע",
+    "filterStatusAria": "סנן לפי סטטוס",
+    "selectAllAria": "בחר את כל ההקראות הגלויות",
+    "restoreTitle": "שחזר טקסט, קול ומהירות",
+    "generationFailed": "היצירה נכשלה",
+    "rename": "שנה שם",
+    "copyText": "העתק טקסט",
+    "revealFile": "הצג את הקובץ",
+    "regenerate": "צור מחדש",
+    "renameTitle": "שנה את שם ההקראה",
+    "renameDescription": "תן שם להקראה הזו. השאר ריק כדי להציג רק את הטקסט שלה. שמות קובצי השמע נשארים כפי שהם.",
+    "saveName": "שמור שם",
+    "deleteSelectedDescription": "למחוק את ההקראות שנבחרו ואת כל קטעי השמע השמורים שלהן? לא ניתן לבטל פעולה זו."
+  },
+  "batch": {
+    "title": "מעבד TTS אצווה",
+    "texts": "קטעי טקסט (אחד בכל שורה)",
+    "textsPlaceholder": "הזן קטעי טקסט, אחד בכל שורה...",
+    "outputDirectory": "תיקיית פלט",
+    "filenamePrefix": "קידומת שם קובץ",
+    "audioFormat": "פורמט שמע",
+    "results": "תוצאות"
+  },
+  "voices": {
+    "loadFailed": "הטעינה נכשלה"
+  },
+  "hud": {
+    "clipboardCopied": "הלוח הועתק",
+    "processing": "מעבד..."
+  },
+  "htmlExport": {
+    "generating": "יוצר תוכן HTML...",
+    "generated": "קובץ ה-HTML נוצר בהצלחה",
+    "preparing": "מכין הורדה...",
+    "complete": "הייצוא הושלם",
+    "failed": "הייצוא נכשל: {error}",
+    "unknownError": "שגיאה לא ידועה"
+  },
+  "update": {
+    "errors": {
+      "unreachable": "לא ניתן להגיע לשרת העדכונים",
+      "signature": "חתימת העדכון אינה תקינה",
+      "network": "שגיאת רשת",
+      "checkFailed": "בדיקת העדכונים נכשלה",
+      "installFailed": "התקנת העדכון נכשלה"
+    },
+    "status": {
+      "disabled": "עדכונים כבויים",
+      "downloading": "מוריד {percent}%",
+      "installing": "מתקין...",
+      "preparing": "מכין...",
+      "checking": "בודק...",
+      "upToDate": "מעודכן",
+      "available": "עדכון זמין",
+      "check": "בדוק עדכונים"
+    }
   }
 }

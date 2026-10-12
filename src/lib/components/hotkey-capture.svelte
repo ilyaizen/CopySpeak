@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import Kbd from "#lib/components/ui/kbd/kbd.svelte";
   import KbdGroup from "#lib/components/ui/kbd/kbd-group.svelte";
   import { X } from "@lucide/svelte";
@@ -105,7 +106,7 @@
     onkeydown={handleKeyDown}
     onblur={handleBlur}
     {disabled}
-    aria-label="Set global hotkey"
+    aria-label={$_("hotkey.setAria")}
   >
     {#if isCapturing}
       <span class="text-primary animate-pulse">...</span>
@@ -116,7 +117,7 @@
         {/each}
       </KbdGroup>
     {:else}
-      <span class="text-muted-foreground">Set</span>
+      <span class="text-muted-foreground">{$_("hotkey.set")}</span>
     {/if}
   </button>
 
@@ -125,7 +126,7 @@
       type="button"
       class="hover:bg-muted/50 rounded p-1 transition-colors"
       onclick={onclear}
-      aria-label="Clear hotkey"
+      aria-label={$_("hotkey.clearAria")}
     >
       <X class="text-muted-foreground size-3.5" />
     </button>

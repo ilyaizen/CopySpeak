@@ -1,7 +1,8 @@
 {
   "app": {
     "title": "CopySpeak",
-    "tagline": "تحويل النص إلى كلام بالذكاء الاصطناعي لحافظتك"
+    "tagline": "تحويل النص إلى كلام بالذكاء الاصطناعي لحافظتك",
+    "logoAlt": "شعار CopySpeak"
   },
   "nav": {
     "play": "تشغيل",
@@ -14,7 +15,8 @@
     "engines": "المحركات",
     "history": "السجل",
     "settings": "الإعدادات",
-    "tagline": "تحويل النص إلى كلام بالذكاء الاصطناعي لحافظتك"
+    "tagline": "تحويل النص إلى كلام بالذكاء الاصطناعي لحافظتك",
+    "navAria": "التنقل الرئيسي"
   },
   "common": {
     "loading": "جارٍ التحميل...",
@@ -32,7 +34,23 @@
     "error": "خطأ",
     "success": "نجاح",
     "warning": "تحذير",
-    "info": "معلومات"
+    "info": "معلومات",
+    "delete": "حذف",
+    "duplicate": "تكرار",
+    "export": "تصدير",
+    "import": "استيراد",
+    "name": "الاسم",
+    "engine": "المحرك",
+    "voice": "الصوت",
+    "speed": "السرعة",
+    "pitch": "درجة الصوت",
+    "effect": "التأثير",
+    "effects": "التأثيرات",
+    "hotkey": "اختصار لوحة المفاتيح",
+    "volume": "مستوى الصوت",
+    "toggleTheme": "تبديل المظهر",
+    "tryAgain": "حاول مرة أخرى",
+    "moreInfo": "مزيد من المعلومات"
   },
   "settings": {
     "title": "الإعدادات",
@@ -97,7 +115,12 @@
       "debugMode": "وضع التصحيح",
       "updateChecks": "التحقق من التحديثات تلقائيًا",
       "autoSave": "حفظ التغييرات تلقائيًا",
-      "autoSaveDescription": "حفظ التعديلات تلقائيًا بعد 800 مللي ثانية من آخر تغيير في صفحات الإعدادات والمحركات والأصوات — دون شريط حفظ/إلغاء"
+      "autoSaveDescription": "حفظ التعديلات تلقائيًا بعد 800 مللي ثانية من آخر تغيير في صفحات الإعدادات والمحركات والأصوات — دون شريط حفظ/إلغاء",
+      "launchOnLoginTooltip": "تشغيل CopySpeak عند تسجيل الدخول",
+      "startMinimizedLabel": "البدء مصغّراً",
+      "startMinimizedTooltip": "بدء التطبيق مصغّراً إلى علبة النظام",
+      "minimizeToTray": "التصغير إلى العلبة عند الإغلاق",
+      "minimizeToTrayTooltip": "التصغير إلى علبة النظام بدلاً من الخروج عند إغلاق النافذة"
     },
     "playback": {
       "title": "إعدادات التشغيل",
@@ -308,7 +331,34 @@
         "title": "محرك HTTP مخصص",
         "description": "واجهة خلفية TTS عامة عبر HTTP/REST",
         "detail": "محرك لواجهتك الخلفية الخاصة يستدعي أي نقطة نهاية HTTP بقوالب URL ومصادقة قابلة للتهيئة."
-      }
+      },
+      "checkUpdates": "التحقق من التحديثات",
+      "checkUpdatesTooltip": "التحقق تلقائياً من الإصدارات الجديدة عند بدء التشغيل",
+      "updateStatus": "حالة التحديث",
+      "debugMode": "وضع التصحيح",
+      "debugModeTooltip": "تفعيل السجلات التفصيلية ومعلومات الحالة الإضافية",
+      "refreshing": "جارٍ التحديث...",
+      "noLogs": "لا توجد سجلات متاحة"
+    },
+    "importExport": {
+      "tooltip": "تصدير الإعدادات أو استيرادها أو إعادة تعيينها",
+      "exportTitle": "تصدير الإعدادات",
+      "exportDescription": "انسخ JSON أدناه أو نزّله كملف",
+      "importTitle": "استيراد الإعدادات",
+      "importDescription": "الصق JSON الإعدادات أدناه أو ارفع ملفاً",
+      "pastePlaceholder": "الصق JSON الإعدادات هنا...",
+      "resetTitle": "إعادة تعيين كل الإعدادات؟",
+      "resetConfirm": "إعادة التعيين وإعادة بدء الإعداد"
+    },
+    "appearance": {
+      "theme": "المظهر",
+      "themeTooltip": "اختر نظام الألوان المفضّل لديك"
+    },
+    "hotkey": {
+      "enable": "تفعيل الاختصار العام",
+      "enableTooltip": "تشغيل TTS من أي تطبيق",
+      "globalHotkey": "الاختصار العام",
+      "globalHotkeyTooltip": "اضغط على مجموعة مفاتيح لتعيينها. يتطلب مفتاح تعديل واحداً على الأقل (Ctrl، Alt، Shift، Win)."
     }
   },
   "engine": {
@@ -550,7 +600,12 @@
     "stopTooltip": "إيقاف",
     "abortTooltip": "إلغاء التوليف أو التشغيل",
     "skipBackTooltip": "رجوع 5 ثوانٍ",
-    "skipFwdTooltip": "تقديم 5 ثوانٍ"
+    "skipFwdTooltip": "تقديم 5 ثوانٍ",
+    "readAloud": "القراءة بصوت عالٍ",
+    "nowReadingAria": "يُقرأ الآن",
+    "textLabel": "النص المراد قراءته بصوت عالٍ",
+    "controlsAria": "عناصر التحكم في القراءة",
+    "restored": "تمت استعادة النص والصوت والسرعة. تستخدم درجة الصوت والتأثيرات الملف الشخصي الحالي."
   },
   "history": {
     "title": "السجل",
@@ -582,7 +637,21 @@
       "failedToPlay": "فشل التشغيل",
       "failedToReSpeak": "فشلت إعادة القراءة",
       "failedToDelete": "فشل الحذف"
-    }
+    },
+    "deleteEntryTooltip": "حذف العنصر",
+    "confirmDeleteEntry": "هل تريد حذف عنصر السجل هذا؟ لا يمكن التراجع عن هذا الإجراء.",
+    "meta": {
+      "engine": "المحرك:",
+      "voice": "الصوت:",
+      "duration": "المدة:",
+      "length": "الطول:",
+      "attempts": "المحاولات:",
+      "app": "التطبيق:",
+      "output": "المخرجات:"
+    },
+    "searchPlaceholder": "ابحث في محتوى النص...",
+    "filters": "عوامل التصفية",
+    "activeFilters": "عوامل التصفية النشطة:"
   },
   "toast": {
     "success": {
@@ -597,7 +666,8 @@
       "settingsDownloaded": "تم تنزيل الإعدادات",
       "settingsImported": "تم استيراد الإعدادات بنجاح",
       "settingsReset": "تمت إعادة ضبط الإعدادات — بدء إعداد جديد",
-      "synthesisAborted": "تم إلغاء التوليف"
+      "synthesisAborted": "تم إلغاء التوليف",
+      "voicesSaved": "تم حفظ الأصوات بنجاح"
     },
     "error": {
       "loadSettings": "تعذّر تحميل الإعدادات",
@@ -608,7 +678,19 @@
       "hudTest": "فشل اختبار HUD",
       "cleanup": "فشل التنظيف",
       "installer": "تعذّر تشغيل برنامج التثبيت",
-      "switchEngine": "تعذّر تبديل المحرك"
+      "switchEngine": "تعذّر تبديل المحرك",
+      "kokoroInstallFailed": "فشل تثبيت Kokoro — اختر محركاً آخر، أو أعد محاولة التثبيت.",
+      "kokoroInstallStart": "تعذّر بدء تثبيت Kokoro: {error}",
+      "saveFailed": "فشل حفظ الإعدادات: {error}",
+      "cleanupFailed": "فشل التنظيف: {error}",
+      "hotkeyRegistration": "فشل تسجيل الاختصار: {error}",
+      "switchProfile": "فشل تبديل الملف الشخصي: {error}",
+      "resetSettings": "فشلت إعادة تعيين الإعدادات: {error}",
+      "copyToClipboard": "تعذّر النسخ إلى الحافظة",
+      "voicesSave": "فشل الحفظ: {error}",
+      "effectsLoad": "فشل تحميل التأثيرات: {error}",
+      "effectSave": "فشل حفظ التأثير: {error}",
+      "previewFailed": "فشلت المعاينة: {error}"
     },
     "info": {
       "httpEngineRemoved": "تمت إزالة محرك HTTP. تم التبديل إلى المحرك المحلي."
@@ -633,7 +715,10 @@
     "installed": "تم التثبيت!",
     "openTerminal": "فتح طرفية PowerShell",
     "checkingEngine": "جارٍ فحص المحرك...",
-    "helpText": "يمكنك دائمًا تهيئة المحرك لاحقًا من تبويب المحرك."
+    "helpText": "يمكنك دائمًا تهيئة المحرك لاحقًا من تبويب المحرك.",
+    "chooseEngine": "اختر محرك الصوت",
+    "installingKokoro": "جارٍ تثبيت Kokoro… (~335 ميغابايت، مرة واحدة)",
+    "installFailed": "فشل التثبيت."
   },
   "effects": {
     "title": "المؤثرات الصوتية",
@@ -681,7 +766,8 @@
     "screenshots": {
       "title": "لقطات الشاشة",
       "subtitle": "شاهد CopySpeak أثناء العمل",
-      "caption": "CopySpeak v0.1.8 — الواجهة الرئيسية مع تبويب التشغيل"
+      "caption": "CopySpeak v0.1.8 — الواجهة الرئيسية مع تبويب التشغيل",
+      "alt": "لقطة شاشة لتطبيق CopySpeak"
     },
     "footer": {
       "github": "GitHub",
@@ -697,5 +783,108 @@
     "unavailable": "غير متاح - تحقق من التهيئة",
     "error": "خطأ في التحقق من التوفر",
     "notChecked": "لم يُفحص - انقر للتبديل"
+  },
+  "profiles": {
+    "title": "ملفات تعريف الصوت",
+    "sound": "الصوت",
+    "newFromTemplate": "ملف تعريف جديد من قالب",
+    "activeProfile": "الملف النشط",
+    "startFrom": "ابدأ من",
+    "voiceTooltip": "الأصوات المعروفة من كتالوج المحرك أو من واجهة برمجة التطبيقات للمزود.",
+    "providerDefault": "الافتراضي للمزود",
+    "importPlaceholder": "الصق JSON الملف الشخصي هنا...",
+    "toast": {
+      "copied": "تم النسخ إلى الحافظة",
+      "copyFailed": "تعذّر النسخ",
+      "downloaded": "تم التنزيل",
+      "duplicated": "تم تكرار الملف الشخصي",
+      "deleted": "تم حذف الملف الشخصي",
+      "imported": "تم استيراد \"{name}\"",
+      "created": "تم إنشاء \"{name}\"",
+      "catalogFailed": "تعذّر تحميل كتالوج المحرك: {error}",
+      "voicesLoaded": "عدد الأصوات المحمّلة: {count}",
+      "voiceRefreshFailed": "فشل تحديث الأصوات: {error}"
+    },
+    "templateTooltip": "ملء مسبق للأمر والوسائط والصوت من محرك معروف. التعديل لاحقاً لا يغيّر القالب أبداً."
+  },
+  "voicePicker": {
+    "select": "اختر الصوت…",
+    "search": "ابحث عن الأصوات…",
+    "customId": "معرّف مخصص / يدوي…"
+  },
+  "hotkey": {
+    "set": "تعيين",
+    "setAria": "تعيين اختصار عام",
+    "clearAria": "مسح الاختصار"
+  },
+  "quick": {
+    "doubleCopy": "النسخ المزدوج",
+    "doubleCopyTooltip": "مراقبة الحافظة لاكتشاف النسخ المزدوج",
+    "effectsTooltip": "تطبيق تأثير صوتي على تشغيل TTS"
+  },
+  "recent": {
+    "viewAll": "عرض السجل كاملاً",
+    "allEngines": "كل المحركات",
+    "allStatuses": "كل الحالات",
+    "savedAudio": "صوت محفوظ",
+    "failed": "فشل",
+    "searchAria": "البحث في السجل",
+    "searchPlaceholder": "ابحث في النص أو الاسم أو الصوت…",
+    "filterEngineAria": "التصفية حسب المحرك",
+    "filterStatusAria": "التصفية حسب الحالة",
+    "selectAllAria": "تحديد كل القراءات المرئية",
+    "restoreTitle": "استعادة النص والصوت والسرعة",
+    "generationFailed": "فشل الإنشاء",
+    "rename": "إعادة التسمية",
+    "copyText": "نسخ النص",
+    "revealFile": "إظهار الملف",
+    "regenerate": "إعادة الإنشاء",
+    "renameTitle": "إعادة تسمية القراءة",
+    "renameDescription": "أعطِ هذه القراءة اسماً. اتركه فارغاً لعرض نصها فقط. تبقى أسماء ملفات الصوت كما هي.",
+    "saveName": "حفظ الاسم",
+    "deleteSelectedDescription": "هل تريد حذف القراءات المحددة وجميع أجزاء الصوت المحفوظة لها؟ لا يمكن التراجع عن هذا."
+  },
+  "batch": {
+    "title": "معالج TTS الدفعي",
+    "texts": "مقاطع النص (واحد في كل سطر)",
+    "textsPlaceholder": "أدخل مقاطع النص، واحداً في كل سطر...",
+    "outputDirectory": "مجلد الإخراج",
+    "filenamePrefix": "بادئة اسم الملف",
+    "audioFormat": "تنسيق الصوت",
+    "results": "النتائج"
+  },
+  "voices": {
+    "loadFailed": "فشل التحميل"
+  },
+  "hud": {
+    "clipboardCopied": "تم نسخ الحافظة",
+    "processing": "جارٍ المعالجة..."
+  },
+  "htmlExport": {
+    "generating": "جارٍ إنشاء محتوى HTML...",
+    "generated": "تم إنشاء HTML بنجاح",
+    "preparing": "جارٍ تجهيز التنزيل...",
+    "complete": "اكتمل التصدير",
+    "failed": "فشل التصدير: {error}",
+    "unknownError": "خطأ غير معروف"
+  },
+  "update": {
+    "errors": {
+      "unreachable": "تعذّر الوصول إلى خادم التحديثات",
+      "signature": "توقيع التحديث غير صالح",
+      "network": "خطأ في الشبكة",
+      "checkFailed": "فشل التحقق من التحديثات",
+      "installFailed": "فشل تثبيت التحديث"
+    },
+    "status": {
+      "disabled": "التحديثات معطلة",
+      "downloading": "جارٍ التنزيل {percent}%",
+      "installing": "جارٍ التثبيت...",
+      "preparing": "جارٍ التحضير...",
+      "checking": "جارٍ التحقق...",
+      "upToDate": "محدّث",
+      "available": "يتوفر تحديث",
+      "check": "التحقق من التحديثات"
+    }
   }
 }

@@ -197,7 +197,7 @@
       <a
         href="/history"
         class="text-muted-foreground hover:text-foreground rounded-sm text-sm underline-offset-4 hover:underline focus-visible:outline-2"
-        >View all history</a
+        >{$_("recent.viewAll")}</a
       >
     {:else}
       <span class="text-muted-foreground text-sm"
@@ -209,17 +209,17 @@
     <div class="flex flex-wrap items-center gap-2">
       <Input
         type="search"
-        aria-label="Search history"
-        placeholder="Search text, name or voice…"
+        aria-label={$_("recent.searchAria")}
+        placeholder={$_("recent.searchPlaceholder")}
         bind:value={search}
         class="min-w-40 flex-1"
       />
       <select
-        aria-label="Filter by engine"
+        aria-label={$_("recent.filterEngineAria")}
         bind:value={engineFilter}
         class="border-input bg-background h-9 max-w-full rounded-md border px-2 text-sm"
       >
-        <option value="">All engines</option>
+        <option value="">{$_("recent.allEngines")}</option>
         {#each engineOptions as engine}
           <option value={engine}
             >{engines.find((entry) => entry.engine === engine)?.label ?? engine}</option
@@ -227,13 +227,13 @@
         {/each}
       </select>
       <select
-        aria-label="Filter by status"
+        aria-label={$_("recent.filterStatusAria")}
         bind:value={statusFilter}
         class="border-input bg-background h-9 rounded-md border px-2 text-sm"
       >
-        <option value="">All statuses</option>
-        <option value="audio">Saved audio</option>
-        <option value="failed">Failed</option>
+        <option value="">{$_("recent.allStatuses")}</option>
+        <option value="audio">{$_("recent.savedAudio")}</option>
+        <option value="failed">{$_("recent.failed")}</option>
       </select>
     </div>
     {#if readings.length}
@@ -241,7 +241,7 @@
         <label class="flex items-center gap-2">
           <input
             type="checkbox"
-            aria-label="Select all visible readings"
+            aria-label={$_("recent.selectAllAria")}
             disabled={busy || playbackBusy}
             checked={selectedReadings.length === readings.length}
             indeterminate={selectedReadings.length > 0 && selectedReadings.length < readings.length}
@@ -305,7 +305,7 @@
             onclick={() => restore(reading)}
             disabled={busy || playbackBusy}
             aria-label={`Restore reading: ${reading.title || reading.text}`}
-            title="Restore text, voice and speed"
+            title={$_("recent.restoreTitle")}
           >
             {#if reading.title}<span class="mb-1 block truncate text-sm font-semibold"
                 >{reading.title}</span
@@ -332,7 +332,9 @@
               {#if reading.partCount > 1}<span class="inline-flex items-center gap-1"
                   ><Layers class="size-3" aria-hidden="true" />{reading.partCount} parts</span
                 >{/if}
-              {#if !reading.success}<span class="text-destructive">Generation failed</span>
+              {#if !reading.success}<span class="text-destructive"
+                  >{$_("recent.generationFailed")}</span
+                >
               {:else if !reading.hasAudio}<span>{$_("history.noAudioFile")}</span>{/if}
             </span>
           </button>
@@ -363,7 +365,7 @@
                 onclick={() => {
                   readingToRename = reading;
                   name = reading.title;
-                }}><Pencil />Rename</DropdownMenu.Item
+                }}><Pencil />{$_("recent.rename")}</DropdownMenu.Item
               >
               <DropdownMenu.Item
                 onclick={() =>
@@ -371,23 +373,24 @@
                     reading,
                     () => navigator.clipboard.writeText(reading.text),
                     "Text copied"
-                  )}><Copy />Copy text</DropdownMenu.Item
+                  )}><Copy />{$_("recent.copyText")}</DropdownMenu.Item
               >
               <DropdownMenu.Item
                 disabled={!item.output_path}
                 onclick={() =>
                   runAction(reading, async () => {
                     if (item.output_path) await revealItemInDir(item.output_path);
-                  })}><FolderOpen />Reveal file</DropdownMenu.Item
+                  })}><FolderOpen />{$_("recent.revealFile")}</DropdownMenu.Item
               >
               <DropdownMenu.Item disabled={playbackBusy} onclick={() => restore(reading, true)}
-                ><RotateCcw />Regenerate</DropdownMenu.Item
+                ><RotateCcw />{$_("recent.regenerate")}</DropdownMenu.Item
               >
               <DropdownMenu.Separator />
               <DropdownMenu.Item
                 variant="destructive"
                 disabled={playbackBusy}
-                onclick={() => (readingsToDelete = [reading])}><Trash2 />Delete</DropdownMenu.Item
+                onclick={() => (readingsToDelete = [reading])}
+                ><Trash2 />{$_("common.delete")}</DropdownMenu.Item
               >
             </DropdownMenu.Content>
           </DropdownMenu.Root>
@@ -411,10 +414,8 @@
 >
   <DialogContent>
     <DialogHeader>
-      <DialogTitle>Rename reading</DialogTitle>
-      <DialogDescription
-        >Give this reading a name. Leave blank to show only its text. Audio filenames stay the same.</DialogDescription
-      >
+      <DialogTitle>{$_("recent.renameTitle")}</DialogTitle>
+      <DialogDescription>{$_("recent.renameDescription")}</DialogDescription>
     </DialogHeader>
     <form
       class="flex flex-col gap-3"
@@ -423,10 +424,10 @@
         renameReading();
       }}
     >
-      <label for="reading-name" class="text-sm">Name</label>
+      <label for="reading-name" class="text-sm">{$_("common.name")}</label>
       <Input id="reading-name" bind:value={name} maxlength={200} disabled={busy} />
       {#if actionError}<p role="alert" class="text-destructive text-sm">{actionError}</p>{/if}
-      <Button type="submit" disabled={busy}>Save name</Button>
+      <Button type="submit" disabled={busy}>{$_("recent.saveName")}</Button>
     </form>
   </DialogContent>
 </Dialog>
@@ -444,9 +445,7 @@
           ? "reading"
           : `${readingsToDelete.length} readings`}?</AlertDialogTitle
       >
-      <AlertDialogDescription
-        >Delete the selected readings and all their saved audio parts? This cannot be undone.</AlertDialogDescription
-      >
+      <AlertDialogDescription>{$_("recent.deleteSelectedDescription")}</AlertDialogDescription>
     </AlertDialogHeader>
     <AlertDialogFooter>
       <AlertDialogCancel>{$_("history.cancel")}</AlertDialogCancel>

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import {
     AlertDialog,
     AlertDialogContent,
@@ -178,7 +179,7 @@
     </div>
 
     <AlertDialogFooter>
-      <AlertDialogCancel>Cancel</AlertDialogCancel>
+      <AlertDialogCancel>{$_("common.cancel")}</AlertDialogCancel>
       <AlertDialogAction
         onclick={handleExport}
         disabled={!hasValidDates}

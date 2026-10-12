@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
   import Progress from "#lib/components/ui/progress/progress.svelte";
   import { hudStore } from "#lib/stores/hud-store.svelte.js";
 
@@ -20,7 +21,7 @@
 </script>
 
 <div class="synthesis-progress-container">
-  <span class="status-text">Processing...</span>
+  <span class="status-text">{$_("hud.processing")}</span>
   <Progress value={progressPercent} max={100} class="progress-bar" />
   {#if providerLabel}
     <span class="provider-info">{providerLabel}</span>

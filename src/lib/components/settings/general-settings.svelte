@@ -12,17 +12,23 @@
 </script>
 
 <div class="space-y-4">
-  <SettingRow label="Launch at login" tooltip="Launch CopySpeak when you log in">
+  <SettingRow
+    label={$_("settings.general.launchOnLogin")}
+    tooltip={$_("settings.general.launchOnLoginTooltip")}
+  >
     <Switch id="launch-on-login" bind:checked={localConfig.general.launch_on_login} />
   </SettingRow>
 
-  <SettingRow label="Start Minimized" tooltip="Start the application minimized to system tray">
+  <SettingRow
+    label={$_("settings.general.startMinimizedLabel")}
+    tooltip={$_("settings.general.startMinimizedTooltip")}
+  >
     <Switch id="start-minimized" bind:checked={localConfig.general.start_minimized} />
   </SettingRow>
 
   <SettingRow
-    label="Minimize to Tray on Close"
-    tooltip="Minimize to system tray instead of exiting when closing the window"
+    label={$_("settings.general.minimizeToTray")}
+    tooltip={$_("settings.general.minimizeToTrayTooltip")}
   >
     <Switch
       id="minimize-to-tray"

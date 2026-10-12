@@ -141,7 +141,7 @@
     } catch (e) {
       console.error("Failed to load config:", e);
       errors.load = e instanceof Error ? e.message : String(e);
-      toast.error("Failed to load settings");
+      toast.error($_("toast.error.loadSettings"));
     } finally {
       isLoading = false;
     }
@@ -156,7 +156,7 @@
       window.location.reload();
     } catch (e) {
       console.error("Failed to save config:", e);
-      toast.error(`Failed to save settings: ${e}`);
+      toast.error($_("toast.error.saveFailed", { values: { error: String(e) } }));
     }
   }
 
@@ -191,7 +191,7 @@
       await invoke("run_history_cleanup");
       toast.success($_("toast.success.historyCleanup"));
     } catch (e) {
-      toast.error(`Cleanup failed: ${e}`);
+      toast.error($_("toast.error.cleanupFailed", { values: { error: String(e) } }));
     }
   }
 
@@ -199,7 +199,8 @@
     await loadConfig();
     // saveConfig reloads the page, so this also reports a failed re-register.
     const hotkeyError = await invoke<string | null>("get_hotkey_error").catch(() => null);
-    if (hotkeyError) toast.error(`Hotkey registration failed: ${hotkeyError}`);
+    if (hotkeyError)
+      toast.error($_("toast.error.hotkeyRegistration", { values: { error: hotkeyError } }));
     await tick();
     setupScrollSpy();
   });

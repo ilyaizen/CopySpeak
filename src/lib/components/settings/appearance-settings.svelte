@@ -48,7 +48,10 @@
     />
   </SettingRow>
 
-  <SettingRow label="Theme" tooltip="Choose your preferred color theme">
+  <SettingRow
+    label={$_("settings.appearance.theme")}
+    tooltip={$_("settings.appearance.themeTooltip")}
+  >
     <Select
       id="theme"
       options={appearanceOptions}

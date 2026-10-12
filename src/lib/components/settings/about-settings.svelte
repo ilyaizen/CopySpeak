@@ -62,7 +62,10 @@
   </SettingRow>
 
   <!-- Check for Updates -->
-  <SettingRow label="Check for Updates" tooltip="Automatically check for new versions on startup">
+  <SettingRow
+    label={$_("settings.about.checkUpdates")}
+    tooltip={$_("settings.about.checkUpdatesTooltip")}
+  >
     <Switch
       id="update-checks"
       checked={localConfig.general.update_checks_enabled ?? true}
@@ -72,7 +75,7 @@
     />
   </SettingRow>
 
-  <SettingRow label="Update Status">
+  <SettingRow label={$_("settings.about.updateStatus")}>
     <UpdateChecker
       enabled={localConfig.general.update_checks_enabled ?? true}
       autoCheckOnMount={false}
@@ -96,7 +99,10 @@
 
   {#if showDebugMode}
     <div>
-      <SettingRow label="Debug Mode" tooltip="Enable verbose logging and additional status info">
+      <SettingRow
+        label={$_("settings.about.debugMode")}
+        tooltip={$_("settings.about.debugModeTooltip")}
+      >
         <Switch id="debug-mode" bind:checked={localConfig.general.debug_mode} />
       </SettingRow>
 
@@ -107,7 +113,9 @@
               {logsPath || "Loading..."}
             </Badge>
             {#if isLoadingLogs}
-              <span class="text-muted-foreground text-[10px]">refreshing...</span>
+              <span class="text-muted-foreground text-[10px]"
+                >{$_("settings.about.refreshing")}</span
+              >
             {/if}
           </div>
           <div class="bg-muted rounded-md border p-2">
@@ -118,7 +126,9 @@
                     class="px-1 py-0.5 font-mono text-[10px] leading-tight break-all whitespace-pre-wrap">{line}</pre>
                 </div>
               {:else}
-                <div class="text-muted-foreground p-2 font-mono text-[10px]">No logs available</div>
+                <div class="text-muted-foreground p-2 font-mono text-[10px]">
+                  {$_("settings.about.noLogs")}
+                </div>
               {/each}
             </div>
           </div>
