@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.11] - 2026-10-12
+
 ### Removed
 
 - **Edge-TTS is hidden everywhere in the UI** — Microsoft killed the free Read-Aloud protocol the `edge-tts` CLI speaks (2026-10-10, [rany2/edge-tts#490](https://github.com/rany2/edge-tts/issues/490); every released edge-tts version 403s and no fixed release exists yet). Edge is gone from onboarding, the Engines page, the About page, and the profile editor's engine dropdown; existing Edge profiles are retired on config load (an active Edge profile switches to the bundled Kokoro profile). The engine code stays in the tree and comes back with a pin bump in `src-tauri/src/tts/edge.rs` once upstream ships a fixed release.
@@ -18,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Spanish (`es`) interface language** — selectable in Settings and on the landing page. Translations are managed in Crowdin (`crowdin.yml`); the Spanish text is a draft until reviewers approve it there.
 
 - **Hebrew (`he`) interface language with right-to-left layout** — selectable in Settings and on the landing page. The layout mirrors for RTL: text alignment, margins, and borders flip with the language. Translations are managed in Crowdin; the Hebrew text is a draft until reviewers approve it there.
+
+- **Arabic, German, French, Hindi, Russian, and Simplified Chinese interface languages** — `ar`, `de`, `fr`, `hi`, `ru`, and `zh` are selectable in Settings, each covering the full interface; Arabic uses the right-to-left layout. Translations are managed in Crowdin and are drafts until reviewers approve them there.
+
+- **Browser companion follows double-copy and hotkey readings** — with "Highlight when I double-copy" on (the default), the extension highlights the copied passage on the page as CopySpeak reads it, with ±5 s skip on the pill. Each queued reading is followed only while its own audio plays.
+
+- **LLM condensing controls** — post-processing gains a minimum length (text shorter than it is spoken verbatim; default 200 characters), an "Only On Request" switch that condenses only when a caller asks (control server `condense` field or CLI `--condense`), and a request timeout so a slow provider falls back to the original text.
 
 ### Fixed
 
