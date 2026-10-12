@@ -22,12 +22,13 @@ pub enum ClientMessage {
  Hello{v:u8,automatic:bool},
  Start{v:u8,request_id:String,text:String},
  Capture{v:u8,request_id:String,text:String},
- Control{v:u8,reading_id:String,action:Action},
+ // Exactly one of reading_id (a reading the page started) or trigger_id (a desktop speak it follows).
+ Control{v:u8,reading_id:Option<String>,trigger_id:Option<String>,action:Action},
  Snapshot{v:u8,reading_id:String},
 }
 #[derive(Debug,Deserialize)]
 #[serde(rename_all="snake_case")]
-pub enum Action{Pause,Resume,Stop}
+pub enum Action{Pause,Resume,Stop,#[serde(rename="skip-back")]SkipBack,#[serde(rename="skip-forward")]SkipForward}
 impl ClientMessage {
  pub fn parse(value:Value)->io::Result<Self>{
   let message:Self=serde_json::from_value(value).map_err(|_|invalid())?;
@@ -35,7 +36,8 @@ impl ClientMessage {
   let valid=match &message {
    Self::Hello{v,..}=>*v==1,
    Self::Start{v,request_id,text}|Self::Capture{v,request_id,text}=>*v==1&&id(request_id)&&!text.trim().is_empty()&&text.encode_utf16().count()<=65536,
-   Self::Control{v,reading_id,..}|Self::Snapshot{v,reading_id}=>*v==1&&id(reading_id),
+   Self::Control{v,reading_id,trigger_id,..}=>*v==1&&match (reading_id,trigger_id) {(Some(key),None)|(None,Some(key))=>id(key),_=>false},
+   Self::Snapshot{v,reading_id}=>*v==1&&id(reading_id),
   };
   if valid{Ok(message)}else{Err(invalid())}
  }

@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { playbackStore } from "./playback-store.svelte";
 import { emit, emitTo } from "@tauri-apps/api/event";
+import { invoke } from "@tauri-apps/api/core";
 import { PcmStreamScheduler } from "./playback/pcm-stream";
 
 const { listeners } = vi.hoisted(() => ({
   listeners: new Map<string, (event: { payload: unknown }) => Promise<void>>()
 }));
 vi.mock("#lib/services/tauri.js", () => ({ isTauri: true }));
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => undefined) }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(async (name, callback) => {
     listeners.set(name, callback);
@@ -375,4 +377,53 @@ it("rewinds across a fragment boundary through the retained previous fragment", 
   // When the rewind target ends, the interrupted fragment follows from its start.
   audio.dispatchEvent(new Event("ended"));
   await vi.waitFor(() => expect(playbackStore.currentFragmentIndex).toBe(1));
+});
+
+it("drives pause, resume, clamped skips and stop from page control events", async () => {
+  vi.spyOn(audio, "duration", "get").mockReturnValue(10);
+  vi.spyOn(audio, "paused", "get").mockImplementation(() => playbackStore.isPaused);
+  await sendAudio();
+  expect(playbackStore.isPlaying).toBe(true);
+  await listeners.get("playback-toggle-pause")!({ payload: null });
+  expect(playbackStore.isPaused).toBe(true);
+  await listeners.get("playback-toggle-pause")!({ payload: null });
+  expect(playbackStore.isPaused).toBe(false);
+  audio.currentTime = 8;
+  await listeners.get("playback-skip-forward")!({ payload: null });
+  expect(audio.currentTime).toBe(10);
+  audio.currentTime = 3;
+  await listeners.get("playback-skip-backward")!({ payload: null });
+  expect(audio.currentTime).toBe(0);
+  await listeners.get("playback-stop")!({ payload: null });
+  expect(playbackStore.isPlaying).toBe(false);
+});
+
+it("reports a followed page session by id, and only the current one", async () => {
+  const calls = () => vi.mocked(invoke).mock.calls;
+  vi.mocked(invoke).mockClear();
+  await listeners.get("browser-reading")!({
+    payload: { active: true, session_id: "trigger-1" }
+  });
+  await sendAudio(0);
+  expect(calls()).toContainEqual([
+    "browser_reading_progress",
+    expect.objectContaining({ sessionId: "trigger-1", fragmentIndex: 0 })
+  ]);
+  playbackStore.handleStop();
+  expect(calls()).toContainEqual([
+    "browser_reading_finished",
+    { sessionId: "trigger-1", status: "cancelled" }
+  ]);
+
+  // A late end notice for a replaced session leaves its successor followed.
+  await listeners.get("browser-reading")!({ payload: { active: true, session_id: "a" } });
+  await listeners.get("browser-reading")!({ payload: { active: true, session_id: "b" } });
+  await listeners.get("browser-reading")!({ payload: { active: false, session_id: "a" } });
+  vi.mocked(invoke).mockClear();
+  await sendAudio(0);
+  audio.dispatchEvent(new Event("ended"));
+  expect(calls()).toContainEqual([
+    "browser_reading_finished",
+    { sessionId: "b", status: "completed" }
+  ]);
 });

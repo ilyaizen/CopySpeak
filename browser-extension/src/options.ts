@@ -13,8 +13,9 @@ async function apply() {
 async function refresh() {
   const settings = await chrome.storage.local.get(["hoverRead", "automatic", "showPanel"]);
   for (const key of ["hoverRead", "automatic", "showPanel"]) {
+    // Double-copy highlighting is on until turned off; the rest are opt-in.
     document.querySelector<HTMLInputElement>(`#${key}`)!.checked =
-      key === "showPanel" ? settings[key] !== false : settings[key] === true;
+      key === "automatic" ? settings[key] !== false : settings[key] === true;
   }
   const permissions = await chrome.permissions.getAll();
   sites.replaceChildren();

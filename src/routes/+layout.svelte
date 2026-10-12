@@ -129,17 +129,24 @@
         const { listen } = await import("@tauri-apps/api/event");
         const { invoke: tauriInvoke } = await import("@tauri-apps/api/core");
 
-        unlistenSpeak = await listen<{ text: string }>("speak-request", async (e) => {
-          console.log("[LAYOUT] speak-request received, text length:", e.payload.text.length);
-          try {
-            // Use speak_queued so large texts are automatically paginated
-            // into fragments and played sequentially.
-            await tauriInvoke("speak_queued", { text: e.payload.text });
-            console.log("[LAYOUT] speak_queued completed successfully");
-          } catch (err) {
-            console.error("[LAYOUT] speak_queued failed:", err);
+        unlistenSpeak = await listen<{ text: string; trigger: unknown }>(
+          "speak-request",
+          async (e) => {
+            console.log("[LAYOUT] speak-request received, text length:", e.payload.text.length);
+            try {
+              // Use speak_queued so large texts are automatically paginated
+              // into fragments and played sequentially. `trigger` (double-copy
+              // context for the browser companion) goes back untouched.
+              await tauriInvoke("speak_queued", {
+                text: e.payload.text,
+                trigger: e.payload.trigger
+              });
+              console.log("[LAYOUT] speak_queued completed successfully");
+            } catch (err) {
+              console.error("[LAYOUT] speak_queued failed:", err);
+            }
           }
-        });
+        );
         console.log("[LAYOUT] speak-request listener registered");
       } catch (e) {
         console.error("Failed to set up listeners:", e);

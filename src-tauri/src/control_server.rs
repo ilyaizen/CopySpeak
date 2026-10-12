@@ -262,6 +262,8 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
         telemetry_state,
         Some(text),
         Some(request.condense.unwrap_or(false)),
+        // Control-server speaks never surface in pages.
+        None,
     )
     .await
 }

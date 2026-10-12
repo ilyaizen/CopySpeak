@@ -182,6 +182,7 @@ pub async fn speak_selected_text(
         telemetry_state,
         Some(selected),
         None,
+        Some(crate::browser_bridge::TriggerSource::Hotkey),
     )
     .await
 }

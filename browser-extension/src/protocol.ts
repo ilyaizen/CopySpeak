@@ -1,19 +1,32 @@
 export type Status = "playing" | "paused" | "buffering" | "completed" | "cancelled" | "error";
+/** What started a desktop speak the page may follow: CopySpeak's double-copy or hotkey. */
+export type TriggerSource = "double_copy" | "hotkey";
+type StateFields = {
+  v: 1;
+  type: "state";
+  seq: number;
+  status: Status;
+  word: { start: number; end: number } | null;
+  word_available: boolean;
+};
 export type NativeEvent =
-  | { v: 1; type: "accepted"; request_id: string; reading_id: string }
+  // `skip`: the app takes skip-back/skip-forward controls (older apps omit it).
+  | { v: 1; type: "accepted"; request_id: string; reading_id: string; skip: boolean }
   | { v: 1; type: "rejected"; request_id: string; reason: string }
   | { v: 1; type: "probe"; request_id: string }
+  | (StateFields & { reading_id: string })
+  // A desktop trigger speak, mirrored: word offsets index into its raw_text.
+  | (StateFields & { trigger_id: string })
   | {
       v: 1;
-      type: "state";
-      reading_id: string;
-      seq: number;
-      status: Status;
-      word: { start: number; end: number } | null;
-      word_available: boolean;
+      type: "trigger-started";
+      trigger_id: string;
+      source: TriggerSource;
+      raw_text: string;
     };
+export type TriggerStarted = Extract<NativeEvent, { type: "trigger-started" }>;
 
-export type ControlAction = "pause" | "resume" | "stop";
+export type ControlAction = "pause" | "resume" | "stop" | "skip-back" | "skip-forward";
 
 /**
  * Messages exchanged over the extension's own chrome.runtime channel (content
@@ -25,9 +38,15 @@ export type CopyCommand =
   | { type: "read-paragraph" }
   | { type: "site-access" }
   | { type: "refresh-site-access" }
-  | { type: "disconnect" }
+  // `trigger_id` scopes a disconnect to one followed trigger speak.
+  | { type: "disconnect"; trigger_id?: string }
   | { type: "native"; document_token: string; event: NativeEvent }
+  // Worker -> every frame of every permitted tab: does your selection match?
+  | { type: "trigger"; event: NativeEvent }
+  // Frame -> worker: my selection matched; route this trigger's states here.
+  | { type: "trigger-claim"; document_token: string; trigger_id: string }
   | { type: "control"; document_token: string; reading_id: string; action: ControlAction }
+  | { type: "control"; document_token: string; trigger_id: string; action: ControlAction }
   | { type: "settings" };
 
 /** Reply sent back by a content-script frame answering a capture command. */
@@ -59,16 +78,48 @@ export const terminal = (status: Status) => ["completed", "cancelled", "error"].
 const status = (x: string): Status | null =>
   (STATUSES as string[]).includes(x) ? (x as Status) : null;
 
+const source = (x: string | null): TriggerSource | null =>
+  x === "double_copy" || x === "hotkey" ? x : null;
+
+const id = (x: WireMessage): string | null => {
+  const raw = str(x);
+  return raw === null ? null : bounded(raw, 128);
+};
+
 export function parseEvent(value: WireMessage): NativeEvent | null {
   const x = bag(value);
   if (x === null || x.v !== 1) return null;
-  const rawRequestId = str(x.request_id);
-  const requestId = rawRequestId === null ? null : bounded(rawRequestId, 128);
+  const requestId = id(x.request_id);
   if (x.type === "accepted") {
-    const readingRaw = str(x.reading_id);
-    const readingId = readingRaw === null ? null : bounded(readingRaw, 128);
+    const readingId = id(x.reading_id);
     if (requestId === null || readingId === null) return null;
-    return { v: 1, type: "accepted", request_id: requestId, reading_id: readingId };
+    return {
+      v: 1,
+      type: "accepted",
+      request_id: requestId,
+      reading_id: readingId,
+      skip: x.skip === true
+    };
+  }
+  if (x.type === "trigger-started") {
+    const triggerId = id(x.trigger_id);
+    const triggerSource = source(str(x.source));
+    const rawText = str(x.raw_text);
+    if (
+      triggerId === null ||
+      triggerSource === null ||
+      rawText === null ||
+      bounded(rawText, 65536) === null ||
+      rawText.trim().length === 0
+    )
+      return null;
+    return {
+      v: 1,
+      type: "trigger-started",
+      trigger_id: triggerId,
+      source: triggerSource,
+      raw_text: rawText
+    };
   }
   if (x.type === "rejected") {
     const reason = str(x.reason);
@@ -83,8 +134,11 @@ export function parseEvent(value: WireMessage): NativeEvent | null {
   const statusValue = statusName === null ? null : status(statusName);
   const seq = int(x.seq);
   const wordAvailable = boolean(x.word_available);
+  // A state frame belongs to exactly one reading or one trigger speak.
+  const readingId = str(x.reading_id);
+  const triggerId = id(x.trigger_id);
   if (
-    str(x.reading_id) === null ||
+    (readingId === null) === (triggerId === null) ||
     statusValue === null ||
     seq === null ||
     seq <= 0 ||
@@ -101,15 +155,17 @@ export function parseEvent(value: WireMessage): NativeEvent | null {
     if (!wordAvailable || terminal(statusValue) || statusValue === "buffering") return null;
     word = { start, end };
   }
-  return {
+  const fields: StateFields = {
     v: 1,
     type: "state",
-    reading_id: str(x.reading_id) ?? "",
     seq,
     status: statusValue,
     word,
     word_available: wordAvailable
   };
+  return triggerId !== null
+    ? { ...fields, trigger_id: triggerId }
+    : { ...fields, reading_id: readingId ?? "" };
 }
 
 /** Parse a capture-report reply from a content-script frame. */
@@ -140,7 +196,39 @@ export class ReadingOwner {
       this.ended = true;
       return true;
     }
-    if (e.type !== "state" || e.reading_id !== this.readingId || e.seq <= this.seq) return false;
+    if (
+      e.type !== "state" ||
+      !("reading_id" in e) ||
+      e.reading_id !== this.readingId ||
+      e.seq <= this.seq
+    )
+      return false;
+    this.seq = e.seq;
+    this.ended = terminal(e.status);
+    return true;
+  }
+}
+
+/**
+ * One followed trigger speak (double-copy / hotkey), keyed by trigger_id the
+ * way ReadingOwner keys a reading: ordered states only, nothing after a
+ * terminal one. A newer trigger replaces the owner rather than updating it.
+ */
+export class TriggerOwner {
+  seq = 0;
+  ended = false;
+  constructor(readonly triggerId: string) {}
+  apply(value: WireMessage): boolean {
+    const e = parseEvent(value);
+    if (
+      !e ||
+      this.ended ||
+      e.type !== "state" ||
+      !("trigger_id" in e) ||
+      e.trigger_id !== this.triggerId ||
+      e.seq <= this.seq
+    )
+      return false;
     this.seq = e.seq;
     this.ended = terminal(e.status);
     return true;

@@ -6,6 +6,44 @@ export interface SelectionAnchor {
   clearIfUnchanged(): boolean;
 }
 
+/**
+ * Match text CopySpeak copied (the clipboard, as the app read it) against a
+ * captured selection. The two never agree on whitespace: the clipboard has
+ * CRLF on Windows and blank lines between paragraphs, while a capture keeps
+ * the page source's whitespace and joins blocks with one "\n". They match
+ * when their non-whitespace UTF-16 units are identical, in order. Returns a
+ * mapper from a [start, end) span of `copied` (where the app's word offsets
+ * live) to the same span of `captured`, or null when the texts differ.
+ */
+export function matchCopiedText(
+  captured: string,
+  copied: string
+): ((start: number, end: number) => [number, number] | null) | null {
+  const space = /\s/;
+  const kept: number[] = []; // captured offset of each non-whitespace unit
+  for (let i = 0; i < captured.length; i++) if (!space.test(captured.charAt(i))) kept.push(i);
+  const ordinal = new Int32Array(copied.length).fill(-1); // copied offset -> index into kept
+  let n = 0;
+  for (let i = 0; i < copied.length; i++) {
+    if (space.test(copied.charAt(i))) continue;
+    const at = kept[n];
+    if (at === undefined || captured.charCodeAt(at) !== copied.charCodeAt(i)) return null;
+    ordinal[i] = n++;
+  }
+  if (n === 0 || n !== kept.length) return null;
+  return (start, end) => {
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end > copied.length)
+      return null;
+    // Spans may carry edge whitespace; their ends are the units they cover.
+    while (start < end && ordinal[start] === -1) start++;
+    while (end > start && ordinal[end - 1] === -1) end--;
+    if (start >= end) return null;
+    const first = kept[ordinal[start]!];
+    const last = kept[ordinal[end - 1]!];
+    return first === undefined || last === undefined ? null : [first, last + 1];
+  };
+}
+
 /** Offsets are UTF16, as in DOM Range and native CopySpeak captions. */
 export function captureSelection(doc: Document, paragraph?: Range): SelectionAnchor | null {
   const selection = doc.getSelection();

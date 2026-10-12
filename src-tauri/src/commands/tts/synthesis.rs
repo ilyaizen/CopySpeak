@@ -1,6 +1,7 @@
 // TTS synthesis commands — speak_now, speak_queued, speak_history_entry.
 
 use crate::audio::{self, AudioPlayer};
+use crate::browser_bridge::{self, SpeakTrigger, TriggerSource};
 use crate::config::{self, AppConfig};
 use crate::fragment_queue::FragmentQueue;
 use crate::history::{self, HistoryLog};
@@ -568,6 +569,8 @@ fn replay_saved_audio(app: &AppHandle, speech: &SpeechAudio, text: &str) {
 // ── speak_now ───────────────────────────────────────────────────────────────
 
 /// Manually trigger TTS for the given text (or current clipboard if empty).
+/// `trigger` marks a hotkey speak the browser companion may follow; the Play
+/// page, tray and control server pass none.
 #[tauri::command]
 pub async fn speak_now(
     app: AppHandle,
@@ -577,9 +580,12 @@ pub async fn speak_now(
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     text: Option<String>,
     condense: Option<bool>,
+    trigger: Option<TriggerSource>,
 ) -> Result<(), String> {
-    speak_now_internal(
-        app,
+    let trigger = trigger.map(|source| (source, browser_bridge::new_trigger_id()));
+    let trigger_id = trigger.as_ref().map(|(_, id)| id.clone());
+    let result = speak_now_internal(
+        app.clone(),
         config,
         _player,
         history,
@@ -588,8 +594,13 @@ pub async fn speak_now(
         None,
         true,
         condense.unwrap_or(false),
+        trigger,
     )
-    .await
+    .await;
+    if let (Err(_), Some(id)) = (&result, trigger_id) {
+        browser_bridge::fail_trigger(&app, &id);
+    }
+    result
 }
 
 /// Like `speak_now`, but always synthesizes fresh audio, even when history
@@ -613,6 +624,7 @@ pub async fn regenerate_now(
         None,
         false,
         false,
+        None,
     )
     .await
 }
@@ -637,6 +649,7 @@ pub async fn speak_now_with_profile(
         profile_id,
         true,
         false,
+        None,
     )
     .await
 }
@@ -651,8 +664,14 @@ async fn speak_now_internal(
     _profile_id: Option<String>,
     reuse_saved_audio: bool,
     condense: bool,
+    trigger: Option<(TriggerSource, String)>,
 ) -> Result<(), String> {
     let text = get_text_or_clipboard(text)?;
+    // The page matches its live selection against the text as copied.
+    let trigger = trigger.map(|(source, id)| {
+        let raw_text = text.clone();
+        (SpeakTrigger { source, raw_text }, id)
+    });
     // Play page, hotkey, tray, selection and control server all land here;
     // unsanitized web text (tabs, NBSPs) breaks engine tokenizers like Kokoro's.
     let text = {
@@ -699,6 +718,12 @@ async fn speak_now_internal(
     let text =
         crate::post_process::try_process(text, &post_process_config, &sanitization, condense).await;
     let _ = app.emit("reading-started", &text);
+    // File output plays nothing, so there is no speak for a page to follow.
+    if let Some((trigger, id)) = &trigger {
+        if !(output_config.enabled && !output_config.directory.is_empty()) {
+            browser_bridge::begin_trigger(&app, id, trigger, &text);
+        }
+    }
 
     log_tts_debug("TTS", &format!("{:?}", active_backend), &text);
 
@@ -1118,6 +1143,8 @@ fn handle_playback_output(
 
 /// Speak text with fragment queue support for long texts.
 /// Automatically paginates long texts and plays fragments sequentially.
+/// `trigger` marks a double-copy speak the browser companion may follow; it
+/// carries the text as copied because `text` arrives already sanitized.
 #[tauri::command]
 pub async fn speak_queued(
     app: AppHandle,
@@ -1127,6 +1154,34 @@ pub async fn speak_queued(
     queue: State<'_, Mutex<FragmentQueue>>,
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     text: Option<String>,
+    trigger: Option<SpeakTrigger>,
+) -> Result<(), String> {
+    let trigger = trigger.map(|trigger| (trigger, browser_bridge::new_trigger_id()));
+    let trigger_id = trigger.as_ref().map(|(_, id)| id.clone());
+    let result = speak_queued_internal(
+        app.clone(),
+        config,
+        history,
+        queue,
+        telemetry_state,
+        text,
+        trigger,
+    )
+    .await;
+    if let (Err(_), Some(id)) = (&result, trigger_id) {
+        browser_bridge::fail_trigger(&app, &id);
+    }
+    result
+}
+
+async fn speak_queued_internal(
+    app: AppHandle,
+    config: State<'_, Mutex<AppConfig>>,
+    history: State<'_, Mutex<HistoryLog>>,
+    queue: State<'_, Mutex<FragmentQueue>>,
+    telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
+    text: Option<String>,
+    trigger: Option<(SpeakTrigger, String)>,
 ) -> Result<(), String> {
     let text = get_text_or_clipboard(text)?;
     if text.trim().is_empty() {
@@ -1163,6 +1218,9 @@ pub async fn speak_queued(
     let text =
         crate::post_process::try_process(text, &post_process_config, &sanitization, false).await;
     let _ = app.emit("reading-started", &text);
+    if let Some((trigger, id)) = &trigger {
+        browser_bridge::begin_trigger(&app, id, trigger, &text);
+    }
 
     log_tts_debug("Queue", &format!("{:?}", active_backend), &text);
 

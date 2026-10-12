@@ -13,8 +13,18 @@ through Chrome native messaging and a local named pipe.
 - Hover the extension icon when it shows `!` for the reason a reading failed.
 - Shows the selected passage and, when the engine supplies matching caption
   timings, follows the current word.
-- Provides Pause, Resume, and Stop controls in the page.
-- Stops when the selected content changes, the page navigates, or the tab closes.
+- Text that CopySpeak reads after a double-copy or its hotkey is highlighted
+  too, on websites you allowed, when your current selection there is the text
+  being read. Whitespace differences are ignored. A copy from another app, a
+  cleared selection, or different text highlights nothing. Two tabs that hold
+  the same selection both highlight. Turn this off with **Highlight when I
+  double-copy** in the extension settings.
+- Offers Pause, Resume, Stop, and 5-second back/forward skip controls in a
+  playback box for both kinds of reading. The box is off by default; turn on
+  **Show the playback box** in the extension settings.
+- A reading started from the extension stops when the selected content
+  changes, the page navigates, or the tab closes. A double-copy or hotkey
+  reading only loses its highlight then and keeps playing.
 
 Only ordinary, visible HTML text selections up to 65,536 UTF-16 units are
 supported. Editors, PDFs, shadow DOM, and browsers without CSS Custom Highlight

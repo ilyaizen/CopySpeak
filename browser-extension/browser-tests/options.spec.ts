@@ -55,9 +55,10 @@ test("settings persist and website access can be granted, refused, and removed",
   });
   await page.goto("http://localhost/options.html");
   await expect(page.locator("#version")).toHaveText("0.1.1");
-  await expect(page.getByLabel("Show the playback box")).toBeChecked();
+  await expect(page.getByLabel("Show the playback box")).not.toBeChecked();
+  await expect(page.getByLabel("Highlight when I double-copy")).toBeChecked();
   await page.getByLabel("Hover to read a paragraph").check();
-  await page.getByLabel("Show the playback box").uncheck();
+  await page.getByLabel("Show the playback box").check();
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -65,7 +66,7 @@ test("settings persist and website access can be granted, refused, and removed",
         return (window as any).settings;
       })
     )
-    .toEqual({ hoverRead: true, showPanel: false });
+    .toEqual({ hoverRead: true, showPanel: true });
   await page.getByLabel("Website address").fill("example.com/article");
   await page.getByRole("button", { name: "Allow website", exact: true }).click();
   await expect(page.locator("#sites")).toContainText("https://example.com/*");

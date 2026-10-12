@@ -508,6 +508,8 @@ fn main() {
                                     telemetry_state,
                                     None,
                                     None,
+                                    // Tray speaks the clipboard, not a selection.
+                                    None,
                                 )
                                 .await
                                 {
@@ -753,6 +755,7 @@ fn main() {
                                 telemetry_state,
                                 None,
                                 None,
+                                Some(browser_bridge::TriggerSource::Hotkey),
                             )
                             .await
                             {

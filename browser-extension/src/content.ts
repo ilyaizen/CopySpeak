@@ -1,5 +1,12 @@
-import { captureSelection, type SelectionAnchor } from "./anchor";
-import { ReadingOwner, parseEvent, type CopyCommand } from "./protocol";
+import { captureSelection, matchCopiedText, type SelectionAnchor } from "./anchor";
+import {
+  ReadingOwner,
+  TriggerOwner,
+  parseEvent,
+  type ControlAction,
+  type CopyCommand,
+  type Status
+} from "./protocol";
 import { paragraphHover } from "./hover";
 
 // Repeated scripting.executeScript calls do not install duplicate listeners.
@@ -10,21 +17,28 @@ if (!scope[marker]) {
   scope[marker] = true;
   const documentToken = crypto.randomUUID();
   let anchor: SelectionAnchor | null = null;
+  // One audio per document: a reading this page started, or a desktop
+  // trigger speak (double-copy / hotkey) whose text is this page's selection.
   let owner: ReadingOwner | null = null;
+  let trigger: {
+    owner: TriggerOwner;
+    toCaptured: (start: number, end: number) => [number, number] | null;
+  } | null = null;
   let observer: MutationObserver | null = null;
   let panel: HTMLElement | null = null;
   let style: HTMLStyleElement | null = null;
   let pauseButton: HTMLButtonElement | null = null;
   let label: HTMLElement | null = null;
   let paused = false;
-  let showPanel = true;
+  let showPanel = false;
   let siteAllowed = false;
   const hover = paragraphHover(() => {
     void chrome.runtime.sendMessage({ type: "read-paragraph" }).catch(() => cleanup());
   });
   async function loadSettings() {
     const settings = await chrome.storage.local.get(["hoverRead", "showPanel"]);
-    showPanel = settings.showPanel !== false;
+    // Off unless turned on in settings.
+    showPanel = settings.showPanel === true;
     if (panel) panel.hidden = !showPanel;
     hover.setEnabled(siteAllowed && settings.hoverRead === true);
   }
@@ -41,16 +55,20 @@ if (!scope[marker]) {
       .catch(() => hover.setEnabled(false));
   }
   refreshSiteAccess();
-  const sendControl = (action: "pause" | "resume" | "stop") => {
-    if (owner?.readingId)
+  const sendControl = (action: ControlAction) => {
+    const target = owner?.readingId
+      ? { reading_id: owner.readingId }
+      : trigger
+        ? { trigger_id: trigger.owner.triggerId }
+        : null;
+    if (target)
       void chrome.runtime
-        .sendMessage({
-          type: "control",
-          document_token: documentToken,
-          reading_id: owner.readingId,
-          action
-        })
+        .sendMessage({ type: "control", document_token: documentToken, ...target, action })
         .catch(() => cleanup());
+  };
+  /** Stop a reading this page started; a desktop trigger speak outlives the page. */
+  const stopReading = () => {
+    if (owner) sendControl("stop");
   };
   function cleanup() {
     observer?.disconnect();
@@ -63,16 +81,18 @@ if (!scope[marker]) {
     style = null;
     anchor = null;
     owner = null;
+    trigger = null;
   }
-  function accepted() {
+  /** Passage highlight plus the playback box, over the current anchor. */
+  function present(skip: boolean) {
     if (!anchor?.valid()) {
-      sendControl("stop");
+      stopReading();
       cleanup();
       return;
     }
     const passage = anchor.range(0, anchor.text.length);
     if (!passage) {
-      sendControl("stop");
+      stopReading();
       cleanup();
       return;
     }
@@ -92,35 +112,54 @@ if (!scope[marker]) {
     label = document.createElement("span");
     label.textContent = "CopySpeak · Buffering";
     label.setAttribute("role", "status");
-    pauseButton = document.createElement("button");
-    pauseButton.textContent = "Pause";
-    pauseButton.onclick = () => sendControl(paused ? "resume" : "pause");
-    const stop = document.createElement("button");
-    stop.textContent = "Stop";
-    stop.onclick = () => {
+    const button = (text: string, name: string, onclick: () => void) => {
+      const element = document.createElement("button");
+      element.textContent = text;
+      element.setAttribute("aria-label", name);
+      element.onclick = onclick;
+      return element;
+    };
+    pauseButton = button("Pause", "Pause", () => sendControl(paused ? "resume" : "pause"));
+    const stop = button("Stop", "Stop", () => {
       sendControl("stop");
       cleanup();
-    };
-    const hide = document.createElement("button");
-    hide.textContent = "×";
-    hide.setAttribute("aria-label", "Hide playback box");
-    hide.title = "Hide playback box. Restore it in CopySpeak Companion settings.";
-    hide.onclick = () => {
+    });
+    const hide = button("×", "Hide playback box", () => {
       showPanel = false;
       if (panel) panel.hidden = true;
       void chrome.storage.local.set({ showPanel: false });
-    };
-    strip.append(label, pauseButton, stop, hide);
+    });
+    hide.title = "Hide playback box. Restore it in CopySpeak Companion settings.";
+    // Skips only when the app takes them: an older native host drops the
+    // whole connection on an action it does not know.
+    strip.append(label);
+    if (skip) strip.append(button("−5s", "Back 5 seconds", () => sendControl("skip-back")));
+    strip.append(pauseButton);
+    if (skip) strip.append(button("+5s", "Forward 5 seconds", () => sendControl("skip-forward")));
+    strip.append(stop, hide);
     shadow.append(css, strip);
     document.documentElement.append(panel);
     anchor.clearIfUnchanged();
     observer = new MutationObserver(() => {
       if (anchor && !anchor.valid()) {
-        sendControl("stop");
+        stopReading();
         cleanup();
       }
     });
     observer.observe(anchor.root, { subtree: true, childList: true, characterData: true });
+  }
+  /** Reflect one state frame: box label, pause button, and the word span (captured offsets). */
+  function show(status: Status, wordAvailable: boolean, word: [number, number] | null) {
+    paused = status === "paused";
+    if (pauseButton) {
+      pauseButton.textContent = paused ? "Resume" : "Pause";
+      pauseButton.setAttribute("aria-label", pauseButton.textContent);
+    }
+    if (label)
+      label.textContent = `CopySpeak · ${status}${wordAvailable ? "" : " · Word highlighting unavailable"}`;
+    CSS.highlights.delete("copyspeak-word");
+    const range = word && anchor?.range(word[0], word[1]);
+    if (range) CSS.highlights.set("copyspeak-word", new Highlight(range));
   }
   chrome.runtime.onMessage.addListener((message: CopyCommand, _sender, respond) => {
     if (message.type === "refresh-site-access") {
@@ -161,15 +200,64 @@ if (!scope[marker]) {
       respond({ text: anchor.text, document_token: documentToken });
       return;
     }
+    if (message.type === "trigger") {
+      // A desktop speak started from copied text. Follow it only when this
+      // frame's live selection IS that text; anything else (another app, a
+      // cleared or different selection) is a silent no-op.
+      const e = parseEvent(message.event);
+      if (e?.type !== "trigger-started" || !CSS.highlights || !("Highlight" in globalThis)) return;
+      const captured = captureSelection(document);
+      const toCaptured =
+        captured && captured.text.length <= 65536
+          ? matchCopiedText(captured.text, e.raw_text)
+          : null;
+      if (!captured || !toCaptured) return;
+      // The app already cancelled whatever this page was following; drop it
+      // locally without a stop, which would stop the new speak instead.
+      cleanup();
+      anchor = captured;
+      const followed = { owner: new TriggerOwner(e.trigger_id), toCaptured };
+      trigger = followed;
+      present(true);
+      void chrome.runtime
+        .sendMessage({
+          type: "trigger-claim",
+          document_token: documentToken,
+          trigger_id: e.trigger_id
+        })
+        .then((claimed) => {
+          if (claimed !== true && trigger === followed) cleanup();
+        })
+        .catch(() => {
+          if (trigger === followed) cleanup();
+        });
+      return;
+    }
     if (message.type !== "native" && message.type !== "disconnect") return;
     if (message.type === "disconnect") {
-      cleanup();
+      // Scoped: a reading's disconnect must not clear a trigger this page
+      // started following in the meantime, and vice versa.
+      const ours =
+        message.trigger_id === undefined
+          ? owner !== null
+          : trigger?.owner.triggerId === message.trigger_id;
+      if (ours) cleanup();
       return;
     }
     if (message.document_token !== documentToken) return;
     const e = parseEvent(message.event);
-    if (!e || !owner?.apply(e)) return;
-    if (e.type === "accepted") accepted();
+    if (!e) return;
+    if (e.type === "state" && "trigger_id" in e) {
+      if (!trigger?.owner.apply(e)) return;
+      if (trigger.owner.ended || !anchor?.valid()) {
+        cleanup();
+        return;
+      }
+      show(e.status, e.word_available, e.word && trigger.toCaptured(e.word.start, e.word.end));
+      return;
+    }
+    if (!owner?.apply(e)) return;
+    if (e.type === "accepted") present(e.skip);
     if (e.type === "rejected") cleanup();
     if (e.type === "state") {
       if (owner.ended) {
@@ -181,19 +269,11 @@ if (!scope[marker]) {
         cleanup();
         return;
       }
-      paused = e.status === "paused";
-      if (pauseButton) pauseButton.textContent = paused ? "Resume" : "Pause";
-      if (label)
-        label.textContent = `CopySpeak · ${e.status}${e.word_available ? "" : " · Word highlighting unavailable"}`;
-      CSS.highlights.delete("copyspeak-word");
-      if (e.word) {
-        const range = anchor.range(e.word.start, e.word.end);
-        if (range) CSS.highlights.set("copyspeak-word", new Highlight(range));
-      }
+      show(e.status, e.word_available, e.word && [e.word.start, e.word.end]);
     }
   });
   addEventListener("pagehide", () => {
-    sendControl("stop");
+    stopReading();
     cleanup();
   });
 }
