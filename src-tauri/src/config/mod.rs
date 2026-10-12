@@ -367,6 +367,12 @@ pub fn load_or_default() -> AppConfig {
                 migrate_add_kokoro_profile_v6(&mut cfg);
             }
 
+            // Retire Edge-TTS profiles (upstream service dead, UI hidden).
+            // Runs every load — it must also catch profiles created AFTER a
+            // migrated load (migrate_tts_config force-resets schema_version,
+            // so a schema-bump gate would never fire again).
+            tts::migrate_retire_edge_profiles(&mut cfg.tts);
+
             clamp_profile_rates(&mut cfg);
 
             // `version` is informational (shown in exports); always reflect the

@@ -72,15 +72,6 @@
       installable: true
     },
     {
-      id: "edge",
-      name: "Edge-TTS",
-      tagline: "Works instantly",
-      detail:
-        "Free Microsoft Read Aloud voices. No API key, no downloads — start listening right away.",
-      recommended: false,
-      keyless: true
-    },
-    {
       id: "cartesia",
       name: "Cartesia",
       tagline: "Premium cloud voices",
@@ -118,7 +109,7 @@
       if (status.has_config) selectedEngine = status.engine;
     } catch (e) {
       // Even if this fails, defaults are safe: Kokoro is the fresh-install
-      // default in Rust, and completing with "kokoro" or "edge" is always valid.
+      // default in Rust, and completing with any offered engine is valid.
       console.error("Failed to load onboarding status:", e);
       status = {
         has_config: false,
@@ -301,8 +292,8 @@
                 </p>
               {:else}
                 <p class="text-muted-foreground text-sm">
-                  Click below to install Kokoro. The download streams here — Edge-TTS is there
-                  instantly if you'd rather skip it.
+                  Click below to install Kokoro. The download streams here — cloud or local engines
+                  can also be set up later from the Engines page.
                 </p>
               {/if}
             </div>
@@ -334,9 +325,7 @@
               Install Kokoro & Get Started
             {:else}
               {$_("onboarding.complete")}
-              {#if selectedEngine !== "edge"}
-                — {engineChoices.find((c) => c.id === selectedEngine)?.name}
-              {/if}
+              — {engineChoices.find((c) => c.id === selectedEngine)?.name}
             {/if}
           </Button>
         </div>

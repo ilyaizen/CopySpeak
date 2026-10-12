@@ -813,6 +813,31 @@ pub struct VoiceProfile {
     pub engine_options: ProfileEngineOptions,
 }
 
+// Required by the container-level `#[serde(default)]`: a profile JSON that
+// misses fields deserializes the missing ones from this. Edge-TTS used to
+// seed it; the engine is retired, so the default is the bundled Kokoro
+// profile (the fresh-install default engine).
+impl Default for VoiceProfile {
+    fn default() -> Self {
+        let engine = TtsEngine::Kokoro;
+        let voice = KOKORO_DEFAULT_VOICE.to_string();
+        let voice_label = catalog_voice_label(&engine, &voice);
+        Self {
+            id: "default".into(),
+            name: "Kokoro".into(),
+            description: None,
+            engine,
+            voice,
+            voice_label,
+            speed: 1.0,
+            pitch: 1.0,
+            effects: ProfileEffects::default(),
+            text_processing: ProfileTextProcessing::default(),
+            engine_options: ProfileEngineOptions::default_for(&TtsEngine::Kokoro),
+        }
+    }
+}
+
 fn prettify_voice_id(voice: &str) -> String {
     voice
         .split(['-', '_'])
@@ -847,27 +872,6 @@ fn catalog_voice_label(engine: &TtsEngine, voice: &str) -> Option<String> {
         .find(|entry| entry.engine == *engine)
         .and_then(|entry| entry.voices.into_iter().find(|v| v.id == voice))
         .map(|voice| voice.label)
-}
-
-impl Default for VoiceProfile {
-    fn default() -> Self {
-        let engine = TtsEngine::Edge;
-        let voice = "en-US-AvaMultilingualNeural".to_string();
-        let voice_label = catalog_voice_label(&engine, &voice);
-        Self {
-            id: "default".into(),
-            name: "Edge".into(),
-            description: None,
-            engine,
-            voice,
-            voice_label,
-            speed: 1.0,
-            pitch: 1.0,
-            effects: ProfileEffects::default(),
-            text_processing: ProfileTextProcessing::default(),
-            engine_options: ProfileEngineOptions::default_for(&TtsEngine::Edge),
-        }
-    }
 }
 
 fn schema_version_absent() -> u32 {
@@ -1060,7 +1064,7 @@ pub(crate) const KOKORO_DEFAULT_PROFILE_ID: &str = "profile-kokoro-default";
 /// `models/voices-v1.0.bin` and in the catalog (Heart, en, female).
 pub(crate) const KOKORO_DEFAULT_VOICE: &str = "af_heart";
 
-fn default_kokoro_profile() -> VoiceProfile {
+pub(crate) fn default_kokoro_profile() -> VoiceProfile {
     let engine = TtsEngine::Kokoro;
     let voice = KOKORO_DEFAULT_VOICE.to_string();
     let voice_label = catalog_voice_label(&engine, &voice);
@@ -1093,25 +1097,50 @@ pub(crate) fn migrate_add_kokoro_profile_v6(tts: &mut TtsConfig) {
     tts.schema_version = 6;
 }
 
+/// Microsoft killed the free Read-Aloud protocol the edge-tts CLI speaks
+/// (2026-10, rany2/edge-tts#490); the engine is hidden from the UI. Retire
+/// every Edge profile and keep the active selection valid: an active Edge
+/// profile falls back to the bundled Kokoro profile (created first if the
+/// config predates v6). The `TtsEngine::Edge` variant and backend stay for a
+/// future upstream fix, so this is a load-time normalization (like
+/// clamp_profile_rates), not a schema bump. Idempotent.
+pub(crate) fn migrate_retire_edge_profiles(tts: &mut TtsConfig) {
+    let had_active_edge = tts
+        .profiles
+        .iter()
+        .any(|p| p.id == tts.active_profile_id && p.engine == TtsEngine::Edge);
+    tts.profiles.retain(|p| p.engine != TtsEngine::Edge);
+    if had_active_edge {
+        if !tts
+            .profiles
+            .iter()
+            .any(|p| p.id == KOKORO_DEFAULT_PROFILE_ID)
+        {
+            tts.profiles.push(default_kokoro_profile());
+        }
+        tts.active_profile_id = KOKORO_DEFAULT_PROFILE_ID.into();
+        log::info!(
+            "Active Edge-TTS profile retired (upstream service unavailable); \
+             switched to the bundled Kokoro profile"
+        );
+        sync_active_backend_mirror(tts);
+    }
+}
+
 impl Default for TtsConfig {
     fn default() -> Self {
         let cartesia_profile = default_cartesia_profile();
-        // Fresh installs start on Edge-TTS (profile id "default" — see
-        // VoiceProfile::default(), first in the vec): no API key needed, so
-        // onboarding needs nothing (issue #43). Existing configs on disk are
-        // unaffected — defaults only apply when no config file exists.
+        // Fresh installs start on Kokoro (bundled profile
+        // profile-kokoro-default): keyless offline voices, installed from
+        // onboarding with streamed progress. Edge-TTS is not offered: its
+        // free upstream service is dead (see migrate_retire_edge_profiles).
+        // Existing configs on disk are unaffected — defaults only apply when
+        // no config file exists.
         Self {
             schema_version: 6,
-            // Fresh installs start on Kokoro (bundled profile
-            // profile-kokoro-default): keyless offline voices, installed
-            // from onboarding with streamed progress. The Edge "default"
-            // profile stays first in the vec as the zero-download fallback.
-            // Existing configs on disk are unaffected — defaults only apply
-            // when no config file exists.
             active_backend: TtsEngine::Kokoro,
             active_profile_id: KOKORO_DEFAULT_PROFILE_ID.into(),
             profiles: vec![
-                VoiceProfile::default(),
                 default_kitten_profile(),
                 default_qwen_profile(),
                 default_kokoro_profile(),

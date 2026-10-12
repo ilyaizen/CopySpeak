@@ -2,7 +2,7 @@
 
 **Current Version:** 0.2.11
 
-A modern desktop app that reads clipboard text aloud using AI Text-to-Speech engines. Trigger speech by quickly copying the same text twice in a row — works out of the box with no API key (Edge TTS is the default engine).
+A modern desktop app that reads clipboard text aloud using AI Text-to-Speech engines. Trigger speech by quickly copying the same text twice in a row — works out of the box with the bundled offline voices (Kokoro is the default engine).
 
 ## [Download Latest](https://github.com/ilyaizen/CopySpeak/releases)
 
@@ -53,9 +53,8 @@ bun run tauri dev
 ### Core
 
 - **Multiple trigger modes**: Double-copy (1.5s window), hotkey, or manual paste/play
-- **13 TTS engines**:
+- **12 TTS engines**:
   - **Local** — Piper, Kokoro, Kitten, Qwen3-TTS (multilingual, 9 CustomVoice voices), Pocket, or any CLI TTS tool via local subprocess
-  - **Edge TTS** — Free Microsoft Edge Read Aloud backend (default)
   - **OpenAI TTS** — Cloud API with 9 voices
   - **ElevenLabs TTS** — Cloud API with voice library support
   - **Cartesia TTS** — Sonic 3.5 cloud API

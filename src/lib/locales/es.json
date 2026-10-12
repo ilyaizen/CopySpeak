@@ -290,11 +290,6 @@
         "description": "TTS local compacto",
         "detail": "Kyutai Pocket: un modelo de 100 M de parámetros diseñado para funcionar en CPU, con voces en seis idiomas."
       },
-      "edge": {
-        "title": "Edge-TTS",
-        "description": "TTS neuronal de Microsoft Edge (gratis)",
-        "detail": "Voces neuronales gratuitas y de alta calidad del servicio TTS en línea de Microsoft Edge. No requiere clave de API."
-      },
       "google": {
         "title": "Google Gemini TTS",
         "description": "TTS en la nube basado en Gemini de Google",
@@ -359,10 +354,6 @@
       "apiKeyDescription": "Tu clave de API se guarda en local y nunca se comparte.",
       "check": "Comprobar",
       "testEngine": "Probar motor"
-    },
-    "edge": {
-      "title": "Edge TTS",
-      "description": "Nube: voces de lectura en voz alta de Microsoft Edge. Gratis y sin clave de API, pero necesita conexión a internet."
     },
     "google": {
       "title": "Google",
@@ -664,7 +655,7 @@
       },
       "engines": {
         "title": "9 motores TTS",
-        "description": "Edge TTS, OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP y motores locales de línea de comandos (Piper, Kokoro, Kitten)."
+        "description": "OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP y motores locales de línea de comandos (Piper, Kokoro, Kitten)."
       },
       "hud": {
         "title": "Superposición HUD",
