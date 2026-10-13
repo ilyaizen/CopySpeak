@@ -886,5 +886,12 @@
       "available": "Mise à jour disponible",
       "check": "Rechercher les mises à jour"
     }
+  },
+  "tray": {
+    "listening": "● À l'écoute",
+    "paused": "○ En pause",
+    "speakClipboard": "Lire le presse-papiers maintenant",
+    "settings": "Paramètres...",
+    "quit": "Quitter"
   }
 }

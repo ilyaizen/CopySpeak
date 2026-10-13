@@ -886,5 +886,12 @@
       "available": "Update available",
       "check": "Check for updates"
     }
+  },
+  "tray": {
+    "listening": "● Listening",
+    "paused": "○ Paused",
+    "speakClipboard": "Speak Clipboard Now",
+    "settings": "Settings...",
+    "quit": "Quit"
   }
 }

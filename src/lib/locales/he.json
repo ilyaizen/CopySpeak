@@ -886,5 +886,12 @@
       "available": "עדכון זמין",
       "check": "בדוק עדכונים"
     }
+  },
+  "tray": {
+    "listening": "● מקשיב",
+    "paused": "○ מושהה",
+    "speakClipboard": "הקרא את הלוח עכשיו",
+    "settings": "הגדרות...",
+    "quit": "יציאה"
   }
 }

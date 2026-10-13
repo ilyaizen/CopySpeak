@@ -886,5 +886,12 @@
       "available": "Update verfügbar",
       "check": "Nach Updates suchen"
     }
+  },
+  "tray": {
+    "listening": "● Lauscht",
+    "paused": "○ Pausiert",
+    "speakClipboard": "Zwischenablage jetzt vorlesen",
+    "settings": "Einstellungen...",
+    "quit": "Beenden"
   }
 }

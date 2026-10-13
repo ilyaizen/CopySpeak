@@ -295,6 +295,11 @@ pub fn set_config(
         log::info!("[LocalDaemon] idle timeout set to {}s", secs);
     }
 
+    // Tray labels follow the saved locale and the listening state.
+    if let Err(e) = crate::tray_labels::apply(&app) {
+        log::error!("Failed to update tray labels: {}", e);
+    }
+
     // Emit config-changed event so frontend can react
     let _ = app.emit("config-changed", ());
 
