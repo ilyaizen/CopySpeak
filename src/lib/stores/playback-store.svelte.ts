@@ -384,6 +384,7 @@ class PlaybackStore {
     this.currentFragmentIndex = null;
     this.totalFragments = null;
     this._pcmScheduler = null;
+    this._streamSessionId = null;
     this.reportBrowserFinished("completed");
     void this._emit?.("hud:stop", null);
     this.emitPlaybackFinished();
@@ -452,7 +453,8 @@ class PlaybackStore {
    * A streamed reading failed on the backend. Stop only when that reading owns
    * the stream on the speakers; another reading's failure leaves it playing,
    * and its own end still emits playback-finished. When nothing is playing,
-   * stop anyway so playback-finished fires and a /speak --wait caller returns.
+   * emit playback-finished without a stop: handleStop would also gate off the
+   * chunks of a reading that is still synthesizing, and clear its queue.
    */
   handleStreamFailed(sessionId: string | null): void {
     if (this._pcmScheduler) {
@@ -460,7 +462,7 @@ class PlaybackStore {
       return;
     }
     if (this.isPlaying || this.isLoadingAudio || this._fragmentQueue.isProcessing()) return;
-    this.handleStop();
+    this.emitPlaybackFinished();
   }
 
   async playAudio() {
@@ -510,6 +512,7 @@ class PlaybackStore {
     this._fragmentQueue.clear();
     this._pcmScheduler?.stop();
     this._pcmScheduler = null;
+    this._streamSessionId = null;
     this.currentFragmentIndex = null;
     this.totalFragments = null;
 
