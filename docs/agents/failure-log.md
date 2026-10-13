@@ -46,8 +46,6 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Export Kokoro's duration-capable model under isolated Python 3.12; Kokoro 0.8.4's NumPy 1.x dependency cannot use the engine's Python 3.13 wheels.
 - Filter Kokoro's misaki phonemes through the model vocab before inference; misaki emits unpronounceable punctuation as literal phonemes, and only a missing _letter_ phoneme is a real pronunciation gap worth aborting on.
 - Change a model default in all four places together: the catalog `default_value` in `tts/catalog.rs`, the `*Config::default()` impl and the bundled `default_*_profile()` in `config/tts.rs`, and `play-page.svelte`'s mock; a catalog-only edit leaves fresh installs on the old model.
-- Take a speech's engine from its effective profile (`eff.engine`), not `cfg.tts.active_backend`: that field only mirrors the active profile (`sync_active_backend_mirror`), so a per-utterance switch would file telemetry, history and cache under the wrong engine.
-
 ## Browser companion
 
 - Gate every browser-protocol addition on a capability: the native host's `ClientMessage` is `deny_unknown_fields` and drops the relay on any unknown field or action, and older extensions disconnect on any app event type they cannot parse.
@@ -69,6 +67,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Hide the playback button's decorative spinner from accessibility naming so synthesis keeps the action named “Stop”.
 - Clear the shared audio queue on decode/play failure and invalidate pending decoding on Stop so history retries work and stopped readings cannot restart.
 - When a cache test asserts an exact pagination count, set `fragment_size` above each intended sentence length; overlong sentences are correctly force-split into extra fragments.
+- Take a speech's engine from its effective profile (`eff.engine`), not `cfg.tts.active_backend`: that field only mirrors the active profile (`sync_active_backend_mirror`), so a per-utterance switch would file telemetry, history and cache under the wrong engine.
 
 ## Linux
 
@@ -85,5 +84,3 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Grep components for `>Text<` and `label="Text"` after an i18n pass; literal UI text bypasses `$_` and passes locale parity.
 - Pass caught errors to `$_` values as `String(e)`; a catch binding is `unknown` and svelte-check rejects it.
 - Run `vp fmt src/lib/i18n/types.ts` after `node scripts/generate-i18n-types.js`; raw generator output reflows `NestedKeyOf` and adds trailing whitespace, so the diff picks up noise.
-- Put UI strings in `src/lib/locales/en.json`, not `src/lib/i18n/`; that folder holds the i18n code and the generated `types.ts`.
-- Change `iso_639_1` in `src-tauri/src/language.rs` and `DETECTED_LANGUAGE_CODES` in `profile-language.ts` together; `profile-language.test.ts` fails when the two code lists drift.

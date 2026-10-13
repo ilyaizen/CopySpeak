@@ -15,7 +15,7 @@ A user keeps one voice profile per language. Double-copy and browser readings sp
 - **Scope**: double-copy and browser readings (`speak_queued`). Hotkey, Play page, tray and control-server speaks (`speak_now`) always use the active profile.
 - **Per utterance**: the switched profile is not saved and `set_active_profile` is not called.
 - **No retry**: if the switched profile fails, its error surfaces. Falling back silently would hide a broken profile.
-- **Labels follow the profile**: engine, voice, telemetry, history, saved-audio cache and the HUD all read the profile that spoke. A reading's fragments share one profile.
+- **Labels follow the profile**: for a live reading, engine, voice, telemetry, history, saved-audio cache and the HUD all read the profile that spoke. A reading's fragments share one profile.
 
 ## Alternatives considered
 
@@ -28,3 +28,4 @@ A user keeps one voice profile per language. Double-copy and browser readings sp
 - Short, mixed-language or very famous sentences keep the active profile. The detector refuses the classic English pangram by design.
 - The language list exists in two places: `iso_639_1` in `language.rs` and `DETECTED_LANGUAGE_CODES` in `profile-language.ts`. `profile-language.test.ts` fails when they drift, so change both together.
 - Speak paths differ on purpose. A future change that adds switching to `speak_now` must also decide how its engine labels and cache keys work.
+- Known gap, pre-existing and not fixed here: a history replay's HUD (`show_hud_playback`) still names the active profile. The history row already stores the engine and voice that spoke, so the fix is to read the label from the entry.

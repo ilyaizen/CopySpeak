@@ -552,17 +552,18 @@ pub(crate) fn resolve_effective(tts_config: &TtsConfig) -> EffectiveTtsRequest {
 /// The profile for one utterance. With auto-switch on and a reliable language
 /// reading of `text`, a profile tagged with that language wins: the active one
 /// if it matches, else the first in list order. Anything else keeps the active
-/// profile.
+/// profile. A matched profile that fails to resolve is an error, not a silent
+/// fallback to the active profile.
 pub(crate) fn resolve_effective_for_text(
     tts_config: &TtsConfig,
     text: &str,
-) -> EffectiveTtsRequest {
+) -> Result<EffectiveTtsRequest, String> {
     let active = resolve_effective(tts_config);
     if !tts_config.auto_switch_language {
-        return active;
+        return Ok(active);
     }
     let Some(language) = crate::language::detect_language(text) else {
-        return active;
+        return Ok(active);
     };
     let matching: Vec<_> = tts_config
         .profiles
@@ -574,12 +575,12 @@ pub(crate) fn resolve_effective_for_text(
         .find(|p| p.id == tts_config.active_profile_id)
         .or(matching.first())
     else {
-        return active;
+        return Ok(active);
     };
     if target.id == tts_config.active_profile_id {
-        return active;
+        return Ok(active);
     }
-    resolve_effective_for_profile(tts_config, Some(target.id.as_str())).unwrap_or(active)
+    resolve_effective_for_profile(tts_config, Some(target.id.as_str()))
 }
 
 /// Get the engine string identifier for a backend (legacy function, prefer engine_identifier).
@@ -630,59 +631,51 @@ mod tests {
         }
     }
 
-    fn picked(tts: &TtsConfig, text: &str) -> Option<String> {
-        resolve_effective_for_text(tts, text).profile_id
-    }
-
-    #[test]
-    fn auto_switch_off_keeps_active_profile() {
-        let mut tts = config(
+    /// English and German profiles; `active` picks which one is active.
+    fn en_and_de(active: &str) -> TtsConfig {
+        config(
             vec![
                 profile("en", TtsEngine::Kokoro, Some("en")),
                 profile("de", TtsEngine::Piper, Some("de")),
             ],
-            "en",
-        );
+            active,
+        )
+    }
+
+    fn picked(tts: &TtsConfig, text: &str) -> Option<String> {
+        resolve_effective_for_text(tts, text).unwrap().profile_id
+    }
+
+    #[test]
+    fn auto_switch_off_keeps_active_profile() {
+        let mut tts = en_and_de("en");
         tts.auto_switch_language = false;
         assert_eq!(picked(&tts, GERMAN).as_deref(), Some("en"));
     }
 
     #[test]
     fn matching_profile_is_switched_to() {
-        let tts = config(
-            vec![
-                profile("en", TtsEngine::Kokoro, Some("en")),
-                profile("de", TtsEngine::Piper, Some("de")),
-            ],
-            "en",
-        );
-        let eff = resolve_effective_for_text(&tts, GERMAN);
+        let tts = en_and_de("en");
+        let eff = resolve_effective_for_text(&tts, GERMAN).unwrap();
         assert_eq!(eff.profile_id.as_deref(), Some("de"));
         assert_eq!(eff.engine, TtsEngine::Piper);
     }
 
     #[test]
     fn short_text_keeps_active_profile() {
-        let tts = config(
-            vec![
-                profile("en", TtsEngine::Kokoro, Some("en")),
-                profile("de", TtsEngine::Piper, Some("de")),
-            ],
-            "en",
-        );
+        let tts = en_and_de("en");
         assert_eq!(picked(&tts, "Guten Tag").as_deref(), Some("en"));
     }
 
     #[test]
     fn unreliable_text_keeps_active_profile() {
-        let tts = config(
-            vec![
-                profile("en", TtsEngine::Kokoro, Some("en")),
-                profile("de", TtsEngine::Piper, Some("de")),
-            ],
-            "de",
-        );
+        let tts = en_and_de("de");
         assert_eq!(picked(&tts, PANGRAM).as_deref(), Some("de"));
+    }
+
+    #[test]
+    fn reliable_english_text_switches_to_english_profile() {
+        let tts = en_and_de("de");
         assert_eq!(picked(&tts, ENGLISH).as_deref(), Some("en"));
     }
 
@@ -722,5 +715,13 @@ mod tests {
             "en",
         );
         assert_eq!(picked(&tts, GERMAN).as_deref(), Some("en"));
+    }
+
+    #[test]
+    fn unknown_active_profile_switches_to_first_match() {
+        // The active id names no profile, so nothing "matches" it and the first
+        // language match wins.
+        let tts = en_and_de("missing");
+        assert_eq!(picked(&tts, GERMAN).as_deref(), Some("de"));
     }
 }

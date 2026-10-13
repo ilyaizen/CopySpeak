@@ -1239,7 +1239,7 @@ async fn speak_queued_internal(
         crate::post_process::try_process(text, &post_process_config, &sanitization, false).await;
     // Every label and engine read below uses this utterance's profile, which
     // may be a language-matched one rather than the active profile.
-    let eff = resolve_effective_for_text(&tts_config, &text);
+    let eff = resolve_effective_for_text(&tts_config, &text)?;
     let _ = app.emit("reading-started", &text);
     if let Some((trigger, id)) = &trigger {
         browser_bridge::begin_trigger(&app, id, trigger, &text);
@@ -1588,6 +1588,7 @@ pub async fn speak_history_entry(
     };
 
     let active_backend = active_engine(&tts_config);
+    let eff = resolve_effective(&tts_config);
 
     let backend: Box<dyn TtsBackend> = create_backend(&active_backend, &tts_config);
     let voice = original_voice;
@@ -1615,7 +1616,7 @@ pub async fn speak_history_entry(
     );
 
     // Show HUD with synthesizing indicator
-    hud::show_hud_synthesizing(&app, Some(text.clone()), &resolve_effective(&tts_config));
+    hud::show_hud_synthesizing(&app, Some(text.clone()), &eff);
 
     let backend_arc = Arc::new(backend);
     let synthesis_start = Instant::now();
@@ -1666,12 +1667,7 @@ pub async fn speak_history_entry(
     }
 
     // Show HUD with waveform visualization
-    hud::show_hud(
-        &app,
-        envelope,
-        Some(text.clone()),
-        &resolve_effective(&tts_config),
-    );
+    hud::show_hud(&app, envelope, Some(text.clone()), &eff);
 
     // Emit audio to frontend
     emit_audio_ready(&app, &wav_bytes, &text, None);

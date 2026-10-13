@@ -287,7 +287,7 @@ pub fn test_show_hud(
         duration_ms: 5000,
     };
 
-    let eff = resolve_effective(&config.lock().unwrap().tts);
+    let eff = resolve_effective(&config.lock().map_err(|e| e.to_string())?.tts);
     hud::show_hud(
         &app,
         envelope,
