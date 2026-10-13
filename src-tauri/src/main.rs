@@ -25,6 +25,7 @@ mod sanitize;
 mod secrets;
 mod telemetry;
 mod text_map;
+mod tray_labels;
 mod tts;
 
 pub struct JobStatus {
@@ -440,14 +441,27 @@ fn main() {
                 None::<&str>,
             )?;
             let sep1 = PredefinedMenuItem::separator(app)?;
-            let toggle_item = MenuItem::with_id(app, "toggle", "● Listening", true, None::<&str>)?;
+            // Labels follow the saved locale; `tray_labels::apply` re-applies them on change.
+            let labels = {
+                let cfg = app.state::<std::sync::Mutex<config::AppConfig>>();
+                let locale = cfg.lock().unwrap().general.locale.clone();
+                tray_labels::labels_for(&locale)
+            };
+            let toggle_item =
+                MenuItem::with_id(app, "toggle", labels.listening, true, None::<&str>)?;
             let speak_item =
-                MenuItem::with_id(app, "speak", "Speak Clipboard Now", true, None::<&str>)?;
+                MenuItem::with_id(app, "speak", labels.speak_clipboard, true, None::<&str>)?;
             let sep2 = PredefinedMenuItem::separator(app)?;
             let settings_item =
-                MenuItem::with_id(app, "settings", "Settings...", true, Some("Ctrl+,"))?;
+                MenuItem::with_id(app, "settings", labels.settings, true, Some("Ctrl+,"))?;
             let sep3 = PredefinedMenuItem::separator(app)?;
-            let quit_item = MenuItem::with_id(app, "quit", "Quit", true, Some("Ctrl+Q"))?;
+            let quit_item = MenuItem::with_id(app, "quit", labels.quit, true, Some("Ctrl+Q"))?;
+            app.manage(tray_labels::TrayItems {
+                toggle: toggle_item.clone(),
+                speak: speak_item.clone(),
+                settings: settings_item.clone(),
+                quit: quit_item.clone(),
+            });
 
             let menu = Menu::with_items(
                 app,
@@ -464,7 +478,6 @@ fn main() {
             )?;
 
             let is_listening_for_tray = is_listening.clone();
-            let toggle_item_for_event = toggle_item.clone();
             let _tray = TrayIconBuilder::with_id("main")
                 .menu(&menu)
                 .tooltip("CopySpeak")
@@ -478,12 +491,9 @@ fn main() {
                             log::info!("Tray: toggle listening -> {}", new_state);
 
                             // Update menu item label
-                            let label = if new_state {
-                                "● Listening"
-                            } else {
-                                "○ Paused"
-                            };
-                            let _ = toggle_item_for_event.set_text(label);
+                            if let Err(e) = tray_labels::apply(app) {
+                                log::error!("Failed to update tray labels: {}", e);
+                            }
                         }
                         "speak" => {
                             log::info!("Tray: speak clipboard");

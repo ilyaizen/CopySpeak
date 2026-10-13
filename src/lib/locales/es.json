@@ -886,5 +886,12 @@
       "available": "Actualización disponible",
       "check": "Buscar actualizaciones"
     }
+  },
+  "tray": {
+    "listening": "● Escuchando",
+    "paused": "○ En pausa",
+    "speakClipboard": "Leer el portapapeles ahora",
+    "settings": "Configuración...",
+    "quit": "Salir"
   }
 }

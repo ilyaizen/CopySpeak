@@ -709,7 +709,12 @@ export type TranslationKeys =
   | "update.status.checking"
   | "update.status.upToDate"
   | "update.status.available"
-  | "update.status.check";
+  | "update.status.check"
+  | "tray.listening"
+  | "tray.paused"
+  | "tray.speakClipboard"
+  | "tray.settings"
+  | "tray.quit";
 
 /**
  * Helper type for nested key paths

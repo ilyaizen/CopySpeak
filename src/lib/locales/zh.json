@@ -886,5 +886,12 @@
       "available": "有可用更新",
       "check": "检查更新"
     }
+  },
+  "tray": {
+    "listening": "● 监听中",
+    "paused": "○ 已暂停",
+    "speakClipboard": "立即朗读剪贴板",
+    "settings": "设置...",
+    "quit": "退出"
   }
 }
