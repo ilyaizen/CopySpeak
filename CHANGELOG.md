@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.12] - 2026-10-13
+
+### Added
+
+- **Model picker for each engine** — the model field for OpenAI, ElevenLabs, Cartesia and Google is now a list built from each vendor's documented models. A model id already saved in your config that isn't on the list stays selectable, so no setting is lost.
+
+- **Tray menu follows the app language** — the tray labels (the listening/paused toggle, Speak Clipboard, Settings, Quit) come from the same locale files as the window. Changing the language re-labels the tray without a restart.
+
+### Changed
+
+- **OpenAI streams only on the `gpt-4o-mini-tts` family** — the docs show chunked streaming for that model only. The default `tts-1`, `tts-1-hd` and unknown models now use the batch path, so default OpenAI users get their first audio only after the whole reading is synthesized. The docs don't confirm whether `tts-1` can stream. To stream, switch to `gpt-4o-mini-tts`.
+
+- **Local engines stream only when warm** — kokoro and pocket always play a reading as one piece. piper, kitten and qwen stream only once their daemon is running; until then a reading takes the batch path.
+
+- **More of the interface is translated** — about 45 more strings now go through the translation catalog. Arabic, German, French, Hindi, Russian and Chinese have drafts for every key, and Spanish and Hebrew are extended to match. The drafts are unreviewed; reviewers check them in Crowdin.
+
+### Fixed
+
+- **Failed streamed readings finish cleanly** — a reading whose stream errored mid-way could leave playback stalled, with other audio ducked until the next reading. The failed reading now stops and finishes, and ducking restores (ilyaizen/CopySpeak#70).
+
+- **Aborts no longer reach the next reading** — an abort applies only to readings already running. A late error or leftover audio from an aborted stream can't affect a reading that started after it.
+
 ## [0.2.11] - 2026-10-12
 
 ### Removed
@@ -798,7 +820,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.11...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.12...HEAD
+[0.2.12]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.9...v0.2.10
 [0.2.9]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.8...v0.2.9
