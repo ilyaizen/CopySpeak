@@ -73,6 +73,11 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - On Linux launch with `GDK_BACKEND=x11` and show() the HUD window before `set_position`; Wayland toplevels cannot self-position.
 - Hide the HUD's native window when the frontend emits global `hud:stop` on Linux; webview playback never trips the Rust AudioPlayer monitor.
 
+## Landing page
+
+- Grep `src/` for the filename before removing or renaming anything in `static/`; the 0.2.6 screenshot swap left `screenshots.svelte` requesting the deleted `screen-v0.1.8.png` and the live landing page shipped a broken image.
+- Keep version numbers out of locale strings; they rot on every release (all nine locales carried `v0.1.8` inside the screenshot caption).
+
 ## Release
 
 - `bun run bump` derives the new version only from `src/lib/version.ts`; verify all six ✅ lines after bumping. It never touches `browser-extension/` — bump the extension's `manifest.json` + `package.json` by hand on its own cadence.
