@@ -300,8 +300,8 @@ async fn synthesize_streaming_and_emit(
     emit_final: bool,
     session_id: Option<String>,
 ) -> Result<SpeechAudio, String> {
-    let app = app.clone();
-    tokio::task::spawn_blocking(move || {
+    let worker_app = app.clone();
+    let result = tokio::task::spawn_blocking(move || {
         let opened_at = Instant::now();
         log::info!(
             "[TTS][stream] opening streaming synthesis ({} chars, voice '{}', fragment {})",
@@ -323,7 +323,7 @@ async fn synthesize_streaming_and_emit(
 
         let meta = stream.meta.clone();
         let mut pcm_bytes = 0u64;
-        let drained = drain_chunk_stream(stream, |chunk_idx, pcm, is_final, captions| {
+        drain_chunk_stream(stream, |chunk_idx, pcm, is_final, captions| {
             pcm_bytes += pcm.len() as u64;
             if !is_final && chunk_idx == 0 {
                 log::info!(
@@ -342,7 +342,7 @@ async fn synthesize_streaming_and_emit(
                 None
             };
             emit_audio_stream_chunk(
-                &app,
+                &worker_app,
                 &meta,
                 pcm,
                 fragment_index,
@@ -352,20 +352,21 @@ async fn synthesize_streaming_and_emit(
                 captions,
                 session_id.as_deref(),
             );
-        });
-        if drained.is_err() {
-            // The webview scheduler finishes only on a final chunk, which a failed
-            // stream never sends. Stop playback so playback-finished fires: it
-            // restores ducked audio and unblocks /speak --wait. Partial audio is cut.
-            if let Err(e) = app.emit("playback-stop", ()) {
-                log::warn!("Failed to emit playback-stop: {}", e);
-            }
-        }
-        drained
+        })
     })
     .await
-    .map_err(|e| format!("Task join error: {e}"))?
-    .map(|(wav, _ttfa_ms)| wav)
+    .map_err(|e| format!("Task join error: {e}"))
+    .and_then(|drained| drained)
+    .map(|(wav, _ttfa_ms)| wav);
+    if result.is_err() {
+        // The webview scheduler finishes only on a final marker, which a failed
+        // stream never sends. Stop playback so playback-finished fires: it restores
+        // ducked audio and unblocks /speak --wait. Partial audio is cut.
+        if let Err(e) = app.emit("playback-stop", ()) {
+            log::warn!("Failed to emit playback-stop: {}", e);
+        }
+    }
+    result
 }
 
 /// Save audio to history storage and return path
