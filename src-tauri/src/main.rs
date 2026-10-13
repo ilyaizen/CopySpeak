@@ -16,6 +16,7 @@ mod history_manager;
 mod hud;
 #[cfg(target_os = "linux")]
 mod hud_layershell;
+mod language;
 mod logging;
 mod pagination;
 mod audio_duck;
