@@ -25,6 +25,7 @@
   import ProfileExportDialog from "./profile-export-dialog.svelte";
   import VoicePicker from "./voice-picker.svelte";
   import { findSetupEntry } from "./engine-meta";
+  import { choicesWithCurrent } from "./select-choices";
   import type {
     AppConfig,
     EngineCatalogEntry,
@@ -345,6 +346,14 @@
     const value = optionValue(profile, descriptor);
     if (Array.isArray(value)) return value.join("\n");
     return String(value ?? "");
+  }
+
+  function selectOptions(profile: VoiceProfile, descriptor: EngineOptionDescriptor) {
+    const current = String(optionValue(profile, descriptor) ?? "");
+    return choicesWithCurrent(descriptor.choices ?? [], current).map((c) => ({
+      value: c,
+      label: c
+    }));
   }
 
   function catalogVoicesFor(engine: TtsEngine): VoiceCatalogEntry[] {
@@ -849,7 +858,7 @@
                   />
                 {:else if option.kind === "select"}
                   <Select
-                    options={(option.choices ?? []).map((c) => ({ value: c, label: c }))}
+                    options={selectOptions(active, option)}
                     value={String(optionValue(active, option) ?? "")}
                     onchange={(e) => {
                       const val = (e.target as HTMLSelectElement).value;

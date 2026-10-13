@@ -14,7 +14,7 @@
 
     <div class="mt-12">
       <div class="border-border bg-muted/30 mx-auto max-w-3xl border p-2">
-        <img src="/screen-v0.1.8.png" alt={$_("landing.screenshots.alt")} class="w-full" />
+        <img src="/screen-0.2.6.png" alt={$_("landing.screenshots.alt")} class="w-full" />
       </div>
       <p class="text-muted-foreground mt-4 text-center text-sm">
         {$_("landing.screenshots.caption")}

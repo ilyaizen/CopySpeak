@@ -1,6 +1,6 @@
 # 2. Streaming consolidation
 
-Status: accepted (2026-10-13). Slice 1 implements D2, D4 and D7. Slice 2 implements D1 and the helper part of D6. Slice 3 implements the producer-driver part of D6 for OpenAI, Cartesia, Google and ElevenLabs, and adds the is_final rule test. The D9 gate and effects tests predate this slice, and the odd-byte split tests are in `pcm-stream.test.ts`. playback-finished after a failed or empty stream is open (see Open). Slice 4 (contract) removes the batch-wrap default from `TtsBackend::synthesize_streaming`: a backend without a native stream now refuses instead of wrapping its batch WAV. `chunk_stream_from_wav` is removed; its tests use `chunk_stream_from_speech`. The static `supports_streaming()` claim stays, because D1 needs it at the gate.
+Status: accepted (2026-10-13). Slice 1 implements D2, D4 and D7. Slice 2 implements D1 and the helper part of D6. Slice 3 implements the producer-driver part of D6 for OpenAI, Cartesia, Google and ElevenLabs, and adds the is_final rule test. The D9 gate and effects tests predate this slice, and the odd-byte split tests are in `pcm-stream.test.ts`. Slice 4 (contract) removes the batch-wrap default from `TtsBackend::synthesize_streaming`: a backend without a native stream now refuses instead of wrapping its batch WAV. `chunk_stream_from_wav` is removed; its tests use `chunk_stream_from_speech`. The static `supports_streaming()` claim stays, because D1 needs it at the gate.
 
 ## Context
 
@@ -25,6 +25,5 @@ Every OpenAI user on the default model (`tts-1`) and every user who sets `tts-1`
 ## Open
 
 - Gemini live probe: needs the user's own key. Then either keep `streamGenerateContent` or move to the documented Interactions API.
-- A failed or empty stream does not reach playback-finished. `drain_chunk_stream` returns `Err` on `ChunkItem::Failed` and on an empty stream, with no final chunk, `playback-stop` or `synthesis-aborted`. `/speak --wait` gets the error at once (`handle_speak` propagates it), so it does not hang. The webview scheduler stays stalled and `playback-finished` never fires. `audio_duck` is driven by those events, so ducking may not restore until the next reading ends. Needs a decision on the terminal event before fixing.
 - The CLI daemon stream (`local_daemon::try_stream`) is a synchronous pipe protocol and stays outside the async producer driver.
 - tts-1 chunked-streaming confirmation: D2 relies on the docs showing streaming examples only for gpt-4o-mini-tts. Whether tts-1 streams is unconfirmed.
