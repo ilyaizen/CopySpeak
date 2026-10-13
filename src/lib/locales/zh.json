@@ -709,7 +709,6 @@
     },
     "install": "安装 Kitten TTS",
     "installing": "正在安装...",
-    "skip": "暂时跳过",
     "complete": "开始使用",
     "loading": "正在加载配置...",
     "installed": "已安装！",
@@ -843,15 +842,6 @@
     "renameDescription": "为此朗读记录命名。留空则仅显示其文本。音频文件名保持不变。",
     "saveName": "保存名称",
     "deleteSelectedDescription": "删除所选朗读记录及其所有已保存的音频片段？此操作无法撤销。"
-  },
-  "batch": {
-    "title": "批量 TTS 处理器",
-    "texts": "文本片段（每行一条）",
-    "textsPlaceholder": "输入文本片段，每行一条...",
-    "outputDirectory": "输出目录",
-    "filenamePrefix": "文件名前缀",
-    "audioFormat": "音频格式",
-    "results": "结果"
   },
   "voices": {
     "loadFailed": "加载失败"

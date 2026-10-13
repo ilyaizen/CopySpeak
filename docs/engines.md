@@ -131,7 +131,12 @@ for the placeholder tokens (`{text}`, `{raw_text}`, `{voice}`, `{speed}`).
 
 ## Adding a new engine
 
-Backend steps live in [`docs_internal/tts_backends.md`](../docs_internal/tts_backends.md):
-implement `TtsBackend`, register in `tts/mod.rs`, add a catalog entry, and (for
-local engines) add an installer under `scripts/` plus a tab in the Engine page
-registry (`ENGINE_TABS` in `engine-page.svelte`).
+1. Implement `TtsBackend` (`src-tauri/src/tts/mod.rs`) and register the module there.
+2. Add a `TtsEngine` variant (`src-tauri/src/config/tts.rs`) and a catalog entry
+   (`src-tauri/src/tts/catalog.rs`).
+3. Add an Engines page setup entry (`CLOUD_ENGINES` or `LOCAL_ENGINES` in
+   `src/lib/components/engine/engine-meta.ts`).
+4. Local engines: add `install-*.ps1` / `install-*.sh` under `scripts/`.
+
+Known gotchas (test fixtures, installer bundling, wrapper backports) are in the
+Engines section of [`agents/failure-log.md`](./agents/failure-log.md#engines).

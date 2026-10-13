@@ -58,9 +58,12 @@ CopySpeak follows a clean architecture pattern:
 - `config/` - Configuration persistence modules
 - `commands/` - Tauri command handlers for frontend communication
 - `clipboard/` - Double-copy detection trigger
-- `audio/` - Audio playback using rodio
-- `tts/` - TTS backend abstraction (cloud: ElevenLabs, OpenAI, Cartesia, Microsoft, Google, Edge · local: Kokoro, Piper, Kitten, Qwen, Pocket · generic: HTTP)
+- `audio/` - Rodio safety-net player (audible playback runs in the webview, `src/lib/stores/playback/`)
+- `tts/` - TTS backend abstraction (cloud: ElevenLabs, OpenAI, Cartesia, Microsoft, Google · local: Kokoro, Piper, Kitten, Qwen, Pocket · generic: HTTP)
 - `sanitize/` - Text normalization modules
+- `history.rs` - Speech history and saved-audio cache
+- `control_server.rs` - Loopback HTTP API used by the CLI and agent integrations
+- `browser_bridge.rs` - Native-messaging bridge to the browser companion
 
 **Frontend (Svelte 5/TypeScript - `src/`):**
 

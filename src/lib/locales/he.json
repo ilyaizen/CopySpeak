@@ -709,7 +709,6 @@
     },
     "install": "התקן את Kitten TTS",
     "installing": "מתקין...",
-    "skip": "דלג לעכשיו",
     "complete": "התחל",
     "loading": "טוען תצורה...",
     "installed": "הותקן!",
@@ -843,15 +842,6 @@
     "renameDescription": "תן שם להקראה הזו. השאר ריק כדי להציג רק את הטקסט שלה. שמות קובצי השמע נשארים כפי שהם.",
     "saveName": "שמור שם",
     "deleteSelectedDescription": "למחוק את ההקראות שנבחרו ואת כל קטעי השמע השמורים שלהן? לא ניתן לבטל פעולה זו."
-  },
-  "batch": {
-    "title": "מעבד TTS אצווה",
-    "texts": "קטעי טקסט (אחד בכל שורה)",
-    "textsPlaceholder": "הזן קטעי טקסט, אחד בכל שורה...",
-    "outputDirectory": "תיקיית פלט",
-    "filenamePrefix": "קידומת שם קובץ",
-    "audioFormat": "פורמט שמע",
-    "results": "תוצאות"
   },
   "voices": {
     "loadFailed": "הטעינה נכשלה"

@@ -709,7 +709,6 @@
     },
     "install": "Instalar Kitten TTS",
     "installing": "Instalando...",
-    "skip": "Omitir por ahora",
     "complete": "Empezar",
     "loading": "Cargando la configuración...",
     "installed": "¡Instalado!",
@@ -843,15 +842,6 @@
     "renameDescription": "Dale un nombre a esta lectura. Déjalo en blanco para mostrar solo su texto. Los nombres de archivo de audio no cambian.",
     "saveName": "Guardar nombre",
     "deleteSelectedDescription": "¿Eliminar las lecturas seleccionadas y todas sus partes de audio guardadas? No se puede deshacer."
-  },
-  "batch": {
-    "title": "Procesador TTS por lotes",
-    "texts": "Fragmentos de texto (uno por línea)",
-    "textsPlaceholder": "Escribe fragmentos de texto, uno por línea...",
-    "outputDirectory": "Carpeta de salida",
-    "filenamePrefix": "Prefijo del nombre de archivo",
-    "audioFormat": "Formato de audio",
-    "results": "Resultados"
   },
   "voices": {
     "loadFailed": "Error al cargar"

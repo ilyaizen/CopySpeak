@@ -709,7 +709,6 @@
     },
     "install": "Kitten TTS installieren",
     "installing": "Wird installiert...",
-    "skip": "Vorerst überspringen",
     "complete": "Loslegen",
     "loading": "Konfiguration wird geladen...",
     "installed": "Installiert!",
@@ -843,15 +842,6 @@
     "renameDescription": "Geben Sie dieser Lesung einen Namen. Leer lassen, um nur den Text anzuzeigen. Die Audiodateinamen bleiben unverändert.",
     "saveName": "Name speichern",
     "deleteSelectedDescription": "Die ausgewählten Lesungen und alle ihre gespeicherten Audioteile löschen? Dies kann nicht rückgängig gemacht werden."
-  },
-  "batch": {
-    "title": "TTS-Stapelverarbeitung",
-    "texts": "Textausschnitte (eine Zeile pro Eintrag)",
-    "textsPlaceholder": "Textausschnitte eingeben, einer pro Zeile...",
-    "outputDirectory": "Ausgabeordner",
-    "filenamePrefix": "Dateinamenpräfix",
-    "audioFormat": "Audioformat",
-    "results": "Ergebnisse"
   },
   "voices": {
     "loadFailed": "Laden fehlgeschlagen"

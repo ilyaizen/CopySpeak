@@ -102,51 +102,7 @@ bun run tauri dev
 
 ## Project Structure
 
-```
-src/                     # Svelte 5 frontend
-├── lib/
-│   ├── components/      # UI components
-│   │   ├── effects-page.svelte
-│   │   ├── engine/      # Engine settings
-│   │   ├── history/     # History components
-│   │   ├── hud/         # HUD overlay
-│   │   ├── landing/     # Marketing landing page
-│   │   ├── settings/    # Settings tabs
-│   │   ├── ui/          # shadcn-svelte
-│   │   ├── profiles-page.svelte
-│   │   ├── play-page.svelte
-│   │   └── ...
-│   └── utils.ts         # Utilities (cn, portal action)
-└── routes/              # SvelteKit routes
-    ├── settings/        # Settings page
-    ├── effects/         # Effects page
-    ├── engines/         # Engine page
-    ├── history/         # History page
-    ├── voices/          # Voice profiles page
-    ├── onboarding/      # First-run setup
-    └── hud/             # HUD overlay
-
-src-tauri/src/           # Rust backend
-├── main.rs              # Entry point, IPC registration
-├── config/              # Persistence modules
-│   └── tts.rs           # TTS config types & engine enum
-├── commands/            # IPC handlers
-│   └── tts/             # Synthesis commands
-├── tts/                 # TTS backend implementations
-│   ├── edge.rs          # Edge TTS
-│   ├── openai.rs        # OpenAI
-│   ├── elevenlabs.rs    # ElevenLabs
-│   ├── cartesia.rs      # Cartesia
-│   ├── google.rs        # Google
-│   ├── microsoft.rs     # Microsoft
-│   ├── http.rs          # Generic HTTP
-│   ├── cli.rs           # Local CLI engines
-│   └── catalog.rs       # Engine catalog types
-├── clipboard/           # Double-copy detection (win32 / wayland)
-├── audio.rs             # Playback
-├── post_process.rs      # LLM post-processing
-└── sanitize/            # Text normalization
-```
+See [Understanding the Codebase](docs/CONTRIBUTING.md#understanding-the-codebase) in the contributing guide.
 
 ## Commands
 

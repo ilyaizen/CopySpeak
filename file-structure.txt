@@ -133,7 +133,6 @@
 │   │   │   ├── settings
 │   │   │   │   ├── about-settings.svelte
 │   │   │   │   ├── appearance-settings.svelte
-│   │   │   │   ├── batch-settings.svelte
 │   │   │   │   ├── general-settings.svelte
 │   │   │   │   ├── history-settings.svelte
 │   │   │   │   ├── hotkey-settings.svelte

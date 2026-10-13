@@ -709,7 +709,6 @@
     },
     "install": "Installer Kitten TTS",
     "installing": "Installation...",
-    "skip": "Passer pour l'instant",
     "complete": "Commencer",
     "loading": "Chargement de la configuration...",
     "installed": "Installé !",
@@ -843,15 +842,6 @@
     "renameDescription": "Donnez un nom à cette lecture. Laissez vide pour n'afficher que son texte. Les noms des fichiers audio ne changent pas.",
     "saveName": "Enregistrer le nom",
     "deleteSelectedDescription": "Supprimer les lectures sélectionnées et toutes leurs parties audio enregistrées ? Cette action est irréversible."
-  },
-  "batch": {
-    "title": "Traitement TTS par lots",
-    "texts": "Extraits de texte (un par ligne)",
-    "textsPlaceholder": "Saisissez des extraits de texte, un par ligne...",
-    "outputDirectory": "Dossier de sortie",
-    "filenamePrefix": "Préfixe du nom de fichier",
-    "audioFormat": "Format audio",
-    "results": "Résultats"
   },
   "voices": {
     "loadFailed": "Échec du chargement"

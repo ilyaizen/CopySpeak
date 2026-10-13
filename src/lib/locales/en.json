@@ -709,7 +709,6 @@
     },
     "install": "Install Kitten TTS",
     "installing": "Installing...",
-    "skip": "Skip for now",
     "complete": "Get Started",
     "loading": "Loading configuration...",
     "installed": "Installed!",
@@ -843,15 +842,6 @@
     "renameDescription": "Give this reading a name. Leave blank to show only its text. Audio filenames stay the same.",
     "saveName": "Save name",
     "deleteSelectedDescription": "Delete the selected readings and all their saved audio parts? This cannot be undone."
-  },
-  "batch": {
-    "title": "Batch TTS Processor",
-    "texts": "Text Snippets (one per line)",
-    "textsPlaceholder": "Enter text snippets, one per line...",
-    "outputDirectory": "Output Directory",
-    "filenamePrefix": "Filename Prefix",
-    "audioFormat": "Audio Format",
-    "results": "Results"
   },
   "voices": {
     "loadFailed": "Failed to load"
