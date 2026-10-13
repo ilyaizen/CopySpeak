@@ -280,12 +280,14 @@ fn drain_chunk_stream(
 /// The frontend PCM scheduler wires straight into `ctx.destination` with no
 /// effect chain, so an enabled profile effect must force the fragment path,
 /// where `buildPlaybackUrl` runs `effect.process` before playback.
+/// A cold backend (daemon still loading) takes the batch path until it is ready.
 fn allows_streaming_playback(
     streaming_enabled: bool,
     backend_streams: bool,
+    runtime_ready: bool,
     effects_enabled: bool,
 ) -> bool {
-    streaming_enabled && backend_streams && !effects_enabled
+    streaming_enabled && backend_streams && runtime_ready && !effects_enabled
 }
 
 /// Synthesize via the backend's streaming path, forwarding each PCM chunk to
@@ -787,6 +789,7 @@ async fn speak_now_internal(
     let streaming_playback = allows_streaming_playback(
         streaming_enabled,
         backend_arc.supports_streaming(),
+        backend_arc.runtime_ready(),
         eff.effects.enabled,
     ) && !cache_hit
         && !output_config.enabled;
@@ -1397,6 +1400,7 @@ async fn speak_queued_internal(
             && allows_streaming_playback(
                 streaming_enabled,
                 backend_arc.supports_streaming(),
+                backend_arc.runtime_ready(),
                 eff.effects.enabled,
             );
         let wav_bytes = if let Some(speech) = saved.as_mut().and_then(Iterator::next) {
@@ -1732,12 +1736,20 @@ mod streaming_tests {
     #[test]
     fn enabled_effect_forces_fragment_path_over_stream_chunks() {
         // Streaming on, warm streaming backend, no effect: live chunks.
-        assert!(allows_streaming_playback(true, true, false));
+        assert!(allows_streaming_playback(true, true, true, false));
         // Any kill switch routes the reading through audio-fragment-ready,
         // the only path where buildPlaybackUrl applies the effect.
-        assert!(!allows_streaming_playback(false, true, false));
-        assert!(!allows_streaming_playback(true, false, false));
-        assert!(!allows_streaming_playback(true, true, true));
+        assert!(!allows_streaming_playback(false, true, true, false));
+        assert!(!allows_streaming_playback(true, false, true, false));
+        assert!(!allows_streaming_playback(true, true, true, true));
+    }
+
+    #[test]
+    fn cold_backend_takes_batch_path_until_ready() {
+        // A static streaming claim alone must not stream: a cold CLI daemon
+        // would otherwise run a one-shot command through the stream branch.
+        assert!(!allows_streaming_playback(true, true, false, false));
+        assert!(allows_streaming_playback(true, true, true, false));
     }
 
     #[test]

@@ -8,6 +8,7 @@
 //
 // Supported placeholders: {text}, {raw_text}, {voice}.
 
+use super::block_on_async;
 use super::{TtsBackend, TtsError};
 use crate::config::HttpTtsConfig;
 use reqwest::Client;
@@ -20,19 +21,6 @@ pub struct HttpTtsBackend {
 impl HttpTtsBackend {
     pub fn new(config: HttpTtsConfig) -> Self {
         Self { config }
-    }
-
-    fn block_on_async<F, T>(f: F) -> T
-    where
-        F: std::future::Future<Output = T>,
-    {
-        match tokio::runtime::Handle::try_current() {
-            Ok(handle) => handle.block_on(f),
-            Err(_) => {
-                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                rt.block_on(f)
-            }
-        }
     }
 
     fn fill(template: &str, text: &str, voice: &str) -> String {
@@ -74,7 +62,7 @@ impl TtsBackend for HttpTtsBackend {
         let headers = self.config.headers.clone();
         let timeout = Duration::from_secs(self.config.timeout_secs.max(1));
 
-        let response = Self::block_on_async(async {
+        let response = block_on_async(async {
             let client = Client::builder()
                 .timeout(timeout)
                 .build()
@@ -103,7 +91,7 @@ impl TtsBackend for HttpTtsBackend {
             start_time.elapsed()
         );
 
-        let bytes = Self::block_on_async(async { response.bytes().await })
+        let bytes = block_on_async(async { response.bytes().await })
             .map_err(|e| TtsError::Http(format!("Failed to read bytes: {}", e)))?;
 
         if !status.is_success() {

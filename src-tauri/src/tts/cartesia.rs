@@ -1,3 +1,4 @@
+use super::block_on_async;
 use super::captions::{CaptionAlignment, WordTiming};
 use super::stream::{AudioFormatMeta, ChunkItem, ChunkStream};
 use super::{TtsBackend, TtsError};
@@ -243,7 +244,7 @@ impl CartesiaTtsBackend {
         let text = text.to_owned();
         let (tx, rx) = std::sync::mpsc::channel();
         std::thread::spawn(move || {
-            Self::block_on_async(async move {
+            block_on_async(async move {
                 let result: Result<(), TtsError> = async {
                     let mut response = Client::new()
                         .post(url)
@@ -303,19 +304,6 @@ impl CartesiaTtsBackend {
         ))
     }
 
-    fn block_on_async<F, T>(f: F) -> T
-    where
-        F: std::future::Future<Output = T>,
-    {
-        match tokio::runtime::Handle::try_current() {
-            Ok(handle) => handle.block_on(f),
-            Err(_) => {
-                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                rt.block_on(f)
-            }
-        }
-    }
-
     /// Fetch available voices from the Cartesia API.
     /// GET https://api.cartesia.ai/voices — returns the account's voice library.
     /// On failure the caller falls back to the static catalog list.
@@ -324,7 +312,7 @@ impl CartesiaTtsBackend {
         if api_key.trim().is_empty() {
             return Err(TtsError::Unavailable("Cartesia API key is missing".into()));
         }
-        let (status, body) = Self::block_on_async(async move {
+        let (status, body) = block_on_async(async move {
             let client = Client::new();
             let response = client
                 .get("https://api.cartesia.ai/voices")
@@ -405,7 +393,7 @@ impl TtsBackend for CartesiaTtsBackend {
         let start_time = std::time::Instant::now();
         let api_key = crate::secrets::resolve(&self.config.api_key, &["CARTESIA_API_KEY"]);
 
-        let response = Self::block_on_async(async {
+        let response = block_on_async(async {
             let client = Client::new();
             client
                 .post(CARTESIA_TTS_URL)
@@ -434,8 +422,7 @@ impl TtsBackend for CartesiaTtsBackend {
         );
 
         if !status.is_success() {
-            let error_text =
-                Self::block_on_async(async { response.text().await.unwrap_or_default() });
+            let error_text = block_on_async(async { response.text().await.unwrap_or_default() });
             log::error!("Cartesia API error {}: {}", status, error_text);
             return Err(TtsError::Http(format!(
                 "Cartesia API error {}: {}",
@@ -443,7 +430,7 @@ impl TtsBackend for CartesiaTtsBackend {
             )));
         }
 
-        let bytes = Self::block_on_async(async { response.bytes().await }).map_err(|e| {
+        let bytes = block_on_async(async { response.bytes().await }).map_err(|e| {
             log::error!("Failed to read Cartesia response bytes: {}", e);
             TtsError::Http(format!("Failed to read bytes: {}", e))
         })?;

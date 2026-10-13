@@ -1,3 +1,4 @@
+use super::block_on_async;
 use super::stream::{AudioFormatMeta, ChunkItem, ChunkStream};
 use super::{TtsBackend, TtsError};
 use crate::config::OpenAIConfig;
@@ -18,26 +19,6 @@ pub struct OpenAiTtsBackend {
 impl OpenAiTtsBackend {
     pub fn new(config: OpenAIConfig) -> Self {
         Self { config }
-    }
-
-    /// Execute an async block using the current Tokio runtime if available,
-    /// or create a new one if called from outside a runtime context.
-    fn block_on_async<F, T>(f: F) -> T
-    where
-        F: std::future::Future<Output = T>,
-    {
-        // Try to get the current runtime handle
-        match tokio::runtime::Handle::try_current() {
-            Ok(handle) => {
-                // We're in a Tokio runtime context, use block_on
-                handle.block_on(f)
-            }
-            Err(_) => {
-                // No runtime context, create a new one
-                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                rt.block_on(f)
-            }
-        }
     }
 }
 
@@ -85,7 +66,7 @@ impl TtsBackend for OpenAiTtsBackend {
 
         let (tx, rx) = std::sync::mpsc::channel();
         std::thread::spawn(move || {
-            Self::block_on_async(async move {
+            block_on_async(async move {
                 let result: Result<(), TtsError> = async {
                     let mut response = Client::new()
                         .post(OPENAI_TTS_URL)
@@ -175,7 +156,7 @@ impl TtsBackend for OpenAiTtsBackend {
 
         let start_time = std::time::Instant::now();
 
-        let response = Self::block_on_async(async {
+        let response = block_on_async(async {
             let client = Client::new();
             client
                 .post(url)
@@ -203,8 +184,7 @@ impl TtsBackend for OpenAiTtsBackend {
         );
 
         if !response.status().is_success() {
-            let error_text =
-                Self::block_on_async(async { response.text().await.unwrap_or_default() });
+            let error_text = block_on_async(async { response.text().await.unwrap_or_default() });
             log::error!("OpenAI API error {}: {}", status, error_text);
             return Err(TtsError::Http(format!(
                 "OpenAI API error {}: {}",
@@ -212,7 +192,7 @@ impl TtsBackend for OpenAiTtsBackend {
             )));
         }
 
-        let bytes = Self::block_on_async(async { response.bytes().await }).map_err(|e| {
+        let bytes = block_on_async(async { response.bytes().await }).map_err(|e| {
             log::error!("Failed to read response bytes: {}", e);
             TtsError::Http(format!("Failed to read bytes: {}", e))
         })?;

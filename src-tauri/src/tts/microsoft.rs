@@ -10,6 +10,7 @@
 // against current Foundry docs. The HTTP backend (engine "http") is the escape
 // hatch when a deployment diverges from this default contract.
 
+use super::block_on_async;
 use super::{TtsBackend, TtsError};
 use crate::config::MicrosoftTtsConfig;
 use base64::{engine::general_purpose, Engine as _};
@@ -23,19 +24,6 @@ pub struct MicrosoftTtsBackend {
 impl MicrosoftTtsBackend {
     pub fn new(config: MicrosoftTtsConfig) -> Self {
         Self { config }
-    }
-
-    fn block_on_async<F, T>(f: F) -> T
-    where
-        F: std::future::Future<Output = T>,
-    {
-        match tokio::runtime::Handle::try_current() {
-            Ok(handle) => handle.block_on(f),
-            Err(_) => {
-                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                rt.block_on(f)
-            }
-        }
     }
 
     /// Pull base64 audio out of a JSON envelope, trying common field names.
@@ -85,7 +73,7 @@ impl TtsBackend for MicrosoftTtsBackend {
 
         let start_time = std::time::Instant::now();
 
-        let response = Self::block_on_async(async {
+        let response = block_on_async(async {
             let client = Client::new();
             client
                 .post(&endpoint)
@@ -120,7 +108,7 @@ impl TtsBackend for MicrosoftTtsBackend {
             start_time.elapsed()
         );
 
-        let bytes = Self::block_on_async(async { response.bytes().await })
+        let bytes = block_on_async(async { response.bytes().await })
             .map_err(|e| TtsError::Http(format!("Failed to read bytes: {}", e)))?;
 
         if !status.is_success() {

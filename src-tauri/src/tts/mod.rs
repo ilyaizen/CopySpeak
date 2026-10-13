@@ -20,6 +20,21 @@ use stream::ChunkStream;
 
 use thiserror::Error;
 
+/// Run an async block to completion from synchronous code: on the current
+/// Tokio runtime when the caller is inside one, otherwise on a fresh runtime.
+pub(crate) fn block_on_async<F, T>(f: F) -> T
+where
+    F: std::future::Future<Output = T>,
+{
+    match tokio::runtime::Handle::try_current() {
+        Ok(handle) => handle.block_on(f),
+        Err(_) => {
+            let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+            rt.block_on(f)
+        }
+    }
+}
+
 #[derive(Error, Debug)]
 #[allow(dead_code)]
 pub enum TtsError {
@@ -87,6 +102,13 @@ pub trait TtsBackend: Send + Sync {
         false
     }
 
+    /// Whether streaming can start right now. Static claims stay in
+    /// [`TtsBackend::supports_streaming`]; this covers warm-up state such as a
+    /// local daemon that is still loading. Call sites require both.
+    fn runtime_ready(&self) -> bool {
+        true
+    }
+
     /// Stream synthesized audio as PCM chunks.
     ///
     /// Default wraps the batch `synthesize` output: the returned WAV container
@@ -114,5 +136,28 @@ pub trait TtsBackend: Send + Sync {
     #[allow(dead_code)]
     fn voice_display_name(&self, voice_id: &str) -> String {
         voice_id.to_lowercase()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::block_on_async;
+
+    #[test]
+    fn block_on_async_runs_without_an_ambient_runtime() {
+        assert_eq!(block_on_async(async { 7 }), 7);
+    }
+
+    #[test]
+    fn block_on_async_runs_from_a_blocking_task_inside_a_runtime() {
+        // Backends call this from spawn_blocking/std threads inside the app's
+        // runtime; the helper must reuse that runtime instead of building one.
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let value = rt.block_on(async {
+            tokio::task::spawn_blocking(|| block_on_async(async { 9 }))
+                .await
+                .unwrap()
+        });
+        assert_eq!(value, 9);
     }
 }
