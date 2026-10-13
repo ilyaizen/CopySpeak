@@ -1,6 +1,6 @@
 # 2. Streaming consolidation
 
-Status: accepted (2026-10-13). Slice 1 implements D2, D4 and D7. Slice 2 implements D1 and the helper part of D6. The other decisions land in later Track 1 slices.
+Status: accepted (2026-10-13). Slice 1 implements D2, D4 and D7. Slice 2 implements D1 and the helper part of D6. Slice 3 implements the producer-driver part of D6 for OpenAI, Cartesia, Google and ElevenLabs, and adds the is_final rule test. The D9 gate and effects tests predate this slice, and the odd-byte split tests are in `pcm-stream.test.ts`. The other decisions land in later Track 1 slices.
 
 ## Context
 
@@ -25,4 +25,5 @@ Every OpenAI user on the default model (`tts-1`) and every user who sets `tts-1`
 ## Open
 
 - Gemini live probe: needs the user's own key. Then either keep `streamGenerateContent` or move to the documented Interactions API.
+- The CLI daemon stream (`local_daemon::try_stream`) is a synchronous pipe protocol and stays outside the async producer driver.
 - tts-1 chunked-streaming confirmation: D2 relies on the docs showing streaming examples only for gpt-4o-mini-tts. Whether tts-1 streams is unconfirmed.

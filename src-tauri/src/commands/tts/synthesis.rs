@@ -214,8 +214,8 @@ fn drain_chunk_stream(
     let mut ttfa_ms: Option<u64> = None;
 
     loop {
-        // Dropping the receiver is what actually cancels a streaming request:
-        // every producer stops pulling its source once its send fails.
+        // Dropping the receiver stops each producer at its next send. A
+        // producer blocked on a stalled upstream read only notices then.
         if scope.aborted() {
             log::info!(
                 "[TTS][stream] aborted by user after {} bytes",
@@ -298,6 +298,19 @@ fn allows_streaming_playback(
     streaming_enabled && backend_streams && runtime_ready && !effects_enabled
 }
 
+/// Whether this fragment is the last one in its reading. Only that fragment may
+/// send a final marker.
+fn is_last_fragment(index: usize, total: usize) -> bool {
+    index + 1 == total
+}
+
+/// A chunk carries the final marker only when it is the stream's last chunk
+/// and its fragment is the reading's last one. The player arms its completion
+/// timer on the marker, so an early one cuts the reading short.
+fn final_marker(chunk_is_final: bool, fragment_is_last: bool) -> bool {
+    chunk_is_final && fragment_is_last
+}
+
 /// Synthesize via the backend's streaming path, forwarding each PCM chunk to
 /// the frontend as an `audio-stream-chunk` event while accumulating the full
 /// payload into a WAV container for history/cache/envelope handling.
@@ -361,7 +374,7 @@ async fn synthesize_streaming_and_emit(
                 &meta,
                 pcm,
                 fragment_index,
-                is_final && emit_final,
+                final_marker(is_final, emit_final),
                 (chunk_idx == 0).then_some(text.as_str()),
                 duration_ms,
                 captions,
@@ -1454,7 +1467,7 @@ async fn speak_queued_internal(
                 fragment.text.clone(),
                 voice.clone(),
                 index,
-                index + 1 == total,
+                is_last_fragment(index, total),
                 session_id.clone(),
                 scope,
             )
@@ -1795,6 +1808,19 @@ mod streaming_tests {
         // would otherwise run a one-shot command through the stream branch.
         assert!(!allows_streaming_playback(true, true, false, false));
         assert!(allows_streaming_playback(true, true, true, false));
+    }
+
+    #[test]
+    fn only_the_last_fragments_last_chunk_is_marked_final() {
+        // Pins the rule the helpers encode: only the reading's last fragment's
+        // final chunk carries the marker. The call site passing
+        // is_last_fragment(...) is not exercised here.
+        let total = 3;
+        let marks: Vec<bool> = (0..total)
+            .map(|index| final_marker(true, is_last_fragment(index, total)))
+            .collect();
+        assert_eq!(marks, [false, false, true]);
+        assert!(!final_marker(false, is_last_fragment(total - 1, total)));
     }
 
     #[test]
