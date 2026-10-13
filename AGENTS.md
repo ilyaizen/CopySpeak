@@ -24,6 +24,20 @@ CopySpeak: A lightweight and modern cross-platform AI text-to-speech orchestrato
 - **Public (tracked)**: README.md, CHANGELOG.md, BROWSER_EXTENSION.md, DESIGN.md (historical spec), docs/CONTRIBUTING.md, docs/engines.md, docs/profile-engine-settings.md, docs/agent-voice.md.
 - **Internal (untracked)**: `docs_internal/` — start from `docs_internal/README.md` (the index). Superseded and historical docs live in `docs_internal/archive/`.
 
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `ilyaizen/CopySpeak`, via `gh`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `CONTEXT.md` + `docs/adr/`, created lazily. See `docs/agents/domain.md`.
+
 ## Keeping this file current
 
 File logs failures, not wishlist. Every line below exists because it went wrong at least once. On mistake, correction, or undocumented discovery about codebase:
