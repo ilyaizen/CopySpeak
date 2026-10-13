@@ -21,7 +21,10 @@ use super::helpers::{
     active_engine, create_backend, create_backend_from_effective, engine_identifier, engine_str,
     resolve_effective, voice_display_name, SynthesisGuard,
 };
-use crate::commands::{AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent};
+use crate::commands::{
+    AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent,
+    PlaybackStreamFailedEvent,
+};
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
 
@@ -357,7 +360,7 @@ async fn synthesize_streaming_and_emit(
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))
-    .and_then(|drained| drained)
+    .and_then(|worker_result| worker_result)
     .map(|(wav, _ttfa_ms)| wav);
     // An abort already stopped playback, and a late failure from it must not
     // stop a reading that started after the abort.
@@ -366,8 +369,10 @@ async fn synthesize_streaming_and_emit(
         // stream never sends. The store stops playback only when this session
         // owns it, and finishes when nothing plays, so playback-finished fires
         // either way and restores ducked audio.
-        let payload = serde_json::json!({ "session_id": failed_session });
-        if let Err(e) = app.emit("playback-stream-failed", payload) {
+        let event = PlaybackStreamFailedEvent {
+            session_id: failed_session,
+        };
+        if let Err(e) = app.emit("playback-stream-failed", event) {
             log::warn!("Failed to emit playback-stream-failed: {}", e);
         }
     }
