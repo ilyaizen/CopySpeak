@@ -440,6 +440,14 @@ it("leaves the playing stream alone when another streamed reading fails", async 
   playbackStore.handleStop();
 });
 
+it("leaves a reading that is still synthesizing alone when an idle stream fails", async () => {
+  await startStreamingReading();
+  await listeners.get("playback-stream-failed")!({ payload: { session_id: "trigger-a" } });
+  playbackStore.handleStreamChunk(streamChunk("trigger-b"));
+  expect(playbackStore.isPlaying).toBe(true);
+  playbackStore.handleStop();
+});
+
 it("stops the streamed reading that fails while it is playing", async () => {
   await startStreamingReading();
   vi.mocked(emit).mockClear();
