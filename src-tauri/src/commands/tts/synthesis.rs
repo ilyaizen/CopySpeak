@@ -315,8 +315,9 @@ async fn synthesize_streaming_and_emit(
     emit_final: bool,
     session_id: Option<String>,
 ) -> Result<SpeechAudio, String> {
-    let app = app.clone();
-    tokio::task::spawn_blocking(move || {
+    let worker_app = app.clone();
+    let failed_session = session_id.clone();
+    let result = tokio::task::spawn_blocking(move || {
         let opened_at = Instant::now();
         log::info!(
             "[TTS][stream] opening streaming synthesis ({} chars, voice '{}', fragment {})",
@@ -357,7 +358,7 @@ async fn synthesize_streaming_and_emit(
                 None
             };
             emit_audio_stream_chunk(
-                &app,
+                &worker_app,
                 &meta,
                 pcm,
                 fragment_index,
@@ -370,8 +371,22 @@ async fn synthesize_streaming_and_emit(
         })
     })
     .await
-    .map_err(|e| format!("Task join error: {e}"))?
-    .map(|(wav, _ttfa_ms)| wav)
+    .map_err(|e| format!("Task join error: {e}"))
+    .and_then(|drained| drained)
+    .map(|(wav, _ttfa_ms)| wav);
+    // An abort already stopped playback, and a late failure from it must not
+    // stop a reading that started after the abort.
+    if result.is_err() && !crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
+        // The webview scheduler finishes only on a final marker, which a failed
+        // stream never sends. The store stops playback only when this session
+        // owns it, and finishes when nothing plays, so playback-finished fires
+        // either way and restores ducked audio.
+        let payload = serde_json::json!({ "session_id": failed_session });
+        if let Err(e) = app.emit("playback-stream-failed", payload) {
+            log::warn!("Failed to emit playback-stream-failed: {}", e);
+        }
+    }
+    result
 }
 
 /// Save audio to history storage and return path

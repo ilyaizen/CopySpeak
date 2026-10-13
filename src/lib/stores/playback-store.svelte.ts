@@ -61,6 +61,8 @@ class PlaybackStore {
   private _readingText = "";
   private _fragmentCaptions: CaptionAlignment | null = null;
   private _streamStopped = false;
+  /** Session of the reading that created the live PCM scheduler. */
+  private _streamSessionId: string | null = null;
   private _fragmentText = "";
   private _captionTimer: ReturnType<typeof setInterval> | null = null;
   private _lastCaption: HudCaptionPayload | null = null;
@@ -422,6 +424,7 @@ class PlaybackStore {
       });
       this._pcmScheduler.setVolume(this.volume);
       this._pcmScheduler.setRate(this.speed, this.pitch);
+      this._streamSessionId = payload.session_id ?? null;
       this.currentFragmentIndex = payload.fragment_index;
       this.totalFragments = payload.fragment_total;
       this.isPlaying = true;
@@ -443,6 +446,21 @@ class PlaybackStore {
     }
     this._pcmScheduler.handleChunk(payload);
     if (this._pcmScheduler) this.startCaptionClock();
+  }
+
+  /**
+   * A streamed reading failed on the backend. Stop only when that reading owns
+   * the stream on the speakers; another reading's failure leaves it playing,
+   * and its own end still emits playback-finished. When nothing is playing,
+   * stop anyway so playback-finished fires and a /speak --wait caller returns.
+   */
+  handleStreamFailed(sessionId: string | null): void {
+    if (this._pcmScheduler) {
+      if (this._streamSessionId === sessionId) this.handleStop();
+      return;
+    }
+    if (this.isPlaying || this.isLoadingAudio || this._fragmentQueue.isProcessing()) return;
+    this.handleStop();
   }
 
   async playAudio() {
@@ -707,6 +725,14 @@ class PlaybackStore {
         this.handleStop();
       });
 
+      // A streamed reading failed on the backend; see handleStreamFailed.
+      const unStreamFailed = await listen<{ session_id: string | null }>(
+        "playback-stream-failed",
+        (e) => {
+          this.handleStreamFailed(e.payload.session_id);
+        }
+      );
+
       const unTogglePause = await listen("playback-toggle-pause", () => {
         this.handleTogglePause();
       });
@@ -767,6 +793,7 @@ class PlaybackStore {
         unStreamChunk,
         unPaginationComplete,
         unPlaybackStop,
+        unStreamFailed,
         unTogglePause,
         unSkipBackward,
         unSkipForward,

@@ -61,6 +61,14 @@ pub fn replay_cached(
     Ok(())
 }
 
+/// Tell the webview to stop all audio. Every unscoped stop goes through here so
+/// a failed emit is logged the same way at each site.
+pub fn emit_playback_stop(app: &tauri::AppHandle) {
+    if let Err(e) = app.emit("playback-stop", ()) {
+        log::warn!("Failed to emit playback-stop: {}", e);
+    }
+}
+
 #[tauri::command]
 pub fn stop_speaking(
     app: tauri::AppHandle,
@@ -70,9 +78,7 @@ pub fn stop_speaking(
         log::debug!("[IPC] stop_speaking called");
     }
     // Emit event so frontend audio element stops
-    if let Err(e) = app.emit("playback-stop", ()) {
-        log::warn!("Failed to emit playback-stop: {}", e);
-    }
+    emit_playback_stop(&app);
     // Keep Rodio stop as safety net
     let mut p = player.lock().unwrap();
     p.stop();
