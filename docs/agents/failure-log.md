@@ -9,7 +9,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Give `TimeStretcher`'s first output after every reset a ~5 ms fade-in and hold the last ~5 ms of input out of the WSOLA flush; cold-start or hard speech-to-silence steps click at fragment seams.
 - Anchor PCM skip targets to `_stallPosition` in `pcm-stream.ts`: `_mediaNow()` collapses to 0 whenever no scheduled source covers the playhead (synthesis stalls, final drain, the START_DELAY window after a rebuild), so `mediaNow - n` alone makes ±5s jump to the timeline start.
 - Re-sync `playbackStore` from its own `config-changed` listener; pages that only `set_config` never update it.
-- Gate streaming playback off when the active profile has an effect: warm daemons stream via `CliTtsBackend::supports_streaming`, and the PCM scheduler has no effect chain — only the `audio-fragment-ready` path applies effects.
+- Gate streaming playback off when the active profile has an effect: warm daemons stream (checked by `CliTtsBackend::runtime_ready`), and the PCM scheduler has no effect chain — only the `audio-fragment-ready` path applies effects.
 - Emit the streaming `is_final` marker on the last fragment only; an intermediate one arms the player's completion timer mid-passage.
 - Signal a failed streamed reading with `playback-stream-failed` and its `session_id`, never `playback-stop` (which cuts every reading): a dead stream never sends the final marker that `playback-finished` waits for.
 - Give each reading its own `AbortScope::begin()` and check `scope.aborted()`; never clear the global abort state at a reading's start, since that un-aborts a stream still draining from the previous reading.
@@ -31,6 +31,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 ## Engines
 
 - Local engine wrappers speak daemon protocol v2 (`READY 2`) and emit 16-bit signed LE PCM; `pcm-stream.ts` drops any other `bits_per_sample`.
+- Gate every streaming branch on `supports_streaming()` AND `runtime_ready()`; the static claim alone sends a cold CLI daemon's one-shot command down the stream branch.
 - Adding a `TtsEngine` variant: update the catalog test's engine list and entry count, plus the `Record<TtsEngine, number>` fixtures in `html-templates.test.ts` and `html-export.test.ts`.
 - Wrapper fixes reach an installed engine only when its installer re-runs (for wrapper-only fixes, `cp` the repo file into `engines/<e>/scripts/`), and shared wrapper functions must be backported to EVERY engine — `diff` the engine wrappers against each other when touching one.
 - Bundle each installer wrapper directory in `tauri.conf.json`; a lone `install-*.ps1` breaks app-driven installs in dev and release builds.

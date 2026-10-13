@@ -1,3 +1,4 @@
+use super::block_on_async;
 use super::stream::{AudioFormatMeta, ChunkItem, ChunkStream};
 use super::{TtsBackend, TtsError, Voice};
 use crate::config::ElevenLabsConfig;
@@ -260,7 +261,7 @@ impl ElevenLabsTtsBackend {
 
         std::thread::spawn(move || {
             // Fresh thread => no ambient runtime; block_on_async creates one.
-            let _ = Self::block_on_async(async move {
+            let _ = block_on_async(async move {
                 let client = Client::new();
                 let mut response = match client
                     .post(&url)
@@ -376,26 +377,6 @@ impl ElevenLabsTtsBackend {
         Ok(ChunkStream::new(meta, rx))
     }
 
-    /// Execute an async block using the current Tokio runtime if available,
-    /// or create a new one if called from outside a runtime context.
-    fn block_on_async<F, T>(f: F) -> T
-    where
-        F: std::future::Future<Output = T>,
-    {
-        // Try to get the current runtime handle
-        match tokio::runtime::Handle::try_current() {
-            Ok(handle) => {
-                // We're in a Tokio runtime context, use block_on
-                handle.block_on(f)
-            }
-            Err(_) => {
-                // No runtime context, create a new one
-                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                rt.block_on(f)
-            }
-        }
-    }
-
     /// Fetch available voices from ElevenLabs API
     /// https://elevenlabs.io/docs/api-reference/get-voices
     pub fn list_voices(&self) -> Result<Vec<ElevenLabsVoice>, TtsError> {
@@ -434,7 +415,7 @@ impl ElevenLabsTtsBackend {
         // Perform the full request-response cycle in one block to avoid body truncation
         // that occurs when .send() and .bytes() are split across separate block_on_async calls.
         let fetch_result: Result<(reqwest::StatusCode, Vec<u8>), TtsError> =
-            Self::block_on_async(async move {
+            block_on_async(async move {
                 let client = Client::new();
                 let response = client
                     .get(url)
@@ -652,7 +633,7 @@ impl ElevenLabsTtsBackend {
         // Perform the full request-response cycle in one block to avoid body truncation
         // that occurs when .send() and .bytes() are split across separate block_on_async calls.
         let fetch_result: Result<(reqwest::StatusCode, String), TtsError> =
-            Self::block_on_async(async move {
+            block_on_async(async move {
                 let client = Client::new();
                 let response = client
                     .get(&url)
@@ -819,7 +800,7 @@ impl TtsBackend for ElevenLabsTtsBackend {
 
         let start_time = std::time::Instant::now();
 
-        let response = Self::block_on_async(async {
+        let response = block_on_async(async {
             let client = Client::new();
             client
                 .post(&url)
@@ -849,8 +830,7 @@ impl TtsBackend for ElevenLabsTtsBackend {
         );
 
         if !response.status().is_success() {
-            let error_text =
-                Self::block_on_async(async { response.text().await.unwrap_or_default() });
+            let error_text = block_on_async(async { response.text().await.unwrap_or_default() });
             log::error!("ElevenLabs API error {}: {}", status, error_text);
             // Provide a user-friendly message for payment-required errors (library voices)
             if status == reqwest::StatusCode::PAYMENT_REQUIRED
@@ -869,7 +849,7 @@ impl TtsBackend for ElevenLabsTtsBackend {
             )));
         }
 
-        let bytes = Self::block_on_async(async { response.bytes().await }).map_err(|e| {
+        let bytes = block_on_async(async { response.bytes().await }).map_err(|e| {
             log::error!("Failed to read response bytes: {}", e);
             TtsError::Http(format!("Failed to read bytes: {}", e))
         })?;

@@ -1,6 +1,6 @@
 # 2. Streaming consolidation
 
-Status: accepted (2026-10-13). Slice 1 implements D2, D4 and D7. The other decisions land in later Track 1 slices.
+Status: accepted (2026-10-13). Slice 1 implements D2, D4 and D7. Slice 2 implements D1 and the helper part of D6. The other decisions land in later Track 1 slices.
 
 ## Context
 
@@ -8,12 +8,12 @@ Each `TtsBackend` reports streaming through one `supports_streaming()` bool. The
 
 ## Decisions
 
-- D1. Split the capability into a static claim (per backend or per model) and a runtime gate (daemon readiness). Call sites gate on static AND runtime_ready. Later slice.
+- D1. Split the capability into a static claim (per backend or per model) and a runtime gate (daemon readiness). Call sites gate on static AND runtime_ready. Slice 2: `TtsBackend::runtime_ready` (default true) carries daemon warm-up; CLI `supports_streaming` is static only.
 - D2. OpenAI streaming is per model. `gpt-4o-mini-tts` and ids starting with it return `true`. `tts-1`, `tts-1-hd` and unknown ids return `false`. Approved by the user. The docs' streaming examples use only gpt-4o-mini-tts; they do not state that tts-1 cannot stream.
 - D3. Gemini stays `true`, unproven. The live probe needs the user's own key.
 - D4. CLI engines kokoro and pocket return `false`. Their wrappers yield one whole-utterance chunk, so there is no time-to-first-audio gain. piper, kitten and qwen are unchanged and still gated on a warm daemon.
 - D5. ElevenLabs and Cartesia stay `true`, matching their vendor docs. edge and microsoft stay `false`. http stays `false`.
-- D6. Expand-contract for the remaining backends: one shared `block_on_async` helper and a per-engine producer closure. Not a request/decode trait. Later slice.
+- D6. Expand-contract for the remaining backends: one shared `block_on_async` helper and a per-engine producer closure. Not a request/decode trait. The helper landed in slice 2; the producer driver lands in a later slice.
 - D7. Doc fixes: the ElevenLabs comment says `pcm_24000` (F4), and the streaming doc comment documents `supports_streaming` (F7). Behaviour is unchanged.
 - D8. F8, the possible double WAV header in `google.rs`, is reported only. It is not changed here.
 - D9. Each streaming invariant needs a test: `is_final` only on the last fragment; the `allows_streaming_playback` gate; the effects gate; the OpenAI odd-byte remainder carried across chunks; `playback-finished` on every terminal path. Those tests are a later slice.
