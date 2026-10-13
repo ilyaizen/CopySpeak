@@ -791,6 +791,11 @@
     "startFrom": "Start from",
     "voiceTooltip": "Known voices from the engine catalog or provider API.",
     "providerDefault": "provider default",
+    "autoSwitchLanguage": "Switch profile by language",
+    "autoSwitchTooltip": "Double-copy and browser readings use the profile whose language matches the text, or the active profile when the language is unclear. Hotkey and Play page readings always use the active profile.",
+    "language": "Language",
+    "languageTooltip": "The language this profile speaks. Auto-switching picks profiles by this tag. Not set means the profile is never picked by language.",
+    "languageNone": "Not set",
     "importPlaceholder": "Paste profile JSON here...",
     "toast": {
       "copied": "Copied to clipboard",
