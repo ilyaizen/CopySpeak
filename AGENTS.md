@@ -41,7 +41,7 @@ Single-context: root `GLOSSARY.md` + `docs/adr/`, created lazily. See `docs/agen
 
 Every line exists because it went wrong at least once. On mistake, correction, or undocumented discovery about the codebase, add one imperative line describing correct behaviour: here if every session needs it, else under its area in [`docs/agents/failure-log.md`](docs/agents/failure-log.md). A workflow fix goes in a skill under `.agents/skills/` instead. Include it in the same commit and mention it in the summary.
 
-- Double-copy and browser readings run `speak_queued`; Play page, hotkey and control server run `speak_now` — change both paths together.
+- Double-copy and browser readings run `speak_queued`; Play page, hotkey and control server run `speak_now` — change both paths together, except the language switch (ADR 0001).
 - Wire playback controls through `playbackStore` (webview audio); Rust `toggle_pause`/`skip_forward`/`skip_backward` commands drive only the Rodio safety-net player, which is never what you hear.
 - Treat `speak_now`'s return as playback-START, not completion: only the webview store's `finishPlayback`/`handleStop` → `playback-finished` → `playback_signal` chain means completion, and every terminal path must emit it or blocking `/speak --wait` callers hang until the 600 s cap.
 - Branch every synthesis save site on `history.enabled`: on logs and saves to the history folder, off calls `save_speech_cache` and logs nothing; `find_cached_speech` must read the same store.
