@@ -806,6 +806,9 @@ pub struct VoiceProfile {
     pub engine: TtsEngine,
     pub voice: String,
     pub voice_label: Option<String>,
+    /// ISO 639-1 code this profile speaks. Used by auto language switching;
+    /// `None` means the profile is never picked by language.
+    pub language: Option<String>,
     pub speed: f32,
     pub pitch: f32,
     pub effects: ProfileEffects,
@@ -829,6 +832,7 @@ impl Default for VoiceProfile {
             engine,
             voice,
             voice_label,
+            language: None,
             speed: 1.0,
             pitch: 1.0,
             effects: ProfileEffects::default(),
@@ -892,6 +896,10 @@ pub struct TtsConfig {
     pub active_profile_id: String,
     #[serde(default)]
     pub profiles: Vec<VoiceProfile>,
+    /// Pick a profile per utterance by the text's language (see
+    /// `language::detect_language`). The active profile is not changed.
+    #[serde(default = "default_auto_switch_language")]
+    pub auto_switch_language: bool,
 
     // Legacy fields — kept for deserialization of old configs, skipped on serialize.
     // Migration (v0→v2) copies what's needed into profiles.
@@ -933,6 +941,10 @@ fn default_daemon_idle_timeout_secs() -> u64 {
     crate::tts::local_daemon::DEFAULT_IDLE_TIMEOUT_SECS
 }
 
+fn default_auto_switch_language() -> bool {
+    true
+}
+
 fn default_elevenlabs_profile() -> VoiceProfile {
     VoiceProfile {
         id: "profile-d90537b5".into(),
@@ -941,6 +953,7 @@ fn default_elevenlabs_profile() -> VoiceProfile {
         engine: TtsEngine::ElevenLabs,
         voice: "JBFqnCBsd6RMkjVDRZzb".into(),
         voice_label: Some("George".into()),
+        language: None,
         speed: 1.1,
         pitch: 0.9,
         effects: ProfileEffects::default(),
@@ -963,6 +976,7 @@ fn default_cartesia_profile() -> VoiceProfile {
         engine: TtsEngine::Cartesia,
         voice: "c5d00dfb-501f-43f3-8e79-c810d24f5acd".into(),
         voice_label: Some("Harper - Conversationalist".into()),
+        language: None,
         speed: 0.9,
         pitch: 1.3,
         effects: ProfileEffects::default(),
@@ -984,6 +998,7 @@ fn default_google_profile() -> VoiceProfile {
         engine: TtsEngine::Google,
         voice: "Orus".into(),
         voice_label: Some("Orus".into()),
+        language: None,
         speed: 1.1,
         pitch: 0.85,
         effects: ProfileEffects::default(),
@@ -1006,6 +1021,7 @@ fn default_kitten_profile() -> VoiceProfile {
         engine: TtsEngine::Kitten,
         voice: "Rosie".into(),
         voice_label: Some("Rosie".into()),
+        language: None,
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
@@ -1038,6 +1054,7 @@ fn default_qwen_profile() -> VoiceProfile {
         engine: TtsEngine::Qwen,
         voice: "Aiden".into(),
         voice_label: Some("Aiden".into()),
+        language: None,
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
@@ -1075,6 +1092,7 @@ pub(crate) fn default_kokoro_profile() -> VoiceProfile {
         engine,
         voice,
         voice_label,
+        language: None,
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
@@ -1148,6 +1166,7 @@ impl Default for TtsConfig {
                 cartesia_profile,
                 default_google_profile(),
             ],
+            auto_switch_language: true,
             preset: "kitten-tts".into(),
             command: "uv".into(),
             args_template: vec![
@@ -1218,6 +1237,7 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             engine: tts.active_backend.clone(),
             voice,
             voice_label,
+            language: None,
             speed: 1.0,
             pitch: 1.0,
             effects: ProfileEffects::default(),

@@ -358,6 +358,7 @@ mod tests {
             engine: TtsEngine::Http,
             voice: "amy.wav".into(),
             voice_label: None,
+            language: Some("fr".into()),
             speed: 1.05,
             pitch: 1.0,
             effects: ProfileEffects {
@@ -373,6 +374,7 @@ mod tests {
         let json = serde_json::to_string(&profile).unwrap();
         let back: VoiceProfile = serde_json::from_str(&json).unwrap();
         assert_eq!(back.id, "p1");
+        assert_eq!(back.language.as_deref(), Some("fr"));
         assert_eq!(back.engine, TtsEngine::Http);
         assert!(back.effects.enabled);
         assert_eq!(back.effects.active_effect, EffectId::WalkieTalkie);
@@ -460,5 +462,34 @@ mod tests {
         config.version = "0.1.10-fossil".into();
         let stamped = stamp_config_version(config);
         assert_eq!(stamped.version, CONFIG_VERSION);
+    }
+
+    #[test]
+    fn fresh_install_has_auto_switch_language_on() {
+        assert!(TtsConfig::default().auto_switch_language);
+    }
+
+    #[test]
+    fn legacy_tts_config_without_auto_switch_loads_as_on() {
+        // A config saved before the setting existed must load with it on.
+        let tts: TtsConfig =
+            serde_json::from_str(r#"{"active_backend":"kokoro","active_profile_id":"default"}"#)
+                .unwrap();
+        assert!(tts.auto_switch_language);
+    }
+
+    #[test]
+    fn saved_auto_switch_choice_is_honored() {
+        let tts: TtsConfig = serde_json::from_str(
+            r#"{"active_backend":"kokoro","active_profile_id":"default","auto_switch_language":false}"#,
+        )
+        .unwrap();
+        assert!(!tts.auto_switch_language);
+    }
+
+    #[test]
+    fn legacy_profile_without_language_loads_as_unset() {
+        let profile: VoiceProfile = serde_json::from_str(r#"{"id":"p1","name":"P1"}"#).unwrap();
+        assert_eq!(profile.language, None);
     }
 }
