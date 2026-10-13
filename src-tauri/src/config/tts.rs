@@ -52,7 +52,7 @@ pub struct OpenAIConfig {
 }
 
 fn default_openai_model() -> String {
-    "tts-1".into()
+    "gpt-4o-mini-tts".into()
 }
 
 fn default_openai_response_format() -> String {
@@ -63,7 +63,7 @@ impl Default for OpenAIConfig {
     fn default() -> Self {
         Self {
             api_key: String::new(),
-            model: "tts-1".into(),
+            model: "gpt-4o-mini-tts".into(),
             voice: "alloy".into(),
             response_format: default_openai_response_format(),
             instructions: None,
@@ -125,7 +125,7 @@ impl Default for ElevenLabsConfig {
             api_key: String::new(),
             voice_id: "21m00Tcm4TlvDq8ikWAM".into(), // Rachel
             voice_name: Some("Rachel".into()),
-            model_id: "eleven_turbo_v2_5".into(),
+            model_id: "eleven_v4".into(),
             output_format: crate::tts::elevenlabs::ElevenLabsOutputFormat::default(),
             voice_stability: default_elevenlabs_stability(),
             voice_similarity_boost: default_elevenlabs_similarity(),
@@ -169,7 +169,7 @@ impl Default for CartesiaConfig {
     fn default() -> Self {
         Self {
             api_key: String::new(),
-            model_id: "sonic-3.5".into(),
+            model_id: "sonic-3.6".into(),
             voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02".into(),
             voice_name: Some("Katie".into()),
             output_format: "wav".into(),
@@ -207,7 +207,7 @@ impl Default for GoogleTtsConfig {
     fn default() -> Self {
         Self {
             api_key: String::new(),
-            model: "gemini-2.5-flash-preview-tts".into(),
+            model: "gemini-3.8-flash-tts".into(),
             voice_name: "Kore".into(),
             output_format: "wav".into(),
         }
@@ -946,7 +946,7 @@ fn default_elevenlabs_profile() -> VoiceProfile {
         effects: ProfileEffects::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::ElevenLabs(ElevenLabsEngineOptions {
-            model_id: Some("eleven_turbo_v2_5".into()),
+            model_id: Some("eleven_v4".into()),
             output_format: Some("mp3_44100_128".into()),
             similarity_boost: Some(0.75),
             stability: Some(0.5),
@@ -968,7 +968,7 @@ fn default_cartesia_profile() -> VoiceProfile {
         effects: ProfileEffects::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::Cartesia(CartesiaEngineOptions {
-            model_id: Some("sonic-3.5".into()),
+            model_id: Some("sonic-3.6".into()),
             output_format: Some("wav".into()),
             encoding: Some("pcm_f32le".into()),
             sample_rate: Some(44100),
@@ -989,7 +989,7 @@ fn default_google_profile() -> VoiceProfile {
         effects: ProfileEffects::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::Google(GoogleEngineOptions {
-            model: Some("gemini-2.5-flash-preview-tts".into()),
+            model: Some("gemini-3.8-flash-tts".into()),
             output_format: Some("wav".into()),
         }),
     }
