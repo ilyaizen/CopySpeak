@@ -323,7 +323,7 @@ async fn synthesize_streaming_and_emit(
 
         let meta = stream.meta.clone();
         let mut pcm_bytes = 0u64;
-        drain_chunk_stream(stream, |chunk_idx, pcm, is_final, captions| {
+        let drained = drain_chunk_stream(stream, |chunk_idx, pcm, is_final, captions| {
             pcm_bytes += pcm.len() as u64;
             if !is_final && chunk_idx == 0 {
                 log::info!(
@@ -352,7 +352,16 @@ async fn synthesize_streaming_and_emit(
                 captions,
                 session_id.as_deref(),
             );
-        })
+        });
+        if drained.is_err() {
+            // The webview scheduler finishes only on a final chunk, which a failed
+            // stream never sends. Stop playback so playback-finished fires: it
+            // restores ducked audio and unblocks /speak --wait. Partial audio is cut.
+            if let Err(e) = app.emit("playback-stop", ()) {
+                log::warn!("Failed to emit playback-stop: {}", e);
+            }
+        }
+        drained
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))?
