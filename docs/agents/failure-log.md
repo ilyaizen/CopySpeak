@@ -16,6 +16,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - `hud:*` events fire only while the HUD is enabled; main-window UI reads `playbackStore.caption` and `reading-started`, never HUD events.
 - Duck other apps per-session and skip our whole process tree, not our PID: playback is in the webview, so the audio session belongs to a `msedgewebview2` child; persist originals to `duck-state.json` because per-app mixer volumes survive a crash.
 - "Beeps" in generated audio: suspect unpronounceable glyphs in the text before the playback code; keep `remove_unpronounceable`'s symbol ranges ahead of what vendors confound.
+- Pass the speech's `EffectiveTtsRequest` to `hud::show_hud` and `show_hud_synthesizing`; `get_provider_voice` resolves the active preset itself, so a language-switched reading shows the wrong engine and voice.
 
 ## Captions
 
@@ -45,6 +46,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Export Kokoro's duration-capable model under isolated Python 3.12; Kokoro 0.8.4's NumPy 1.x dependency cannot use the engine's Python 3.13 wheels.
 - Filter Kokoro's misaki phonemes through the model vocab before inference; misaki emits unpronounceable punctuation as literal phonemes, and only a missing _letter_ phoneme is a real pronunciation gap worth aborting on.
 - Change a model default in all four places together: the catalog `default_value` in `tts/catalog.rs`, the `*Config::default()` impl and the bundled `default_*_profile()` in `config/tts.rs`, and `play-page.svelte`'s mock; a catalog-only edit leaves fresh installs on the old model.
+- Take a speech's engine from its effective profile (`eff.engine`), not `cfg.tts.active_backend`: that field only mirrors the active profile (`sync_active_backend_mirror`), so a per-utterance switch would file telemetry, history and cache under the wrong engine.
 
 ## Browser companion
 
@@ -83,3 +85,5 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Grep components for `>Text<` and `label="Text"` after an i18n pass; literal UI text bypasses `$_` and passes locale parity.
 - Pass caught errors to `$_` values as `String(e)`; a catch binding is `unknown` and svelte-check rejects it.
 - Run `vp fmt src/lib/i18n/types.ts` after `node scripts/generate-i18n-types.js`; raw generator output reflows `NestedKeyOf` and adds trailing whitespace, so the diff picks up noise.
+- Put UI strings in `src/lib/locales/en.json`, not `src/lib/i18n/`; that folder holds the i18n code and the generated `types.ts`.
+- Change `iso_639_1` in `src-tauri/src/language.rs` and `DETECTED_LANGUAGE_CODES` in `profile-language.ts` together; `profile-language.test.ts` fails when the two code lists drift.
