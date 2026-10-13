@@ -374,12 +374,12 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             supports_captions: false,
             supports_bracket_emotes: true,
             options: vec![
-                option(
+                select_option(
                     "model",
                     "Model",
-                    EngineOptionKind::Text,
-                    "Speech model.",
-                    serde_json::json!("tts-1"),
+                    "Speech model. tts-1 and tts-1-hd are deprecated and removed 2027-01-06.",
+                    serde_json::json!("gpt-4o-mini-tts"),
+                    vec!["gpt-4o-mini-tts", "tts-1", "tts-1-hd"],
                 ),
                 option(
                     "response_format",
@@ -486,12 +486,20 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             supports_captions: true,
             supports_bracket_emotes: false,
             options: vec![
-                option(
+                select_option(
                     "model_id",
                     "Model",
-                    EngineOptionKind::Text,
                     "ElevenLabs model id.",
-                    serde_json::json!("eleven_turbo_v2_5"),
+                    serde_json::json!("eleven_v4"),
+                    vec![
+                        "eleven_v4",
+                        "eleven_v4_turbo",
+                        "eleven_v3",
+                        "eleven_v3_conversational",
+                        "eleven_multilingual_v2",
+                        "eleven_flash_v2_5",
+                        "eleven_flash_v2",
+                    ],
                 ),
                 option(
                     "output_format",
@@ -691,12 +699,12 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             supports_captions: true,
             supports_bracket_emotes: false,
             options: vec![
-                option(
+                select_option(
                     "model_id",
                     "Model",
-                    EngineOptionKind::Text,
                     "Cartesia model id.",
-                    serde_json::json!("sonic-3.5"),
+                    serde_json::json!("sonic-3.6"),
+                    vec!["sonic-3.6", "sonic-3.5"],
                 ),
                 option(
                     "output_format",
@@ -940,12 +948,16 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             supports_captions: false,
             supports_bracket_emotes: true,
             options: vec![
-                option(
+                select_option(
                     "model",
                     "Model",
-                    EngineOptionKind::Text,
                     "Gemini TTS model.",
-                    serde_json::json!("gemini-2.5-flash-preview-tts"),
+                    serde_json::json!("gemini-3.8-flash-tts"),
+                    vec![
+                        "gemini-3.8-flash-tts",
+                        "gemini-3.8-flash-lite-tts",
+                        "gemini-2.5-flash-preview-tts",
+                    ],
                 ),
                 option(
                     "output_format",
@@ -1187,6 +1199,94 @@ mod tests {
                 v.label
             );
             assert!(seen.insert(v.id.clone()), "duplicate voice id: {}", v.id);
+        }
+    }
+
+    #[test]
+    fn select_defaults_are_listed_choices() {
+        for entry in list_engines() {
+            for option in &entry.options {
+                if !matches!(option.kind, EngineOptionKind::Select) {
+                    continue;
+                }
+                let choices = option.choices.as_deref().unwrap_or_default();
+                assert!(
+                    option
+                        .default_value
+                        .as_str()
+                        .is_some_and(|d| choices.iter().any(|c| c == d)),
+                    "{:?}.{}: default {} is not a listed choice",
+                    entry.engine,
+                    option.key,
+                    option.default_value
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn model_selects_list_verified_model_ids() {
+        let cases: [(TtsEngine, &str, &str, &[&str]); 4] = [
+            (
+                TtsEngine::OpenAI,
+                "model",
+                "gpt-4o-mini-tts",
+                &["gpt-4o-mini-tts", "tts-1", "tts-1-hd"],
+            ),
+            (
+                TtsEngine::ElevenLabs,
+                "model_id",
+                "eleven_v4",
+                &[
+                    "eleven_v4",
+                    "eleven_v4_turbo",
+                    "eleven_v3",
+                    "eleven_v3_conversational",
+                    "eleven_multilingual_v2",
+                    "eleven_flash_v2_5",
+                    "eleven_flash_v2",
+                ],
+            ),
+            (
+                TtsEngine::Cartesia,
+                "model_id",
+                "sonic-3.6",
+                &["sonic-3.6", "sonic-3.5"],
+            ),
+            (
+                TtsEngine::Google,
+                "model",
+                "gemini-3.8-flash-tts",
+                &[
+                    "gemini-3.8-flash-tts",
+                    "gemini-3.8-flash-lite-tts",
+                    "gemini-2.5-flash-preview-tts",
+                ],
+            ),
+        ];
+        let entries = list_engines();
+        for (engine, key, default, expected) in cases {
+            let entry = entries
+                .iter()
+                .find(|e| e.engine == engine)
+                .expect("catalog entry");
+            let option = entry
+                .options
+                .iter()
+                .find(|o| o.key == key)
+                .expect("model option");
+            assert!(
+                matches!(option.kind, EngineOptionKind::Select),
+                "{engine:?}.{key} must be a select"
+            );
+            assert_eq!(option.default_value, serde_json::json!(default));
+            let choices: Vec<&str> = option
+                .choices
+                .iter()
+                .flatten()
+                .map(String::as_str)
+                .collect();
+            assert_eq!(choices, expected, "{engine:?}.{key} choices");
         }
     }
 }
