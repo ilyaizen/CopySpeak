@@ -358,10 +358,12 @@ async fn synthesize_streaming_and_emit(
     .map_err(|e| format!("Task join error: {e}"))
     .and_then(|drained| drained)
     .map(|(wav, _ttfa_ms)| wav);
-    if result.is_err() {
+    // An abort already stopped playback, and a late failure from it must not
+    // stop a reading that started after the abort.
+    if result.is_err() && !crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
         // The webview scheduler finishes only on a final marker, which a failed
-        // stream never sends. Stop playback so playback-finished fires: it restores
-        // ducked audio and unblocks /speak --wait. Partial audio is cut.
+        // stream never sends. Stop playback so playback-finished fires, which
+        // restores ducked audio. Partial audio is cut.
         if let Err(e) = app.emit("playback-stop", ()) {
             log::warn!("Failed to emit playback-stop: {}", e);
         }
