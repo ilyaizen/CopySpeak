@@ -43,8 +43,6 @@ pub enum ChunkItem {
     /// Rejected optional metadata invalidates the retained snapshot, not audio.
     ClearCaptions,
     /// The synthesis failed mid-stream; carries a human-readable reason.
-    /// Constructed by native-streaming backends (later slice tasks).
-    #[allow(dead_code)]
     Failed(String),
 }
 
@@ -112,6 +110,9 @@ impl ChunkSink {
 ///
 /// Each backend supplies only its engine-specific producer. An `Err` from the
 /// producer arrives as one `ChunkItem::Failed`, and the stream then closes.
+/// A producer that needs its raw message (no `HTTP error:` prefix) sends
+/// `ChunkItem::Failed` through the sink itself and returns `Ok(())`. ElevenLabs
+/// does this so its messages stay as they were.
 pub fn spawn_stream<F, Fut>(meta: AudioFormatMeta, produce: F) -> ChunkStream
 where
     F: FnOnce(ChunkSink) -> Fut + Send + 'static,
