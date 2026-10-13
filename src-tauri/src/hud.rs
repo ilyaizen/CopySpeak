@@ -9,7 +9,7 @@
 // the HUD component registers handlers for `hud:*` events.
 
 use crate::audio::AmplitudeEnvelope;
-use crate::commands::helpers::resolve_effective;
+use crate::commands::helpers::{resolve_effective, EffectiveTtsRequest};
 use crate::config::{AppConfig, HudConfig, HudPosition, HudPresetPosition, TtsEngine};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Monitor, PhysicalPosition, WebviewWindow};
@@ -38,8 +38,7 @@ fn title_case(value: &str) -> String {
     }
 }
 
-fn get_provider_voice(cfg: &AppConfig) -> (Option<String>, Option<String>) {
-    let eff = resolve_effective(&cfg.tts);
+fn get_provider_voice(eff: &EffectiveTtsRequest) -> (Option<String>, Option<String>) {
     let provider = match eff.engine {
         TtsEngine::Local => "Local".to_string(),
         TtsEngine::Kitten => "Kitten TTS".to_string(),
@@ -55,7 +54,10 @@ fn get_provider_voice(cfg: &AppConfig) -> (Option<String>, Option<String>) {
         TtsEngine::Microsoft => "Microsoft".to_string(),
         TtsEngine::Edge => "Edge-TTS".to_string(),
     };
-    let voice = eff.voice_label.unwrap_or_else(|| title_case(&eff.voice));
+    let voice = eff
+        .voice_label
+        .clone()
+        .unwrap_or_else(|| title_case(&eff.voice));
     (Some(provider), Some(voice))
 }
 
@@ -245,11 +247,16 @@ pub fn move_hud_offscreen(window: &WebviewWindow) {
     }
 }
 
-pub fn show_hud(app: &AppHandle, envelope: AmplitudeEnvelope, text: Option<String>) {
+pub fn show_hud(
+    app: &AppHandle,
+    envelope: AmplitudeEnvelope,
+    text: Option<String>,
+    eff: &EffectiveTtsRequest,
+) {
     let (config, provider, voice) = {
         let state = app.state::<std::sync::Mutex<AppConfig>>();
         let cfg = state.lock().unwrap();
-        let (p, v) = get_provider_voice(&cfg);
+        let (p, v) = get_provider_voice(eff);
         (cfg.hud.clone(), p, v)
     };
 
@@ -301,11 +308,11 @@ pub fn show_hud(app: &AppHandle, envelope: AmplitudeEnvelope, text: Option<Strin
     });
 }
 
-pub fn show_hud_synthesizing(app: &AppHandle, text: Option<String>) {
+pub fn show_hud_synthesizing(app: &AppHandle, text: Option<String>, eff: &EffectiveTtsRequest) {
     let (config, provider, voice) = {
         let state = app.state::<std::sync::Mutex<AppConfig>>();
         let cfg = state.lock().unwrap();
-        let (p, v) = get_provider_voice(&cfg);
+        let (p, v) = get_provider_voice(eff);
         (cfg.hud.clone(), p, v)
     };
 
@@ -354,7 +361,7 @@ pub fn show_hud_playback(app: &AppHandle, text: Option<String>, audio_duration_m
     let (config, provider, voice) = {
         let state = app.state::<std::sync::Mutex<AppConfig>>();
         let cfg = state.lock().unwrap();
-        let (p, v) = get_provider_voice(&cfg);
+        let (p, v) = get_provider_voice(&resolve_effective(&cfg.tts));
         (cfg.hud.clone(), p, v)
     };
 

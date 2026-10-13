@@ -4,10 +4,6 @@
 //! detector is reliable and the text is long enough to judge; anything else
 //! returns `None` so the caller keeps the active profile.
 
-// Consumed by speak_queued_internal in the integration commit; until then the
-// production build has no caller.
-#![allow(dead_code)]
-
 use whatlang::Lang;
 
 /// Shortest text, in characters, the detector is asked to judge. Shorter text

@@ -549,6 +549,39 @@ pub(crate) fn resolve_effective(tts_config: &TtsConfig) -> EffectiveTtsRequest {
     })
 }
 
+/// The profile for one utterance. With auto-switch on and a reliable language
+/// reading of `text`, a profile tagged with that language wins: the active one
+/// if it matches, else the first in list order. Anything else keeps the active
+/// profile.
+pub(crate) fn resolve_effective_for_text(
+    tts_config: &TtsConfig,
+    text: &str,
+) -> EffectiveTtsRequest {
+    let active = resolve_effective(tts_config);
+    if !tts_config.auto_switch_language {
+        return active;
+    }
+    let Some(language) = crate::language::detect_language(text) else {
+        return active;
+    };
+    let matching: Vec<_> = tts_config
+        .profiles
+        .iter()
+        .filter(|p| p.language.as_deref() == Some(language))
+        .collect();
+    let Some(target) = matching
+        .iter()
+        .find(|p| p.id == tts_config.active_profile_id)
+        .or(matching.first())
+    else {
+        return active;
+    };
+    if target.id == tts_config.active_profile_id {
+        return active;
+    }
+    resolve_effective_for_profile(tts_config, Some(target.id.as_str())).unwrap_or(active)
+}
+
 /// Get the engine string identifier for a backend (legacy function, prefer engine_identifier).
 pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
     match active {
@@ -565,5 +598,129 @@ pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
         TtsEngine::Piper => "piper",
         TtsEngine::Kokoro => "kokoro",
         TtsEngine::Pocket => "pocket",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::VoiceProfile;
+
+    const ENGLISH: &str =
+        "I think we should meet at the coffee shop around noon tomorrow to discuss the plan.";
+    const GERMAN: &str = "Der schnelle braune Fuchs springt an einem warmen Sommermorgen über den faulen Hund am Flussufer.";
+    /// The detector refuses this sentence (see language.rs), so it must not switch.
+    const PANGRAM: &str = "The quick brown fox jumps over the lazy dog.";
+
+    fn profile(id: &str, engine: TtsEngine, language: Option<&str>) -> VoiceProfile {
+        VoiceProfile {
+            id: id.into(),
+            name: id.into(),
+            engine,
+            language: language.map(String::from),
+            ..VoiceProfile::default()
+        }
+    }
+
+    fn config(profiles: Vec<VoiceProfile>, active: &str) -> TtsConfig {
+        TtsConfig {
+            profiles,
+            active_profile_id: active.into(),
+            ..TtsConfig::default()
+        }
+    }
+
+    fn picked(tts: &TtsConfig, text: &str) -> Option<String> {
+        resolve_effective_for_text(tts, text).profile_id
+    }
+
+    #[test]
+    fn auto_switch_off_keeps_active_profile() {
+        let mut tts = config(
+            vec![
+                profile("en", TtsEngine::Kokoro, Some("en")),
+                profile("de", TtsEngine::Piper, Some("de")),
+            ],
+            "en",
+        );
+        tts.auto_switch_language = false;
+        assert_eq!(picked(&tts, GERMAN).as_deref(), Some("en"));
+    }
+
+    #[test]
+    fn matching_profile_is_switched_to() {
+        let tts = config(
+            vec![
+                profile("en", TtsEngine::Kokoro, Some("en")),
+                profile("de", TtsEngine::Piper, Some("de")),
+            ],
+            "en",
+        );
+        let eff = resolve_effective_for_text(&tts, GERMAN);
+        assert_eq!(eff.profile_id.as_deref(), Some("de"));
+        assert_eq!(eff.engine, TtsEngine::Piper);
+    }
+
+    #[test]
+    fn short_text_keeps_active_profile() {
+        let tts = config(
+            vec![
+                profile("en", TtsEngine::Kokoro, Some("en")),
+                profile("de", TtsEngine::Piper, Some("de")),
+            ],
+            "en",
+        );
+        assert_eq!(picked(&tts, "Guten Tag").as_deref(), Some("en"));
+    }
+
+    #[test]
+    fn unreliable_text_keeps_active_profile() {
+        let tts = config(
+            vec![
+                profile("en", TtsEngine::Kokoro, Some("en")),
+                profile("de", TtsEngine::Piper, Some("de")),
+            ],
+            "de",
+        );
+        assert_eq!(picked(&tts, PANGRAM).as_deref(), Some("de"));
+        assert_eq!(picked(&tts, ENGLISH).as_deref(), Some("en"));
+    }
+
+    #[test]
+    fn active_profile_wins_a_language_tie() {
+        let tts = config(
+            vec![
+                profile("de-a", TtsEngine::Piper, Some("de")),
+                profile("de-b", TtsEngine::Kokoro, Some("de")),
+            ],
+            "de-b",
+        );
+        assert_eq!(picked(&tts, GERMAN).as_deref(), Some("de-b"));
+    }
+
+    #[test]
+    fn first_matching_profile_wins_when_active_does_not_match() {
+        let tts = config(
+            vec![
+                profile("en", TtsEngine::Kokoro, Some("en")),
+                profile("untagged", TtsEngine::Kokoro, None),
+                profile("de-a", TtsEngine::Piper, Some("de")),
+                profile("de-b", TtsEngine::Kokoro, Some("de")),
+            ],
+            "en",
+        );
+        assert_eq!(picked(&tts, GERMAN).as_deref(), Some("de-a"));
+    }
+
+    #[test]
+    fn no_matching_profile_keeps_active_profile() {
+        let tts = config(
+            vec![
+                profile("en", TtsEngine::Kokoro, Some("en")),
+                profile("fr", TtsEngine::Kokoro, Some("fr")),
+            ],
+            "en",
+        );
+        assert_eq!(picked(&tts, GERMAN).as_deref(), Some("en"));
     }
 }

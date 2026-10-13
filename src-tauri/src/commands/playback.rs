@@ -1,6 +1,7 @@
 // Playback control commands — stop, pause, skip, volume, speed, replay.
 
 use crate::audio::{AmplitudeEnvelope, AudioPlayer, PlaybackState};
+use crate::commands::helpers::resolve_effective;
 use crate::config::AppConfig;
 use crate::history::HistoryLog;
 use crate::hud;
@@ -269,7 +270,10 @@ pub fn show_hud_for_playback(
 /// Used in settings to preview the HUD overlay.
 /// Automatically hides after 3 seconds since HUD is click-through.
 #[tauri::command]
-pub fn test_show_hud(app: tauri::AppHandle) -> Result<(), String> {
+pub fn test_show_hud(
+    app: tauri::AppHandle,
+    config: State<'_, Mutex<AppConfig>>,
+) -> Result<(), String> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] test_show_hud called");
     }
@@ -283,10 +287,12 @@ pub fn test_show_hud(app: tauri::AppHandle) -> Result<(), String> {
         duration_ms: 5000,
     };
 
+    let eff = resolve_effective(&config.lock().unwrap().tts);
     hud::show_hud(
         &app,
         envelope,
         Some("Test HUD - Sample text for preview".to_string()),
+        &eff,
     );
 
     // Auto-hide after 3 seconds since HUD is click-through with no close button

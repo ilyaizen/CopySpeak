@@ -19,7 +19,8 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
     active_engine, create_backend, create_backend_from_effective, engine_identifier, engine_str,
-    resolve_effective, voice_display_name, SynthesisGuard,
+    resolve_effective, resolve_effective_for_text, voice_display_name, EffectiveTtsRequest,
+    SynthesisGuard,
 };
 use crate::commands::{AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent};
 
@@ -562,12 +563,19 @@ fn find_cached_reading(
 
 /// Play audio that history already holds: no new entry, file or telemetry
 /// sample, since nothing was synthesized.
-fn replay_saved_audio(app: &AppHandle, speech: &SpeechAudio, text: &str, session_id: Option<&str>) {
+fn replay_saved_audio(
+    app: &AppHandle,
+    speech: &SpeechAudio,
+    text: &str,
+    session_id: Option<&str>,
+    eff: &EffectiveTtsRequest,
+) {
     cache_audio(app, speech, text);
     hud::show_hud(
         app,
         extract_envelope_or_default(&speech.bytes),
         Some(text.to_string()),
+        eff,
     );
     emit_audio_ready(app, speech, text, session_id);
 }
@@ -776,7 +784,7 @@ async fn speak_now_internal(
     );
 
     // Show HUD with synthesizing indicator
-    hud::show_hud_synthesizing(&app, Some(text.clone()));
+    hud::show_hud_synthesizing(&app, Some(text.clone()), &eff);
 
     // Wrap backend in Arc for sharing across pagination calls
     let backend_arc = Arc::new(backend);
@@ -874,7 +882,7 @@ async fn speak_now_internal(
     }
 
     if cache_hit {
-        replay_saved_audio(&app, &wav_bytes, &text, session_id.as_deref());
+        replay_saved_audio(&app, &wav_bytes, &text, session_id.as_deref(), &eff);
         return Ok(());
     }
 
@@ -888,6 +896,7 @@ async fn speak_now_internal(
         &voice,
         &active_backend,
         &tts_config,
+        &eff,
         backend_arc,
         synthesis_ms,
         already_streamed,
@@ -1099,6 +1108,7 @@ fn handle_playback_output(
     voice: &str,
     active_backend: &crate::config::TtsEngine,
     tts_config: &crate::config::TtsConfig,
+    eff: &EffectiveTtsRequest,
     backend_arc: Arc<Box<dyn TtsBackend>>,
     synthesis_ms: u64,
     already_streamed: bool,
@@ -1142,7 +1152,7 @@ fn handle_playback_output(
     cache_audio(app, speech, text);
 
     // Show HUD with waveform visualization
-    hud::show_hud(app, envelope, Some(text.to_string()));
+    hud::show_hud(app, envelope, Some(text.to_string()), eff);
 
     // Emit audio to frontend for browser-native playback. Skipped when PCM
     // chunks were already forwarded by the streaming synthesis path.
@@ -1206,17 +1216,9 @@ async fn speak_queued_internal(
         return Err("Nothing to speak".into());
     }
 
-    let (
-        active_backend,
-        tts_config,
-        pagination_config,
-        post_process_config,
-        sanitization,
-        streaming_enabled,
-    ) = {
+    let (tts_config, pagination_config, post_process_config, sanitization, streaming_enabled) = {
         let cfg = config.lock().unwrap();
         (
-            cfg.tts.active_backend.clone(),
             cfg.tts.clone(),
             cfg.pagination.clone(),
             cfg.post_process.clone(),
@@ -1235,15 +1237,18 @@ async fn speak_queued_internal(
     // condensing; re-sanitizes condenser output like speak_now does.
     let text =
         crate::post_process::try_process(text, &post_process_config, &sanitization, false).await;
+    // Every label and engine read below uses this utterance's profile, which
+    // may be a language-matched one rather than the active profile.
+    let eff = resolve_effective_for_text(&tts_config, &text);
     let _ = app.emit("reading-started", &text);
     if let Some((trigger, id)) = &trigger {
         browser_bridge::begin_trigger(&app, id, trigger, &text);
     }
 
-    log_tts_debug("Queue", &format!("{:?}", active_backend), &text);
+    log_tts_debug("Queue", &format!("{:?}", eff.engine), &text);
 
     // Show HUD with synthesizing indicator
-    hud::show_hud_synthesizing(&app, Some(text.clone()));
+    hud::show_hud_synthesizing(&app, Some(text.clone()), &eff);
 
     // Paginate text
     let fragments = pagination::paginate_text(&text, &pagination_config);
@@ -1252,14 +1257,13 @@ async fn speak_queued_internal(
         log::debug!("[Queue] Created {} fragments", fragments.len());
     }
 
-    let eff = resolve_effective(&tts_config);
     let voice = eff.voice.clone();
 
     // Get telemetry estimates
     let char_counts: Vec<usize> = fragments.iter().map(|f| f.text.len()).collect();
     let (total_estimate, avg_confidence, _) = telemetry::get_estimate_paginated(
         &telemetry_state,
-        &engine_str(&active_backend),
+        &engine_str(&eff.engine),
         &voice,
         &char_counts,
     );
@@ -1314,8 +1318,8 @@ async fn speak_queued_internal(
         None
     };
 
-    let engine_str_val = engine_str(&active_backend);
-    let engine_id_val = engine_identifier(&active_backend);
+    let engine_str_val = engine_str(&eff.engine);
+    let engine_id_val = engine_identifier(&eff.engine);
 
     // Repeated text replays saved audio — only when the saved-audio store holds
     // every fragment, so a reading never mixes saved and fresh parts nor leaves
@@ -1447,7 +1451,7 @@ async fn speak_queued_internal(
 
         // Transition HUD from synthesizing → playing on first fragment
         if index == 0 {
-            hud::show_hud(&app, envelope.clone(), Some(text.clone()));
+            hud::show_hud(&app, envelope.clone(), Some(text.clone()), &eff);
         }
 
         // Save to history (a replay is already there). With history off the
@@ -1463,12 +1467,8 @@ async fn speak_queued_internal(
         }
         if !replaying && history_on {
             let audio_ext = backend_arc.file_extension().to_string();
-            let voice_name = voice_display_name(
-                &active_backend,
-                &tts_config,
-                &voice,
-                eff.voice_label.as_deref(),
-            );
+            let voice_name =
+                voice_display_name(&eff.engine, &tts_config, &voice, eff.voice_label.as_deref());
             let history_path = save_to_history_storage(
                 &config,
                 &wav_bytes,
@@ -1615,7 +1615,7 @@ pub async fn speak_history_entry(
     );
 
     // Show HUD with synthesizing indicator
-    hud::show_hud_synthesizing(&app, Some(text.clone()));
+    hud::show_hud_synthesizing(&app, Some(text.clone()), &resolve_effective(&tts_config));
 
     let backend_arc = Arc::new(backend);
     let synthesis_start = Instant::now();
@@ -1666,7 +1666,12 @@ pub async fn speak_history_entry(
     }
 
     // Show HUD with waveform visualization
-    hud::show_hud(&app, envelope, Some(text.clone()));
+    hud::show_hud(
+        &app,
+        envelope,
+        Some(text.clone()),
+        &resolve_effective(&tts_config),
+    );
 
     // Emit audio to frontend
     emit_audio_ready(&app, &wav_bytes, &text, None);
