@@ -94,6 +94,41 @@ impl ChunkStream {
     }
 }
 
+/// Producer side of a [`ChunkStream`], handed to the closure given to
+/// [`spawn_stream`].
+pub struct ChunkSink {
+    tx: mpsc::Sender<ChunkItem>,
+}
+
+impl ChunkSink {
+    /// Returns false once the consumer dropped the stream (stop or abort). The
+    /// producer should stop pulling its source then.
+    pub fn send(&self, item: ChunkItem) -> bool {
+        self.tx.send(item).is_ok()
+    }
+}
+
+/// Run a streaming producer on a worker thread and return the stream it feeds.
+///
+/// Each backend supplies only its engine-specific producer. An `Err` from the
+/// producer arrives as one `ChunkItem::Failed`, and the stream then closes.
+pub fn spawn_stream<F, Fut>(meta: AudioFormatMeta, produce: F) -> ChunkStream
+where
+    F: FnOnce(ChunkSink) -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = Result<(), TtsError>>,
+{
+    let (tx, rx) = mpsc::channel();
+    let failure_tx = tx.clone();
+    std::thread::spawn(move || {
+        let result = super::block_on_async(produce(ChunkSink { tx }));
+        if let Err(error) = result {
+            log::error!("[TTS] {error}");
+            let _ = failure_tx.send(ChunkItem::Failed(error.to_string()));
+        }
+    });
+    ChunkStream::new(meta, rx)
+}
+
 /// Build a single-chunk [`ChunkStream`] from a complete WAV byte buffer.
 ///
 /// Parses the container with the existing WAV helpers, extracts format
@@ -488,5 +523,56 @@ mod tests {
             stream.recv_timeout(Duration::from_secs(2)),
             Ok(Some(ChunkItem::Pcm(_)))
         ));
+    }
+
+    fn pcm_meta() -> AudioFormatMeta {
+        AudioFormatMeta {
+            sample_rate: 24000,
+            channels: 1,
+            bits_per_sample: 16,
+        }
+    }
+
+    #[test]
+    fn spawn_stream_delivers_items_in_order_then_closes() {
+        let stream = spawn_stream(pcm_meta(), |sink| async move {
+            assert!(sink.send(ChunkItem::Pcm(vec![1, 2])));
+            assert!(sink.send(ChunkItem::Pcm(vec![3])));
+            Ok(())
+        });
+        assert_eq!(stream.recv(), Some(ChunkItem::Pcm(vec![1, 2])));
+        assert_eq!(stream.recv(), Some(ChunkItem::Pcm(vec![3])));
+        assert_eq!(stream.recv(), None);
+    }
+
+    #[test]
+    fn spawn_stream_turns_producer_error_into_one_failed_item() {
+        let stream = spawn_stream(pcm_meta(), |sink| async move {
+            assert!(sink.send(ChunkItem::Pcm(vec![7])));
+            Err(TtsError::Http("boom".into()))
+        });
+        assert_eq!(stream.recv(), Some(ChunkItem::Pcm(vec![7])));
+        assert_eq!(
+            stream.recv(),
+            Some(ChunkItem::Failed("HTTP error: boom".into()))
+        );
+        assert_eq!(stream.recv(), None);
+    }
+
+    #[test]
+    fn spawn_stream_stops_producer_once_consumer_drops() {
+        let (done_tx, done_rx) = mpsc::channel();
+        let stream = spawn_stream(pcm_meta(), move |sink| async move {
+            while sink.send(ChunkItem::Pcm(vec![0])) {
+                tokio::time::sleep(Duration::from_millis(1)).await;
+            }
+            let _ = done_tx.send(());
+            Ok(())
+        });
+        assert!(stream.recv().is_some());
+        drop(stream);
+        done_rx
+            .recv_timeout(Duration::from_secs(5))
+            .expect("producer must stop pulling once the consumer is gone");
     }
 }

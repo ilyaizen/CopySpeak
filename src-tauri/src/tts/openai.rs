@@ -1,5 +1,5 @@
 use super::block_on_async;
-use super::stream::{AudioFormatMeta, ChunkItem, ChunkStream};
+use super::stream::{spawn_stream, AudioFormatMeta, ChunkItem, ChunkStream};
 use super::{TtsBackend, TtsError};
 use crate::config::OpenAIConfig;
 use reqwest::Client;
@@ -64,59 +64,43 @@ impl TtsBackend for OpenAiTtsBackend {
             text.len()
         );
 
-        let (tx, rx) = std::sync::mpsc::channel();
-        std::thread::spawn(move || {
-            block_on_async(async move {
-                let result: Result<(), TtsError> = async {
-                    let mut response = Client::new()
-                        .post(OPENAI_TTS_URL)
-                        .header("Authorization", format!("Bearer {api_key}"))
-                        .json(&body)
-                        .send()
-                        .await
-                        .map_err(|e| {
-                            TtsError::Http(format!("OpenAI stream request failed: {e}"))
-                        })?;
-                    let status = response.status();
-                    if !status.is_success() {
-                        let error_text = response.text().await.unwrap_or_default();
-                        return Err(TtsError::Http(format!(
-                            "OpenAI API error {status}: {error_text}"
-                        )));
-                    }
-                    let mut total_bytes = 0usize;
-                    while let Some(chunk) = response.chunk().await.map_err(|e| {
-                        TtsError::Http(format!(
-                            "OpenAI stream read failed after {total_bytes} bytes: {e}"
-                        ))
-                    })? {
-                        if chunk.is_empty() {
-                            continue;
-                        }
-                        total_bytes += chunk.len();
-                        if tx.send(ChunkItem::Pcm(chunk.to_vec())).is_err() {
-                            // Consumer dropped (stop/abort): stop pulling the body.
-                            return Ok(());
-                        }
-                    }
-                    Ok(())
+        let meta = AudioFormatMeta {
+            sample_rate: OPENAI_PCM_SAMPLE_RATE,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        Ok(spawn_stream(meta, move |sink| async move {
+            let mut response = Client::new()
+                .post(OPENAI_TTS_URL)
+                .header("Authorization", format!("Bearer {api_key}"))
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| TtsError::Http(format!("OpenAI stream request failed: {e}")))?;
+            let status = response.status();
+            if !status.is_success() {
+                let error_text = response.text().await.unwrap_or_default();
+                return Err(TtsError::Http(format!(
+                    "OpenAI API error {status}: {error_text}"
+                )));
+            }
+            let mut total_bytes = 0usize;
+            while let Some(chunk) = response.chunk().await.map_err(|e| {
+                TtsError::Http(format!(
+                    "OpenAI stream read failed after {total_bytes} bytes: {e}"
+                ))
+            })? {
+                if chunk.is_empty() {
+                    continue;
                 }
-                .await;
-                if let Err(error) = result {
-                    log::error!("[TTS] {error}");
-                    let _ = tx.send(ChunkItem::Failed(error.to_string()));
+                total_bytes += chunk.len();
+                if !sink.send(ChunkItem::Pcm(chunk.to_vec())) {
+                    // Consumer dropped (stop/abort): stop pulling the body.
+                    return Ok(());
                 }
-            });
-        });
-
-        Ok(ChunkStream::new(
-            AudioFormatMeta {
-                sample_rate: OPENAI_PCM_SAMPLE_RATE,
-                channels: 1,
-                bits_per_sample: 16,
-            },
-            rx,
-        ))
+            }
+            Ok(())
+        }))
     }
 
     fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {

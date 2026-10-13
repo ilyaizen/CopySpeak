@@ -1,6 +1,6 @@
 # 2. Streaming consolidation
 
-Status: accepted (2026-10-13). Slice 1 implements D2, D4 and D7. Slice 2 implements D1 and the helper part of D6. The other decisions land in later Track 1 slices.
+Status: accepted (2026-10-13). Slice 1 implements D2, D4 and D7. Slice 2 implements D1 and the helper part of D6. Slice 3 implements the producer-driver part of D6 for OpenAI, Cartesia, Google and ElevenLabs, and the D9 tests except playback-finished on a mid-stream failure (open, see Open). The other decisions land in later Track 1 slices.
 
 ## Context
 
@@ -25,4 +25,6 @@ Every OpenAI user on the default model (`tts-1`) and every user who sets `tts-1`
 ## Open
 
 - Gemini live probe: needs the user's own key. Then either keep `streamGenerateContent` or move to the documented Interactions API.
+- Mid-stream failure does not reach playback-finished. `drain_chunk_stream` returns `Err` on `ChunkItem::Failed` (and on an empty stream) without a final chunk, `playback-stop` or `synthesis-aborted`. The webview's scheduler never completes, so blocking `/speak --wait` callers wait for the 600 s cap. Needs a decision on the terminal event before fixing.
+- The CLI daemon stream (`local_daemon::try_stream`) is a synchronous pipe protocol and stays outside the async producer driver.
 - tts-1 chunked-streaming confirmation: D2 relies on the docs showing streaming examples only for gpt-4o-mini-tts. Whether tts-1 streams is unconfirmed.
