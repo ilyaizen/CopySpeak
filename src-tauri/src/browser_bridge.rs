@@ -940,7 +940,7 @@ fn handle_message(app: AppHandle, pipe: &SafeHandle, message: Value) -> Result<(
                     let _ = app.emit("playback-skip-forward", ());
                 }
                 "stop" => {
-                    let _ = app.emit("playback-stop", ());
+                    crate::commands::emit_playback_stop(&app);
                     // The playback store also reports the cancelled status via
                     // browser_reading_finished; cancel eagerly here so the
                     // session ends even if the webview is unresponsive.
