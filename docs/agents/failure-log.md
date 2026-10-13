@@ -11,6 +11,8 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Re-sync `playbackStore` from its own `config-changed` listener; pages that only `set_config` never update it.
 - Gate streaming playback off when the active profile has an effect: warm daemons stream via `CliTtsBackend::supports_streaming`, and the PCM scheduler has no effect chain — only the `audio-fragment-ready` path applies effects.
 - Emit the streaming `is_final` marker on the last fragment only; an intermediate one arms the player's completion timer mid-passage.
+- Signal a failed streamed reading with `playback-stream-failed` and its `session_id`, never `playback-stop` (which cuts every reading): a dead stream never sends the final marker that `playback-finished` waits for.
+- Give each reading its own `AbortScope::begin()` and check `scope.aborted()`; never clear the global abort state at a reading's start, since that un-aborts a stream still draining from the previous reading.
 - Allow `createWaveShaper` only as a directly-called member; reject local declarations and every other symbol containing "shape".
 - Drive HUD captions from the audible fragment's audio clock; synthesis events may describe a later fragment, and incoming PCM must not resume a user-paused stream.
 - `hud:*` events fire only while the HUD is enabled; main-window UI reads `playbackStore.caption` and `reading-started`, never HUD events.

@@ -35,8 +35,24 @@ pub struct JobStatus {
 /// PID of the active CLI TTS process (0 if none).
 pub static ACTIVE_CLI_PID: AtomicU32 = AtomicU32::new(0);
 
-/// Flag set when synthesis abort is requested.
-pub static ABORT_REQUESTED: AtomicBool = AtomicBool::new(false);
+/// Bumped by each synthesis abort. Readings compare against the value they
+/// began under, so an abort reaches only the readings already running.
+pub static ABORT_GENERATION: AtomicU64 = AtomicU64::new(0);
+
+/// The abort generation a synthesis began under.
+#[derive(Clone, Copy)]
+pub struct AbortScope(u64);
+
+impl AbortScope {
+    pub fn begin() -> Self {
+        Self(ABORT_GENERATION.load(Ordering::Relaxed))
+    }
+
+    /// True once an abort has been requested after this scope began.
+    pub fn aborted(self) -> bool {
+        ABORT_GENERATION.load(Ordering::Relaxed) != self.0
+    }
+}
 
 pub fn update_tray_icon(app_handle: &tauri::AppHandle) {
     if let Some(tray) = app_handle.tray_by_id("main") {
@@ -271,8 +287,8 @@ pub fn do_abort_synthesis(app: &tauri::AppHandle) {
         ACTIVE_CLI_PID.store(0, Ordering::Relaxed);
     }
 
-    // Signal abort to synthesis tasks
-    ABORT_REQUESTED.store(true, Ordering::Relaxed);
+    // Signal abort to the synthesis tasks already running
+    ABORT_GENERATION.fetch_add(1, Ordering::Relaxed);
 
     // Reset synthesis state
     {
@@ -286,7 +302,7 @@ pub fn do_abort_synthesis(app: &tauri::AppHandle) {
     let _ = app.emit("synthesis-aborted", ());
 
     // Stop playback
-    let _ = app.emit("playback-stop", ());
+    crate::commands::emit_playback_stop(app);
     {
         let player = app.state::<std::sync::Mutex<audio::AudioPlayer>>();
         if let Ok(mut p) = player.lock() {
@@ -296,7 +312,7 @@ pub fn do_abort_synthesis(app: &tauri::AppHandle) {
     }
 }
 
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},

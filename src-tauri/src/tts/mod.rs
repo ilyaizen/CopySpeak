@@ -75,14 +75,14 @@ pub trait TtsBackend: Send + Sync {
     /// Check if the engine binary/server is reachable.
     fn health_check(&self) -> Result<(), TtsError>;
 
+    /// Load this engine's model ahead of the first utterance. Only local
+    /// engines with a resident daemon do anything; everyone else is a no-op.
+    #[allow(dead_code)]
+    fn prewarm(&self, _voice: &str) {}
+
     /// Whether this backend can produce audio incrementally via
     /// [`TtsBackend::synthesize_streaming`]. Defaults to false for batch-only
     /// backends; the command layer uses this to pick the streaming path.
-    #[allow(dead_code)]
-    /// Load this engine's model ahead of the first utterance. Only local
-    /// engines with a resident daemon do anything; everyone else is a no-op.
-    fn prewarm(&self, _voice: &str) {}
-
     fn supports_streaming(&self) -> bool {
         false
     }

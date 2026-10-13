@@ -47,7 +47,9 @@ impl TtsBackend for OpenAiTtsBackend {
     }
 
     fn supports_streaming(&self) -> bool {
-        true
+        // The docs show chunked streaming only with gpt-4o-mini-tts. tts-1,
+        // tts-1-hd and unknown ids take the batch path, which is always correct.
+        self.config.model.starts_with("gpt-4o-mini-tts")
     }
 
     fn synthesize_streaming(&self, text: &str, voice: &str) -> Result<ChunkStream, TtsError> {
@@ -240,5 +242,28 @@ impl TtsBackend for OpenAiTtsBackend {
 
     fn voice_display_name(&self, voice_id: &str) -> String {
         voice_id.to_lowercase()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn backend_for_model(model: &str) -> OpenAiTtsBackend {
+        OpenAiTtsBackend::new(OpenAIConfig {
+            model: model.into(),
+            ..Default::default()
+        })
+    }
+
+    #[test]
+    fn streams_only_for_the_gpt_4o_mini_tts_family() {
+        // The docs show streaming only with gpt-4o-mini-tts. tts-1, tts-1-hd and
+        // unknown ids take the batch path, which is always correct.
+        assert!(backend_for_model("gpt-4o-mini-tts").supports_streaming());
+        assert!(backend_for_model("gpt-4o-mini-tts-snapshot").supports_streaming());
+        assert!(!backend_for_model("tts-1").supports_streaming());
+        assert!(!backend_for_model("tts-1-hd").supports_streaming());
+        assert!(!backend_for_model("some-unknown-model").supports_streaming());
     }
 }

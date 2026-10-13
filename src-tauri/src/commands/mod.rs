@@ -81,6 +81,14 @@ pub struct AudioStreamChunkEvent {
     pub session_id: Option<String>,
 }
 
+/// Event emitted when a streamed reading fails, so the webview stops only the
+/// stream that reading owns. `session_id` is null for desktop readings, so it is
+/// serialized as null rather than skipped; the store compares it with `===`.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct PlaybackStreamFailedEvent {
+    pub session_id: Option<String>,
+}
+
 /// Event emitted during synthesis to show progress with ETA.
 #[derive(Debug, Clone, serde::Serialize)]
 #[allow(dead_code)]

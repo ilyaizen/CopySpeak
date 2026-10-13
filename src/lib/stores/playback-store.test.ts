@@ -399,6 +399,70 @@ it("drives pause, resume, clamped skips and stop from page control events", asyn
   expect(playbackStore.isPlaying).toBe(false);
 });
 
+function streamChunk(sessionId: string | null) {
+  return {
+    audio_base64: "",
+    sample_rate: 24000,
+    channels: 1,
+    bits_per_sample: 16,
+    fragment_index: 0,
+    fragment_total: 1,
+    is_final: false,
+    text: "streamed",
+    session_id: sessionId
+  };
+}
+
+// A new synthesis clears the stop left by the previous reading, as in the app.
+async function startStreamingReading() {
+  vi.stubGlobal(
+    "AudioContext",
+    class {
+      state = "running";
+      currentTime = 0;
+      destination = {};
+      createGain = () => ({ gain: { value: 1 }, connect() {}, disconnect() {} });
+      resume = vi.fn();
+      suspend = vi.fn();
+      close = vi.fn();
+    }
+  );
+  await listeners.get("synthesis-state-change")!({ payload: true });
+}
+
+it("leaves the playing stream alone when another streamed reading fails", async () => {
+  await startStreamingReading();
+  vi.mocked(emit).mockClear();
+  playbackStore.handleStreamChunk(streamChunk("trigger-a"));
+  await listeners.get("playback-stream-failed")!({ payload: { session_id: "trigger-b" } });
+  expect(playbackStore.isPlaying).toBe(true);
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", null);
+  playbackStore.handleStop();
+});
+
+it("leaves a reading that is still synthesizing alone when an idle stream fails", async () => {
+  await startStreamingReading();
+  await listeners.get("playback-stream-failed")!({ payload: { session_id: "trigger-a" } });
+  playbackStore.handleStreamChunk(streamChunk("trigger-b"));
+  expect(playbackStore.isPlaying).toBe(true);
+  playbackStore.handleStop();
+});
+
+it("stops the streamed reading that fails while it is playing", async () => {
+  await startStreamingReading();
+  vi.mocked(emit).mockClear();
+  playbackStore.handleStreamChunk(streamChunk("trigger-a"));
+  await listeners.get("playback-stream-failed")!({ payload: { session_id: "trigger-a" } });
+  expect(playbackStore.isPlaying).toBe(false);
+  expect(emit).toHaveBeenCalledWith("playback-finished", null);
+});
+
+it("finishes a failed streamed reading when nothing is playing, so /speak --wait returns", async () => {
+  vi.mocked(emit).mockClear();
+  await listeners.get("playback-stream-failed")!({ payload: { session_id: null } });
+  expect(emit).toHaveBeenCalledWith("playback-finished", null);
+});
+
 it("reports a followed page session by id, and only the current one", async () => {
   const calls = () => vi.mocked(invoke).mock.calls;
   vi.mocked(invoke).mockClear();

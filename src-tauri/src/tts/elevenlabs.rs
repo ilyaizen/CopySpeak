@@ -748,8 +748,9 @@ impl TtsBackend for ElevenLabsTtsBackend {
     }
 
     fn supports_streaming(&self) -> bool {
-        // The /stream endpoint is pinned to pcm_44100 regardless of the
-        // profile's batch output_format, so native streaming is always usable.
+        // The /stream endpoint is pinned to pcm_24000 (STREAM_OUTPUT_FORMAT)
+        // regardless of the profile's batch output_format, so native streaming
+        // is always usable.
         true
     }
 
