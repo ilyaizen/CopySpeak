@@ -34,13 +34,13 @@
       daemon_idle_timeout_secs: 600,
       openai: {
         api_key: "",
-        model: "tts-1",
+        model: "gpt-4o-mini-tts",
         voice: "alloy"
       },
       elevenlabs: {
         api_key: "",
         voice_id: "21m00Tcm4TlvDq8ikWAM",
-        model_id: "eleven_turbo_v2_5",
+        model_id: "eleven_v4",
         output_format: "mp3_44100_128",
         voice_stability: 0.5,
         voice_similarity_boost: 0.75,
@@ -49,7 +49,7 @@
       },
       cartesia: {
         api_key: "",
-        model_id: "sonic-3.5",
+        model_id: "sonic-3.6",
         voice_id: "f786b574-daa5-4673-aa0c-cbe3e8534c02",
         voice_name: "Katie",
         output_format: "wav",

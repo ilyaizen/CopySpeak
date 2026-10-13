@@ -61,6 +61,7 @@ Before editing an area, read its section in [`docs/agents/failure-log.md`](docs/
 - **Engines**: installers, Python wrappers, daemon protocol, CUDA, adding a `TtsEngine`
 - **Browser companion**: native host, extension protocol, page highlights
 - **History & cache**: history UI, replay, speech cache
+- **Landing page**: `static/` asset references, version strings in locales
 - **Linux**: HUD window, Wayland
 - **Release**: version bump, GitHub release workflow
 - **i18n**: locale strings, `$_`
