@@ -1,6 +1,6 @@
 # 2. Streaming consolidation
 
-Status: accepted (2026-10-13). Slice 1 implements D2, D4 and D7. Slice 2 implements D1 and the helper part of D6. Slice 3 implements the producer-driver part of D6 for OpenAI, Cartesia, Google and ElevenLabs, and adds the is_final rule test. The D9 gate and effects tests predate this slice, and the odd-byte split tests are in `pcm-stream.test.ts`. The other decisions land in later Track 1 slices.
+Status: accepted (2026-10-13). Slice 1 implements D2, D4 and D7. Slice 2 implements D1 and the helper part of D6. Slice 3 implements the producer-driver part of D6 for OpenAI, Cartesia, Google and ElevenLabs, and adds the is_final rule test. The D9 gate and effects tests predate this slice, and the odd-byte split tests are in `pcm-stream.test.ts`. Slice 4 (contract) removes the batch-wrap default from `TtsBackend::synthesize_streaming`: a backend without a native stream now refuses instead of wrapping its batch WAV. `chunk_stream_from_wav` is removed; its tests use `chunk_stream_from_speech`. The static `supports_streaming()` claim stays, because D1 needs it at the gate.
 
 ## Context
 

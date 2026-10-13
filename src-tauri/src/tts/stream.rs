@@ -1,10 +1,9 @@
 // Streaming contract shared by all TTS backends.
 //
 // A backend that supports intra-request streaming produces PCM chunks through
-// a bounded channel; the command layer forwards them to the frontend without
-// knowing which engine produced them. Backends without native streaming get a
-// default implementation that wraps their existing batch `synthesize` output
-// as a single-chunk stream, so consumers never special-case engines.
+// an unbounded channel; the command layer forwards them to the frontend without
+// knowing which engine produced them. Backends without native streaming refuse
+// `synthesize_streaming`, and the command layer keeps them on the batch path.
 
 use serde::Serialize;
 use std::sync::mpsc;
@@ -130,16 +129,10 @@ where
     ChunkStream::new(meta, rx)
 }
 
-/// Build a single-chunk [`ChunkStream`] from a complete WAV byte buffer.
+/// Build a single-chunk [`ChunkStream`] from one complete batch result.
 ///
-/// Parses the container with the existing WAV helpers, extracts format
-/// metadata and the data-section payload, and delivers the payload as exactly
-/// one `Pcm` chunk. This backs the default `synthesize_streaming`
-/// implementation for batch-only backends.
-pub fn chunk_stream_from_wav(wav: Vec<u8>) -> Result<ChunkStream, TtsError> {
-    chunk_stream_from_speech(wav.into())
-}
-
+/// Used by the CLI when no daemon stream is available (cold, busy, or gone):
+/// the one-shot output is delivered as exactly one `Pcm` chunk.
 pub fn chunk_stream_from_speech(
     speech: super::captions::SpeechAudio,
 ) -> Result<ChunkStream, TtsError> {
@@ -425,7 +418,7 @@ mod tests {
         let pcm = vec![0u8, 1u8, 2u8, 3u8, 254u8, 255u8];
         let wav = build_wav(44100, 1, 16, &pcm);
 
-        let stream = chunk_stream_from_wav(wav).expect("valid WAV must parse");
+        let stream = chunk_stream_from_speech(wav.into()).expect("valid WAV must parse");
 
         assert_eq!(stream.meta.sample_rate, 44100);
         assert_eq!(stream.meta.channels, 1);
@@ -439,12 +432,12 @@ mod tests {
 
     #[test]
     fn malformed_input_is_rejected() {
-        assert!(chunk_stream_from_wav(Vec::new()).is_err());
+        assert!(chunk_stream_from_speech(Vec::<u8>::new().into()).is_err());
 
         // Valid header shape, but not a WAV (missing WAVE marker).
         let mut junk = b"RIFF\x24\x00\x00\x00JUNK".to_vec();
         junk.resize(64, 0);
-        assert!(chunk_stream_from_wav(junk).is_err());
+        assert!(chunk_stream_from_speech(junk.into()).is_err());
     }
 
     #[test]
@@ -485,7 +478,7 @@ mod tests {
     }
 
     #[test]
-    fn pcm_to_wav_round_trips_through_chunk_stream_from_wav() {
+    fn pcm_to_wav_round_trips_through_chunk_stream_from_speech() {
         let meta = AudioFormatMeta {
             sample_rate: 24000,
             channels: 2,
@@ -494,7 +487,7 @@ mod tests {
         let pcm = vec![7u8; 40];
         let wav = pcm_to_wav(&pcm, &meta);
 
-        let stream = chunk_stream_from_wav(wav).expect("generated WAV must parse");
+        let stream = chunk_stream_from_speech(wav.into()).expect("generated WAV must parse");
         assert_eq!(stream.meta.sample_rate, 24000);
         assert_eq!(stream.meta.channels, 2);
         assert_eq!(stream.meta.bits_per_sample, 16);

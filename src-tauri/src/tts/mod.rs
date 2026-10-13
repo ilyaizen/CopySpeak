@@ -112,18 +112,15 @@ pub trait TtsBackend: Send + Sync {
 
     /// Stream synthesized audio as PCM chunks.
     ///
-    /// Default wraps the batch `synthesize` output: the returned WAV container
-    /// is parsed and its data section is delivered as exactly one `Pcm` chunk.
-    /// Backends with native intra-request streaming override both this and
-    /// [`TtsBackend::supports_streaming`].
+    /// Only backends that override this and claim [`TtsBackend::supports_streaming`]
+    /// are asked to stream. The default refuses instead of wrapping batch output,
+    /// so a backend that is asked without a native stream fails loudly.
     #[allow(dead_code)]
-    fn synthesize_streaming(&self, text: &str, voice: &str) -> Result<ChunkStream, TtsError> {
-        log::debug!(
-            "[TTS] {} has no native streaming, falling back to batch wrap",
+    fn synthesize_streaming(&self, _text: &str, _voice: &str) -> Result<ChunkStream, TtsError> {
+        Err(TtsError::Unavailable(format!(
+            "{} has no native streaming",
             self.name()
-        );
-        let wav = self.synthesize(text, voice)?;
-        stream::chunk_stream_from_wav(wav)
+        )))
     }
 
     /// File extension for the audio bytes returned by `synthesize` (e.g. "wav", "mp3").
@@ -142,7 +139,36 @@ pub trait TtsBackend: Send + Sync {
 
 #[cfg(test)]
 mod tests {
-    use super::block_on_async;
+    use super::{block_on_async, TtsBackend, TtsError};
+
+    struct BatchOnly;
+
+    impl TtsBackend for BatchOnly {
+        fn name(&self) -> &str {
+            "batch-only"
+        }
+
+        fn synthesize(&self, _text: &str, _voice: &str) -> Result<Vec<u8>, TtsError> {
+            Ok(Vec::new())
+        }
+
+        fn health_check(&self) -> Result<(), TtsError> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn backend_without_native_streaming_refuses_to_stream() {
+        // Such a backend must fail loudly if asked, not silently wrap its batch output.
+        let err = BatchOnly
+            .synthesize_streaming("hi", "v")
+            .err()
+            .expect("batch-only backend must refuse to stream");
+        assert!(
+            matches!(&err, TtsError::Unavailable(reason) if reason.contains("no native streaming")),
+            "{err}"
+        );
+    }
 
     #[test]
     fn block_on_async_runs_without_an_ambient_runtime() {
