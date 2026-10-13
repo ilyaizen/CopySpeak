@@ -286,7 +286,7 @@ pub fn do_abort_synthesis(app: &tauri::AppHandle) {
     let _ = app.emit("synthesis-aborted", ());
 
     // Stop playback
-    let _ = app.emit("playback-stop", ());
+    crate::commands::emit_playback_stop(app);
     {
         let player = app.state::<std::sync::Mutex<audio::AudioPlayer>>();
         if let Ok(mut p) = player.lock() {
