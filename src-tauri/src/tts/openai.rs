@@ -47,8 +47,8 @@ impl TtsBackend for OpenAiTtsBackend {
     }
 
     fn supports_streaming(&self) -> bool {
-        // Chunked streaming is documented for the gpt-4o-mini-tts family only.
-        // tts-1, tts-1-hd and unknown ids take the batch path.
+        // The docs show chunked streaming only with gpt-4o-mini-tts. tts-1,
+        // tts-1-hd and unknown ids take the batch path, which is always correct.
         self.config.model.starts_with("gpt-4o-mini-tts")
     }
 
@@ -258,8 +258,8 @@ mod tests {
 
     #[test]
     fn streams_only_for_the_gpt_4o_mini_tts_family() {
-        // Chunked streaming is documented for gpt-4o-mini-tts only. tts-1,
-        // tts-1-hd and unknown ids take the batch path, which is always correct.
+        // The docs show streaming only with gpt-4o-mini-tts. tts-1, tts-1-hd and
+        // unknown ids take the batch path, which is always correct.
         assert!(backend_for_model("gpt-4o-mini-tts").supports_streaming());
         assert!(backend_for_model("gpt-4o-mini-tts-snapshot").supports_streaming());
         assert!(!backend_for_model("tts-1").supports_streaming());
