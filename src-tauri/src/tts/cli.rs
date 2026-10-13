@@ -433,6 +433,13 @@ impl CliTtsBackend {
     }
 }
 
+/// Whether a daemon-eligible engine can stream, given whether its daemon is
+/// warm. kokoro and pocket yield the whole utterance as one frame, so they
+/// never stream. Split out so the rule is testable without a live process.
+fn daemon_streams(engine: &str, daemon_ready: bool) -> bool {
+    daemon_ready && !matches!(engine, "kokoro" | "pocket")
+}
+
 impl TtsBackend for CliTtsBackend {
     fn name(&self) -> &str {
         &self.command
@@ -449,8 +456,9 @@ impl TtsBackend for CliTtsBackend {
         // Only once this engine's daemon is warm. Before then the one-shot
         // command is the only option and it cannot stream, so promising a
         // stream would just mean a single-chunk "stream" with extra steps.
-        self.daemon_engine_kind()
-            .is_some_and(crate::tts::local_daemon::is_ready)
+        self.daemon_engine_kind().is_some_and(|engine| {
+            daemon_streams(engine, crate::tts::local_daemon::is_ready(engine))
+        })
     }
 
     fn synthesize_streaming(&self, text: &str, voice: &str) -> Result<ChunkStream, TtsError> {
@@ -1009,5 +1017,21 @@ mod tests {
         // Kokoro/Pocket format: af_heart (single segment)
         assert_eq!(backend.voice_display_name("af_heart"), "af_heart");
         assert_eq!(backend.voice_display_name("alba"), "alba");
+    }
+
+    #[test]
+    fn single_chunk_engines_never_advertise_streaming() {
+        // kokoro and pocket hand back the whole utterance as one frame, so a
+        // warm daemon has nothing to stream.
+        assert!(!daemon_streams("kokoro", true));
+        assert!(!daemon_streams("pocket", true));
+    }
+
+    #[test]
+    fn incremental_engines_stream_only_when_daemon_is_warm() {
+        for engine in ["piper", "kitten", "qwen"] {
+            assert!(daemon_streams(engine, true), "{engine} warm should stream");
+            assert!(!daemon_streams(engine, false), "{engine} cold should not");
+        }
     }
 }
