@@ -164,7 +164,10 @@ mod tests {
             .synthesize_streaming("hi", "v")
             .err()
             .expect("batch-only backend must refuse to stream");
-        assert!(err.to_string().contains("no native streaming"), "{err}");
+        assert!(
+            matches!(&err, TtsError::Unavailable(reason) if reason.contains("no native streaming")),
+            "{err}"
+        );
     }
 
     #[test]

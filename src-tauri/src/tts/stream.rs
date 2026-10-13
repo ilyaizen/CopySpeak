@@ -1,10 +1,9 @@
 // Streaming contract shared by all TTS backends.
 //
 // A backend that supports intra-request streaming produces PCM chunks through
-// a bounded channel; the command layer forwards them to the frontend without
-// knowing which engine produced them. Backends without native streaming get a
-// default implementation that wraps their existing batch `synthesize` output
-// as a single-chunk stream, so consumers never special-case engines.
+// an unbounded channel; the command layer forwards them to the frontend without
+// knowing which engine produced them. Backends without native streaming refuse
+// `synthesize_streaming`, and the command layer keeps them on the batch path.
 
 use serde::Serialize;
 use std::sync::mpsc;
@@ -132,7 +131,7 @@ where
 
 /// Build a single-chunk [`ChunkStream`] from one complete batch result.
 ///
-/// Used by the CLI when its daemon disappears between the gate and the call:
+/// Used by the CLI when no daemon stream is available (cold, busy, or gone):
 /// the one-shot output is delivered as exactly one `Pcm` chunk.
 pub fn chunk_stream_from_speech(
     speech: super::captions::SpeechAudio,
