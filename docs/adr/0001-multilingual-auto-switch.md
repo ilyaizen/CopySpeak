@@ -28,4 +28,4 @@ A user keeps one voice profile per language. Double-copy and browser readings sp
 - Short, mixed-language or very famous sentences keep the active profile. The detector refuses the classic English pangram by design.
 - The language list exists in two places: `iso_639_1` in `language.rs` and `DETECTED_LANGUAGE_CODES` in `profile-language.ts`. `profile-language.test.ts` fails when they drift, so change both together.
 - Speak paths differ on purpose. A future change that adds switching to `speak_now` must also decide how its engine labels and cache keys work.
-- Known gap, pre-existing and not fixed here: a history replay's HUD (`show_hud_playback`) still names the active profile. The history row already stores the engine and voice that spoke, so the fix is to read the label from the entry.
+- History replay HUD names the engine and voice that spoke, not the active profile (`saved_provider_voice` in `hud.rs`). Rows store the voice id, not its label, so the label is that of the profile with the same engine and voice, as in the history list; without one, the voice id in title case. Renaming a profile therefore renames its past replays' HUD label.

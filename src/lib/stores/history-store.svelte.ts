@@ -300,7 +300,9 @@ function createHistoryStore() {
       if (item) {
         await invoke("show_hud_for_playback", {
           text: item.text,
-          audioDurationMs: item.duration_ms ?? null
+          audioDurationMs: item.duration_ms ?? null,
+          ttsEngine: item.tts_engine,
+          voice: item.voice
         }).catch(() => {});
       }
       playbackStore.historyReadingId = `entry:${id}`;

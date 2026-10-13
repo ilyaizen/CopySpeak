@@ -9,8 +9,10 @@
 // the HUD component registers handlers for `hud:*` events.
 
 use crate::audio::AmplitudeEnvelope;
-use crate::commands::helpers::{resolve_effective, EffectiveTtsRequest};
-use crate::config::{AppConfig, HudConfig, HudPosition, HudPresetPosition, TtsEngine};
+use crate::commands::helpers::EffectiveTtsRequest;
+use crate::config::{
+    AppConfig, HudConfig, HudPosition, HudPresetPosition, TtsEngine, VoiceProfile,
+};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Monitor, PhysicalPosition, WebviewWindow};
 
@@ -38,8 +40,8 @@ fn title_case(value: &str) -> String {
     }
 }
 
-fn get_provider_voice(eff: &EffectiveTtsRequest) -> (Option<String>, Option<String>) {
-    let provider = match eff.engine {
+fn provider_name(engine: &TtsEngine) -> String {
+    match engine {
         TtsEngine::Local => "Local".to_string(),
         TtsEngine::Kitten => "Kitten TTS".to_string(),
         TtsEngine::Qwen => "Qwen3-TTS".to_string(),
@@ -53,12 +55,45 @@ fn get_provider_voice(eff: &EffectiveTtsRequest) -> (Option<String>, Option<Stri
         TtsEngine::Google => "Google".to_string(),
         TtsEngine::Microsoft => "Microsoft".to_string(),
         TtsEngine::Edge => "Edge-TTS".to_string(),
-    };
+    }
+}
+
+fn get_provider_voice(eff: &EffectiveTtsRequest) -> (Option<String>, Option<String>) {
     let voice = eff
         .voice_label
         .clone()
         .unwrap_or_else(|| title_case(&eff.voice));
-    (Some(provider), Some(voice))
+    (Some(provider_name(&eff.engine)), Some(voice))
+}
+
+/// Provider and voice for a saved reading, from the engine and voice that spoke it.
+/// The voice label matches the history list: the label of a profile with that
+/// engine and voice, else the voice id in title case.
+fn saved_provider_voice(
+    engine: &str,
+    voice: &str,
+    profiles: &[VoiceProfile],
+) -> (Option<String>, Option<String>) {
+    let Ok(engine) = serde_json::from_value::<TtsEngine>(serde_json::Value::String(engine.into()))
+    else {
+        log::warn!(
+            "Unknown engine '{}' on history entry, HUD provider omitted",
+            engine
+        );
+        return (None, Some(title_case(voice)));
+    };
+    let label = profiles
+        .iter()
+        .filter(|p| p.engine == engine && p.voice == voice)
+        .find_map(|p| {
+            p.voice_label
+                .as_deref()
+                .map(str::trim)
+                .filter(|l| !l.is_empty())
+        })
+        .map(str::to_string)
+        .unwrap_or_else(|| title_case(voice));
+    (Some(provider_name(&engine)), Some(label))
 }
 
 #[derive(Clone, Serialize)]
@@ -356,12 +391,19 @@ pub fn show_hud_synthesizing(app: &AppHandle, text: Option<String>, eff: &Effect
 }
 
 /// Show HUD for playback of existing audio file.
+/// Labels the reading with the engine and voice that spoke it, not the active profile.
 /// Emits hud:playback_start event - frontend will stream amplitude data.
-pub fn show_hud_playback(app: &AppHandle, text: Option<String>, audio_duration_ms: Option<u64>) {
-    let (config, provider, voice) = {
+pub fn show_hud_playback(
+    app: &AppHandle,
+    text: Option<String>,
+    audio_duration_ms: Option<u64>,
+    engine: &str,
+    voice: &str,
+) {
+    let (config, provider, label) = {
         let state = app.state::<std::sync::Mutex<AppConfig>>();
         let cfg = state.lock().unwrap();
-        let (p, v) = get_provider_voice(&resolve_effective(&cfg.tts));
+        let (p, v) = saved_provider_voice(engine, voice, &cfg.tts.profiles);
         (cfg.hud.clone(), p, v)
     };
 
@@ -393,7 +435,7 @@ pub fn show_hud_playback(app: &AppHandle, text: Option<String>, audio_duration_m
             HudPlaybackStartPayload {
                 text,
                 provider,
-                voice,
+                voice: label,
                 audio_duration_ms,
             },
         ) {
@@ -547,4 +589,47 @@ fn compute_hud_position(
     };
 
     Some(PhysicalPosition::new(x, y))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn profile(engine: TtsEngine, voice: &str, label: Option<&str>) -> VoiceProfile {
+        VoiceProfile {
+            engine,
+            voice: voice.into(),
+            voice_label: label.map(String::from),
+            ..VoiceProfile::default()
+        }
+    }
+
+    #[test]
+    fn saved_reading_uses_label_of_profile_with_its_engine_and_voice() {
+        let profiles = [profile(TtsEngine::Piper, "en_US-joe-medium", Some("Joe"))];
+        let (provider, label) = saved_provider_voice("piper", "en_US-joe-medium", &profiles);
+        assert_eq!(provider.as_deref(), Some("Piper"));
+        assert_eq!(label.as_deref(), Some("Joe"));
+    }
+
+    #[test]
+    fn saved_reading_ignores_profile_of_other_engine_with_same_voice() {
+        let profiles = [profile(TtsEngine::ElevenLabs, "joe", Some("Rachel"))];
+        let (_, label) = saved_provider_voice("piper", "joe", &profiles);
+        assert_eq!(label.as_deref(), Some("Joe"));
+    }
+
+    #[test]
+    fn saved_reading_without_profile_title_cases_voice_id() {
+        let (provider, label) = saved_provider_voice("edge", "en-US-AriaNeural", &[]);
+        assert_eq!(provider.as_deref(), Some("Edge-TTS"));
+        assert_eq!(label.as_deref(), Some("En-US-AriaNeural"));
+    }
+
+    #[test]
+    fn saved_reading_unknown_engine_omits_provider() {
+        let (provider, label) = saved_provider_voice("removed-engine", "joe", &[]);
+        assert_eq!(provider, None);
+        assert_eq!(label.as_deref(), Some("Joe"));
+    }
 }

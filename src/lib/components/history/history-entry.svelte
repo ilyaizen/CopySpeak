@@ -75,7 +75,9 @@
       const inv = await getInvoke();
       await inv?.("show_hud_for_playback", {
         text: entry.text,
-        audioDurationMs: entry.duration_ms ?? null
+        audioDurationMs: entry.duration_ms ?? null,
+        ttsEngine: entry.tts_engine,
+        voice: entry.voice
       });
       await inv?.("play_history_entry", { entryId: entry.id });
     } catch (e) {

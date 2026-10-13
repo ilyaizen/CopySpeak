@@ -257,12 +257,14 @@ pub fn show_hud_for_playback(
     app: tauri::AppHandle,
     text: Option<String>,
     audio_duration_ms: Option<u64>,
+    tts_engine: String,
+    voice: String,
 ) -> Result<(), String> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] show_hud_for_playback called");
     }
 
-    hud::show_hud_playback(&app, text, audio_duration_ms);
+    hud::show_hud_playback(&app, text, audio_duration_ms, &tts_engine, &voice);
     Ok(())
 }
 

@@ -723,7 +723,14 @@ pub async fn play_history_batch(
     let mut missing_fragments: Vec<(usize, String)> = Vec::new();
 
     // Show HUD for playback with total duration
-    crate::hud::show_hud_playback(&app, Some(combined_text), Some(total_duration_ms));
+    // One reading shares one engine and voice across its fragments.
+    crate::hud::show_hud_playback(
+        &app,
+        Some(combined_text),
+        Some(total_duration_ms),
+        &entries[0].tts_engine,
+        &entries[0].voice,
+    );
 
     // Emit pagination started event
     let _ = app.emit(
