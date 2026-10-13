@@ -9,7 +9,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Give `TimeStretcher`'s first output after every reset a ~5 ms fade-in and hold the last ~5 ms of input out of the WSOLA flush; cold-start or hard speech-to-silence steps click at fragment seams.
 - Anchor PCM skip targets to `_stallPosition` in `pcm-stream.ts`: `_mediaNow()` collapses to 0 whenever no scheduled source covers the playhead (synthesis stalls, final drain, the START_DELAY window after a rebuild), so `mediaNow - n` alone makes ±5s jump to the timeline start.
 - Re-sync `playbackStore` from its own `config-changed` listener; pages that only `set_config` never update it.
-- Gate streaming playback off when the active profile has an effect: warm daemons stream via `CliTtsBackend::runtime_ready`, and the PCM scheduler has no effect chain — only the `audio-fragment-ready` path applies effects.
+- Gate streaming playback off when the active profile has an effect: warm daemons stream (checked by `CliTtsBackend::runtime_ready`), and the PCM scheduler has no effect chain — only the `audio-fragment-ready` path applies effects.
 - Emit the streaming `is_final` marker on the last fragment only; an intermediate one arms the player's completion timer mid-passage.
 - Allow `createWaveShaper` only as a directly-called member; reject local declarations and every other symbol containing "shape".
 - Drive HUD captions from the audible fragment's audio clock; synthesis events may describe a later fragment, and incoming PCM must not resume a user-paused stream.

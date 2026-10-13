@@ -436,7 +436,7 @@ impl CliTtsBackend {
 /// Static streaming claim for a daemon-eligible engine. kokoro and pocket yield
 /// the whole utterance as one frame, so they never stream. Warm-up is a
 /// separate runtime check (`TtsBackend::runtime_ready`).
-fn daemon_streams(engine: &str) -> bool {
+fn claims_streaming(engine: &str) -> bool {
     !matches!(engine, "kokoro" | "pocket")
 }
 
@@ -453,7 +453,7 @@ impl TtsBackend for CliTtsBackend {
     }
 
     fn supports_streaming(&self) -> bool {
-        self.daemon_engine_kind().is_some_and(daemon_streams)
+        self.daemon_engine_kind().is_some_and(claims_streaming)
     }
 
     fn runtime_ready(&self) -> bool {
@@ -1026,8 +1026,8 @@ mod tests {
     fn single_chunk_engines_never_advertise_streaming() {
         // kokoro and pocket hand back the whole utterance as one frame, so a
         // warm daemon has nothing to stream.
-        assert!(!daemon_streams("kokoro"));
-        assert!(!daemon_streams("pocket"));
+        assert!(!claims_streaming("kokoro"));
+        assert!(!claims_streaming("pocket"));
     }
 
     #[test]
@@ -1035,7 +1035,19 @@ mod tests {
         // Whether the daemon is warm is a runtime question, answered by
         // `runtime_ready` and gated at the call sites.
         for engine in ["piper", "kitten", "qwen"] {
-            assert!(daemon_streams(engine), "{engine} should claim streaming");
+            assert!(claims_streaming(engine), "{engine} should claim streaming");
         }
+    }
+
+    #[test]
+    fn cold_daemon_claims_streaming_but_is_not_ready() {
+        // No daemon has been started in this process, so the static claim holds
+        // while runtime_ready reports cold. The call sites require both.
+        let piper = CliTtsBackend::new(
+            "uv".into(),
+            vec!["{engine_dir}/piper/scripts/copyspeak-piper.py".into()],
+        );
+        assert!(piper.supports_streaming());
+        assert!(!piper.runtime_ready());
     }
 }

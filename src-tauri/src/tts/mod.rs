@@ -22,7 +22,7 @@ use thiserror::Error;
 
 /// Run an async block to completion from synchronous code: on the current
 /// Tokio runtime when the caller is inside one, otherwise on a fresh runtime.
-pub(crate) fn block_on_async<F, T>(f: F) -> T
+fn block_on_async<F, T>(f: F) -> T
 where
     F: std::future::Future<Output = T>,
 {
@@ -95,9 +95,10 @@ pub trait TtsBackend: Send + Sync {
     #[allow(dead_code)]
     fn prewarm(&self, _voice: &str) {}
 
-    /// Whether this backend can produce audio incrementally via
-    /// [`TtsBackend::synthesize_streaming`]. Defaults to false for batch-only
-    /// backends; the command layer uses this to pick the streaming path.
+    /// Static claim: whether this backend (or model) can produce audio
+    /// incrementally via [`TtsBackend::synthesize_streaming`]. Defaults to false
+    /// for batch-only backends. The command layer picks the streaming path only
+    /// when this and [`TtsBackend::runtime_ready`] both hold.
     fn supports_streaming(&self) -> bool {
         false
     }
