@@ -9,7 +9,7 @@ Each `TtsBackend` reports streaming through one `supports_streaming()` bool. The
 ## Decisions
 
 - D1. Split the capability into a static claim (per backend or per model) and a runtime gate (daemon readiness). Call sites gate on static AND runtime_ready. Later slice.
-- D2. OpenAI streaming is per model. `gpt-4o-mini-tts` and ids starting with it return `true`. `tts-1`, `tts-1-hd` and unknown ids return `false`. Approved by the user. The docs show chunked streaming only for the gpt-4o-mini-tts family.
+- D2. OpenAI streaming is per model. `gpt-4o-mini-tts` and ids starting with it return `true`. `tts-1`, `tts-1-hd` and unknown ids return `false`. Approved by the user. The docs' streaming examples use only gpt-4o-mini-tts; they do not state that tts-1 cannot stream.
 - D3. Gemini stays `true`, unproven. The live probe needs the user's own key.
 - D4. CLI engines kokoro and pocket return `false`. Their wrappers yield one whole-utterance chunk, so there is no time-to-first-audio gain. piper, kitten and qwen are unchanged and still gated on a warm daemon.
 - D5. ElevenLabs and Cartesia stay `true`, matching their vendor docs. edge and microsoft stay `false`. http stays `false`.
@@ -20,9 +20,9 @@ Each `TtsBackend` reports streaming through one `supports_streaming()` bool. The
 
 ## Consequences
 
-Users who set `tts-1` or `tts-1-hd` explicitly move to the batch path. Playback then starts after full synthesis, the same behaviour non-streaming engines already have. The config default (`tts-1`) is unchanged until the Track 2 PR.
+Every OpenAI user on the default model (`tts-1`) and every user who sets `tts-1` or `tts-1-hd` moves to the batch path. Playback then starts after full synthesis, the same behaviour non-streaming engines already have. The config default is unchanged in this slice; Track 2 changes it to `gpt-4o-mini-tts`, which restores streaming for default users.
 
 ## Open
 
 - Gemini live probe: needs the user's own key. Then either keep `streamGenerateContent` or move to the documented Interactions API.
-- tts-1 chunked-streaming confirmation: D2 relies on the docs listing only the gpt-4o-mini-tts family for streaming.
+- tts-1 chunked-streaming confirmation: D2 relies on the docs showing streaming examples only for gpt-4o-mini-tts. Whether tts-1 streams is unconfirmed.
