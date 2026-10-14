@@ -40,7 +40,7 @@
       elevenlabs: {
         api_key: "",
         voice_id: "21m00Tcm4TlvDq8ikWAM",
-        model_id: "eleven_v4",
+        model_id: "eleven_v4_turbo",
         output_format: "mp3_44100_128",
         voice_stability: 0.5,
         voice_similarity_boost: 0.75,
