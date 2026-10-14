@@ -173,8 +173,16 @@ function tone(
 }
 
 /** Frequency-shift-keyed warble, the chirpy part of a handshake. */
-function fsk(ctx: BaseAudioContext, t0: number, dur: number, f1: number, f2: number, step: number) {
-  const osc = tone(ctx, "square", f1, t0, dur, 0.1);
+function fsk(
+  ctx: BaseAudioContext,
+  t0: number,
+  dur: number,
+  f1: number,
+  f2: number,
+  step: number,
+  peak = 0.1
+) {
+  const osc = tone(ctx, "square", f1, t0, dur, peak);
   for (let t = t0, i = 0; t < t0 + dur; t += step, i++) {
     osc.frequency.setValueAtTime(i % 2 ? f2 : f1, t);
   }
@@ -227,7 +235,7 @@ function click(ctx: BaseAudioContext, t0: number) {
 
 function renderIntro(ctx: BaseAudioContext, noise: AudioBuffer) {
   // Hard-start high synth beep, louder than the answer tone.
-  tone(ctx, "square", 4500, 0, 0.09, 0.35);
+  tone(ctx, "square", 4500, 0, 0.045, 0.12);
 
   // Answer tone with 15 Hz amplitude wobble.
   const am = ctx.createGain();
@@ -259,7 +267,7 @@ function renderIntro(ctx: BaseAudioContext, noise: AudioBuffer) {
 }
 
 function renderOutro(ctx: BaseAudioContext, noise: AudioBuffer) {
-  fsk(ctx, 0, 0.14, 1180, 1650, 0.008);
+  fsk(ctx, 0, 0.07, 1180, 1650, 0.008, 0.05);
   hiss(ctx, noise, 0.1, 0.4, 0.22, 2200, 53);
   click(ctx, 0.3);
   click(ctx, 0.52);
