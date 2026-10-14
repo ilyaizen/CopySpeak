@@ -144,11 +144,17 @@ export function crushTail(
   return out;
 }
 
-function envelope(ctx: BaseAudioContext, t0: number, dur: number, peak: number): GainNode {
+function envelope(
+  ctx: BaseAudioContext,
+  t0: number,
+  dur: number,
+  peak: number,
+  fade = 0.004
+): GainNode {
   const g = ctx.createGain();
   g.gain.setValueAtTime(0, t0);
-  g.gain.linearRampToValueAtTime(peak, t0 + 0.004);
-  g.gain.setValueAtTime(peak, t0 + dur - 0.004);
+  g.gain.linearRampToValueAtTime(peak, t0 + fade);
+  g.gain.setValueAtTime(peak, t0 + dur - fade);
   g.gain.linearRampToValueAtTime(0, t0 + dur);
   g.connect(ctx.destination);
   return g;
@@ -235,7 +241,8 @@ function click(ctx: BaseAudioContext, t0: number) {
 
 function renderIntro(ctx: BaseAudioContext, noise: AudioBuffer) {
   // Hard-start high synth beep, louder than the answer tone.
-  tone(ctx, "square", 4500, 0, 0.015, 0.12);
+  // 6 ms beep with 1 ms fades so it still reaches full level.
+  tone(ctx, "square", 4500, 0, 0.006, 0.12, envelope(ctx, 0, 0.006, 0.12, 0.001));
 
   // Answer tone with 15 Hz amplitude wobble.
   const am = ctx.createGain();
