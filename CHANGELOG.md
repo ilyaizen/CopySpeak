@@ -23,11 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **More of the interface is translated** — about 45 more strings now go through the translation catalog. Arabic, German, French, Hindi, Russian and Chinese have drafts for every key, and Spanish and Hebrew are extended to match. The drafts are unreviewed; reviewers check them in Crowdin.
 
+- **ElevenLabs defaults to `eleven_v4_turbo`** — fresh installs and the bundled ElevenLabs profile use the new model. A config that already saves `eleven_v4` keeps it; change the model in the ElevenLabs engine settings.
+
 ### Fixed
 
 - **Failed streamed readings finish cleanly** — a reading whose stream errored mid-way could leave playback stalled, with other audio ducked until the next reading. The failed reading now stops and finishes, and ducking restores (ilyaizen/CopySpeak#70).
 
 - **Aborts no longer reach the next reading** — an abort applies only to readings already running. A late error or leftover audio from an aborted stream can't affect a reading that started after it.
+
+- **ElevenLabs `eleven_v4_turbo` keeps its captions** — the model sends audio-only records with no characters ahead of its text, and those cleared captions for the whole reading, so the live highlight never started. Those records now stay audio-only.
 
 ## [0.2.11] - 2026-10-12
 
