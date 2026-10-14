@@ -267,7 +267,8 @@
       "options": {
         "none": "Keiner",
         "walkieTalkie": "Walkie-Talkie",
-        "gameBoy": "8-Bit-Game-Boy"
+        "gameBoy": "8-Bit-Game-Boy",
+        "cyberpunk": "Cyberpunk"
       }
     },
     "about": {

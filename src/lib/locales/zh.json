@@ -267,7 +267,8 @@
       "options": {
         "none": "无",
         "walkieTalkie": "对讲机",
-        "gameBoy": "8 位 Game Boy"
+        "gameBoy": "8 位 Game Boy",
+        "cyberpunk": "赛博朋克"
       }
     },
     "about": {

@@ -65,7 +65,7 @@ bun run tauri dev
 - **Live captions** — Word-level highlighting synced to the audio clock on the Play page, HUD, and browser companion, for engines that emit timing metadata
 - **History** — Persistent TTS generation history with playback and batch management
 - **Voice profiles** — Create, edit, and switch between named voice profiles with engine, voice, speed, pitch, and effects settings
-- **Audio effects** — Walkie-talkie, 8-bit Game Boy, and more via OfflineAudioContext post-processing
+- **Audio effects** — Walkie-talkie, 8-bit Game Boy, Cyberpunk, and more via OfflineAudioContext post-processing
 - **LLM post-processing** — Optional Groq/AI rewrite pass that turns copied text into concise, listener-friendly speech
 - **Engines page** — Dedicated per-engine setup with API key entry, local-engine installers, and test buttons
 

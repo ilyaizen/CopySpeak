@@ -20,7 +20,8 @@
   const effectOptions = [
     { value: "none", label: $_("settings.effects.options.none") },
     { value: "walkie_talkie", label: $_("settings.effects.options.walkieTalkie") },
-    { value: "game_boy", label: $_("settings.effects.options.gameBoy") }
+    { value: "game_boy", label: $_("settings.effects.options.gameBoy") },
+    { value: "cyberpunk", label: $_("settings.effects.options.cyberpunk") }
   ];
 
   onMount(async () => {

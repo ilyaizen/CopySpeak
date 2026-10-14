@@ -36,7 +36,7 @@ async function loadSamples(ctx: AudioContext): Promise<WalkieSamples> {
   return cachedSamples;
 }
 
-function buildSoftClipCurve(amount = 0.18): Float32Array<ArrayBuffer> {
+export function buildSoftClipCurve(amount = 0.18): Float32Array<ArrayBuffer> {
   const n = 4096;
   const curve: Float32Array<ArrayBuffer> = new Float32Array(n);
   const k = amount * 8;

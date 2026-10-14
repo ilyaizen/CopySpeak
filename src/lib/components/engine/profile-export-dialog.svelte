@@ -31,7 +31,7 @@
     "google",
     "microsoft"
   ];
-  const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy"];
+  const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy", "cyberpunk"];
 
   let exportJson = $state("");
   let importJson = $state("");
