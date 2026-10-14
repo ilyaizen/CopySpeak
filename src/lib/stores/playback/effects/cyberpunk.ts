@@ -1,14 +1,19 @@
 // Cyberpunk effect: synthesized 56k modem handshake fragments at both ends,
-// glitch stutters on the first word and a few random word onsets, and a
+// glitch stutters on the first word and bursty word onsets, and a
 // bright, lightly ring-modulated voice. Stutters insert time.
 
 import type { Effect } from "./types";
 import { buildSoftClipCurve } from "./walkie-talkie";
 
 const INTRO_DUR = 0.9;
-const OUTRO_DUR = 0.35;
-const STUTTER_CHANCE = 1 / 6;
-const STUTTER_MIN_GAP_SEC = 1.5;
+const OUTRO_DUR = 0.6;
+const SEGMENT_MIN_SEC = 2;
+const SEGMENT_MAX_SEC = 4;
+const BURST_SHARE = 1 / 3;
+const BURST_CHANCE = 1 / 2;
+const BURST_MIN_GAP_SEC = 0.4;
+const SPARSE_CHANCE = 1 / 20;
+const SPARSE_MIN_GAP_SEC = 1.5;
 
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -56,23 +61,43 @@ interface Stutter {
   repeats: number;
 }
 
-/** Repeats the first 40-70 ms of chosen word onsets 2-4 extra times. */
+/**
+ * Picks glitch points. The utterance splits into 2-4 s segments, each either
+ * sparse (rare glitches, long gaps) or bursty (frequent glitches, short gaps).
+ * The first onset always glitches and gets a longer, busier stutter.
+ */
+export function planStutters(data: Float32Array, sampleRate: number, seed: number): Stutter[] {
+  const rand = mulberry32(seed);
+  const stutters: Stutter[] = [];
+  let segEnd = 0;
+  let burst = false;
+  for (const at of findOnsets(data, sampleRate)) {
+    if (at >= segEnd) {
+      const segSec = SEGMENT_MIN_SEC + rand() * (SEGMENT_MAX_SEC - SEGMENT_MIN_SEC);
+      segEnd = at + Math.round(segSec * sampleRate);
+      burst = rand() < BURST_SHARE;
+    }
+    const last = stutters[stutters.length - 1];
+    const minGap = (burst ? BURST_MIN_GAP_SEC : SPARSE_MIN_GAP_SEC) * sampleRate;
+    const chance = burst ? BURST_CHANCE : SPARSE_CHANCE;
+    if (last && (at - last.at < minGap || rand() >= chance)) continue;
+    const opener = !last;
+    const grainSec = opener ? 0.06 + rand() * 0.04 : 0.04 + rand() * 0.03;
+    const grain = Math.min(Math.round(grainSec * sampleRate), data.length - at);
+    const repeats = opener ? 4 + Math.floor(rand() * 2) : 2 + Math.floor(rand() * 3);
+    if (grain > 0) stutters.push({ at, grain, repeats });
+  }
+  return stutters;
+}
+
+/** Repeats the start of each planned word onset 2-5 extra times. */
 export function insertStutters(
   channels: Float32Array[],
   sampleRate: number,
   seed: number
 ): Float32Array<ArrayBuffer>[] {
   const len = channels[0].length;
-  const rand = mulberry32(seed);
-  const minGap = STUTTER_MIN_GAP_SEC * sampleRate;
-  const stutters: Stutter[] = [];
-  for (const at of findOnsets(channels[0], sampleRate)) {
-    const last = stutters[stutters.length - 1];
-    if (last && (at - last.at < minGap || rand() >= STUTTER_CHANCE)) continue;
-    const grain = Math.min(Math.round((0.04 + rand() * 0.03) * sampleRate), len - at);
-    const repeats = 2 + Math.floor(rand() * 3);
-    if (grain > 0) stutters.push({ at, grain, repeats });
-  }
+  const stutters = planStutters(channels[0], sampleRate, seed);
 
   const extra = stutters.reduce((n, s) => n + s.grain * s.repeats, 0);
   const fadeMax = Math.round(sampleRate * 0.002);
@@ -98,6 +123,24 @@ export function insertStutters(
     out.set(data.subarray(read), write);
     return out;
   });
+}
+
+/** Bitcrush (amplitude quantize) and hard on/off chop gated at `chopHz`. */
+export function crushTail(
+  data: Float32Array,
+  sampleRate: number,
+  step: number,
+  chopHz: number,
+  gain: number
+): Float32Array<ArrayBuffer> {
+  const out = new Float32Array(data.length);
+  const half = sampleRate / chopHz / 2;
+  for (let i = 0; i < data.length; i++) {
+    const on = Math.floor(i / half) % 2 === 0 ? 1 : 0;
+    const q = Math.round((data[i] * gain) / step) * step;
+    out[i] = Math.max(-1, Math.min(1, q)) * on;
+  }
+  return out;
 }
 
 function envelope(ctx: BaseAudioContext, t0: number, dur: number, peak: number): GainNode {
@@ -209,10 +252,27 @@ function renderIntro(ctx: BaseAudioContext, noise: AudioBuffer) {
   click(ctx, 0.86);
 }
 
-function renderOutro(ctx: BaseAudioContext, noise: AudioBuffer, t0: number) {
-  fsk(ctx, t0, 0.1, 1180, 1650, 0.008);
-  hiss(ctx, noise, t0 + 0.08, 0.2, 0.16, 2200, 53);
-  click(ctx, t0 + 0.3);
+function renderOutro(ctx: BaseAudioContext, noise: AudioBuffer) {
+  fsk(ctx, 0, 0.14, 1180, 1650, 0.008);
+  hiss(ctx, noise, 0.1, 0.4, 0.22, 2200, 53);
+  click(ctx, 0.3);
+  click(ctx, 0.52);
+}
+
+/** Renders a mono tail offline so it can be post-processed sample by sample. */
+async function renderTail(
+  sampleRate: number,
+  dur: number,
+  render: (ctx: BaseAudioContext, noise: AudioBuffer) => void
+): Promise<Float32Array<ArrayBuffer>> {
+  const ctx = new OfflineAudioContext(1, Math.ceil(dur * sampleRate), sampleRate);
+  const noise = ctx.createBuffer(1, sampleRate, sampleRate);
+  const rand = mulberry32(1);
+  const noiseData = noise.getChannelData(0);
+  for (let i = 0; i < noiseData.length; i++) noiseData[i] = rand() * 2 - 1;
+  render(ctx, noise);
+  const rendered = await ctx.startRendering();
+  return new Float32Array(rendered.getChannelData(0));
 }
 
 export const cyberpunk: Effect = {
@@ -228,15 +288,34 @@ export const cyberpunk: Effect = {
     const voice = ctx.createBuffer(channels, stuttered[0].length, sampleRate);
     stuttered.forEach((data, c) => voice.copyToChannel(data, c));
 
+    const intro = crushTail(
+      await renderTail(sampleRate, INTRO_DUR, renderIntro),
+      sampleRate,
+      1 / 16,
+      30,
+      1.8
+    );
+    const outro = crushTail(
+      await renderTail(sampleRate, OUTRO_DUR, renderOutro),
+      sampleRate,
+      1 / 12,
+      45,
+      1.6
+    );
+
     const totalLen = Math.ceil((INTRO_DUR + voice.duration + OUTRO_DUR) * sampleRate);
     const offline = new OfflineAudioContext(channels, totalLen, sampleRate);
 
-    const noise = offline.createBuffer(1, sampleRate, sampleRate);
-    const rand = mulberry32(1);
-    const noiseData = noise.getChannelData(0);
-    for (let i = 0; i < noiseData.length; i++) noiseData[i] = rand() * 2 - 1;
-
-    renderIntro(offline, noise);
+    const play = (data: Float32Array<ArrayBuffer>, at: number) => {
+      const buf = offline.createBuffer(channels, data.length, sampleRate);
+      for (let c = 0; c < channels; c++) buf.copyToChannel(data, c);
+      const src = offline.createBufferSource();
+      src.buffer = buf;
+      src.connect(offline.destination);
+      src.start(at);
+    };
+    play(intro, 0);
+    play(outro, INTRO_DUR + voice.duration);
 
     const voiceSrc = offline.createBufferSource();
     voiceSrc.buffer = voice;
@@ -277,8 +356,6 @@ export const cyberpunk: Effect = {
       .connect(ring)
       .connect(offline.destination);
     voiceSrc.start(INTRO_DUR);
-
-    renderOutro(offline, noise, INTRO_DUR + voice.duration);
 
     return offline.startRendering();
   }
