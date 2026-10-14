@@ -258,7 +258,7 @@ function renderIntro(ctx: BaseAudioContext, noise: AudioBuffer) {
     [1650, 1200],
     [2400, 1800]
   ]) {
-    tone(ctx, "sine", from, 0.36, 0.12, 0.2).frequency.exponentialRampToValueAtTime(to, 0.48);
+    tone(ctx, "sine", from, 0.36, 0.12, 0.1).frequency.exponentialRampToValueAtTime(to, 0.48);
   }
 
   hiss(ctx, noise, 0.48, 0.36, 0.3, 1800, 37);
