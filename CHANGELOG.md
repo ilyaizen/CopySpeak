@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Cyberpunk effect** — a short synthesized 56k modem handshake opens and closes each reading, the first word and a few random later words glitch-stutter, and the voice gets a bright, lightly ring-modulated tone. Stutters add a little length, so karaoke captions drift slightly behind, as with the walkie-talkie lead-in.
+
 ## [0.2.12] - 2026-10-13
 
 ### Added

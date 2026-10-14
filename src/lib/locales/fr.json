@@ -267,7 +267,8 @@
       "options": {
         "none": "Aucun",
         "walkieTalkie": "Talkie-walkie",
-        "gameBoy": "Game Boy 8 bits"
+        "gameBoy": "Game Boy 8 bits",
+        "cyberpunk": "Cyberpunk"
       }
     },
     "about": {

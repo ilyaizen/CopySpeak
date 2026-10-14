@@ -267,7 +267,8 @@
       "options": {
         "none": "Нет",
         "walkieTalkie": "Рация",
-        "gameBoy": "8-битный Game Boy"
+        "gameBoy": "8-битный Game Boy",
+        "cyberpunk": "Киберпанк"
       }
     },
     "about": {

@@ -300,6 +300,7 @@ fn parse_effect(effect: &str) -> Result<EffectId, String> {
         "none" | "" => Ok(EffectId::None),
         "walkie_talkie" => Ok(EffectId::WalkieTalkie),
         "game_boy" => Ok(EffectId::GameBoy),
+        "cyberpunk" => Ok(EffectId::Cyberpunk),
         _ => Err(format!("unsupported effect: {}", effect)),
     }
 }

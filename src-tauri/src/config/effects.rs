@@ -8,6 +8,7 @@ pub enum EffectId {
     None,
     WalkieTalkie,
     GameBoy,
+    Cyberpunk,
 }
 
 impl Default for EffectId {
