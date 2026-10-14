@@ -1,6 +1,7 @@
-// Cyberpunk effect: synthesized 56k modem handshake fragments at both ends,
-// glitch stutters on the first word and bursty word onsets, and a
-// bright, lightly ring-modulated voice. Stutters insert time.
+// Cyberpunk effect: a hard-start synth beep and synthesized 56k modem
+// handshake fragments at both ends, glitch stutters on the first word and
+// bursty word onsets, a driven and lightly ring-modulated voice, and a low
+// static bed under everything. Stutters insert time.
 
 import type { Effect } from "./types";
 import { buildSoftClipCurve } from "./walkie-talkie";
@@ -173,7 +174,7 @@ function tone(
 
 /** Frequency-shift-keyed warble, the chirpy part of a handshake. */
 function fsk(ctx: BaseAudioContext, t0: number, dur: number, f1: number, f2: number, step: number) {
-  const osc = tone(ctx, "square", f1, t0, dur, 0.05);
+  const osc = tone(ctx, "square", f1, t0, dur, 0.1);
   for (let t = t0, i = 0; t < t0 + dur; t += step, i++) {
     osc.frequency.setValueAtTime(i % 2 ? f2 : f1, t);
   }
@@ -225,6 +226,9 @@ function click(ctx: BaseAudioContext, t0: number) {
 }
 
 function renderIntro(ctx: BaseAudioContext, noise: AudioBuffer) {
+  // Hard-start high synth beep, louder than the answer tone.
+  tone(ctx, "square", 4500, 0, 0.09, 0.35);
+
   // Answer tone with 15 Hz amplitude wobble.
   const am = ctx.createGain();
   am.gain.value = 0.6;
@@ -238,17 +242,19 @@ function renderIntro(ctx: BaseAudioContext, noise: AudioBuffer) {
   click(ctx, 0.12);
 
   fsk(ctx, 0.18, 0.18, 980, 1180, 0.012);
+  // Random-sounding noise under the FSK warble.
+  hiss(ctx, noise, 0.18, 0.18, 0.3, 2000, 0);
 
   // Falling dual-tone "bong".
   for (const [from, to] of [
     [1650, 1200],
     [2400, 1800]
   ]) {
-    tone(ctx, "sine", from, 0.36, 0.12, 0.1).frequency.exponentialRampToValueAtTime(to, 0.48);
+    tone(ctx, "sine", from, 0.36, 0.12, 0.2).frequency.exponentialRampToValueAtTime(to, 0.48);
   }
 
-  hiss(ctx, noise, 0.48, 0.36, 0.2, 1800, 37);
-  hiss(ctx, noise, 0.5, 0.32, 0.08, 3400, 0);
+  hiss(ctx, noise, 0.48, 0.36, 0.4, 1800, 37);
+  hiss(ctx, noise, 0.5, 0.32, 0.16, 3400, 0);
   click(ctx, 0.86);
 }
 
@@ -293,25 +299,31 @@ export const cyberpunk: Effect = {
       sampleRate,
       1 / 16,
       30,
-      1.8
+      3.6
     );
     const outro = crushTail(
       await renderTail(sampleRate, OUTRO_DUR, renderOutro),
       sampleRate,
       1 / 12,
       45,
-      1.6
+      3.2
     );
 
     const totalLen = Math.ceil((INTRO_DUR + voice.duration + OUTRO_DUR) * sampleRate);
     const offline = new OfflineAudioContext(channels, totalLen, sampleRate);
+
+    // Hard clamp on the final mix. An identity curve over [-1, 1] pins any
+    // input outside that range to ±1, so summed layers can't exceed full scale.
+    const master = offline.createWaveShaper();
+    master.curve = new Float32Array([-1, 1]);
+    master.connect(offline.destination);
 
     const play = (data: Float32Array<ArrayBuffer>, at: number) => {
       const buf = offline.createBuffer(channels, data.length, sampleRate);
       for (let c = 0; c < channels; c++) buf.copyToChannel(data, c);
       const src = offline.createBufferSource();
       src.buffer = buf;
-      src.connect(offline.destination);
+      src.connect(master);
       src.start(at);
     };
     play(intro, 0);
@@ -329,6 +341,10 @@ export const cyberpunk: Effect = {
     presence.frequency.value = 3000;
     presence.Q.value = 1.1;
     presence.gain.value = 5;
+
+    // +6 dB pre-clip drive; the soft clip curve keeps peaks within ±1.
+    const drive = offline.createGain();
+    drive.gain.value = 2;
 
     const softClip = offline.createWaveShaper();
     softClip.curve = buildSoftClipCurve(0.3);
@@ -351,11 +367,29 @@ export const cyberpunk: Effect = {
     voiceSrc
       .connect(highpass)
       .connect(presence)
+      .connect(drive)
       .connect(softClip)
       .connect(comp)
       .connect(ring)
-      .connect(offline.destination);
+      .connect(master);
     voiceSrc.start(INTRO_DUR);
+
+    // Low static bed under the whole output, about -36 dBFS (full-scale noise
+    // before the band-pass). Seeded so renders repeat.
+    const staticBuf = offline.createBuffer(1, totalLen, sampleRate);
+    const staticData = staticBuf.getChannelData(0);
+    const staticRand = mulberry32(2);
+    for (let i = 0; i < staticData.length; i++) staticData[i] = staticRand() * 2 - 1;
+    const staticSrc = offline.createBufferSource();
+    staticSrc.buffer = staticBuf;
+    const staticBp = offline.createBiquadFilter();
+    staticBp.type = "bandpass";
+    staticBp.frequency.value = 2500;
+    staticBp.Q.value = 0.7;
+    const staticGain = offline.createGain();
+    staticGain.gain.value = 10 ** (-36 / 20);
+    staticSrc.connect(staticBp).connect(staticGain).connect(master);
+    staticSrc.start(0);
 
     return offline.startRendering();
   }
