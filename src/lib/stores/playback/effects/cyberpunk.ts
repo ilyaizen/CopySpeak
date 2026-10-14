@@ -235,7 +235,7 @@ function click(ctx: BaseAudioContext, t0: number) {
 
 function renderIntro(ctx: BaseAudioContext, noise: AudioBuffer) {
   // Hard-start high synth beep, louder than the answer tone.
-  tone(ctx, "square", 4500, 0, 0.045, 0.12);
+  tone(ctx, "square", 4500, 0, 0.015, 0.12);
 
   // Answer tone with 15 Hz amplitude wobble.
   const am = ctx.createGain();
@@ -251,7 +251,7 @@ function renderIntro(ctx: BaseAudioContext, noise: AudioBuffer) {
 
   fsk(ctx, 0.18, 0.18, 980, 1180, 0.012);
   // Random-sounding noise under the FSK warble.
-  hiss(ctx, noise, 0.18, 0.18, 0.3, 2000, 0);
+  hiss(ctx, noise, 0.18, 0.18, 0.15, 2000, 0);
 
   // Falling dual-tone "bong".
   for (const [from, to] of [
@@ -261,7 +261,7 @@ function renderIntro(ctx: BaseAudioContext, noise: AudioBuffer) {
     tone(ctx, "sine", from, 0.36, 0.12, 0.2).frequency.exponentialRampToValueAtTime(to, 0.48);
   }
 
-  hiss(ctx, noise, 0.48, 0.36, 0.4, 1800, 37);
+  hiss(ctx, noise, 0.48, 0.36, 0.3, 1800, 37);
   hiss(ctx, noise, 0.5, 0.32, 0.16, 3400, 0);
   click(ctx, 0.86);
 }
