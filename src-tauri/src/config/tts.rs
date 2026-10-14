@@ -125,7 +125,7 @@ impl Default for ElevenLabsConfig {
             api_key: String::new(),
             voice_id: "21m00Tcm4TlvDq8ikWAM".into(), // Rachel
             voice_name: Some("Rachel".into()),
-            model_id: "eleven_v4".into(),
+            model_id: "eleven_v4_turbo".into(),
             output_format: crate::tts::elevenlabs::ElevenLabsOutputFormat::default(),
             voice_stability: default_elevenlabs_stability(),
             voice_similarity_boost: default_elevenlabs_similarity(),
@@ -946,7 +946,7 @@ fn default_elevenlabs_profile() -> VoiceProfile {
         effects: ProfileEffects::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::ElevenLabs(ElevenLabsEngineOptions {
-            model_id: Some("eleven_v4".into()),
+            model_id: Some("eleven_v4_turbo".into()),
             output_format: Some("mp3_44100_128".into()),
             similarity_boost: Some(0.75),
             stability: Some(0.5),

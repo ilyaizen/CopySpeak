@@ -74,7 +74,11 @@ impl TimestampDecoder {
                         let result = serde_json::from_value::<CharacterAlignment>(value)
                             .map_err(|e| format!("Invalid ElevenLabs alignment schema: {e}"))
                             .and_then(|alignment| {
+                                // eleven_v4_turbo leads with audio-only records whose
+                                // characters array is empty. That adds no words, so it
+                                // is not blank alignment and must not clear captions.
                                 if !pcm.is_empty()
+                                    && !alignment.characters.is_empty()
                                     && alignment.characters.iter().all(String::is_empty)
                                 {
                                     return Err("ElevenLabs audio has empty alignment".into());
@@ -251,7 +255,6 @@ mod tests {
             serde_json::json!({"characters": ["B"], "character_start_times_seconds": [0.3], "character_end_times_seconds": [0.2]}),
             serde_json::json!({"characters": ["B"], "character_start_times_seconds": [-1.0], "character_end_times_seconds": [0.3]}),
             serde_json::json!({"characters": ["B"], "character_start_times_seconds": [0.0], "character_end_times_seconds": [0.1]}),
-            serde_json::json!({"characters": [], "character_start_times_seconds": [], "character_end_times_seconds": []}),
         ];
         for alignment in bad_alignments {
             let mut decoder = TimestampDecoder::new();
@@ -426,5 +429,20 @@ mod tests {
             ]
         );
         assert_eq!(decoder.captions.text, "Hello");
+    }
+
+    #[test]
+    fn empty_alignment_records_add_no_text_and_keep_captions() {
+        // eleven_v4_turbo sends audio with an empty characters array both
+        // before its first text and between text records.
+        let mut decoder = TimestampDecoder::new();
+        let empty = r#"{"audio_base64":"AQI=","normalized_alignment":{"characters":[],"character_start_times_seconds":[],"character_end_times_seconds":[]}}"#
+            .to_string()
+            + "\n";
+        let wire = empty.clone() + &timed_record("Hi", 0.1) + &empty + &timed_record("!", 1.0);
+        let items = decoder.push(wire.as_bytes(), true).unwrap();
+        assert!(!items.contains(&ChunkItem::ClearCaptions));
+        assert_eq!(decoder.captions.text, "Hi!");
+        assert_eq!(decoder.captions.words.len(), 2);
     }
 }

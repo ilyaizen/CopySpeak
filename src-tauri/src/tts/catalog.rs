@@ -490,7 +490,7 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                     "model_id",
                     "Model",
                     "ElevenLabs model id.",
-                    serde_json::json!("eleven_v4"),
+                    serde_json::json!("eleven_v4_turbo"),
                     vec![
                         "eleven_v4",
                         "eleven_v4_turbo",
@@ -1236,7 +1236,7 @@ mod tests {
             (
                 TtsEngine::ElevenLabs,
                 "model_id",
-                "eleven_v4",
+                "eleven_v4_turbo",
                 &[
                     "eleven_v4",
                     "eleven_v4_turbo",
