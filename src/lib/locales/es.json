@@ -792,6 +792,8 @@
     "startFrom": "Empezar desde",
     "voiceTooltip": "Voces conocidas del catálogo del motor o de la API del proveedor.",
     "providerDefault": "predeterminado del proveedor",
+    "autoSwitchLanguage": "Cambiar perfil según el idioma",
+    "autoSwitchTooltip": "Cada lectura usa el perfil cuyo idioma coincide con su texto.",
     "importPlaceholder": "Pega aquí el JSON del perfil...",
     "toast": {
       "copied": "Copiado al portapapeles",
@@ -810,7 +812,10 @@
     "autoSwitchUnclear": "El texto sin idioma claro usa el perfil activo.",
     "autoSwitchReady": "Solo se elige un perfil instalado o con credenciales.",
     "autoSwitchHint": "El idioma detectado también se envía al motor como sugerencia.",
-    "languageAutoFill": "Se toma del idioma de la voz elegida. No definido significa cualquier idioma, así que el perfil nunca se elige por idioma."
+    "language": "Idioma",
+    "languageTooltip": "El idioma que habla este perfil. El cambio automático elige perfiles según esta etiqueta.",
+    "languageAutoFill": "Se toma del idioma de la voz elegida. No definido significa cualquier idioma, así que el perfil nunca se elige por idioma.",
+    "languageNone": "No definido"
   },
   "voicePicker": {
     "select": "Seleccionar voz…",

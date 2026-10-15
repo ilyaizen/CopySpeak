@@ -792,6 +792,8 @@
     "startFrom": "Starten mit",
     "voiceTooltip": "Bekannte Stimmen aus dem Engine-Katalog oder der API des Anbieters.",
     "providerDefault": "Standard des Anbieters",
+    "autoSwitchLanguage": "Profil nach Sprache wechseln",
+    "autoSwitchTooltip": "Jede Wiedergabe nutzt das Profil, dessen Sprache zu ihrem Text passt.",
     "importPlaceholder": "Profil-JSON hier einfügen...",
     "toast": {
       "copied": "In die Zwischenablage kopiert",
@@ -810,7 +812,10 @@
     "autoSwitchUnclear": "Text ohne erkennbare Sprache verwendet das aktive Profil.",
     "autoSwitchReady": "Nur ein installiertes Profil oder eines mit Zugangsdaten wird gewählt.",
     "autoSwitchHint": "Die erkannte Sprache wird außerdem als Hinweis an die Engine gesendet.",
-    "languageAutoFill": "Wird aus der Sprache der gewählten Stimme übernommen. Nicht gesetzt bedeutet jede Sprache, daher wird das Profil nie nach Sprache gewählt."
+    "language": "Sprache",
+    "languageTooltip": "Die Sprache, die dieses Profil spricht. Der automatische Wechsel wählt Profile anhand dieser Markierung.",
+    "languageAutoFill": "Wird aus der Sprache der gewählten Stimme übernommen. Nicht gesetzt bedeutet jede Sprache, daher wird das Profil nie nach Sprache gewählt.",
+    "languageNone": "Nicht gesetzt"
   },
   "voicePicker": {
     "select": "Stimme auswählen…",
