@@ -174,6 +174,9 @@
   let unlistenTruncated: (() => void) | null = null;
   let unlistenConfig: (() => void) | null = null;
   let unlistenReading: (() => void) | null = null;
+  // HMR can destroy this instance while onMount still awaits; a listener that
+  // resolves afterwards would outlive it and fire alongside the new instance's.
+  let destroyed = false;
   // True while this page's own Play request runs, so its text stays as typed.
   let generating = false;
 
@@ -399,10 +402,12 @@
         unlistenConfig = await listen("config-changed", async () => {
           await loadConfig(true);
         });
+        if (destroyed) unlistenConfig();
         // Double-copy, hotkey and browser readings fill the field with their text.
         unlistenReading = await listen<string>("reading-started", (event) => {
           if (!generating) manualText = event.payload;
         });
+        if (destroyed) unlistenReading();
       } catch {}
     }
 
@@ -420,11 +425,13 @@
           };
           setTimeout(() => (truncationWarning = null), 5000);
         });
+        if (destroyed) unlistenTruncated();
       } catch {}
     }
   });
 
   onDestroy(() => {
+    destroyed = true;
     if (unlistenTruncated) unlistenTruncated();
     if (unlistenConfig) unlistenConfig();
     if (unlistenReading) unlistenReading();

@@ -1,18 +1,27 @@
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { playbackStore } from "./playback-store.svelte";
-import { emit, emitTo } from "@tauri-apps/api/event";
+import { emit, emitTo, listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { PcmStreamScheduler } from "./playback/pcm-stream";
 
-const { listeners } = vi.hoisted(() => ({
-  listeners: new Map<string, (event: { payload: unknown }) => Promise<void>>()
+const { listeners, live, ipc } = vi.hoisted(() => ({
+  listeners: new Map<string, (event: { payload: unknown }) => Promise<void>>(),
+  // Every registration not yet unlistened, including ones the Map overwrote.
+  live: new Set<unknown>(),
+  // Every `listen` waits on this, so a test can hold setup mid-registration.
+  ipc: { ready: Promise.resolve() }
 }));
 vi.mock("#lib/services/tauri.js", () => ({ isTauri: true }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => undefined) }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(async (name, callback) => {
+    await ipc.ready;
     listeners.set(name, callback);
-    return () => listeners.delete(name);
+    live.add(callback);
+    return () => {
+      listeners.delete(name);
+      live.delete(callback);
+    };
   }),
   emit: vi.fn(async () => {}),
   emitTo: vi.fn(async () => {})
@@ -96,6 +105,25 @@ it.each(["decode", "play"])(
     expect(playbackStore.error).toBeNull();
   }
 );
+
+it("keeps one set of listeners when HMR tears GlobalPlayer down mid-setup", async () => {
+  const perSetup = live.size;
+  playbackStore.teardownListeners();
+
+  // HMR destroys GlobalPlayer while its setup awaits `listen`, then mounts a new one.
+  const ready = Promise.withResolvers<void>();
+  ipc.ready = ready.promise;
+  vi.mocked(listen).mockClear();
+  const first = playbackStore.setupListeners();
+  await vi.waitFor(() => expect(listen).toHaveBeenCalled());
+  playbackStore.teardownListeners();
+  const second = playbackStore.setupListeners();
+  ready.resolve();
+  ipc.ready = Promise.resolve();
+  await Promise.all([first, second]);
+
+  expect(live.size).toBe(perSetup);
+});
 
 it("does not restart a stopped reading when its pending decode finishes", async () => {
   const pending = Promise.withResolvers<{ duration: number }>();
