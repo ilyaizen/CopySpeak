@@ -724,11 +724,12 @@ pub async fn play_history_batch(
 
     // Show HUD for playback with total duration
     // One reading shares one engine and voice across its fragments.
+    let engine = crate::config::TtsEngine::from_id(&entries[0].tts_engine);
     crate::hud::show_hud_playback(
         &app,
         Some(combined_text),
         Some(total_duration_ms),
-        &entries[0].tts_engine,
+        engine.as_ref(),
         &entries[0].voice,
     );
 

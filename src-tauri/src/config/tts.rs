@@ -25,6 +25,18 @@ pub enum TtsEngine {
     Pocket,
 }
 
+impl TtsEngine {
+    /// Parse an engine id as stored in history or sent by the frontend.
+    /// `None` for an id that no longer names an engine.
+    pub fn from_id(id: &str) -> Option<Self> {
+        let parsed = serde_json::from_value(serde_json::Value::String(id.into())).ok();
+        if parsed.is_none() {
+            log::warn!("Unknown engine '{}'", id);
+        }
+        parsed
+    }
+}
+
 impl Default for TtsEngine {
     fn default() -> Self {
         // Kokoro is the fresh-install default: natural offline voices, no API

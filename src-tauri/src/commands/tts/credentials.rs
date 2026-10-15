@@ -1,6 +1,6 @@
 // Credential validation commands (lightweight, no synthesis credits consumed).
 
-use crate::config::AppConfig;
+use crate::config::{AppConfig, TtsEngine};
 use std::sync::Mutex;
 use tauri::State;
 
@@ -123,26 +123,28 @@ pub fn check_cartesia_credentials(
 /// without making any HTTP requests. Used by the UI to hide the "set up
 /// credentials" hint when .env already supplies the key.
 #[tauri::command]
-pub fn has_engine_credentials(engine: String, config: State<'_, Mutex<AppConfig>>) -> bool {
+pub fn has_engine_credentials(engine: TtsEngine, config: State<'_, Mutex<AppConfig>>) -> bool {
     engine_has_credentials(&engine, &config.lock().unwrap().tts)
 }
 
 /// `has_engine_credentials` without the command wrapper; engines that need no
 /// key count as having one.
-pub(crate) fn engine_has_credentials(engine: &str, tts: &crate::config::TtsConfig) -> bool {
+pub(crate) fn engine_has_credentials(engine: &TtsEngine, tts: &crate::config::TtsConfig) -> bool {
     match engine {
-        "openai" => !crate::secrets::resolve(&tts.openai.api_key, &["OPENAI_API_KEY"]).is_empty(),
-        "elevenlabs" => {
+        TtsEngine::OpenAI => {
+            !crate::secrets::resolve(&tts.openai.api_key, &["OPENAI_API_KEY"]).is_empty()
+        }
+        TtsEngine::ElevenLabs => {
             !crate::secrets::resolve(&tts.elevenlabs.api_key, &["ELEVENLABS_API_KEY"]).is_empty()
         }
-        "cartesia" => {
+        TtsEngine::Cartesia => {
             !crate::secrets::resolve(&tts.cartesia.api_key, &["CARTESIA_API_KEY"]).is_empty()
         }
-        "google" => {
+        TtsEngine::Google => {
             !crate::secrets::resolve(&tts.google.api_key, &["GEMINI_API_KEY", "GOOGLE_API_KEY"])
                 .is_empty()
         }
-        "microsoft" => !crate::secrets::resolve(
+        TtsEngine::Microsoft => !crate::secrets::resolve(
             &tts.microsoft.api_key,
             &["MICROSOFT_API_KEY", "AZURE_API_KEY"],
         )

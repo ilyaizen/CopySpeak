@@ -70,21 +70,28 @@ fn get_provider_voice(eff: &EffectiveTtsRequest) -> (Option<String>, Option<Stri
 /// The voice label matches the history list: the label of a profile with that
 /// engine and voice, else the voice id in title case.
 fn saved_provider_voice(
-    engine: &str,
+    engine: Option<&TtsEngine>,
     voice: &str,
     profiles: &[VoiceProfile],
 ) -> (Option<String>, Option<String>) {
-    let Ok(engine) = serde_json::from_value::<TtsEngine>(serde_json::Value::String(engine.into()))
-    else {
-        log::warn!(
-            "Unknown engine '{}' on history entry, HUD provider omitted",
-            engine
-        );
+    // `None` engine: an id that no longer names one, so no provider.
+    let Some(engine) = engine else {
         return (None, Some(title_case(voice)));
     };
-    let label = profiles
+    let label = saved_voice_label(engine, voice, profiles).unwrap_or_else(|| title_case(voice));
+    (Some(provider_name(engine)), Some(label))
+}
+
+/// The label of the profile with this engine and voice, or `None` when no
+/// profile has one. Replays and their HUD use it for the voice name.
+pub(crate) fn saved_voice_label(
+    engine: &TtsEngine,
+    voice: &str,
+    profiles: &[VoiceProfile],
+) -> Option<String> {
+    profiles
         .iter()
-        .filter(|p| p.engine == engine && p.voice == voice)
+        .filter(|p| p.engine == *engine && p.voice == voice)
         .find_map(|p| {
             p.voice_label
                 .as_deref()
@@ -92,8 +99,6 @@ fn saved_provider_voice(
                 .filter(|l| !l.is_empty())
         })
         .map(str::to_string)
-        .unwrap_or_else(|| title_case(voice));
-    (Some(provider_name(&engine)), Some(label))
 }
 
 #[derive(Clone, Serialize)]
@@ -397,7 +402,7 @@ pub fn show_hud_playback(
     app: &AppHandle,
     text: Option<String>,
     audio_duration_ms: Option<u64>,
-    engine: &str,
+    engine: Option<&TtsEngine>,
     voice: &str,
 ) {
     let (config, provider, label) = {
@@ -607,7 +612,8 @@ mod tests {
     #[test]
     fn saved_reading_uses_label_of_profile_with_its_engine_and_voice() {
         let profiles = [profile(TtsEngine::Piper, "en_US-joe-medium", Some("Joe"))];
-        let (provider, label) = saved_provider_voice("piper", "en_US-joe-medium", &profiles);
+        let (provider, label) =
+            saved_provider_voice(Some(&TtsEngine::Piper), "en_US-joe-medium", &profiles);
         assert_eq!(provider.as_deref(), Some("Piper"));
         assert_eq!(label.as_deref(), Some("Joe"));
     }
@@ -615,20 +621,21 @@ mod tests {
     #[test]
     fn saved_reading_ignores_profile_of_other_engine_with_same_voice() {
         let profiles = [profile(TtsEngine::ElevenLabs, "joe", Some("Rachel"))];
-        let (_, label) = saved_provider_voice("piper", "joe", &profiles);
+        let (_, label) = saved_provider_voice(Some(&TtsEngine::Piper), "joe", &profiles);
         assert_eq!(label.as_deref(), Some("Joe"));
     }
 
     #[test]
     fn saved_reading_without_profile_title_cases_voice_id() {
-        let (provider, label) = saved_provider_voice("edge", "en-US-AriaNeural", &[]);
+        let (provider, label) =
+            saved_provider_voice(Some(&TtsEngine::Edge), "en-US-AriaNeural", &[]);
         assert_eq!(provider.as_deref(), Some("Edge-TTS"));
         assert_eq!(label.as_deref(), Some("En-US-AriaNeural"));
     }
 
     #[test]
     fn saved_reading_unknown_engine_omits_provider() {
-        let (provider, label) = saved_provider_voice("removed-engine", "joe", &[]);
+        let (provider, label) = saved_provider_voice(None, "joe", &[]);
         assert_eq!(provider, None);
         assert_eq!(label.as_deref(), Some("Joe"));
     }

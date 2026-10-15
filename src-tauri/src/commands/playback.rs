@@ -2,7 +2,7 @@
 
 use crate::audio::{AmplitudeEnvelope, AudioPlayer, PlaybackState};
 use crate::commands::helpers::resolve_effective;
-use crate::config::AppConfig;
+use crate::config::{AppConfig, TtsEngine};
 use crate::history::HistoryLog;
 use crate::hud;
 use std::sync::Mutex;
@@ -270,7 +270,8 @@ pub fn show_hud_for_playback(
         log::debug!("[IPC] show_hud_for_playback called");
     }
 
-    hud::show_hud_playback(&app, text, audio_duration_ms, &tts_engine, &voice);
+    let engine = TtsEngine::from_id(&tts_engine);
+    hud::show_hud_playback(&app, text, audio_duration_ms, engine.as_ref(), &voice);
     Ok(())
 }
 

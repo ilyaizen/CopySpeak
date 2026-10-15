@@ -639,7 +639,9 @@ pub(crate) fn profile_ready(profile: &VoiceProfile, tts_config: &TtsConfig) -> b
         | TtsEngine::ElevenLabs
         | TtsEngine::Cartesia
         | TtsEngine::Google
-        | TtsEngine::Microsoft => super::credentials::engine_has_credentials(engine, tts_config),
+        | TtsEngine::Microsoft => {
+            super::credentials::engine_has_credentials(&profile.engine, tts_config)
+        }
         TtsEngine::Edge
         | TtsEngine::Kitten
         | TtsEngine::Qwen
