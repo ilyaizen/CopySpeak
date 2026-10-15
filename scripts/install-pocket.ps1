@@ -66,7 +66,9 @@ Write-Host "  [STEP] engine" -ForegroundColor Yellow
 Write-Host "  Installing pocket-tts..." -ForegroundColor Gray
 # Windows PyPI torch wheels are already CPU-only, so no extra index is needed
 # here; -Cuda swaps in a CUDA build below.
-Invoke-Uv add --project $EngineDir "pocket-tts"
+# 2.1.0 is the first release with the French/Spanish/Italian/German/Portuguese
+# voices; an older one fails to load them (see copyspeak-pocket.py).
+Invoke-Uv add --project $EngineDir "pocket-tts>=2.1.0"
 
 $scriptsDir = Join-Path $EngineDir "scripts"
 $outputDir = Join-Path $EngineDir "output"
