@@ -485,7 +485,7 @@ fn on_path(bin: &str) -> bool {
 #[derive(Clone, Serialize)]
 pub struct EngineStatus {
     /// The engine is usable right now (binary present and/or models on disk).
-    installed: bool,
+    pub(crate) installed: bool,
     /// Voice ids recorded by the installer; empty for engines without one.
     voices: Vec<String>,
 }

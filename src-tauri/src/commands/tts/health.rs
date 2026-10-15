@@ -89,6 +89,7 @@ mod tests {
                 model_id: model_id.map(String::from),
                 ..Default::default()
             }),
+            language_hint: None,
         }
     }
 

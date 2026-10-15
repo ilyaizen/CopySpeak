@@ -1,6 +1,8 @@
 // Shared helpers used across TTS command sub-modules.
 
-use crate::config::{ProfileEngineOptions, ProfileTextProcessing, TtsConfig, TtsEngine};
+use crate::config::{
+    ProfileEngineOptions, ProfileTextProcessing, TtsConfig, TtsEngine, VoiceProfile,
+};
 use crate::tts::cli::CliTtsBackend;
 use crate::tts::TtsBackend;
 use crate::JobStatus;
@@ -496,6 +498,8 @@ pub(crate) struct EffectiveTtsRequest {
     pub effects: crate::config::ProfileEffects,
     pub text_processing: ProfileTextProcessing,
     pub engine_options: ProfileEngineOptions,
+    /// Detected language of the text, for engines that accept one. Never persisted.
+    pub language_hint: Option<&'static str>,
 }
 
 pub(crate) fn resolve_effective_for_profile(
@@ -524,6 +528,7 @@ pub(crate) fn resolve_effective_for_profile(
         effects: profile.effects.clone(),
         text_processing: profile.text_processing.clone(),
         engine_options: profile.engine_options.clone(),
+        language_hint: None,
     })
 }
 
@@ -545,18 +550,21 @@ pub(crate) fn resolve_effective(tts_config: &TtsConfig) -> EffectiveTtsRequest {
             effects: crate::config::ProfileEffects::default(),
             text_processing: ProfileTextProcessing::default(),
             engine_options,
+            language_hint: None,
         }
     })
 }
 
 /// The profile for one utterance. With auto-switch on and a reliable language
-/// reading of `text`, a profile tagged with that language wins: the active one
-/// if it matches, else the first in list order. Anything else keeps the active
-/// profile. A matched profile that fails to resolve is an error, not a silent
-/// fallback to the active profile.
+/// reading of `text`, the active profile keeps the reading when it is untagged
+/// (speaks any language) or tagged with that language; otherwise the first
+/// `ready` profile tagged with it wins, else the active one. Every detected
+/// language rides along as `language_hint`. A matched profile that fails to
+/// resolve is an error, not a silent fallback to the active profile.
 pub(crate) fn resolve_effective_for_text(
     tts_config: &TtsConfig,
     text: &str,
+    ready: impl Fn(&VoiceProfile) -> bool,
 ) -> Result<EffectiveTtsRequest, String> {
     let active = resolve_effective(tts_config);
     if !tts_config.auto_switch_language {
@@ -565,22 +573,46 @@ pub(crate) fn resolve_effective_for_text(
     let Some(language) = crate::language::detect_language(text) else {
         return Ok(active);
     };
-    let matching: Vec<_> = tts_config
+    let keeps = tts_config
         .profiles
         .iter()
-        .filter(|p| p.language.as_deref() == Some(language))
-        .collect();
-    let Some(target) = matching
-        .iter()
         .find(|p| p.id == tts_config.active_profile_id)
-        .or(matching.first())
-    else {
-        return Ok(active);
+        .is_some_and(|p| p.language.as_deref().is_none_or(|l| l == language));
+    let target = (!keeps)
+        .then(|| {
+            tts_config
+                .profiles
+                .iter()
+                .find(|p| p.language.as_deref() == Some(language) && ready(p))
+        })
+        .flatten();
+    let mut eff = match target {
+        Some(p) => resolve_effective_for_profile(tts_config, Some(p.id.as_str()))?,
+        None => active,
     };
-    if target.id == tts_config.active_profile_id {
-        return Ok(active);
+    eff.language_hint = Some(language);
+    Ok(eff)
+}
+
+/// Whether a profile can speak right now: a first-class local engine is
+/// installed, a cloud engine has credentials. Local CLI and HTTP always can.
+pub(crate) fn profile_ready(profile: &VoiceProfile, tts_config: &TtsConfig) -> bool {
+    let engine = engine_str(&profile.engine);
+    match profile.engine {
+        TtsEngine::Local | TtsEngine::Http => true,
+        TtsEngine::OpenAI
+        | TtsEngine::ElevenLabs
+        | TtsEngine::Cartesia
+        | TtsEngine::Google
+        | TtsEngine::Microsoft => super::credentials::engine_has_credentials(engine, tts_config),
+        TtsEngine::Edge
+        | TtsEngine::Kitten
+        | TtsEngine::Qwen
+        | TtsEngine::Piper
+        | TtsEngine::Kokoro
+        | TtsEngine::Pocket => crate::commands::install::engine_status(engine.into())
+            .is_ok_and(|status| status.installed),
     }
-    resolve_effective_for_profile(tts_config, Some(target.id.as_str()))
 }
 
 /// Get the engine string identifier for a backend (legacy function, prefer engine_identifier).
@@ -643,22 +675,62 @@ mod tests {
     }
 
     fn picked(tts: &TtsConfig, text: &str) -> Option<String> {
-        resolve_effective_for_text(tts, text).unwrap().profile_id
+        resolve_effective_for_text(tts, text, |_| true)
+            .unwrap()
+            .profile_id
     }
 
     #[test]
     fn auto_switch_off_keeps_active_profile() {
         let mut tts = en_and_de("en");
         tts.auto_switch_language = false;
-        assert_eq!(picked(&tts, GERMAN).as_deref(), Some("en"));
+        let eff = resolve_effective_for_text(&tts, GERMAN, |_| true).unwrap();
+        assert_eq!(eff.profile_id.as_deref(), Some("en"));
+        assert_eq!(eff.language_hint, None);
     }
 
     #[test]
     fn matching_profile_is_switched_to() {
         let tts = en_and_de("en");
-        let eff = resolve_effective_for_text(&tts, GERMAN).unwrap();
+        let eff = resolve_effective_for_text(&tts, GERMAN, |_| true).unwrap();
         assert_eq!(eff.profile_id.as_deref(), Some("de"));
         assert_eq!(eff.engine, TtsEngine::Piper);
+        assert_eq!(eff.language_hint, Some("de"));
+    }
+
+    /// An untagged profile speaks any language, so it keeps every reading
+    /// and the engine still learns the language.
+    #[test]
+    fn untagged_active_keeps_reading_with_hint() {
+        let tts = config(
+            vec![
+                profile("any", TtsEngine::ElevenLabs, None),
+                profile("de", TtsEngine::Piper, Some("de")),
+            ],
+            "any",
+        );
+        let eff = resolve_effective_for_text(&tts, GERMAN, |_| true).unwrap();
+        assert_eq!(eff.profile_id.as_deref(), Some("any"));
+        assert_eq!(eff.language_hint, Some("de"));
+    }
+
+    #[test]
+    fn unready_profile_is_not_a_target() {
+        let tts = config(
+            vec![
+                profile("en", TtsEngine::Kokoro, Some("en")),
+                profile("de-a", TtsEngine::Piper, Some("de")),
+                profile("de-b", TtsEngine::Pocket, Some("de")),
+            ],
+            "en",
+        );
+        let ready_b = |p: &VoiceProfile| p.id != "de-a";
+        let eff = resolve_effective_for_text(&tts, GERMAN, ready_b).unwrap();
+        assert_eq!(eff.profile_id.as_deref(), Some("de-b"));
+        let none_ready = |p: &VoiceProfile| p.id == "en";
+        let eff = resolve_effective_for_text(&tts, GERMAN, none_ready).unwrap();
+        assert_eq!(eff.profile_id.as_deref(), Some("en"));
+        assert_eq!(eff.language_hint, Some("de"));
     }
 
     #[test]

@@ -19,7 +19,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
     active_engine, create_backend, create_backend_from_effective, engine_identifier, engine_str,
-    resolve_effective, resolve_effective_for_profile, resolve_effective_for_text,
+    profile_ready, resolve_effective, resolve_effective_for_profile, resolve_effective_for_text,
     voice_display_name, EffectiveTtsRequest, SynthesisGuard,
 };
 use crate::commands::{
@@ -1296,7 +1296,7 @@ async fn speak_queued_internal(
         crate::post_process::try_process(text, &post_process_config, &sanitization, false).await;
     // Every label and engine read below uses this utterance's profile, which
     // may be a language-matched one rather than the active profile.
-    let eff = resolve_effective_for_text(&tts_config, &text)?;
+    let eff = resolve_effective_for_text(&tts_config, &text, |p| profile_ready(p, &tts_config))?;
     let _ = app.emit("reading-started", &text);
     if let Some((trigger, id)) = &trigger {
         browser_bridge::begin_trigger(&app, id, trigger, &text);
