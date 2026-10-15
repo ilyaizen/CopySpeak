@@ -17,11 +17,11 @@ Before any engine sees the text, the sanitizer also mangled non-English text: Cy
   2. The active profile speaks any language, or its language is the detected one: the active profile, with the detected language as a hint.
   3. The first profile tagged with the detected language **and ready** is the target, with the hint.
   4. Otherwise: the active profile, with the hint.
-- **Ready** means installed (local engines) or has credentials (cloud engines). Local Http profiles are always ready. An unready profile is never a target, so an uninstalled bundled profile cannot take readings from a non-English active profile.
+- **Ready** means installed (local engines) or has credentials (cloud engines). A custom CLI (`Local`) profile is ready when its command can run; HTTP profiles are always ready. An unready profile is never a target, so an uninstalled bundled profile cannot take readings from a non-English active profile.
 - **Hint**: the detected language travels with the request as `language_hint`. ElevenLabs sends it as `language_code` and Cartesia as `language`; other engines ignore it. Norwegian is `nb` in the detector and `no` at both providers.
 - **Scope**: every speak path (double-copy, browser, hotkey, tray, Play page, control server and CLI), except a request that names a profile. A named profile is used as given and skips switching.
 - **Per reading**: the switched profile is not saved, and `set_active_profile` is not called.
-- **Playback follows the profile that spoke**: each reading emits `reading-profile` with its speed, pitch and effect, so the playback store applies them to that reading. Engine, voice, telemetry, history, the saved-audio cache and the HUD read the same profile. History replays restore the row's saved engine, voice and speed, and keep the current profile's pitch and effects.
+- **Playback follows the profile that spoke**: each reading emits `reading-profile` with its speed, pitch and effect, so the playback store applies them to that reading. Engine, voice, telemetry, history, the saved-audio cache and the HUD read the same profile. History replays use the row's saved speed and the current profile's pitch and effects, with the active engine and the row's voice id. A replay of a row spoken by another engine pairs that voice id with the active engine; this is known, not decided.
 - **No retry**: if the switched profile fails, its error surfaces. Falling back silently would hide a broken profile.
 - **Fragments**: a reading's fragments share one profile.
 
@@ -41,4 +41,4 @@ Before any engine sees the text, the sanitizer also mangled non-English text: Cy
 - The language list exists in two places: `iso_639_1` in `language.rs` and `DETECTED_LANGUAGE_CODES` in `profile-language.ts`. `profile-language.test.ts` fails when they drift, so change both together.
 - A queued reading can retune the previous reading's tail, because the playback store applies `reading-profile` when the reading starts. Marked with a `ponytail:` comment in the playback store.
 - Each local engine has one daemon slot. Two same-engine profiles in different languages reload the model on every switch, so the first reading after a flip is slow.
-- History replay HUD names the engine and voice that spoke, not the active profile (`saved_provider_voice` in `hud.rs`). Rows store the voice id, not its label, so the label is that of the profile with the same engine and voice, as in the history list; without one, the voice id in title case. Renaming a profile therefore renames its past replays' HUD label.
+- History replay HUD labels the engine and voice of the active profile, as every other HUD does. The row's own engine and voice are not used for the label; whether they should be is not decided.

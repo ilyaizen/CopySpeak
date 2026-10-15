@@ -84,7 +84,6 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Clear the shared audio queue on decode/play failure and invalidate pending decoding on Stop so history retries work and stopped readings cannot restart.
 - When a cache test asserts an exact pagination count, set `fragment_size` above each intended sentence length; overlong sentences are correctly force-split into extra fragments.
 - Take a speech's engine from its effective profile (`eff.engine`), not `cfg.tts.active_backend`: that field only mirrors the active profile (`sync_active_backend_mirror`), so a per-utterance switch would file telemetry, history and cache under the wrong engine.
-- Label a history replay's HUD from the row's `tts_engine` and `voice` (`saved_provider_voice` in `hud.rs`), not the active profile; rows store no voice name, only the raw voice ID.
 - Send a replay's playback settings as `reading-profile` (`replay_profile`: the row's speed, the active profile's pitch and effect); do not call `syncFromActiveProfile()` before a replay, it takes the active profile's speed too.
 
 ## Text pipeline
