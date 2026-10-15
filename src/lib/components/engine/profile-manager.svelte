@@ -457,6 +457,8 @@
       profile.voice = "alba";
       profile.voice_label = "Alba";
     }
+    // A preset's voice change retags the profile, as the picker does.
+    profile.language = voiceLanguage(profile.engine, profile.voice);
   }
 
   function setOptionValue(index: number, key: string, value: EngineOptionValue) {
@@ -617,6 +619,7 @@
     };
     profile.voice = t.voice;
     profile.voice_label = t.voice || null;
+    profile.language = voiceLanguage(profile.engine, t.voice);
   }
 
   // Each tooltip is a few sentences, one translation key per sentence.
