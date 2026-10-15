@@ -18,14 +18,15 @@ use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
-    active_engine, create_backend, create_backend_from_effective, engine_identifier, engine_str,
-    profile_ready, reading_profile, resolve_effective, resolve_effective_for_profile,
-    resolve_effective_for_text, voice_display_name, EffectiveTtsRequest, SynthesisGuard,
+    create_backend, create_backend_from_effective, engine_identifier, engine_str, profile_ready,
+    reading_profile, resolve_effective, resolve_effective_for_profile, resolve_effective_for_text,
+    voice_display_name, EffectiveTtsRequest, SynthesisGuard,
 };
 use crate::commands::{
     AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent,
     PlaybackStreamFailedEvent,
 };
+use crate::config::TtsEngine;
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
 
@@ -1643,13 +1644,18 @@ pub async fn speak_history_entry(
         log::debug!("[IPC] speak_history_entry called (id: {})", entry_id);
     }
 
-    // Get text and voice from history
-    let (text, original_voice) = {
+    // Get text, engine and voice from history
+    let (text, row_engine, original_voice, row_speed) = {
         let hist = history.lock().unwrap();
         let entry = hist
             .get_by_id(&entry_id)
             .ok_or_else(|| format!("History entry not found: {}", entry_id))?;
-        (entry.text.clone(), entry.voice.clone())
+        (
+            entry.text.clone(),
+            entry.tts_engine.clone(),
+            entry.voice.clone(),
+            entry.speed,
+        )
     };
 
     if text.trim().is_empty() {
@@ -1661,14 +1667,20 @@ pub async fn speak_history_entry(
         (cfg.tts.clone(), cfg.history.enabled)
     };
 
-    let active_backend = active_engine(&tts_config);
-    let eff = resolve_effective(&tts_config);
+    // The row's engine and voice speak it, not the active profile's.
+    let engine = TtsEngine::from_id(&row_engine)
+        .ok_or_else(|| format!("Unknown engine '{}' on history entry", row_engine))?;
+    let mut eff = resolve_effective(&tts_config);
+    eff.engine = engine.clone();
+    eff.voice = original_voice.clone();
+    eff.voice_label = crate::hud::saved_voice_label(&engine, &original_voice, &tts_config.profiles);
+    eff.speed = row_speed;
 
-    let backend: Box<dyn TtsBackend> = create_backend(&active_backend, &tts_config);
+    let backend: Box<dyn TtsBackend> = create_backend(&engine, &tts_config);
     let voice = original_voice;
-    let engine_str_val = engine_str(&active_backend);
-    let engine_id = engine_identifier(&active_backend);
-    let voice_name = voice_display_name(&active_backend, &tts_config, &voice, None);
+    let engine_str_val = engine_str(&engine);
+    let engine_id = engine_identifier(&engine);
+    let voice_name = voice_display_name(&engine, &tts_config, &voice, None);
     let audio_ext = backend.file_extension().to_string();
 
     // Get telemetry estimate
@@ -1744,6 +1756,7 @@ pub async fn speak_history_entry(
     hud::show_hud(&app, envelope, Some(text.clone()), &eff);
 
     // Emit audio to frontend
+    let _ = app.emit("reading-profile", reading_profile(&eff, None));
     emit_audio_ready(&app, &wav_bytes, &text, None, scope);
 
     log::info!("Re-spoke history entry: {}", entry_id);

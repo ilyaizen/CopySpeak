@@ -535,6 +535,18 @@ pub(crate) fn reading_profile(
     }
 }
 
+/// Playback settings for a replay: the row's saved speed, with the active
+/// profile's pitch and effect.
+pub(crate) fn replay_profile(
+    tts_config: &TtsConfig,
+    row_speed: f32,
+    session_id: Option<&str>,
+) -> ReadingProfile {
+    let mut eff = resolve_effective(tts_config);
+    eff.speed = row_speed;
+    reading_profile(&eff, session_id)
+}
+
 pub(crate) fn resolve_effective_for_profile(
     tts_config: &TtsConfig,
     profile_id: Option<&str>,
@@ -564,10 +576,6 @@ pub(crate) fn resolve_effective_for_profile(
         engine_options: profile.engine_options.clone(),
         language_hint: None,
     })
-}
-
-pub(crate) fn active_engine(tts_config: &TtsConfig) -> TtsEngine {
-    resolve_effective(tts_config).engine
 }
 
 pub(crate) fn resolve_effective(tts_config: &TtsConfig) -> EffectiveTtsRequest {

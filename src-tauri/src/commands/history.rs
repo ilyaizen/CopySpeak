@@ -668,6 +668,7 @@ pub fn delete_history_batch(
 #[tauri::command]
 pub async fn play_history_batch(
     app: AppHandle,
+    config: State<'_, Mutex<crate::config::AppConfig>>,
     history: State<'_, Mutex<HistoryLog>>,
     player: State<'_, Mutex<AudioPlayer>>,
     batch_id: String,
@@ -742,6 +743,14 @@ pub async fn play_history_batch(
             is_paginated: true,
         },
     );
+
+    // One reading: the first fragment's saved speed for all of it.
+    let profile = crate::commands::tts::helpers::replay_profile(
+        &config.lock().unwrap().tts,
+        entries[0].speed,
+        None,
+    );
+    let _ = app.emit("reading-profile", profile);
 
     for (index, entry) in entries.iter().enumerate() {
         let output_path = match &entry.output_path {
