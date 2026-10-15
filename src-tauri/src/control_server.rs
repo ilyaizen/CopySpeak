@@ -20,6 +20,8 @@ const SPEAK_WAIT_TIMEOUT_SECS: u64 = 600;
 #[derive(Debug, Deserialize)]
 struct SpeakRequest {
     text: String,
+    /// Speak with this profile id instead of the active one; unknown ids fail.
+    profile: Option<String>,
     engine: Option<String>,
     effect: Option<String>,
     /// Ask the post-process condenser for this request even when the global
@@ -254,16 +256,16 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
     let player: State<Mutex<AudioPlayer>> = app.state();
     let history: State<Mutex<HistoryLog>> = app.state();
     let telemetry_state: State<Mutex<telemetry::TelemetryLog>> = app.state();
-    crate::commands::speak_now(
+    // Control-server speaks never surface in pages, so they carry no trigger.
+    crate::commands::speak_now_with_profile(
         app.clone(),
         config_state,
         player,
         history,
         telemetry_state,
         Some(text),
-        Some(request.condense.unwrap_or(false)),
-        // Control-server speaks never surface in pages.
-        None,
+        request.profile,
+        request.condense,
     )
     .await
 }
@@ -441,8 +443,8 @@ ab",
         }
     }
 
-    /// Legacy callers send profile/persist_selection fields the server drops;
-    /// parsing must keep accepting them alongside the new condense/wait fields.
+    /// The CLI sends `profile` (the speaking profile) and `persist_selection`,
+    /// which the server drops; parsing must keep accepting it.
     #[test]
     fn speak_request_tolerates_unknown_fields() {
         let request = serde_json::json!({
@@ -454,6 +456,7 @@ ab",
         });
         match parse_request(&speak_request(&request)) {
             Ok(ControlRequest::Speak(speak)) => {
+                assert_eq!(speak.profile.as_deref(), Some("pi"));
                 assert_eq!(speak.condense, Some(true));
                 assert_eq!(speak.wait, Some(false));
             }

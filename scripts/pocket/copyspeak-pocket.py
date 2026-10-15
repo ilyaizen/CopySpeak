@@ -27,6 +27,21 @@ import sys
 import wave
 from pathlib import Path
 
+# pocket-tts ships a language-specific model for each of these voices. The
+# default model is English-only, so these voices load their language's model.
+VOICE_LANGUAGES = {
+    "estelle": "french",
+    "lola": "spanish",
+    "giovanni": "italian",
+    "juergen": "german",
+    "rafael": "portuguese",
+}
+
+
+def model_language(voice: str):
+    """The language model a voice needs, or None for the default model."""
+    return VOICE_LANGUAGES.get(voice)
+
 
 def probe_cuda_kernels(torch) -> None:
     """Fail at load, loudly, when this torch build cannot run on this GPU.
@@ -196,7 +211,19 @@ def main() -> int:
         return 1
 
     try:
-        model = TTSModel.load_model()
+        language = model_language(args.voice)
+        if language is None:
+            model = TTSModel.load_model()
+        else:
+            try:
+                model = TTSModel.load_model(language=language)
+            except TypeError as exc:
+                if "language" not in str(exc):
+                    raise
+                raise RuntimeError(
+                    f"this pocket-tts cannot load the {language} model ({exc}); "
+                    "reinstall with ./scripts/install-pocket.ps1 -Force"
+                ) from exc
         if args.device == "cuda":
             import torch
 

@@ -105,6 +105,8 @@ export interface TtsConfig {
   active_backend: TtsEngine;
   active_profile_id: string;
   profiles: VoiceProfile[];
+  /** Pick a profile per utterance by the text's language. Active profile unchanged. */
+  auto_switch_language: boolean;
   preset: string;
   command: string;
   args_template: string[];
@@ -176,6 +178,8 @@ export interface VoiceProfile {
   engine: TtsEngine;
   voice: string;
   voice_label: string | null;
+  /** ISO 639-1 code this profile speaks; null or absent means never matched by language. */
+  language?: string | null;
   speed: number;
   pitch: number;
   effects: ProfileEffects;

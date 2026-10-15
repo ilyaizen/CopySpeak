@@ -367,6 +367,11 @@ pub fn load_or_default() -> AppConfig {
                 migrate_add_kokoro_profile_v6(&mut cfg);
             }
 
+            // Migrate v6 -> v7: tag untagged profiles with their voice's language.
+            if cfg.tts.schema_version < 7 {
+                tts::migrate_profile_languages_v7(&mut cfg.tts);
+            }
+
             // Retire Edge-TTS profiles (upstream service dead, UI hidden).
             // Runs every load — it must also catch profiles created AFTER a
             // migrated load (migrate_tts_config force-resets schema_version,

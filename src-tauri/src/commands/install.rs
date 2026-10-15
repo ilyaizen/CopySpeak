@@ -481,11 +481,22 @@ fn on_path(bin: &str) -> bool {
     out.map(|o| o.status.success()).unwrap_or(false)
 }
 
+/// Whether a custom CLI's command can run: a bare name must be on PATH, a path
+/// must name an existing file (`where` rejects drive-letter paths).
+pub(crate) fn command_available(command: &str) -> bool {
+    let path = std::path::Path::new(command);
+    if path.components().count() > 1 {
+        path.is_file()
+    } else {
+        on_path(command)
+    }
+}
+
 /// What the frontend needs to decide between Install, Reinstall, and Uninstall.
 #[derive(Clone, Serialize)]
 pub struct EngineStatus {
     /// The engine is usable right now (binary present and/or models on disk).
-    installed: bool,
+    pub(crate) installed: bool,
     /// Voice ids recorded by the installer; empty for engines without one.
     voices: Vec<String>,
 }

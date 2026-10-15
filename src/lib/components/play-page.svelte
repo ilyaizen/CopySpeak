@@ -27,6 +27,7 @@
       active_backend: "cartesia",
       active_profile_id: "default",
       profiles: [],
+      auto_switch_language: true,
       preset: "kokoro-tts",
       command: "kokoro-tts",
       args_template: [],

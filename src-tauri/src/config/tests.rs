@@ -274,7 +274,7 @@ mod tests {
     fn test_default_tts_config_uses_kokoro_profile() {
         let tts = TtsConfig::default();
         assert_eq!(TtsEngine::default(), TtsEngine::Kokoro);
-        assert_eq!(tts.schema_version, 6);
+        assert_eq!(tts.schema_version, 7);
         assert_eq!(tts.active_backend, TtsEngine::Kokoro);
         // No Edge seed profile: the engine is retired (upstream service dead).
         assert!(!tts
@@ -340,13 +340,69 @@ mod tests {
         assert_eq!(migrated.profiles[0].voice, "voice-xyz");
     }
 
+    /// Every load runs this migration, so it must not drop a newer schema:
+    /// the v4–v6 gates in `load` would otherwise re-add deleted bundled profiles.
+    #[test]
+    fn test_migrate_keeps_newer_schema_version() {
+        let tts = TtsConfig {
+            schema_version: 6,
+            ..TtsConfig::default()
+        };
+        let migrated = migrate_tts_config(tts);
+        assert_eq!(migrated.schema_version, 6);
+    }
+
+    /// v6 → v7: a profile with no language takes its voice's catalog language;
+    /// a language the user set stays. The version then stays 7 on reload.
+    #[test]
+    fn test_migrate_profile_languages_v7_fills_untagged_profiles() {
+        let mut tts = TtsConfig {
+            schema_version: 6,
+            profiles: vec![
+                VoiceProfile {
+                    id: "qwen".into(),
+                    engine: TtsEngine::Qwen,
+                    voice: "Dylan".into(),
+                    language: None,
+                    ..VoiceProfile::default()
+                },
+                VoiceProfile {
+                    id: "kokoro".into(),
+                    engine: TtsEngine::Kokoro,
+                    voice: "af_heart".into(),
+                    language: Some("de".into()),
+                    ..VoiceProfile::default()
+                },
+            ],
+            ..TtsConfig::default()
+        };
+        crate::config::tts::migrate_profile_languages_v7(&mut tts);
+        assert_eq!(tts.profiles[0].language.as_deref(), Some("zh"));
+        assert_eq!(tts.profiles[1].language.as_deref(), Some("de"));
+        assert_eq!(tts.schema_version, 7);
+        assert_eq!(migrate_tts_config(tts).schema_version, 7);
+    }
+
+    #[test]
+    fn catalog_language_code_keeps_base_subtag_and_detector_codes() {
+        use crate::config::tts::catalog_language_code;
+        assert_eq!(catalog_language_code("zh-Beijing").as_deref(), Some("zh"));
+        assert_eq!(catalog_language_code("EN").as_deref(), Some("en"));
+        assert_eq!(catalog_language_code("no").as_deref(), Some("nb"));
+        // Cantonese has no detector code, so its voice carries no language.
+        assert_eq!(catalog_language_code("yue"), None);
+    }
+
     #[test]
     fn test_migrate_is_idempotent() {
-        let tts = TtsConfig::default();
+        let tts = TtsConfig {
+            schema_version: 6,
+            ..TtsConfig::default()
+        };
         let once = migrate_tts_config(tts);
         let twice = migrate_tts_config(once.clone());
         assert_eq!(once.profiles.len(), twice.profiles.len());
-        assert_eq!(twice.schema_version, 2);
+        assert_eq!(twice.schema_version, 6);
     }
 
     #[test]
@@ -358,6 +414,7 @@ mod tests {
             engine: TtsEngine::Http,
             voice: "amy.wav".into(),
             voice_label: None,
+            language: Some("fr".into()),
             speed: 1.05,
             pitch: 1.0,
             effects: ProfileEffects {
@@ -373,6 +430,7 @@ mod tests {
         let json = serde_json::to_string(&profile).unwrap();
         let back: VoiceProfile = serde_json::from_str(&json).unwrap();
         assert_eq!(back.id, "p1");
+        assert_eq!(back.language.as_deref(), Some("fr"));
         assert_eq!(back.engine, TtsEngine::Http);
         assert!(back.effects.enabled);
         assert_eq!(back.effects.active_effect, EffectId::WalkieTalkie);
@@ -460,5 +518,50 @@ mod tests {
         config.version = "0.1.10-fossil".into();
         let stamped = stamp_config_version(config);
         assert_eq!(stamped.version, CONFIG_VERSION);
+    }
+
+    #[test]
+    fn fresh_install_has_auto_switch_language_on() {
+        assert!(TtsConfig::default().auto_switch_language);
+    }
+
+    #[test]
+    fn legacy_tts_config_without_auto_switch_loads_as_on() {
+        // A config saved before the setting existed must load with it on.
+        let tts: TtsConfig =
+            serde_json::from_str(r#"{"active_backend":"kokoro","active_profile_id":"default"}"#)
+                .unwrap();
+        assert!(tts.auto_switch_language);
+    }
+
+    #[test]
+    fn saved_auto_switch_choice_is_honored() {
+        let tts: TtsConfig = serde_json::from_str(
+            r#"{"active_backend":"kokoro","active_profile_id":"default","auto_switch_language":false}"#,
+        )
+        .unwrap();
+        assert!(!tts.auto_switch_language);
+    }
+
+    #[test]
+    fn legacy_profile_without_language_loads_as_unset() {
+        let profile: VoiceProfile = serde_json::from_str(r#"{"id":"p1","name":"P1"}"#).unwrap();
+        assert_eq!(profile.language, None);
+    }
+
+    /// A legacy profile saved without `language` must take its language from
+    /// its own voice, not from the serde default profile's voice.
+    #[test]
+    fn legacy_profile_gets_language_from_its_voice() {
+        let profile: VoiceProfile =
+            serde_json::from_str(r#"{"id":"p1","name":"P1","engine":"qwen","voice":"Dylan"}"#)
+                .unwrap();
+        let mut tts = TtsConfig {
+            schema_version: 6,
+            profiles: vec![profile],
+            ..TtsConfig::default()
+        };
+        crate::config::tts::migrate_profile_languages_v7(&mut tts);
+        assert_eq!(tts.profiles[0].language.as_deref(), Some("zh"));
     }
 }

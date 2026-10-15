@@ -9,6 +9,7 @@ CopySpeak profiles are the user-facing synthesis abstraction. Users should pick 
 Profiles may contain non-secret synthesis intent:
 
 - engine/provider
+- language tag (ISO 639-1); none means the profile speaks any language. Auto-switching picks a profile by this tag, see [`adr/0001-multilingual-auto-switch.md`](./adr/0001-multilingual-auto-switch.md)
 - voice id/name and optional display label
 - speed and pitch
 - output format/model where it changes synthesis behavior
@@ -89,5 +90,7 @@ node scripts/copyspeak.mjs profiles show pi
 node scripts/copyspeak.mjs engines list
 node scripts/copyspeak.mjs voices list --engine elevenlabs
 ```
+
+`speak --profile <id>` speaks with that profile for that reading only, and skips auto-switching. Known issue: the control server does not yet apply `--engine` or `--persist` on `speak`; use `--profile`.
 
 The server is trusted localhost automation. Do not bind it to `0.0.0.0` without adding authentication first.

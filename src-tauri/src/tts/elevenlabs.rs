@@ -192,6 +192,17 @@ impl Default for VoiceSettings {
 
 pub struct ElevenLabsTtsBackend {
     config: ElevenLabsConfig,
+    /// Detected language of the reading, sent as `language_code`. Never persisted.
+    pub language: Option<&'static str>,
+}
+
+/// `language_code` for a detected language. ElevenLabs calls Norwegian `no`,
+/// and multilingual_v2 models do not support the field.
+fn elevenlabs_language(model_id: &str, code: &'static str) -> Option<&'static str> {
+    if model_id.contains("multilingual_v2") {
+        return None;
+    }
+    Some(crate::language::provider_code(code))
 }
 
 /// Production API root. Tests point [`ElevenLabsTtsBackend::synthesize_streaming_from`]
@@ -206,7 +217,15 @@ const STREAM_OUTPUT_FORMAT: &str = "pcm_24000";
 
 impl ElevenLabsTtsBackend {
     pub fn new(config: ElevenLabsConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            language: None,
+        }
+    }
+
+    fn language_code(&self) -> Option<&'static str> {
+        self.language
+            .and_then(|code| elevenlabs_language(&self.config.model_id, code))
     }
 
     /// Stream synthesis from an explicit API base URL (wiremock tests override it).
@@ -233,7 +252,7 @@ impl ElevenLabsTtsBackend {
             "{}/v1/text-to-speech/{}/stream/with-timestamps",
             base_url, self.config.voice_id
         );
-        let body = json!({
+        let mut body = json!({
             "text": text,
             "model_id": self.config.model_id,
             "voice_settings": VoiceSettings {
@@ -243,12 +262,16 @@ impl ElevenLabsTtsBackend {
                 use_speaker_boost: self.config.use_speaker_boost,
             },
         });
+        if let Some(code) = self.language_code() {
+            body["language_code"] = code.into();
+        }
 
         let start_time = std::time::Instant::now();
         log::info!(
-            "[TTS] ElevenLabs stream opening - voice: {}, model: {}, {} chars",
+            "[TTS] ElevenLabs stream opening - voice: {}, model: {}, language: {:?}, {} chars",
             self.config.voice_id,
             self.config.model_id,
+            self.language_code(),
             text.len()
         );
 
@@ -771,7 +794,7 @@ impl TtsBackend for ElevenLabsTtsBackend {
             self.config.voice_id
         );
 
-        let body = json!({
+        let mut body = json!({
             "text": text,
             "model_id": self.config.model_id,
             "voice_settings": VoiceSettings {
@@ -781,6 +804,9 @@ impl TtsBackend for ElevenLabsTtsBackend {
                 use_speaker_boost: self.config.use_speaker_boost,
             },
         });
+        if let Some(code) = self.language_code() {
+            body["language_code"] = code.into();
+        }
 
         if crate::logging::is_debug_mode() {
             log::debug!(
@@ -884,6 +910,13 @@ impl TtsBackend for ElevenLabsTtsBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn elevenlabs_language_maps_norwegian_and_skips_multilingual_v2() {
+        assert_eq!(elevenlabs_language("eleven_v4_turbo", "it"), Some("it"));
+        assert_eq!(elevenlabs_language("eleven_flash_v2_5", "nb"), Some("no"));
+        assert_eq!(elevenlabs_language("eleven_multilingual_v2", "it"), None);
+    }
 
     #[test]
     fn test_output_format_as_str() {
@@ -1030,7 +1063,8 @@ mod tests {
             .mount(&server)
             .await;
 
-        let backend = test_backend();
+        let mut backend = test_backend();
+        backend.language = Some("nb");
         let stream = backend
             .synthesize_streaming_from(&server.uri(), "hello streaming world")
             .expect("valid api key must not fail synchronously");
@@ -1078,6 +1112,8 @@ mod tests {
                 .and_then(|v| v.to_str().ok()),
             Some("test-key")
         );
+        let body: serde_json::Value = serde_json::from_slice(&request.body).unwrap();
+        assert_eq!(body["language_code"], "no");
     }
 
     #[tokio::test]

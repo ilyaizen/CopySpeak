@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { _ } from "svelte-i18n";
+  import { _, locale } from "svelte-i18n";
   import { Button } from "#lib/components/ui/button/index.js";
   import {
     DropdownMenu,
@@ -10,6 +10,7 @@
   import { Input } from "#lib/components/ui/input/index.js";
   import { Select } from "#lib/components/ui/select/index.js";
   import { Slider } from "#lib/components/ui/slider/index.js";
+  import { Switch } from "#lib/components/ui/switch/index.js";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { invoke } from "@tauri-apps/api/core";
   import {
@@ -26,6 +27,7 @@
   import VoicePicker from "./voice-picker.svelte";
   import { findSetupEntry } from "./engine-meta";
   import { choicesWithCurrent } from "./select-choices";
+  import { languageChoices, profileLanguage } from "./profile-language";
   import type {
     AppConfig,
     EngineCatalogEntry,
@@ -360,6 +362,15 @@
     return voicesByEngine[engine] ?? [];
   }
 
+  // A voice's language tag, or null (speaks any) for a voice the catalog does not list.
+  function catalogVoice(engine: TtsEngine, voiceId: string): VoiceCatalogEntry | undefined {
+    return catalogVoicesFor(engine).find((voice) => voice.id === voiceId);
+  }
+
+  function voiceLanguage(engine: TtsEngine, voiceId: string): string | null {
+    return profileLanguage(catalogVoice(engine, voiceId)?.language);
+  }
+
   function applyPresetDefaults(index: number, preset: EngineOptionValue) {
     const profile = localConfig.tts.profiles[index];
     if (profile.engine !== "local") return;
@@ -446,6 +457,8 @@
       profile.voice = "alba";
       profile.voice_label = "Alba";
     }
+    // A preset's voice change retags the profile, as the picker does.
+    profile.language = voiceLanguage(profile.engine, profile.voice);
   }
 
   function setOptionValue(index: number, key: string, value: EngineOptionValue) {
@@ -474,8 +487,9 @@
   function setVoice(index: number, voiceId: string) {
     const profile = localConfig.tts.profiles[index];
     profile.voice = voiceId;
-    const match = catalogVoicesFor(profile.engine).find((voice) => voice.id === voiceId);
+    const match = catalogVoice(profile.engine, voiceId);
     profile.voice_label = match?.label;
+    profile.language = profileLanguage(match?.language);
   }
 
   function resetEngineOptions(index: number, engine: TtsEngine) {
@@ -580,6 +594,7 @@
       engine: preset.engine,
       voice: preset.voice,
       voice_label: preset.voiceLabel,
+      language: voiceLanguage(preset.engine, preset.voice),
       speed: 1.0,
       pitch: 1.0,
       effects: { enabled: true, active_effect: "walkie_talkie" },
@@ -604,6 +619,30 @@
     };
     profile.voice = t.voice;
     profile.voice_label = t.voice || null;
+    profile.language = voiceLanguage(profile.engine, t.voice);
+  }
+
+  // Each tooltip is a few sentences, one translation key per sentence.
+  function autoSwitchTooltip(): string {
+    return [
+      $_("profiles.autoSwitchTooltip"),
+      $_("profiles.autoSwitchPaths"),
+      $_("profiles.autoSwitchUnclear"),
+      $_("profiles.autoSwitchReady"),
+      $_("profiles.autoSwitchHint")
+    ].join(" ");
+  }
+
+  function languageTooltip(): string {
+    return [$_("profiles.languageTooltip"), $_("profiles.languageAutoFill")].join(" ");
+  }
+
+  // "Not set" first, then detector codes labelled in the UI locale.
+  function languageSelectOptions(current: string | null | undefined) {
+    return [
+      { value: "", label: $_("profiles.languageNone") },
+      ...languageChoices($locale ?? "en", current)
+    ];
   }
 </script>
 
@@ -663,6 +702,9 @@
         class="w-56"
       />
     </SettingRow>
+    <SettingRow label={$_("profiles.autoSwitchLanguage")} tooltip={autoSwitchTooltip()}>
+      <Switch id="auto-switch-language" bind:checked={localConfig.tts.auto_switch_language} />
+    </SettingRow>
   </div>
 
   {#if active}
@@ -674,6 +716,17 @@
         </p>
         <SettingRow label={$_("common.name")}>
           <Input bind:value={localConfig.tts.profiles[activeIndex].name} class="w-56" />
+        </SettingRow>
+        <SettingRow label={$_("profiles.language")} tooltip={languageTooltip()}>
+          <Select
+            options={languageSelectOptions(active.language)}
+            value={active.language ?? ""}
+            onchange={(e) => {
+              const v = (e.target as HTMLSelectElement).value;
+              localConfig.tts.profiles[activeIndex].language = v || null;
+            }}
+            class="w-56"
+          />
         </SettingRow>
       </section>
 

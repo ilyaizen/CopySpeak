@@ -792,6 +792,8 @@
     "startFrom": "Partir de",
     "voiceTooltip": "Voix connues du catalogue du moteur ou de l'API du fournisseur.",
     "providerDefault": "par défaut du fournisseur",
+    "autoSwitchLanguage": "Changer de profil selon la langue",
+    "autoSwitchTooltip": "Chaque lecture utilise le profil dont la langue correspond à son texte.",
     "importPlaceholder": "Collez ici le JSON du profil...",
     "toast": {
       "copied": "Copié dans le presse-papiers",
@@ -805,7 +807,15 @@
       "voicesLoaded": "Voix chargées : {count}",
       "voiceRefreshFailed": "Échec de l'actualisation des voix : {error}"
     },
-    "templateTooltip": "Pré-remplit la commande, les arguments et la voix à partir d'un moteur connu. Les modifications ultérieures ne changent jamais le modèle."
+    "templateTooltip": "Pré-remplit la commande, les arguments et la voix à partir d'un moteur connu. Les modifications ultérieures ne changent jamais le modèle.",
+    "autoSwitchPaths": "Couvre les lectures par double copie, navigateur, raccourci, barre système et page de lecture. Une lecture qui nomme un profil ne change jamais.",
+    "autoSwitchUnclear": "Un texte sans langue claire utilise le profil actif.",
+    "autoSwitchReady": "Seul un profil installé ou disposant d'identifiants est choisi.",
+    "autoSwitchHint": "La langue détectée est aussi envoyée au moteur comme indice.",
+    "language": "Langue",
+    "languageTooltip": "La langue que parle ce profil. Le changement automatique choisit les profils selon ce tag.",
+    "languageAutoFill": "Reprise de la langue de la voix choisie. Non défini signifie n'importe quelle langue, donc le profil n'est jamais choisi par langue.",
+    "languageNone": "Non défini"
   },
   "voicePicker": {
     "select": "Sélectionner une voix…",

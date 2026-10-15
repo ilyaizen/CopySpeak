@@ -12,20 +12,25 @@ use super::cleanup::cleanup_artifacts;
 /// cleaner single-line text for history preview.
 pub fn sanitize_tts(text: &str) -> String {
     let mut result = text.to_string();
+    // The English rewrites below (Dr., 5 m, ~) would mangle a confidently
+    // non-English text, so they run only when the text is English or unclear.
+    let english_or_unclear = crate::language::detect_language(text).is_none_or(|l| l == "en");
 
     // Order matters — run in the specified priority sequence
     result = normalize_characters(&result);
     result = remove_unpronounceable(&result);
     result = remove_urls(&result);
     result = remove_citations(&result);
-    result = expand_slash_lookups(&result);
-    result = expand_slash_options(&result);
-    result = expand_slash_ratios(&result);
-    result = expand_latin_abbreviations(&result);
-    result = expand_title_abbreviations(&result);
-    result = expand_number_suffixes(&result); // Run before metric units (5m = 5 million, not 5 meters)
-    result = expand_metric_units(&result);
-    result = expand_symbols(&result);
+    if english_or_unclear {
+        result = expand_slash_lookups(&result);
+        result = expand_slash_options(&result);
+        result = expand_slash_ratios(&result);
+        result = expand_latin_abbreviations(&result);
+        result = expand_title_abbreviations(&result);
+        result = expand_number_suffixes(&result); // Run before metric units (5m = 5 million, not 5 meters)
+        result = expand_metric_units(&result);
+        result = expand_symbols(&result);
+    }
     result = normalize_punctuation(&result);
     result = cleanup_artifacts(&result);
     // Last: drop orphan leading punctuation (", They didn't know…" →
@@ -67,13 +72,14 @@ fn remove_unpronounceable(text: &str) -> String {
         // Control and invisible formatting characters - never speech content:
         // 0000–0008 000E–001F: C0 controls except tab/newline/VT/FF
         // 007F–009F:   DEL and C1 controls
-        // 200B–200F:   zero-width space/non-joiner/joiner, LRM/RLM
+        // 200B 200D–200F: zero-width space/joiner, LRM/RLM (ZWNJ 200C is kept:
+        //              Persian and Indic spelling need it)
         // 2028–202E:   line/paragraph separators, bidi overrides
         // 2060–2064:   word joiner and invisible operators
         // 20D0–20FF:   combining marks for symbols (keycap, etc.)
         // FEFF:        BOM / zero-width no-break space
         static ref INVISIBLE_REGEX: Regex = Regex::new(
-            r"[\u{0000}-\u{0008}\u{000E}-\u{001F}\u{007F}-\u{009F}\u{200B}-\u{200F}\u{2028}-\u{202E}\u{2060}-\u{2064}\u{20D0}-\u{20FF}\u{FEFF}]+"
+            r"[\u{0000}-\u{0008}\u{000E}-\u{001F}\u{007F}-\u{009F}\u{200B}\u{200D}-\u{200F}\u{2028}-\u{202E}\u{2060}-\u{2064}\u{20D0}-\u{20FF}\u{FEFF}]+"
         ).unwrap();
     }
     // Tab/VT/FF separate words, so normalize them to spaces instead of
@@ -138,8 +144,27 @@ fn substitute_same_length(text: &str) -> String {
 
 /// Homoglyph folding — Cyrillic confusables (a classic LLM-output artifact
 /// that trips TTS pronunciation) with a visual Latin equivalent fold 1 unit
-/// → 1 unit. Real Cyrillic words survive untouched.
+/// → 1 unit, but only inside a word that also holds a Latin letter. Real
+/// Cyrillic words survive untouched. A word is a maximal alphanumeric run,
+/// the same unit `text_map::tokenize` compares, so raw and spoken keys agree.
 fn fold_homoglyphs(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut word = String::new();
+    for c in text.chars() {
+        if c.is_alphanumeric() {
+            word.push(c);
+        } else {
+            fold_word(&mut out, &word);
+            word.clear();
+            out.push(c);
+        }
+    }
+    fold_word(&mut out, &word);
+    out
+}
+
+/// Appends `word`, folding its Cyrillic confusables when it mixes in Latin letters.
+fn fold_word(out: &mut String, word: &str) {
     const MAP: &[(char, char)] = &[
         ('Ѐ', 'E'),
         ('Ё', 'E'),
@@ -163,20 +188,26 @@ fn fold_homoglyphs(text: &str) -> String {
         ('х', 'x'),
         ('ё', 'e'),
     ];
-    text.chars()
-        .map(|c| match MAP.iter().find(|(from, _)| *from == c) {
-            Some((_, to)) => *to,
-            None => c,
-        })
-        .collect()
+    if !word.chars().any(|c| c.is_ascii_alphabetic()) {
+        out.push_str(word);
+        return;
+    }
+    out.extend(
+        word.chars()
+            .map(|c| match MAP.iter().find(|(from, _)| *from == c) {
+                Some((_, to)) => *to,
+                None => c,
+            }),
+    );
 }
 
-/// Removes zero-width / invisible characters and BOM/soft-hyphen marks.
+/// Removes zero-width / invisible characters and BOM/soft-hyphen marks, but
+/// keeps the zero-width non-joiner (U+200C), which Persian and Indic spelling need.
 /// These are DELETIONS — they disqualify exact mapping by themselves.
 fn strip_invisibles(text: &str) -> String {
     lazy_static::lazy_static! {
         static ref INVISIBLE: Regex = Regex::new(
-            r"[\u{200B}-\u{200F}\u{2060}-\u{2064}\u{FEFF}\u{00AD}\u{180E}]"
+            r"[\u{200B}\u{200D}-\u{200F}\u{2060}-\u{2064}\u{FEFF}\u{00AD}\u{180E}]"
         )
         .unwrap();
     }
@@ -439,6 +470,24 @@ fn normalize_punctuation(text: &str) -> String {
 mod tests {
     use super::*;
 
+    /// English-only rewrites (Dr., 5 m, ~) must not run on a confidently German
+    /// sentence, but still run on English text.
+    #[test]
+    fn non_english_text_keeps_english_only_rewrites() {
+        let german = "Der schnelle braune Fuchs springt über den faulen Hund. \
+            Dr. Schmidt wartet seit 5 m am Bahnhof, und das Wetter ist heute ~ sehr schön.";
+        assert_eq!(crate::language::detect_language(german), Some("de"));
+        let out = sanitize_tts(german);
+        assert!(out.contains("Dr. Schmidt"), "{out}");
+        assert!(out.contains("5 m am"), "{out}");
+        assert!(out.contains('~'), "{out}");
+
+        let english = "Dr. Smith waits 5 m away from the station, and the weather is ~ nice today.";
+        let out = sanitize_tts(english);
+        assert!(out.contains("Doctor Smith"), "{out}");
+        assert!(out.contains("approximately"), "{out}");
+    }
+
     #[test]
     fn test_normalize_curly_quotes_and_dashes() {
         assert_eq!(
@@ -459,10 +508,12 @@ mod tests {
 
     #[test]
     fn test_normalize_homoglyphs_fold_latin_lookalikes() {
-        // Cyrillic а, е, о fold to Latin; real Cyrillic with no Latin
-        // confusable (жизнь) survives untouched.
+        // Cyrillic с, а fold to Latin inside a word that holds Latin letters;
+        // real Cyrillic words survive untouched, lookalike letters included.
         assert_eq!(normalize_characters("саt"), "cat");
         assert_eq!(normalize_characters("жизнь"), "жизнь");
+        assert_eq!(normalize_characters("привет саt"), "привет cat");
+        assert_eq!(normalize_characters("Россия"), "Россия");
     }
 
     #[test]
@@ -473,6 +524,12 @@ mod tests {
             "invisible"
         );
         assert_eq!(normalize_characters("\u{FEFF}leading"), "leading");
+    }
+
+    #[test]
+    fn test_sanitize_keeps_zero_width_non_joiner() {
+        // Persian "می‌خواهم" is spelled with a ZWNJ; dropping it fuses the word.
+        assert_eq!(sanitize_tts("می\u{200C}خواهم"), "می\u{200C}خواهم");
     }
 
     #[test]

@@ -16,6 +16,7 @@ CopySpeak: A lightweight and modern cross-platform AI text-to-speech orchestrato
 - Run the checks yourself before merging: all three workflows are `workflow_dispatch`, so PRs and `main` pushes trigger no CI.
 - Run `rustfmt` on touched Rust files only; `cargo fmt --all` marks unrelated CRLF-tracked files modified.
 - Check credential presence without printing `.env` values; keep secret files out of command output.
+- User skims long messages: repeat every unanswered question under a bold **Open questions** heading right above the next-step line, in every message, until answered.
 - End with one concrete next step; user approves. Use shape: `If you want, I can do X next. React with ✅ to run it.` Several viable: list up to 3, one line each, best first.
 - Hand-off prompts carry only what next session can't access: decisions made, dead ends, ongoing states, next steps.
 - Leave visual verification to the user; skip image previews.
@@ -66,6 +67,8 @@ Before editing an area, read its section in [`docs/agents/failure-log.md`](docs/
 - **Engines**: installers, Python wrappers, daemon protocol, CUDA, adding a `TtsEngine`
 - **Browser companion**: native host, extension protocol, page highlights
 - **History & cache**: history UI, replay, speech cache
+- **Config**: `migrate_tts_config`, schema versions, profile migrations
+- **Text pipeline**: sanitizer (`tts_normalize.rs`), pagination, non-English text
 - **Landing page**: `static/` asset references, version strings in locales
 - **Linux**: HUD window, Wayland
 - **Release**: version bump, GitHub release workflow

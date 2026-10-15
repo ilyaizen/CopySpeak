@@ -1,6 +1,7 @@
 // Playback control commands — stop, pause, skip, volume, speed, replay.
 
 use crate::audio::{AmplitudeEnvelope, AudioPlayer, PlaybackState};
+use crate::commands::helpers::resolve_effective;
 use crate::config::AppConfig;
 use crate::history::HistoryLog;
 use crate::hud;
@@ -178,6 +179,7 @@ pub fn set_volume(config: State<'_, Mutex<AppConfig>>, volume: u8) -> Result<(),
 #[tauri::command]
 pub fn play_history_entry(
     app: tauri::AppHandle,
+    config: State<'_, Mutex<AppConfig>>,
     history: State<'_, Mutex<HistoryLog>>,
     entry_id: String,
 ) -> Result<(), String> {
@@ -185,7 +187,7 @@ pub fn play_history_entry(
         log::debug!("[IPC] play_history_entry called (id: {})", entry_id);
     }
 
-    let (output_path, text) = {
+    let (output_path, text, speed) = {
         let hist = history.lock().unwrap();
         let entry = hist
             .get_by_id(&entry_id)
@@ -198,6 +200,7 @@ pub fn play_history_entry(
                 .ok_or_else(|| "No audio file available for this entry".to_string())?
                 .clone(),
             entry.text.clone(),
+            entry.speed,
         )
     };
 
@@ -236,6 +239,9 @@ pub fn play_history_entry(
     use base64::{engine::general_purpose, Engine as _};
     let encoded = general_purpose::STANDARD.encode(&wav_bytes);
     let captions = crate::tts::captions::read_sidecar(&output_path);
+    let profile =
+        crate::commands::tts::helpers::replay_profile(&config.lock().unwrap().tts, speed, None);
+    let _ = app.emit("reading-profile", profile);
     if let Err(e) = app.emit(
         "audio-fragment-ready",
         super::AudioFragmentEvent {
@@ -275,7 +281,10 @@ pub fn show_hud_for_playback(
 /// Used in settings to preview the HUD overlay.
 /// Automatically hides after 3 seconds since HUD is click-through.
 #[tauri::command]
-pub fn test_show_hud(app: tauri::AppHandle) -> Result<(), String> {
+pub fn test_show_hud(
+    app: tauri::AppHandle,
+    config: State<'_, Mutex<AppConfig>>,
+) -> Result<(), String> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] test_show_hud called");
     }
@@ -289,10 +298,12 @@ pub fn test_show_hud(app: tauri::AppHandle) -> Result<(), String> {
         duration_ms: 5000,
     };
 
+    let eff = resolve_effective(&config.lock().map_err(|e| e.to_string())?.tts);
     hud::show_hud(
         &app,
         envelope,
         Some("Test HUD - Sample text for preview".to_string()),
+        &eff,
     );
 
     // Auto-hide after 3 seconds since HUD is click-through with no close button

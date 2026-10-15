@@ -303,6 +303,7 @@ function createHistoryStore() {
           audioDurationMs: item.duration_ms ?? null
         }).catch(() => {});
       }
+      // The backend sends the replay's settings: the row's speed, the active profile's pitch and effect.
       playbackStore.historyReadingId = `entry:${id}`;
       await invoke("play_history_entry", { entryId: id });
     } catch (e) {

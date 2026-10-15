@@ -18,6 +18,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - `hud:*` events fire only while the HUD is enabled; main-window UI reads `playbackStore.caption` and `reading-started`, never HUD events.
 - Duck other apps per-session and skip our whole process tree, not our PID: playback is in the webview, so the audio session belongs to a `msedgewebview2` child; persist originals to `duck-state.json` because per-app mixer volumes survive a crash.
 - "Beeps" in generated audio: suspect unpronounceable glyphs in the text before the playback code; keep `remove_unpronounceable`'s symbol ranges ahead of what vendors confound.
+- Pass the speech's `EffectiveTtsRequest` to `hud::show_hud` and `show_hud_synthesizing`; `get_provider_voice` reads the request's `engine` and `voice_label`, so a language-switched reading shows its own engine and voice.
 - Clamp the final mix of an offline effect graph with an identity WaveShaper over `[-1, 1]`: a clamp on one layer does not cap layers summed after it (static bed pushed clamped cyberpunk intro/outro to 1.012), and a gain-up without a final clamp exceeds full scale.
 - Size a layer's peak after the crush gain, not before: `crushTail` multiplies by gain before its clamp, so a layer whose peak times gain exceeds 1 hard-clips into a harsh click (the cyberpunk start beep at 0.35 × 3.6).
 - Gate only noise layers in an offline effect tail: a whole-tail on/off chop silences designed clicks that fall in off-windows (an older cyberpunk intro had clicks at 0.06, 0.12, 0.86 s that a 30 Hz gate chopped) and chops tones into clicks at every edge.
@@ -25,6 +26,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Keep an offline effect's start beep at 40 ms or longer: a 6 ms square burst at 0.5 peak was inaudible in playback while a 40 ms one at the same level was heard.
 - Tune offline effect onset and glitch levers on real TTS output (`engines/*/output/test.wav` under `%LOCALAPPDATA%\CopySpeak`), not synthetic bursts: the old silence gate found about 0 onsets per clip on speech, and synthetic clean gaps hid it.
 - Glitch mid-speech onsets in place, never by inserting copies of the grain: a 40–70 ms grain replayed before its word sounds like slap-back echo, and each inserted copy pushes captions later.
+- Apply each reading's `reading-profile` (speed, pitch, effect) to `playbackStore` on every speak path; reading the active profile instead plays a language-switched reading with the wrong speed, pitch and effect.
 
 ## Captions
 
@@ -55,6 +57,9 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Pass Kokoro exporter options by their long names through `Invoke-Uv`; PowerShell binds `-o` as an ambiguous common parameter before uv runs.
 - Export Kokoro's duration-capable model under isolated Python 3.12; Kokoro 0.8.4's NumPy 1.x dependency cannot use the engine's Python 3.13 wheels.
 - Filter Kokoro's misaki phonemes through the model vocab before inference; misaki emits unpronounceable punctuation as literal phonemes, and only a missing _letter_ phoneme is a real pronunciation gap worth aborting on.
+- Load Pocket's language model for its fr/de/es/it/pt voices (`TTSModel.load_model(language=…)`, mapped in `VOICE_LANGUAGES`); the default model is English-only and reads them in English. This needs `pocket-tts>=2.1.0`, so re-run `install-pocket` after a wrapper change, not just a copy.
+- Send Cartesia only the codes in `SONIC_LANGUAGES`, and map the detector's `nb` to `no`: ElevenLabs and Cartesia both call Norwegian `no`, and Sonic 3.6 speaks 44 base codes.
+- Omit ElevenLabs `language_code` on `multilingual_v2` models: they reject the field, so `elevenlabs_language` returns `None` for them.
 - Change a model default in all four places together: the catalog `default_value` in `tts/catalog.rs`, the `*Config::default()` impl and the bundled `default_*_profile()` in `config/tts.rs`, and `play-page.svelte`'s mock; a catalog-only edit leaves fresh installs on the old model.
 
 ## Browser companion
@@ -78,6 +83,20 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Hide the playback button's decorative spinner from accessibility naming so synthesis keeps the action named “Stop”.
 - Clear the shared audio queue on decode/play failure and invalidate pending decoding on Stop so history retries work and stopped readings cannot restart.
 - When a cache test asserts an exact pagination count, set `fragment_size` above each intended sentence length; overlong sentences are correctly force-split into extra fragments.
+- Take a speech's engine from its effective profile (`eff.engine`), not `cfg.tts.active_backend`: that field only mirrors the active profile (`sync_active_backend_mirror`), so a per-utterance switch would file telemetry, history and cache under the wrong engine.
+- Send a replay's playback settings as `reading-profile` (`replay_profile`: the row's speed, the active profile's pitch and effect); do not call `syncFromActiveProfile()` before a replay, it takes the active profile's speed too.
+
+## Text pipeline
+
+- Fold Cyrillic homoglyphs only inside a word that also holds a Latin letter (`fold_homoglyphs`); a per-character fold turned every Russian word into mixed script ("привет" → "пpивeт").
+- Keep U+200C (ZWNJ) out of both invisible-character regexes in `tts_normalize.rs`; Persian and Indic words are spelled with it.
+- Add a script's sentence terminator to both `is_sentence_end` in `pagination.rs` and the phrase regex in `captions.ts`; text with no terminator force-splits at exact character counts, mid-word.
+- Run the English-only rewrites (abbreviations, units, symbols, slash forms) in `sanitize_tts` only when the text is English or unclear; on German text they turn `Dr.`, `5 m` and `~` into wrong speech.
+
+## Config
+
+- Write `schema_version` in `migrate_tts_config` as `.max(2)`, never `= 2`: the reset re-runs the `< 4`, `< 5` and `< 6` migrations on every load, so deleted bundled profiles come back each launch.
+- Retag a profile's `language` in every path that sets its voice (`setVoice`, preset apply, template apply); the picker alone left presets and templates untagged.
 
 ## Linux
 

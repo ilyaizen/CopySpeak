@@ -82,6 +82,7 @@ mod tests {
             engine: TtsEngine::Cartesia,
             voice: String::new(),
             voice_label: None,
+            speed: 1.0,
             pitch: 1.0,
             effects: Default::default(),
             text_processing: Default::default(),
@@ -89,6 +90,7 @@ mod tests {
                 model_id: model_id.map(String::from),
                 ..Default::default()
             }),
+            language_hint: None,
         }
     }
 
