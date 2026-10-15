@@ -955,7 +955,6 @@ async fn speak_now_internal(
         &wav_bytes,
         &text,
         &voice,
-        &eff.engine,
         &tts_config,
         &eff,
         backend_arc,
@@ -1171,7 +1170,6 @@ fn handle_playback_output(
     speech: &SpeechAudio,
     text: &str,
     voice: &str,
-    active_backend: &crate::config::TtsEngine,
     tts_config: &crate::config::TtsConfig,
     eff: &EffectiveTtsRequest,
     backend_arc: Arc<Box<dyn TtsBackend>>,
@@ -1184,8 +1182,8 @@ fn handle_playback_output(
     let wav_bytes = &speech.bytes;
     let envelope = extract_envelope_or_default(wav_bytes);
 
-    let engine_id = engine_identifier(active_backend);
-    let voice_name = voice_display_name(active_backend, tts_config, voice, voice_label);
+    let engine_id = engine_identifier(&eff.engine);
+    let voice_name = voice_display_name(&eff.engine, tts_config, voice, voice_label);
     let audio_ext = backend_arc.file_extension().to_string();
 
     let history_on = config.lock().unwrap().history.enabled;
@@ -1195,7 +1193,7 @@ fn handle_playback_output(
         add_history_with_metadata(
             history,
             text,
-            &engine_str(active_backend),
+            &engine_str(&eff.engine),
             voice,
             envelope.duration_ms,
             history_path,
@@ -1208,7 +1206,7 @@ fn handle_playback_output(
         save_speech_cache(
             &speech_cache_dir(),
             speech,
-            &engine_str(active_backend),
+            &engine_str(&eff.engine),
             voice,
             text,
         );
