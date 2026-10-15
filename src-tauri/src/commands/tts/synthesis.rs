@@ -120,6 +120,17 @@ fn add_history_with_metadata(
     );
 }
 
+/// Tell the frontend a reading began and which profile speaks it.
+fn emit_reading_started(
+    app: &AppHandle,
+    text: &str,
+    eff: &EffectiveTtsRequest,
+    session_id: Option<&str>,
+) {
+    let _ = app.emit("reading-started", text);
+    let _ = app.emit("reading-profile", reading_profile(eff, session_id));
+}
+
 /// Emit audio-ready event with base64 encoded audio
 fn emit_audio_ready(
     app: &AppHandle,
@@ -788,11 +799,7 @@ async fn speak_now_internal(
         Some(eff) => eff,
         None => resolve_effective_for_text(&tts_config, &text, |p| profile_ready(p, &tts_config))?,
     };
-    let _ = app.emit("reading-started", &text);
-    let _ = app.emit(
-        "reading-profile",
-        reading_profile(&eff, session_id.as_deref()),
-    );
+    emit_reading_started(&app, &text, &eff, session_id.as_deref());
     // File output plays nothing, so there is no speak for a page to follow.
     if let Some((trigger, id)) = &trigger {
         if !(output_config.enabled && !output_config.directory.is_empty()) {
@@ -1304,11 +1311,7 @@ async fn speak_queued_internal(
     // Every label and engine read below uses this utterance's profile, which
     // may be a language-matched one rather than the active profile.
     let eff = resolve_effective_for_text(&tts_config, &text, |p| profile_ready(p, &tts_config))?;
-    let _ = app.emit("reading-started", &text);
-    let _ = app.emit(
-        "reading-profile",
-        reading_profile(&eff, session_id.as_deref()),
-    );
+    emit_reading_started(&app, &text, &eff, session_id.as_deref());
     if let Some((trigger, id)) = &trigger {
         browser_bridge::begin_trigger(&app, id, trigger, &text);
     }
