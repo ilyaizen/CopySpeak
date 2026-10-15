@@ -305,6 +305,8 @@ function createHistoryStore() {
           voice: item.voice
         }).catch(() => {});
       }
+      // History replays keep the active profile's pitch and effects, not the last reading's.
+      await playbackStore.syncFromActiveProfile();
       playbackStore.historyReadingId = `entry:${id}`;
       await invoke("play_history_entry", { entryId: id });
     } catch (e) {
@@ -372,6 +374,7 @@ function createHistoryStore() {
     }
 
     try {
+      await playbackStore.syncFromActiveProfile();
       playbackStore.historyReadingId = `batch:${batchId}`;
       await invoke("play_history_batch", { batchId });
     } catch (e) {

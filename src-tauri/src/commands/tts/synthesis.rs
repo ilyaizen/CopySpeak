@@ -19,8 +19,8 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
     active_engine, create_backend, create_backend_from_effective, engine_identifier, engine_str,
-    profile_ready, resolve_effective, resolve_effective_for_profile, resolve_effective_for_text,
-    voice_display_name, EffectiveTtsRequest, SynthesisGuard,
+    profile_ready, reading_profile, resolve_effective, resolve_effective_for_profile,
+    resolve_effective_for_text, voice_display_name, EffectiveTtsRequest, SynthesisGuard,
 };
 use crate::commands::{
     AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent,
@@ -789,6 +789,10 @@ async fn speak_now_internal(
         None => resolve_effective_for_text(&tts_config, &text, |p| profile_ready(p, &tts_config))?,
     };
     let _ = app.emit("reading-started", &text);
+    let _ = app.emit(
+        "reading-profile",
+        reading_profile(&eff, session_id.as_deref()),
+    );
     // File output plays nothing, so there is no speak for a page to follow.
     if let Some((trigger, id)) = &trigger {
         if !(output_config.enabled && !output_config.directory.is_empty()) {
@@ -1303,6 +1307,10 @@ async fn speak_queued_internal(
     // may be a language-matched one rather than the active profile.
     let eff = resolve_effective_for_text(&tts_config, &text, |p| profile_ready(p, &tts_config))?;
     let _ = app.emit("reading-started", &text);
+    let _ = app.emit(
+        "reading-profile",
+        reading_profile(&eff, session_id.as_deref()),
+    );
     if let Some((trigger, id)) = &trigger {
         browser_bridge::begin_trigger(&app, id, trigger, &text);
     }

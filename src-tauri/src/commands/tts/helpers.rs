@@ -498,12 +498,41 @@ pub(crate) struct EffectiveTtsRequest {
     pub engine: TtsEngine,
     pub voice: String,
     pub voice_label: Option<String>,
+    pub speed: f32,
     pub pitch: f32,
     pub effects: crate::config::ProfileEffects,
     pub text_processing: ProfileTextProcessing,
     pub engine_options: ProfileEngineOptions,
     /// Detected language of the text, for engines that accept one. Never persisted.
     pub language_hint: Option<&'static str>,
+}
+
+/// Playback settings of one reading. Sent as `reading-profile` right after
+/// `reading-started`, so the Play page applies this reading's own speed,
+/// pitch and effect.
+#[derive(Clone, serde::Serialize)]
+pub(crate) struct ReadingProfile {
+    pub session_id: Option<String>,
+    pub speed: f32,
+    pub pitch: f32,
+    pub effect: crate::config::EffectId,
+}
+
+pub(crate) fn reading_profile(
+    eff: &EffectiveTtsRequest,
+    session_id: Option<&str>,
+) -> ReadingProfile {
+    let effect = if eff.effects.enabled {
+        eff.effects.active_effect.clone()
+    } else {
+        crate::config::EffectId::None
+    };
+    ReadingProfile {
+        session_id: session_id.map(str::to_owned),
+        speed: eff.speed,
+        pitch: eff.pitch,
+        effect,
+    }
 }
 
 pub(crate) fn resolve_effective_for_profile(
@@ -528,6 +557,7 @@ pub(crate) fn resolve_effective_for_profile(
         engine: profile.engine.clone(),
         voice,
         voice_label: profile.voice_label.clone(),
+        speed: profile.speed,
         pitch: profile.pitch,
         effects: profile.effects.clone(),
         text_processing: profile.text_processing.clone(),
@@ -550,6 +580,7 @@ pub(crate) fn resolve_effective(tts_config: &TtsConfig) -> EffectiveTtsRequest {
             voice: voice_for_backend(&engine, tts_config),
             voice_label: None,
             engine,
+            speed: 1.0,
             pitch: 1.0,
             effects: crate::config::ProfileEffects::default(),
             text_processing: ProfileTextProcessing::default(),
@@ -735,6 +766,41 @@ mod tests {
         let eff = resolve_effective_for_text(&tts, GERMAN, none_ready).unwrap();
         assert_eq!(eff.profile_id.as_deref(), Some("en"));
         assert_eq!(eff.language_hint, Some("de"));
+    }
+
+    /// A switched reading plays with its own speed, pitch and effect, so the
+    /// Play page must hear them rather than the active profile's.
+    #[test]
+    fn reading_profile_carries_the_profile_speed_pitch_and_effect() {
+        let mut de = profile("de", TtsEngine::Piper, Some("de"));
+        de.speed = 1.25;
+        de.pitch = 0.9;
+        de.effects = crate::config::ProfileEffects {
+            enabled: true,
+            active_effect: crate::config::EffectId::GameBoy,
+        };
+        let tts = config(vec![profile("en", TtsEngine::Kokoro, Some("en")), de], "en");
+        let eff = resolve_effective_for_text(&tts, GERMAN, |_| true).unwrap();
+        let payload = reading_profile(&eff, Some("trigger-1"));
+        assert_eq!(payload.session_id.as_deref(), Some("trigger-1"));
+        assert_eq!(payload.speed, 1.25);
+        assert_eq!(payload.pitch, 0.9);
+        assert_eq!(payload.effect, crate::config::EffectId::GameBoy);
+    }
+
+    #[test]
+    fn reading_profile_reports_no_effect_when_effects_are_off() {
+        let mut de = profile("de", TtsEngine::Piper, Some("de"));
+        de.effects = crate::config::ProfileEffects {
+            enabled: false,
+            active_effect: crate::config::EffectId::GameBoy,
+        };
+        let tts = config(vec![de], "de");
+        let eff = resolve_effective(&tts);
+        assert_eq!(
+            reading_profile(&eff, None).effect,
+            crate::config::EffectId::None
+        );
     }
 
     #[test]

@@ -161,6 +161,17 @@ it("plays grouped fragments in order and retains the reading for Replay", async 
   expect(playbackStore.historyReadingId).toBe("batch:reading");
 });
 
+it("applies a reading's own speed, pitch and effect when it starts", async () => {
+  playbackStore.syncPlaybackConfig(100, 1, 1, "none");
+  await listeners.get("reading-profile")!({
+    payload: { session_id: null, speed: 1.5, pitch: 0.8, effect: "game_boy" }
+  });
+  expect(playbackStore.speed).toBe(1.5);
+  expect(playbackStore.pitch).toBe(0.8);
+  expect(playbackStore.activeEffect).toBe("game_boy");
+  expect(audio.playbackRate).toBe(1.5);
+});
+
 it("publishes captions from the audio clock and audible fragment, then stops publishing on Stop", async () => {
   vi.useFakeTimers();
   vi.spyOn(audio, "readyState", "get").mockReturnValue(4);

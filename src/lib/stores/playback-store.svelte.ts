@@ -661,6 +661,15 @@ class PlaybackStore {
     hudStore.setSpeed(speed);
   }
 
+  /** Take volume, speed, pitch and effect from the active profile in config. */
+  async syncFromActiveProfile() {
+    const config = await invoke<AppConfig>("get_config");
+    const { volume } = config.playback;
+    const profile = config.tts.profiles.find((p) => p.id === config.tts.active_profile_id);
+    const effect = profile?.effects?.enabled ? profile.effects.active_effect : "none";
+    this.syncPlaybackConfig(volume, profile?.speed ?? 1.0, profile?.pitch ?? 1.0, effect);
+  }
+
   async setupListeners(): Promise<void> {
     if (!isTauri) return;
     this._listeners ??= this._registerListeners();
@@ -775,14 +784,23 @@ class PlaybackStore {
       // reading uses them instead of the values this store held at startup.
       const unConfigChanged = await listen("config-changed", async () => {
         try {
-          const config = await invoke<AppConfig>("get_config");
-          const { volume } = config.playback;
-          const profile = config.tts.profiles.find((p) => p.id === config.tts.active_profile_id);
-          const effect = profile?.effects?.enabled ? profile.effects.active_effect : "none";
-          this.syncPlaybackConfig(volume, profile?.speed ?? 1.0, profile?.pitch ?? 1.0, effect);
+          await this.syncFromActiveProfile();
         } catch (e) {
           console.error("[PlaybackStore] Failed to re-sync after config-changed:", e);
         }
+      });
+
+      // Each reading announces its own profile's settings right after
+      // `reading-started`, so a language-switched reading plays with its own speed,
+      // pitch and effect, not the active profile's.
+      // ponytail: a queued reading can retune the previous reading's tail; per-fragment settings would need a fragment-level payload.
+      const unReadingProfile = await listen<{
+        session_id: string | null;
+        speed: number;
+        pitch: number;
+        effect: EffectId;
+      }>("reading-profile", (e) => {
+        this.syncPlaybackConfig(this.volume, e.payload.speed, e.payload.pitch, e.payload.effect);
       });
 
       const unSynthesis = await listen<boolean>("synthesis-state-change", (e) => {
@@ -811,6 +829,7 @@ class PlaybackStore {
         unSkipForward,
         unBrowserReading,
         unConfigChanged,
+        unReadingProfile,
         unSynthesis,
         unAbort
       ];
