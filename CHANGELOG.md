@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Russian and other Cyrillic text** is no longer sent to the engine with some letters swapped for Latin lookalikes ("привет" became "пpивeт"). Only words that mix Cyrillic and Latin letters, a common AI-text artifact, are still repaired.
 - **Persian and Indic text** keeps its zero-width non-joiner, so words spelled with it are no longer fused.
 - **Hindi, Arabic, Urdu, Armenian, Amharic, Burmese and Khmer** sentence endings now split long text between sentences instead of mid-word, and start a new caption phrase.
+- **Pocket's French, Spanish, Italian, German and Portuguese voices** now load their own language model; before, they read in English. Re-run the Pocket installer (`install-pocket.ps1` or `install-pocket.sh`) to pick up `pocket-tts` 2.1.0 or later.
 
 ## [0.2.12] - 2026-10-13
 

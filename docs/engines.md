@@ -121,6 +121,32 @@ synthesis time the engine says so in the log rather than quietly using the CPU.
 Pocket is the exception worth knowing about: it is designed for CPU, and on a
 fast laptop chip the GPU is no quicker. It pays off on thread-limited machines.
 
+## Languages
+
+A profile's `language` tag decides when auto-switching picks it (see
+[`adr/0001-multilingual-auto-switch.md`](./adr/0001-multilingual-auto-switch.md)).
+The detected language is sent to an engine only where its API takes one.
+Everything else gets the text alone.
+
+| Engine            | Language sent to the engine                                  | Non-English voices                                            |
+| ----------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
+| Cartesia (Sonic)  | `language`, only the 44 Sonic 3.6 base codes; `nb` → `no`   | From the voice's language tag                                 |
+| ElevenLabs        | `language_code`; `nb` → `no`; skipped on `multilingual_v2`   | Per voice, from the voice's `language` label                  |
+| OpenAI            | not sent                                                     | Not verified                                                  |
+| Google Gemini TTS | not sent                                                     | Not verified                                                  |
+| Microsoft / Azure | not sent                                                     | Not verified                                                  |
+| Kitten TTS        | not sent                                                     | English only                                                  |
+| Piper             | not sent                                                     | Installer is `en_US` only; any-language installs are planned |
+| Kokoro TTS        | not sent                                                     | English voices only; other voices are rejected                |
+| Pocket TTS        | not sent                                                     | fr, es, it, de, pt load their own language model              |
+| Qwen3-TTS         | not sent (the wrapper uses `language="Auto"`)                | Catalog includes zh, ja and ko voices                         |
+| HTTP server       | not sent                                                     | Depends on the server                                         |
+
+Cartesia probe (2026-10-15, `Cartesia-Version: 2024-06-10`): `language: "fr"` returns 200, an unsupported code such as `xx` returns 400 `unsupported language`. An omitted `language` also returns 200; whether it defaults to English was not checked.
+
+Pocket's non-English voices need a reinstall: a wrapper copy alone does not
+bring in the `pocket-tts` version floor.
+
 ## HTTP servers
 
 Any TTS engine that exposes an HTTP API (OpenAI-compatible or custom) is
