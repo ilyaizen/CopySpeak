@@ -23,6 +23,11 @@ pub fn detect_language(text: &str) -> Option<&'static str> {
     Some(iso_639_1(info.lang()))
 }
 
+/// Whether `code` is one `detect_language` can return.
+pub fn is_detector_code(code: &str) -> bool {
+    Lang::all().iter().any(|lang| iso_639_1(*lang) == code)
+}
+
 /// ISO 639-1 code for a detector language. Exhaustive on purpose: a whatlang
 /// upgrade that adds a language fails to compile until it gets a code here.
 fn iso_639_1(lang: Lang) -> &'static str {

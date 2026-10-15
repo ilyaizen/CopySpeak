@@ -832,6 +832,8 @@ impl Default for VoiceProfile {
             engine,
             voice,
             voice_label,
+            // Stays unset: serde fills missing fields from this, and a legacy
+            // profile must get its language from its own voice (v7 migration).
             language: None,
             speed: 1.0,
             pitch: 1.0,
@@ -876,6 +878,34 @@ fn catalog_voice_label(engine: &TtsEngine, voice: &str) -> Option<String> {
         .find(|entry| entry.engine == *engine)
         .and_then(|entry| entry.voices.into_iter().find(|v| v.id == voice))
         .map(|voice| voice.label)
+}
+
+/// The language a catalog voice speaks, as a detector code, or `None` when the
+/// catalog has none or the detector has no code for it.
+pub(crate) fn catalog_voice_language(engine: &TtsEngine, voice: &str) -> Option<String> {
+    catalog::list_engines()
+        .into_iter()
+        .find(|entry| entry.engine == *engine)
+        .and_then(|entry| entry.voices.into_iter().find(|v| v.id == voice))
+        .and_then(|voice| voice.language)
+        .and_then(|raw| catalog_language_code(&raw))
+}
+
+/// Base subtag of a catalog language (`zh-Beijing` → `zh`), lowercased, with
+/// Norwegian `no` as the detector's `nb`. `None` unless the detector knows it.
+pub(crate) fn catalog_language_code(raw: &str) -> Option<String> {
+    let base = raw.split(['-', '_']).next()?.to_ascii_lowercase();
+    let code = if base == "no" { "nb".to_string() } else { base };
+    crate::language::is_detector_code(&code).then_some(code)
+}
+
+/// v6 → v7: tag untagged profiles with their voice's catalog language so
+/// auto-switching can find them. Fills `None` only; a language the user set stays.
+pub(crate) fn migrate_profile_languages_v7(tts: &mut TtsConfig) {
+    for profile in tts.profiles.iter_mut().filter(|p| p.language.is_none()) {
+        profile.language = catalog_voice_language(&profile.engine, &profile.voice);
+    }
+    tts.schema_version = 7;
 }
 
 fn schema_version_absent() -> u32 {
@@ -953,7 +983,7 @@ fn default_elevenlabs_profile() -> VoiceProfile {
         engine: TtsEngine::ElevenLabs,
         voice: "JBFqnCBsd6RMkjVDRZzb".into(),
         voice_label: Some("George".into()),
-        language: None,
+        language: catalog_voice_language(&TtsEngine::ElevenLabs, "JBFqnCBsd6RMkjVDRZzb"),
         speed: 1.1,
         pitch: 0.9,
         effects: ProfileEffects::default(),
@@ -976,7 +1006,10 @@ fn default_cartesia_profile() -> VoiceProfile {
         engine: TtsEngine::Cartesia,
         voice: "c5d00dfb-501f-43f3-8e79-c810d24f5acd".into(),
         voice_label: Some("Harper - Conversationalist".into()),
-        language: None,
+        language: catalog_voice_language(
+            &TtsEngine::Cartesia,
+            "c5d00dfb-501f-43f3-8e79-c810d24f5acd",
+        ),
         speed: 0.9,
         pitch: 1.3,
         effects: ProfileEffects::default(),
@@ -998,7 +1031,7 @@ fn default_google_profile() -> VoiceProfile {
         engine: TtsEngine::Google,
         voice: "Orus".into(),
         voice_label: Some("Orus".into()),
-        language: None,
+        language: catalog_voice_language(&TtsEngine::Google, "Orus"),
         speed: 1.1,
         pitch: 0.85,
         effects: ProfileEffects::default(),
@@ -1021,7 +1054,7 @@ fn default_kitten_profile() -> VoiceProfile {
         engine: TtsEngine::Kitten,
         voice: "Rosie".into(),
         voice_label: Some("Rosie".into()),
-        language: None,
+        language: catalog_voice_language(&TtsEngine::Kitten, "Rosie"),
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
@@ -1054,7 +1087,7 @@ fn default_qwen_profile() -> VoiceProfile {
         engine: TtsEngine::Qwen,
         voice: "Aiden".into(),
         voice_label: Some("Aiden".into()),
-        language: None,
+        language: catalog_voice_language(&TtsEngine::Qwen, "Aiden"),
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
@@ -1085,6 +1118,7 @@ pub(crate) fn default_kokoro_profile() -> VoiceProfile {
     let engine = TtsEngine::Kokoro;
     let voice = KOKORO_DEFAULT_VOICE.to_string();
     let voice_label = catalog_voice_label(&engine, &voice);
+    let language = catalog_voice_language(&engine, &voice);
     VoiceProfile {
         id: KOKORO_DEFAULT_PROFILE_ID.into(),
         name: "Kokoro".into(),
@@ -1092,7 +1126,7 @@ pub(crate) fn default_kokoro_profile() -> VoiceProfile {
         engine,
         voice,
         voice_label,
-        language: None,
+        language,
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
@@ -1155,7 +1189,7 @@ impl Default for TtsConfig {
         // Existing configs on disk are unaffected — defaults only apply when
         // no config file exists.
         Self {
-            schema_version: 6,
+            schema_version: 7,
             active_backend: TtsEngine::Kokoro,
             active_profile_id: KOKORO_DEFAULT_PROFILE_ID.into(),
             profiles: vec![
