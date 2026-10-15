@@ -752,7 +752,6 @@ async fn speak_now_internal(
     let _synthesis_guard = SynthesisGuard::new(&app);
 
     let (
-        active_backend,
         tts_config,
         output_config,
         pagination_config,
@@ -762,7 +761,6 @@ async fn speak_now_internal(
     ) = {
         let cfg = config.lock().unwrap();
         (
-            cfg.tts.active_backend.clone(),
             cfg.tts.clone(),
             cfg.output.clone(),
             cfg.pagination.clone(),
@@ -785,13 +783,12 @@ async fn speak_now_internal(
         }
     }
 
-    log_tts_debug("TTS", &format!("{:?}", active_backend), &text);
-
     let eff = resolve_effective(&tts_config);
     let voice = eff.voice.clone();
+    log_tts_debug("TTS", &format!("{:?}", eff.engine), &text);
 
     let backend: Box<dyn TtsBackend> = create_backend_from_effective(&eff, &tts_config);
-    let engine_str_for_cache = engine_str(&active_backend);
+    let engine_str_for_cache = engine_str(&eff.engine);
 
     let history_on = config.lock().unwrap().history.enabled;
     let cached = if reuse_saved_audio {
@@ -857,7 +854,7 @@ async fn speak_now_internal(
             backend_arc.clone(),
             &text,
             &voice,
-            &active_backend,
+            &eff.engine,
             &telemetry_state,
             &synthesis_start,
             estimated_ms,
@@ -902,7 +899,7 @@ async fn speak_now_internal(
     if !cache_hit {
         record_telemetry(
             &telemetry_state,
-            &engine_str(&active_backend),
+            engine_str_for_cache,
             &voice,
             text.len(),
             synthesis_ms,
@@ -923,7 +920,7 @@ async fn speak_now_internal(
             &wav_bytes,
             &text,
             &voice,
-            &active_backend,
+            &eff.engine,
             &output_config,
             synthesis_ms,
         );
@@ -942,7 +939,7 @@ async fn speak_now_internal(
         &wav_bytes,
         &text,
         &voice,
-        &active_backend,
+        &eff.engine,
         &tts_config,
         &eff,
         backend_arc,
