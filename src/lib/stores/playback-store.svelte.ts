@@ -257,10 +257,11 @@ class PlaybackStore {
         // Pitch shift only - duration stays native so caption positions map 1:1.
         buffer = stretchBuffer(this._decodedBuffer, 1, pitchRatio);
       }
+      // Fade the speech before the effect: an effect may open with its own onset.
+      applyFadeIn(buffer, 10);
       if (effect) {
         buffer = await effect.process(buffer, this._audioCtx);
       }
-      applyFadeIn(buffer, 10);
       blob = audioBufferToWavBlob(buffer);
     } else {
       return "";

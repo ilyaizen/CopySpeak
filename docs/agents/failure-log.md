@@ -18,6 +18,13 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - `hud:*` events fire only while the HUD is enabled; main-window UI reads `playbackStore.caption` and `reading-started`, never HUD events.
 - Duck other apps per-session and skip our whole process tree, not our PID: playback is in the webview, so the audio session belongs to a `msedgewebview2` child; persist originals to `duck-state.json` because per-app mixer volumes survive a crash.
 - "Beeps" in generated audio: suspect unpronounceable glyphs in the text before the playback code; keep `remove_unpronounceable`'s symbol ranges ahead of what vendors confound.
+- Clamp the final mix of an offline effect graph with an identity WaveShaper over `[-1, 1]`: a clamp on one layer does not cap layers summed after it (static bed pushed clamped cyberpunk intro/outro to 1.012), and a gain-up without a final clamp exceeds full scale.
+- Size a layer's peak after the crush gain, not before: `crushTail` multiplies by gain before its clamp, so a layer whose peak times gain exceeds 1 hard-clips into a harsh click (the cyberpunk start beep at 0.35 × 3.6).
+- Gate only noise layers in an offline effect tail: a whole-tail on/off chop silences designed clicks that fall in off-windows (an older cyberpunk intro had clicks at 0.06, 0.12, 0.86 s that a 30 Hz gate chopped) and chops tones into clicks at every edge.
+- Fade speech before `effect.process` in `buildPlaybackUrl`, never after: a post-effect fade ramps the effect's own t=0 onset (the cyberpunk beep lost 7 dB to a 10 ms fade).
+- Keep an offline effect's start beep at 40 ms or longer: a 6 ms square burst at 0.5 peak was inaudible in playback while a 40 ms one at the same level was heard.
+- Tune offline effect onset and glitch levers on real TTS output (`engines/*/output/test.wav` under `%LOCALAPPDATA%\CopySpeak`), not synthetic bursts: the old silence gate found about 0 onsets per clip on speech, and synthetic clean gaps hid it.
+- Glitch mid-speech onsets in place, never by inserting copies of the grain: a 40–70 ms grain replayed before its word sounds like slap-back echo, and each inserted copy pushes captions later.
 
 ## Captions
 

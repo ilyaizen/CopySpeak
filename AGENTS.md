@@ -54,6 +54,8 @@ Every line exists because it went wrong at least once. On mistake, correction, o
 - Import test APIs from `vite-plus/test`, not `vitest`; `vp check`'s `prefer-vite-plus-imports` rejects the bare import.
 - Hold a mocked async API on a promise the test opens when proving a race; `vi.waitFor` polls, so an ungated mock finishes the whole setup before the test's next step and the race never happens.
 - Type test catalog maps with `satisfies Record<string, Catalog>`, not a `: Record<…>` annotation; `vp check`'s anti-slop `no-known-value-widening` rejects the annotation.
+- Let one dynamic `import()` of a `vi.mock`ed module settle before code under test starts another: concurrent ones can resolve the real module, so the mock never sees the race.
+- Unlisten a Tauri `listen` that resolves after its component's `onDestroy`: HMR can destroy a component mid-`onMount`, and the orphaned listener double-fires (one double-copy spoke twice).
 
 ### Area gotchas
 

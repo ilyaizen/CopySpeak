@@ -3,52 +3,46 @@
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { historyStore } from "#lib/stores/history-store.svelte";
 
-let unlistenHistory: UnlistenFn | null = null;
-let unlistenSpeak: UnlistenFn | null = null;
-let isListening = false;
+// The registration in flight or done. Stop takes it before awaiting, so a stop
+// that lands mid-start (HMR remounting the layout) still unlistens what that
+// start registers, and the next start registers afresh.
+let listeners: Promise<UnlistenFn[]> | null = null;
 
 export async function startHistoryEventListeners(): Promise<void> {
   if (!("window" in globalThis) || !("__TAURI_INTERNALS__" in window)) {
     return;
   }
 
-  if (isListening) {
-    return;
-  }
+  listeners ??= (async () => {
+    const unlisteners: UnlistenFn[] = [];
+    try {
+      const { listen } = await import("@tauri-apps/api/event");
 
-  try {
-    const { listen } = await import("@tauri-apps/api/event");
+      unlisteners.push(
+        await listen<void>("history-updated", async () => {
+          await historyStore.refresh();
+        })
+      );
 
-    unlistenHistory = await listen<void>("history-updated", async () => {
-      await historyStore.refresh();
-    });
-
-    unlistenSpeak = await listen<{ text: string }>("speak-request", async () => {
-      setTimeout(async () => {
-        await historyStore.refresh();
-      }, 100);
-    });
-
-    isListening = true;
-  } catch (error) {
-    console.error("[history-events] Failed to start event listeners:", error);
-  }
+      unlisteners.push(
+        await listen<{ text: string }>("speak-request", async () => {
+          setTimeout(async () => {
+            await historyStore.refresh();
+          }, 100);
+        })
+      );
+    } catch (error) {
+      console.error("[history-events] Failed to start event listeners:", error);
+    }
+    return unlisteners;
+  })();
+  await listeners;
 }
 
 export async function stopHistoryEventListeners(): Promise<void> {
-  if (unlistenHistory) {
-    unlistenHistory();
-    unlistenHistory = null;
-  }
-  if (unlistenSpeak) {
-    unlistenSpeak();
-    unlistenSpeak = null;
-  }
-  isListening = false;
-}
-
-export function isListeningForHistoryEvents(): boolean {
-  return isListening;
+  const pending = listeners;
+  listeners = null;
+  for (const unlisten of (await pending) ?? []) unlisten();
 }
 
 export async function refreshHistory(): Promise<void> {

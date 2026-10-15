@@ -1,19 +1,17 @@
-// Cyberpunk effect: synthesized 56k modem handshake fragments at both ends,
-// glitch stutters on the first word and bursty word onsets, and a
-// bright, lightly ring-modulated voice. Stutters insert time.
+// Cyberpunk effect: a hard-start synth beep, a short modem chirp at the end,
+// a glitch stutter on the first word, in-place crunch on random word onsets,
+// a driven and lightly ring-modulated voice, and a low static bed under
+// everything. Only the first-word stutter inserts time.
 
 import type { Effect } from "./types";
 import { buildSoftClipCurve } from "./walkie-talkie";
 
-const INTRO_DUR = 0.9;
-const OUTRO_DUR = 0.6;
-const SEGMENT_MIN_SEC = 2;
-const SEGMENT_MAX_SEC = 4;
-const BURST_SHARE = 1 / 3;
-const BURST_CHANCE = 1 / 2;
-const BURST_MIN_GAP_SEC = 0.4;
-const SPARSE_CHANCE = 1 / 20;
-const SPARSE_MIN_GAP_SEC = 1.5;
+const INTRO_DUR = 0.05;
+const OUTRO_DUR = 0.15;
+const GLITCH_CHANCE = 0.5;
+const MIN_GAP_SEC = 0.6;
+// Sample-and-hold rate for in-place glitches; lower is crunchier.
+const GLITCH_HOLD_HZ = 3000;
 
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -26,7 +24,11 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-/** Sample indices where speech rises after ≥80 ms of near-silence. */
+/**
+ * Sample indices where a sound starts: a 10 ms frame at least twice the quietest
+ * of the three frames before it, above 5% of peak, and 60 ms after the last start.
+ * Speech rarely goes silent between syllables, so a silence gate finds almost none.
+ */
 export function findOnsets(data: Float32Array, sampleRate: number): number[] {
   const frame = Math.max(1, Math.round(sampleRate * 0.01));
   const frames = Math.floor(data.length / frame);
@@ -38,19 +40,14 @@ export function findOnsets(data: Float32Array, sampleRate: number): number[] {
     rms[f] = Math.sqrt(sum / frame);
     peak = Math.max(peak, rms[f]);
   }
-  if (peak === 0) return [];
-
-  const hi = peak * 0.25;
-  const lo = peak * 0.08;
-  const minQuiet = 8;
   const onsets: number[] = [];
-  let quiet = minQuiet; // buffer start counts as silence
-  for (let f = 0; f < frames; f++) {
-    if (rms[f] < lo) quiet++;
-    else if (rms[f] > hi && quiet >= minQuiet) {
+  let last = -Infinity;
+  for (let f = 3; f < frames; f++) {
+    const quietest = Math.min(rms[f - 3], rms[f - 2], rms[f - 1]);
+    if (rms[f] > peak * 0.05 && rms[f] >= 2 * Math.max(quietest, 1e-6) && f - last >= 6) {
       onsets.push(f * frame);
-      quiet = 0;
-    } else quiet = 0;
+      last = f;
+    }
   }
   return onsets;
 }
@@ -58,39 +55,31 @@ export function findOnsets(data: Float32Array, sampleRate: number): number[] {
 interface Stutter {
   at: number;
   grain: number;
+  /** 0 = glitch the grain in place. */
   repeats: number;
 }
 
 /**
- * Picks glitch points. The utterance splits into 2-4 s segments, each either
- * sparse (rare glitches, long gaps) or bursty (frequent glitches, short gaps).
- * The first onset always glitches and gets a longer, busier stutter.
+ * Picks glitch points: each onset glitches at random, at least MIN_GAP_SEC
+ * apart. The first onset always glitches with a repeated stutter; the rest
+ * glitch in place, since a repeated 40-70 ms grain reads as echo.
  */
 export function planStutters(data: Float32Array, sampleRate: number, seed: number): Stutter[] {
   const rand = mulberry32(seed);
   const stutters: Stutter[] = [];
-  let segEnd = 0;
-  let burst = false;
   for (const at of findOnsets(data, sampleRate)) {
-    if (at >= segEnd) {
-      const segSec = SEGMENT_MIN_SEC + rand() * (SEGMENT_MAX_SEC - SEGMENT_MIN_SEC);
-      segEnd = at + Math.round(segSec * sampleRate);
-      burst = rand() < BURST_SHARE;
-    }
     const last = stutters[stutters.length - 1];
-    const minGap = (burst ? BURST_MIN_GAP_SEC : SPARSE_MIN_GAP_SEC) * sampleRate;
-    const chance = burst ? BURST_CHANCE : SPARSE_CHANCE;
-    if (last && (at - last.at < minGap || rand() >= chance)) continue;
+    if (last && (at - last.at < MIN_GAP_SEC * sampleRate || rand() >= GLITCH_CHANCE)) continue;
     const opener = !last;
     const grainSec = opener ? 0.06 + rand() * 0.04 : 0.04 + rand() * 0.03;
     const grain = Math.min(Math.round(grainSec * sampleRate), data.length - at);
-    const repeats = opener ? 4 + Math.floor(rand() * 2) : 2 + Math.floor(rand() * 3);
+    const repeats = opener ? 2 + Math.floor(rand() * 2) : 0;
     if (grain > 0) stutters.push({ at, grain, repeats });
   }
   return stutters;
 }
 
-/** Repeats the start of each planned word onset 2-5 extra times. */
+/** Repeats the opener's start 2-3 times; crunches the other onsets in place, adding no time. */
 export function insertStutters(
   channels: Float32Array[],
   sampleRate: number,
@@ -101,6 +90,7 @@ export function insertStutters(
 
   const extra = stutters.reduce((n, s) => n + s.grain * s.repeats, 0);
   const fadeMax = Math.round(sampleRate * 0.002);
+  const inPlaceHold = Math.max(2, Math.round(sampleRate / GLITCH_HOLD_HZ));
   return channels.map((data) => {
     const out = new Float32Array(len + extra);
     let read = 0;
@@ -109,6 +99,17 @@ export function insertStutters(
       out.set(data.subarray(read, at), write);
       write += at - read;
       const fade = Math.max(1, Math.min(fadeMax, Math.floor(grain / 2)));
+      if (repeats === 0) {
+        // Crossfade into and out of the held samples so the edges don't click.
+        for (let j = 0; j < grain; j++) {
+          const env = Math.min(1, j / fade, (grain - 1 - j) / fade);
+          const dry = data[at + j];
+          out[write + j] = dry + (data[at + j - (j % inPlaceHold)] - dry) * env;
+        }
+        write += grain;
+        read = at + grain;
+        continue;
+      }
       for (let r = 0; r < repeats; r++) {
         // Odd repeats sample-and-hold every 4 samples for digital crunch.
         const hold = r % 2 === 1 ? 4 : 1;
@@ -125,29 +126,31 @@ export function insertStutters(
   });
 }
 
-/** Bitcrush (amplitude quantize) and hard on/off chop gated at `chopHz`. */
+/** Bitcrush: amplitude quantize, then clamp. No gating, so clicks and tones keep their shape. */
 export function crushTail(
   data: Float32Array,
-  sampleRate: number,
   step: number,
-  chopHz: number,
   gain: number
 ): Float32Array<ArrayBuffer> {
   const out = new Float32Array(data.length);
-  const half = sampleRate / chopHz / 2;
   for (let i = 0; i < data.length; i++) {
-    const on = Math.floor(i / half) % 2 === 0 ? 1 : 0;
     const q = Math.round((data[i] * gain) / step) * step;
-    out[i] = Math.max(-1, Math.min(1, q)) * on;
+    out[i] = Math.max(-1, Math.min(1, q));
   }
   return out;
 }
 
-function envelope(ctx: BaseAudioContext, t0: number, dur: number, peak: number): GainNode {
+function envelope(
+  ctx: BaseAudioContext,
+  t0: number,
+  dur: number,
+  peak: number,
+  fade = 0.004
+): GainNode {
   const g = ctx.createGain();
   g.gain.setValueAtTime(0, t0);
-  g.gain.linearRampToValueAtTime(peak, t0 + 0.004);
-  g.gain.setValueAtTime(peak, t0 + dur - 0.004);
+  g.gain.linearRampToValueAtTime(peak, t0 + fade);
+  g.gain.setValueAtTime(peak, t0 + dur - fade);
   g.gain.linearRampToValueAtTime(0, t0 + dur);
   g.connect(ctx.destination);
   return g;
@@ -172,105 +175,52 @@ function tone(
 }
 
 /** Frequency-shift-keyed warble, the chirpy part of a handshake. */
-function fsk(ctx: BaseAudioContext, t0: number, dur: number, f1: number, f2: number, step: number) {
-  const osc = tone(ctx, "square", f1, t0, dur, 0.05);
+function fsk(
+  ctx: BaseAudioContext,
+  t0: number,
+  dur: number,
+  f1: number,
+  f2: number,
+  step: number,
+  peak = 0.1
+) {
+  const osc = tone(ctx, "square", f1, t0, dur, peak);
   for (let t = t0, i = 0; t < t0 + dur; t += step, i++) {
     osc.frequency.setValueAtTime(i % 2 ? f2 : f1, t);
   }
 }
 
-/** Band-passed noise, square-gated at `gateHz` like the scrambler hiss. */
-function hiss(
-  ctx: BaseAudioContext,
-  noise: AudioBuffer,
-  t0: number,
-  dur: number,
-  peak: number,
-  center: number,
-  gateHz: number
-) {
-  const src = ctx.createBufferSource();
-  src.buffer = noise;
-  src.loop = true;
-  const bp = ctx.createBiquadFilter();
-  bp.type = "bandpass";
-  bp.frequency.value = center;
-  bp.Q.value = 0.8;
-  const gate = ctx.createGain();
-  if (gateHz > 0) {
-    // Square ±1 scaled to ±0.5 around 0.5, so the gate swings 0..1.
-    gate.gain.value = 0.5;
-    const depth = ctx.createGain();
-    depth.gain.value = 0.5;
-    depth.connect(gate.gain);
-    tone(ctx, "square", gateHz, t0, dur, 0, depth);
-  }
-  src
-    .connect(bp)
-    .connect(gate)
-    .connect(envelope(ctx, t0, dur, peak));
-  src.start(t0);
-  src.stop(t0 + dur);
-}
-
 function click(ctx: BaseAudioContext, t0: number) {
+  // Peak 0.15 so the x3.2 outro crush stays under full scale.
   const sr = ctx.sampleRate;
   const buf = ctx.createBuffer(1, Math.round(sr * 0.006), sr);
   const d = buf.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = (i % 2 ? -0.6 : 0.6) * Math.exp(-i / (sr * 0.0008));
+  for (let i = 0; i < d.length; i++) d[i] = (i % 2 ? -0.15 : 0.15) * Math.exp(-i / (sr * 0.0008));
   const src = ctx.createBufferSource();
   src.buffer = buf;
   src.connect(ctx.destination);
   src.start(t0);
 }
 
-function renderIntro(ctx: BaseAudioContext, noise: AudioBuffer) {
-  // Answer tone with 15 Hz amplitude wobble.
-  const am = ctx.createGain();
-  am.gain.value = 0.6;
-  am.connect(envelope(ctx, 0, 0.18, 0.12));
-  tone(ctx, "sine", 2100, 0, 0.18, 0, am);
-  const wobble = ctx.createGain();
-  wobble.gain.value = 0.4;
-  tone(ctx, "sine", 15, 0, 0.18, 0, wobble);
-  wobble.connect(am.gain);
-  click(ctx, 0.06);
-  click(ctx, 0.12);
-
-  fsk(ctx, 0.18, 0.18, 980, 1180, 0.012);
-
-  // Falling dual-tone "bong".
-  for (const [from, to] of [
-    [1650, 1200],
-    [2400, 1800]
-  ]) {
-    tone(ctx, "sine", from, 0.36, 0.12, 0.1).frequency.exponentialRampToValueAtTime(to, 0.48);
-  }
-
-  hiss(ctx, noise, 0.48, 0.36, 0.2, 1800, 37);
-  hiss(ctx, noise, 0.5, 0.32, 0.08, 3400, 0);
-  click(ctx, 0.86);
+function renderIntro(ctx: BaseAudioContext) {
+  // Hard-start high synth beep, 1 ms fades so it still reaches full level. 40 ms:
+  // a 6 ms burst reads as a click, not a beep.
+  tone(ctx, "square", 4500, 0, 0.04, 0.12, envelope(ctx, 0, 0.04, 0.12, 0.001));
 }
 
-function renderOutro(ctx: BaseAudioContext, noise: AudioBuffer) {
-  fsk(ctx, 0, 0.14, 1180, 1650, 0.008);
-  hiss(ctx, noise, 0.1, 0.4, 0.22, 2200, 53);
-  click(ctx, 0.3);
-  click(ctx, 0.52);
+function renderOutro(ctx: BaseAudioContext) {
+  fsk(ctx, 0, 0.07, 1180, 1650, 0.008, 0.05);
+  click(ctx, 0.1);
 }
 
 /** Renders a mono tail offline so it can be post-processed sample by sample. */
 async function renderTail(
   sampleRate: number,
   dur: number,
-  render: (ctx: BaseAudioContext, noise: AudioBuffer) => void
+  render: (ctx: BaseAudioContext) => void
 ): Promise<Float32Array<ArrayBuffer>> {
   const ctx = new OfflineAudioContext(1, Math.ceil(dur * sampleRate), sampleRate);
-  const noise = ctx.createBuffer(1, sampleRate, sampleRate);
-  const rand = mulberry32(1);
-  const noiseData = noise.getChannelData(0);
-  for (let i = 0; i < noiseData.length; i++) noiseData[i] = rand() * 2 - 1;
-  render(ctx, noise);
+  render(ctx);
   const rendered = await ctx.startRendering();
   return new Float32Array(rendered.getChannelData(0));
 }
@@ -288,30 +238,24 @@ export const cyberpunk: Effect = {
     const voice = ctx.createBuffer(channels, stuttered[0].length, sampleRate);
     stuttered.forEach((data, c) => voice.copyToChannel(data, c));
 
-    const intro = crushTail(
-      await renderTail(sampleRate, INTRO_DUR, renderIntro),
-      sampleRate,
-      1 / 16,
-      30,
-      1.8
-    );
-    const outro = crushTail(
-      await renderTail(sampleRate, OUTRO_DUR, renderOutro),
-      sampleRate,
-      1 / 12,
-      45,
-      1.6
-    );
+    const intro = crushTail(await renderTail(sampleRate, INTRO_DUR, renderIntro), 1 / 16, 3.6);
+    const outro = crushTail(await renderTail(sampleRate, OUTRO_DUR, renderOutro), 1 / 12, 3.2);
 
     const totalLen = Math.ceil((INTRO_DUR + voice.duration + OUTRO_DUR) * sampleRate);
     const offline = new OfflineAudioContext(channels, totalLen, sampleRate);
+
+    // Hard clamp on the final mix. An identity curve over [-1, 1] pins any
+    // input outside that range to ±1, so summed layers can't exceed full scale.
+    const master = offline.createWaveShaper();
+    master.curve = new Float32Array([-1, 1]);
+    master.connect(offline.destination);
 
     const play = (data: Float32Array<ArrayBuffer>, at: number) => {
       const buf = offline.createBuffer(channels, data.length, sampleRate);
       for (let c = 0; c < channels; c++) buf.copyToChannel(data, c);
       const src = offline.createBufferSource();
       src.buffer = buf;
-      src.connect(offline.destination);
+      src.connect(master);
       src.start(at);
     };
     play(intro, 0);
@@ -320,15 +264,26 @@ export const cyberpunk: Effect = {
     const voiceSrc = offline.createBufferSource();
     voiceSrc.buffer = voice;
 
-    const highpass = offline.createBiquadFilter();
-    highpass.type = "highpass";
-    highpass.frequency.value = 180;
+    // Phone voice band, 300-3400 Hz: high-pass before the drive keeps lows out
+    // of the distortion; the band again after the chain cuts what the drive and
+    // ring-mod regenerate, with the low-pass stacked for 24 dB/oct.
+    const phoneFilter = (type: BiquadFilterType, freq: number) => {
+      const filter = offline.createBiquadFilter();
+      filter.type = type;
+      filter.frequency.value = freq;
+      return filter;
+    };
+    const highpass = phoneFilter("highpass", 300);
 
     const presence = offline.createBiquadFilter();
     presence.type = "peaking";
     presence.frequency.value = 3000;
     presence.Q.value = 1.1;
     presence.gain.value = 5;
+
+    // +6 dB pre-clip drive; the soft clip curve keeps peaks within ±1.
+    const drive = offline.createGain();
+    drive.gain.value = 2;
 
     const softClip = offline.createWaveShaper();
     softClip.curve = buildSoftClipCurve(0.3);
@@ -351,11 +306,32 @@ export const cyberpunk: Effect = {
     voiceSrc
       .connect(highpass)
       .connect(presence)
+      .connect(drive)
       .connect(softClip)
       .connect(comp)
       .connect(ring)
-      .connect(offline.destination);
+      .connect(phoneFilter("highpass", 300))
+      .connect(phoneFilter("lowpass", 3400))
+      .connect(phoneFilter("lowpass", 3400))
+      .connect(master);
     voiceSrc.start(INTRO_DUR);
+
+    // Low static bed under the whole output, about -36 dBFS (full-scale noise
+    // before the band-pass). Seeded so renders repeat.
+    const staticBuf = offline.createBuffer(1, totalLen, sampleRate);
+    const staticData = staticBuf.getChannelData(0);
+    const staticRand = mulberry32(2);
+    for (let i = 0; i < staticData.length; i++) staticData[i] = staticRand() * 2 - 1;
+    const staticSrc = offline.createBufferSource();
+    staticSrc.buffer = staticBuf;
+    const staticBp = offline.createBiquadFilter();
+    staticBp.type = "bandpass";
+    staticBp.frequency.value = 2500;
+    staticBp.Q.value = 0.7;
+    const staticGain = offline.createGain();
+    staticGain.gain.value = 10 ** (-36 / 20);
+    staticSrc.connect(staticBp).connect(staticGain).connect(master);
+    staticSrc.start(0);
 
     return offline.startRendering();
   }
