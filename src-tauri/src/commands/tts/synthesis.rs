@@ -19,8 +19,8 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
     active_engine, create_backend, create_backend_from_effective, engine_identifier, engine_str,
-    resolve_effective, resolve_effective_for_text, voice_display_name, EffectiveTtsRequest,
-    SynthesisGuard,
+    resolve_effective, resolve_effective_for_profile, resolve_effective_for_text,
+    voice_display_name, EffectiveTtsRequest, SynthesisGuard,
 };
 use crate::commands::{
     AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent,
@@ -688,6 +688,8 @@ pub async fn regenerate_now(
     .await
 }
 
+/// Like `speak_now`, but speaks with the named profile (the active one when
+/// `None`). An unknown id is an error.
 #[tauri::command]
 pub async fn speak_now_with_profile(
     app: AppHandle,
@@ -697,6 +699,7 @@ pub async fn speak_now_with_profile(
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     text: Option<String>,
     profile_id: Option<String>,
+    condense: Option<bool>,
 ) -> Result<(), String> {
     speak_now_internal(
         app,
@@ -707,7 +710,7 @@ pub async fn speak_now_with_profile(
         text,
         profile_id,
         true,
-        false,
+        condense.unwrap_or(false),
         None,
     )
     .await
@@ -720,7 +723,7 @@ async fn speak_now_internal(
     history: State<'_, Mutex<HistoryLog>>,
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     text: Option<String>,
-    _profile_id: Option<String>,
+    profile_id: Option<String>,
     reuse_saved_audio: bool,
     condense: bool,
     trigger: Option<(TriggerSource, String)>,
@@ -769,6 +772,10 @@ async fn speak_now_internal(
             cfg.playback.streaming_enabled,
         )
     };
+    let named = profile_id
+        .as_deref()
+        .map(|id| resolve_effective_for_profile(&tts_config, Some(id)))
+        .transpose()?;
 
     // Optional LLM post-processing (e.g., Groq) — best-effort; falls back to
     // the input text on any failure so synthesis is never blocked. Re-runs
@@ -783,7 +790,7 @@ async fn speak_now_internal(
         }
     }
 
-    let eff = resolve_effective(&tts_config);
+    let eff = named.unwrap_or_else(|| resolve_effective(&tts_config));
     let voice = eff.voice.clone();
     log_tts_debug("TTS", &format!("{:?}", eff.engine), &text);
 

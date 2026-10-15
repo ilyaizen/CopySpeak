@@ -60,7 +60,11 @@
     if (!isTauri || isPreviewing) return;
     isPreviewing = true;
     try {
-      await invoke("speak_now", { text: PREVIEW_TEXT });
+      // Name the active profile so language switching never previews another one.
+      await invoke("speak_now_with_profile", {
+        text: PREVIEW_TEXT,
+        profileId: config?.tts.active_profile_id
+      });
     } catch (e) {
       toast.error($_("toast.error.previewFailed", { values: { error: String(e) } }));
     } finally {
