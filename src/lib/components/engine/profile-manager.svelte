@@ -27,7 +27,7 @@
   import VoicePicker from "./voice-picker.svelte";
   import { findSetupEntry } from "./engine-meta";
   import { choicesWithCurrent } from "./select-choices";
-  import { languageChoices } from "./profile-language";
+  import { languageChoices, profileLanguage } from "./profile-language";
   import type {
     AppConfig,
     EngineCatalogEntry,
@@ -362,6 +362,12 @@
     return voicesByEngine[engine] ?? [];
   }
 
+  // A voice's language tag, or null (speaks any) for a voice the catalog does not list.
+  function voiceLanguage(engine: TtsEngine, voiceId: string): string | null {
+    const match = catalogVoicesFor(engine).find((voice) => voice.id === voiceId);
+    return profileLanguage(match?.language);
+  }
+
   function applyPresetDefaults(index: number, preset: EngineOptionValue) {
     const profile = localConfig.tts.profiles[index];
     if (profile.engine !== "local") return;
@@ -478,6 +484,7 @@
     profile.voice = voiceId;
     const match = catalogVoicesFor(profile.engine).find((voice) => voice.id === voiceId);
     profile.voice_label = match?.label;
+    profile.language = voiceLanguage(profile.engine, voiceId);
   }
 
   function resetEngineOptions(index: number, engine: TtsEngine) {
@@ -582,6 +589,7 @@
       engine: preset.engine,
       voice: preset.voice,
       voice_label: preset.voiceLabel,
+      language: voiceLanguage(preset.engine, preset.voice),
       speed: 1.0,
       pitch: 1.0,
       effects: { enabled: true, active_effect: "walkie_talkie" },
@@ -606,6 +614,21 @@
     };
     profile.voice = t.voice;
     profile.voice_label = t.voice || null;
+  }
+
+  // Each tooltip is a few sentences, one translation key per sentence.
+  function autoSwitchTooltip(): string {
+    return [
+      $_("profiles.autoSwitchTooltip"),
+      $_("profiles.autoSwitchPaths"),
+      $_("profiles.autoSwitchUnclear"),
+      $_("profiles.autoSwitchReady"),
+      $_("profiles.autoSwitchHint")
+    ].join(" ");
+  }
+
+  function languageTooltip(): string {
+    return [$_("profiles.languageTooltip"), $_("profiles.languageAutoFill")].join(" ");
   }
 
   // "Not set" first, then detector codes labelled in the UI locale.
@@ -673,10 +696,7 @@
         class="w-56"
       />
     </SettingRow>
-    <SettingRow
-      label={$_("profiles.autoSwitchLanguage")}
-      tooltip={$_("profiles.autoSwitchTooltip")}
-    >
+    <SettingRow label={$_("profiles.autoSwitchLanguage")} tooltip={autoSwitchTooltip()}>
       <Switch id="auto-switch-language" bind:checked={localConfig.tts.auto_switch_language} />
     </SettingRow>
   </div>
@@ -691,7 +711,7 @@
         <SettingRow label={$_("common.name")}>
           <Input bind:value={localConfig.tts.profiles[activeIndex].name} class="w-56" />
         </SettingRow>
-        <SettingRow label={$_("profiles.language")} tooltip={$_("profiles.languageTooltip")}>
+        <SettingRow label={$_("profiles.language")} tooltip={languageTooltip()}>
           <Select
             options={languageSelectOptions(active.language)}
             value={active.language ?? ""}

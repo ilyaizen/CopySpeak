@@ -805,7 +805,12 @@
       "voicesLoaded": "已加载语音：{count}",
       "voiceRefreshFailed": "刷新语音失败：{error}"
     },
-    "templateTooltip": "从已知引擎预填命令/参数/语音。之后的编辑不会更改模板。"
+    "templateTooltip": "从已知引擎预填命令/参数/语音。之后的编辑不会更改模板。",
+    "autoSwitchPaths": "适用于双击复制、浏览器、快捷键、托盘和播放页的朗读。指定了配置文件的朗读不会切换。",
+    "autoSwitchUnclear": "语言不明确的文本使用当前配置文件。",
+    "autoSwitchReady": "只会选择已安装或已有凭据的配置文件。",
+    "autoSwitchHint": "检测到的语言还会作为提示发送给引擎。",
+    "languageAutoFill": "根据所选语音的语言自动填入。未设置表示任何语言，因此该配置文件不会按语言被选中。"
   },
   "voicePicker": {
     "select": "选择语音…",

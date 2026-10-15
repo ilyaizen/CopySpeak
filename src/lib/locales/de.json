@@ -805,7 +805,12 @@
       "voicesLoaded": "Geladene Stimmen: {count}",
       "voiceRefreshFailed": "Aktualisierung der Stimmen fehlgeschlagen: {error}"
     },
-    "templateTooltip": "Befehl, Argumente und Stimme aus einer bekannten Engine vorausfüllen. Spätere Änderungen verändern die Vorlage nie."
+    "templateTooltip": "Befehl, Argumente und Stimme aus einer bekannten Engine vorausfüllen. Spätere Änderungen verändern die Vorlage nie.",
+    "autoSwitchPaths": "Gilt für Doppelkopieren, Browser, Tastenkürzel, Tray und Wiedergabeseite. Eine Wiedergabe, die ein Profil nennt, wird nie umgeschaltet.",
+    "autoSwitchUnclear": "Text ohne erkennbare Sprache verwendet das aktive Profil.",
+    "autoSwitchReady": "Nur ein installiertes Profil oder eines mit Zugangsdaten wird gewählt.",
+    "autoSwitchHint": "Die erkannte Sprache wird außerdem als Hinweis an die Engine gesendet.",
+    "languageAutoFill": "Wird aus der Sprache der gewählten Stimme übernommen. Nicht gesetzt bedeutet jede Sprache, daher wird das Profil nie nach Sprache gewählt."
   },
   "voicePicker": {
     "select": "Stimme auswählen…",

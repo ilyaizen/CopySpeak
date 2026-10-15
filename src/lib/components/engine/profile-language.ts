@@ -76,6 +76,18 @@ export const DETECTED_LANGUAGE_CODES: readonly string[] = [
   "zu"
 ];
 
+/**
+ * The detector code a catalog voice language maps to, or null when the voice
+ * has none or the detector has no code for it. Mirrors `catalog_language_code`
+ * in src-tauri/src/config/tts.rs: base subtag, lowercased, `no` as `nb`.
+ */
+export function profileLanguage(voiceLanguage: string | null | undefined): string | null {
+  const base = voiceLanguage?.split(/[-_]/)[0].toLowerCase();
+  if (!base) return null;
+  const code = base === "no" ? "nb" : base;
+  return DETECTED_LANGUAGE_CODES.includes(code) ? code : null;
+}
+
 export interface LanguageChoice {
   value: string;
   label: string;

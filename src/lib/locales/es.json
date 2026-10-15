@@ -805,7 +805,12 @@
       "voicesLoaded": "Voces cargadas: {count}",
       "voiceRefreshFailed": "Error al actualizar las voces: {error}"
     },
-    "templateTooltip": "Rellena el comando, los argumentos y la voz desde un motor conocido. Editarlo después nunca cambia la plantilla."
+    "templateTooltip": "Rellena el comando, los argumentos y la voz desde un motor conocido. Editarlo después nunca cambia la plantilla.",
+    "autoSwitchPaths": "Incluye las lecturas con doble copia, navegador, atajo, bandeja y página de reproducción. Una lectura que nombra un perfil nunca cambia.",
+    "autoSwitchUnclear": "El texto sin idioma claro usa el perfil activo.",
+    "autoSwitchReady": "Solo se elige un perfil instalado o con credenciales.",
+    "autoSwitchHint": "El idioma detectado también se envía al motor como sugerencia.",
+    "languageAutoFill": "Se toma del idioma de la voz elegida. No definido significa cualquier idioma, así que el perfil nunca se elige por idioma."
   },
   "voicePicker": {
     "select": "Seleccionar voz…",
