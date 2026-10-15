@@ -52,7 +52,10 @@ class PlaybackStore {
   private _decodedBuffer: AudioBuffer | null = null;
   private _originalBytes: ArrayBuffer | null = null;
   private _cachedPitchUrl: { ratio: number; effectId: EffectId; url: string } | null = null;
-  private _unlistenFns: Array<() => void> = [];
+  // The registration in flight or done. Teardown takes it before it resolves, so a
+  // teardown that lands mid-setup (HMR remounting GlobalPlayer) still unlistens
+  // what that setup registers, and the next setup registers afresh.
+  private _listeners: Promise<Array<() => void>> | null = null;
   private _emit: ((name: string, payload: EmitPayload) => Promise<void>) | null = null;
   private _emitTo: ((target: string, name: string, payload: EmitPayload) => Promise<void>) | null =
     null;
@@ -659,6 +662,11 @@ class PlaybackStore {
 
   async setupListeners(): Promise<void> {
     if (!isTauri) return;
+    this._listeners ??= this._registerListeners();
+    await this._listeners;
+  }
+
+  private async _registerListeners(): Promise<Array<() => void>> {
     console.log("[PlaybackStore] Setting up listeners...");
     try {
       const { listen, emit, emitTo } = await import("@tauri-apps/api/event");
@@ -789,7 +797,7 @@ class PlaybackStore {
         this.handleStop();
       });
 
-      this._unlistenFns = [
+      return [
         ...captionListeners,
         unAudioReady,
         unFragmentReady,
@@ -807,6 +815,7 @@ class PlaybackStore {
       ];
     } catch (e) {
       console.error("Failed to setup playback listeners:", e);
+      return [];
     }
   }
 
@@ -816,8 +825,11 @@ class PlaybackStore {
     this._analyser.destroy();
     this._pcmScheduler?.stop();
     this._pcmScheduler = null;
-    for (const fn of this._unlistenFns) fn();
-    this._unlistenFns = [];
+    const pending = this._listeners;
+    this._listeners = null;
+    void pending?.then((fns) => {
+      for (const fn of fns) fn();
+    });
     if (this._cachedPitchUrl) {
       URL.revokeObjectURL(this._cachedPitchUrl.url);
       this._cachedPitchUrl = null;

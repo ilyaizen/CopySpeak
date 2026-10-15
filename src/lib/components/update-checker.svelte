@@ -31,6 +31,9 @@
   let errorMessage = $state<string | null>(null);
 
   let unlisten: (() => void) | null = null;
+  // HMR can destroy this instance while onMount still awaits; a listener that
+  // resolves afterwards would outlive it and fire alongside the new instance's.
+  let destroyed = false;
   let upToDateTimeout: ReturnType<typeof setTimeout> | null = null;
   let errorTimeout: ReturnType<typeof setTimeout> | null = null;
   let downloadedBytes = 0;
@@ -53,6 +56,10 @@
       });
       unlisten = unlistenEvent;
     }
+    if (destroyed) {
+      unlisten?.();
+      return;
+    }
 
     // Auto-check on startup if enabled
     if (autoCheckOnMount && effectiveUpdateChecksEnabled) {
@@ -61,6 +68,7 @@
   });
 
   onDestroy(() => {
+    destroyed = true;
     if (unlisten) unlisten();
     if (upToDateTimeout) clearTimeout(upToDateTimeout);
     if (errorTimeout) clearTimeout(errorTimeout);

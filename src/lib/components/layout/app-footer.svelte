@@ -23,6 +23,9 @@
   let currentConfig = $state<AppConfig | null>(null);
   let isHudRoute = $state(false);
   let unlisten: (() => void) | null = null;
+  // HMR can destroy this instance while onMount still awaits; a listener that
+  // resolves afterwards would outlive it and fire alongside the new instance's.
+  let destroyed = false;
   let dropdownOpen = $state(false);
 
   type AvailabilityStatus = "unknown" | "checking" | "available" | "unavailable" | "error";
@@ -96,12 +99,14 @@
         await loadProfileInfo();
         await checkActiveProfileAvailability();
       });
+      if (destroyed) unlisten();
     } catch (e) {
       console.error("Failed to listen for config-changed:", e);
     }
   });
 
   onDestroy(() => {
+    destroyed = true;
     if (unlisten) {
       unlisten();
     }
