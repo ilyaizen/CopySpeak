@@ -267,7 +267,8 @@
       "options": {
         "none": "ללא",
         "walkieTalkie": "ווקי-טוקי",
-        "gameBoy": "Game Boy בן 8 סיביות"
+        "gameBoy": "Game Boy בן 8 סיביות",
+        "cyberpunk": "סייברפאנק"
       }
     },
     "about": {
@@ -765,7 +766,7 @@
     "screenshots": {
       "title": "צילומי מסך",
       "subtitle": "ראה את CopySpeak בפעולה",
-      "caption": "CopySpeak v0.1.8 — ממשק ראשי עם לשונית ההשמעה",
+      "caption": "ממשק ראשי עם לשונית ההשמעה",
       "alt": "צילום מסך של CopySpeak"
     },
     "footer": {

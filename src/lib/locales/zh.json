@@ -267,7 +267,8 @@
       "options": {
         "none": "无",
         "walkieTalkie": "对讲机",
-        "gameBoy": "8 位 Game Boy"
+        "gameBoy": "8 位 Game Boy",
+        "cyberpunk": "赛博朋克"
       }
     },
     "about": {
@@ -765,7 +766,7 @@
     "screenshots": {
       "title": "截图",
       "subtitle": "看看 CopySpeak 的实际效果",
-      "caption": "CopySpeak v0.1.8——带“播放”标签页的主界面",
+      "caption": "带“播放”标签页的主界面",
       "alt": "CopySpeak 截图"
     },
     "footer": {

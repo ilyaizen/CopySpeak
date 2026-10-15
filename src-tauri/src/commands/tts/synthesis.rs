@@ -11,8 +11,8 @@ use crate::telemetry;
 use crate::tts::captions::{read_sidecar, write_sidecar, CaptionAlignment, SpeechAudio};
 use crate::tts::stream::{pcm_to_wav, AudioFormatMeta, ChunkItem, ChunkStream};
 use crate::tts::TtsBackend;
+use crate::AbortScope;
 use std::collections::HashMap;
-use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -22,7 +22,10 @@ use super::helpers::{
     resolve_effective, resolve_effective_for_text, voice_display_name, EffectiveTtsRequest,
     SynthesisGuard,
 };
-use crate::commands::{AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent};
+use crate::commands::{
+    AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent,
+    PlaybackStreamFailedEvent,
+};
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
 
@@ -118,8 +121,14 @@ fn add_history_with_metadata(
 }
 
 /// Emit audio-ready event with base64 encoded audio
-fn emit_audio_ready(app: &AppHandle, speech: &SpeechAudio, text: &str, session_id: Option<&str>) {
-    emit_audio_fragment(app, speech, 0, 1, text.to_owned(), session_id);
+fn emit_audio_ready(
+    app: &AppHandle,
+    speech: &SpeechAudio,
+    text: &str,
+    session_id: Option<&str>,
+    scope: AbortScope,
+) {
+    emit_audio_fragment(app, speech, 0, 1, text.to_owned(), session_id, scope);
 }
 
 /// Emit audio-fragment-ready event for streaming playback
@@ -130,9 +139,10 @@ fn emit_audio_fragment(
     total: usize,
     text: String,
     session_id: Option<&str>,
+    scope: AbortScope,
 ) {
     let wav_bytes = &speech.bytes;
-    if crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
+    if scope.aborted() {
         return;
     }
     use base64::{engine::general_purpose, Engine as _};
@@ -167,9 +177,6 @@ fn emit_audio_stream_chunk(
     captions: Option<&CaptionAlignment>,
     session_id: Option<&str>,
 ) {
-    if crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
-        return;
-    }
     use base64::{engine::general_purpose, Engine as _};
     let encoded = general_purpose::STANDARD.encode(pcm);
     let event = AudioStreamChunkEvent {
@@ -197,6 +204,7 @@ fn emit_audio_stream_chunk(
 /// bytes and time-to-first-audio in milliseconds.
 fn drain_chunk_stream(
     stream: ChunkStream,
+    scope: AbortScope,
     mut on_chunk: impl FnMut(usize, &[u8], bool, Option<&CaptionAlignment>),
 ) -> Result<(SpeechAudio, u64), String> {
     let start = Instant::now();
@@ -207,9 +215,9 @@ fn drain_chunk_stream(
     let mut ttfa_ms: Option<u64> = None;
 
     loop {
-        // Dropping the receiver is what actually cancels a streaming request:
-        // every producer stops pulling its source once its send fails.
-        if crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
+        // Dropping the receiver stops each producer at its next send. A
+        // producer blocked on a stalled upstream read only notices then.
+        if scope.aborted() {
             log::info!(
                 "[TTS][stream] aborted by user after {} bytes",
                 accumulated.len()
@@ -281,12 +289,27 @@ fn drain_chunk_stream(
 /// The frontend PCM scheduler wires straight into `ctx.destination` with no
 /// effect chain, so an enabled profile effect must force the fragment path,
 /// where `buildPlaybackUrl` runs `effect.process` before playback.
+/// A cold backend (daemon still loading) takes the batch path until it is ready.
 fn allows_streaming_playback(
     streaming_enabled: bool,
     backend_streams: bool,
+    runtime_ready: bool,
     effects_enabled: bool,
 ) -> bool {
-    streaming_enabled && backend_streams && !effects_enabled
+    streaming_enabled && backend_streams && runtime_ready && !effects_enabled
+}
+
+/// Whether this fragment is the last one in its reading. Only that fragment may
+/// send a final marker.
+fn is_last_fragment(index: usize, total: usize) -> bool {
+    index + 1 == total
+}
+
+/// A chunk carries the final marker only when it is the stream's last chunk
+/// and its fragment is the reading's last one. The player arms its completion
+/// timer on the marker, so an early one cuts the reading short.
+fn final_marker(chunk_is_final: bool, fragment_is_last: bool) -> bool {
+    chunk_is_final && fragment_is_last
 }
 
 /// Synthesize via the backend's streaming path, forwarding each PCM chunk to
@@ -300,9 +323,11 @@ async fn synthesize_streaming_and_emit(
     fragment_index: usize,
     emit_final: bool,
     session_id: Option<String>,
+    scope: AbortScope,
 ) -> Result<SpeechAudio, String> {
-    let app = app.clone();
-    tokio::task::spawn_blocking(move || {
+    let worker_app = app.clone();
+    let failed_session = session_id.clone();
+    let result = tokio::task::spawn_blocking(move || {
         let opened_at = Instant::now();
         log::info!(
             "[TTS][stream] opening streaming synthesis ({} chars, voice '{}', fragment {})",
@@ -324,7 +349,10 @@ async fn synthesize_streaming_and_emit(
 
         let meta = stream.meta.clone();
         let mut pcm_bytes = 0u64;
-        drain_chunk_stream(stream, |chunk_idx, pcm, is_final, captions| {
+        drain_chunk_stream(stream, scope, |chunk_idx, pcm, is_final, captions| {
+            if scope.aborted() {
+                return;
+            }
             pcm_bytes += pcm.len() as u64;
             if !is_final && chunk_idx == 0 {
                 log::info!(
@@ -343,11 +371,11 @@ async fn synthesize_streaming_and_emit(
                 None
             };
             emit_audio_stream_chunk(
-                &app,
+                &worker_app,
                 &meta,
                 pcm,
                 fragment_index,
-                is_final && emit_final,
+                final_marker(is_final, emit_final),
                 (chunk_idx == 0).then_some(text.as_str()),
                 duration_ms,
                 captions,
@@ -356,8 +384,24 @@ async fn synthesize_streaming_and_emit(
         })
     })
     .await
-    .map_err(|e| format!("Task join error: {e}"))?
-    .map(|(wav, _ttfa_ms)| wav)
+    .map_err(|e| format!("Task join error: {e}"))
+    .and_then(|worker_result| worker_result)
+    .map(|(wav, _ttfa_ms)| wav);
+    // An abort already stopped this reading's playback. Its late failure must
+    // not emit, even when a newer reading has started since.
+    if result.is_err() && !scope.aborted() {
+        // The webview scheduler finishes only on a final marker, which a failed
+        // stream never sends. The store stops playback only when this session
+        // owns it, and finishes when nothing plays, so playback-finished fires
+        // either way and restores ducked audio.
+        let event = PlaybackStreamFailedEvent {
+            session_id: failed_session,
+        };
+        if let Err(e) = app.emit("playback-stream-failed", event) {
+            log::warn!("Failed to emit playback-stream-failed: {}", e);
+        }
+    }
+    result
 }
 
 /// Save audio to history storage and return path
@@ -568,6 +612,7 @@ fn replay_saved_audio(
     speech: &SpeechAudio,
     text: &str,
     session_id: Option<&str>,
+    scope: AbortScope,
     eff: &EffectiveTtsRequest,
 ) {
     cache_audio(app, speech, text);
@@ -577,7 +622,7 @@ fn replay_saved_audio(
         Some(text.to_string()),
         eff,
     );
-    emit_audio_ready(app, speech, text, session_id);
+    emit_audio_ready(app, speech, text, session_id, scope);
 }
 
 // ── speak_now ───────────────────────────────────────────────────────────────
@@ -700,8 +745,8 @@ async fn speak_now_internal(
     let lock_state = app.state::<tokio::sync::Mutex<()>>();
     let _queue_lock = lock_state.lock().await;
 
-    // Clear any previous abort request
-    crate::ABORT_REQUESTED.store(false, Ordering::Relaxed);
+    // Aborts issued before this reading starts do not reach it
+    let scope = AbortScope::begin();
 
     // Enter critical section for TTS synthesis
     let _synthesis_guard = SynthesisGuard::new(&app);
@@ -795,6 +840,7 @@ async fn speak_now_internal(
     let streaming_playback = allows_streaming_playback(
         streaming_enabled,
         backend_arc.supports_streaming(),
+        backend_arc.runtime_ready(),
         eff.effects.enabled,
     ) && !cache_hit
         && !output_config.enabled;
@@ -818,6 +864,7 @@ async fn speak_now_internal(
             confidence,
             streaming_playback,
             session_id.clone(),
+            scope,
         )
         .await?;
         (wav, streaming_playback)
@@ -830,6 +877,7 @@ async fn speak_now_internal(
             0,
             true,
             session_id.clone(),
+            scope,
         )
         .await?;
         (wav, true)
@@ -842,7 +890,7 @@ async fn speak_now_internal(
     // Both the paginated and streaming paths return empty bytes when the user
     // aborts mid-synthesis. do_abort_synthesis has already stopped playback and
     // emitted synthesis-aborted, so there is nothing to save or play here.
-    if crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
+    if scope.aborted() {
         log::info!("[TTS] Synthesis aborted; nothing to play or save");
         return Ok(());
     }
@@ -882,7 +930,7 @@ async fn speak_now_internal(
     }
 
     if cache_hit {
-        replay_saved_audio(&app, &wav_bytes, &text, session_id.as_deref(), &eff);
+        replay_saved_audio(&app, &wav_bytes, &text, session_id.as_deref(), scope, &eff);
         return Ok(());
     }
 
@@ -902,6 +950,7 @@ async fn speak_now_internal(
         already_streamed,
         eff.voice_label.as_deref(),
         session_id.as_deref(),
+        scope,
     )
 }
 
@@ -918,6 +967,7 @@ async fn synthesize_paginated(
     _avg_confidence: f32,
     streaming: bool,
     session_id: Option<String>,
+    scope: AbortScope,
 ) -> Result<SpeechAudio, String> {
     let pagination_config = crate::config::PaginationConfig::default();
     let fragments = pagination::paginate_text(text, &pagination_config);
@@ -933,6 +983,7 @@ async fn synthesize_paginated(
                 0,
                 true,
                 session_id,
+                scope,
             )
             .await
         } else {
@@ -957,7 +1008,7 @@ async fn synthesize_paginated(
     let mut fragment_audio = Vec::new();
     for (i, fragment) in fragments.iter().enumerate() {
         // Check for abort
-        if crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
+        if scope.aborted() {
             log::info!("[TTS] Pagination aborted by user");
             return Ok(Vec::new().into());
         }
@@ -994,6 +1045,7 @@ async fn synthesize_paginated(
                 i,
                 i + 1 == fragments.len(),
                 session_id.clone(),
+                scope,
             )
             .await
         } else {
@@ -1006,7 +1058,7 @@ async fn synthesize_paginated(
         }
         .map_err(|e| format!("Fragment {} synthesis failed: {}", i + 1, e))?;
 
-        if crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
+        if scope.aborted() {
             return Ok(Vec::new().into());
         }
         fragment_audio.push((frag_wav, fragment.text.clone()));
@@ -1114,6 +1166,7 @@ fn handle_playback_output(
     already_streamed: bool,
     voice_label: Option<&str>,
     session_id: Option<&str>,
+    scope: AbortScope,
 ) -> Result<(), String> {
     let wav_bytes = &speech.bytes;
     let envelope = extract_envelope_or_default(wav_bytes);
@@ -1157,7 +1210,7 @@ fn handle_playback_output(
     // Emit audio to frontend for browser-native playback. Skipped when PCM
     // chunks were already forwarded by the streaming synthesis path.
     if !already_streamed {
-        emit_audio_ready(app, speech, text, session_id);
+        emit_audio_ready(app, speech, text, session_id, scope);
     }
 
     Ok(())
@@ -1227,10 +1280,10 @@ async fn speak_queued_internal(
         )
     };
 
-    // Clear any previous abort request, the same way speak_now_internal does.
-    // Both commands feed drain_chunk_stream, which now honours the flag, so a
-    // stale `true` from an earlier abort would kill this run's first stream.
-    crate::ABORT_REQUESTED.store(false, Ordering::Relaxed);
+    // Aborts issued before this run starts do not reach it. speak_queued takes
+    // no queue lock, so a shared flag cleared here could also un-abort a run
+    // still draining from before.
+    let scope = AbortScope::begin();
 
     // Optional LLM post-processing — best-effort; falls back on failure.
     // speak_queued callers (double-copy, browser readings) never request
@@ -1401,6 +1454,7 @@ async fn speak_queued_internal(
             && allows_streaming_playback(
                 streaming_enabled,
                 backend_arc.supports_streaming(),
+                backend_arc.runtime_ready(),
                 eff.effects.enabled,
             );
         let wav_bytes = if let Some(speech) = saved.as_mut().and_then(Iterator::next) {
@@ -1412,15 +1466,16 @@ async fn speak_queued_internal(
                 fragment.text.clone(),
                 voice.clone(),
                 index,
-                index + 1 == total,
+                is_last_fragment(index, total),
                 session_id.clone(),
+                scope,
             )
             .await?
         } else {
             synthesize_async(backend_arc.clone(), fragment.text.clone(), voice.clone()).await?
         };
         let fragment_duration = fragment_start.elapsed();
-        if crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
+        if scope.aborted() {
             return Ok(());
         }
 
@@ -1508,6 +1563,7 @@ async fn speak_queued_internal(
                 total,
                 fragment.text.clone(),
                 session_id.as_deref(),
+                scope,
             );
         }
 
@@ -1563,7 +1619,7 @@ pub async fn speak_history_entry(
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     entry_id: String,
 ) -> Result<(), String> {
-    crate::ABORT_REQUESTED.store(false, Ordering::Relaxed);
+    let scope = AbortScope::begin();
     let _synthesis_guard = SynthesisGuard::new(&app);
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] speak_history_entry called (id: {})", entry_id);
@@ -1623,7 +1679,7 @@ pub async fn speak_history_entry(
 
     // Synthesize
     let wav_bytes = synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?;
-    if crate::ABORT_REQUESTED.load(Ordering::Relaxed) {
+    if scope.aborted() {
         return Ok(());
     }
     let synthesis_ms = synthesis_start.elapsed().as_millis() as u64;
@@ -1670,7 +1726,7 @@ pub async fn speak_history_entry(
     hud::show_hud(&app, envelope, Some(text.clone()), &eff);
 
     // Emit audio to frontend
-    emit_audio_ready(&app, &wav_bytes, &text, None);
+    emit_audio_ready(&app, &wav_bytes, &text, None, scope);
 
     log::info!("Re-spoke history entry: {}", entry_id);
     Ok(())
@@ -1708,10 +1764,11 @@ mod streaming_tests {
         );
 
         let mut seen: Vec<(usize, Vec<u8>, bool)> = Vec::new();
-        let (wav, _ttfa) = drain_chunk_stream(stream, |idx, pcm, is_final, _| {
-            seen.push((idx, pcm.to_vec(), is_final));
-        })
-        .expect("healthy stream drains");
+        let (wav, _ttfa) =
+            drain_chunk_stream(stream, AbortScope::begin(), |idx, pcm, is_final, _| {
+                seen.push((idx, pcm.to_vec(), is_final));
+            })
+            .expect("healthy stream drains");
 
         assert_eq!(seen.len(), 3, "two data chunks plus the terminal marker");
         assert_eq!(seen[0], (0, a.clone(), false));
@@ -1733,12 +1790,33 @@ mod streaming_tests {
     #[test]
     fn enabled_effect_forces_fragment_path_over_stream_chunks() {
         // Streaming on, warm streaming backend, no effect: live chunks.
-        assert!(allows_streaming_playback(true, true, false));
+        assert!(allows_streaming_playback(true, true, true, false));
         // Any kill switch routes the reading through audio-fragment-ready,
         // the only path where buildPlaybackUrl applies the effect.
-        assert!(!allows_streaming_playback(false, true, false));
-        assert!(!allows_streaming_playback(true, false, false));
-        assert!(!allows_streaming_playback(true, true, true));
+        assert!(!allows_streaming_playback(false, true, true, false));
+        assert!(!allows_streaming_playback(true, false, true, false));
+        assert!(!allows_streaming_playback(true, true, true, true));
+    }
+
+    #[test]
+    fn cold_backend_takes_batch_path_until_ready() {
+        // A static streaming claim alone must not stream: a cold CLI daemon
+        // would otherwise run a one-shot command through the stream branch.
+        assert!(!allows_streaming_playback(true, true, false, false));
+        assert!(allows_streaming_playback(true, true, true, false));
+    }
+
+    #[test]
+    fn only_the_last_fragments_last_chunk_is_marked_final() {
+        // Pins the rule the helpers encode: only the reading's last fragment's
+        // final chunk carries the marker. The call site passing
+        // is_last_fragment(...) is not exercised here.
+        let total = 3;
+        let marks: Vec<bool> = (0..total)
+            .map(|index| final_marker(true, is_last_fragment(index, total)))
+            .collect();
+        assert_eq!(marks, [false, false, true]);
+        assert!(!final_marker(false, is_last_fragment(total - 1, total)));
     }
 
     #[test]
@@ -1769,9 +1847,13 @@ mod streaming_tests {
                 8000,
             );
             let mut seen = Vec::new();
-            let (speech, _) = drain_chunk_stream(stream, |idx, pcm, is_final, captions| {
-                seen.push((idx, pcm.to_vec(), is_final, captions.cloned()));
-            })
+            let (speech, _) = drain_chunk_stream(
+                stream,
+                AbortScope::begin(),
+                |idx, pcm, is_final, captions| {
+                    seen.push((idx, pcm.to_vec(), is_final, captions.cloned()));
+                },
+            )
             .unwrap();
             assert_eq!(speech.bytes, pcm_to_wav(&[1, 2, 3, 4], &meta(8000)));
             assert_eq!(speech.captions, None);
@@ -1797,7 +1879,7 @@ mod streaming_tests {
             8000,
         );
         assert_eq!(
-            drain_chunk_stream(next, |_, _, _, _| {})
+            drain_chunk_stream(next, AbortScope::begin(), |_, _, _, _| {})
                 .unwrap()
                 .0
                 .captions,
@@ -1814,7 +1896,7 @@ mod streaming_tests {
             ],
             16000,
         );
-        let result = drain_chunk_stream(stream, |_, _, _, _| {});
+        let result = drain_chunk_stream(stream, AbortScope::begin(), |_, _, _, _| {});
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("connection reset"));
     }
@@ -1822,14 +1904,14 @@ mod streaming_tests {
     #[test]
     fn empty_stream_is_an_error_not_silence() {
         let stream = stream_from_items(Vec::new(), 22050);
-        assert!(drain_chunk_stream(stream, |_, _, _, _| {}).is_err());
+        assert!(drain_chunk_stream(stream, AbortScope::begin(), |_, _, _, _| {}).is_err());
     }
 
     #[test]
     fn terminal_marker_always_emitted_even_for_single_chunk() {
         let stream = stream_from_items(vec![ChunkItem::Pcm(vec![9, 9, 9])], 8000);
         let mut finals = 0;
-        let (wav, _) = drain_chunk_stream(stream, |_, _, is_final, _| {
+        let (wav, _) = drain_chunk_stream(stream, AbortScope::begin(), |_, _, is_final, _| {
             if is_final {
                 finals += 1;
             }

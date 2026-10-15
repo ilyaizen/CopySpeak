@@ -1,18 +1,27 @@
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { playbackStore } from "./playback-store.svelte";
-import { emit, emitTo } from "@tauri-apps/api/event";
+import { emit, emitTo, listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { PcmStreamScheduler } from "./playback/pcm-stream";
 
-const { listeners } = vi.hoisted(() => ({
-  listeners: new Map<string, (event: { payload: unknown }) => Promise<void>>()
+const { listeners, live, ipc } = vi.hoisted(() => ({
+  listeners: new Map<string, (event: { payload: unknown }) => Promise<void>>(),
+  // Every registration not yet unlistened, including ones the Map overwrote.
+  live: new Set<unknown>(),
+  // Every `listen` waits on this, so a test can hold setup mid-registration.
+  ipc: { ready: Promise.resolve() }
 }));
 vi.mock("#lib/services/tauri.js", () => ({ isTauri: true }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => undefined) }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(async (name, callback) => {
+    await ipc.ready;
     listeners.set(name, callback);
-    return () => listeners.delete(name);
+    live.add(callback);
+    return () => {
+      listeners.delete(name);
+      live.delete(callback);
+    };
   }),
   emit: vi.fn(async () => {}),
   emitTo: vi.fn(async () => {})
@@ -96,6 +105,25 @@ it.each(["decode", "play"])(
     expect(playbackStore.error).toBeNull();
   }
 );
+
+it("keeps one set of listeners when HMR tears GlobalPlayer down mid-setup", async () => {
+  const perSetup = live.size;
+  playbackStore.teardownListeners();
+
+  // HMR destroys GlobalPlayer while its setup awaits `listen`, then mounts a new one.
+  const ready = Promise.withResolvers<void>();
+  ipc.ready = ready.promise;
+  vi.mocked(listen).mockClear();
+  const first = playbackStore.setupListeners();
+  await vi.waitFor(() => expect(listen).toHaveBeenCalled());
+  playbackStore.teardownListeners();
+  const second = playbackStore.setupListeners();
+  ready.resolve();
+  ipc.ready = Promise.resolve();
+  await Promise.all([first, second]);
+
+  expect(live.size).toBe(perSetup);
+});
 
 it("does not restart a stopped reading when its pending decode finishes", async () => {
   const pending = Promise.withResolvers<{ duration: number }>();
@@ -397,6 +425,70 @@ it("drives pause, resume, clamped skips and stop from page control events", asyn
   expect(audio.currentTime).toBe(0);
   await listeners.get("playback-stop")!({ payload: null });
   expect(playbackStore.isPlaying).toBe(false);
+});
+
+function streamChunk(sessionId: string | null) {
+  return {
+    audio_base64: "",
+    sample_rate: 24000,
+    channels: 1,
+    bits_per_sample: 16,
+    fragment_index: 0,
+    fragment_total: 1,
+    is_final: false,
+    text: "streamed",
+    session_id: sessionId
+  };
+}
+
+// A new synthesis clears the stop left by the previous reading, as in the app.
+async function startStreamingReading() {
+  vi.stubGlobal(
+    "AudioContext",
+    class {
+      state = "running";
+      currentTime = 0;
+      destination = {};
+      createGain = () => ({ gain: { value: 1 }, connect() {}, disconnect() {} });
+      resume = vi.fn();
+      suspend = vi.fn();
+      close = vi.fn();
+    }
+  );
+  await listeners.get("synthesis-state-change")!({ payload: true });
+}
+
+it("leaves the playing stream alone when another streamed reading fails", async () => {
+  await startStreamingReading();
+  vi.mocked(emit).mockClear();
+  playbackStore.handleStreamChunk(streamChunk("trigger-a"));
+  await listeners.get("playback-stream-failed")!({ payload: { session_id: "trigger-b" } });
+  expect(playbackStore.isPlaying).toBe(true);
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", null);
+  playbackStore.handleStop();
+});
+
+it("leaves a reading that is still synthesizing alone when an idle stream fails", async () => {
+  await startStreamingReading();
+  await listeners.get("playback-stream-failed")!({ payload: { session_id: "trigger-a" } });
+  playbackStore.handleStreamChunk(streamChunk("trigger-b"));
+  expect(playbackStore.isPlaying).toBe(true);
+  playbackStore.handleStop();
+});
+
+it("stops the streamed reading that fails while it is playing", async () => {
+  await startStreamingReading();
+  vi.mocked(emit).mockClear();
+  playbackStore.handleStreamChunk(streamChunk("trigger-a"));
+  await listeners.get("playback-stream-failed")!({ payload: { session_id: "trigger-a" } });
+  expect(playbackStore.isPlaying).toBe(false);
+  expect(emit).toHaveBeenCalledWith("playback-finished", null);
+});
+
+it("finishes a failed streamed reading when nothing is playing, so /speak --wait returns", async () => {
+  vi.mocked(emit).mockClear();
+  await listeners.get("playback-stream-failed")!({ payload: { session_id: null } });
+  expect(emit).toHaveBeenCalledWith("playback-finished", null);
 });
 
 it("reports a followed page session by id, and only the current one", async () => {

@@ -52,7 +52,10 @@ class PlaybackStore {
   private _decodedBuffer: AudioBuffer | null = null;
   private _originalBytes: ArrayBuffer | null = null;
   private _cachedPitchUrl: { ratio: number; effectId: EffectId; url: string } | null = null;
-  private _unlistenFns: Array<() => void> = [];
+  // The registration in flight or done. Teardown takes it before it resolves, so a
+  // teardown that lands mid-setup (HMR remounting GlobalPlayer) still unlistens
+  // what that setup registers, and the next setup registers afresh.
+  private _listeners: Promise<Array<() => void>> | null = null;
   private _emit: ((name: string, payload: EmitPayload) => Promise<void>) | null = null;
   private _emitTo: ((target: string, name: string, payload: EmitPayload) => Promise<void>) | null =
     null;
@@ -61,6 +64,8 @@ class PlaybackStore {
   private _readingText = "";
   private _fragmentCaptions: CaptionAlignment | null = null;
   private _streamStopped = false;
+  /** Session of the reading that created the live PCM scheduler. */
+  private _streamSessionId: string | null = null;
   private _fragmentText = "";
   private _captionTimer: ReturnType<typeof setInterval> | null = null;
   private _lastCaption: HudCaptionPayload | null = null;
@@ -252,10 +257,11 @@ class PlaybackStore {
         // Pitch shift only - duration stays native so caption positions map 1:1.
         buffer = stretchBuffer(this._decodedBuffer, 1, pitchRatio);
       }
+      // Fade the speech before the effect: an effect may open with its own onset.
+      applyFadeIn(buffer, 10);
       if (effect) {
         buffer = await effect.process(buffer, this._audioCtx);
       }
-      applyFadeIn(buffer, 10);
       blob = audioBufferToWavBlob(buffer);
     } else {
       return "";
@@ -382,6 +388,7 @@ class PlaybackStore {
     this.currentFragmentIndex = null;
     this.totalFragments = null;
     this._pcmScheduler = null;
+    this._streamSessionId = null;
     this.reportBrowserFinished("completed");
     void this._emit?.("hud:stop", null);
     this.emitPlaybackFinished();
@@ -422,6 +429,7 @@ class PlaybackStore {
       });
       this._pcmScheduler.setVolume(this.volume);
       this._pcmScheduler.setRate(this.speed, this.pitch);
+      this._streamSessionId = payload.session_id ?? null;
       this.currentFragmentIndex = payload.fragment_index;
       this.totalFragments = payload.fragment_total;
       this.isPlaying = true;
@@ -443,6 +451,22 @@ class PlaybackStore {
     }
     this._pcmScheduler.handleChunk(payload);
     if (this._pcmScheduler) this.startCaptionClock();
+  }
+
+  /**
+   * A streamed reading failed on the backend. Stop only when that reading owns
+   * the stream on the speakers; another reading's failure leaves it playing,
+   * and its own end still emits playback-finished. When nothing is playing,
+   * emit playback-finished without a stop: handleStop would also gate off the
+   * chunks of a reading that is still synthesizing, and clear its queue.
+   */
+  handleStreamFailed(sessionId: string | null): void {
+    if (this._pcmScheduler) {
+      if (this._streamSessionId === sessionId) this.handleStop();
+      return;
+    }
+    if (this.isPlaying || this.isLoadingAudio || this._fragmentQueue.isProcessing()) return;
+    this.emitPlaybackFinished();
   }
 
   async playAudio() {
@@ -492,6 +516,7 @@ class PlaybackStore {
     this._fragmentQueue.clear();
     this._pcmScheduler?.stop();
     this._pcmScheduler = null;
+    this._streamSessionId = null;
     this.currentFragmentIndex = null;
     this.totalFragments = null;
 
@@ -638,6 +663,11 @@ class PlaybackStore {
 
   async setupListeners(): Promise<void> {
     if (!isTauri) return;
+    this._listeners ??= this._registerListeners();
+    await this._listeners;
+  }
+
+  private async _registerListeners(): Promise<Array<() => void>> {
     console.log("[PlaybackStore] Setting up listeners...");
     try {
       const { listen, emit, emitTo } = await import("@tauri-apps/api/event");
@@ -707,6 +737,14 @@ class PlaybackStore {
         this.handleStop();
       });
 
+      // A streamed reading failed on the backend; see handleStreamFailed.
+      const unStreamFailed = await listen<{ session_id: string | null }>(
+        "playback-stream-failed",
+        (e) => {
+          this.handleStreamFailed(e.payload.session_id);
+        }
+      );
+
       const unTogglePause = await listen("playback-toggle-pause", () => {
         this.handleTogglePause();
       });
@@ -760,13 +798,14 @@ class PlaybackStore {
         this.handleStop();
       });
 
-      this._unlistenFns = [
+      return [
         ...captionListeners,
         unAudioReady,
         unFragmentReady,
         unStreamChunk,
         unPaginationComplete,
         unPlaybackStop,
+        unStreamFailed,
         unTogglePause,
         unSkipBackward,
         unSkipForward,
@@ -777,6 +816,7 @@ class PlaybackStore {
       ];
     } catch (e) {
       console.error("Failed to setup playback listeners:", e);
+      return [];
     }
   }
 
@@ -786,8 +826,11 @@ class PlaybackStore {
     this._analyser.destroy();
     this._pcmScheduler?.stop();
     this._pcmScheduler = null;
-    for (const fn of this._unlistenFns) fn();
-    this._unlistenFns = [];
+    const pending = this._listeners;
+    this._listeners = null;
+    void pending?.then((fns) => {
+      for (const fn of fns) fn();
+    });
     if (this._cachedPitchUrl) {
       URL.revokeObjectURL(this._cachedPitchUrl.url);
       this._cachedPitchUrl = null;

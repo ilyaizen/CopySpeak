@@ -4,7 +4,8 @@
 // legacy Google Cloud Text-to-Speech service. The API returns base64-encoded
 // signed 16-bit little-endian PCM (typically 24kHz mono), which we wrap into WAV.
 
-use super::stream::{AudioFormatMeta, ChunkItem, ChunkStream};
+use super::block_on_async;
+use super::stream::{spawn_stream, AudioFormatMeta, ChunkItem, ChunkStream};
 use super::{TtsBackend, TtsError};
 use crate::config::GoogleTtsConfig;
 use base64::{engine::general_purpose, Engine as _};
@@ -26,19 +27,6 @@ pub struct GoogleTtsBackend {
 impl GoogleTtsBackend {
     pub fn new(config: GoogleTtsConfig) -> Self {
         Self { config }
-    }
-
-    fn block_on_async<F, T>(f: F) -> T
-    where
-        F: std::future::Future<Output = T>,
-    {
-        match tokio::runtime::Handle::try_current() {
-            Ok(handle) => handle.block_on(f),
-            Err(_) => {
-                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                rt.block_on(f)
-            }
-        }
     }
 
     /// Parse the PCM sample rate out of a Gemini mime type like
@@ -146,65 +134,51 @@ impl TtsBackend for GoogleTtsBackend {
             text.len()
         );
 
-        let (tx, rx) = std::sync::mpsc::channel();
-        std::thread::spawn(move || {
-            Self::block_on_async(async move {
-                let result: Result<(), TtsError> = async {
-                    let mut response = Client::new()
-                        .post(&url)
-                        .header("x-goog-api-key", api_key)
-                        .json(&body)
-                        .send()
-                        .await
-                        .map_err(|e| TtsError::Http(format!("Google stream request failed: {e}")))?;
-                    let status = response.status();
-                    if !status.is_success() {
-                        let error_text = response.text().await.unwrap_or_default();
-                        return Err(TtsError::Http(format!(
-                            "Google API error {status}: {error_text}"
-                        )));
-                    }
+        let meta = AudioFormatMeta {
+            sample_rate: GEMINI_PCM_SAMPLE_RATE,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        Ok(spawn_stream(meta, move |sink| async move {
+            let mut response = Client::new()
+                .post(&url)
+                .header("x-goog-api-key", api_key)
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| TtsError::Http(format!("Google stream request failed: {e}")))?;
+            let status = response.status();
+            if !status.is_success() {
+                let error_text = response.text().await.unwrap_or_default();
+                return Err(TtsError::Http(format!(
+                    "Google API error {status}: {error_text}"
+                )));
+            }
 
-                    let mut buffer = String::new();
-                    while let Some(chunk) = response
-                        .chunk()
-                        .await
-                        .map_err(|e| TtsError::Http(format!("Google stream read failed: {e}")))?
-                    {
-                        buffer.push_str(&String::from_utf8_lossy(&chunk));
-                        for payload in Self::drain_sse_payloads(&mut buffer) {
-                            let Some((pcm, rate)) = Self::audio_from_sse_event(&payload) else {
-                                continue;
-                            };
-                            if rate != GEMINI_PCM_SAMPLE_RATE {
-                                log::warn!(
-                                    "[TTS] Gemini returned {rate} Hz audio but the stream was opened at {GEMINI_PCM_SAMPLE_RATE} Hz; playback will be off-pitch"
-                                );
-                            }
-                            if tx.send(ChunkItem::Pcm(pcm)).is_err() {
-                                // Consumer dropped (stop/abort): stop pulling.
-                                return Ok(());
-                            }
-                        }
+            let mut buffer = String::new();
+            while let Some(chunk) = response
+                .chunk()
+                .await
+                .map_err(|e| TtsError::Http(format!("Google stream read failed: {e}")))?
+            {
+                buffer.push_str(&String::from_utf8_lossy(&chunk));
+                for payload in Self::drain_sse_payloads(&mut buffer) {
+                    let Some((pcm, rate)) = Self::audio_from_sse_event(&payload) else {
+                        continue;
+                    };
+                    if rate != GEMINI_PCM_SAMPLE_RATE {
+                        log::warn!(
+                            "[TTS] Gemini returned {rate} Hz audio but the stream was opened at {GEMINI_PCM_SAMPLE_RATE} Hz; playback will be off-pitch"
+                        );
                     }
-                    Ok(())
+                    if !sink.send(ChunkItem::Pcm(pcm)) {
+                        // Consumer dropped (stop/abort): stop pulling.
+                        return Ok(());
+                    }
                 }
-                .await;
-                if let Err(error) = result {
-                    log::error!("[TTS] {error}");
-                    let _ = tx.send(ChunkItem::Failed(error.to_string()));
-                }
-            });
-        });
-
-        Ok(ChunkStream::new(
-            AudioFormatMeta {
-                sample_rate: GEMINI_PCM_SAMPLE_RATE,
-                channels: 1,
-                bits_per_sample: 16,
-            },
-            rx,
-        ))
+            }
+            Ok(())
+        }))
     }
 
     fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
@@ -232,7 +206,7 @@ impl TtsBackend for GoogleTtsBackend {
         let api_key =
             crate::secrets::resolve(&self.config.api_key, &["GEMINI_API_KEY", "GOOGLE_API_KEY"]);
 
-        let response = Self::block_on_async(async {
+        let response = block_on_async(async {
             let client = Client::new();
             client
                 .post(&url)
@@ -258,7 +232,7 @@ impl TtsBackend for GoogleTtsBackend {
             start_time.elapsed()
         );
 
-        let text_body = Self::block_on_async(async { response.text().await })
+        let text_body = block_on_async(async { response.text().await })
             .map_err(|e| TtsError::Http(format!("Failed to read body: {}", e)))?;
 
         if !status.is_success() {

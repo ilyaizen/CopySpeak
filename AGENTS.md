@@ -47,10 +47,15 @@ Every line exists because it went wrong at least once. On mistake, correction, o
 - Branch every synthesis save site on `history.enabled`: on logs and saves to the history folder, off calls `save_speech_cache` and logs nothing; `find_cached_speech` must read the same store.
 - Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
 - The app loads secrets from `<exe-dir>/.env` (`src-tauri/target/debug/.env` in dev), not the repo-root `.env`.
+- In a fresh worktree, run `bun install` in `browser-extension/` as well as the root; without its `@types/chrome`, `vp check` fails with `Cannot find type definition file for 'chrome'`.
 - Use three-way `cfg(target_os = ...)` (windows/macos/linux) for platform seams; `cfg(not(windows))` makes macOS compile Linux-only code (wl-clipboard, gtk-layer-shell) that cannot build or run on darwin.
 - Treat a Windows-green `cargo check` as silent about `cfg(not(windows))` code; grep cfg-gated blocks for a trait's methods before deleting an "unused" import.
 - Verify a subsystem is actually wired before extending it — grep `mod` declarations and component mounts; the parity checklist once described a post-processing enum system that was never compiled or mounted.
+- Import test APIs from `vite-plus/test`, not `vitest`; `vp check`'s `prefer-vite-plus-imports` rejects the bare import.
+- Hold a mocked async API on a promise the test opens when proving a race; `vi.waitFor` polls, so an ungated mock finishes the whole setup before the test's next step and the race never happens.
 - Type test catalog maps with `satisfies Record<string, Catalog>`, not a `: Record<…>` annotation; `vp check`'s anti-slop `no-known-value-widening` rejects the annotation.
+- Let one dynamic `import()` of a `vi.mock`ed module settle before code under test starts another: concurrent ones can resolve the real module, so the mock never sees the race.
+- Unlisten a Tauri `listen` that resolves after its component's `onDestroy`: HMR can destroy a component mid-`onMount`, and the orphaned listener double-fires (one double-copy spoke twice).
 
 ### Area gotchas
 
@@ -61,6 +66,7 @@ Before editing an area, read its section in [`docs/agents/failure-log.md`](docs/
 - **Engines**: installers, Python wrappers, daemon protocol, CUDA, adding a `TtsEngine`
 - **Browser companion**: native host, extension protocol, page highlights
 - **History & cache**: history UI, replay, speech cache
+- **Landing page**: `static/` asset references, version strings in locales
 - **Linux**: HUD window, Wayland
 - **Release**: version bump, GitHub release workflow
 - **i18n**: locale strings, `$_`

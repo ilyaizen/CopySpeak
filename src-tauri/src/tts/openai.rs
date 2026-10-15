@@ -1,4 +1,5 @@
-use super::stream::{AudioFormatMeta, ChunkItem, ChunkStream};
+use super::block_on_async;
+use super::stream::{spawn_stream, AudioFormatMeta, ChunkItem, ChunkStream};
 use super::{TtsBackend, TtsError};
 use crate::config::OpenAIConfig;
 use reqwest::Client;
@@ -19,26 +20,6 @@ impl OpenAiTtsBackend {
     pub fn new(config: OpenAIConfig) -> Self {
         Self { config }
     }
-
-    /// Execute an async block using the current Tokio runtime if available,
-    /// or create a new one if called from outside a runtime context.
-    fn block_on_async<F, T>(f: F) -> T
-    where
-        F: std::future::Future<Output = T>,
-    {
-        // Try to get the current runtime handle
-        match tokio::runtime::Handle::try_current() {
-            Ok(handle) => {
-                // We're in a Tokio runtime context, use block_on
-                handle.block_on(f)
-            }
-            Err(_) => {
-                // No runtime context, create a new one
-                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                rt.block_on(f)
-            }
-        }
-    }
 }
 
 impl TtsBackend for OpenAiTtsBackend {
@@ -47,7 +28,9 @@ impl TtsBackend for OpenAiTtsBackend {
     }
 
     fn supports_streaming(&self) -> bool {
-        true
+        // The docs show chunked streaming only with gpt-4o-mini-tts. tts-1,
+        // tts-1-hd and unknown ids take the batch path, which is always correct.
+        self.config.model.starts_with("gpt-4o-mini-tts")
     }
 
     fn synthesize_streaming(&self, text: &str, voice: &str) -> Result<ChunkStream, TtsError> {
@@ -81,59 +64,43 @@ impl TtsBackend for OpenAiTtsBackend {
             text.len()
         );
 
-        let (tx, rx) = std::sync::mpsc::channel();
-        std::thread::spawn(move || {
-            Self::block_on_async(async move {
-                let result: Result<(), TtsError> = async {
-                    let mut response = Client::new()
-                        .post(OPENAI_TTS_URL)
-                        .header("Authorization", format!("Bearer {api_key}"))
-                        .json(&body)
-                        .send()
-                        .await
-                        .map_err(|e| {
-                            TtsError::Http(format!("OpenAI stream request failed: {e}"))
-                        })?;
-                    let status = response.status();
-                    if !status.is_success() {
-                        let error_text = response.text().await.unwrap_or_default();
-                        return Err(TtsError::Http(format!(
-                            "OpenAI API error {status}: {error_text}"
-                        )));
-                    }
-                    let mut total_bytes = 0usize;
-                    while let Some(chunk) = response.chunk().await.map_err(|e| {
-                        TtsError::Http(format!(
-                            "OpenAI stream read failed after {total_bytes} bytes: {e}"
-                        ))
-                    })? {
-                        if chunk.is_empty() {
-                            continue;
-                        }
-                        total_bytes += chunk.len();
-                        if tx.send(ChunkItem::Pcm(chunk.to_vec())).is_err() {
-                            // Consumer dropped (stop/abort): stop pulling the body.
-                            return Ok(());
-                        }
-                    }
-                    Ok(())
+        let meta = AudioFormatMeta {
+            sample_rate: OPENAI_PCM_SAMPLE_RATE,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        Ok(spawn_stream(meta, move |sink| async move {
+            let mut response = Client::new()
+                .post(OPENAI_TTS_URL)
+                .header("Authorization", format!("Bearer {api_key}"))
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| TtsError::Http(format!("OpenAI stream request failed: {e}")))?;
+            let status = response.status();
+            if !status.is_success() {
+                let error_text = response.text().await.unwrap_or_default();
+                return Err(TtsError::Http(format!(
+                    "OpenAI API error {status}: {error_text}"
+                )));
+            }
+            let mut total_bytes = 0usize;
+            while let Some(chunk) = response.chunk().await.map_err(|e| {
+                TtsError::Http(format!(
+                    "OpenAI stream read failed after {total_bytes} bytes: {e}"
+                ))
+            })? {
+                if chunk.is_empty() {
+                    continue;
                 }
-                .await;
-                if let Err(error) = result {
-                    log::error!("[TTS] {error}");
-                    let _ = tx.send(ChunkItem::Failed(error.to_string()));
+                total_bytes += chunk.len();
+                if !sink.send(ChunkItem::Pcm(chunk.to_vec())) {
+                    // Consumer dropped (stop/abort): stop pulling the body.
+                    return Ok(());
                 }
-            });
-        });
-
-        Ok(ChunkStream::new(
-            AudioFormatMeta {
-                sample_rate: OPENAI_PCM_SAMPLE_RATE,
-                channels: 1,
-                bits_per_sample: 16,
-            },
-            rx,
-        ))
+            }
+            Ok(())
+        }))
     }
 
     fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
@@ -173,7 +140,7 @@ impl TtsBackend for OpenAiTtsBackend {
 
         let start_time = std::time::Instant::now();
 
-        let response = Self::block_on_async(async {
+        let response = block_on_async(async {
             let client = Client::new();
             client
                 .post(url)
@@ -201,8 +168,7 @@ impl TtsBackend for OpenAiTtsBackend {
         );
 
         if !response.status().is_success() {
-            let error_text =
-                Self::block_on_async(async { response.text().await.unwrap_or_default() });
+            let error_text = block_on_async(async { response.text().await.unwrap_or_default() });
             log::error!("OpenAI API error {}: {}", status, error_text);
             return Err(TtsError::Http(format!(
                 "OpenAI API error {}: {}",
@@ -210,7 +176,7 @@ impl TtsBackend for OpenAiTtsBackend {
             )));
         }
 
-        let bytes = Self::block_on_async(async { response.bytes().await }).map_err(|e| {
+        let bytes = block_on_async(async { response.bytes().await }).map_err(|e| {
             log::error!("Failed to read response bytes: {}", e);
             TtsError::Http(format!("Failed to read bytes: {}", e))
         })?;
@@ -240,5 +206,28 @@ impl TtsBackend for OpenAiTtsBackend {
 
     fn voice_display_name(&self, voice_id: &str) -> String {
         voice_id.to_lowercase()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn backend_for_model(model: &str) -> OpenAiTtsBackend {
+        OpenAiTtsBackend::new(OpenAIConfig {
+            model: model.into(),
+            ..Default::default()
+        })
+    }
+
+    #[test]
+    fn streams_only_for_the_gpt_4o_mini_tts_family() {
+        // The docs show streaming only with gpt-4o-mini-tts. tts-1, tts-1-hd and
+        // unknown ids take the batch path, which is always correct.
+        assert!(backend_for_model("gpt-4o-mini-tts").supports_streaming());
+        assert!(backend_for_model("gpt-4o-mini-tts-snapshot").supports_streaming());
+        assert!(!backend_for_model("tts-1").supports_streaming());
+        assert!(!backend_for_model("tts-1-hd").supports_streaming());
+        assert!(!backend_for_model("some-unknown-model").supports_streaming());
     }
 }

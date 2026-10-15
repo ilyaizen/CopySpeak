@@ -55,7 +55,7 @@
     "kokoro",
     "pocket"
   ];
-  const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy"];
+  const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy", "cyberpunk"];
 
   const fallbackEngineOptions = ENGINES.map((e) => ({ value: e, label: e }));
   const effectOptions = EFFECTS.map((e) => ({ value: e, label: e }));

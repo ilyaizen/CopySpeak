@@ -267,7 +267,8 @@
       "options": {
         "none": "Keiner",
         "walkieTalkie": "Walkie-Talkie",
-        "gameBoy": "8-Bit-Game-Boy"
+        "gameBoy": "8-Bit-Game-Boy",
+        "cyberpunk": "Cyberpunk"
       }
     },
     "about": {
@@ -765,7 +766,7 @@
     "screenshots": {
       "title": "Screenshots",
       "subtitle": "CopySpeak in Aktion",
-      "caption": "CopySpeak v0.1.8 — Hauptoberfläche mit Tab Abspielen",
+      "caption": "Hauptoberfläche mit Tab Abspielen",
       "alt": "CopySpeak-Screenshot"
     },
     "footer": {

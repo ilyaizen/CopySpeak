@@ -62,6 +62,9 @@
   });
 
   let unlistenConfig: (() => void) | null = null;
+  // HMR can destroy this instance while onMount still awaits; a listener that
+  // resolves afterwards would outlive it and fire alongside the new instance's.
+  let destroyed = false;
 
   onMount(async () => {
     await loadConfig();
@@ -71,11 +74,13 @@
         unlistenConfig = await listen("config-changed", async () => {
           await loadConfig();
         });
+        if (destroyed) unlistenConfig();
       } catch {}
     }
   });
 
   onDestroy(() => {
+    destroyed = true;
     flushAutoSave();
     if (unlistenConfig) unlistenConfig();
   });

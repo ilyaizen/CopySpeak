@@ -248,6 +248,7 @@ export type TranslationKeys =
   | "settings.effects.options.none"
   | "settings.effects.options.walkieTalkie"
   | "settings.effects.options.gameBoy"
+  | "settings.effects.options.cyberpunk"
   | "settings.about.version"
   | "settings.about.versionDescription"
   | "settings.about.sourceCode"

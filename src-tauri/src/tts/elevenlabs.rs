@@ -1,4 +1,5 @@
-use super::stream::{AudioFormatMeta, ChunkItem, ChunkStream};
+use super::block_on_async;
+use super::stream::{spawn_stream, AudioFormatMeta, ChunkItem, ChunkStream};
 use super::{TtsBackend, TtsError, Voice};
 use crate::config::ElevenLabsConfig;
 use reqwest::Client;
@@ -251,149 +252,124 @@ impl ElevenLabsTtsBackend {
             text.len()
         );
 
-        let (tx, rx) = std::sync::mpsc::channel();
         let meta = AudioFormatMeta {
             sample_rate: 24000,
             channels: 1,
             bits_per_sample: 16,
         };
 
-        std::thread::spawn(move || {
-            // Fresh thread => no ambient runtime; block_on_async creates one.
-            let _ = Self::block_on_async(async move {
-                let client = Client::new();
-                let mut response = match client
-                    .post(&url)
-                    .header("xi-api-key", &api_key)
-                    .header("Content-Type", "application/json")
-                    .header("Accept", "application/json")
-                    .query(&[("output_format", STREAM_OUTPUT_FORMAT)])
-                    .json(&body)
-                    .send()
-                    .await
-                {
-                    Ok(response) => response,
-                    Err(e) => {
-                        log::error!(
+        Ok(spawn_stream(meta, move |sink| async move {
+            let client = Client::new();
+            let mut response = match client
+                .post(&url)
+                .header("xi-api-key", &api_key)
+                .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
+                .query(&[("output_format", STREAM_OUTPUT_FORMAT)])
+                .json(&body)
+                .send()
+                .await
+            {
+                Ok(response) => response,
+                Err(e) => {
+                    log::error!(
                             "[TTS] ElevenLabs stream failed at phase request after {:?} (0 bytes received): {}",
                             start_time.elapsed(),
                             e
                         );
-                        let _ = tx.send(ChunkItem::Failed(format!(
-                            "ElevenLabs stream request failed: {}",
-                            e
-                        )));
-                        return;
-                    }
-                };
+                    sink.send(ChunkItem::Failed(format!(
+                        "ElevenLabs stream request failed: {}",
+                        e
+                    )));
+                    return Ok(());
+                }
+            };
 
-                let status = response.status();
-                if !status.is_success() {
-                    let error_text = response.text().await.unwrap_or_default();
-                    log::error!(
+            let status = response.status();
+            if !status.is_success() {
+                let error_text = response.text().await.unwrap_or_default();
+                log::error!(
                         "[TTS] ElevenLabs stream failed at phase headers after {:?} (0 bytes received): {} {}",
                         start_time.elapsed(),
                         status,
                         error_text
                     );
-                    let _ = tx.send(ChunkItem::Failed(format!(
-                        "ElevenLabs API error {}: {}",
-                        status, error_text
-                    )));
-                    return;
-                }
+                sink.send(ChunkItem::Failed(format!(
+                    "ElevenLabs API error {}: {}",
+                    status, error_text
+                )));
+                return Ok(());
+            }
 
-                let mut first_chunk_logged = false;
-                let mut total_bytes = 0usize;
-                let mut decoder = super::elevenlabs_timing::TimestampDecoder::new();
-                loop {
-                    match response.chunk().await {
-                        Ok(Some(chunk)) => {
-                            if chunk.is_empty() {
-                                continue;
-                            }
-                            if !first_chunk_logged {
-                                first_chunk_logged = true;
-                                log::info!(
-                                    "[TTS] ElevenLabs stream first chunk after {:?} ({} bytes)",
-                                    start_time.elapsed(),
-                                    chunk.len()
-                                );
-                            }
-                            total_bytes += chunk.len();
-                            match decoder.push(&chunk, false) {
-                                Ok(items) => {
-                                    for item in items {
-                                        if tx.send(item).is_err() {
-                                            return;
-                                        }
+            let mut first_chunk_logged = false;
+            let mut total_bytes = 0usize;
+            let mut decoder = super::elevenlabs_timing::TimestampDecoder::new();
+            loop {
+                match response.chunk().await {
+                    Ok(Some(chunk)) => {
+                        if chunk.is_empty() {
+                            continue;
+                        }
+                        if !first_chunk_logged {
+                            first_chunk_logged = true;
+                            log::info!(
+                                "[TTS] ElevenLabs stream first chunk after {:?} ({} bytes)",
+                                start_time.elapsed(),
+                                chunk.len()
+                            );
+                        }
+                        total_bytes += chunk.len();
+                        match decoder.push(&chunk, false) {
+                            Ok(items) => {
+                                for item in items {
+                                    if !sink.send(item) {
+                                        return Ok(());
                                     }
                                 }
-                                Err(error) => {
-                                    let _ = tx.send(ChunkItem::Failed(error));
-                                    return;
-                                }
+                            }
+                            Err(error) => {
+                                sink.send(ChunkItem::Failed(error));
+                                return Ok(());
                             }
                         }
-                        Ok(None) => {
-                            match decoder.push(&[], true) {
-                                Ok(items) => {
-                                    for item in items {
-                                        if tx.send(item).is_err() {
-                                            return;
-                                        }
+                    }
+                    Ok(None) => {
+                        match decoder.push(&[], true) {
+                            Ok(items) => {
+                                for item in items {
+                                    if !sink.send(item) {
+                                        return Ok(());
                                     }
                                 }
-                                Err(error) => {
-                                    let _ = tx.send(ChunkItem::Failed(error));
-                                }
                             }
-                            break;
+                            Err(error) => {
+                                sink.send(ChunkItem::Failed(error));
+                            }
                         }
-                        Err(e) => {
-                            log::error!(
+                        break;
+                    }
+                    Err(e) => {
+                        log::error!(
                                 "[TTS] ElevenLabs stream failed at phase body after {:?} ({} bytes received): {}",
                                 start_time.elapsed(),
                                 total_bytes,
                                 e
                             );
-                            let _ = tx.send(ChunkItem::Failed(format!(
-                                "ElevenLabs stream read failed after {} bytes: {}",
-                                total_bytes, e
-                            )));
-                            return;
-                        }
+                        sink.send(ChunkItem::Failed(format!(
+                            "ElevenLabs stream read failed after {} bytes: {}",
+                            total_bytes, e
+                        )));
+                        return Ok(());
                     }
                 }
-                log::info!(
-                    "[TTS] ElevenLabs stream ended: {} bytes in {:?}",
-                    total_bytes,
-                    start_time.elapsed()
-                );
-            });
-        });
-
-        Ok(ChunkStream::new(meta, rx))
-    }
-
-    /// Execute an async block using the current Tokio runtime if available,
-    /// or create a new one if called from outside a runtime context.
-    fn block_on_async<F, T>(f: F) -> T
-    where
-        F: std::future::Future<Output = T>,
-    {
-        // Try to get the current runtime handle
-        match tokio::runtime::Handle::try_current() {
-            Ok(handle) => {
-                // We're in a Tokio runtime context, use block_on
-                handle.block_on(f)
             }
-            Err(_) => {
-                // No runtime context, create a new one
-                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                rt.block_on(f)
-            }
-        }
+            log::info!(
+                "[TTS] ElevenLabs stream ended: {} bytes in {:?}",
+                total_bytes,
+                start_time.elapsed()
+            );
+            Ok(())
+        }))
     }
 
     /// Fetch available voices from ElevenLabs API
@@ -434,7 +410,7 @@ impl ElevenLabsTtsBackend {
         // Perform the full request-response cycle in one block to avoid body truncation
         // that occurs when .send() and .bytes() are split across separate block_on_async calls.
         let fetch_result: Result<(reqwest::StatusCode, Vec<u8>), TtsError> =
-            Self::block_on_async(async move {
+            block_on_async(async move {
                 let client = Client::new();
                 let response = client
                     .get(url)
@@ -652,7 +628,7 @@ impl ElevenLabsTtsBackend {
         // Perform the full request-response cycle in one block to avoid body truncation
         // that occurs when .send() and .bytes() are split across separate block_on_async calls.
         let fetch_result: Result<(reqwest::StatusCode, String), TtsError> =
-            Self::block_on_async(async move {
+            block_on_async(async move {
                 let client = Client::new();
                 let response = client
                     .get(&url)
@@ -748,8 +724,9 @@ impl TtsBackend for ElevenLabsTtsBackend {
     }
 
     fn supports_streaming(&self) -> bool {
-        // The /stream endpoint is pinned to pcm_44100 regardless of the
-        // profile's batch output_format, so native streaming is always usable.
+        // The /stream endpoint is pinned to pcm_24000 (STREAM_OUTPUT_FORMAT)
+        // regardless of the profile's batch output_format, so native streaming
+        // is always usable.
         true
     }
 
@@ -818,7 +795,7 @@ impl TtsBackend for ElevenLabsTtsBackend {
 
         let start_time = std::time::Instant::now();
 
-        let response = Self::block_on_async(async {
+        let response = block_on_async(async {
             let client = Client::new();
             client
                 .post(&url)
@@ -848,8 +825,7 @@ impl TtsBackend for ElevenLabsTtsBackend {
         );
 
         if !response.status().is_success() {
-            let error_text =
-                Self::block_on_async(async { response.text().await.unwrap_or_default() });
+            let error_text = block_on_async(async { response.text().await.unwrap_or_default() });
             log::error!("ElevenLabs API error {}: {}", status, error_text);
             // Provide a user-friendly message for payment-required errors (library voices)
             if status == reqwest::StatusCode::PAYMENT_REQUIRED
@@ -868,7 +844,7 @@ impl TtsBackend for ElevenLabsTtsBackend {
             )));
         }
 
-        let bytes = Self::block_on_async(async { response.bytes().await }).map_err(|e| {
+        let bytes = block_on_async(async { response.bytes().await }).map_err(|e| {
             log::error!("Failed to read response bytes: {}", e);
             TtsError::Http(format!("Failed to read bytes: {}", e))
         })?;

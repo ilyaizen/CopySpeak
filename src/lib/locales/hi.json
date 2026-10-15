@@ -267,7 +267,8 @@
       "options": {
         "none": "कोई नहीं",
         "walkieTalkie": "वॉकी-टॉकी",
-        "gameBoy": "8-बिट Game Boy"
+        "gameBoy": "8-बिट Game Boy",
+        "cyberpunk": "साइबरपंक"
       }
     },
     "about": {
@@ -765,7 +766,7 @@
     "screenshots": {
       "title": "स्क्रीनशॉट",
       "subtitle": "CopySpeak को काम करते देखें",
-      "caption": "CopySpeak v0.1.8 — चलाएँ टैब के साथ मुख्य इंटरफ़ेस",
+      "caption": "चलाएँ टैब के साथ मुख्य इंटरफ़ेस",
       "alt": "CopySpeak का स्क्रीनशॉट"
     },
     "footer": {

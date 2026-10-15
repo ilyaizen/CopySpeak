@@ -329,7 +329,7 @@ export interface HotkeyConfig {
   shortcut: string;
 }
 
-export type EffectId = "none" | "walkie_talkie" | "game_boy";
+export type EffectId = "none" | "walkie_talkie" | "game_boy" | "cyberpunk";
 
 export interface PostProcessProvider {
   id: string;

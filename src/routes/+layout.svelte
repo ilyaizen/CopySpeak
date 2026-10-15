@@ -55,6 +55,9 @@
   const isWeb = import.meta.env.VITE_IS_VERCEL;
 
   let unlistenSpeak: (() => void) | null = null;
+  // HMR can destroy this instance while onMount still awaits; a listener that
+  // resolves afterwards would outlive it and every double-copy would speak twice.
+  let destroyed = false;
 
   onMount(async () => {
     if (isWeb) return;
@@ -122,6 +125,8 @@
       console.error("Failed to check config:", e);
     }
 
+    // HMR may also have re-run history-events, so this instance's stop already ran.
+    if (destroyed) return;
     await startHistoryEventListeners();
 
     if (isTauri) {
@@ -147,6 +152,7 @@
             }
           }
         );
+        if (destroyed) unlistenSpeak();
         console.log("[LAYOUT] speak-request listener registered");
       } catch (e) {
         console.error("Failed to set up listeners:", e);
@@ -168,6 +174,7 @@
 
   // Cleanup event listeners when app unmounts
   onDestroy(async () => {
+    destroyed = true;
     if (isWeb) return;
     await stopHistoryEventListeners();
     if (unlistenSpeak) unlistenSpeak();

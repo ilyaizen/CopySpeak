@@ -1,5 +1,6 @@
+use super::block_on_async;
 use super::captions::{CaptionAlignment, WordTiming};
-use super::stream::{AudioFormatMeta, ChunkItem, ChunkStream};
+use super::stream::{spawn_stream, AudioFormatMeta, ChunkItem, ChunkStream};
 use super::{TtsBackend, TtsError};
 use crate::config::CartesiaConfig;
 use base64::{engine::general_purpose::STANDARD, Engine as _};
@@ -241,79 +242,51 @@ impl CartesiaTtsBackend {
         });
         let url = url.to_owned();
         let text = text.to_owned();
-        let (tx, rx) = std::sync::mpsc::channel();
-        std::thread::spawn(move || {
-            Self::block_on_async(async move {
-                let result: Result<(), TtsError> = async {
-                    let mut response = Client::new()
-                        .post(url)
-                        .header("X-API-Key", api_key)
-                        .header("Cartesia-Version", CARTESIA_VERSION)
-                        .json(&body)
-                        .send()
-                        .await
-                        .map_err(|e| {
-                            TtsError::Http(format!("Cartesia stream request failed: {e}"))
-                        })?;
-                    let status = response.status();
-                    if !status.is_success() {
-                        let error_text = response.text().await.unwrap_or_default();
-                        return Err(TtsError::Http(format!(
-                            "Cartesia API error {status}: {error_text}"
-                        )));
-                    }
-                    let mut total_bytes = 0usize;
-                    let mut decoder = CartesiaSseDecoder::new(text);
-                    while let Some(chunk) = response.chunk().await.map_err(|e| {
-                        TtsError::Http(format!(
-                            "Cartesia stream read failed after {total_bytes} bytes: {e}"
-                        ))
-                    })? {
-                        if chunk.is_empty() {
-                            continue;
-                        }
-                        total_bytes += chunk.len();
-                        for item in decoder.push(&chunk, false).map_err(TtsError::Http)? {
-                            if tx.send(item).is_err() {
-                                return Ok(());
-                            }
-                        }
-                    }
-                    for item in decoder.push(&[], true).map_err(TtsError::Http)? {
-                        if tx.send(item).is_err() {
-                            return Ok(());
-                        }
-                    }
-                    Ok(())
-                }
-                .await;
-                if let Err(error) = result {
-                    log::error!("[TTS] {error}");
-                    let _ = tx.send(ChunkItem::Failed(error.to_string()));
-                }
-            });
-        });
-        Ok(ChunkStream::new(
-            AudioFormatMeta {
-                sample_rate: 44100,
-                channels: 1,
-                bits_per_sample: 16,
-            },
-            rx,
-        ))
-    }
-
-    fn block_on_async<F, T>(f: F) -> T
-    where
-        F: std::future::Future<Output = T>,
-    {
-        match tokio::runtime::Handle::try_current() {
-            Ok(handle) => handle.block_on(f),
-            Err(_) => {
-                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
-                rt.block_on(f)
+        let meta = AudioFormatMeta {
+            sample_rate: 44100,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        Ok(spawn_stream(meta, move |sink| async move {
+            let mut response = Client::new()
+                .post(url)
+                .header("X-API-Key", api_key)
+                .header("Cartesia-Version", CARTESIA_VERSION)
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| TtsError::Http(format!("Cartesia stream request failed: {e}")))?;
+            let status = response.status();
+            if !status.is_success() {
+                let error_text = response.text().await.unwrap_or_default();
+                return Err(TtsError::Http(format!(
+                    "Cartesia API error {status}: {error_text}"
+                )));
             }
-        }
+            let mut total_bytes = 0usize;
+            let mut decoder = CartesiaSseDecoder::new(text);
+            while let Some(chunk) = response.chunk().await.map_err(|e| {
+                TtsError::Http(format!(
+                    "Cartesia stream read failed after {total_bytes} bytes: {e}"
+                ))
+            })? {
+                if chunk.is_empty() {
+                    continue;
+                }
+                total_bytes += chunk.len();
+                for item in decoder.push(&chunk, false).map_err(TtsError::Http)? {
+                    if !sink.send(item) {
+                        return Ok(());
+                    }
+                }
+            }
+            for item in decoder.push(&[], true).map_err(TtsError::Http)? {
+                if !sink.send(item) {
+                    return Ok(());
+                }
+            }
+            Ok(())
+        }))
     }
 
     /// Fetch available voices from the Cartesia API.
@@ -324,7 +297,7 @@ impl CartesiaTtsBackend {
         if api_key.trim().is_empty() {
             return Err(TtsError::Unavailable("Cartesia API key is missing".into()));
         }
-        let (status, body) = Self::block_on_async(async move {
+        let (status, body) = block_on_async(async move {
             let client = Client::new();
             let response = client
                 .get("https://api.cartesia.ai/voices")
@@ -405,7 +378,7 @@ impl TtsBackend for CartesiaTtsBackend {
         let start_time = std::time::Instant::now();
         let api_key = crate::secrets::resolve(&self.config.api_key, &["CARTESIA_API_KEY"]);
 
-        let response = Self::block_on_async(async {
+        let response = block_on_async(async {
             let client = Client::new();
             client
                 .post(CARTESIA_TTS_URL)
@@ -434,8 +407,7 @@ impl TtsBackend for CartesiaTtsBackend {
         );
 
         if !status.is_success() {
-            let error_text =
-                Self::block_on_async(async { response.text().await.unwrap_or_default() });
+            let error_text = block_on_async(async { response.text().await.unwrap_or_default() });
             log::error!("Cartesia API error {}: {}", status, error_text);
             return Err(TtsError::Http(format!(
                 "Cartesia API error {}: {}",
@@ -443,7 +415,7 @@ impl TtsBackend for CartesiaTtsBackend {
             )));
         }
 
-        let bytes = Self::block_on_async(async { response.bytes().await }).map_err(|e| {
+        let bytes = block_on_async(async { response.bytes().await }).map_err(|e| {
             log::error!("Failed to read Cartesia response bytes: {}", e);
             TtsError::Http(format!("Failed to read bytes: {}", e))
         })?;
