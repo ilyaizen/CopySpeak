@@ -82,6 +82,12 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Take a speech's engine from its effective profile (`eff.engine`), not `cfg.tts.active_backend`: that field only mirrors the active profile (`sync_active_backend_mirror`), so a per-utterance switch would file telemetry, history and cache under the wrong engine.
 - Label a history replay's HUD from the row's `tts_engine` and `voice` (`saved_provider_voice` in `hud.rs`), not the active profile; rows store no voice name, only the raw voice ID.
 
+## Text pipeline
+
+- Fold Cyrillic homoglyphs only inside a word that also holds a Latin letter (`fold_homoglyphs`); a per-character fold turned every Russian word into mixed script ("привет" → "пpивeт").
+- Keep U+200C (ZWNJ) out of both invisible-character regexes in `tts_normalize.rs`; Persian and Indic words are spelled with it.
+- Add a script's sentence terminator to both `is_sentence_end` in `pagination.rs` and the phrase regex in `captions.ts`; text with no terminator force-splits at exact character counts, mid-word.
+
 ## Linux
 
 - On Linux launch with `GDK_BACKEND=x11` and show() the HUD window before `set_position`; Wayland toplevels cannot self-position.

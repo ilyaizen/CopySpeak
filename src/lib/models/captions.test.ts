@@ -24,6 +24,12 @@ it("preserves multilingual text and punctuation while making short phrases", () 
   }
 });
 
+it("starts a new phrase after a Devanagari danda", () => {
+  const words = buildCaptions("नमस्ते दुनिया। यह परीक्षण है।");
+  expect(words[0].phrase).toBe(0);
+  expect(words.find((word) => word.text.startsWith("यह"))?.phrase).toBe(1);
+});
+
 it("selects words at audio boundaries and safely handles missing timing", () => {
   const text = "One two. Three!";
   const words = buildCaptions(text, {

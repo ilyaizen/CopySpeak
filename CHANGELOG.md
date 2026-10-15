@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Cyberpunk effect** — a short synthesized 56k modem handshake opens and closes each reading, the first word and a few random later words glitch-stutter, and the voice gets a bright, lightly ring-modulated tone. Stutters add a little length, so karaoke captions drift slightly behind, as with the walkie-talkie lead-in.
 
+### Fixed
+
+- **Russian and other Cyrillic text** is no longer sent to the engine with some letters swapped for Latin lookalikes ("привет" became "пpивeт"). Only words that mix Cyrillic and Latin letters, a common AI-text artifact, are still repaired.
+- **Persian and Indic text** keeps its zero-width non-joiner, so words spelled with it are no longer fused.
+- **Hindi, Arabic, Urdu, Armenian, Amharic, Burmese and Khmer** sentence endings now split long text between sentences instead of mid-word, and start a new caption phrase.
+
 ## [0.2.12] - 2026-10-13
 
 ### Added
