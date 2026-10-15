@@ -782,6 +782,12 @@ async fn speak_now_internal(
     // sanitization on the condenser OUTPUT (see try_process).
     let text =
         crate::post_process::try_process(text, &post_process_config, &sanitization, condense).await;
+    // A named profile skips language switching; otherwise this utterance may
+    // speak with a language-matched profile rather than the active one.
+    let eff = match named {
+        Some(eff) => eff,
+        None => resolve_effective_for_text(&tts_config, &text, |p| profile_ready(p, &tts_config))?,
+    };
     let _ = app.emit("reading-started", &text);
     // File output plays nothing, so there is no speak for a page to follow.
     if let Some((trigger, id)) = &trigger {
@@ -790,7 +796,6 @@ async fn speak_now_internal(
         }
     }
 
-    let eff = named.unwrap_or_else(|| resolve_effective(&tts_config));
     let voice = eff.voice.clone();
     log_tts_debug("TTS", &format!("{:?}", eff.engine), &text);
 
