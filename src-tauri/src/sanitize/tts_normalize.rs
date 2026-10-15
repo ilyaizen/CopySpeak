@@ -12,20 +12,25 @@ use super::cleanup::cleanup_artifacts;
 /// cleaner single-line text for history preview.
 pub fn sanitize_tts(text: &str) -> String {
     let mut result = text.to_string();
+    // The English rewrites below (Dr., 5 m, ~) would mangle a confidently
+    // non-English text, so they run only when the text is English or unclear.
+    let english = !matches!(crate::language::detect_language(text), Some(l) if l != "en");
 
     // Order matters — run in the specified priority sequence
     result = normalize_characters(&result);
     result = remove_unpronounceable(&result);
     result = remove_urls(&result);
     result = remove_citations(&result);
-    result = expand_slash_lookups(&result);
-    result = expand_slash_options(&result);
-    result = expand_slash_ratios(&result);
-    result = expand_latin_abbreviations(&result);
-    result = expand_title_abbreviations(&result);
-    result = expand_number_suffixes(&result); // Run before metric units (5m = 5 million, not 5 meters)
-    result = expand_metric_units(&result);
-    result = expand_symbols(&result);
+    if english {
+        result = expand_slash_lookups(&result);
+        result = expand_slash_options(&result);
+        result = expand_slash_ratios(&result);
+        result = expand_latin_abbreviations(&result);
+        result = expand_title_abbreviations(&result);
+        result = expand_number_suffixes(&result); // Run before metric units (5m = 5 million, not 5 meters)
+        result = expand_metric_units(&result);
+        result = expand_symbols(&result);
+    }
     result = normalize_punctuation(&result);
     result = cleanup_artifacts(&result);
     // Last: drop orphan leading punctuation (", They didn't know…" →
@@ -464,6 +469,24 @@ fn normalize_punctuation(text: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// English-only rewrites (Dr., 5 m, ~) must not run on a confidently German
+    /// sentence, but still run on English text.
+    #[test]
+    fn non_english_text_keeps_english_only_rewrites() {
+        let german = "Der schnelle braune Fuchs springt über den faulen Hund. \
+            Dr. Schmidt wartet seit 5 m am Bahnhof, und das Wetter ist heute ~ sehr schön.";
+        assert_eq!(crate::language::detect_language(german), Some("de"));
+        let out = sanitize_tts(german);
+        assert!(out.contains("Dr. Schmidt"), "{out}");
+        assert!(out.contains("5 m am"), "{out}");
+        assert!(out.contains('~'), "{out}");
+
+        let english = "Dr. Smith waits 5 m away from the station, and the weather is ~ nice today.";
+        let out = sanitize_tts(english);
+        assert!(out.contains("Doctor Smith"), "{out}");
+        assert!(out.contains("approximately"), "{out}");
+    }
 
     #[test]
     fn test_normalize_curly_quotes_and_dashes() {
