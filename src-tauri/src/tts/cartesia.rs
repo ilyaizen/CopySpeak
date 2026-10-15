@@ -224,7 +224,7 @@ const SONIC_LANGUAGES: [&str; 44] = [
 /// Cartesia's `language` for a detected language (Norwegian is `no`), or
 /// `None` when Sonic does not speak it.
 fn cartesia_language(code: &str) -> Option<&'static str> {
-    let code = if code == "nb" { "no" } else { code };
+    let code = crate::language::provider_code(code);
     SONIC_LANGUAGES.into_iter().find(|&l| l == code)
 }
 

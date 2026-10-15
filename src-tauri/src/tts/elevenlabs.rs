@@ -202,7 +202,7 @@ fn elevenlabs_language(model_id: &str, code: &'static str) -> Option<&'static st
     if model_id.contains("multilingual_v2") {
         return None;
     }
-    Some(if code == "nb" { "no" } else { code })
+    Some(crate::language::provider_code(code))
 }
 
 /// Production API root. Tests point [`ElevenLabsTtsBackend::synthesize_streaming_from`]

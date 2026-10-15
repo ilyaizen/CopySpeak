@@ -28,6 +28,25 @@ pub fn is_detector_code(code: &str) -> bool {
     Lang::all().iter().any(|lang| iso_639_1(*lang) == code)
 }
 
+/// Detector code for a catalog language code. Catalogs say Norwegian `no`;
+/// the detector says `nb`.
+pub fn detector_code(catalog_code: &str) -> &str {
+    if catalog_code == "no" {
+        "nb"
+    } else {
+        catalog_code
+    }
+}
+
+/// Provider code for a detector code. ElevenLabs and Cartesia say Norwegian `no`.
+pub fn provider_code(detector_code: &str) -> &str {
+    if detector_code == "nb" {
+        "no"
+    } else {
+        detector_code
+    }
+}
+
 /// ISO 639-1 code for a detector language. Exhaustive on purpose: a whatlang
 /// upgrade that adds a language fails to compile until it gets a code here.
 fn iso_639_1(lang: Lang) -> &'static str {

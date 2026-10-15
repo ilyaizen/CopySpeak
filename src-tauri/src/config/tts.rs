@@ -895,7 +895,7 @@ pub(crate) fn catalog_voice_language(engine: &TtsEngine, voice: &str) -> Option<
 /// Norwegian `no` as the detector's `nb`. `None` unless the detector knows it.
 pub(crate) fn catalog_language_code(raw: &str) -> Option<String> {
     let base = raw.split(['-', '_']).next()?.to_ascii_lowercase();
-    let code = if base == "no" { "nb".to_string() } else { base };
+    let code = crate::language::detector_code(&base).to_string();
     crate::language::is_detector_code(&code).then_some(code)
 }
 
