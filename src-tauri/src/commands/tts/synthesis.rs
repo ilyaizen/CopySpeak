@@ -980,7 +980,7 @@ async fn synthesize_paginated(
     backend_arc: Arc<Box<dyn TtsBackend>>,
     text: &str,
     voice: &str,
-    active_backend: &crate::config::TtsEngine,
+    engine: &crate::config::TtsEngine,
     telemetry_state: &State<'_, Mutex<telemetry::TelemetryLog>>,
     synthesis_start: &Instant,
     _total_estimate: Option<u64>,
@@ -1020,7 +1020,7 @@ async fn synthesize_paginated(
     let char_counts: Vec<usize> = fragments.iter().map(|f| f.text.len()).collect();
     let (total_estimate, avg_confidence, _) = telemetry::get_estimate_paginated(
         telemetry_state,
-        &engine_str(active_backend),
+        &engine_str(engine),
         voice,
         &char_counts,
     );
@@ -1096,7 +1096,7 @@ fn handle_file_output(
     speech: &SpeechAudio,
     text: &str,
     voice: &str,
-    active_backend: &crate::config::TtsEngine,
+    engine: &crate::config::TtsEngine,
     output_config: &crate::config::OutputConfig,
     synthesis_ms: u64,
 ) -> Result<(), String> {
@@ -1148,7 +1148,7 @@ fn handle_file_output(
         add_history_with_metadata(
             history,
             text,
-            &engine_str(active_backend),
+            &engine_str(engine),
             voice,
             audio_duration_ms,
             Some(output_path.to_string_lossy().into_owned()),
@@ -1161,7 +1161,7 @@ fn handle_file_output(
         save_speech_cache(
             &speech_cache_dir(),
             speech,
-            &engine_str(active_backend),
+            &engine_str(engine),
             voice,
             text,
         );
