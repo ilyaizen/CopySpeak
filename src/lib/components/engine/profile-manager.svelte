@@ -363,9 +363,12 @@
   }
 
   // A voice's language tag, or null (speaks any) for a voice the catalog does not list.
+  function catalogVoice(engine: TtsEngine, voiceId: string): VoiceCatalogEntry | undefined {
+    return catalogVoicesFor(engine).find((voice) => voice.id === voiceId);
+  }
+
   function voiceLanguage(engine: TtsEngine, voiceId: string): string | null {
-    const match = catalogVoicesFor(engine).find((voice) => voice.id === voiceId);
-    return profileLanguage(match?.language);
+    return profileLanguage(catalogVoice(engine, voiceId)?.language);
   }
 
   function applyPresetDefaults(index: number, preset: EngineOptionValue) {
@@ -482,9 +485,9 @@
   function setVoice(index: number, voiceId: string) {
     const profile = localConfig.tts.profiles[index];
     profile.voice = voiceId;
-    const match = catalogVoicesFor(profile.engine).find((voice) => voice.id === voiceId);
+    const match = catalogVoice(profile.engine, voiceId);
     profile.voice_label = match?.label;
-    profile.language = voiceLanguage(profile.engine, voiceId);
+    profile.language = profileLanguage(match?.language);
   }
 
   function resetEngineOptions(index: number, engine: TtsEngine) {
