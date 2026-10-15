@@ -14,14 +14,14 @@ pub fn sanitize_tts(text: &str) -> String {
     let mut result = text.to_string();
     // The English rewrites below (Dr., 5 m, ~) would mangle a confidently
     // non-English text, so they run only when the text is English or unclear.
-    let english = !matches!(crate::language::detect_language(text), Some(l) if l != "en");
+    let english_or_unclear = crate::language::detect_language(text).is_none_or(|l| l == "en");
 
     // Order matters — run in the specified priority sequence
     result = normalize_characters(&result);
     result = remove_unpronounceable(&result);
     result = remove_urls(&result);
     result = remove_citations(&result);
-    if english {
+    if english_or_unclear {
         result = expand_slash_lookups(&result);
         result = expand_slash_options(&result);
         result = expand_slash_ratios(&result);
