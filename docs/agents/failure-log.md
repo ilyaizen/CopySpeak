@@ -18,7 +18,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - `hud:*` events fire only while the HUD is enabled; main-window UI reads `playbackStore.caption` and `reading-started`, never HUD events.
 - Duck other apps per-session and skip our whole process tree, not our PID: playback is in the webview, so the audio session belongs to a `msedgewebview2` child; persist originals to `duck-state.json` because per-app mixer volumes survive a crash.
 - "Beeps" in generated audio: suspect unpronounceable glyphs in the text before the playback code; keep `remove_unpronounceable`'s symbol ranges ahead of what vendors confound.
-- Pass the speech's `EffectiveTtsRequest` to `hud::show_hud` and `show_hud_synthesizing`; `get_provider_voice` resolves the active preset itself, so a language-switched reading shows the wrong engine and voice.
+- Pass the speech's `EffectiveTtsRequest` to `hud::show_hud` and `show_hud_synthesizing`; `get_provider_voice` reads the request's `engine` and `voice_label`, so a language-switched reading shows its own engine and voice.
 - Clamp the final mix of an offline effect graph with an identity WaveShaper over `[-1, 1]`: a clamp on one layer does not cap layers summed after it (static bed pushed clamped cyberpunk intro/outro to 1.012), and a gain-up without a final clamp exceeds full scale.
 - Size a layer's peak after the crush gain, not before: `crushTail` multiplies by gain before its clamp, so a layer whose peak times gain exceeds 1 hard-clips into a harsh click (the cyberpunk start beep at 0.35 × 3.6).
 - Gate only noise layers in an offline effect tail: a whole-tail on/off chop silences designed clicks that fall in off-windows (an older cyberpunk intro had clicks at 0.06, 0.12, 0.86 s that a 30 Hz gate chopped) and chops tones into clicks at every edge.
@@ -84,6 +84,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - When a cache test asserts an exact pagination count, set `fragment_size` above each intended sentence length; overlong sentences are correctly force-split into extra fragments.
 - Take a speech's engine from its effective profile (`eff.engine`), not `cfg.tts.active_backend`: that field only mirrors the active profile (`sync_active_backend_mirror`), so a per-utterance switch would file telemetry, history and cache under the wrong engine.
 - Label a history replay's HUD from the row's `tts_engine` and `voice` (`saved_provider_voice` in `hud.rs`), not the active profile; rows store no voice name, only the raw voice ID.
+- Send a replay's playback settings as `reading-profile` (`replay_profile`: the row's speed, the active profile's pitch and effect); do not call `syncFromActiveProfile()` before a replay, it takes the active profile's speed too.
 
 ## Text pipeline
 

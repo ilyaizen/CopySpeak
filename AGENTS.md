@@ -47,7 +47,6 @@ Every line exists because it went wrong at least once. On mistake, correction, o
 - Treat `speak_now`'s return as playback-START, not completion: only the webview store's `finishPlayback`/`handleStop` → `playback-finished` → `playback_signal` chain means completion, and every terminal path must emit it or blocking `/speak --wait` callers hang until the 600 s cap.
 - Branch every synthesis save site on `history.enabled`: on logs and saves to the history folder, off calls `save_speech_cache` and logs nothing; `find_cached_speech` must read the same store.
 - Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
-- Write `schema_version` in `migrate_tts_config` as `.max(2)`, never `= 2`; a plain reset re-runs every migration on each launch and brings deleted bundled profiles back.
 - The app loads secrets from `<exe-dir>/.env` (`src-tauri/target/debug/.env` in dev), not the repo-root `.env`.
 - In a fresh worktree, run `bun install` in `browser-extension/` as well as the root; without its `@types/chrome`, `vp check` fails with `Cannot find type definition file for 'chrome'`.
 - Use three-way `cfg(target_os = ...)` (windows/macos/linux) for platform seams; `cfg(not(windows))` makes macOS compile Linux-only code (wl-clipboard, gtk-layer-shell) that cannot build or run on darwin.
@@ -68,6 +67,7 @@ Before editing an area, read its section in [`docs/agents/failure-log.md`](docs/
 - **Engines**: installers, Python wrappers, daemon protocol, CUDA, adding a `TtsEngine`
 - **Browser companion**: native host, extension protocol, page highlights
 - **History & cache**: history UI, replay, speech cache
+- **Config**: `migrate_tts_config`, schema versions, profile migrations
 - **Text pipeline**: sanitizer (`tts_normalize.rs`), pagination, non-English text
 - **Landing page**: `static/` asset references, version strings in locales
 - **Linux**: HUD window, Wayland
