@@ -638,11 +638,21 @@ pub(crate) fn resolve_effective_for_text(
 }
 
 /// Whether a profile can speak right now: a first-class local engine is
-/// installed, a cloud engine has credentials. Local CLI and HTTP always can.
+/// installed, a cloud engine has credentials, the custom CLI's command can run.
+/// HTTP always can.
 pub(crate) fn profile_ready(profile: &VoiceProfile, tts_config: &TtsConfig) -> bool {
     let engine = engine_str(&profile.engine);
     match profile.engine {
-        TtsEngine::Local | TtsEngine::Http => true,
+        // The custom CLI counts as ready once its command can run.
+        TtsEngine::Local => {
+            let command = profile
+                .engine_options
+                .local()
+                .and_then(|o| o.command.clone())
+                .unwrap_or_else(|| tts_config.command.clone());
+            crate::commands::install::command_available(&command)
+        }
+        TtsEngine::Http => true,
         TtsEngine::OpenAI
         | TtsEngine::ElevenLabs
         | TtsEngine::Cartesia
@@ -706,6 +716,20 @@ mod tests {
             active_profile_id: active.into(),
             ..TtsConfig::default()
         }
+    }
+
+    #[test]
+    fn custom_cli_profile_is_ready_only_when_its_command_is_on_path() {
+        let p = profile("cli", TtsEngine::Local, None);
+        let mut tts = config(vec![p.clone()], "cli");
+        tts.command = "copyspeak-no-such-command-xyz".into();
+        assert!(!profile_ready(&p, &tts));
+        // The test binary's own path is a command that certainly exists.
+        tts.command = std::env::current_exe()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
+        assert!(profile_ready(&p, &tts));
     }
 
     /// English and German profiles; `active` picks which one is active.
