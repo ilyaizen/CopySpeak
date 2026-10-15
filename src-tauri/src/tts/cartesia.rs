@@ -210,11 +210,30 @@ impl Default for CartesiaVoice {
 
 pub struct CartesiaTtsBackend {
     config: CartesiaConfig,
+    /// Detected language of the reading, sent as `language`. Never persisted.
+    pub language: Option<&'static str>,
+}
+
+/// Base language codes Sonic 3.6 speaks.
+const SONIC_LANGUAGES: [&str; 44] = [
+    "en", "fr", "de", "es", "pt", "zh", "ja", "hi", "it", "ko", "nl", "pl", "ru", "sv", "tr", "tl",
+    "bg", "ro", "ar", "cs", "el", "fi", "hr", "ms", "sk", "da", "ta", "uk", "hu", "no", "vi", "bn",
+    "th", "he", "ka", "id", "te", "gu", "kn", "ml", "mr", "pa", "or", "ur",
+];
+
+/// Cartesia's `language` for a detected language (Norwegian is `no`), or
+/// `None` when Sonic does not speak it.
+fn cartesia_language(code: &str) -> Option<&'static str> {
+    let code = if code == "nb" { "no" } else { code };
+    SONIC_LANGUAGES.into_iter().find(|&l| l == code)
 }
 
 impl CartesiaTtsBackend {
     pub fn new(config: CartesiaConfig) -> Self {
-        Self { config }
+        Self {
+            config,
+            language: None,
+        }
     }
 
     fn synthesize_streaming_from(
@@ -228,7 +247,7 @@ impl CartesiaTtsBackend {
             return Err(TtsError::Unavailable("Cartesia API key is missing".into()));
         }
         // The shared player and history WAV writer consume signed integer PCM.
-        let body = json!({
+        let mut body = json!({
             "model_id": self.config.model_id,
             "transcript": text,
             "voice": { "mode": "id", "id": voice },
@@ -240,6 +259,9 @@ impl CartesiaTtsBackend {
             "add_timestamps": true,
             "use_normalized_timestamps": false,
         });
+        if let Some(code) = self.language.and_then(cartesia_language) {
+            body["language"] = code.into();
+        }
         let url = url.to_owned();
         let text = text.to_owned();
         let meta = AudioFormatMeta {
@@ -354,7 +376,7 @@ impl TtsBackend for CartesiaTtsBackend {
     }
 
     fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
-        let body = json!({
+        let mut body = json!({
             "model_id": self.config.model_id,
             "transcript": text,
             "voice": {
@@ -367,6 +389,9 @@ impl TtsBackend for CartesiaTtsBackend {
                 "sample_rate": 44100,
             },
         });
+        if let Some(code) = self.language.and_then(cartesia_language) {
+            body["language"] = code.into();
+        }
 
         log::info!(
             "Cartesia TTS request - model: {}, voice: {}, text length: {} chars",
@@ -459,6 +484,14 @@ mod tests {
     use super::*;
     use std::io::{Read, Write};
     use std::time::Duration;
+
+    #[test]
+    fn cartesia_language_sends_only_sonic_codes() {
+        assert_eq!(cartesia_language("de"), Some("de"));
+        assert_eq!(cartesia_language("nb"), Some("no"));
+        assert_eq!(cartesia_language("eo"), None);
+        assert_eq!(cartesia_language("yi"), None);
+    }
 
     #[test]
     fn streams_before_response_finishes_and_reports_truncated_body() {

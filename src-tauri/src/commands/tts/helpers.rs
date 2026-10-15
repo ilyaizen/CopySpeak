@@ -267,7 +267,9 @@ pub(crate) fn create_backend_from_effective(
                 config.voice_style = o.style.or(config.voice_style);
                 config.use_speaker_boost = o.use_speaker_boost.or(config.use_speaker_boost);
             }
-            Box::new(crate::tts::elevenlabs::ElevenLabsTtsBackend::new(config))
+            let mut backend = crate::tts::elevenlabs::ElevenLabsTtsBackend::new(config);
+            backend.language = eff.language_hint;
+            Box::new(backend)
         }
         TtsEngine::Cartesia => {
             let mut config = tts_config.cartesia.clone();
@@ -283,7 +285,9 @@ pub(crate) fn create_backend_from_effective(
                 config.encoding = o.encoding.clone().or(config.encoding);
                 config.sample_rate = o.sample_rate.or(config.sample_rate);
             }
-            Box::new(crate::tts::cartesia::CartesiaTtsBackend::new(config))
+            let mut backend = crate::tts::cartesia::CartesiaTtsBackend::new(config);
+            backend.language = eff.language_hint;
+            Box::new(backend)
         }
         TtsEngine::Http => {
             let mut config = tts_config.http.clone();
