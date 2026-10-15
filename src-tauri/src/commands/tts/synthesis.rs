@@ -26,7 +26,6 @@ use crate::commands::{
     AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent,
     PlaybackStreamFailedEvent,
 };
-use crate::config::TtsEngine;
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
 
@@ -1644,18 +1643,13 @@ pub async fn speak_history_entry(
         log::debug!("[IPC] speak_history_entry called (id: {})", entry_id);
     }
 
-    // Get text, engine and voice from history
-    let (text, row_engine, original_voice, row_speed) = {
+    // Get text, voice and speed from history
+    let (text, original_voice, row_speed) = {
         let hist = history.lock().unwrap();
         let entry = hist
             .get_by_id(&entry_id)
             .ok_or_else(|| format!("History entry not found: {}", entry_id))?;
-        (
-            entry.text.clone(),
-            entry.tts_engine.clone(),
-            entry.voice.clone(),
-            entry.speed,
-        )
+        (entry.text.clone(), entry.voice.clone(), entry.speed)
     };
 
     if text.trim().is_empty() {
@@ -1667,14 +1661,11 @@ pub async fn speak_history_entry(
         (cfg.tts.clone(), cfg.history.enabled)
     };
 
-    // The row's engine and voice speak it, not the active profile's.
-    let engine = TtsEngine::from_id(&row_engine)
-        .ok_or_else(|| format!("Unknown engine '{}' on history entry", row_engine))?;
+    // The active engine speaks the saved voice id, as before replay settings
+    // moved to the row's speed.
     let mut eff = resolve_effective(&tts_config);
-    eff.engine = engine.clone();
-    eff.voice = original_voice.clone();
-    eff.voice_label = crate::hud::saved_voice_label(&engine, &original_voice, &tts_config.profiles);
     eff.speed = row_speed;
+    let engine = eff.engine.clone();
 
     let backend: Box<dyn TtsBackend> = create_backend(&engine, &tts_config);
     let voice = original_voice;

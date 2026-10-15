@@ -300,9 +300,7 @@ function createHistoryStore() {
       if (item) {
         await invoke("show_hud_for_playback", {
           text: item.text,
-          audioDurationMs: item.duration_ms ?? null,
-          ttsEngine: item.tts_engine,
-          voice: item.voice
+          audioDurationMs: item.duration_ms ?? null
         }).catch(() => {});
       }
       // The backend sends the replay's settings: the row's speed, the active profile's pitch and effect.

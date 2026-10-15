@@ -9,10 +9,8 @@
 // the HUD component registers handlers for `hud:*` events.
 
 use crate::audio::AmplitudeEnvelope;
-use crate::commands::helpers::EffectiveTtsRequest;
-use crate::config::{
-    AppConfig, HudConfig, HudPosition, HudPresetPosition, TtsEngine, VoiceProfile,
-};
+use crate::commands::helpers::{resolve_effective, EffectiveTtsRequest};
+use crate::config::{AppConfig, HudConfig, HudPosition, HudPresetPosition, TtsEngine};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Monitor, PhysicalPosition, WebviewWindow};
 
@@ -64,41 +62,6 @@ fn get_provider_voice(eff: &EffectiveTtsRequest) -> (Option<String>, Option<Stri
         .clone()
         .unwrap_or_else(|| title_case(&eff.voice));
     (Some(provider_name(&eff.engine)), Some(voice))
-}
-
-/// Provider and voice for a saved reading, from the engine and voice that spoke it.
-/// The voice label matches the history list: the label of a profile with that
-/// engine and voice, else the voice id in title case.
-fn saved_provider_voice(
-    engine: Option<&TtsEngine>,
-    voice: &str,
-    profiles: &[VoiceProfile],
-) -> (Option<String>, Option<String>) {
-    // `None` engine: an id that no longer names one, so no provider.
-    let Some(engine) = engine else {
-        return (None, Some(title_case(voice)));
-    };
-    let label = saved_voice_label(engine, voice, profiles).unwrap_or_else(|| title_case(voice));
-    (Some(provider_name(engine)), Some(label))
-}
-
-/// The label of the profile with this engine and voice, or `None` when no
-/// profile has one. Replays and their HUD use it for the voice name.
-pub(crate) fn saved_voice_label(
-    engine: &TtsEngine,
-    voice: &str,
-    profiles: &[VoiceProfile],
-) -> Option<String> {
-    profiles
-        .iter()
-        .filter(|p| p.engine == *engine && p.voice == voice)
-        .find_map(|p| {
-            p.voice_label
-                .as_deref()
-                .map(str::trim)
-                .filter(|l| !l.is_empty())
-        })
-        .map(str::to_string)
 }
 
 #[derive(Clone, Serialize)]
@@ -396,19 +359,12 @@ pub fn show_hud_synthesizing(app: &AppHandle, text: Option<String>, eff: &Effect
 }
 
 /// Show HUD for playback of existing audio file.
-/// Labels the reading with the engine and voice that spoke it, not the active profile.
 /// Emits hud:playback_start event - frontend will stream amplitude data.
-pub fn show_hud_playback(
-    app: &AppHandle,
-    text: Option<String>,
-    audio_duration_ms: Option<u64>,
-    engine: Option<&TtsEngine>,
-    voice: &str,
-) {
-    let (config, provider, label) = {
+pub fn show_hud_playback(app: &AppHandle, text: Option<String>, audio_duration_ms: Option<u64>) {
+    let (config, provider, voice) = {
         let state = app.state::<std::sync::Mutex<AppConfig>>();
         let cfg = state.lock().unwrap();
-        let (p, v) = saved_provider_voice(engine, voice, &cfg.tts.profiles);
+        let (p, v) = get_provider_voice(&resolve_effective(&cfg.tts));
         (cfg.hud.clone(), p, v)
     };
 
@@ -440,7 +396,7 @@ pub fn show_hud_playback(
             HudPlaybackStartPayload {
                 text,
                 provider,
-                voice: label,
+                voice,
                 audio_duration_ms,
             },
         ) {
@@ -594,49 +550,4 @@ fn compute_hud_position(
     };
 
     Some(PhysicalPosition::new(x, y))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn profile(engine: TtsEngine, voice: &str, label: Option<&str>) -> VoiceProfile {
-        VoiceProfile {
-            engine,
-            voice: voice.into(),
-            voice_label: label.map(String::from),
-            ..VoiceProfile::default()
-        }
-    }
-
-    #[test]
-    fn saved_reading_uses_label_of_profile_with_its_engine_and_voice() {
-        let profiles = [profile(TtsEngine::Piper, "en_US-joe-medium", Some("Joe"))];
-        let (provider, label) =
-            saved_provider_voice(Some(&TtsEngine::Piper), "en_US-joe-medium", &profiles);
-        assert_eq!(provider.as_deref(), Some("Piper"));
-        assert_eq!(label.as_deref(), Some("Joe"));
-    }
-
-    #[test]
-    fn saved_reading_ignores_profile_of_other_engine_with_same_voice() {
-        let profiles = [profile(TtsEngine::ElevenLabs, "joe", Some("Rachel"))];
-        let (_, label) = saved_provider_voice(Some(&TtsEngine::Piper), "joe", &profiles);
-        assert_eq!(label.as_deref(), Some("Joe"));
-    }
-
-    #[test]
-    fn saved_reading_without_profile_title_cases_voice_id() {
-        let (provider, label) =
-            saved_provider_voice(Some(&TtsEngine::Edge), "en-US-AriaNeural", &[]);
-        assert_eq!(provider.as_deref(), Some("Edge-TTS"));
-        assert_eq!(label.as_deref(), Some("En-US-AriaNeural"));
-    }
-
-    #[test]
-    fn saved_reading_unknown_engine_omits_provider() {
-        let (provider, label) = saved_provider_voice(None, "joe", &[]);
-        assert_eq!(provider, None);
-        assert_eq!(label.as_deref(), Some("Joe"));
-    }
 }
