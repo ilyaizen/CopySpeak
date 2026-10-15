@@ -1200,7 +1200,7 @@ impl Default for TtsConfig {
                 cartesia_profile,
                 default_google_profile(),
             ],
-            auto_switch_language: true,
+            auto_switch_language: default_auto_switch_language(),
             preset: "kitten-tts".into(),
             command: "uv".into(),
             args_template: vec![
