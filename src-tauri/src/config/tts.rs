@@ -1293,7 +1293,9 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             profile.voice_label = catalog_voice_label(&profile.engine, &profile.voice);
         }
     }
-    tts.schema_version = 2;
+    // Never lower the schema: `load` runs this on every launch, and the v4–v6
+    // gates re-add bundled profiles whenever the version reads below them.
+    tts.schema_version = tts.schema_version.max(2);
     sync_active_backend_mirror(&mut tts);
 
     tts

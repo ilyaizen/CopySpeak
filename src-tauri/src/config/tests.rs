@@ -340,13 +340,28 @@ mod tests {
         assert_eq!(migrated.profiles[0].voice, "voice-xyz");
     }
 
+    /// Every load runs this migration, so it must not drop a newer schema:
+    /// the v4–v6 gates in `load` would otherwise re-add deleted bundled profiles.
+    #[test]
+    fn test_migrate_keeps_newer_schema_version() {
+        let tts = TtsConfig {
+            schema_version: 6,
+            ..TtsConfig::default()
+        };
+        let migrated = migrate_tts_config(tts);
+        assert_eq!(migrated.schema_version, 6);
+    }
+
     #[test]
     fn test_migrate_is_idempotent() {
-        let tts = TtsConfig::default();
+        let tts = TtsConfig {
+            schema_version: 6,
+            ..TtsConfig::default()
+        };
         let once = migrate_tts_config(tts);
         let twice = migrate_tts_config(once.clone());
         assert_eq!(once.profiles.len(), twice.profiles.len());
-        assert_eq!(twice.schema_version, 2);
+        assert_eq!(twice.schema_version, 6);
     }
 
     #[test]
