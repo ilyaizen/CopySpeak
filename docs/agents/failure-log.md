@@ -59,6 +59,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Filter Kokoro's misaki phonemes through the model vocab before inference; misaki emits unpronounceable punctuation as literal phonemes, and only a missing _letter_ phoneme is a real pronunciation gap worth aborting on.
 - Load Pocket's language model for its fr/de/es/it/pt voices (`TTSModel.load_model(language=…)`, mapped in `VOICE_LANGUAGES`); the default model is English-only and reads them in English. This needs `pocket-tts>=2.1.0`, so re-run `install-pocket` after a wrapper change, not just a copy.
 - Send Cartesia only the codes in `SONIC_LANGUAGES`, and map the detector's `nb` to `no`: ElevenLabs and Cartesia both call Norwegian `no`, and Sonic 3.6 speaks 44 base codes.
+- Omit ElevenLabs `language_code` on `multilingual_v2` models: they reject the field, so `elevenlabs_language` returns `None` for them.
 - Change a model default in all four places together: the catalog `default_value` in `tts/catalog.rs`, the `*Config::default()` impl and the bundled `default_*_profile()` in `config/tts.rs`, and `play-page.svelte`'s mock; a catalog-only edit leaves fresh installs on the old model.
 
 ## Browser companion
@@ -96,6 +97,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 ## Config
 
 - Write `schema_version` in `migrate_tts_config` as `.max(2)`, never `= 2`: the reset re-runs the `< 4`, `< 5` and `< 6` migrations on every load, so deleted bundled profiles come back each launch.
+- Retag a profile's `language` in every path that sets its voice (`setVoice`, preset apply, template apply); the picker alone left presets and templates untagged.
 
 ## Linux
 
