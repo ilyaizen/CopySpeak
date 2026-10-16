@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.13] - 2026-10-16
+
 ### Fixed
 
 - **Browser companion stays connected on double-copy** — the app could report the first word while a double-copied reading was still buffering, between the clip being queued and its audio starting. The extension rejects that, so it dropped its connection, showed `!` on its icon and never highlighted the page. Words now reach the browser only while the reading plays or is paused.
