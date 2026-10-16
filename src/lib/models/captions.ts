@@ -117,7 +117,8 @@ export function buildCaptions(text: string, alignment?: CaptionAlignment | null)
     word.phrase = phrase;
     phraseLength += word.text.length;
     phraseWords++;
-    if (/[.!?。！？][\s"'”’)]*$/.test(word.text)) {
+    // Same sentence ends as pagination.rs is_sentence_end.
+    if (/[.!?。！？।॥؟۔։።။។][\s"'”’)]*$/.test(word.text)) {
       phrase++;
       phraseLength = 0;
       phraseWords = 0;

@@ -7,10 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-
-- **Cyberpunk effect** — a short synthesized 56k modem handshake opens and closes each reading, the first word and a few random later words glitch-stutter, and the voice gets a bright, lightly ring-modulated tone. Stutters add a little length, so karaoke captions drift slightly behind, as with the walkie-talkie lead-in.
-
 ## [0.2.12] - 2026-10-13
 
 ### Added
@@ -18,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Model picker for each engine** — the model field for OpenAI, ElevenLabs, Cartesia and Google is now a list built from each vendor's documented models. A model id already saved in your config that isn't on the list stays selectable, so no setting is lost.
 
 - **Tray menu follows the app language** — the tray labels (the listening/paused toggle, Speak Clipboard, Settings, Quit) come from the same locale files as the window. Changing the language re-labels the tray without a restart.
+
+- **Cyberpunk effect** — a short synthesized 56k modem handshake opens and closes each reading, the first word and a few random later words glitch-stutter, and the voice gets a bright, lightly ring-modulated tone. Stutters add a little length, so karaoke captions drift slightly behind, as with the walkie-talkie lead-in.
 
 ### Changed
 
@@ -36,6 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Aborts no longer reach the next reading** — an abort applies only to readings already running. A late error or leftover audio from an aborted stream can't affect a reading that started after it.
 
 - **ElevenLabs `eleven_v4_turbo` keeps its captions** — the model sends audio-only records with no characters ahead of its text, and those cleared captions for the whole reading, so the live highlight never started. Those records now stay audio-only.
+
+- **Russian and other Cyrillic text** is no longer sent to the engine with some letters swapped for Latin lookalikes ("привет" became "пpивeт"). Only words that mix Cyrillic and Latin letters, a common AI-text artifact, are still repaired.
+
+- **Persian and Indic text** keeps its zero-width non-joiner, so words spelled with it are no longer fused.
+
+- **Hindi, Arabic, Urdu, Armenian, Amharic, Burmese and Khmer** sentence endings now split long text between sentences instead of mid-word, and start a new caption phrase.
+
+- **Playback events no longer fire twice** — a page torn down before its event listeners finished registering left a listener behind, so every later event ran twice and a double-copy could speak twice.
 
 ## [0.2.11] - 2026-10-12
 

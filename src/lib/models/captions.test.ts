@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, it } from "vite-plus/test";
 import {
   activeCaptionWord,
@@ -22,6 +23,12 @@ it("preserves multilingual text and punctuation while making short phrases", () 
       expect(group.map((word) => word.text).join("").length).toBeLessThanOrEqual(42);
     }
   }
+});
+
+it("starts a new phrase after a Devanagari danda", () => {
+  const words = buildCaptions("नमस्ते दुनिया। यह परीक्षण है।");
+  expect(words[0].phrase).toBe(0);
+  expect(words.find((word) => word.text.startsWith("यह"))?.phrase).toBe(1);
 });
 
 it("selects words at audio boundaries and safely handles missing timing", () => {
@@ -87,4 +94,18 @@ it("moves the spoken boundary only at word ends and matches copied timings by va
     })
   ).toBe(false);
   expect(sameCaptionAlignment(timing, null)).toBe(false);
+});
+
+it("keeps the sentence-end class in step with pagination.rs is_sentence_end", () => {
+  // Runs from the package root (bun run test), so the paths are root-relative.
+  const rust = readFileSync("src-tauri/src/pagination.rs", "utf8");
+  const rustBody = rust.match(
+    /fn is_sentence_end\(c: char\) -> bool \{\s*matches!\(\s*c,([\s\S]*?)\)\s*\}/
+  );
+  expect(rustBody).not.toBeNull();
+  const rustEnds = [...rustBody![1].matchAll(/'(.)'/g)].map((match) => match[1]);
+  const source = readFileSync("src/lib/models/captions.ts", "utf8");
+  const tsEnds = source.match(/\/\[([^\]]+)\]\[/);
+  expect(tsEnds).not.toBeNull();
+  expect(Array.from(tsEnds![1]).sort()).toEqual([...new Set(rustEnds)].sort());
 });
