@@ -66,6 +66,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Release the old browser reading before asking the document to capture its replacement; a later disconnect erases the new paragraph/selection anchor.
 - Start the browser session's state ticker at accept time, not after `speak_queued` returns; a post-synthesis ticker pins the companion panel at `buffering` for the whole generation while audio already plays.
 - The browser pipe serves one client at a time; the native host retries `ERROR_PIPE_BUSY` with `WaitNamedPipeW` instead of failing the reading.
+- Send a state frame's `word` only while `playing` or `paused` with `word_available`: the extension disconnects its native port (badge `!`) on any frame its parser rejects, and a trigger clip is announced audible while still `buffering`, at 0 ms over its first word.
 
 ## History & cache
 
