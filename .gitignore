@@ -14,7 +14,6 @@ bun.lock
 skills-lock.json
 package-lock.json
 /.agents
-src-tauri/Cargo.lock
 /.agent
 .vercel
 __pycache__/
