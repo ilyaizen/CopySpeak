@@ -5,6 +5,7 @@
   import { relaunch } from "@tauri-apps/plugin-process";
   import { listen } from "@tauri-apps/api/event";
   import { invoke } from "@tauri-apps/api/core";
+  import { isTauri } from "#lib/services/tauri";
   import { cn } from "#lib/utils.js";
   import { Download } from "@lucide/svelte";
   import { Spinner } from "#lib/components/ui/spinner/index.js";
@@ -40,17 +41,19 @@
   let contentLength = 0;
 
   onMount(async () => {
-    // Load config to check if updates are enabled
-    try {
-      const config = await invoke<AppConfig>("get_config");
-      updateChecksEnabled = config.general.update_checks_enabled ?? true;
-    } catch {
-      // Default to enabled if config load fails
-      updateChecksEnabled = true;
+    // Load config to check if updates are enabled (Tauri only; browser mode has no backend)
+    if (isTauri) {
+      try {
+        const config = await invoke<AppConfig>("get_config");
+        updateChecksEnabled = config.general.update_checks_enabled ?? true;
+      } catch {
+        // Default to enabled if config load fails
+        updateChecksEnabled = true;
+      }
     }
 
     // Listen for update check events from backend
-    if (listenForBackendEvent) {
+    if (listenForBackendEvent && isTauri) {
       const unlistenEvent = await listen("check-for-updates", () => {
         handleManualCheck();
       });
@@ -61,8 +64,8 @@
       return;
     }
 
-    // Auto-check on startup if enabled
-    if (autoCheckOnMount && effectiveUpdateChecksEnabled) {
+    // Auto-check on startup if enabled (updater plugin is Tauri-only)
+    if (isTauri && autoCheckOnMount && effectiveUpdateChecksEnabled) {
       checkForUpdates();
     }
   });
