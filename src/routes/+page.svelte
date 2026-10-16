@@ -4,6 +4,7 @@
   import Features from "#lib/components/landing/features.svelte";
   import Screenshots from "#lib/components/landing/screenshots.svelte";
   import Footer from "#lib/components/landing/footer.svelte";
+  import Poem from "#lib/components/landing/poem.svelte";
 </script>
 
 {#if import.meta.env.VITE_IS_VERCEL}
@@ -11,6 +12,7 @@
   <Features />
   <Screenshots />
   <Footer />
+  <Poem />
 {:else}
   <div class="mx-auto flex w-full max-w-6xl min-w-0 flex-1 flex-col">
     <PlayPage />

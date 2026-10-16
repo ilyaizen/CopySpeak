@@ -4,6 +4,8 @@
 
 @import "@fontsource/lato/400.css";
 @import "@fontsource/lato/700.css";
+@import "@fontsource/eb-garamond/400.css";
+@import "@fontsource/eb-garamond/400-italic.css";
 
 @custom-variant dark (&:is(.dark *));
 
