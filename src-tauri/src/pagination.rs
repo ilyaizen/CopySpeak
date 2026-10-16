@@ -121,9 +121,13 @@ fn detect_sentence_boundaries(text: &str) -> Vec<SentenceBoundary> {
     boundaries
 }
 
-/// Check if a character is a sentence-ending punctuation.
+/// Check if a character is a sentence-ending punctuation: Latin, CJK, Devanagari
+/// danda, Arabic question mark, Urdu full stop, Armenian, Ethiopic, Myanmar, Khmer.
 fn is_sentence_end(c: char) -> bool {
-    matches!(c, '.' | '!' | '?' | '。' | '！' | '？')
+    matches!(
+        c,
+        '.' | '!' | '?' | '。' | '！' | '？' | '।' | '॥' | '؟' | '۔' | '։' | '።' | '။' | '។'
+    )
 }
 
 /// Check if the punctuation at position is likely part of an abbreviation.
@@ -620,6 +624,22 @@ mod tests {
             ..default_config()
         };
         assert_eq!(estimate_fragment_count(&long_text, &disabled_config), 1);
+    }
+
+    #[test]
+    fn test_hindi_text_splits_at_danda() {
+        // Without the danda as a sentence end the whole text is one sentence and
+        // gets force-split at exact character counts, mid-word.
+        let text = "यह एक परीक्षण वाक्य है। ".repeat(6);
+        let config = PaginationConfig {
+            fragment_size: 60,
+            ..default_config()
+        };
+        let fragments = paginate_text(&text, &config);
+        assert!(fragments.len() > 1);
+        for fragment in &fragments {
+            assert!(fragment.text.ends_with('।'), "{:?}", fragment.text);
+        }
     }
 
     #[test]
