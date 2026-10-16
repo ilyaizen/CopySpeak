@@ -95,6 +95,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 - Grep `src/` for the filename before removing or renaming anything in `static/`; the 0.2.6 screenshot swap left `screenshots.svelte` requesting the deleted `screen-v0.1.8.png` and the live landing page shipped a broken image.
 - Keep version numbers out of locale strings; they rot on every release (all nine locales carried `v0.1.8` inside the screenshot caption).
+- The landing flag `VITE_IS_VERCEL` is never read from the environment: `vite.config.js` `define` maps it from `process.env.VERCEL` (what Vercel's runners set). Local previews must run `bun run dev:landing` / `preview:landing` (they set `VERCEL=1`); exporting `VITE_IS_VERCEL=1` yourself silently serves the Play UI.
 
 ## Release
 
