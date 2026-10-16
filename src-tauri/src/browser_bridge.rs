@@ -1308,11 +1308,16 @@ fn project_state(
     session: &BrowserSession,
 ) -> (&'static str, Option<(usize, usize)>, Option<&'static str>) {
     let status = SessionStatus::from_u8(session.status.load(Ordering::Relaxed))
-        .unwrap_or(SessionStatus::Buffering)
-        .as_str();
-    let word = current_word(session);
+        .unwrap_or(SessionStatus::Buffering);
     let reason = degrade_reason(session);
-    (status, word, reason)
+    // The extension drops its connection on a word in a buffering or terminal
+    // frame, or one without word_available; a clip announced audible stays
+    // buffering until its audio starts.
+    let word = match status {
+        SessionStatus::Playing | SessionStatus::Paused if reason.is_none() => current_word(session),
+        _ => None,
+    };
+    (status.as_str(), word, reason)
 }
 
 /// Projection of the audible word into the raw selection's UTF-16 space.
@@ -2081,5 +2086,33 @@ mod tests {
         let frame = state_message(&session, 1, status, word, reason);
         assert_eq!(frame["word"], Value::Null);
         assert_eq!(frame["word_available"], false);
+    }
+
+    /// A clip is announced audible before its audio starts (decode and effect
+    /// render run in between), so the session is still buffering at 0 ms over
+    /// the first word. Extensions drop the whole connection on a word in a
+    /// buffering or terminal frame.
+    #[test]
+    fn words_project_only_while_playing_or_paused() {
+        let spoken = "First word.";
+        let session = trigger_session(spoken, spoken);
+        record_on(
+            &session,
+            0,
+            Some(spoken),
+            Some(captions_for(spoken, "First")),
+        );
+        for (status, has_word) in [
+            (SessionStatus::Buffering, false),
+            (SessionStatus::Playing, true),
+            (SessionStatus::Paused, true),
+            (SessionStatus::Completed, false),
+            (SessionStatus::Cancelled, false),
+            (SessionStatus::Error, false),
+        ] {
+            session.status.store(status as u8, Ordering::Relaxed);
+            let (_, word, _) = project_state(&session);
+            assert_eq!(word.is_some(), has_word, "{status:?}");
+        }
     }
 }
