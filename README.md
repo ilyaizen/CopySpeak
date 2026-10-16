@@ -1,35 +1,104 @@
+<div align="center">
+
+<img src="static/app-logo.svg" alt="CopySpeak logo" width="96" />
+
 # CopySpeak
 
-**Current Version:** 0.2.13
+**Your clipboard, read aloud.** Double-copy any text and an AI voice reads it back — with a floating HUD, live word-synced captions, and 12 TTS engines that run offline by default.
 
-A modern desktop app that reads clipboard text aloud using AI Text-to-Speech engines. Trigger speech by quickly copying the same text twice in a row — works out of the box with the bundled offline voices (Kokoro is the default engine).
+[Download](https://github.com/ilyaizen/CopySpeak/releases) · [Changelog](CHANGELOG.md) · [Issues](https://github.com/ilyaizen/CopySpeak/issues) · [Contributing](docs/CONTRIBUTING.md)
 
-## [Download Latest](https://github.com/ilyaizen/CopySpeak/releases)
+**Windows · macOS (Intel) · Linux (x86_64)**
 
-![CopySpeak screenshot](static/screen-0.2.6.png)
+</div>
+
+---
+
+![CopySpeak screenshot](static/screen-0.2.13.png)
+
+## Why CopySpeak
+
+Most read-aloud tools are browser extensions chained to a cloud API, or desktop apps that need a hotkey and a settings detour before anything speaks. CopySpeak watches your clipboard instead: copy any text twice, and it speaks — no window focus, no selection dance. Voices run locally by default (Kokoro installs in one click from onboarding, no API key), cloud engines are there when you want them, and the whole surface — triggers, voices, effects, captions, export — is configurable.
+
+## Features
+
+### Triggers & playback
+
+- ✅ **Double-copy trigger** — copy the same text twice within 1.5 s to start a reading; no hotkey needed
+- ✅ **Global hotkey & tray** — configurable shortcut, plus Speak Clipboard from the tray (localized to your language)
+- ✅ **Play page** — paste text and speak, with full transport controls: rewind/forward ±5 s, play/pause (Space), stop (Escape — aborts in-flight synthesis immediately)
+- ✅ **Streaming playback** — first audio starts after ~150 ms of buffering; local engines stream once warm, OpenAI streams on `gpt-4o-mini-tts`
+- ✅ **Speed 0.25×–4×, pitch 0.5×–2×, volume** — with output device selection and MP3/OGG/FLAC export
+- ✅ **Duck other apps** (Windows) — lowers or mutes other apps' audio while CopySpeak speaks, restores them after, per app
+
+### Engines & voices
+
+- ✅ **12 TTS engines** — offline: **Kokoro** (default), Piper, Kitten, Qwen3-TTS, Pocket, and any CLI TTS tool; cloud: OpenAI, ElevenLabs, Cartesia, Google, Microsoft Azure, and generic HTTP endpoints
+- ✅ **One-click local engine installs** — streamed progress, optional CUDA GPU support, and live install/runtime status (Installed badge, CPU vs GPU per run)
+- ✅ **Idle shutdown** — local engine daemons exit after inactivity (default 10 min) and free their RAM/VRAM
+- ✅ **Model picker** — model fields for OpenAI, ElevenLabs, Cartesia, and Google are lists built from each vendor's documented models
+- ✅ **Voice profiles** — named profiles bundling engine, voice, speed, pitch, and effects
+
+### Captions & effects
+
+- ✅ **HUD overlay** — floating heads-up display with a real-time waveform
+- ✅ **Live captions** — word-level highlighting synced to the audio clock, on the Play page, the HUD, and the browser companion
+- ✅ **Audio effects** — walkie-talkie, 8-bit, and Cyberpunk (56k modem handshake intro, glitch-stuttered words, ring-modulated tone), built on `OfflineAudioContext` post-processing
+
+### Text pipeline
+
+- ✅ **Sanitization** — markdown stripping, URL expansion, and unicode normalization, careful with non-English scripts (no Cyrillic lookalike swaps, zero-width joiners preserved, sentence-aware splitting for Hindi/Arabic/Urdu/Armenian/Amharic/Burmese/Khmer)
+- ✅ **LLM post-processing** — optional AI rewrite pass with a provider registry (Groq, OpenAI, Z.AI, OpenRouter, Ollama, Cerebras, or any OpenAI-compatible endpoint), live model lists, minimum-length and on-request gating
+
+### Integrations
+
+- ✅ **Browser companion** (Chrome/Edge) — read your selection or hovered paragraphs through the app; the extension highlights the passage on the page while it's read, with ±5 s skip on its pill
+- ✅ **Control server** — local HTTP API (`/health`, `/speak` with optional blocking wait) for scripts and external tools; see [profile & engine settings](docs/profile-engine-settings.md)
+- ✅ **Pi & Claude Code extensions** — speak AI assistant responses through CopySpeak
+
+### System
+
+- ✅ **History** — persistent generation history with playback, batch management, and export; switch it off and readings stay out of the log (a small recent-clips cache still skips re-synthesis)
+- ✅ **9 interface languages** — English, Spanish, Hebrew, Arabic, German, French, Hindi, Russian, Simplified Chinese; Hebrew and Arabic mirror right-to-left, and the tray follows the app language
+- ✅ **Auto-updater** — checks GitHub Releases in the background; also **system tray**, **dark/light themes**, and **audio save mode**
 
 ## Install
 
+Grab a build from [Releases](https://github.com/ilyaizen/CopySpeak/releases). Asset names per platform (v0.2.13 shown):
+
+| Platform          | Asset                                                                                            |
+| ----------------- | ------------------------------------------------------------------------------------------------ |
+| Windows           | `CopySpeak_0.2.13_x64-setup.exe` (`.msi` also available)                                         |
+| macOS (Intel)     | `CopySpeak_0.2.13_x64.dmg`                                                                       |
+| Linux             | `CopySpeak_0.2.13_amd64.AppImage`, `CopySpeak_0.2.13_amd64.deb`, `CopySpeak-0.2.13-1.x86_64.rpm` |
+| Browser companion | `CopySpeak-Companion-0.2.13.zip`                                                                 |
+
 ### Windows
 
-1. Download `CopySpeak_<version>_x64-setup.exe` and run it (`.msi` also available).
-2. On first launch, onboarding walks you through picking an engine and voice.
+1. Run the installer.
+2. On first launch, onboarding walks you through picking an engine and voice — Kokoro is the recommended default and installs right there.
 3. Updates: the app checks GitHub Releases automatically (or via **Check for updates** in the footer).
+
+### macOS (Intel)
+
+1. Open the `.dmg` and drag CopySpeak to Applications. (Apple Silicon Macs run the x86_64 build through Rosetta 2.)
+2. On first launch, onboarding walks you through picking an engine and voice.
+3. Updates: the built-in auto-updater handles new releases.
 
 ### Linux (x86_64)
 
-Tested on Omarchy (Arch, Wayland); ships AppImage, `.deb`, and `.rpm`:
+Tested on Omarchy (Arch, Wayland):
 
 ```bash
 # AppImage
-chmod +x CopySpeak_<version>_amd64.AppImage
-./CopySpeak_<version>_amd64.AppImage
+chmod +x CopySpeak_0.2.13_amd64.AppImage
+./CopySpeak_0.2.13_amd64.AppImage
 
 # Debian / Ubuntu
-sudo apt install ./copyspeak_<version>_amd64.deb
+sudo apt install ./CopySpeak_0.2.13_amd64.deb
 
 # Fedora / openSUSE
-sudo dnf install ./copyspeak_<version>_amd64.rpm
+sudo dnf install ./CopySpeak-0.2.13-1.x86_64.rpm
 ```
 
 On Wayland compositors the HUD runs through XWayland and global hotkeys are protocol-impossible — trigger readings by double-copy, the tray, or a compositor keybind that POSTs to the local [control server](docs/profile-engine-settings.md).
@@ -37,72 +106,18 @@ On Wayland compositors the HUD runs through XWayland and global hotkeys are prot
 ### Browser companion (Chrome / Edge)
 
 1. Install and start the desktop app first — the extension drives it.
-2. Download `CopySpeak-Companion-<version>.zip` from the same release and extract it.
+2. Download `CopySpeak-Companion-0.2.13.zip` from the same release and extract it.
 3. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the extracted `dist` folder.
-4. Open the extension's settings to grant per-site access, then select text and double-copy (or use the extension's toolbar button) to read it through the app.
+4. Open the extension's settings to grant per-site access, then select text and double-copy (or use the extension's toolbar button) to read it through the app — the extension highlights the passage as it's spoken.
 
-## Quick Start
+## Development
 
 ```bash
 bun install
 bun run tauri dev
 ```
 
-## Features
-
-### Core
-
-- **Multiple trigger modes**: Double-copy (1.5s window), hotkey, or manual paste/play
-- **12 TTS engines**:
-  - **Local** — Piper, Kokoro, Kitten, Qwen3-TTS (multilingual, 9 CustomVoice voices), Pocket, or any CLI TTS tool via local subprocess
-  - **OpenAI TTS** — Cloud API with 9 voices
-  - **ElevenLabs TTS** — Cloud API with voice library support
-  - **Cartesia TTS** — Sonic 3.5 cloud API
-  - **Google TTS** — Cloud API
-  - **Microsoft TTS** — Azure Cognitive Services
-  - **HTTP TTS** — Generic HTTP endpoint backend
-- **HUD overlay** — Floating heads-up display with real-time waveform visualization and live word-highlighting captions
-- **Live captions** — Word-level highlighting synced to the audio clock on the Play page, HUD, and browser companion, for engines that emit timing metadata
-- **History** — Persistent TTS generation history with playback and batch management
-- **Voice profiles** — Create, edit, and switch between named voice profiles with engine, voice, speed, pitch, and effects settings
-- **Audio effects** — Walkie-talkie, 8-bit Game Boy, Cyberpunk, and more via OfflineAudioContext post-processing
-- **LLM post-processing** — Optional Groq/AI rewrite pass that turns copied text into concise, listener-friendly speech
-- **Engines page** — Dedicated per-engine setup with API key entry, local-engine installers, and test buttons
-
-### Settings
-
-- General: auto-start, debug mode, language
-- Playback: speed (0.25x–4x), pitch (0.5x–2x), volume
-- Effects: toggle and select audio effects
-- Triggers: double-copy window, hotkey configuration
-- Sanitization: granular markdown stripping toggles, text normalization
-- Advanced: LLM post-processing, engine catalog
-- Audio: output device selection, format conversion (MP3/OGG/FLAC)
-
-### System
-
-- **System tray** — Quick access controls
-- **Browser companion** — Chrome/Edge extension to read your selection or hovered paragraphs through the app, with a context menu, status badge, and per-site permissions
-- **Auto-updater** — Check and install updates from GitHub Releases
-- **Control server** — Local HTTP server for external integrations (Pi, Claude Code, curl)
-- **Pi & Claude Code extensions** — Speak AI assistant responses through CopySpeak
-- **Audio save mode** — Save TTS output to files
-- **Dark/Light mode** — Brutalist design with theme support
-
-## Tech Stack
-
-| Component       | Technology                             |
-| --------------- | -------------------------------------- |
-| Platforms       | Windows, Linux (x86_64), macOS (Intel) |
-| Backend         | Rust (Tauri v2)                        |
-| Frontend        | Svelte 5, TypeScript, Vite             |
-| Package Manager | Bun                                    |
-| Audio           | rodio                                  |
-| UI              | shadcn-svelte, Tailwind CSS v4         |
-
-## Project Structure
-
-See [Understanding the Codebase](docs/CONTRIBUTING.md#understanding-the-codebase) in the contributing guide.
+The frontend is SvelteKit (Svelte 5); the backend is Rust under `src-tauri`. See [Understanding the Codebase](docs/CONTRIBUTING.md#understanding-the-codebase) in the contributing guide, and [docs/engines.md](docs/engines.md) for how local TTS engines are wired.
 
 ## Commands
 
@@ -137,6 +152,18 @@ bun run bump:minor          # Minor version bump (0.x.0)
 bun run bump:major          # Major version bump (x.0.0)
 ```
 
+## Tech Stack
+
+| Component       | Technology                               |
+| --------------- | ---------------------------------------- |
+| Platforms       | Windows, macOS (Intel), Linux (x86_64)   |
+| Backend         | Rust (Tauri v2)                          |
+| Frontend        | Svelte 5, SvelteKit, TypeScript, Vite    |
+| Package Manager | Bun                                      |
+| Audio           | rodio, Web Audio (`OfflineAudioContext`) |
+| UI              | shadcn-svelte, Tailwind CSS v4           |
+| i18n            | svelte-i18n, 9 locales, Crowdin          |
+
 ## Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md) for recent changes.
@@ -147,4 +174,4 @@ We welcome contributions! Please see our [Contributing Guide](./docs/CONTRIBUTIN
 
 ## License
 
-MIT
+[MIT](LICENSE)
