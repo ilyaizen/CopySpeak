@@ -731,9 +731,9 @@
     "hero": {
       "title": "CopySpeak",
       "subtitle": "מתזמר TTS מודרני מבוסס AI",
-      "description": "אפליקציה קלה ורב-פלטפורמית שמקריאה בקול טקסט מהלוח, באמצעות מנועי המרת טקסט לדיבור מבוססי AI.",
-      "download": "הורד לפלטפורמה שלך",
-      "github": "צפה ב-GitHub",
+      "description": "אפליקציה קלה ורב-פלטפורמית שמקריאה בקול טקסט מהלוח עם קולות AI — מנועים מקומיים מובנים ומנועי ענן אופציונליים. Windows, macOS ו-Linux.",
+      "download": "הורדה",
+      "github": "GitHub",
       "version": "v{version}"
     },
     "features": {
@@ -743,24 +743,24 @@
         "description": "העתק טקסט פעמיים תוך 1.5 שניות כדי להפעיל דיבור מיידית. ללא צורך במקשי קיצור."
       },
       "engines": {
-        "title": "9 מנועי TTS",
-        "description": "OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP, ומנועי CLI מקומיים (Piper, Kokoro, Kitten)."
+        "title": "מנועי TTS מקומיים ומהענן",
+        "description": "Kokoro, Piper, Kitten, Qwen3 ו-Pocket עובדים במלואם ללא אינטרנט. OpenAI, ElevenLabs, Cartesia, Google, Microsoft או כל נקודת קצה HTTP לקולות מהענן."
       },
       "hud": {
         "title": "שכבת HUD",
-        "description": "תצוגת מידע צפה עם הדמיית גלי קול בזמן אמת במהלך ההשמעה."
+        "description": "תצוגת מידע צפה עם גלי קול בזמן אמת וכתוביות מודגשות מילה במילה."
       },
       "history": {
         "title": "היסטוריה",
-        "description": "היסטוריית יצירות TTS קבועה, עם השמעה, ניהול קבוצות וייצוא שמע."
+        "description": "היסטוריית יצירות קבועה עם השמעה וייצוא שמע — או כיבוי, ואז ההקראות לא נשמרות ביומן."
       },
       "sanitization": {
         "title": "ניקוי טקסט",
-        "description": "הסרה אוטומטית של Markdown, הרחבת כתובות URL ונרמול טקסט לדיבור ברור יותר."
+        "description": "הסרת Markdown, הרחבת כתובות URL ונרמול טקסט — ובנוסף ניסוח מחדש אופציונלי ב-AI לדיבור נעים להאזנה."
       },
       "configurable": {
         "title": "הגדרות רבות",
-        "description": "מהירות השמעה, עוצמה, גובה צליל, גורמים מפעילים, מראה ועוד. ערכות נושא כהה ובהירה."
+        "description": "מהירות השמעה, גובה צליל, עוצמה, גורמים מפעילים, אפקטים קוליים ותשע שפות ממשק. ערכות נושא כהה ובהירה."
       }
     },
     "screenshots": {

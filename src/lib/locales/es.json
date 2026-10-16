@@ -731,9 +731,9 @@
     "hero": {
       "title": "CopySpeak",
       "subtitle": "Orquestador moderno de TTS con IA",
-      "description": "Una aplicación ligera y multiplataforma que lee en voz alta el texto del portapapeles con motores de texto a voz basados en IA.",
-      "download": "Descargar para tu plataforma",
-      "github": "Ver en GitHub",
+      "description": "Una aplicación ligera y multiplataforma que lee en voz alta el texto de tu portapapeles con voces de IA — motores locales incluidos, motores en la nube opcionales. Windows, macOS y Linux.",
+      "download": "Descargar",
+      "github": "GitHub",
       "version": "v{version}"
     },
     "features": {
@@ -743,24 +743,24 @@
         "description": "Copia un texto dos veces en menos de 1,5 segundos para iniciar la lectura al instante. No necesitas atajos de teclado."
       },
       "engines": {
-        "title": "9 motores TTS",
-        "description": "OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP y motores locales de línea de comandos (Piper, Kokoro, Kitten)."
+        "title": "Motores TTS locales y en la nube",
+        "description": "Kokoro, Piper, Kitten, Qwen3 y Pocket funcionan sin conexión. OpenAI, ElevenLabs, Cartesia, Google, Microsoft o cualquier endpoint HTTP para voces en la nube."
       },
       "hud": {
         "title": "Superposición HUD",
-        "description": "Pantalla flotante con visualización de la forma de onda en tiempo real durante la reproducción."
+        "description": "Pantalla flotante con forma de onda en tiempo real y subtítulos con resaltado palabra por palabra."
       },
       "history": {
         "title": "Historial",
-        "description": "Historial persistente de generaciones de TTS con reproducción, gestión por lotes y exportación de audio."
+        "description": "Historial persistente con reproducción y exportación de audio — o desactívalo y las lecturas no quedan registradas."
       },
       "sanitization": {
         "title": "Limpieza de texto",
-        "description": "Eliminación automática de Markdown, expansión de URL y normalización del texto para una voz más clara."
+        "description": "Eliminación de Markdown, expansión de URL y normalización — más una reescritura opcional con IA para una voz más amena."
       },
       "configurable": {
         "title": "Muy configurable",
-        "description": "Velocidad, volumen, tono, activadores, apariencia y más. Temas oscuro y claro."
+        "description": "Velocidad, tono, volumen, activadores, efectos de audio y nueve idiomas de interfaz. Temas oscuro y claro."
       }
     },
     "screenshots": {

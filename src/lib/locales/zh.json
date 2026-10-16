@@ -731,9 +731,9 @@
     "hero": {
       "title": "CopySpeak",
       "subtitle": "现代 AI TTS 编排器",
-      "description": "一款轻量的跨平台应用，使用 AI 文字转语音引擎朗读剪贴板中的文本。",
-      "download": "下载适合你平台的版本",
-      "github": "在 GitHub 上查看",
+      "description": "一款轻量的跨平台应用，用 AI 语音朗读剪贴板文本——内置离线引擎，云端引擎可选。支持 Windows、macOS 和 Linux。",
+      "download": "下载",
+      "github": "GitHub",
       "version": "v{version}"
     },
     "features": {
@@ -743,24 +743,24 @@
         "description": "1.5 秒内复制文本两次，即可立即朗读。无需快捷键。"
       },
       "engines": {
-        "title": "9 种 TTS 引擎",
-        "description": "OpenAI、ElevenLabs、Cartesia、Google、Microsoft、HTTP 以及本地 CLI 引擎（Piper、Kokoro、Kitten）。"
+        "title": "离线与云端 TTS 引擎",
+        "description": "Kokoro、Piper、Kitten、Qwen3 和 Pocket 完全离线运行；需要云端声音时可用 OpenAI、ElevenLabs、Cartesia、Google、Microsoft 或任意 HTTP 端点。"
       },
       "hud": {
         "title": "HUD 浮层",
-        "description": "播放时显示带实时波形的悬浮抬头显示。"
+        "description": "悬浮抬头显示，带实时波形和逐词高亮的字幕。"
       },
       "history": {
         "title": "历史记录",
-        "description": "永久保存的 TTS 生成历史，支持播放、批次管理和音频导出。"
+        "description": "永久保存的生成历史，支持播放和音频导出——也可以关掉，朗读就不会留下记录。"
       },
       "sanitization": {
         "title": "文本清理",
-        "description": "自动去除 Markdown、展开网址并规范化文本，让朗读更清晰。"
+        "description": "自动去除 Markdown、展开网址并规范化文本——还可选 AI 改写，让朗读更自然。"
       },
       "configurable": {
         "title": "高度可配置",
-        "description": "播放速度、音量、音调、触发方式、外观等均可调整。支持深色和浅色主题。"
+        "description": "播放速度、音调、音量、触发方式、音频特效以及九种界面语言。支持深色和浅色主题。"
       }
     },
     "screenshots": {

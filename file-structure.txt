@@ -344,7 +344,7 @@
 │   │   └── walkie-static.wav
 │   ├── app-logo.png
 │   ├── favicon.png
-│   └── screen-0.2.6.png
+│   └── screen-0.2.13.png
 ├── tools
 │   └── oxlint
 │       └── anti-slop

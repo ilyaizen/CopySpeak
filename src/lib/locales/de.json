@@ -731,9 +731,9 @@
     "hero": {
       "title": "CopySpeak",
       "subtitle": "Moderner KI-TTS-Orchestrator",
-      "description": "Eine schlanke plattformübergreifende App, die Text aus der Zwischenablage mit KI-Sprachausgabe-Engines vorliest.",
-      "download": "Für Ihre Plattform herunterladen",
-      "github": "Auf GitHub ansehen",
+      "description": "Eine schlanke plattformübergreifende App, die Ihren Zwischenablage-Text mit KI-Stimmen vorliest — Offline-Engines integriert, Cloud-Engines optional. Windows, macOS und Linux.",
+      "download": "Herunterladen",
+      "github": "GitHub",
       "version": "v{version}"
     },
     "features": {
@@ -743,24 +743,24 @@
         "description": "Text innerhalb von 1,5 Sekunden zweimal kopieren, um die Sprachausgabe sofort zu starten. Keine Tastenkürzel nötig."
       },
       "engines": {
-        "title": "9 TTS-Engines",
-        "description": "OpenAI, ElevenLabs, Cartesia, Google, Microsoft, HTTP und lokale CLI-Engines (Piper, Kokoro, Kitten)."
+        "title": "Offline- & Cloud-TTS-Engines",
+        "description": "Kokoro, Piper, Kitten, Qwen3 und Pocket laufen vollständig offline. OpenAI, ElevenLabs, Cartesia, Google, Microsoft oder ein beliebiger HTTP-Endpunkt für Cloud-Stimmen."
       },
       "hud": {
         "title": "HUD-Overlay",
-        "description": "Schwebendes Head-up-Display mit Echtzeit-Wellenform während der Wiedergabe."
+        "description": "Schwebendes Head-up-Display mit Echtzeit-Wellenform und Live-Untertiteln mit Wort-Hervorhebung."
       },
       "history": {
         "title": "Verlauf",
-        "description": "Dauerhafter TTS-Generierungsverlauf mit Wiedergabe, Stapelverwaltung und Audio-Export."
+        "description": "Dauerhafter Generierungsverlauf mit Wiedergabe und Audio-Export — oder deaktiviert, dann bleiben Vorlesungen unprotokolliert."
       },
       "sanitization": {
         "title": "Textbereinigung",
-        "description": "Automatisches Entfernen von Markdown, Ausschreiben von URLs und Textnormalisierung für klarere Sprache."
+        "description": "Markdown-Entfernung, Ausschreiben von URLs und Normalisierung — plus optionaler KI-Umschreibpass für eine gut verständliche Sprache."
       },
       "configurable": {
         "title": "Umfassend konfigurierbar",
-        "description": "Wiedergabegeschwindigkeit, Lautstärke, Tonhöhe, Auslöser, Darstellung und mehr. Dunkles und helles Design."
+        "description": "Wiedergabegeschwindigkeit, Tonhöhe, Lautstärke, Auslöser, Audioeffekte und neun Oberflächensprachen. Dunkles und helles Design."
       }
     },
     "screenshots": {
