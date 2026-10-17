@@ -692,11 +692,11 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
         EngineCatalogEntry {
             engine: TtsEngine::Fish,
             label: "Fish Audio".into(),
-            description: "Fish Audio cloud TTS.".into(),
+            description: "Fish Audio cloud TTS with estimated word captions.".into(),
             docs_url: "https://docs.fish.audio/".into(),
             supports_voice_refresh: true,
             supports_pitch: false,
-            supports_captions: false,
+            supports_captions: true,
             supports_bracket_emotes: false,
             options: vec![
                 select_option(
@@ -1218,6 +1218,7 @@ mod tests {
                 TtsEngine::Piper,
                 TtsEngine::Kokoro,
                 TtsEngine::ElevenLabs,
+                TtsEngine::Fish,
                 TtsEngine::Cartesia,
             ]
         );

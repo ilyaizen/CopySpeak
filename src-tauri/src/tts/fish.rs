@@ -1,4 +1,5 @@
 use super::block_on_async;
+use super::captions::{estimate_alignment, CaptionAlignment, SpeechAudio};
 use super::stream::{spawn_stream, AudioFormatMeta, ChunkItem, ChunkStream};
 use super::{TtsBackend, TtsError, Voice};
 use crate::config::FishConfig;
@@ -222,6 +223,15 @@ impl TtsBackend for FishTtsBackend {
         Ok(response_bytes)
     }
 
+    /// No native timings: decode the finished audio for its exact duration
+    /// and place the words proportionally inside it (estimation recipe).
+    fn synthesize_with_captions(&self, text: &str, voice: &str) -> Result<SpeechAudio, TtsError> {
+        let bytes = self.synthesize(text, voice)?;
+        // An undecodable container still plays; it just carries no captions.
+        let captions = captions_for_audio(&bytes, text);
+        Ok(SpeechAudio { bytes, captions })
+    }
+
     fn health_check(&self) -> Result<(), TtsError> {
         log::debug!("Fish Audio TTS health check - validating API key");
 
@@ -248,6 +258,40 @@ impl TtsBackend for FishTtsBackend {
     }
 }
 
+/// Duration of finished audio in milliseconds, `None` when the container
+/// cannot be measured. Parses the WAV header instead of decoding: rodio's
+/// decoder trusts the data-chunk size field, and Fish writes 0xFFFFFF00
+/// there while shipping the real bytes after it, so a decode iterates past
+/// EOF forever (the busy-tray-with-no-audio hang). Header math is exact;
+/// the declared size is clamped to the actual buffer so a lying or
+/// truncated header cannot extend the measurement.
+fn decoded_duration_ms(bytes: &[u8]) -> Option<f64> {
+    let info = crate::audio::wav::parse_wav_header(bytes).ok()?;
+    let bytes_per_second = f64::from(info.sample_rate)
+        * f64::from(info.channels)
+        * f64::from(info.bits_per_sample / 8);
+    if bytes_per_second <= 0.0 {
+        return None;
+    }
+    let available = bytes.len().saturating_sub(info.data_offset);
+    let pcm_bytes = info.data_size.min(available);
+    if info.data_size > available {
+        log::debug!(
+            "[TTS] WAV data chunk claims {} bytes but only {} follow the header; measuring the real bytes",
+            info.data_size,
+            available
+        );
+    }
+    (pcm_bytes > 0).then(|| pcm_bytes as f64 * 1000.0 / bytes_per_second)
+}
+
+/// Estimated word timings for finished audio bytes, `None` without decodable
+/// audio or with no words to time.
+fn captions_for_audio(bytes: &[u8], text: &str) -> Option<CaptionAlignment> {
+    let alignment = estimate_alignment(text, decoded_duration_ms(bytes)?);
+    (!alignment.words.is_empty()).then_some(alignment)
+}
+
 impl FishTtsBackend {
     /// Open a progressive PCM stream. Split from
     /// [`TtsBackend::synthesize_streaming`] so tests can point it at a local
@@ -267,6 +311,7 @@ impl FishTtsBackend {
         let body = self.stream_request_body(text);
         let model = self.config.model.clone();
         let url = base_url.to_string();
+        let text = text.to_string();
 
         log::info!(
             "Fish Audio TTS stream - model: {}, voice: {}, text length: {} chars",
@@ -315,6 +360,19 @@ impl FishTtsBackend {
                 if !sink.send(ChunkItem::Pcm(chunk.to_vec())) {
                     // Consumer dropped (stop/abort): stop pulling the body.
                     return Ok(());
+                }
+            }
+            // Fish returns no word timings: the measured PCM byte count IS the
+            // exact duration, so place the words inside it once the body ends.
+            // Sent after the final PCM — live consumers update mid-playback,
+            // and the drained SpeechAudio carries captions for
+            // history/cache/sidecar storage.
+            if total_bytes > 0 {
+                let duration_ms =
+                    total_bytes as f64 * 1000.0 / (f64::from(FISH_PCM_SAMPLE_RATE) * 2.0);
+                let alignment = estimate_alignment(&text, duration_ms);
+                if !alignment.words.is_empty() {
+                    let _ = sink.send(ChunkItem::Captions(alignment));
                 }
             }
             Ok(())
@@ -380,6 +438,70 @@ mod tests {
     #[test]
     fn supports_streaming_reports_true() {
         assert!(backend("").supports_streaming());
+    }
+
+    #[test]
+    fn batch_captions_estimate_inside_the_decoded_duration() {
+        let meta = AudioFormatMeta {
+            sample_rate: 8000,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        // 16000 bytes = 8000 samples = exactly one second at 8 kHz mono.
+        let bytes = super::super::stream::pcm_to_wav(&vec![0; 16000], &meta);
+        let captions = captions_for_audio(&bytes, "Hello, world!").expect("decodable wav");
+        assert_eq!(captions.text, "Hello, world!");
+        captions.validate().unwrap();
+        let last = captions.words.last().unwrap();
+        assert!(
+            (last.end_ms - 1000.0).abs() < 1.0,
+            "last word must end at the decoded duration: {}",
+            last.end_ms
+        );
+        assert_eq!(captions.words[0].text_start, 0);
+    }
+
+    #[test]
+    fn undecodable_batch_audio_yields_no_captions() {
+        assert!(captions_for_audio(&[1, 2, 3, 4], "hello").is_none());
+    }
+
+    /// Fish writes 0xFFFFFF00 into the WAV data-chunk size field while
+    /// shipping the real bytes after it. The duration must come from the real
+    /// bytes — the previous rodio decode trusted the field and spun at EOF
+    /// forever, hanging the whole synthesis queue (busy tray, no audio, no
+    /// error).
+    #[test]
+    fn lying_data_chunk_size_yields_the_real_duration() {
+        let meta = AudioFormatMeta {
+            sample_rate: 8000,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        // One second of PCM inside a canonical WAV...
+        let mut bytes = super::super::stream::pcm_to_wav(&vec![0u8; 16000], &meta);
+        // ...with the data-chunk size overwritten by Fish's lie.
+        let data_size_field = 40; // riff(12) + fmt(8 + 16) → size field of data
+        bytes[data_size_field..data_size_field + 4].copy_from_slice(&0xFFFFFF00u32.to_le_bytes());
+
+        let captions = captions_for_audio(&bytes, "Hello, world!").expect("real bytes measured");
+        captions.validate().unwrap();
+        let last = captions.words.last().unwrap();
+        assert!(
+            (last.end_ms - 1000.0).abs() < 1.0,
+            "last word must end at the real duration, not the claimed 4 GB: {}",
+            last.end_ms
+        );
+
+        // A transfer cut mid-body must measure only what arrived (whole frames).
+        bytes.truncate(bytes.len() - 10);
+        let captions = captions_for_audio(&bytes, "Hello, world!").expect("truncated still parses");
+        let last = captions.words.last().unwrap();
+        assert!(
+            (990.0..1000.0).contains(&last.end_ms),
+            "truncated audio must measure its real frames: {}",
+            last.end_ms
+        );
     }
 
     /// Two-phase mock server: half the advertised body arrives, the response
@@ -459,14 +581,30 @@ mod tests {
         );
         second_go_tx.send(()).unwrap();
         let mut total = first.len();
+        let mut captions = None;
+        let mut captions_before_pcm = false;
         while let Some(item) = stream.recv_timeout(Duration::from_secs(5)).unwrap() {
             match item {
-                ChunkItem::Pcm(bytes) => total += bytes.len(),
+                ChunkItem::Pcm(bytes) => {
+                    if captions.is_some() {
+                        captions_before_pcm = true;
+                    }
+                    total += bytes.len();
+                }
+                ChunkItem::Captions(value) => captions = Some(value),
                 ChunkItem::Failed(reason) => panic!("stream failed: {reason}"),
                 _ => {}
             }
         }
         assert_eq!(total, 64, "all advertised PCM must arrive");
+        let captions = captions.expect("estimated captions must follow the final PCM");
+        assert!(!captions_before_pcm, "captions must not precede the PCM");
+        assert_eq!(captions.text, "hello");
+        captions.validate().unwrap();
+        assert_eq!(captions.words.len(), 1);
+        assert_eq!(captions.words[0].text_start, 0);
+        assert_eq!(captions.words[0].text_end, 5);
+        assert!(captions.words[0].end_ms > 0.0);
         server.join().unwrap();
     }
 
@@ -499,6 +637,46 @@ mod tests {
         Ok(())
     }
 
+    /// Live batch synthesis must also produce captions: the estimator decodes
+    /// the container, and a real Fish WAV is the input no synthetic fixture
+    /// matches. The decode runs under a watchdog because a hostile container
+    /// could spin instead of erroring. Opt-in: needs `FISH_API_KEY`; runs only
+    /// via `cargo test fish_live_batch_captions -- --ignored`.
+    #[test]
+    #[ignore = "live API test; needs FISH_API_KEY in the environment"]
+    fn fish_live_batch_captions_decode_without_hanging() -> Result<(), Box<dyn std::error::Error>> {
+        let Ok(api_key) = std::env::var("FISH_API_KEY") else {
+            eprintln!("FISH_API_KEY not set; skipping live batch captions test");
+            return Ok(());
+        };
+        const TEXT: &str = "One two three, testing the batch caption decode.";
+        let backend = FishTtsBackend::new(FishConfig {
+            api_key,
+            model: "s2.1-pro-free".into(),
+            format: "wav".into(),
+            ..Default::default()
+        });
+        let bytes = backend
+            .synthesize(TEXT, "")
+            .expect("live synthesis must succeed");
+        let dump = std::env::temp_dir().join("fish-live-batch.wav");
+        std::fs::write(&dump, &bytes)?;
+        eprintln!("dumped {} bytes to {}", bytes.len(), dump.display());
+        let (tx, rx) = std::sync::mpsc::channel();
+        let for_decode = bytes.clone();
+        let text = TEXT.to_string();
+        std::thread::spawn(move || {
+            let _ = tx.send(captions_for_audio(&for_decode, &text));
+        });
+        let captions = rx
+            .recv_timeout(Duration::from_secs(15))
+            .map_err(|_| "caption decode hung on the live Fish WAV (>15s)")?;
+        let captions = captions.expect("live wav must decode for estimation");
+        captions.validate()?;
+        assert!(!captions.words.is_empty());
+        Ok(())
+    }
+
     /// Live progressive streaming against api.fish.audio. Opt-in: needs
     /// `FISH_API_KEY` in the environment; runs only via
     /// `cargo test fish_live_streams -- --ignored`.
@@ -523,9 +701,11 @@ mod tests {
             .expect("live stream must open");
         assert_eq!(stream.meta.sample_rate, FISH_PCM_SAMPLE_RATE);
         let mut pcm = Vec::new();
+        let mut captions = None;
         while let Some(item) = stream.recv() {
             match item {
                 ChunkItem::Pcm(bytes) => pcm.extend_from_slice(&bytes),
+                ChunkItem::Captions(value) => captions = Some(value),
                 ChunkItem::Failed(reason) => panic!("stream failed mid-way: {reason}"),
                 _ => {}
             }
@@ -533,6 +713,12 @@ mod tests {
         // One spoken sentence at 44.1 kHz / 16-bit / mono is ~88 KB/s; anything
         // under 10 KB is not a real synthesis.
         assert!(pcm.len() > 10_000, "suspiciously small pcm: {}", pcm.len());
+        let captions = captions.expect("live stream must end with estimated captions");
+        assert_eq!(
+            captions.text,
+            "The streaming live test reads one full sentence aloud for verification."
+        );
+        captions.validate().unwrap();
         Ok(())
     }
 }

@@ -25,6 +25,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Keep an offline effect's start beep at 40 ms or longer: a 6 ms square burst at 0.5 peak was inaudible in playback while a 40 ms one at the same level was heard.
 - Tune offline effect onset and glitch levers on real TTS output (`engines/*/output/test.wav` under `%LOCALAPPDATA%\CopySpeak`), not synthetic bursts: the old silence gate found about 0 onsets per clip on speech, and synthetic clean gaps hid it.
 - Glitch mid-speech onsets in place, never by inserting copies of the grain: a 40–70 ms grain replayed before its word sounds like slap-back echo, and each inserted copy pushes captions later.
+- Measure a provider WAV's duration from its parsed header clamped to the real byte count, never by iterating the container: Fish writes 0xFFFFFF00 into the data-chunk size and rodio's decode spins past EOF forever (busy tray, no audio, no error).
 
 ## Captions
 

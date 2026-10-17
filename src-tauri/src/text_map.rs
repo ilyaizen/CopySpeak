@@ -120,7 +120,7 @@ impl TextAlignment {
 /// ponytail: alphanumeric runs, so a script written without word spacing (CJK)
 /// tokenizes as one long word and highlights the whole run; add script-aware
 /// segmentation if a voice for one of those ships.
-fn tokenize(text: &str) -> (Vec<Span>, Vec<String>) {
+pub(crate) fn tokenize(text: &str) -> (Vec<Span>, Vec<String>) {
     let mut spans = Vec::new();
     let mut keys = Vec::new();
     let mut offset = 0usize; // running UTF-16 offset

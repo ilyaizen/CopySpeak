@@ -148,6 +148,44 @@ pub fn concat_speech(fragments: Vec<(SpeechAudio, String)>) -> Result<SpeechAudi
     })
 }
 
+/// Estimated word timings for engines whose API returns none: place each word
+/// proportionally inside the exactly measured duration of its audio (the
+/// estimation recipe — per-request durations are exact, intra-request word
+/// placement is approximate, and validation drops whatever does not fit).
+/// Words are the same alphanumeric runs the browser bridge aligns with, so a
+/// highlighted unit is identical on both sides.
+pub fn estimate_alignment(text: &str, duration_ms: f64) -> CaptionAlignment {
+    let (spans, _) = crate::text_map::tokenize(text);
+    CaptionAlignment {
+        text: text.to_string(),
+        words: proportional_words(&spans, duration_ms),
+    }
+}
+
+/// Contiguous slices of `duration_ms`, each token weighted by its UTF-16
+/// length. Empty for no tokens or a non-positive duration: still a valid,
+/// untimed alignment.
+fn proportional_words(spans: &[(usize, usize)], duration_ms: f64) -> Vec<WordTiming> {
+    let total: usize = spans.iter().map(|(start, end)| end - start).sum();
+    if total == 0 || !duration_ms.is_finite() || duration_ms <= 0.0 {
+        return Vec::new();
+    }
+    let mut words = Vec::with_capacity(spans.len());
+    let mut consumed = 0usize;
+    for &(text_start, text_end) in spans {
+        let start_ms = duration_ms * consumed as f64 / total as f64;
+        consumed += text_end - text_start;
+        let end_ms = duration_ms * consumed as f64 / total as f64;
+        words.push(WordTiming {
+            text_start,
+            text_end,
+            start_ms,
+            end_ms,
+        });
+    }
+    words
+}
+
 /// Sidecars travel with saved audio, including history and the CLI's one-shot output.
 pub fn read_sidecar(path: &str) -> Option<CaptionAlignment> {
     let data = match std::fs::read(format!("{path}.captions.json")) {
@@ -324,6 +362,44 @@ mod tests {
     #[test]
     fn concatenation_still_rejects_undecodable_audio() {
         assert!(concat_speech(vec![(vec![1, 2, 3].into(), "Hi".into())]).is_err());
+    }
+
+    #[test]
+    fn estimated_words_fill_the_measured_duration_contiguously() {
+        let alignment = estimate_alignment("Hello, world!", 1000.0);
+        assert_eq!(alignment.text, "Hello, world!");
+        assert_eq!(alignment.words.len(), 2);
+        assert_eq!(alignment.words[0].text_start, 0);
+        assert_eq!(alignment.words[0].text_end, 5);
+        assert_eq!(alignment.words[1].text_start, 7);
+        assert_eq!(alignment.words[1].text_end, 12);
+        assert_eq!(alignment.words[0].start_ms, 0.0);
+        assert_eq!(alignment.words[0].end_ms, alignment.words[1].start_ms);
+        assert_eq!(alignment.words[1].end_ms, 1000.0);
+        alignment.validate().unwrap();
+    }
+
+    #[test]
+    fn estimation_weights_words_by_length() {
+        // UTF-16 token lengths 2, 5, 6 of 13 total over 1300 ms.
+        let alignment = estimate_alignment("hi there friend", 1300.0);
+        let ends: Vec<f64> = alignment.words.iter().map(|w| w.end_ms).collect();
+        assert_eq!(ends, vec![200.0, 700.0, 1300.0]);
+    }
+
+    #[test]
+    fn estimation_without_tokens_or_duration_yields_no_words() {
+        for (text, duration) in [
+            ("", 1000.0),
+            ("... —!", 1000.0),
+            ("words", 0.0),
+            ("words", -5.0),
+            ("words", f64::NAN),
+        ] {
+            let alignment = estimate_alignment(text, duration);
+            assert!(alignment.words.is_empty(), "{text:?} {duration}");
+            assert_eq!(alignment.text, text);
+        }
     }
 
     #[test]
