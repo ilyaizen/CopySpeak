@@ -27,8 +27,8 @@
     "http",
     "openai",
     "elevenlabs",
-    "cartesia",
     "fish",
+    "cartesia",
     "google",
     "microsoft"
   ];

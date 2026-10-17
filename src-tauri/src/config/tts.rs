@@ -210,7 +210,7 @@ impl Default for FishConfig {
     fn default() -> Self {
         Self {
             api_key: String::new(),
-            model: "s2.1-pro".into(),
+            model: "s2.1-pro-free".into(),
             // Empty = Fish Audio's built-in default voice (`reference_id`
             // omitted from the request body).
             voice_id: String::new(),
@@ -1070,7 +1070,7 @@ fn default_fish_profile() -> VoiceProfile {
         effects: ProfileEffects::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::Fish(FishEngineOptions {
-            model: Some("s2.1-pro".into()),
+            model: Some("s2.1-pro-free".into()),
             format: Some("wav".into()),
         }),
     }
@@ -1226,9 +1226,9 @@ impl Default for TtsConfig {
                 default_qwen_profile(),
                 default_kokoro_profile(),
                 default_elevenlabs_profile(),
+                default_fish_profile(),
                 cartesia_profile,
                 default_google_profile(),
-                default_fish_profile(),
             ],
             preset: "kitten-tts".into(),
             command: "uv".into(),

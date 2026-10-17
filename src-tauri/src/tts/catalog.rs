@@ -690,6 +690,44 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             ],
         },
         EngineCatalogEntry {
+            engine: TtsEngine::Fish,
+            label: "Fish Audio".into(),
+            description: "Fish Audio cloud TTS.".into(),
+            docs_url: "https://docs.fish.audio/".into(),
+            supports_voice_refresh: true,
+            supports_pitch: false,
+            supports_captions: false,
+            supports_bracket_emotes: false,
+            options: vec![
+                select_option(
+                    "model",
+                    "Model",
+                    "Fish Audio model.",
+                    serde_json::json!("s2.1-pro-free"),
+                    vec!["s2.1-pro", "s2.1-pro-free", "s2-pro", "drama-3"],
+                ),
+                select_option(
+                    "format",
+                    "Format",
+                    "Audio container.",
+                    serde_json::json!("wav"),
+                    vec!["wav", "mp3", "opus", "pcm"],
+                ),
+            ],
+            voices: vec![
+                // Fish's built-in default voice: an empty reference id, which
+                // the backend omits from the request body. The library refresh
+                // (GET /model) replaces this list with ranked community voices.
+                voice(
+                    "",
+                    "Fish default voice",
+                    None,
+                    Some("Fish Audio's built-in voice, used when no voice model is selected"),
+                    None,
+                ),
+            ],
+        },
+        EngineCatalogEntry {
             engine: TtsEngine::Cartesia,
             label: "Cartesia".into(),
             description: "Cartesia Sonic TTS.".into(),
@@ -935,44 +973,6 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                     Some("en"),
                     Some("Warm, conversational British male for casual dialogue"),
                     Some("male"),
-                ),
-            ],
-        },
-        EngineCatalogEntry {
-            engine: TtsEngine::Fish,
-            label: "Fish Audio".into(),
-            description: "Fish Audio cloud TTS.".into(),
-            docs_url: "https://docs.fish.audio/".into(),
-            supports_voice_refresh: true,
-            supports_pitch: false,
-            supports_captions: false,
-            supports_bracket_emotes: false,
-            options: vec![
-                select_option(
-                    "model",
-                    "Model",
-                    "Fish Audio model.",
-                    serde_json::json!("s2.1-pro"),
-                    vec!["s2.1-pro", "s2.1-pro-free", "s2-pro", "drama-3"],
-                ),
-                select_option(
-                    "format",
-                    "Format",
-                    "Audio container.",
-                    serde_json::json!("wav"),
-                    vec!["wav", "mp3", "opus", "pcm"],
-                ),
-            ],
-            voices: vec![
-                // Fish's built-in default voice: an empty reference id, which
-                // the backend omits from the request body. The library refresh
-                // (GET /model) replaces this list with ranked community voices.
-                voice(
-                    "",
-                    "Fish default voice",
-                    None,
-                    Some("Fish Audio's built-in voice, used when no voice model is selected"),
-                    None,
                 ),
             ],
         },
@@ -1295,7 +1295,7 @@ mod tests {
             (
                 TtsEngine::Fish,
                 "model",
-                "s2.1-pro",
+                "s2.1-pro-free",
                 &["s2.1-pro", "s2.1-pro-free", "s2-pro", "drama-3"],
             ),
             (

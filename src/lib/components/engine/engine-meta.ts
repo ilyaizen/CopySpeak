@@ -65,20 +65,20 @@ export const CLOUD_ENGINES: EngineSetupEntry[] = [
     docsUrl: "https://elevenlabs.io/docs/api-reference/text-to-speech/convert"
   },
   {
-    id: "cartesia",
-    kind: "cloud",
-    credential: "api_key",
-    credentialTarget: "cartesia",
-    placeholderKey: "placeholderCartesia",
-    docsUrl: "https://docs.cartesia.ai/api-reference/tts/bytes"
-  },
-  {
     id: "fish",
     kind: "cloud",
     credential: "api_key",
     credentialTarget: "fish",
     placeholderKey: "placeholderFish",
     docsUrl: "https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech"
+  },
+  {
+    id: "cartesia",
+    kind: "cloud",
+    credential: "api_key",
+    credentialTarget: "cartesia",
+    placeholderKey: "placeholderCartesia",
+    docsUrl: "https://docs.cartesia.ai/api-reference/tts/bytes"
   },
   {
     id: "google",

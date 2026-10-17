@@ -44,8 +44,8 @@
     "http",
     "openai",
     "elevenlabs",
-    "cartesia",
     "fish",
+    "cartesia",
     "google",
     "microsoft",
     "kitten",
@@ -115,6 +115,13 @@
       voice: "alba",
       voiceLabel: "Alba",
       engineOptions: { engine: "pocket" }
+    },
+    {
+      name: "Fish Audio — Default Voice",
+      engine: "fish",
+      voice: "",
+      voiceLabel: "Fish default voice",
+      engineOptions: { engine: "fish", model: "s2.1-pro-free", format: "wav" }
     }
   ];
 

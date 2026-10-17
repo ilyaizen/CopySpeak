@@ -57,7 +57,7 @@
       },
       fish: {
         api_key: "",
-        model: "s2.1-pro",
+        model: "s2.1-pro-free",
         voice_id: "",
         voice_name: undefined,
         format: "wav"
