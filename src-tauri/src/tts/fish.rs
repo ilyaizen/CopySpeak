@@ -1,4 +1,5 @@
 use super::block_on_async;
+use super::stream::{spawn_stream, AudioFormatMeta, ChunkItem, ChunkStream};
 use super::{TtsBackend, TtsError, Voice};
 use crate::config::FishConfig;
 use reqwest::Client;
@@ -6,6 +7,12 @@ use serde_json::json;
 
 const FISH_TTS_URL: &str = "https://api.fish.audio/v1/tts";
 const FISH_MODEL_LIST_URL: &str = "https://api.fish.audio/model";
+
+/// PCM rate of Fish's s2 models. Verified 44100 Hz / mono / 16-bit for
+/// s2.1-pro-free via a WAV-header probe (2026-10-17); raw PCM carries no
+/// header, so the paid models (s2-pro, drama-3) are assumed to match — a
+/// mismatch would only surface as wrong-speed playback.
+const FISH_PCM_SAMPLE_RATE: u32 = 44100;
 
 pub struct FishTtsBackend {
     config: FishConfig,
@@ -21,10 +28,10 @@ impl FishTtsBackend {
         crate::secrets::resolve(&self.config.api_key, &["FISH_API_KEY"])
     }
 
-    fn request_body(&self, text: &str) -> serde_json::Value {
+    fn request_body_with_format(&self, text: &str, format: &str) -> serde_json::Value {
         let mut body = json!({
             "text": text,
-            "format": self.config.format,
+            "format": format,
         });
         // Empty voice = Fish Audio's built-in default voice: `reference_id`
         // must be omitted, not sent blank.
@@ -32,6 +39,20 @@ impl FishTtsBackend {
         if !voice.is_empty() {
             body["reference_id"] = json!(voice);
         }
+        body
+    }
+
+    fn request_body(&self, text: &str) -> serde_json::Value {
+        self.request_body_with_format(text, &self.config.format)
+    }
+
+    /// Streaming body: raw PCM (a container is only parseable once the whole
+    /// body has arrived) at Fish's `balanced` latency, its lowest
+    /// time-to-first-audio mode. The batch path keeps the profile's format,
+    /// which is what file output and the cache want.
+    fn stream_request_body(&self, text: &str) -> serde_json::Value {
+        let mut body = self.request_body_with_format(text, "pcm");
+        body["latency"] = json!("balanced");
         body
     }
 
@@ -106,6 +127,17 @@ impl FishTtsBackend {
 impl TtsBackend for FishTtsBackend {
     fn name(&self) -> &str {
         "Fish Audio"
+    }
+
+    fn supports_streaming(&self) -> bool {
+        // Fish's /v1/tts streams PCM progressively for every model when asked
+        // with format=pcm (probed 2026-10-17: first chunk at 0.61 s for a
+        // 400-char read, continuous ~2x-realtime delivery after that).
+        true
+    }
+
+    fn synthesize_streaming(&self, text: &str, _voice: &str) -> Result<ChunkStream, TtsError> {
+        self.synthesize_streaming_from(FISH_TTS_URL, text)
     }
 
     fn synthesize(&self, text: &str, _voice: &str) -> Result<Vec<u8>, TtsError> {
@@ -216,9 +248,85 @@ impl TtsBackend for FishTtsBackend {
     }
 }
 
+impl FishTtsBackend {
+    /// Open a progressive PCM stream. Split from
+    /// [`TtsBackend::synthesize_streaming`] so tests can point it at a local
+    /// mock server, mirroring the elevenlabs/cartesia shape.
+    fn synthesize_streaming_from(
+        &self,
+        base_url: &str,
+        text: &str,
+    ) -> Result<ChunkStream, TtsError> {
+        let api_key = self.api_key();
+        if api_key.trim().is_empty() {
+            return Err(TtsError::Unavailable(
+                "Fish Audio API key is missing".into(),
+            ));
+        }
+
+        let body = self.stream_request_body(text);
+        let model = self.config.model.clone();
+        let url = base_url.to_string();
+
+        log::info!(
+            "Fish Audio TTS stream - model: {}, voice: {}, text length: {} chars",
+            self.config.model,
+            if self.config.voice_id.trim().is_empty() {
+                "(default)"
+            } else {
+                &self.config.voice_id
+            },
+            text.len()
+        );
+
+        let meta = AudioFormatMeta {
+            sample_rate: FISH_PCM_SAMPLE_RATE,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        Ok(spawn_stream(meta, move |sink| async move {
+            let mut response = Client::new()
+                .post(&url)
+                .header("Authorization", format!("Bearer {api_key}"))
+                .header("Content-Type", "application/json")
+                // Fish selects the TTS model via a request header, not the body.
+                .header("model", model)
+                .json(&body)
+                .send()
+                .await
+                .map_err(|e| TtsError::Http(format!("Fish Audio stream request failed: {e}")))?;
+            let status = response.status();
+            if !status.is_success() {
+                let error_text = response.text().await.unwrap_or_default();
+                return Err(TtsError::Http(format!(
+                    "Fish Audio API error {status}: {error_text}"
+                )));
+            }
+            let mut total_bytes = 0usize;
+            while let Some(chunk) = response.chunk().await.map_err(|e| {
+                TtsError::Http(format!(
+                    "Fish Audio stream read failed after {total_bytes} bytes: {e}"
+                ))
+            })? {
+                if chunk.is_empty() {
+                    continue;
+                }
+                total_bytes += chunk.len();
+                if !sink.send(ChunkItem::Pcm(chunk.to_vec())) {
+                    // Consumer dropped (stop/abort): stop pulling the body.
+                    return Ok(());
+                }
+            }
+            Ok(())
+        }))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::{Read, Write};
+    use std::time::Duration;
 
     fn backend(voice_id: &str) -> FishTtsBackend {
         FishTtsBackend::new(FishConfig {
@@ -253,6 +361,115 @@ mod tests {
         assert_eq!(mp3.file_extension(), "mp3");
     }
 
+    #[test]
+    fn streaming_body_pins_pcm_and_balanced_latency() {
+        let body = backend("").stream_request_body("hello");
+        assert_eq!(body["format"], "pcm");
+        assert_eq!(body["latency"], "balanced");
+        assert!(body.get("reference_id").is_none());
+    }
+
+    #[test]
+    fn streaming_body_keeps_reference_id_when_voice_is_set() {
+        let body = backend("933563129e564b19a115bedd57b7406a").stream_request_body("hello");
+        assert_eq!(body["format"], "pcm");
+        assert_eq!(body["latency"], "balanced");
+        assert_eq!(body["reference_id"], "933563129e564b19a115bedd57b7406a");
+    }
+
+    #[test]
+    fn supports_streaming_reports_true() {
+        assert!(backend("").supports_streaming());
+    }
+
+    /// Two-phase mock server: half the advertised body arrives, the response
+    /// is held open, and the client must surface PCM before the body
+    /// completes — the progressive behavior the live API exhibits.
+    #[test]
+    fn streams_pcm_while_response_is_open_with_pcm_body_and_model_header() {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let url = format!("http://{}/v1/tts", listener.local_addr().unwrap());
+        let (first_sent_tx, first_sent_rx) = std::sync::mpsc::channel::<()>();
+        let (second_go_tx, second_go_rx) = std::sync::mpsc::channel::<()>();
+        let response_body: Vec<u8> = vec![7u8; 64];
+        let server_body = response_body.clone();
+        let server = std::thread::spawn(move || {
+            let (mut socket, _) = listener.accept().unwrap();
+            socket
+                .set_read_timeout(Some(Duration::from_secs(5)))
+                .unwrap();
+            let mut request = Vec::new();
+            let mut byte = [0];
+            while !request.ends_with(b"\r\n\r\n") {
+                socket.read_exact(&mut byte).unwrap();
+                request.push(byte[0]);
+            }
+            let headers = String::from_utf8(request).unwrap().to_lowercase();
+            assert!(headers.starts_with("post /v1/tts http/1.1"));
+            assert!(headers.contains("authorization: bearer test-key\r\n"));
+            assert!(headers.contains("model: s2.1-pro-free\r\n"));
+            let length: usize = headers
+                .lines()
+                .find_map(|line| line.strip_prefix("content-length: "))
+                .unwrap()
+                .parse()
+                .unwrap();
+            let mut body = vec![0; length];
+            socket.read_exact(&mut body).unwrap();
+            let body: serde_json::Value = serde_json::from_slice(&body).unwrap();
+            assert_eq!(body["text"], "hello");
+            assert_eq!(body["format"], "pcm");
+            assert_eq!(body["latency"], "balanced");
+            assert!(body.get("reference_id").is_none());
+
+            write!(
+                socket,
+                "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\n\r\n",
+                server_body.len()
+            )
+            .unwrap();
+            socket.write_all(&server_body[..32]).unwrap();
+            socket.flush().unwrap();
+            first_sent_tx.send(()).unwrap();
+            second_go_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+            socket.write_all(&server_body[32..]).unwrap();
+            socket.flush().unwrap();
+        });
+
+        let backend = FishTtsBackend::new(FishConfig {
+            api_key: "test-key".into(),
+            model: "s2.1-pro-free".into(),
+            ..Default::default()
+        });
+        assert!(backend.supports_streaming());
+        let stream = backend.synthesize_streaming_from(&url, "hello").unwrap();
+        assert_eq!(stream.meta.sample_rate, 44100);
+        assert_eq!(stream.meta.channels, 1);
+        assert_eq!(stream.meta.bits_per_sample, 16);
+
+        first_sent_rx.recv_timeout(Duration::from_secs(5)).unwrap();
+        let Some(ChunkItem::Pcm(first)) = stream.recv_timeout(Duration::from_secs(5)).unwrap()
+        else {
+            panic!("first chunk must be PCM arriving while the response is open")
+        };
+        assert!(!first.is_empty() && first.iter().all(|&b| b == 7));
+        assert!(
+            first.len() <= 32,
+            "client must not have buffered past the open response"
+        );
+        second_go_tx.send(()).unwrap();
+        let mut total = first.len();
+        while let Some(item) = stream.recv_timeout(Duration::from_secs(5)).unwrap() {
+            match item {
+                ChunkItem::Pcm(bytes) => total += bytes.len(),
+                ChunkItem::Failed(reason) => panic!("stream failed: {reason}"),
+                _ => {}
+            }
+        }
+        assert_eq!(total, 64, "all advertised PCM must arrive");
+        server.join().unwrap();
+    }
+
     /// Live synthesis against api.fish.audio. Opt-in: needs `FISH_API_KEY` in
     /// the environment (e.g. exported from `target/debug/.env`); runs only via
     /// `cargo test fish_live -- --ignored`. Uses the free-tier model so it
@@ -279,6 +496,43 @@ mod tests {
             bytes.len()
         );
         assert_eq!(&bytes[..4], b"RIFF", "expected a WAV container");
+        Ok(())
+    }
+
+    /// Live progressive streaming against api.fish.audio. Opt-in: needs
+    /// `FISH_API_KEY` in the environment; runs only via
+    /// `cargo test fish_live_streams -- --ignored`.
+    #[test]
+    #[ignore = "live API test; needs FISH_API_KEY in the environment"]
+    fn fish_live_streams_pcm_with_default_voice() -> Result<(), Box<dyn std::error::Error>> {
+        let Ok(api_key) = std::env::var("FISH_API_KEY") else {
+            eprintln!("FISH_API_KEY not set; skipping live streaming test");
+            return Ok(());
+        };
+        let backend = FishTtsBackend::new(FishConfig {
+            api_key,
+            model: "s2.1-pro-free".into(),
+            format: "wav".into(),
+            ..Default::default()
+        });
+        let stream = backend
+            .synthesize_streaming(
+                "The streaming live test reads one full sentence aloud for verification.",
+                "",
+            )
+            .expect("live stream must open");
+        assert_eq!(stream.meta.sample_rate, FISH_PCM_SAMPLE_RATE);
+        let mut pcm = Vec::new();
+        while let Some(item) = stream.recv() {
+            match item {
+                ChunkItem::Pcm(bytes) => pcm.extend_from_slice(&bytes),
+                ChunkItem::Failed(reason) => panic!("stream failed mid-way: {reason}"),
+                _ => {}
+            }
+        }
+        // One spoken sentence at 44.1 kHz / 16-bit / mono is ~88 KB/s; anything
+        // under 10 KB is not a real synthesis.
+        assert!(pcm.len() > 10_000, "suspiciously small pcm: {}", pcm.len());
         Ok(())
     }
 }
