@@ -70,6 +70,8 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - The browser pipe serves one client at a time; the native host retries `ERROR_PIPE_BUSY` with `WaitNamedPipeW` instead of failing the reading.
 - Send a state frame's `word` only while `playing` or `paused` with `word_available`: the extension disconnects its native port (badge `!`) on any frame its parser rejects, and a trigger clip is announced audible while still `buffering`, at 0 ms over its first word.
 - Treat the double-copy announce as arriving LATE: a clipboard copy fires no extension event, so ping the worker from the page's `copy` event and let `begin_trigger` wait bounded for the port + `hello` — gating on a live companion at copy time silently dropped every follow started from a sleeping worker, leaving only the stale `!` badge.
+- Declare `file:///*` host access and include it in content-script registration and trigger tab queries only when the browser's file-access switch permits it; toolbar `activeTab` success does not prove automatic double-copy can reach local Markdown tabs.
+- Rebuild and include tracked `browser-extension/dist/` after companion source edits; the loaded unpacked extension executes these bundles, so source-only fixes and passing source tests leave the browser on old code.
 
 ## History & cache
 

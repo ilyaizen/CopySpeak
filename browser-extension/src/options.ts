@@ -19,7 +19,11 @@ async function refresh() {
   }
   const permissions = await chrome.permissions.getAll();
   sites.replaceChildren();
-  for (const origin of permissions.origins ?? []) {
+  // Local files use the browser's dedicated file-access switch, not these
+  // optional website grants; do not offer a Remove button for that permission.
+  for (const origin of (permissions.origins ?? []).filter((origin) =>
+    /^https?:\/\//.test(origin)
+  )) {
     const item = document.createElement("li");
     const name = document.createElement("span");
     name.textContent = origin;

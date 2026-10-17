@@ -12,6 +12,10 @@ type TestHook = (...args: any[]) => void;
 const hooks: Record<string, TestHook> = {};
 const event = (name: string) => ({ addListener: (f: any) => (hooks[name] = f) });
 const settings = { automatic: false };
+let origins = ["https://example.com/*"];
+let fileAccess = false;
+const registrations: any[] = [];
+const injections: any[] = [];
 // SAFETY: the test stubs the chrome global that the worker reads; global typing cannot know it.
 (globalThis as any).chrome = {
   runtime: {
@@ -40,7 +44,12 @@ const settings = { automatic: false };
     setTitle: async () => {}
   },
   tabs: {
-    query: async (query: any) => (query.active ? [{ id: 7, windowId: 1 }] : []),
+    query: async (query: any) =>
+      query.active
+        ? [{ id: 7, windowId: 1 }]
+        : query.url?.includes("file:///*")
+          ? [{ id: 9, url: "file:///C:/notes/example.md" }]
+          : [],
     sendMessage: async (id: number, m: any, opts: any) => {
       delivered.push({ id, m, opts });
       if (m.type === "capture") return { text: "selected", document_token: "doc" };
@@ -49,18 +58,25 @@ const settings = { automatic: false };
     onUpdated: event("updated")
   },
   scripting: {
-    executeScript: async () => [{ frameId: 0, documentId: "browser-doc" }],
+    executeScript: async (script: any) => {
+      injections.push(script);
+      return [{ frameId: 0, documentId: "browser-doc" }];
+    },
     getRegisteredContentScripts: async () => [],
-    registerContentScripts: async () => {},
+    registerContentScripts: async (scripts: any[]) => {
+      registrations.push(...scripts);
+    },
     updateContentScripts: async () => {},
     unregisterContentScripts: async () => {}
   },
   permissions: {
-    contains: async () => false,
-    getAll: async () => ({ origins: ["https://example.com/*"] }),
+    contains: async (request: any) =>
+      request.origins.every((origin: string) => origins.includes(origin)),
+    getAll: async () => ({ origins }),
     onRemoved: event("permissions"),
     onAdded: event("permissionsAdded")
   },
+  extension: { isAllowedFileSchemeAccess: async () => fileAccess },
   storage: { local: { get: async () => ({ automatic: settings.automatic, hoverRead: false }) } },
   windows: { getLastFocused: async () => ({ focused: true }) }
 };
@@ -133,4 +149,87 @@ test("a page-copy wake revives the native-host port a disconnect killed", async 
   hooks.message({ type: "wake" }, { tab: { id: 7 }, frameId: 0, documentId: "d" }, () => {});
   await settle();
   expect(connectCount).toBe(4);
+});
+
+test("double-copy follows a local Markdown tab when file access is enabled", async () => {
+  origins = ["file:///*"];
+  fileAccess = true;
+  const before = registrations.length;
+  hooks.permissionsAdded();
+  await settle();
+  expect(sent.at(-1)).toEqual({ v: 1, type: "hello", automatic: true });
+  expect(registrations.slice(before)).toHaveLength(1);
+  expect(registrations.at(-1).matches).toEqual(["file:///*"]);
+  expect(injections.at(-1).target).toEqual({ tabId: 9, allFrames: true });
+
+  let allowed: boolean | undefined;
+  hooks.message(
+    { type: "site-access" },
+    { url: "file:///C:/notes/example.md" },
+    (value: boolean) => (allowed = value)
+  );
+  await settle();
+  expect(allowed).toBe(true);
+
+  const event = {
+    v: 1,
+    type: "trigger-started",
+    trigger_id: "local-trigger",
+    source: "double_copy",
+    raw_text: "selected"
+  };
+  await Promise.resolve(hooks.native(event));
+  expect(delivered.at(-1)).toMatchObject({ id: 9, m: { type: "trigger", event } });
+
+  let claimed: boolean | undefined;
+  hooks.message(
+    { type: "trigger-claim", trigger_id: "local-trigger", document_token: "local-token" },
+    { tab: { id: 9 }, frameId: 0, documentId: "local-doc" },
+    (value: boolean) => (claimed = value)
+  );
+  expect(claimed).toBe(true);
+  const state = {
+    v: 1,
+    type: "state",
+    trigger_id: "local-trigger",
+    seq: 1,
+    status: "playing",
+    word_available: true,
+    word: { start: 0, end: 8 }
+  };
+  await Promise.resolve(hooks.native(state));
+  expect(delivered.at(-1)).toEqual({
+    id: 9,
+    m: { type: "native", event: state, document_token: "local-token" },
+    opts: { documentId: "local-doc" }
+  });
+});
+
+test("file tabs stay excluded when browser file access is disabled", async () => {
+  fileAccess = false;
+  origins = ["https://example.com/*", "file:///*"];
+  const before = registrations.length;
+  hooks.permissions();
+  await settle();
+  expect(registrations.slice(before)).toHaveLength(1);
+  expect(registrations.at(-1).matches).toEqual(["https://example.com/*"]);
+  let allowed: boolean | undefined;
+  hooks.message(
+    { type: "site-access" },
+    { url: "file:///C:/notes/example.md" },
+    (value: boolean) => (allowed = value)
+  );
+  await settle();
+  expect(allowed).toBe(false);
+  const deliveredBefore = delivered.length;
+  await Promise.resolve(
+    hooks.native({
+      v: 1,
+      type: "trigger-started",
+      trigger_id: "blocked-local-trigger",
+      source: "double_copy",
+      raw_text: "selected"
+    })
+  );
+  expect(delivered.slice(deliveredBefore).some((entry) => entry.m.type === "trigger")).toBe(false);
 });
