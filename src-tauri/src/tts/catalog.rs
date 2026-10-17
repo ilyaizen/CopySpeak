@@ -939,6 +939,44 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             ],
         },
         EngineCatalogEntry {
+            engine: TtsEngine::Fish,
+            label: "Fish Audio".into(),
+            description: "Fish Audio cloud TTS.".into(),
+            docs_url: "https://docs.fish.audio/".into(),
+            supports_voice_refresh: true,
+            supports_pitch: false,
+            supports_captions: false,
+            supports_bracket_emotes: false,
+            options: vec![
+                select_option(
+                    "model",
+                    "Model",
+                    "Fish Audio model.",
+                    serde_json::json!("s2.1-pro"),
+                    vec!["s2.1-pro", "s2.1-pro-free", "s2-pro", "drama-3"],
+                ),
+                select_option(
+                    "format",
+                    "Format",
+                    "Audio container.",
+                    serde_json::json!("wav"),
+                    vec!["wav", "mp3", "opus", "pcm"],
+                ),
+            ],
+            voices: vec![
+                // Fish's built-in default voice: an empty reference id, which
+                // the backend omits from the request body. The library refresh
+                // (GET /model) replaces this list with ranked community voices.
+                voice(
+                    "",
+                    "Fish default voice",
+                    None,
+                    Some("Fish Audio's built-in voice, used when no voice model is selected"),
+                    None,
+                ),
+            ],
+        },
+        EngineCatalogEntry {
             engine: TtsEngine::Google,
             label: "Google Gemini".into(),
             description: "Gemini native audio generation.".into(),
@@ -1137,6 +1175,7 @@ mod tests {
             TtsEngine::OpenAI,
             TtsEngine::ElevenLabs,
             TtsEngine::Cartesia,
+            TtsEngine::Fish,
             TtsEngine::Google,
             TtsEngine::Microsoft,
             TtsEngine::Kitten,
@@ -1153,7 +1192,7 @@ mod tests {
                 1
             );
         }
-        assert_eq!(entries.len(), 12);
+        assert_eq!(entries.len(), 13);
     }
 
     #[test]
@@ -1226,7 +1265,7 @@ mod tests {
 
     #[test]
     fn model_selects_list_verified_model_ids() {
-        let cases: [(TtsEngine, &str, &str, &[&str]); 4] = [
+        let cases: [(TtsEngine, &str, &str, &[&str]); 5] = [
             (
                 TtsEngine::OpenAI,
                 "model",
@@ -1252,6 +1291,12 @@ mod tests {
                 "model_id",
                 "sonic-3.6",
                 &["sonic-3.6", "sonic-3.5"],
+            ),
+            (
+                TtsEngine::Fish,
+                "model",
+                "s2.1-pro",
+                &["s2.1-pro", "s2.1-pro-free", "s2-pro", "drama-3"],
             ),
             (
                 TtsEngine::Google,

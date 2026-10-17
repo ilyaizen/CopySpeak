@@ -51,6 +51,7 @@ export type TtsEngine =
   | "openai"
   | "elevenlabs"
   | "cartesia"
+  | "fish"
   | "google"
   | "microsoft"
   | "edge"
@@ -101,6 +102,14 @@ export interface CartesiaConfig {
   use_manual_voice_id?: boolean;
 }
 
+export interface FishConfig {
+  api_key: string;
+  model: string;
+  voice_id: string;
+  voice_name?: string;
+  format: string;
+}
+
 export interface TtsConfig {
   active_backend: TtsEngine;
   active_profile_id: string;
@@ -112,6 +121,7 @@ export interface TtsConfig {
   openai: OpenAIConfig;
   elevenlabs: ElevenLabsConfig;
   cartesia: CartesiaConfig;
+  fish: FishConfig;
   edge?: EdgeTtsConfig;
   google: GoogleTtsConfig;
   microsoft: MicrosoftTtsConfig;

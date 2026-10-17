@@ -303,6 +303,11 @@
         "description": "TTS בענן עם השהיה נמוכה (Sonic 3.5)",
         "detail": "API בענן המופעל על ידי מודל Sonic 3.5. דורש מפתח API."
       },
+      "fish": {
+        "title": "Fish Audio",
+        "description": "TTS ענן אקספרסיבי (S2)",
+        "detail": "API ענן מבוסס מודלי Fish Audio S2. דורש מפתח API."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "ONNX מקומי קל משקל במיוחד",
@@ -393,6 +398,14 @@
       "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
       "check": "בדוק",
       "testEngine": "בדוק מנוע"
+    },
+    "fish": {
+      "title": "Fish Audio",
+      "description": "ענן: קולות AI אקספרסיביים עם שיבוט קול. דורש מפתח API וחיבור לאינטרנט.",
+      "apiKey": "מפתח API",
+      "apiKeyDescription": "מפתח ה-API שלך מאוחסן מקומית ולעולם אינו משותף.",
+      "check": "בדיקה",
+      "testEngine": "בדיקת מנוע"
     },
     "elevenlabs": {
       "title": "ElevenLabs",
@@ -527,6 +540,7 @@
       "placeholderOpenai": "sk-...",
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
+      "placeholderFish": "מפתח API של Fish Audio",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "נקודת קצה",

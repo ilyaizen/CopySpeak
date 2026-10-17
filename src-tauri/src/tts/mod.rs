@@ -9,6 +9,7 @@ pub mod cli;
 pub mod edge;
 pub mod elevenlabs;
 mod elevenlabs_timing;
+pub mod fish;
 pub mod google;
 pub mod http;
 pub mod local_daemon;

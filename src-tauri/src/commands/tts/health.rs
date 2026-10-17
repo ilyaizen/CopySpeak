@@ -132,6 +132,7 @@ fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
         "openai" => Ok(TtsEngine::OpenAI),
         "elevenlabs" => Ok(TtsEngine::ElevenLabs),
         "cartesia" => Ok(TtsEngine::Cartesia),
+        "fish" => Ok(TtsEngine::Fish),
         "google" => Ok(TtsEngine::Google),
         "microsoft" => Ok(TtsEngine::Microsoft),
         "edge" => Ok(TtsEngine::Edge),
@@ -183,7 +184,7 @@ fn first_set<'a>(candidates: &[&'a str]) -> &'a str {
 fn effective_backend_name(eff: &EffectiveTtsRequest, tts: &TtsConfig) -> String {
     let opts = &eff.engine_options;
     // Bind the profile-side Strings so the &str candidates can borrow them.
-    let (openai, elevenlabs, cartesia, http, google, microsoft, edge, local) = (
+    let (openai, elevenlabs, cartesia, fish, http, google, microsoft, edge, local) = (
         opts.openai()
             .and_then(|o| o.model.clone())
             .unwrap_or_default(),
@@ -192,6 +193,9 @@ fn effective_backend_name(eff: &EffectiveTtsRequest, tts: &TtsConfig) -> String 
             .unwrap_or_default(),
         opts.cartesia()
             .and_then(|o| o.model_id.clone())
+            .unwrap_or_default(),
+        opts.fish()
+            .and_then(|o| o.model.clone())
             .unwrap_or_default(),
         opts.http()
             .and_then(|o| o.url_template.clone())
@@ -221,6 +225,7 @@ fn effective_backend_name(eff: &EffectiveTtsRequest, tts: &TtsConfig) -> String 
             "Cartesia ({})",
             first_set(&[&cartesia, &tts.cartesia.model_id])
         ),
+        TtsEngine::Fish => format!("Fish Audio ({})", first_set(&[&fish, &tts.fish.model])),
         TtsEngine::Http => format!("HTTP ({})", first_set(&[&http, &tts.http.url_template])),
         TtsEngine::Google => format!("Google ({})", first_set(&[&google, &tts.google.model])),
         TtsEngine::Microsoft => format!(
@@ -261,6 +266,7 @@ pub fn test_tts_engine_config(
         TtsEngine::Cartesia => {
             format!("Cartesia ({})", first_set(&[&tts_config.cartesia.model_id]))
         }
+        TtsEngine::Fish => format!("Fish Audio ({})", first_set(&[&tts_config.fish.model])),
         TtsEngine::Http => format!("HTTP ({})", first_set(&[&tts_config.http.url_template])),
         TtsEngine::Google => format!("Google ({})", first_set(&[&tts_config.google.model])),
         TtsEngine::Microsoft => {

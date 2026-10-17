@@ -28,6 +28,7 @@
     "openai",
     "elevenlabs",
     "cartesia",
+    "fish",
     "google",
     "microsoft"
   ];

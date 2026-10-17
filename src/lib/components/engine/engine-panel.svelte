@@ -81,6 +81,7 @@
       openai: c.openai,
       elevenlabs: c.elevenlabs,
       cartesia: c.cartesia,
+      fish: c.fish,
       google: c.google,
       microsoft: c.microsoft
     };

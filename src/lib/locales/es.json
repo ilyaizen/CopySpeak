@@ -303,6 +303,11 @@
         "description": "TTS en la nube de baja latencia (Sonic 3.5)",
         "detail": "API en la nube con el modelo Sonic 3.5. Requiere una clave de API."
       },
+      "fish": {
+        "title": "Fish Audio",
+        "description": "TTS en la nube expresivo (S2)",
+        "detail": "API en la nube basada en los modelos S2 de Fish Audio. Requiere una clave de API."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "TTS local ONNX ultraligero",
@@ -391,6 +396,14 @@
       "description": "Nube: TTS natural y de baja latencia con Sonic 3.5. Requiere una clave de API y conexión a internet.",
       "apiKey": "Clave de API",
       "apiKeyDescription": "Tu clave de API se guarda en local y nunca se comparte.",
+      "check": "Comprobar",
+      "testEngine": "Probar motor"
+    },
+    "fish": {
+      "title": "Fish Audio",
+      "description": "Nube: Voces de IA expresivas con clonación de voz. Requiere una clave de API y conexión a internet.",
+      "apiKey": "Clave de API",
+      "apiKeyDescription": "Tu clave de API se almacena localmente y nunca se comparte.",
       "check": "Comprobar",
       "testEngine": "Probar motor"
     },
@@ -527,6 +540,7 @@
       "placeholderOpenai": "sk-...",
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
+      "placeholderFish": "Clave de API de Fish Audio",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "Endpoint",

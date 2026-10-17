@@ -303,6 +303,11 @@
         "description": "TTS cloud à faible latence (Sonic 3.5)",
         "detail": "API cloud reposant sur le modèle Sonic 3.5. Nécessite une clé API."
       },
+      "fish": {
+        "title": "Fish Audio",
+        "description": "TTS cloud expressif (S2)",
+        "detail": "API cloud basée sur les modèles S2 de Fish Audio. Nécessite une clé API."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "TTS ONNX locale ultra-légère",
@@ -389,6 +394,14 @@
     "cartesia": {
       "title": "Cartesia",
       "description": "Cloud : TTS naturelle à faible latence reposant sur Sonic 3.5. Nécessite une clé API et une connexion Internet.",
+      "apiKey": "Clé API",
+      "apiKeyDescription": "Votre clé API est stockée localement et n'est jamais partagée.",
+      "check": "Vérifier",
+      "testEngine": "Tester le moteur"
+    },
+    "fish": {
+      "title": "Fish Audio",
+      "description": "Cloud : voix IA expressives avec clonage vocal. Nécessite une clé API et une connexion internet.",
       "apiKey": "Clé API",
       "apiKeyDescription": "Votre clé API est stockée localement et n'est jamais partagée.",
       "check": "Vérifier",
@@ -527,6 +540,7 @@
       "placeholderOpenai": "sk-...",
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
+      "placeholderFish": "Clé API Fish Audio",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "Point de terminaison",

@@ -45,6 +45,7 @@
     "openai",
     "elevenlabs",
     "cartesia",
+    "fish",
     "google",
     "microsoft",
     "kitten",

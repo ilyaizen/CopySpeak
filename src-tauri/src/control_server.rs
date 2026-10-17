@@ -288,6 +288,7 @@ fn urls_like_local_name(host: &str) -> bool {
 fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
     match engine.to_ascii_lowercase().as_str() {
         "cartesia" => Ok(TtsEngine::Cartesia),
+        "fish" => Ok(TtsEngine::Fish),
         "openai" => Ok(TtsEngine::OpenAI),
         "elevenlabs" | "eleven_labs" => Ok(TtsEngine::ElevenLabs),
         "local" => Ok(TtsEngine::Local),

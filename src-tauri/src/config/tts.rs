@@ -13,6 +13,7 @@ pub enum TtsEngine {
     OpenAI,
     ElevenLabs,
     Cartesia,
+    Fish,
     Google,
     Microsoft,
     Edge,
@@ -184,6 +185,44 @@ impl CartesiaConfig {
     pub fn validate(&self) -> Vec<ValidationError> {
         let errors = Vec::new();
         errors
+    }
+}
+
+// ── Fish Audio ────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct FishConfig {
+    // Credential — persisted. Profile owns model/voice/format.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub api_key: String,
+    #[serde(skip_serializing, default)]
+    pub model: String,
+    #[serde(skip_serializing, default)]
+    pub voice_id: String,
+    #[serde(skip_serializing, default)]
+    pub voice_name: Option<String>,
+    #[serde(skip_serializing, default)]
+    pub format: String,
+}
+
+impl Default for FishConfig {
+    fn default() -> Self {
+        Self {
+            api_key: String::new(),
+            model: "s2.1-pro".into(),
+            // Empty = Fish Audio's built-in default voice (`reference_id`
+            // omitted from the request body).
+            voice_id: String::new(),
+            voice_name: None,
+            format: "wav".into(),
+        }
+    }
+}
+
+impl FishConfig {
+    pub fn validate(&self) -> Vec<ValidationError> {
+        Vec::new()
     }
 }
 
@@ -454,6 +493,15 @@ pub struct CartesiaEngineOptions {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
+pub struct FishEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct GoogleEngineOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
@@ -548,6 +596,7 @@ pub enum ProfileEngineOptions {
     OpenAI(OpenAiEngineOptions),
     ElevenLabs(ElevenLabsEngineOptions),
     Cartesia(CartesiaEngineOptions),
+    Fish(FishEngineOptions),
     Google(GoogleEngineOptions),
     Microsoft(MicrosoftEngineOptions),
     Edge(EdgeEngineOptions),
@@ -580,6 +629,7 @@ impl ProfileEngineOptions {
                 | (Self::OpenAI(_), TtsEngine::OpenAI)
                 | (Self::ElevenLabs(_), TtsEngine::ElevenLabs)
                 | (Self::Cartesia(_), TtsEngine::Cartesia)
+                | (Self::Fish(_), TtsEngine::Fish)
                 | (Self::Google(_), TtsEngine::Google)
                 | (Self::Microsoft(_), TtsEngine::Microsoft)
                 | (Self::Edge(_), TtsEngine::Edge)
@@ -619,6 +669,7 @@ impl ProfileEngineOptions {
             TtsEngine::Cartesia => {
                 Self::Cartesia(serde_json::from_value(value).unwrap_or_default())
             }
+            TtsEngine::Fish => Self::Fish(serde_json::from_value(value).unwrap_or_default()),
             TtsEngine::Google => Self::Google(serde_json::from_value(value).unwrap_or_default()),
             TtsEngine::Microsoft => {
                 Self::Microsoft(serde_json::from_value(value).unwrap_or_default())
@@ -684,6 +735,12 @@ impl ProfileEngineOptions {
             _ => None,
         }
     }
+    pub fn fish(&self) -> Option<&FishEngineOptions> {
+        match self {
+            Self::Fish(o) => Some(o),
+            _ => None,
+        }
+    }
     pub fn google(&self) -> Option<&GoogleEngineOptions> {
         match self {
             Self::Google(o) => Some(o),
@@ -729,6 +786,7 @@ impl Serialize for ProfileEngineOptions {
             Self::OpenAI(o) => ("openai", serde_json::to_value(o)),
             Self::ElevenLabs(o) => ("elevenlabs", serde_json::to_value(o)),
             Self::Cartesia(o) => ("cartesia", serde_json::to_value(o)),
+            Self::Fish(o) => ("fish", serde_json::to_value(o)),
             Self::Google(o) => ("google", serde_json::to_value(o)),
             Self::Microsoft(o) => ("microsoft", serde_json::to_value(o)),
             Self::Edge(o) => ("edge", serde_json::to_value(o)),
@@ -777,6 +835,7 @@ impl<'de> Deserialize<'de> for ProfileEngineOptions {
             Some("openai") => Ok(Self::from_engine_map(&TtsEngine::OpenAI, map)),
             Some("elevenlabs") => Ok(Self::from_engine_map(&TtsEngine::ElevenLabs, map)),
             Some("cartesia") => Ok(Self::from_engine_map(&TtsEngine::Cartesia, map)),
+            Some("fish") => Ok(Self::from_engine_map(&TtsEngine::Fish, map)),
             Some("google") => Ok(Self::from_engine_map(&TtsEngine::Google, map)),
             Some("microsoft") => Ok(Self::from_engine_map(&TtsEngine::Microsoft, map)),
             Some("edge") => Ok(Self::from_engine_map(&TtsEngine::Edge, map)),
@@ -915,6 +974,8 @@ pub struct TtsConfig {
     #[serde(default)]
     pub cartesia: CartesiaConfig,
     #[serde(default)]
+    pub fish: FishConfig,
+    #[serde(default)]
     pub google: GoogleTtsConfig,
     #[serde(default)]
     pub microsoft: MicrosoftTtsConfig,
@@ -991,6 +1052,26 @@ fn default_google_profile() -> VoiceProfile {
         engine_options: ProfileEngineOptions::Google(GoogleEngineOptions {
             model: Some("gemini-3.8-flash-tts".into()),
             output_format: Some("wav".into()),
+        }),
+    }
+}
+
+fn default_fish_profile() -> VoiceProfile {
+    VoiceProfile {
+        id: "profile-4b7e9c21".into(),
+        name: "Fish Audio".into(),
+        description: None,
+        engine: TtsEngine::Fish,
+        // Empty = Fish Audio's built-in default voice.
+        voice: String::new(),
+        voice_label: None,
+        speed: 1.0,
+        pitch: 1.0,
+        effects: ProfileEffects::default(),
+        text_processing: ProfileTextProcessing::default(),
+        engine_options: ProfileEngineOptions::Fish(FishEngineOptions {
+            model: Some("s2.1-pro".into()),
+            format: Some("wav".into()),
         }),
     }
 }
@@ -1147,6 +1228,7 @@ impl Default for TtsConfig {
                 default_elevenlabs_profile(),
                 cartesia_profile,
                 default_google_profile(),
+                default_fish_profile(),
             ],
             preset: "kitten-tts".into(),
             command: "uv".into(),
@@ -1167,6 +1249,7 @@ impl Default for TtsConfig {
             openai: OpenAIConfig::default(),
             elevenlabs: ElevenLabsConfig::default(),
             cartesia: CartesiaConfig::default(),
+            fish: FishConfig::default(),
             google: GoogleTtsConfig::default(),
             microsoft: MicrosoftTtsConfig::default(),
             edge: EdgeTtsConfig::default(),
@@ -1192,6 +1275,7 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             TtsEngine::OpenAI => tts.openai.voice.clone(),
             TtsEngine::ElevenLabs => tts.elevenlabs.voice_id.clone(),
             TtsEngine::Cartesia => tts.cartesia.voice_id.clone(),
+            TtsEngine::Fish => tts.fish.voice_id.clone(),
             TtsEngine::Google => tts.google.voice_name.clone(),
             TtsEngine::Microsoft => tts.microsoft.voice_name.clone(),
             TtsEngine::Edge => tts.edge.voice.clone(),
@@ -1208,6 +1292,7 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             catalog_voice_label(&tts.active_backend, &voice).or_else(|| match tts.active_backend {
                 TtsEngine::ElevenLabs => tts.elevenlabs.voice_name.clone(),
                 TtsEngine::Cartesia => tts.cartesia.voice_name.clone(),
+                TtsEngine::Fish => tts.fish.voice_name.clone(),
                 _ => None,
             });
         tts.active_profile_id = "default".into();
@@ -1357,6 +1442,9 @@ impl TtsConfig {
             }
             TtsEngine::Cartesia => {
                 errors.extend(self.cartesia.validate());
+            }
+            TtsEngine::Fish => {
+                errors.extend(self.fish.validate());
             }
             TtsEngine::Google => {
                 errors.extend(self.google.validate());

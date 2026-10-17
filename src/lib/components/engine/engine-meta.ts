@@ -7,7 +7,13 @@
 // (machine/account); voice/model/knobs are profile-owned.
 
 export type CredentialKind = "none" | "api_key" | "api_key_endpoint";
-export type CredentialTarget = "openai" | "elevenlabs" | "cartesia" | "google" | "microsoft";
+export type CredentialTarget =
+  | "openai"
+  | "elevenlabs"
+  | "cartesia"
+  | "fish"
+  | "google"
+  | "microsoft";
 
 // Panel state machines shared between engine-setup (orchestrator) and engine-panel (view).
 export type TestState = "idle" | "testing" | "success" | "fail";
@@ -65,6 +71,14 @@ export const CLOUD_ENGINES: EngineSetupEntry[] = [
     credentialTarget: "cartesia",
     placeholderKey: "placeholderCartesia",
     docsUrl: "https://docs.cartesia.ai/api-reference/tts/bytes"
+  },
+  {
+    id: "fish",
+    kind: "cloud",
+    credential: "api_key",
+    credentialTarget: "fish",
+    placeholderKey: "placeholderFish",
+    docsUrl: "https://docs.fish.audio/api-reference/endpoint/openapi-v1/text-to-speech"
   },
   {
     id: "google",

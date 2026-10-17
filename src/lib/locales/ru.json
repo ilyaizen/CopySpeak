@@ -303,6 +303,11 @@
         "description": "Облачный TTS с низкой задержкой (Sonic 3.5)",
         "detail": "Облачный API на базе модели Sonic 3.5. Требуется API-ключ."
       },
+      "fish": {
+        "title": "Fish Audio",
+        "description": "Выразительный облачный TTS (S2)",
+        "detail": "Облачный API на основе моделей Fish Audio S2. Требуется API-ключ."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "Сверхлёгкий локальный ONNX TTS",
@@ -393,6 +398,14 @@
       "apiKeyDescription": "Ваш API-ключ хранится локально и никому не передаётся.",
       "check": "Проверить",
       "testEngine": "Проверить движок"
+    },
+    "fish": {
+      "title": "Fish Audio",
+      "description": "Облако: выразительные ИИ-голоса с клонированием голоса. Требуется API-ключ и интернет-соединение.",
+      "apiKey": "API-ключ",
+      "apiKeyDescription": "Ваш API-ключ хранится локально и никогда не передаётся.",
+      "check": "Проверить",
+      "testEngine": "Тест движка"
     },
     "elevenlabs": {
       "title": "ElevenLabs",
@@ -527,6 +540,7 @@
       "placeholderOpenai": "sk-...",
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
+      "placeholderFish": "API-ключ Fish Audio",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "Эндпоинт",

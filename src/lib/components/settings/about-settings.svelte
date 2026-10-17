@@ -174,6 +174,17 @@
         </p>
       </div>
 
+      <!-- Fish Audio -->
+      <div>
+        <div class="flex items-center gap-1.5">
+          <Label class="text-sm">{$_("settings.about.fish.title")}</Label>
+          <InfoTooltip text={$_("settings.about.fish.description")} />
+        </div>
+        <p class="text-muted-foreground mt-1 text-xs">
+          {$_("settings.about.fish.detail")}
+        </p>
+      </div>
+
       <!-- Kitten -->
       <div>
         <div class="flex items-center gap-1.5">

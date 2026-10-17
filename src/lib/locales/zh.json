@@ -303,6 +303,11 @@
         "description": "低延迟云端 TTS（Sonic 3.5）",
         "detail": "基于 Sonic 3.5 模型的云 API。需要 API 密钥。"
       },
+      "fish": {
+        "title": "Fish Audio",
+        "description": "富有表现力的云端 TTS（S2）",
+        "detail": "基于 Fish Audio S2 模型的云 API。需要 API 密钥。"
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "超轻量本地 ONNX TTS",
@@ -389,6 +394,14 @@
     "cartesia": {
       "title": "Cartesia",
       "description": "云端：由 Sonic 3.5 驱动的低延迟自然 TTS。需要 API 密钥和网络连接。",
+      "apiKey": "API 密钥",
+      "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会被分享。",
+      "check": "检查",
+      "testEngine": "测试引擎"
+    },
+    "fish": {
+      "title": "Fish Audio",
+      "description": "云端：富有表现力的 AI 声音，支持声音克隆。需要 API 密钥和网络连接。",
       "apiKey": "API 密钥",
       "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会被分享。",
       "check": "检查",
@@ -527,6 +540,7 @@
       "placeholderOpenai": "sk-...",
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
+      "placeholderFish": "Fish Audio API 密钥",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "端点",

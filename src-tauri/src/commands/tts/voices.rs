@@ -66,6 +66,28 @@ pub fn list_tts_voices(
         };
     }
 
+    if engine == TtsEngine::Fish {
+        let cfg = config.lock().unwrap();
+        let backend = crate::tts::fish::FishTtsBackend::new(cfg.tts.fish.clone());
+        return match backend.list_voices() {
+            Ok(voices) => Ok(voices
+                .into_iter()
+                .map(|v| crate::tts::catalog::VoiceCatalogEntry {
+                    id: v.id,
+                    label: v.name,
+                    language: v.language,
+                    description: None,
+                    gender: None,
+                    preview_url: None,
+                })
+                .collect()),
+            Err(e) => {
+                log::warn!("Fish Audio voice refresh failed, using static list: {}", e);
+                Ok(crate::tts::catalog::list_static_voices(&engine))
+            }
+        };
+    }
+
     Ok(crate::tts::catalog::list_static_voices(&engine))
 }
 

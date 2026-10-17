@@ -55,6 +55,13 @@
         output_format: "wav",
         use_manual_voice_id: false
       },
+      fish: {
+        api_key: "",
+        model: "s2.1-pro",
+        voice_id: "",
+        voice_name: undefined,
+        format: "wav"
+      },
       edge: { voice: "en-US-AvaMultilingualNeural" },
       google: { api_key: "", model: "", voice_name: "", output_format: "" },
       microsoft: { api_key: "", endpoint: "", model: "", voice_name: "", output_format: "" },

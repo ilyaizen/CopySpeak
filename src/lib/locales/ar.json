@@ -303,6 +303,11 @@
         "description": "TTS سحابي منخفض الكمون (Sonic 3.5)",
         "detail": "واجهة API سحابية تعمل بنموذج Sonic 3.5. تتطلب مفتاح API."
       },
+      "fish": {
+        "title": "Fish Audio",
+        "description": "TTS سحابي معبّر (S2)",
+        "detail": "API سحابي مبني على نماذج Fish Audio S2. يتطلب مفتاح API."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "TTS محلي بتقنية ONNX فائق الخفة",
@@ -391,6 +396,14 @@
       "description": "سحابي: TTS طبيعي منخفض الكمون يعمل بـ Sonic 3.5. يتطلب مفتاح API واتصالًا بالإنترنت.",
       "apiKey": "مفتاح API",
       "apiKeyDescription": "يُخزَّن مفتاح API محليًا ولا تتم مشاركته أبدًا.",
+      "check": "تحقق",
+      "testEngine": "اختبار المحرك"
+    },
+    "fish": {
+      "title": "Fish Audio",
+      "description": "سحابي: أصوات ذكاء اصطناعي معبّرة مع استنساخ الصوت. يتطلب مفتاح API واتصالاً بالإنترنت.",
+      "apiKey": "مفتاح API",
+      "apiKeyDescription": "يُخزَّن مفتاح API محليًا ولا يُشار أبدًا.",
       "check": "تحقق",
       "testEngine": "اختبار المحرك"
     },
@@ -527,6 +540,7 @@
       "placeholderOpenai": "sk-...",
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
+      "placeholderFish": "مفتاح API الخاص بـ Fish Audio",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "نقطة النهاية",

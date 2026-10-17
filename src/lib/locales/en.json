@@ -303,6 +303,11 @@
         "description": "Low-latency cloud TTS (Sonic 3.5)",
         "detail": "Cloud API powered by the Sonic 3.5 model. Requires an API key."
       },
+      "fish": {
+        "title": "Fish Audio",
+        "description": "Expressive cloud TTS (S2)",
+        "detail": "Cloud API powered by the Fish Audio S2 models. Requires an API key."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "Ultra-lightweight local ONNX TTS",
@@ -389,6 +394,14 @@
     "cartesia": {
       "title": "Cartesia",
       "description": "Cloud: Low-latency, natural TTS powered by Sonic 3.5. Requires an API key and internet connection.",
+      "apiKey": "API Key",
+      "apiKeyDescription": "Your API key is stored locally and never shared.",
+      "check": "Check",
+      "testEngine": "Test Engine"
+    },
+    "fish": {
+      "title": "Fish Audio",
+      "description": "Cloud: Expressive AI voices with voice cloning. Requires an API key and internet connection.",
       "apiKey": "API Key",
       "apiKeyDescription": "Your API key is stored locally and never shared.",
       "check": "Check",
@@ -527,6 +540,7 @@
       "placeholderOpenai": "sk-...",
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
+      "placeholderFish": "Fish Audio API key",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "Endpoint",

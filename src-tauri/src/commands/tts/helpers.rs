@@ -168,6 +168,9 @@ pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<
         TtsEngine::Cartesia => Box::new(crate::tts::cartesia::CartesiaTtsBackend::new(
             tts_config.cartesia.clone(),
         )),
+        TtsEngine::Fish => Box::new(crate::tts::fish::FishTtsBackend::new(
+            tts_config.fish.clone(),
+        )),
         TtsEngine::Http => Box::new(crate::tts::http::HttpTtsBackend::new(
             tts_config.http.clone(),
         )),
@@ -283,6 +286,20 @@ pub(crate) fn create_backend_from_effective(
             }
             Box::new(crate::tts::cartesia::CartesiaTtsBackend::new(config))
         }
+        TtsEngine::Fish => {
+            let mut config = tts_config.fish.clone();
+            config.voice_id = eff.voice.clone();
+            config.voice_name = eff.voice_label.clone().or(config.voice_name);
+            if let Some(o) = eff.engine_options.fish() {
+                if let Some(model) = o.model.clone() {
+                    config.model = model;
+                }
+                if let Some(format) = o.format.clone() {
+                    config.format = format;
+                }
+            }
+            Box::new(crate::tts::fish::FishTtsBackend::new(config))
+        }
         TtsEngine::Http => {
             let mut config = tts_config.http.clone();
             config.voice = eff.voice.clone();
@@ -359,6 +376,7 @@ pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> S
         TtsEngine::OpenAI => tts_config.openai.voice.clone(),
         TtsEngine::ElevenLabs => tts_config.elevenlabs.voice_id.clone(),
         TtsEngine::Cartesia => tts_config.cartesia.voice_id.clone(),
+        TtsEngine::Fish => tts_config.fish.voice_id.clone(),
         TtsEngine::Http => tts_config.http.voice.clone(),
         TtsEngine::Google => tts_config.google.voice_name.clone(),
         TtsEngine::Microsoft => tts_config.microsoft.voice_name.clone(),
@@ -385,6 +403,7 @@ pub(crate) fn engine_identifier(active: &TtsEngine) -> String {
         TtsEngine::OpenAI => "openai".to_string(),
         TtsEngine::ElevenLabs => "elevenlabs".to_string(),
         TtsEngine::Cartesia => "cartesia".to_string(),
+        TtsEngine::Fish => "fish".to_string(),
         TtsEngine::Http => "http".to_string(),
         TtsEngine::Google => "google".to_string(),
         TtsEngine::Microsoft => "microsoft".to_string(),
@@ -453,6 +472,14 @@ pub(crate) fn voice_display_name(
                 .unwrap_or(voice_id)
                 .to_lowercase()
         }
+        TtsEngine::Fish => voice_label.map(slugify_filename_part).unwrap_or_else(|| {
+            if voice_id.trim().is_empty() {
+                // Fish's built-in default voice.
+                "fish".to_string()
+            } else {
+                slugify_filename_part(voice_id)
+            }
+        }),
         TtsEngine::Kitten => voice_id.to_lowercase(),
         TtsEngine::Qwen => voice_id.to_lowercase(),
         TtsEngine::Piper => voice_id
@@ -556,6 +583,7 @@ pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
         TtsEngine::OpenAI => "openai",
         TtsEngine::ElevenLabs => "elevenlabs",
         TtsEngine::Cartesia => "cartesia",
+        TtsEngine::Fish => "fish",
         TtsEngine::Http => "http",
         TtsEngine::Google => "google",
         TtsEngine::Microsoft => "microsoft",

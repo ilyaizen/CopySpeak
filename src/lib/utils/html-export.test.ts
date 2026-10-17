@@ -80,6 +80,7 @@ describe("HTML Export Utilities", () => {
         openai: 0,
         elevenlabs: 0,
         cartesia: 0,
+        fish: 0,
         google: 0,
         microsoft: 0,
         edge: 0,

@@ -303,6 +303,11 @@
         "description": "कम लेटेंसी वाला क्लाउड TTS (Sonic 3.5)",
         "detail": "Sonic 3.5 मॉडल पर आधारित क्लाउड API। API कुंजी आवश्यक है।"
       },
+      "fish": {
+        "title": "Fish Audio",
+        "description": "अभिव्यक्तिपूर्ण क्लाउड TTS (S2)",
+        "detail": "Fish Audio S2 मॉडल पर आधारित क्लाउड API। API कुंजी आवश्यक है।"
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "बेहद हल्का लोकल ONNX TTS",
@@ -393,6 +398,14 @@
       "apiKeyDescription": "आपकी API कुंजी लोकल रूप से सहेजी जाती है और कभी साझा नहीं की जाती।",
       "check": "जाँचें",
       "testEngine": "इंजन परखें"
+    },
+    "fish": {
+      "title": "Fish Audio",
+      "description": "क्लाउड: वॉइस क्लोनिंग के साथ अभिव्यक्तिपूर्ण AI आवाज़ें। API कुंजी और इंटरनेट कनेक्शन आवश्यक है।",
+      "apiKey": "API कुंजी",
+      "apiKeyDescription": "आपकी API कुंजी केवल स्थानीय रूप से संग्रहीत होती है और कभी साझा नहीं की जाती।",
+      "check": "जाँचें",
+      "testEngine": "इंजन परीक्षण"
     },
     "elevenlabs": {
       "title": "ElevenLabs",
@@ -527,6 +540,7 @@
       "placeholderOpenai": "sk-...",
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
+      "placeholderFish": "Fish Audio API कुंजी",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "एंडपॉइंट",

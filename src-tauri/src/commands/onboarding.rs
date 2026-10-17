@@ -25,6 +25,7 @@ fn engine_display_name(engine: &TtsEngine) -> String {
         TtsEngine::OpenAI => "OpenAI".into(),
         TtsEngine::ElevenLabs => "ElevenLabs".into(),
         TtsEngine::Cartesia => "Cartesia".into(),
+        TtsEngine::Fish => "Fish Audio".into(),
         TtsEngine::Http => "HTTP".into(),
         TtsEngine::Google => "Google".into(),
         TtsEngine::Microsoft => "Microsoft".into(),

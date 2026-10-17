@@ -119,6 +119,58 @@ pub fn check_cartesia_credentials(
     }
 }
 
+/// Validate a Fish Audio API key via GET /model (no synthesis credits consumed).
+#[tauri::command]
+pub fn check_fish_credentials(
+    config: State<'_, Mutex<AppConfig>>,
+) -> Result<CredentialCheckResult, String> {
+    if crate::logging::is_debug_mode() {
+        log::debug!("[IPC] check_fish_credentials called");
+    }
+
+    let api_key =
+        crate::secrets::resolve(&config.lock().unwrap().tts.fish.api_key, &["FISH_API_KEY"]);
+
+    if api_key.trim().is_empty() {
+        return Ok(CredentialCheckResult {
+            success: false,
+            message: "API key is empty. Enter your Fish Audio API key.".into(),
+            error_type: Some("api_key_missing".into()),
+        });
+    }
+
+    let client = reqwest::blocking::Client::new();
+    match client
+        .get("https://api.fish.audio/model")
+        .query(&[("page_size", "1"), ("page_number", "1")])
+        .bearer_auth(&api_key)
+        .send()
+    {
+        Ok(resp) => match resp.status().as_u16() {
+            200 => Ok(CredentialCheckResult {
+                success: true,
+                message: "Fish Audio API key is valid.".into(),
+                error_type: None,
+            }),
+            401 | 403 => Ok(CredentialCheckResult {
+                success: false,
+                message: "Authentication failed. Check your Fish Audio API key.".into(),
+                error_type: Some("auth_failed".into()),
+            }),
+            status => Ok(CredentialCheckResult {
+                success: false,
+                message: format!("Fish Audio API returned unexpected status: {}", status),
+                error_type: Some("http_error".into()),
+            }),
+        },
+        Err(e) => Ok(CredentialCheckResult {
+            success: false,
+            message: format!("Network error: {}", e),
+            error_type: Some("http_error".into()),
+        }),
+    }
+}
+
 /// Check whether an engine has credentials available (config.json or .env),
 /// without making any HTTP requests. Used by the UI to hide the "set up
 /// credentials" hint when .env already supplies the key.
@@ -136,6 +188,7 @@ pub fn has_engine_credentials(engine: String, config: State<'_, Mutex<AppConfig>
         "cartesia" => {
             !crate::secrets::resolve(&cfg.tts.cartesia.api_key, &["CARTESIA_API_KEY"]).is_empty()
         }
+        "fish" => !crate::secrets::resolve(&cfg.tts.fish.api_key, &["FISH_API_KEY"]).is_empty(),
         "google" => !crate::secrets::resolve(
             &cfg.tts.google.api_key,
             &["GEMINI_API_KEY", "GOOGLE_API_KEY"],
