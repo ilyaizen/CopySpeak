@@ -69,6 +69,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Start the browser session's state ticker at accept time, not after `speak_queued` returns; a post-synthesis ticker pins the companion panel at `buffering` for the whole generation while audio already plays.
 - The browser pipe serves one client at a time; the native host retries `ERROR_PIPE_BUSY` with `WaitNamedPipeW` instead of failing the reading.
 - Send a state frame's `word` only while `playing` or `paused` with `word_available`: the extension disconnects its native port (badge `!`) on any frame its parser rejects, and a trigger clip is announced audible while still `buffering`, at 0 ms over its first word.
+- Treat the double-copy announce as arriving LATE: a clipboard copy fires no extension event, so ping the worker from the page's `copy` event and let `begin_trigger` wait bounded for the port + `hello` — gating on a live companion at copy time silently dropped every follow started from a sleeping worker, leaving only the stale `!` badge.
 
 ## History & cache
 

@@ -198,13 +198,16 @@ impl TriggerContext {
             );
 
             // The copied text, before sanitize and truncation, is what a page
-            // selection can match; only sent when a companion is following.
-            let trigger = crate::browser_bridge::follows_triggers(&self.app).then(|| {
-                crate::browser_bridge::SpeakTrigger {
+            // selection can match. Attach whenever the text could be a page
+            // selection at all — whether a companion actually follows is
+            // begin_trigger's call, and it waits bounded for the connection
+            // the page's copy ping wakes. Gating HERE on a live companion
+            // raced that wake: a sleeping worker silently dropped the follow.
+            let trigger = (text.encode_utf16().count() <= crate::browser_bridge::MAX_TEXT_UNITS)
+                .then(|| crate::browser_bridge::SpeakTrigger {
                     source: crate::browser_bridge::TriggerSource::DoubleCopy,
                     raw_text: text.to_string(),
-                }
-            });
+                });
 
             // Emit the full text — the frontend will call speak_queued,
             // which handles pagination and sequential fragment playback.

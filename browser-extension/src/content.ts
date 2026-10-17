@@ -55,6 +55,12 @@ if (!scope[marker]) {
       .catch(() => hover.setEnabled(false));
   }
   refreshSiteAccess();
+  // Wake the worker on every copy: the double-copy trigger announces within
+  // milliseconds of the second copy, and only an awake worker holds the
+  // native-host port the announce travels through. One message per copy.
+  document.addEventListener("copy", () => {
+    void chrome.runtime.sendMessage({ type: "wake" }).catch(() => {});
+  });
   const sendControl = (action: ControlAction) => {
     const target = owner?.readingId
       ? { reading_id: owner.readingId }

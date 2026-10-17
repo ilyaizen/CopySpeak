@@ -44,6 +44,9 @@ export type CopyCommand =
   | { type: "trigger"; event: NativeEvent }
   // Frame -> worker: my selection matched; route this trigger's states here.
   | { type: "trigger-claim"; document_token: string; trigger_id: string }
+  // Frame -> worker on every page copy: wakes the worker so the native-host
+  // port is live before the double-copy trigger the copy may start.
+  | { type: "wake" }
   | { type: "control"; document_token: string; reading_id: string; action: ControlAction }
   | { type: "control"; document_token: string; trigger_id: string; action: ControlAction }
   | { type: "settings" };

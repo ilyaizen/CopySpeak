@@ -28,6 +28,7 @@ use std::collections::HashMap;
 use std::os::unix::net::UnixListener;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicU8, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Listener, Manager, State};
 #[cfg(target_os = "windows")]
 use windows::Win32::Foundation::{HANDLE, WAIT_OBJECT_0};
@@ -50,11 +51,21 @@ const PIPE_NAME: &str = r"\\.\pipe\copyspeak-browser";
 const MAX_FRAME: usize = 256 * 1024;
 /// Largest text (UTF-16 units) a page selection can carry, the same bound the
 /// extension and native host put on captured readings.
-const MAX_TEXT_UNITS: usize = 65536;
+pub(crate) const MAX_TEXT_UNITS: usize = 65536;
 /// Sentinel for "no active fragment".
 const NO_FRAGMENT: usize = usize::MAX;
 /// How often the state ticker re-evaluates the projected word.
 const TICK_MS: u64 = 50;
+
+/// How long a trigger waits for the companion's connection before giving up.
+/// The copy preceding the trigger wakes the extension worker (the page's
+/// `copy` event pings it), so the fresh native-host port + `hello` land a few
+/// hundred milliseconds after the copy — never synchronously with it. The
+/// bound is generous enough for cold worker starts and stays finite so a
+/// genuinely absent companion cancels the session instead of pinning it.
+const TRIGGER_ANNOUNCE_WAIT: Duration = Duration::from_millis(2000);
+/// Poll interval while waiting for the companion connection.
+const TRIGGER_ANNOUNCE_POLL: Duration = Duration::from_millis(25);
 
 /// What started a speak the browser companion can follow in the page.
 /// The tray is deliberately absent: it speaks the clipboard, not a selection.
@@ -376,11 +387,6 @@ impl BrowserBridge {
     fn follows_triggers(&self) -> bool {
         self.connected.load(Ordering::Relaxed) && self.automatic_mode.load(Ordering::Relaxed)
     }
-}
-
-/// See [`BrowserBridge::follows_triggers`].
-pub fn follows_triggers(app: &AppHandle) -> bool {
-    app.state::<BrowserBridge>().follows_triggers()
 }
 
 /// Native host connected (`Some`) or gone (`None`). A disconnect also forgets
@@ -1093,10 +1099,13 @@ fn install_session(app: &AppHandle, session: Arc<BrowserSession>) {
 /// like a browser reading. Observer only — the speak runs unchanged whether
 /// or not this does anything. Call once the final spoken text (after
 /// sanitize and condense) is known and before synthesis emits audio.
+///
+/// The announce does not require a companion to be connected YET: the copy
+/// preceding this trigger wakes the extension worker (content-script `copy`
+/// ping), and its port + `hello` arrive a few hundred milliseconds later —
+/// gating on a live connection here raced that wake and silently dropped
+/// every browser follow that started from a sleeping worker.
 pub fn begin_trigger(app: &AppHandle, trigger_id: &str, trigger: &SpeakTrigger, spoken_text: &str) {
-    if !follows_triggers(app) {
-        return;
-    }
     let raw_text = &trigger.raw_text;
     if raw_text.trim().is_empty()
         || raw_text.encode_utf16().count() > MAX_TEXT_UNITS
@@ -1104,6 +1113,7 @@ pub fn begin_trigger(app: &AppHandle, trigger_id: &str, trigger: &SpeakTrigger, 
     {
         return;
     }
+    #[cfg(not(target_os = "windows"))]
     let bridge = app.state::<BrowserBridge>();
     let session = Arc::new(BrowserSession {
         id: trigger_id.to_string(),
@@ -1120,20 +1130,81 @@ pub fn begin_trigger(app: &AppHandle, trigger_id: &str, trigger: &SpeakTrigger, 
         stream: Mutex::new(bridge.client.lock().unwrap().clone()),
     });
     install_session(app, session.clone());
-
-    if let Err(e) = send_to_host(&bridge, &trigger_started_message(trigger_id, trigger)) {
-        log::warn!("[Browser] trigger-started not delivered: {}", e);
-        session.cancelled.store(true, Ordering::Relaxed);
-        bridge.sessions.lock().unwrap().remove(trigger_id);
-        return;
-    }
-    log::info!(
-        "[Browser] Trigger started: trigger_id={} source={:?} chars={}",
-        trigger_id,
-        trigger.source,
-        raw_text.chars().count()
+    spawn_trigger_announce(
+        app.clone(),
+        trigger_id.to_string(),
+        session,
+        trigger.clone(),
     );
-    spawn_state_ticker(app.clone(), session);
+}
+
+/// Announce the trigger once the companion can receive it: immediately when
+/// it is already connected, otherwise bounded-wait for the connection the
+/// preceding copy woke. On timeout (or once the session was finished
+/// elsewhere — its speak ended before any companion appeared) the session is
+/// cancelled exactly like a failed send: no page ever follows the speak.
+fn spawn_trigger_announce(
+    app: AppHandle,
+    trigger_id: String,
+    session: Arc<BrowserSession>,
+    trigger: SpeakTrigger,
+) -> std::thread::JoinHandle<()> {
+    std::thread::spawn(move || {
+        let bridge = app.state::<BrowserBridge>();
+        if !wait_for(
+            || bridge.follows_triggers(),
+            &session.cancelled,
+            TRIGGER_ANNOUNCE_WAIT,
+            TRIGGER_ANNOUNCE_POLL,
+        ) {
+            if !session.cancelled.swap(true, Ordering::Relaxed) {
+                log::warn!(
+                    "[Browser] Trigger not announced: no companion connected within {}ms",
+                    TRIGGER_ANNOUNCE_WAIT.as_millis()
+                );
+                bridge.sessions.lock().unwrap().remove(&trigger_id);
+            }
+            return;
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            // The connection arrived after the session was built; Unix state
+            // frames flow through the session's own socket, so pick it up now.
+            *session.stream.lock().unwrap() = bridge.client.lock().unwrap().clone();
+        }
+        if let Err(e) = send_to_host(&bridge, &trigger_started_message(&trigger_id, &trigger)) {
+            log::warn!("[Browser] trigger-started not delivered: {}", e);
+            session.cancelled.store(true, Ordering::Relaxed);
+            bridge.sessions.lock().unwrap().remove(&trigger_id);
+            return;
+        }
+        log::info!(
+            "[Browser] Trigger started: trigger_id={} source={:?} chars={}",
+            trigger_id,
+            trigger.source,
+            trigger.raw_text.chars().count()
+        );
+        spawn_state_ticker(app, session);
+    })
+}
+
+/// Wait bounded for `ready`, polling so live state decides. False on timeout
+/// or once `cancelled` flips (the wait's work became moot); true means `ready`
+/// held on the last check and the session is still live.
+fn wait_for(
+    ready: impl Fn() -> bool,
+    cancelled: &AtomicBool,
+    wait: Duration,
+    poll: Duration,
+) -> bool {
+    let deadline = Instant::now() + wait;
+    while !ready() {
+        if cancelled.load(Ordering::Relaxed) || Instant::now() >= deadline {
+            return false;
+        }
+        std::thread::sleep(poll);
+    }
+    !cancelled.load(Ordering::Relaxed)
 }
 
 /// Announces a trigger speak. Additive to protocol v1: no existing event
@@ -2114,5 +2185,76 @@ mod tests {
             let (_, word, _) = project_state(&session);
             assert_eq!(word.is_some(), has_word, "{status:?}");
         }
+    }
+
+    // ── Deferred trigger announce (the copy wakes the companion) ──
+
+    /// The companion connection the copy wakes lands mid-wait: the bounded
+    /// wait releases as soon as `ready` holds, not at the deadline.
+    #[test]
+    fn trigger_wait_releases_when_the_companion_connects() {
+        let ready_flag = Arc::new(AtomicBool::new(false));
+        let cancelled = AtomicBool::new(false);
+        let late = {
+            let flag = Arc::clone(&ready_flag);
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(60));
+                flag.store(true, Ordering::Relaxed);
+            })
+        };
+        let started = Instant::now();
+        let ready = || ready_flag.load(Ordering::Relaxed);
+        assert!(wait_for(
+            ready,
+            &cancelled,
+            Duration::from_secs(5),
+            Duration::from_millis(5)
+        ));
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "released by the connection, not the deadline"
+        );
+        late.join().unwrap();
+    }
+
+    /// No companion ever connects: the wait gives up at the bound instead of
+    /// pinning the session (spawn_trigger_announce then cancels and logs).
+    #[test]
+    fn trigger_wait_times_out_without_a_companion() {
+        let cancelled = AtomicBool::new(false);
+        let started = Instant::now();
+        assert!(!wait_for(
+            || false,
+            &cancelled,
+            Duration::from_millis(60),
+            Duration::from_millis(5)
+        ));
+        assert!(started.elapsed() >= Duration::from_millis(60));
+    }
+
+    /// The speak finished before any companion appeared: the wait abandons
+    /// immediately instead of announcing a finished speak later.
+    #[test]
+    fn trigger_wait_abandons_when_the_speak_finishes_first() {
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let finisher = {
+            let flag = Arc::clone(&cancelled);
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(30));
+                flag.store(true, Ordering::Relaxed);
+            })
+        };
+        let started = Instant::now();
+        assert!(!wait_for(
+            || false,
+            &cancelled,
+            Duration::from_secs(5),
+            Duration::from_millis(5)
+        ));
+        assert!(
+            started.elapsed() < Duration::from_secs(1),
+            "cancelled beats the deadline"
+        );
+        finisher.join().unwrap();
     }
 }

@@ -89,6 +89,10 @@ function connect() {
   if (port) return port;
   const p = chrome.runtime.connectNative("com.copyspeak.browser");
   port = p;
+  // A fresh connection heals the "!" a dead port left behind: the badge
+  // text persists across worker restarts, long after the app it blamed for
+  // "native-host installation" came back.
+  void badge("", "Read selection with CopySpeak");
   p.onDisconnect.addListener(() => {
     if (port !== p) return;
     port = null;
@@ -214,6 +218,15 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "companion-settings") await chrome.runtime.openOptionsPage();
 });
 chrome.runtime.onMessage.addListener((message: CopyCommand, sender, respond) => {
+  // A page copy pings us (content.ts): a clipboard copy fires no extension
+  // event, so without this the worker — and its native-host port — stay
+  // asleep exactly when a double-copy trigger needs them. A cold worker runs
+  // the full initialize for the real `automatic` value; a warm worker only
+  // reconnects a port that died and nothing else has revived.
+  if (message.type === "wake") {
+    if (!automatic || !port) void initialize();
+    return;
+  }
   const r = route;
   if (message.type === "site-access") {
     if (!sender.url || !/^https?:/.test(sender.url)) {
