@@ -98,6 +98,11 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Keep version numbers out of locale strings; they rot on every release (all nine locales carried `v0.1.8` inside the screenshot caption).
 - The landing flag `VITE_IS_VERCEL` is never read from the environment: `vite.config.js` `define` maps it from `process.env.VERCEL` (what Vercel's runners set). Local previews must run `bun run dev:landing` / `preview:landing` (they set `VERCEL=1`); exporting `VITE_IS_VERCEL=1` yourself silently serves the Play UI.
 
+## Icons
+
+- An asset-only icon swap does not re-embed the exe icon: tauri-build's generated `.rc` references `icons/icon.ico` by path, so cargo relinks without recompiling the resource. Touch `src-tauri/build.rs` (or `cargo clean -p copyspeak`) to force the resource rebuild, then verify by pixel-comparing `ExtractAssociatedIcon` output against the new ico's 32px frame. The tray's `include_bytes!` icons re-embed on the same rebuild; the installed `%LOCALAPPDATA%` app only changes on the next release install.
+- Strip trailing whitespace when installing a designer-exported SVG verbatim: `git diff --check` fails on QuiverAI/Arrow-exported indentation lines, and whitespace-only stripping is render-safe (verify with a byte-compare of a re-render).
+
 ## Release
 
 - `bun run bump` derives the new version only from `src/lib/version.ts`; verify all six ✅ lines after bumping. It never touches `browser-extension/` — bump the extension's `manifest.json` + `package.json` by hand on its own cadence.
