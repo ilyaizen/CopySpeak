@@ -56,10 +56,10 @@ And forced the underbrush—and that was all.`
     alt=""
     aria-hidden="true"
     class="absolute inset-0 hidden h-full w-full object-cover dark:block"
-    style="object-position: 30% 50%;"
+    style="object-position: 30% 50%; filter: brightness(1.5) saturate(1.05);"
   />
 
-  <div class="absolute inset-0 bg-[#c5e0db]/50 dark:bg-[#0a0f0c]/70"></div>
+  <div class="absolute inset-0 bg-[#c5e0db]/50 dark:bg-[#0a0f0c]/30"></div>
   <div
     class="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-[#c5e0db] to-transparent dark:from-[#0a0f0c]"
   ></div>
