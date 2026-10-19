@@ -164,6 +164,15 @@ bun run bump:major          # Major version bump (x.0.0)
 | UI              | shadcn-svelte, Tailwind CSS v4           |
 | i18n            | svelte-i18n, 9 locales, Crowdin          |
 
+## Roadmap
+
+**Next release** targets low-latency, interactive TTS on low-VRAM GPUs and CPU-only machines:
+
+- Low time-to-first-audio (TTFA) for responsive playback
+- Small VRAM and RAM footprint for local engines
+
+**Deferred:** Chatterbox. Its generation latency is too high for immediate, responsive read-aloud, so it is out of the next release and deferred to a later one.
+
 ## Changelog
 
 See [CHANGELOG.md](./CHANGELOG.md) for recent changes.
