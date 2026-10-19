@@ -41,6 +41,7 @@
   <Button
     variant="ghost"
     size="icon"
+    class="rtl:rotate-180"
     onclick={onSkipBack}
     disabled={!canSkip}
     title={$_("play.skipBackTooltip")}
@@ -51,6 +52,7 @@
   <Button
     variant="default"
     size="icon"
+    class="rtl:rotate-180"
     onclick={canPause ? onTogglePause : onPlay}
     disabled={!canPrimary}
     title={canPause
@@ -77,6 +79,7 @@
   <Button
     variant="ghost"
     size="icon"
+    class="rtl:rotate-180"
     onclick={onSkipForward}
     disabled={!canSkip}
     title={$_("play.skipFwdTooltip")}
@@ -87,6 +90,7 @@
   <Button
     variant="ghost"
     size="icon"
+    class="rtl:rotate-180"
     onclick={onStop}
     disabled={!canStop}
     title={$_("play.stopTooltip")}
