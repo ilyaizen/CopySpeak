@@ -30,6 +30,13 @@ Only ordinary, visible HTML text selections up to 65,536 UTF-16 units are
 supported. Editors, PDFs, shadow DOM, and browsers without CSS Custom Highlight
 support are rejected.
 
+Local HTML and rendered Markdown files (for example, Markdown Viewer) also support
+double-copy highlighting. Enable **Allow access to file URLs** on CopySpeak
+Companion's details page in `chrome://extensions` or `edge://extensions`, then
+reload the file tab. This browser-controlled permission is separate from saved
+website grants and must be enabled for CopySpeak Companion, not just the Markdown
+viewer. Highlighting still requires ordinary selectable HTML in the file tab.
+
 ## Architecture
 
 `browser-extension/` captures the selection and owns the page UI.

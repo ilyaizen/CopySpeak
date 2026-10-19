@@ -36,9 +36,24 @@ async function deliver(r: Frame, message: DeliverableMessage) {
     { documentId: r.documentId }
   );
 }
-const permittedOrigins = async () =>
-  (await chrome.permissions.getAll()).origins?.filter((origin) => /^https?:\/\//.test(origin)) ??
-  [];
+async function permittedOrigins() {
+  const origins = (await chrome.permissions.getAll()).origins ?? [];
+  const fileAccess = await chrome.extension.isAllowedFileSchemeAccess();
+  return origins.filter(
+    (origin) => /^https?:\/\//.test(origin) || (origin === "file:///*" && fileAccess)
+  );
+}
+async function hasSiteAccess(url: string) {
+  if (url.startsWith("file://"))
+    return (
+      (await chrome.extension.isAllowedFileSchemeAccess()) &&
+      (await chrome.permissions.contains({ origins: ["file:///*"] }))
+    );
+  return (
+    /^https?:/.test(url) &&
+    (await chrome.permissions.contains({ origins: [new URL(url).origin + "/*"] }))
+  );
+}
 /** Offer a new trigger speak to every frame of every permitted tab; frames whose selection matches claim it. */
 async function announce(e: TriggerStarted) {
   dropTrigger();
@@ -229,13 +244,11 @@ chrome.runtime.onMessage.addListener((message: CopyCommand, sender, respond) => 
   }
   const r = route;
   if (message.type === "site-access") {
-    if (!sender.url || !/^https?:/.test(sender.url)) {
+    if (!sender.url) {
       respond(false);
       return;
     }
-    void chrome.permissions
-      .contains({ origins: [new URL(sender.url).origin + "/*"] })
-      .then(respond, () => respond(false));
+    void hasSiteAccess(sender.url).then(respond, () => respond(false));
     return true;
   }
   if (message.type === "settings" && sender.url === chrome.runtime.getURL("options.html")) {
@@ -246,21 +259,11 @@ chrome.runtime.onMessage.addListener((message: CopyCommand, sender, respond) => 
     return true;
   }
   if (message.type === "read-paragraph") {
-    if (
-      sender.tab?.id === undefined ||
-      !sender.documentId ||
-      !sender.url ||
-      !/^https?:/.test(sender.url)
-    )
-      return;
+    if (sender.tab?.id === undefined || !sender.documentId || !sender.url) return;
     const tab = sender.tab;
     const documentId = sender.documentId;
     void chrome.storage.local.get("hoverRead").then(async (settings) => {
-      if (
-        settings.hoverRead !== true ||
-        !(await chrome.permissions.contains({ origins: [new URL(sender.url!).origin + "/*"] }))
-      )
-        return;
+      if (settings.hoverRead !== true || !(await hasSiteAccess(sender.url!))) return;
       await capture(tab, documentId);
     });
     return;
