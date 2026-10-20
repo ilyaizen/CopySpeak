@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.14] - 2026-10-20
+
+### Added
+
+- **Fish Audio cloud provider** — four models: `s2.1-pro`, `s2.1-pro-free` (the default, works on accounts without credits), `s2-pro` and `drama-3`. Playback starts while audio streams in. Fish returns no word timings, so word highlighting is estimated.
+
+- **Dramatize (Experimental)** — an LLM rewrites a reading with emote tags before it is spoken, for Home reads and double-copy. It needs an ElevenLabs v4 or v3 model, or a Fish S2 model. The Home switch is disabled, with the reason in a tooltip, when the active profile's model cannot read emote tags. A rewrite that adds, drops or changes any word is discarded, and the original text is spoken.
+
+- **Experimental switch** — in Advanced. It shows Dramatize, effects and Post-processing. Off, they are hidden and forced off; your saved settings are kept.
+
+- **New app icon** — the volume-glass mark, with a yellow tray icon while busy.
+
+### Changed
+
+- **Settings sidebar** — General, Playback, History, Advanced and About, plus Post-processing while Experimental is on. Each entry scrolls to its section. Every setting explains itself in a tooltip instead of text under the row.
+
+- **Duck** — on/off plus a level slider (default 20). The mode dropdown and fade slider are gone, and the fade is fixed at 150 ms. Users who had mode "mute" now duck to their level instead of going silent.
+
+- **Effects** — hidden unless Experimental is on, and the `/effects` page returns to Home while it is off. Saved effect settings are kept.
+
+- **Post-processing** — one Dramatize prompt replaces the three earlier prompts, and Restore default reads the backend default. Deleting a provider is removed; adding one stays.
+
+- **Minimum length** — new configs default to 0 characters. Existing configs keep their stored value.
+
+### Fixed
+
+- **Browser companion follows double-copy captions in local file tabs** — captions reach Markdown and other local files, not only web pages.
+
+- **Browser companion wakes on a page copy** — the first double-copy after the worker went idle no longer shows the stale `!` badge.
+
+- **Playback transport buttons in RTL** — they rotate correctly in right-to-left layouts.
+
+- **Updater in browser mode** — skips Tauri-only calls instead of logging errors.
+
 ## [0.2.13] - 2026-10-16
 
 ### Fixed
@@ -840,7 +874,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.12...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.14...HEAD
+[0.2.14]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.13...v0.2.14
+[0.2.13]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.12...v0.2.13
 [0.2.12]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.11...v0.2.12
 [0.2.11]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.10...v0.2.11
 [0.2.10]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.9...v0.2.10

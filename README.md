@@ -64,14 +64,14 @@ Most read-aloud tools are browser extensions chained to a cloud API, or desktop 
 
 ## Install
 
-Grab a build from [Releases](https://github.com/ilyaizen/CopySpeak/releases). Asset names per platform (v0.2.13 shown):
+Grab a build from [Releases](https://github.com/ilyaizen/CopySpeak/releases). Asset names per platform (v0.2.14 shown):
 
 | Platform          | Asset                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------ |
-| Windows           | `CopySpeak_0.2.13_x64-setup.exe` (`.msi` also available)                                         |
-| macOS (Intel)     | `CopySpeak_0.2.13_x64.dmg`                                                                       |
-| Linux             | `CopySpeak_0.2.13_amd64.AppImage`, `CopySpeak_0.2.13_amd64.deb`, `CopySpeak-0.2.13-1.x86_64.rpm` |
-| Browser companion | `CopySpeak-Companion-0.2.13.zip`                                                                 |
+| Windows           | `CopySpeak_0.2.14_x64-setup.exe` (`.msi` also available)                                         |
+| macOS (Intel)     | `CopySpeak_0.2.14_x64.dmg`                                                                       |
+| Linux             | `CopySpeak_0.2.14_amd64.AppImage`, `CopySpeak_0.2.14_amd64.deb`, `CopySpeak-0.2.14-1.x86_64.rpm` |
+| Browser companion | `CopySpeak-Companion-0.2.14.zip`                                                                 |
 
 ### Windows
 
@@ -91,14 +91,14 @@ Tested on Omarchy (Arch, Wayland):
 
 ```bash
 # AppImage
-chmod +x CopySpeak_0.2.13_amd64.AppImage
-./CopySpeak_0.2.13_amd64.AppImage
+chmod +x CopySpeak_0.2.14_amd64.AppImage
+./CopySpeak_0.2.14_amd64.AppImage
 
 # Debian / Ubuntu
-sudo apt install ./CopySpeak_0.2.13_amd64.deb
+sudo apt install ./CopySpeak_0.2.14_amd64.deb
 
 # Fedora / openSUSE
-sudo dnf install ./CopySpeak-0.2.13-1.x86_64.rpm
+sudo dnf install ./CopySpeak-0.2.14-1.x86_64.rpm
 ```
 
 On Wayland compositors the HUD runs through XWayland and global hotkeys are protocol-impossible — trigger readings by double-copy, the tray, or a compositor keybind that POSTs to the local [control server](docs/profile-engine-settings.md).
@@ -106,7 +106,7 @@ On Wayland compositors the HUD runs through XWayland and global hotkeys are prot
 ### Browser companion (Chrome / Edge)
 
 1. Install and start the desktop app first — the extension drives it.
-2. Download `CopySpeak-Companion-0.2.13.zip` from the same release and extract it.
+2. Download `CopySpeak-Companion-0.2.14.zip` from the same release and extract it.
 3. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the extracted `dist` folder.
 4. Open the extension's settings to grant per-site access, then select text and double-copy (or use the extension's toolbar button) to read it through the app — the extension highlights the passage as it's spoken.
 
