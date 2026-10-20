@@ -67,6 +67,7 @@ Every line exists because it went wrong at least once. On mistake, correction, o
 
 Before editing an area, read its section in [`docs/agents/failure-log.md`](docs/agents/failure-log.md):
 
+- **Settings**: stacked sections, scroll-spy, row tooltips, Experimental-gated sections
 - **Playback**: webview audio, `pcm-stream.ts`, `TimeStretcher`, effects, streaming, HUD events, ducking
 - **Captions**: word timings, caption metadata, `.captions.json`
 - **Engines**: installers, Python wrappers, daemon protocol, CUDA, adding a `TtsEngine`

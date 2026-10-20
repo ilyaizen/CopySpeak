@@ -6,11 +6,13 @@
   import { Search, Calendar, X, Filter } from "@lucide/svelte";
   import type { HistoryFilters, HistoryItem } from "#lib/types";
 
-  let props = $props<{
+  let props: Props = $props();
+
+  interface Props {
     items: HistoryItem[];
     onFiltersChange?: (filters: HistoryFilters) => void;
     class?: string;
-  }>();
+  }
 
   // svelte-ignore state_referenced_locally
   let { onFiltersChange, class: className } = props;

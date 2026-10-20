@@ -47,6 +47,12 @@ pub struct GeneralConfig {
     pub auto_save_profiles: bool,
     #[serde(default = "default_locale")]
     pub locale: String,
+    /// Master switch for Experimental features (Dramatize post-processing,
+    /// the Post-processing panel, Effects). Off hides them in the UI AND
+    /// forces them off at synthesis time; saved settings are kept for when
+    /// it is turned back on.
+    #[serde(default)]
+    pub experimental_enabled: bool,
 }
 
 fn default_update_checks_enabled() -> bool {

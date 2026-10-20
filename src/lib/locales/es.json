@@ -59,7 +59,9 @@
       "history": "Historial",
       "effects": "Efectos",
       "advanced": "Avanzado",
-      "about": "Acerca de"
+      "about": "Acerca de",
+      "playback": "Reproducción",
+      "postProcess": "Posprocesamiento"
     },
     "sections": {
       "general": "General",
@@ -120,7 +122,9 @@
       "startMinimizedLabel": "Iniciar minimizado",
       "startMinimizedTooltip": "Iniciar la aplicación minimizada en la bandeja del sistema",
       "minimizeToTray": "Minimizar a la bandeja al cerrar",
-      "minimizeToTrayTooltip": "Minimizar a la bandeja del sistema en lugar de salir al cerrar la ventana"
+      "minimizeToTrayTooltip": "Minimizar a la bandeja del sistema en lugar de salir al cerrar la ventana",
+      "experimental": "Funciones experimentales",
+      "experimentalDescription": "Muestra y activa funciones experimentales: Dramatize y Efectos. Desactivado las oculta y las fuerza a apagarse; la configuración guardada se conserva."
     },
     "playback": {
       "title": "Ajustes de reproducción",
@@ -132,13 +136,8 @@
       "streamingDescription": "Empieza a reproducir mientras llega el audio. Motores en la nube compatibles: ElevenLabs y Cartesia. Si está desactivado, usa síntesis por lotes y espera a que termine cada petición antes de reproducir.",
       "duck": "Atenuar otras aplicaciones",
       "duckDescription": "Baja el audio de otras aplicaciones mientras CopySpeak habla y luego lo restaura. Por ahora, solo en Windows.",
-      "duckMode": "Modo de atenuación",
-      "duckModeLower": "Bajar",
-      "duckModeMute": "Silenciar",
       "duckLevel": "Nivel de atenuación",
       "duckLevelDescription": "Volumen al que bajan las otras aplicaciones, como porcentaje de su nivel propio",
-      "duckFade": "Fundido (ms)",
-      "duckFadeDescription": "Duración del fundido al atenuar y restaurar; 0 para instantáneo",
       "playbackSpeed": "Velocidad",
       "playbackSpeedDescription": "Velocidad de reproducción (0,5x - 2x)",
       "pitch": "Tono",
@@ -249,8 +248,6 @@
       "baseUrl": "URL base",
       "baseUrlTooltip": "Raíz de la API compatible con OpenAI, p. ej. https://api.groq.com/openai/v1",
       "addProvider": "Añadir proveedor",
-      "deleteProvider": "Eliminar proveedor",
-      "deleteProviderTooltip": "Quita este proveedor de la lista. Los incluidos se pueden volver a añadir restableciendo los ajustes.",
       "refreshModels": "Obtener la lista de modelos",
       "modelsEmpty": "El endpoint no devolvió modelos.",
       "model": "Modelo",
@@ -344,7 +341,8 @@
       "debugMode": "Modo de depuración",
       "debugModeTooltip": "Activar registros detallados e información de estado adicional",
       "refreshing": "actualizando...",
-      "noLogs": "No hay registros disponibles"
+      "noLogs": "No hay registros disponibles",
+      "updateStatusTooltip": "Resultado de la última comprobación de actualizaciones."
     },
     "importExport": {
       "tooltip": "Exporta, importa o restablece tu configuración",
@@ -834,7 +832,10 @@
   "quick": {
     "doubleCopy": "Doble copia",
     "doubleCopyTooltip": "Vigilar el portapapeles para detectar la doble copia",
-    "effectsTooltip": "Aplicar un efecto de audio a la reproducción TTS"
+    "effectsTooltip": "Aplicar un efecto de audio a la reproducción TTS",
+    "dramatize": "Dramatizar",
+    "dramatizeTooltip": "Reescribe el texto con etiquetas de emoción antes de leerlo. Usa tu LLM de posprocesado y, si falla, lee el texto original.",
+    "dramatizeUnsupported": "Dramatizar requiere un modelo de voz que lea etiquetas de emoción. El modelo del perfil activo no lo admite."
   },
   "recent": {
     "viewAll": "Ver todo el historial",

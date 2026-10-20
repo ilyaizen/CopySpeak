@@ -14,7 +14,7 @@
 
 #![cfg_attr(not(windows), allow(dead_code))]
 
-use crate::config::{DuckConfig, DuckMode};
+use crate::config::{DuckConfig, DUCK_FADE_MS};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
@@ -29,12 +29,7 @@ pub struct Saved {
 
 /// Volume to set for a session whose own level is `original`.
 pub fn target_volume(original: f32, cfg: &DuckConfig) -> f32 {
-    match cfg.mode {
-        DuckMode::Mute => 0.0,
-        DuckMode::Lower => {
-            (original * f32::from(cfg.level_percent.min(100)) / 100.0).clamp(0.0, 1.0)
-        }
-    }
+    (original * f32::from(cfg.level_percent.min(100)) / 100.0).clamp(0.0, 1.0)
 }
 
 /// True when something other than us changed the volume since we ducked it.
@@ -264,7 +259,7 @@ mod win {
                 continue;
             };
             let applied = target_volume(original, cfg);
-            fade(&s.vol, original, applied, cfg.fade_ms);
+            fade(&s.vol, original, applied, DUCK_FADE_MS);
             saved.push(Saved {
                 id: s.id,
                 original,
@@ -277,7 +272,7 @@ mod win {
         }
     }
 
-    fn restore_all(saved: &mut Vec<Saved>, fade_ms: u32) {
+    fn restore_all(saved: &mut Vec<Saved>) {
         if saved.is_empty() {
             return;
         }
@@ -291,7 +286,7 @@ mod win {
             if user_touched(current, entry.applied) {
                 continue;
             }
-            fade(&s.vol, current, entry.original, fade_ms);
+            fade(&s.vol, current, entry.original, DUCK_FADE_MS);
         }
         write_state(&[]);
     }
@@ -310,7 +305,7 @@ mod win {
                 "[duck] restoring {} session(s) left by a previous run",
                 saved.len()
             );
-            restore_all(&mut saved, 0);
+            restore_all(&mut saved);
         }
         loop {
             let msg = if ducked {
@@ -335,7 +330,7 @@ mod win {
                     duck_new(&cfg, &mut saved);
                 }
                 Some(Cmd::Restore(ack)) => {
-                    restore_all(&mut saved, cfg.fade_ms);
+                    restore_all(&mut saved);
                     ducked = false;
                     if let Some(ack) = ack {
                         let _ = ack.send(());
@@ -344,7 +339,7 @@ mod win {
                 None => {
                     if since.elapsed() > MAX_DUCK {
                         log::warn!("[duck] no playback-finished after {MAX_DUCK:?}; restoring");
-                        restore_all(&mut saved, cfg.fade_ms);
+                        restore_all(&mut saved);
                         ducked = false;
                     } else {
                         duck_new(&cfg, &mut saved);
@@ -359,20 +354,31 @@ mod win {
 mod tests {
     use super::*;
 
-    fn cfg(mode: DuckMode, level: u8) -> DuckConfig {
+    fn cfg(level: u8) -> DuckConfig {
         DuckConfig {
             enabled: true,
-            mode,
             level_percent: level,
-            fade_ms: 0,
         }
     }
 
     #[test]
-    fn lower_scales_the_apps_own_level_and_mute_zeroes_it() {
-        assert!((target_volume(0.8, &cfg(DuckMode::Lower, 25)) - 0.2).abs() < 1e-6);
-        assert_eq!(target_volume(0.8, &cfg(DuckMode::Mute, 25)), 0.0);
-        assert_eq!(target_volume(0.5, &cfg(DuckMode::Lower, 250)), 0.5);
+    fn target_volume_scales_the_apps_own_level() {
+        assert!((target_volume(0.8, &cfg(25)) - 0.2).abs() < 1e-6);
+        assert_eq!(target_volume(0.5, &cfg(250)), 0.5);
+        // Level 0 is the removed "mute" mode's replacement.
+        assert_eq!(target_volume(0.8, &cfg(0)), 0.0);
+    }
+
+    /// Configs saved with the removed `mode`/`fade_ms` fields must still
+    /// load: a mute user silently becomes "lower" at their level.
+    #[test]
+    fn legacy_configs_with_mode_and_fade_still_load() {
+        let duck: DuckConfig = serde_json::from_str(
+            r#"{"enabled": true, "mode": "mute", "level_percent": 20, "fade_ms": 150}"#,
+        )
+        .unwrap();
+        assert!(duck.enabled);
+        assert_eq!(duck.level_percent, 20);
     }
 
     #[test]

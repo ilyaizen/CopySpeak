@@ -75,7 +75,10 @@
     />
   </SettingRow>
 
-  <SettingRow label={$_("settings.about.updateStatus")}>
+  <SettingRow
+    label={$_("settings.about.updateStatus")}
+    tooltip={$_("settings.about.updateStatusTooltip")}
+  >
     <UpdateChecker
       enabled={localConfig.general.update_checks_enabled ?? true}
       autoCheckOnMount={false}
@@ -145,110 +148,110 @@
       <div>
         <div class="flex items-center gap-1.5">
           <Label class="text-sm">{$_("settings.about.openai.title")}</Label>
-          <InfoTooltip text={$_("settings.about.openai.description")} />
+          <InfoTooltip
+            text={$_("settings.about.openai.description")}
+            detail={$_("settings.about.openai.detail")}
+          />
         </div>
-        <p class="text-muted-foreground mt-1 text-xs">
-          {$_("settings.about.openai.detail")}
-        </p>
       </div>
 
       <!-- ElevenLabs -->
       <div>
         <div class="flex items-center gap-1.5">
           <Label class="text-sm">{$_("settings.about.elevenlabs.title")}</Label>
-          <InfoTooltip text={$_("settings.about.elevenlabs.description")} />
+          <InfoTooltip
+            text={$_("settings.about.elevenlabs.description")}
+            detail={$_("settings.about.elevenlabs.detail")}
+          />
         </div>
-        <p class="text-muted-foreground mt-1 text-xs">
-          {$_("settings.about.elevenlabs.detail")}
-        </p>
       </div>
 
       <!-- Cartesia -->
       <div>
         <div class="flex items-center gap-1.5">
           <Label class="text-sm">{$_("settings.about.cartesia.title")}</Label>
-          <InfoTooltip text={$_("settings.about.cartesia.description")} />
+          <InfoTooltip
+            text={$_("settings.about.cartesia.description")}
+            detail={$_("settings.about.cartesia.detail")}
+          />
         </div>
-        <p class="text-muted-foreground mt-1 text-xs">
-          {$_("settings.about.cartesia.detail")}
-        </p>
       </div>
 
       <!-- Fish Audio -->
       <div>
         <div class="flex items-center gap-1.5">
           <Label class="text-sm">{$_("settings.about.fish.title")}</Label>
-          <InfoTooltip text={$_("settings.about.fish.description")} />
+          <InfoTooltip
+            text={$_("settings.about.fish.description")}
+            detail={$_("settings.about.fish.detail")}
+          />
         </div>
-        <p class="text-muted-foreground mt-1 text-xs">
-          {$_("settings.about.fish.detail")}
-        </p>
       </div>
 
       <!-- Kitten -->
       <div>
         <div class="flex items-center gap-1.5">
           <Label class="text-sm">{$_("settings.about.kitten.title")}</Label>
-          <InfoTooltip text={$_("settings.about.kitten.description")} />
+          <InfoTooltip
+            text={$_("settings.about.kitten.description")}
+            detail={$_("settings.about.kitten.detail")}
+          />
         </div>
-        <p class="text-muted-foreground mt-1 text-xs">
-          {$_("settings.about.kitten.detail")}
-        </p>
       </div>
 
       <!-- Kokoro -->
       <div>
         <div class="flex items-center gap-1.5">
           <Label class="text-sm">{$_("settings.about.kokoro.title")}</Label>
-          <InfoTooltip text={$_("settings.about.kokoro.description")} />
+          <InfoTooltip
+            text={$_("settings.about.kokoro.description")}
+            detail={$_("settings.about.kokoro.detail")}
+          />
         </div>
-        <p class="text-muted-foreground mt-1 text-xs">
-          {$_("settings.about.kokoro.detail")}
-        </p>
       </div>
 
       <!-- Piper -->
       <div>
         <div class="flex items-center gap-1.5">
           <Label class="text-sm">{$_("settings.about.piper.title")}</Label>
-          <InfoTooltip text={$_("settings.about.piper.description")} />
+          <InfoTooltip
+            text={$_("settings.about.piper.description")}
+            detail={$_("settings.about.piper.detail")}
+          />
         </div>
-        <p class="text-muted-foreground mt-1 text-xs">
-          {$_("settings.about.piper.detail")}
-        </p>
       </div>
 
       <!-- Google Gemini TTS -->
       <div>
         <div class="flex items-center gap-1.5">
           <Label class="text-sm">{$_("settings.about.google.title")}</Label>
-          <InfoTooltip text={$_("settings.about.google.description")} />
+          <InfoTooltip
+            text={$_("settings.about.google.description")}
+            detail={$_("settings.about.google.detail")}
+          />
         </div>
-        <p class="text-muted-foreground mt-1 text-xs">
-          {$_("settings.about.google.detail")}
-        </p>
       </div>
 
       <!-- Microsoft Foundry AI -->
       <div>
         <div class="flex items-center gap-1.5">
           <Label class="text-sm">{$_("settings.about.microsoft.title")}</Label>
-          <InfoTooltip text={$_("settings.about.microsoft.description")} />
+          <InfoTooltip
+            text={$_("settings.about.microsoft.description")}
+            detail={$_("settings.about.microsoft.detail")}
+          />
         </div>
-        <p class="text-muted-foreground mt-1 text-xs">
-          {$_("settings.about.microsoft.detail")}
-        </p>
       </div>
 
       <!-- Custom HTTP Engine -->
       <div>
         <div class="flex items-center gap-1.5">
           <Label class="text-sm">{$_("settings.about.http.title")}</Label>
-          <InfoTooltip text={$_("settings.about.http.description")} />
+          <InfoTooltip
+            text={$_("settings.about.http.description")}
+            detail={$_("settings.about.http.detail")}
+          />
         </div>
-        <p class="text-muted-foreground mt-1 text-xs">
-          {$_("settings.about.http.detail")}
-        </p>
       </div>
     </div>
   </div>

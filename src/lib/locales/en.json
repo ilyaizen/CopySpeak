@@ -59,7 +59,9 @@
       "history": "History",
       "effects": "Effects",
       "advanced": "Advanced",
-      "about": "About"
+      "about": "About",
+      "playback": "Playback",
+      "postProcess": "Post-processing"
     },
     "sections": {
       "general": "General",
@@ -120,7 +122,9 @@
       "startMinimizedLabel": "Start Minimized",
       "startMinimizedTooltip": "Start the application minimized to system tray",
       "minimizeToTray": "Minimize to Tray on Close",
-      "minimizeToTrayTooltip": "Minimize to system tray instead of exiting when closing the window"
+      "minimizeToTrayTooltip": "Minimize to system tray instead of exiting when closing the window",
+      "experimental": "Experimental features",
+      "experimentalDescription": "Shows and enables experimental features — Dramatize and Effects. Off, they are hidden and forced off; saved settings are kept."
     },
     "playback": {
       "title": "Playback Settings",
@@ -129,16 +133,11 @@
       "volume": "Volume",
       "volumeDescription": "Audio playback volume (0-100%)",
       "streaming": "Stream audio",
-      "streamingDescription": "Start playback as audio arrives. Supported cloud engines: ElevenLabs and Cartesia. When disabled, use batch synthesis and wait for each request to finish before playback.",
+      "streamingDescription": "Starts playback as audio arrives instead of waiting for synthesis; off, a request plays only once it has fully finished. Cloud engines only.",
       "duck": "Duck other apps",
-      "duckDescription": "Lower other apps' audio while CopySpeak speaks, then restore it. Windows only for now.",
-      "duckMode": "Duck mode",
-      "duckModeLower": "Lower",
-      "duckModeMute": "Mute",
+      "duckDescription": "Lowers other apps' audio while CopySpeak speaks and restores it afterwards; off, other apps keep their own volume. Windows only.",
       "duckLevel": "Duck level",
       "duckLevelDescription": "Volume other apps drop to, as a percent of their own level",
-      "duckFade": "Fade (ms)",
-      "duckFadeDescription": "Fade duration when ducking and restoring; 0 for instant",
       "playbackSpeed": "Speed",
       "playbackSpeedDescription": "Playback speed (0.5x - 2x)",
       "pitch": "Pitch",
@@ -150,7 +149,7 @@
     "triggers": {
       "title": "Trigger Settings",
       "listen": "Listen to Double-copy",
-      "listenDescription": "Monitor clipboard for double-copy events",
+      "listenDescription": "Watches the clipboard for a double-copy trigger; off, double-copy does nothing.",
       "doubleCopyWindow": "Double-Copy Detection Window (ms)",
       "doubleCopyWindowDescription": "Time window in which a second copy triggers TTS (100-5000ms)",
       "maxTextLength": "Max Text Length",
@@ -159,13 +158,13 @@
     "pagination": {
       "title": "Pagination Settings",
       "enabled": "Enable Pagination",
-      "description": "Split long texts into fragments for progressive TTS playback",
+      "description": "Splits long text into fragments so playback starts sooner; off, the whole text is synthesized as one request.",
       "fragmentSize": "Fragment Size (characters)",
       "fragmentSizeDescription": "Maximum characters per text fragment (100-10000)"
     },
     "hud": {
       "enabled": "Enable HUD",
-      "enabledDescription": "Show waveform overlay during playback",
+      "enabledDescription": "Shows the waveform overlay during playback; off, playback is audio-only.",
       "overlay": "HUD Overlay",
       "position": "Position",
       "testHud": "Test HUD Display",
@@ -179,7 +178,7 @@
     "history": {
       "title": "History Settings",
       "enabled": "Enable History",
-      "enabledDescription": "Keep a log of all TTS operations",
+      "enabledDescription": "Keeps every reading for replay and search; off, readings are not saved.",
       "storageMode": "Storage mode",
       "persistent": "Persistent",
       "temporary": "Temporary",
@@ -207,7 +206,7 @@
     "sanitization": {
       "title": "Sanitization Settings",
       "enabled": "Enable Sanitization",
-      "enabledDescription": "Remove unwanted formatting from clipboard text before TTS",
+      "enabledDescription": "Cleans clipboard text before synthesis; off, text reaches the engine exactly as copied.",
       "markdown": "Strip Markdown Syntax",
       "markdownDescription": "Remove all markdown formatting (headers, bold, italic, code blocks, links, lists, blockquotes)",
       "stripCodeBlocks": "Code Blocks",
@@ -229,16 +228,16 @@
     },
     "postProcess": {
       "title": "LLM Post-Processing",
-      "description": "Rewrite copied text with an OpenAI-compatible LLM provider for concise, listener-friendly speech.",
+      "description": "Runs text through an OpenAI-compatible LLM before speech.",
       "enabled": "Enable Post-Processing",
-      "enabledDescription": "Run sanitized text through the active provider's chat model before TTS. Failures fall back to the original text.",
+      "enabledDescription": "Sends each reading through the active provider's model before speech; off, text is spoken as-is, and failures fall back to the original text.",
       "minChars": "Minimum Length",
-      "minCharsTooltip": "Condense only text at least this many characters long; shorter text is spoken verbatim. 0 condenses everything.",
+      "minCharsTooltip": "Dramatizes only texts at least this many characters; shorter text is spoken verbatim. 0 dramatizes everything.",
       "requireRequestFlag": "Only On Request",
-      "requireRequestFlagTooltip": "Condense only when a caller explicitly asks (control server condense field or CLI --condense). Off: every qualifying text is condensed.",
+      "requireRequestFlagTooltip": "Off: every read is dramatized, including double-copy. On: only requests that ask for it (control server `condense`, CLI `--condense`).",
       "apiKey": "API Key",
       "apiKeyPlaceholder": "gsk_...",
-      "apiKeyHelp": "Create a key at console.groq.com",
+      "apiKeyHelp": "Key for the selected provider, created in its console.",
       "testKey": "Test",
       "testOk": "Groq API key is valid",
       "testFail": "Invalid key",
@@ -249,8 +248,6 @@
       "baseUrl": "Base URL",
       "baseUrlTooltip": "OpenAI-compatible API root, e.g. https://api.groq.com/openai/v1",
       "addProvider": "Add provider",
-      "deleteProvider": "Delete provider",
-      "deleteProviderTooltip": "Remove this provider from the list. Built-in entries can be re-added by resetting settings.",
       "refreshModels": "Fetch model list",
       "modelsEmpty": "Endpoint returned no models.",
       "model": "Model",
@@ -344,7 +341,8 @@
       "debugMode": "Debug Mode",
       "debugModeTooltip": "Enable verbose logging and additional status info",
       "refreshing": "refreshing...",
-      "noLogs": "No logs available"
+      "noLogs": "No logs available",
+      "updateStatusTooltip": "Result of the last update check."
     },
     "importExport": {
       "tooltip": "Export, import, or reset your settings",
@@ -834,7 +832,10 @@
   "quick": {
     "doubleCopy": "Double-copy",
     "doubleCopyTooltip": "Monitor clipboard for double-copy",
-    "effectsTooltip": "Apply audio effect to TTS playback"
+    "effectsTooltip": "Apply audio effect to TTS playback",
+    "dramatize": "Dramatize",
+    "dramatizeTooltip": "Rewrites text with emote tags before it is spoken. Uses your post-processing LLM and speaks the original text if that fails.",
+    "dramatizeUnsupported": "Dramatize needs a voice model that reads emote tags. The active profile's model does not support it."
   },
   "recent": {
     "viewAll": "View all history",

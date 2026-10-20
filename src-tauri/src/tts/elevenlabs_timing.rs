@@ -88,7 +88,13 @@ impl TimestampDecoder {
                         match result {
                             Ok(()) => {
                                 self.aligned_records += 1;
-                                items.push(ChunkItem::Captions(self.captions.clone()));
+                                // Tags the API echoed into its alignment
+                                // stream are interpreted, never spoken:
+                                // strip them from the emitted snapshot so
+                                // nothing unspoken is ever highlighted.
+                                items.push(ChunkItem::Captions(
+                                    self.captions.stripped_of_emote_tags(),
+                                ));
                             }
                             Err(error) => self.disable_captions(&error, pcm.len(), &mut items),
                         }
@@ -233,6 +239,37 @@ mod tests {
             assert!(TimestampDecoder::new()
                 .push(input.as_bytes(), true)
                 .is_err());
+        }
+    }
+
+    /// Emote-tag characters the API echoes in its alignment stream never
+    /// reach caption consumers: tag text and its timings are stripped from
+    /// every emitted snapshot.
+    #[test]
+    fn emote_tag_characters_are_stripped_from_emitted_captions() {
+        let characters = ["[", "s", "i", "g", "h", "s", "]", " ", "H", "i"];
+        let times: Vec<f64> = (0..characters.len()).map(|i| i as f64 * 0.1).collect();
+        let record = serde_json::json!({"audio_base64": "AQIDBA==", "normalized_alignment": {
+            "characters": characters,
+            "character_start_times_seconds": times,
+            "character_end_times_seconds": times
+        }})
+        .to_string();
+        let items = TimestampDecoder::new()
+            .push(record.as_bytes(), true)
+            .unwrap();
+        let ChunkItem::Captions(captions) = &items[0] else {
+            panic!("captions must precede PCM")
+        };
+        captions.validate().unwrap();
+        assert_eq!(captions.text, " Hi", "{captions:?}");
+        let units: Vec<u16> = captions.text.encode_utf16().collect();
+        for word in &captions.words {
+            let text = String::from_utf16_lossy(&units[word.text_start..word.text_end]);
+            assert!(
+                !text.contains('[') && !text.contains(']'),
+                "tag fragment {text:?} leaked into captions"
+            );
         }
     }
 

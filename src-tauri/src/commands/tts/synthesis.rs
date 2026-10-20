@@ -18,13 +18,14 @@ use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
-    active_engine, create_backend, create_backend_from_effective, engine_identifier, engine_str,
-    resolve_effective, voice_display_name, SynthesisGuard,
+    active_engine, create_backend, create_backend_from_effective, dramatize_gate,
+    engine_identifier, engine_str, resolve_effective, voice_display_name, SynthesisGuard,
 };
 use crate::commands::{
     AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent,
     PlaybackStreamFailedEvent,
 };
+use crate::post_process::dramatize_skip_reason;
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
 
@@ -296,6 +297,12 @@ fn allows_streaming_playback(
     effects_enabled: bool,
 ) -> bool {
     streaming_enabled && backend_streams && runtime_ready && !effects_enabled
+}
+
+/// Profile effects count only while Experimental is on. The saved effect stays
+/// in config, so re-enabling Experimental restores it without a rewrite here.
+fn effects_active(experimental_enabled: bool, profile_effects_enabled: bool) -> bool {
+    experimental_enabled && profile_effects_enabled
 }
 
 /// Whether this fragment is the last one in its reading. Only that fragment may
@@ -756,6 +763,7 @@ async fn speak_now_internal(
         post_process_config,
         sanitization,
         streaming_enabled,
+        experimental_enabled,
     ) = {
         let cfg = config.lock().unwrap();
         (
@@ -766,14 +774,24 @@ async fn speak_now_internal(
             cfg.post_process.clone(),
             cfg.sanitization.clone(),
             cfg.playback.streaming_enabled,
+            cfg.general.experimental_enabled,
         )
     };
+    let eff = resolve_effective(&tts_config);
+    let gate = dramatize_gate(&tts_config, experimental_enabled);
 
     // Optional LLM post-processing (e.g., Groq) — best-effort; falls back to
     // the input text on any failure so synthesis is never blocked. Re-runs
-    // sanitization on the condenser OUTPUT (see try_process).
+    // sanitization on the condenser OUTPUT (tag-safe; see try_process).
+    // Dramatize inserts an LLM round trip before any audio: show the waiting
+    // HUD first so the delay is visible.
+    if dramatize_skip_reason(&post_process_config, condense, text.chars().count(), &gate).is_none()
+    {
+        hud::show_hud_synthesizing(&app, Some(text.clone()));
+    }
     let text =
-        crate::post_process::try_process(text, &post_process_config, &sanitization, condense).await;
+        crate::post_process::try_process(text, &post_process_config, &sanitization, condense, gate)
+            .await;
     let _ = app.emit("reading-started", &text);
     // File output plays nothing, so there is no speak for a page to follow.
     if let Some((trigger, id)) = &trigger {
@@ -784,7 +802,6 @@ async fn speak_now_internal(
 
     log_tts_debug("TTS", &format!("{:?}", active_backend), &text);
 
-    let eff = resolve_effective(&tts_config);
     let voice = eff.voice.clone();
 
     let backend: Box<dyn TtsBackend> = create_backend_from_effective(&eff, &tts_config);
@@ -838,7 +855,7 @@ async fn speak_now_internal(
         streaming_enabled,
         backend_arc.supports_streaming(),
         backend_arc.runtime_ready(),
-        eff.effects.enabled,
+        effects_active(experimental_enabled, eff.effects.enabled),
     ) && !cache_hit
         && !output_config.enabled;
     let (wav_bytes, already_streamed) = if let Some(speech) = cached {
@@ -1271,6 +1288,7 @@ async fn speak_queued_internal(
         post_process_config,
         sanitization,
         streaming_enabled,
+        experimental_enabled,
     ) = {
         let cfg = config.lock().unwrap();
         (
@@ -1280,8 +1298,11 @@ async fn speak_queued_internal(
             cfg.post_process.clone(),
             cfg.sanitization.clone(),
             cfg.playback.streaming_enabled,
+            cfg.general.experimental_enabled,
         )
     };
+    let eff = resolve_effective(&tts_config);
+    let gate = dramatize_gate(&tts_config, experimental_enabled);
 
     // Aborts issued before this run starts do not reach it. speak_queued takes
     // no queue lock, so a shared flag cleared here could also un-abort a run
@@ -1289,10 +1310,18 @@ async fn speak_queued_internal(
     let scope = AbortScope::begin();
 
     // Optional LLM post-processing — best-effort; falls back on failure.
-    // speak_queued callers (double-copy, browser readings) never request
-    // condensing; re-sanitizes condenser output like speak_now does.
+    // Double-copy dramatizes in global mode (request flag false) when the
+    // gate allows it; re-sanitizes condenser output tag-safe like speak_now.
+    // Dramatize inserts an LLM round trip before any audio: show the waiting
+    // HUD first so the delay is visible.
+    let dramatizing =
+        dramatize_skip_reason(&post_process_config, false, text.chars().count(), &gate).is_none();
+    if dramatizing {
+        hud::show_hud_synthesizing(&app, Some(text.clone()));
+    }
     let text =
-        crate::post_process::try_process(text, &post_process_config, &sanitization, false).await;
+        crate::post_process::try_process(text, &post_process_config, &sanitization, false, gate)
+            .await;
     let _ = app.emit("reading-started", &text);
     if let Some((trigger, id)) = &trigger {
         browser_bridge::begin_trigger(&app, id, trigger, &text);
@@ -1300,8 +1329,10 @@ async fn speak_queued_internal(
 
     log_tts_debug("Queue", &format!("{:?}", active_backend), &text);
 
-    // Show HUD with synthesizing indicator
-    hud::show_hud_synthesizing(&app, Some(text.clone()));
+    if !dramatizing {
+        // Keep the previous HUD timing when no LLM delay precedes synthesis.
+        hud::show_hud_synthesizing(&app, Some(text.clone()));
+    }
 
     // Paginate text
     let fragments = pagination::paginate_text(&text, &pagination_config);
@@ -1310,7 +1341,6 @@ async fn speak_queued_internal(
         log::debug!("[Queue] Created {} fragments", fragments.len());
     }
 
-    let eff = resolve_effective(&tts_config);
     let voice = eff.voice.clone();
 
     // Get telemetry estimates
@@ -1456,7 +1486,7 @@ async fn speak_queued_internal(
                 streaming_enabled,
                 backend_arc.supports_streaming(),
                 backend_arc.runtime_ready(),
-                eff.effects.enabled,
+                effects_active(experimental_enabled, eff.effects.enabled),
             );
         let wav_bytes = if let Some(speech) = saved.as_mut().and_then(Iterator::next) {
             speech
@@ -1800,6 +1830,20 @@ mod streaming_tests {
         assert!(!allows_streaming_playback(false, true, true, false));
         assert!(!allows_streaming_playback(true, false, true, false));
         assert!(!allows_streaming_playback(true, true, true, true));
+    }
+
+    #[test]
+    fn saved_effects_are_inert_while_experimental_is_off() {
+        // Experimental off must not let a saved profile effect disable streaming.
+        assert!(effects_active(true, true));
+        assert!(!effects_active(false, true));
+        assert!(!effects_active(true, false));
+        assert!(allows_streaming_playback(
+            true,
+            true,
+            true,
+            effects_active(false, true)
+        ));
     }
 
     #[test]

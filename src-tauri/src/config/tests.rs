@@ -461,4 +461,15 @@ mod tests {
         let stamped = stamp_config_version(config);
         assert_eq!(stamped.version, CONFIG_VERSION);
     }
+
+    /// Experimental features (Dramatize, post-processing panel, effects) are
+    /// opt-in: fresh and legacy configs must both land on `false`.
+    #[test]
+    fn experimental_defaults_off_and_survives_legacy_configs() {
+        assert!(!AppConfig::default().general.experimental_enabled);
+        let legacy: crate::config::GeneralConfig =
+            serde_json::from_str(r#"{"launch_on_login": false, "start_minimized": false}"#)
+                .unwrap();
+        assert!(!legacy.experimental_enabled);
+    }
 }

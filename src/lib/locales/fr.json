@@ -59,7 +59,9 @@
       "history": "Historique",
       "effects": "Effets",
       "advanced": "Avancé",
-      "about": "À propos"
+      "about": "À propos",
+      "playback": "Lecture",
+      "postProcess": "Post-traitement"
     },
     "sections": {
       "general": "Général",
@@ -120,7 +122,9 @@
       "startMinimizedLabel": "Démarrer réduit",
       "startMinimizedTooltip": "Démarrer l'application réduite dans la zone de notification",
       "minimizeToTray": "Réduire dans la zone de notification à la fermeture",
-      "minimizeToTrayTooltip": "Réduire dans la zone de notification au lieu de quitter lors de la fermeture de la fenêtre"
+      "minimizeToTrayTooltip": "Réduire dans la zone de notification au lieu de quitter lors de la fermeture de la fenêtre",
+      "experimental": "Fonctions expérimentales",
+      "experimentalDescription": "Affiche et active les fonctions expérimentales — Dramatize et Effets. Désactivé, elles sont masquées et forcées à l’arrêt ; les réglages enregistrés sont conservés."
     },
     "playback": {
       "title": "Paramètres de lecture",
@@ -132,13 +136,8 @@
       "streamingDescription": "Lance la lecture dès l'arrivée de l'audio. Moteurs cloud pris en charge : ElevenLabs et Cartesia. Désactivé : synthèse par lots, chaque requête est attendue avant la lecture.",
       "duck": "Atténuer les autres applications",
       "duckDescription": "Baisse le son des autres applications pendant que CopySpeak parle, puis le rétablit. Windows uniquement pour l'instant.",
-      "duckMode": "Mode d'atténuation",
-      "duckModeLower": "Baisser",
-      "duckModeMute": "Couper",
       "duckLevel": "Niveau d'atténuation",
       "duckLevelDescription": "Volume auquel descendent les autres applications, en pourcentage de leur propre niveau",
-      "duckFade": "Fondu (ms)",
-      "duckFadeDescription": "Durée du fondu lors de l'atténuation et du rétablissement ; 0 pour instantané",
       "playbackSpeed": "Vitesse",
       "playbackSpeedDescription": "Vitesse de lecture (0,5x - 2x)",
       "pitch": "Hauteur",
@@ -249,8 +248,6 @@
       "baseUrl": "URL de base",
       "baseUrlTooltip": "Racine d'API compatible OpenAI, p. ex. https://api.groq.com/openai/v1",
       "addProvider": "Ajouter un fournisseur",
-      "deleteProvider": "Supprimer le fournisseur",
-      "deleteProviderTooltip": "Retirer ce fournisseur de la liste. Les entrées intégrées peuvent être rétablies en réinitialisant les paramètres.",
       "refreshModels": "Récupérer la liste des modèles",
       "modelsEmpty": "Le point de terminaison n'a renvoyé aucun modèle.",
       "model": "Modèle",
@@ -344,7 +341,8 @@
       "debugMode": "Mode débogage",
       "debugModeTooltip": "Activer la journalisation détaillée et des informations d'état supplémentaires",
       "refreshing": "actualisation...",
-      "noLogs": "Aucun journal disponible"
+      "noLogs": "Aucun journal disponible",
+      "updateStatusTooltip": "Résultat de la dernière recherche de mise à jour."
     },
     "importExport": {
       "tooltip": "Exporter, importer ou réinitialiser vos paramètres",
@@ -834,7 +832,10 @@
   "quick": {
     "doubleCopy": "Double copie",
     "doubleCopyTooltip": "Surveiller le presse-papiers pour la double copie",
-    "effectsTooltip": "Appliquer un effet audio à la lecture TTS"
+    "effectsTooltip": "Appliquer un effet audio à la lecture TTS",
+    "dramatize": "Dramatiser",
+    "dramatizeTooltip": "Réécrit le texte avec des balises d'émotion avant la lecture. Utilise votre LLM de post-traitement et lit le texte d'origine en cas d'échec.",
+    "dramatizeUnsupported": "La dramatisation nécessite un modèle vocal qui lit les balises d'émotion. Le modèle du profil actif ne le permet pas."
   },
   "recent": {
     "viewAll": "Voir tout l'historique",

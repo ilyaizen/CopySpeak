@@ -10,6 +10,14 @@ pub fn list_tts_engines() -> Vec<crate::tts::catalog::EngineCatalogEntry> {
     crate::tts::catalog::list_engines()
 }
 
+/// Whether this (engine, model) pair interprets `[...]` emote tags instead
+/// of speaking them. The Dramatize switch uses it to disable itself with an
+/// explanation when the active profile cannot take tags.
+#[tauri::command]
+pub fn supports_emote_tags(engine: TtsEngine, model: String) -> bool {
+    crate::tts::catalog::supports_emote_tags(&engine, &model)
+}
+
 #[tauri::command]
 pub fn list_tts_voices(
     engine: TtsEngine,

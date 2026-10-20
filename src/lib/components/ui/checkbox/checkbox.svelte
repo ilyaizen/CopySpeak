@@ -1,18 +1,14 @@
 <script lang="ts">
   import { cn } from "#lib/utils.js";
 
-  let {
-    checked = false,
-    disabled = false,
-    onchange,
-    class: className,
-    ...props
-  } = $props<{
+  let { checked = false, disabled = false, onchange, class: className, ...props }: Props = $props();
+
+  interface Props {
     checked?: boolean;
     disabled?: boolean;
     onchange?: (event: Event) => void;
     class?: string;
-  }>();
+  }
 
   // svelte-ignore state_referenced_locally
   let internalChecked = $state(checked);

@@ -4,7 +4,8 @@
   import { Slider } from "#lib/components/ui/slider/index.js";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { listeningStore } from "#lib/stores/listening-store.svelte";
-  import type { AppConfig } from "#lib/types";
+  import { invoke } from "#lib/services/tauri";
+  import type { AppConfig, VoiceProfile } from "#lib/types";
 
   interface Props {
     config?: AppConfig;
@@ -24,6 +25,36 @@
   const profileSpeed = $derived(activeProfile?.speed ?? 1.0);
   const profilePitch = $derived(activeProfile?.pitch ?? 1.0);
   const profileEffectsEnabled = $derived(activeProfile?.effects.enabled ?? false);
+
+  // Dramatize needs emote-tag support for the active profile's (engine, model) pair.
+  // The backend catalog owns that answer; the model key mirrors `effective_model`.
+  function profileModel(profile: VoiceProfile | null): string {
+    if (!profile) return "";
+    const key =
+      profile.engine === "elevenlabs" ? "model_id" : profile.engine === "fish" ? "model" : null;
+    return key ? String(profile.engine_options[key] ?? "") : "";
+  }
+
+  let dramatizeSupported = $state(false);
+  $effect(() => {
+    const engine = activeProfile?.engine;
+    const model = profileModel(activeProfile);
+    if (!engine) {
+      dramatizeSupported = false;
+      return;
+    }
+    let stale = false;
+    invoke<boolean>("supports_emote_tags", { engine, model })
+      .then((ok) => {
+        if (!stale) dramatizeSupported = ok;
+      })
+      .catch(() => {
+        if (!stale) dramatizeSupported = false;
+      });
+    return () => {
+      stale = true;
+    };
+  });
 
   // Live drag values: shown while a slider is dragged, cleared on commit so the
   // profile becomes the source of truth again (also handles profile switching).
@@ -65,23 +96,39 @@
         bind:checked={config.hotkey.enabled}
       />
     </SettingRow>
-    <!-- Effects toggle — binds to active profile's effects -->
-    <SettingRow label={$_("common.effects")} tooltip={$_("quick.effectsTooltip")}>
-      <Switch
-        id="qs-effects"
-        aria-label={$_("common.effects")}
-        disabled={!activeProfile}
-        checked={profileEffectsEnabled}
-        onchange={() => {
-          if (activeProfile) {
-            activeProfile.effects.enabled = !activeProfile.effects.enabled;
-            if (!activeProfile.effects.enabled) {
-              activeProfile.effects.active_effect = "none";
+    {#if config.general.experimental_enabled === true}
+      <!-- Effects toggle — binds to active profile's effects -->
+      <SettingRow label={$_("common.effects")} tooltip={$_("quick.effectsTooltip")}>
+        <Switch
+          id="qs-effects"
+          aria-label={$_("common.effects")}
+          disabled={!activeProfile}
+          checked={profileEffectsEnabled}
+          onchange={() => {
+            if (activeProfile) {
+              activeProfile.effects.enabled = !activeProfile.effects.enabled;
+              if (!activeProfile.effects.enabled) {
+                activeProfile.effects.active_effect = "none";
+              }
             }
-          }
-        }}
-      />
-    </SettingRow>
+          }}
+        />
+      </SettingRow>
+      <!-- Dramatize: the post-process switch; disabled when the profile's model cannot read emote tags -->
+      <SettingRow
+        label={$_("quick.dramatize")}
+        tooltip={dramatizeSupported
+          ? $_("quick.dramatizeTooltip")
+          : $_("quick.dramatizeUnsupported")}
+      >
+        <Switch
+          id="qs-dramatize"
+          aria-label={$_("quick.dramatize")}
+          disabled={!dramatizeSupported}
+          bind:checked={config.post_process.enabled}
+        />
+      </SettingRow>
+    {/if}
     <!-- Volume slider — 0–100% range with integer steps for precise control -->
     <SettingRow label={$_("common.volume")}>
       <div class="flex w-28 items-center gap-2">

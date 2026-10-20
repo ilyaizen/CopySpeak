@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { RefreshCw, Trash2 } from "@lucide/svelte";
+  import { RefreshCw } from "@lucide/svelte";
 
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import { Select } from "#lib/components/ui/select/index.js";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
+  import InfoTooltip from "#lib/components/ui/info-tooltip.svelte";
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { invoke } from "@tauri-apps/api/core";
   import { toast } from "svelte-sonner";
@@ -12,18 +13,6 @@
   import type { AppConfig, PostProcessConfig } from "#lib/types";
 
   let { localConfig = $bindable() }: { localConfig: AppConfig } = $props();
-
-  const DEFAULT_PROMPT = `Rewrite text terse like smart caveman for software developer listening. All technical substance stay. Only fluff die.
-
-Rules:
-- Drop articles, filler words, pleasantries, hedging, repetition, and boilerplate.
-- Keep technical facts, names, numbers, code identifiers, commands, and original language exact.
-- Max 3 bullets/points. No framing or commentary. Output only rewritten text.
-
-Pattern: [thing] [action] [reason]. [next step].
-
-Text:
-\${output}`;
 
   interface CredentialCheckResult {
     success: boolean;
@@ -74,16 +63,6 @@ Text:
     modelRefreshError = "";
   }
 
-  function deleteProvider() {
-    if (!activeProvider) return;
-    pp.providers = pp.providers.filter((p) => p.id !== activeProvider.id);
-    // Dangling provider_id is repaired on save by the backend; mirror that
-    // here so the UI stays consistent without a save round-trip.
-    pp.provider_id = pp.providers[0]?.id ?? "";
-    modelOptions = [];
-    modelRefreshError = "";
-  }
-
   async function refreshModels() {
     if (!activeProvider) return;
     isRefreshingModels = true;
@@ -121,8 +100,10 @@ Text:
     }
   }
 
-  function restoreDefaultPrompt() {
-    localConfig.post_process.prompt = DEFAULT_PROMPT;
+  async function restoreDefaultPrompt() {
+    // The backend default is the single source of truth; a frontend copy
+    // would drift the next time the prompt changes.
+    localConfig.post_process.prompt = await invoke<string>("get_default_post_process_prompt");
   }
 </script>
 
@@ -150,7 +131,7 @@ Text:
             const raw = (e.target as HTMLInputElement).value;
             const parsed = Number(raw);
             localConfig.post_process.min_chars =
-              raw === "" || Number.isNaN(parsed) ? 200 : Math.max(0, Math.floor(parsed));
+              raw === "" || Number.isNaN(parsed) ? 0 : Math.max(0, Math.floor(parsed));
           }}
           class="w-24"
         />
@@ -255,29 +236,16 @@ Text:
         {#if modelRefreshError}
           <div class="text-destructive text-sm">{modelRefreshError}</div>
         {/if}
-
-        {#if pp.providers.length > 1}
-          <SettingRow
-            label={$_("settings.postProcess.deleteProvider")}
-            tooltip={$_("settings.postProcess.deleteProviderTooltip")}
-          >
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={$_("settings.postProcess.deleteProvider")}
-              onclick={deleteProvider}
-            >
-              <Trash2 class="size-4" />
-            </Button>
-          </SettingRow>
-        {/if}
       {/if}
 
       <div class="space-y-2">
         <div class="flex items-center justify-between">
-          <label class="text-sm font-medium" for="post-process-prompt"
-            >{$_("settings.postProcess.prompt")}</label
-          >
+          <div class="flex items-center gap-1.5">
+            <label class="text-sm font-medium" for="post-process-prompt"
+              >{$_("settings.postProcess.prompt")}</label
+            >
+            <InfoTooltip text={$_("settings.postProcess.promptHelp")} />
+          </div>
           <Button variant="ghost" size="sm" onclick={restoreDefaultPrompt}>
             {$_("settings.postProcess.restoreDefault")}
           </Button>
@@ -287,7 +255,6 @@ Text:
           rows="10"
           class="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 font-mono text-xs focus-visible:ring-1 focus-visible:outline-none"
           bind:value={localConfig.post_process.prompt}></textarea>
-        <p class="text-muted-foreground text-xs">{$_("settings.postProcess.promptHelp")}</p>
       </div>
     </div>
   {/if}

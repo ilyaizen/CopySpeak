@@ -3,6 +3,7 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod emote;
 mod audio;
 mod autostart;
 mod browser_bridge;
@@ -882,6 +883,7 @@ fn main() {
             commands::speak_now_with_profile,
             // Engine catalog & installers
             commands::list_tts_engines,
+            commands::supports_emote_tags,
             commands::list_tts_voices,
             commands::install_engine,
             commands::uninstall_engine,
@@ -891,6 +893,7 @@ fn main() {
             commands::test_local_engine,
             // Post-processing models
             commands::list_post_process_models,
+            commands::get_default_post_process_prompt,
             // Browser companion bridge (commands live in browser_bridge.rs)
             crate::browser_bridge::browser_reading_progress,
             crate::browser_bridge::browser_reading_finished,

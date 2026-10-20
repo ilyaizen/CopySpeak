@@ -59,7 +59,9 @@
       "history": "السجل",
       "effects": "المؤثرات",
       "advanced": "متقدم",
-      "about": "حول"
+      "about": "حول",
+      "playback": "التشغيل",
+      "postProcess": "المعالجة اللاحقة"
     },
     "sections": {
       "general": "عام",
@@ -120,7 +122,9 @@
       "startMinimizedLabel": "البدء مصغّراً",
       "startMinimizedTooltip": "بدء التطبيق مصغّراً إلى علبة النظام",
       "minimizeToTray": "التصغير إلى العلبة عند الإغلاق",
-      "minimizeToTrayTooltip": "التصغير إلى علبة النظام بدلاً من الخروج عند إغلاق النافذة"
+      "minimizeToTrayTooltip": "التصغير إلى علبة النظام بدلاً من الخروج عند إغلاق النافذة",
+      "experimental": "ميزات تجريبية",
+      "experimentalDescription": "يعرض الميزات التجريبية ويمكّنها — Dramatize والتأثيرات. عند الإيقاف تُخفى وتُعطَّل، مع الاحتفاظ بالإعدادات المحفوظة."
     },
     "playback": {
       "title": "إعدادات التشغيل",
@@ -132,13 +136,8 @@
       "streamingDescription": "بدء التشغيل فور وصول الصوت. المحركات السحابية المدعومة: ElevenLabs وCartesia. عند التعطيل يُستخدم التوليف الدفعي وتُنتظر نهاية كل طلب قبل التشغيل.",
       "duck": "خفض صوت التطبيقات الأخرى",
       "duckDescription": "يخفض صوت التطبيقات الأخرى أثناء حديث CopySpeak ثم يعيده. على Windows فقط حاليًا.",
-      "duckMode": "وضع الخفض",
-      "duckModeLower": "خفض",
-      "duckModeMute": "كتم",
       "duckLevel": "مستوى الخفض",
       "duckLevelDescription": "مستوى الصوت الذي تنخفض إليه التطبيقات الأخرى، كنسبة مئوية من مستواها",
-      "duckFade": "التلاشي (مللي ثانية)",
-      "duckFadeDescription": "مدة التلاشي عند الخفض والاستعادة؛ 0 للتطبيق الفوري",
       "playbackSpeed": "السرعة",
       "playbackSpeedDescription": "سرعة التشغيل (0.5x - 2x)",
       "pitch": "طبقة الصوت",
@@ -249,8 +248,6 @@
       "baseUrl": "عنوان URL الأساسي",
       "baseUrlTooltip": "جذر API متوافق مع OpenAI، مثل https://api.groq.com/openai/v1",
       "addProvider": "إضافة مزوّد",
-      "deleteProvider": "حذف المزوّد",
-      "deleteProviderTooltip": "إزالة هذا المزوّد من القائمة. يمكن إعادة الإدخالات المدمجة بإعادة ضبط الإعدادات.",
       "refreshModels": "جلب قائمة النماذج",
       "modelsEmpty": "لم تُرجع نقطة النهاية أي نماذج.",
       "model": "النموذج",
@@ -344,7 +341,8 @@
       "debugMode": "وضع التصحيح",
       "debugModeTooltip": "تفعيل السجلات التفصيلية ومعلومات الحالة الإضافية",
       "refreshing": "جارٍ التحديث...",
-      "noLogs": "لا توجد سجلات متاحة"
+      "noLogs": "لا توجد سجلات متاحة",
+      "updateStatusTooltip": "نتيجة آخر تحقق من التحديثات."
     },
     "importExport": {
       "tooltip": "تصدير الإعدادات أو استيرادها أو إعادة تعيينها",
@@ -834,7 +832,10 @@
   "quick": {
     "doubleCopy": "النسخ المزدوج",
     "doubleCopyTooltip": "مراقبة الحافظة لاكتشاف النسخ المزدوج",
-    "effectsTooltip": "تطبيق تأثير صوتي على تشغيل TTS"
+    "effectsTooltip": "تطبيق تأثير صوتي على تشغيل TTS",
+    "dramatize": "إضفاء الطابع الدرامي",
+    "dramatizeTooltip": "يعيد كتابة النص بوسوم تعبيرية قبل النطق. يستخدم نموذج اللغة لمعالجة ما بعد الإنتاج، وينطق النص الأصلي إذا فشل.",
+    "dramatizeUnsupported": "يحتاج إضفاء الطابع الدرامي إلى نموذج صوت يقرأ الوسوم التعبيرية. نموذج الملف الشخصي النشط لا يدعم ذلك."
   },
   "recent": {
     "viewAll": "عرض السجل كاملاً",

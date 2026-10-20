@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { effectiveEffect } from "#lib/effects-gate";
   import { onMount, onDestroy } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
@@ -104,9 +105,7 @@
 
       const { volume } = config.playback;
       const activeProfile = config.tts.profiles.find((p) => p.id === config.tts.active_profile_id);
-      const activeEffect = activeProfile?.effects?.enabled
-        ? activeProfile.effects.active_effect
-        : "none";
+      const activeEffect = effectiveEffect(config);
       const speed = activeProfile?.speed ?? 1.0;
       const pitchVal = activeProfile?.pitch ?? 1.0;
       playbackStore.syncPlaybackConfig(volume, speed, pitchVal, activeEffect);

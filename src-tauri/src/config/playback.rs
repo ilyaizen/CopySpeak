@@ -11,32 +11,26 @@ pub enum RetriggerMode {
 }
 
 /// How other apps are quieted while CopySpeak speaks.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum DuckMode {
-    #[default]
-    Lower,
-    Mute,
-}
+///
+/// The old `mode: lower|mute` dropdown is gone (mute was volume 0 — the
+/// level slider covers it) and the fade is fixed; configs saved with those
+/// fields still deserialize, serde drops the unknown keys.
+pub const DUCK_FADE_MS: u32 = 150;
 
 /// Per-app ducking of other apps' audio during playback (Windows only).
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DuckConfig {
     pub enabled: bool,
-    pub mode: DuckMode,
     /// Volume other apps are lowered to, as a percent of their own level.
+    /// 0 replaces the removed "mute" mode.
     pub level_percent: u8,
-    /// Fade in/out duration; 0 = instant.
-    pub fade_ms: u32,
 }
 
 impl Default for DuckConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            mode: DuckMode::Lower,
             level_percent: 20,
-            fade_ms: 150,
         }
     }
 }

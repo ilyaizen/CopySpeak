@@ -3,10 +3,12 @@
   import { Info } from "@lucide/svelte";
   import * as Tooltip from "#lib/components/ui/tooltip/index.js";
 
-  let { text }: { text: string } = $props();
+  let { text, detail }: { text: string; detail?: string } = $props();
 </script>
 
-<Tooltip.Provider>
+<!-- Provider delay 100 ms: Handy-style snappy tooltips; only the delay is
+     set here, so each instance does not need its own provider wrapper. -->
+<Tooltip.Provider delayDuration={100}>
   <Tooltip.Root>
     <Tooltip.Trigger
       class="text-muted-foreground hover:text-foreground inline-flex items-center justify-center transition-colors"
@@ -16,6 +18,9 @@
     </Tooltip.Trigger>
     <Tooltip.Content>
       <p class="max-w-md text-sm whitespace-normal">{text}</p>
+      {#if detail}
+        <p class="mt-1 max-w-md text-sm whitespace-normal">{detail}</p>
+      {/if}
     </Tooltip.Content>
   </Tooltip.Root>
 </Tooltip.Provider>

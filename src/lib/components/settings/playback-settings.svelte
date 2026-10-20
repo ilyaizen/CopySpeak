@@ -13,27 +13,15 @@
     localConfig: AppConfig;
     retriggerModeOptions: { value: string; label: string }[];
   } = $props();
-
-  const duckModeOptions = [
-    { value: "lower", label: $_("settings.playback.duckModeLower") },
-    { value: "mute", label: $_("settings.playback.duckModeMute") }
-  ];
 </script>
 
 <div class="space-y-4">
-  <div>
-    <SettingRow label={$_("settings.playback.streaming")}>
-      <Switch
-        id="playback-streaming"
-        aria-label={$_("settings.playback.streaming")}
-        aria-describedby="playback-streaming-description"
-        bind:checked={localConfig.playback.streaming_enabled}
-      />
-    </SettingRow>
-    <p id="playback-streaming-description" class="text-muted-foreground text-sm">
-      {$_("settings.playback.streamingDescription")}
-    </p>
-  </div>
+  <SettingRow
+    label={$_("settings.playback.streaming")}
+    tooltip={$_("settings.playback.streamingDescription")}
+  >
+    <Switch id="playback-streaming" bind:checked={localConfig.playback.streaming_enabled} />
+  </SettingRow>
 
   <SettingRow
     label={$_("settings.playback.onRetrigger")}
@@ -70,68 +58,33 @@
   </SettingRow>
 
   <div>
-    <SettingRow label={$_("settings.playback.duck")}>
+    <SettingRow
+      label={$_("settings.playback.duck")}
+      tooltip={$_("settings.playback.duckDescription")}
+    >
       <Switch
         id="playback-duck"
         aria-label={$_("settings.playback.duck")}
-        aria-describedby="playback-duck-description"
         bind:checked={localConfig.playback.duck.enabled}
       />
     </SettingRow>
-    <p id="playback-duck-description" class="text-muted-foreground text-sm">
-      {$_("settings.playback.duckDescription")}
-    </p>
   </div>
 
   {#if localConfig.playback.duck.enabled}
-    <SettingRow label={$_("settings.playback.duckMode")}>
-      <Select
-        id="duck-mode"
-        options={duckModeOptions}
-        value={localConfig.playback.duck.mode}
-        onchange={(e) => {
-          localConfig.playback.duck.mode = (e.target as HTMLSelectElement).value as
-            "lower" | "mute";
-        }}
-        class="w-48"
-      />
-    </SettingRow>
-
-    {#if localConfig.playback.duck.mode === "lower"}
-      <SettingRow
-        label={$_("settings.playback.duckLevel")}
-        tooltip={$_("settings.playback.duckLevelDescription")}
-      >
-        <div class="flex items-center gap-3">
-          <span class="text-muted-foreground w-10 text-end text-sm tabular-nums"
-            >{localConfig.playback.duck.level_percent}%</span
-          >
-          <Slider
-            id="duck-level"
-            min={0}
-            max={100}
-            step={5}
-            bind:value={localConfig.playback.duck.level_percent}
-            class="w-32"
-          />
-        </div>
-      </SettingRow>
-    {/if}
-
     <SettingRow
-      label={$_("settings.playback.duckFade")}
-      tooltip={$_("settings.playback.duckFadeDescription")}
+      label={$_("settings.playback.duckLevel")}
+      tooltip={$_("settings.playback.duckLevelDescription")}
     >
       <div class="flex items-center gap-3">
-        <span class="text-muted-foreground w-14 text-end text-sm tabular-nums"
-          >{localConfig.playback.duck.fade_ms}</span
+        <span class="text-muted-foreground w-10 text-end text-sm tabular-nums"
+          >{localConfig.playback.duck.level_percent}%</span
         >
         <Slider
-          id="duck-fade"
+          id="duck-level"
           min={0}
-          max={1000}
-          step={50}
-          bind:value={localConfig.playback.duck.fade_ms}
+          max={100}
+          step={5}
+          bind:value={localConfig.playback.duck.level_percent}
           class="w-32"
         />
       </div>

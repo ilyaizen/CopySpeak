@@ -131,26 +131,34 @@ fn condense_requested(cfg: &PostProcessConfig, request_flag: bool) -> bool {
 }
 
 /// Convenience wrapper used at synthesis sites. Returns the input unchanged
-/// when post-processing is disabled, gated off (length/request flag), or on
-/// any failure; logs a warning so problems are visible without breaking the
-/// spoken output. The sanitized input is re-sanitized on the LLM OUTPUT: the
-/// condenser can reintroduce markup/symbols, and its text goes straight to
-/// the engine.
+/// when post-processing is disabled, gated off (experimental flag, engine
+/// support, length/request flag), or on any failure. Gate blocks that
+/// override a WANTED run (experimental off, unsupported engine/model) log at
+/// info so a missing dramatization is never silent; feature-off and
+/// unrequested skips are the feature working as configured and stay quiet.
+/// The sanitized input is re-sanitized on the LLM OUTPUT with the tag-safe
+/// variant: the condenser legitimately emits `[...]` emote tags now, and its
+/// text goes straight to the engine.
 pub async fn try_process(
     text: String,
     cfg: &PostProcessConfig,
     sanitization: &SanitizationConfig,
     request_flag: bool,
+    gate: DramatizeGate,
 ) -> String {
-    if !cfg.enabled || !condense_requested(cfg, request_flag) {
-        return text;
-    }
-    if text.chars().count() < cfg.min_chars {
+    if let Some(reason) = dramatize_skip_reason(cfg, request_flag, text.chars().count(), &gate) {
+        if reason.loud() {
+            log::info!("[PostProcess] dramatize skipped for this reading: {reason:?}");
+        }
         return text;
     }
     match process(&text, cfg).await {
         Ok(processed) => {
-            let processed = crate::sanitize::sanitize_text(&processed, sanitization);
+            if !words_preserved(&text, &processed) {
+                warn!("[PostProcess] LLM output changed the spoken words; using the original text");
+                return text;
+            }
+            let processed = crate::sanitize::sanitize_text_tag_safe(&processed, sanitization);
             log::info!(
                 "[PostProcess] {} chars -> {} chars",
                 text.len(),
@@ -163,6 +171,87 @@ pub async fn try_process(
             text
         }
     }
+}
+
+/// Per-reading inputs the synthesis sites resolve once: the Experimental
+/// master switch, and whether the active (engine, model) pair takes bracket
+/// tags (see `tts::catalog::supports_emote_tags`).
+#[derive(Debug, Clone)]
+pub struct DramatizeGate {
+    pub experimental_enabled: bool,
+    pub emote_supported: bool,
+}
+
+/// Why a reading will not be dramatized. `ExperimentalOff` and `Unsupported`
+/// are loud: post-processing was enabled and wanted to run, and the gate
+/// blocked it — that must never look like a silent no-op.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum SkipReason {
+    Disabled,
+    NotRequested,
+    TooShort,
+    ExperimentalOff,
+    Unsupported,
+}
+
+impl SkipReason {
+    /// Only gate blocks are logged; feature-off and unrequested are the
+    /// feature working as configured.
+    fn loud(&self) -> bool {
+        matches!(self, SkipReason::ExperimentalOff | SkipReason::Unsupported)
+    }
+}
+
+/// The config-level decision for one reading: `None` = dramatize, `Some` =
+/// skip with the reason. An explicit request (`request_flag`, the Dramatize
+/// switch or the control server's `condense`) bypasses `min_chars`; global
+/// mode keeps the length gate. Synthesis sites also call this to decide
+/// whether the waiting HUD must show before the LLM round trip.
+pub(crate) fn dramatize_skip_reason(
+    cfg: &PostProcessConfig,
+    request_flag: bool,
+    text_len: usize,
+    gate: &DramatizeGate,
+) -> Option<SkipReason> {
+    if !cfg.enabled {
+        return Some(SkipReason::Disabled);
+    }
+    if !condense_requested(cfg, request_flag) {
+        return Some(SkipReason::NotRequested);
+    }
+    if !request_flag && text_len < cfg.min_chars {
+        return Some(SkipReason::TooShort);
+    }
+    if !gate.experimental_enabled {
+        return Some(SkipReason::ExperimentalOff);
+    }
+    if !gate.emote_supported {
+        return Some(SkipReason::Unsupported);
+    }
+    None
+}
+
+/// True when `tagged` keeps every word of `original`: lowercase alphanumeric
+/// runs compared in order, with `[...]` emote tags, added punctuation, and
+/// emphasis capitalization ignored. Guards against the LLM rewriting,
+/// truncating, or padding the text — tags may be inserted, words may not.
+pub(crate) fn words_preserved(original: &str, tagged: &str) -> bool {
+    fn words(text: &str) -> Vec<String> {
+        crate::emote::strip_tags(text)
+            .chars()
+            .fold(Vec::new(), |mut runs, ch| {
+                if ch.is_alphanumeric() {
+                    runs.last_mut()
+                        .map(|last: &mut String| last.push(ch))
+                        .unwrap_or_else(|| runs.push(ch.to_string()));
+                }
+                runs
+            })
+            .into_iter()
+            .map(|run| run.to_lowercase())
+            .collect()
+    }
+    words(original) == words(tagged)
 }
 
 /// Substitute `${output}` in the prompt template with the actual text. If the
@@ -212,9 +301,111 @@ mod tests {
         assert!(condense_requested(&cfg, true));
     }
 
+    fn permissive_gate() -> DramatizeGate {
+        DramatizeGate {
+            experimental_enabled: true,
+            emote_supported: true,
+        }
+    }
+
+    #[test]
+    fn dramatize_runs_when_every_condition_holds() {
+        let cfg = PostProcessConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        assert!(dramatize_skip_reason(&cfg, false, 1000, &permissive_gate()).is_none());
+        assert!(dramatize_skip_reason(&cfg, true, 1000, &permissive_gate()).is_none());
+    }
+
+    #[test]
+    fn dramatize_names_its_block_reasons() {
+        let cfg = PostProcessConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        let experimental_off = DramatizeGate {
+            experimental_enabled: false,
+            emote_supported: true,
+        };
+        assert!(matches!(
+            dramatize_skip_reason(&cfg, false, 1000, &experimental_off),
+            Some(SkipReason::ExperimentalOff)
+        ));
+        let unsupported = DramatizeGate {
+            experimental_enabled: true,
+            emote_supported: false,
+        };
+        assert!(matches!(
+            dramatize_skip_reason(&cfg, false, 1000, &unsupported),
+            Some(SkipReason::Unsupported)
+        ));
+    }
+
+    #[test]
+    fn dramatize_off_and_unrequested_stay_silent_skips() {
+        let gate = permissive_gate();
+        let disabled = PostProcessConfig {
+            enabled: false,
+            ..Default::default()
+        };
+        assert!(matches!(
+            dramatize_skip_reason(&disabled, false, 1000, &gate),
+            Some(SkipReason::Disabled)
+        ));
+        let strict = PostProcessConfig {
+            enabled: true,
+            require_request_flag: true,
+            ..Default::default()
+        };
+        assert!(matches!(
+            dramatize_skip_reason(&strict, false, 1000, &gate),
+            Some(SkipReason::NotRequested)
+        ));
+    }
+
+    /// `min_chars` gates implicit requests only: an explicit request bypasses
+    /// it (the Dramatize switch speaks short clips too).
+    #[test]
+    fn explicit_requests_bypass_min_chars() {
+        let gate = permissive_gate();
+        let cfg = PostProcessConfig {
+            enabled: true,
+            min_chars: 500,
+            ..Default::default()
+        };
+        assert!(matches!(
+            dramatize_skip_reason(&cfg, false, 100, &gate),
+            Some(SkipReason::TooShort)
+        ));
+        assert!(dramatize_skip_reason(&cfg, true, 100, &gate).is_none());
+    }
+
+    #[test]
+    fn words_preserved_accepts_tags_emphasis_and_punctuation() {
+        assert!(words_preserved(
+            "Hello world, again.",
+            "[sighs] Hello [happy] WORLD, again!"
+        ));
+        assert!(words_preserved(
+            "Are you serious? I can't believe you did that!",
+            "[appalled] Are you serious? [sighs] I can't believe you did that!"
+        ));
+        assert!(words_preserved("", ""));
+    }
+
+    #[test]
+    fn words_preserved_rejects_rewrites_truncations_and_additions() {
+        assert!(!words_preserved("Hello world", "Hello brave world"));
+        assert!(!words_preserved("Hello world again", "Hello world"));
+        assert!(!words_preserved("Hello world", "Hello earth"));
+        assert!(!words_preserved("Calm text", "[sighs]"));
+        assert!(!words_preserved("Hello", ""));
+    }
+
     /// Below min_chars the condenser must not run: short text returns
-    /// verbatim with no network call (the test text is under 200 chars and
-    /// the provider would fail loudly if contacted).
+    /// verbatim with no network call (the test text is short and the
+    /// provider would fail loudly if contacted).
     #[tokio::test]
     async fn try_process_skips_text_below_min_chars() {
         let cfg = PostProcessConfig {
@@ -223,7 +414,14 @@ mod tests {
             ..Default::default()
         };
         let sanitization = SanitizationConfig::default();
-        let out = try_process("short clip".to_string(), &cfg, &sanitization, true).await;
+        let out = try_process(
+            "short clip".to_string(),
+            &cfg,
+            &sanitization,
+            false,
+            permissive_gate(),
+        )
+        .await;
         assert_eq!(out, "short clip");
     }
 
@@ -235,7 +433,41 @@ mod tests {
         };
         let sanitization = SanitizationConfig::default();
         let text = "x".repeat(500);
-        let out = try_process(text.clone(), &cfg, &sanitization, true).await;
+        let out = try_process(text.clone(), &cfg, &sanitization, false, permissive_gate()).await;
         assert_eq!(out, text);
+    }
+
+    /// Gate blocked (experimental off): the text passes through without an
+    /// LLM round trip, loudly logged in production.
+    #[tokio::test]
+    async fn try_process_skips_when_experimental_is_off() {
+        let cfg = PostProcessConfig {
+            enabled: true,
+            ..Default::default()
+        };
+        let gate = DramatizeGate {
+            experimental_enabled: false,
+            emote_supported: true,
+        };
+        let out = try_process(
+            "[sighs] untouched".to_string(),
+            &cfg,
+            &SanitizationConfig::default(),
+            false,
+            gate,
+        )
+        .await;
+        assert_eq!(out, "[sighs] untouched");
+    }
+
+    /// The LLM rewrote the words: the tagged output is discarded and the
+    /// original text is spoken instead.
+    #[tokio::test]
+    async fn words_preserved_passes_tag_only_and_fails_word_diffs() {
+        // words_preserved is pure; this pins the contract try_process relies
+        // on: a tag-only diff passes, any word diff fails. The discard branch
+        // inside try_process itself needs a provider seam and is not covered here.
+        assert!(words_preserved("one two", "[happy] one two"));
+        assert!(!words_preserved("one two", "one three"));
     }
 }

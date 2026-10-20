@@ -558,6 +558,39 @@ pub(crate) fn active_engine(tts_config: &TtsConfig) -> TtsEngine {
     resolve_effective(tts_config).engine
 }
 
+/// The active profile's model id for its engine (`""` when unset). The
+/// Dramatize gate keys emote-tag support on the (engine, model) pair.
+pub(crate) fn effective_model(eff: &EffectiveTtsRequest) -> String {
+    match eff.engine {
+        TtsEngine::ElevenLabs => eff
+            .engine_options
+            .elevenlabs()
+            .and_then(|options| options.model_id.clone()),
+        TtsEngine::Fish => eff
+            .engine_options
+            .fish()
+            .and_then(|options| options.model.clone()),
+        _ => None,
+    }
+    .unwrap_or_default()
+}
+
+/// The Dramatize gate for the active profile: the Experimental master switch
+/// plus per-(engine, model) emote-tag support.
+pub(crate) fn dramatize_gate(
+    tts_config: &TtsConfig,
+    experimental_enabled: bool,
+) -> crate::post_process::DramatizeGate {
+    let eff = resolve_effective(tts_config);
+    crate::post_process::DramatizeGate {
+        experimental_enabled,
+        emote_supported: crate::tts::catalog::supports_emote_tags(
+            &eff.engine,
+            &effective_model(&eff),
+        ),
+    }
+}
+
 pub(crate) fn resolve_effective(tts_config: &TtsConfig) -> EffectiveTtsRequest {
     resolve_effective_for_profile(tts_config, None).unwrap_or_else(|_| {
         let engine = tts_config.active_backend.clone();

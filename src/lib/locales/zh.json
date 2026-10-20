@@ -59,7 +59,9 @@
       "history": "历史记录",
       "effects": "效果",
       "advanced": "高级",
-      "about": "关于"
+      "about": "关于",
+      "playback": "播放",
+      "postProcess": "后处理"
     },
     "sections": {
       "general": "常规",
@@ -120,7 +122,9 @@
       "startMinimizedLabel": "启动时最小化",
       "startMinimizedTooltip": "启动时将应用最小化到系统托盘",
       "minimizeToTray": "关闭时最小化到托盘",
-      "minimizeToTrayTooltip": "关闭窗口时最小化到系统托盘，而不是退出"
+      "minimizeToTrayTooltip": "关闭窗口时最小化到系统托盘，而不是退出",
+      "experimental": "实验性功能",
+      "experimentalDescription": "显示并启用实验性功能 — Dramatize 与音效。关闭时这些功能会隐藏并强制关闭；已保存的设置会保留。"
     },
     "playback": {
       "title": "播放设置",
@@ -132,13 +136,8 @@
       "streamingDescription": "音频一到达即开始播放。支持的云引擎：ElevenLabs 和 Cartesia。关闭时使用批量合成，等每个请求完成后再播放。",
       "duck": "压低其他应用音量",
       "duckDescription": "CopySpeak 朗读时降低其他应用的音量，结束后恢复。目前仅支持 Windows。",
-      "duckMode": "压低模式",
-      "duckModeLower": "降低",
-      "duckModeMute": "静音",
       "duckLevel": "压低程度",
       "duckLevelDescription": "其他应用降至的音量，按其自身音量的百分比计算",
-      "duckFade": "淡变（毫秒）",
-      "duckFadeDescription": "压低与恢复时的淡变时长；0 表示立即",
       "playbackSpeed": "语速",
       "playbackSpeedDescription": "播放速度（0.5x - 2x）",
       "pitch": "音调",
@@ -249,8 +248,6 @@
       "baseUrl": "基础 URL",
       "baseUrlTooltip": "兼容 OpenAI 的 API 根地址，例如 https://api.groq.com/openai/v1",
       "addProvider": "添加服务商",
-      "deleteProvider": "删除服务商",
-      "deleteProviderTooltip": "从列表中移除此服务商。内置条目可通过重置设置恢复。",
       "refreshModels": "获取模型列表",
       "modelsEmpty": "端点未返回任何模型。",
       "model": "模型",
@@ -344,7 +341,8 @@
       "debugMode": "调试模式",
       "debugModeTooltip": "启用详细日志和额外的状态信息",
       "refreshing": "正在刷新...",
-      "noLogs": "没有可用的日志"
+      "noLogs": "没有可用的日志",
+      "updateStatusTooltip": "上次检查更新的结果。"
     },
     "importExport": {
       "tooltip": "导出、导入或重置设置",
@@ -834,7 +832,10 @@
   "quick": {
     "doubleCopy": "双击复制",
     "doubleCopyTooltip": "监控剪贴板的双击复制",
-    "effectsTooltip": "对 TTS 播放应用音频效果"
+    "effectsTooltip": "对 TTS 播放应用音频效果",
+    "dramatize": "戏剧化",
+    "dramatizeTooltip": "朗读前用情绪标签改写文本。使用你的后处理 LLM；若失败，则朗读原文。",
+    "dramatizeUnsupported": "戏剧化需要能读取情绪标签的语音模型。当前配置文件的模型不支持。"
   },
   "recent": {
     "viewAll": "查看全部历史记录",

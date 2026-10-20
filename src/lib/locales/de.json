@@ -59,7 +59,9 @@
       "history": "Verlauf",
       "effects": "Effekte",
       "advanced": "Erweitert",
-      "about": "Info"
+      "about": "Info",
+      "playback": "Wiedergabe",
+      "postProcess": "Nachbearbeitung"
     },
     "sections": {
       "general": "Allgemein",
@@ -120,7 +122,9 @@
       "startMinimizedLabel": "Minimiert starten",
       "startMinimizedTooltip": "Die Anwendung minimiert im Infobereich starten",
       "minimizeToTray": "Beim Schließen in den Infobereich minimieren",
-      "minimizeToTrayTooltip": "Beim Schließen des Fensters in den Infobereich minimieren, statt die Anwendung zu beenden"
+      "minimizeToTrayTooltip": "Beim Schließen des Fensters in den Infobereich minimieren, statt die Anwendung zu beenden",
+      "experimental": "Experimentelle Funktionen",
+      "experimentalDescription": "Zeigt und aktiviert experimentelle Funktionen – Dramatize und Effekte. Aus blendet sie aus und schaltet sie ab; gespeicherte Einstellungen bleiben."
     },
     "playback": {
       "title": "Wiedergabeeinstellungen",
@@ -132,13 +136,8 @@
       "streamingDescription": "Wiedergabe starten, sobald Audio eintrifft. Unterstützte Cloud-Engines: ElevenLabs und Cartesia. Wenn deaktiviert, wird per Batch synthetisiert und jede Anfrage vor der Wiedergabe abgewartet.",
       "duck": "Andere Apps absenken",
       "duckDescription": "Senkt den Ton anderer Apps, während CopySpeak spricht, und stellt ihn danach wieder her. Derzeit nur unter Windows.",
-      "duckMode": "Absenkmodus",
-      "duckModeLower": "Leiser",
-      "duckModeMute": "Stumm",
       "duckLevel": "Absenkpegel",
       "duckLevelDescription": "Lautstärke, auf die andere Apps sinken, in Prozent ihres eigenen Pegels",
-      "duckFade": "Überblendung (ms)",
-      "duckFadeDescription": "Überblenddauer beim Absenken und Wiederherstellen; 0 für sofort",
       "playbackSpeed": "Geschwindigkeit",
       "playbackSpeedDescription": "Wiedergabegeschwindigkeit (0,5x – 2x)",
       "pitch": "Tonhöhe",
@@ -249,8 +248,6 @@
       "baseUrl": "Basis-URL",
       "baseUrlTooltip": "OpenAI-kompatibler API-Stamm, z. B. https://api.groq.com/openai/v1",
       "addProvider": "Anbieter hinzufügen",
-      "deleteProvider": "Anbieter löschen",
-      "deleteProviderTooltip": "Diesen Anbieter aus der Liste entfernen. Integrierte Einträge lassen sich durch Zurücksetzen der Einstellungen wiederherstellen.",
       "refreshModels": "Modellliste abrufen",
       "modelsEmpty": "Der Endpunkt hat keine Modelle geliefert.",
       "model": "Modell",
@@ -344,7 +341,8 @@
       "debugMode": "Debug-Modus",
       "debugModeTooltip": "Ausführliche Protokollierung und zusätzliche Statusinformationen aktivieren",
       "refreshing": "wird aktualisiert...",
-      "noLogs": "Keine Protokolle verfügbar"
+      "noLogs": "Keine Protokolle verfügbar",
+      "updateStatusTooltip": "Ergebnis der letzten Update-Prüfung."
     },
     "importExport": {
       "tooltip": "Einstellungen exportieren, importieren oder zurücksetzen",
@@ -834,7 +832,10 @@
   "quick": {
     "doubleCopy": "Doppelt kopieren",
     "doubleCopyTooltip": "Zwischenablage auf doppeltes Kopieren überwachen",
-    "effectsTooltip": "Audioeffekt auf die TTS-Wiedergabe anwenden"
+    "effectsTooltip": "Audioeffekt auf die TTS-Wiedergabe anwenden",
+    "dramatize": "Dramatisieren",
+    "dramatizeTooltip": "Schreibt den Text vor dem Sprechen mit Emote-Tags um. Nutzt dein Post-Processing-LLM und spricht bei einem Fehler den Originaltext.",
+    "dramatizeUnsupported": "Dramatisieren braucht ein Stimmmodell, das Emote-Tags liest. Das Modell des aktiven Profils unterstützt das nicht."
   },
   "recent": {
     "viewAll": "Gesamten Verlauf anzeigen",

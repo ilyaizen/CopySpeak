@@ -37,7 +37,11 @@
     VoiceProfile
   } from "#lib/types";
 
-  let { localConfig = $bindable() } = $props<{ localConfig: AppConfig }>();
+  let { localConfig = $bindable() }: Props = $props();
+
+  interface Props {
+    localConfig: AppConfig;
+  }
 
   const ENGINES: TtsEngine[] = [
     "local",
@@ -483,7 +487,7 @@
     const profile = localConfig.tts.profiles[index];
     profile.voice = voiceId;
     const match = catalogVoicesFor(profile.engine).find((voice) => voice.id === voiceId);
-    profile.voice_label = match?.label;
+    profile.voice_label = match?.label ?? null;
   }
 
   function resetEngineOptions(index: number, engine: TtsEngine) {
@@ -590,7 +594,10 @@
       voice_label: preset.voiceLabel,
       speed: 1.0,
       pitch: 1.0,
-      effects: { enabled: true, active_effect: "walkie_talkie" },
+      effects:
+        localConfig.general.experimental_enabled === true
+          ? { enabled: true, active_effect: "walkie_talkie" }
+          : { enabled: false, active_effect: "none" },
       engine_options: preset.engineOptions
     };
     localConfig.tts.profiles = [...profiles, profile];
@@ -805,18 +812,21 @@
             />
           </div>
         </SettingRow>
-        <SettingRow label={$_("common.effect")}>
-          <Select
-            options={effectOptions}
-            value={active.effects.active_effect}
-            onchange={(e) => {
-              const v = (e.target as HTMLSelectElement).value as EffectId;
-              localConfig.tts.profiles[activeIndex].effects.active_effect = v;
-              localConfig.tts.profiles[activeIndex].effects.enabled = v !== "none";
-            }}
-            class="w-56"
-          />
-        </SettingRow>
+        {#if localConfig.general.experimental_enabled === true}
+          <SettingRow label={$_("common.effect")}>
+            <Select
+              options={effectOptions}
+              value={active.effects.active_effect}
+              onchange={(e) => {
+                // SAFETY: the Select options enumerate EFFECTS, so the value is an EffectId and e.target is the Select.
+                const v = (e.target as HTMLSelectElement).value as EffectId;
+                localConfig.tts.profiles[activeIndex].effects.active_effect = v;
+                localConfig.tts.profiles[activeIndex].effects.enabled = v !== "none";
+              }}
+              class="w-56"
+            />
+          </SettingRow>
+        {/if}
       </section>
 
       <!-- Advanced: engine-specific options + docs -->

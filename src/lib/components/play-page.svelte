@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { effectiveEffect } from "#lib/effects-gate";
   import { onMount, onDestroy } from "svelte";
   import { replaceState } from "$app/navigation";
   import PlaybackControls from "#lib/components/playback-controls.svelte";
@@ -80,7 +81,7 @@
       on_retrigger: "interrupt",
       volume: 100,
       streaming_enabled: true,
-      duck: { enabled: true, mode: "lower", level_percent: 20, fade_ms: 150 }
+      duck: { enabled: true, level_percent: 20 }
     },
     hud: {
       enabled: false,
@@ -103,7 +104,8 @@
       debug_mode: false,
       close_behavior: "minimize-to-tray",
       appearance: "system",
-      locale: "en"
+      locale: "en",
+      experimental_enabled: false
     },
     output: {
       enabled: false,
@@ -212,9 +214,7 @@
       const c = config;
       const { volume } = c.playback;
       const activeProfile = c.tts.profiles.find((p) => p.id === c.tts.active_profile_id);
-      const activeEffect = activeProfile?.effects?.enabled
-        ? activeProfile.effects.active_effect
-        : "none";
+      const activeEffect = effectiveEffect(c);
       const speed = activeProfile?.speed ?? 1.0;
       const pitch = activeProfile?.pitch ?? 1.0;
 

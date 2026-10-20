@@ -208,6 +208,7 @@ impl Default for AppConfig {
                 update_checks_enabled: true,
                 auto_save_profiles: false,
                 locale: "en".to_string(),
+                experimental_enabled: false,
             },
             trigger: TriggerConfig {
                 listen_enabled: true,

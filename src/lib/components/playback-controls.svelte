@@ -16,7 +16,9 @@
     onStop,
     onSkipBack,
     onSkipForward
-  } = $props<{
+  }: Props = $props();
+
+  interface Props {
     isPlaying: boolean;
     isPaused: boolean;
     isSynthesizing: boolean;
@@ -26,7 +28,7 @@
     onStop: () => void;
     onSkipBack: () => void;
     onSkipForward: () => void;
-  }>();
+  }
 
   const canStop = $derived(isPlaying || isSynthesizing);
   const canPause = $derived(isPlaying || isPaused);

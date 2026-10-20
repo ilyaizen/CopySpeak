@@ -98,6 +98,21 @@ fn voice(
     }
 }
 
+/// (Engine, model) pairs that interpret `[...]` emote tags in the request
+/// text instead of speaking them — the single source of truth for the
+/// Dramatize gate, exposed to the frontend through the `supports_emote_tags`
+/// command. Unverified pairs (`eleven_v3_conversational`, Fish `drama-3`,
+/// every other engine) stay excluded until someone listens to a tagged read
+/// on them; support is per model, never per engine.
+pub fn supports_emote_tags(engine: &TtsEngine, model: &str) -> bool {
+    let supported: &[&str] = match engine {
+        TtsEngine::ElevenLabs => &["eleven_v4", "eleven_v4_turbo", "eleven_v3"],
+        TtsEngine::Fish => &["s2.1-pro", "s2.1-pro-free", "s2-pro"],
+        _ => &[],
+    };
+    supported.contains(&model)
+}
+
 pub fn list_engines() -> Vec<EngineCatalogEntry> {
     vec![
         EngineCatalogEntry {
@@ -1261,6 +1276,42 @@ mod tests {
                     option.default_value
                 );
             }
+        }
+    }
+
+    #[test]
+    fn emote_tag_support_is_per_engine_model_pair() {
+        let supported: [(TtsEngine, &str); 6] = [
+            (TtsEngine::ElevenLabs, "eleven_v4"),
+            (TtsEngine::ElevenLabs, "eleven_v4_turbo"),
+            (TtsEngine::ElevenLabs, "eleven_v3"),
+            (TtsEngine::Fish, "s2.1-pro"),
+            (TtsEngine::Fish, "s2.1-pro-free"),
+            (TtsEngine::Fish, "s2-pro"),
+        ];
+        for (engine, model) in supported {
+            assert!(
+                super::supports_emote_tags(&engine, model),
+                "{engine:?} {model} must support emote tags"
+            );
+        }
+    }
+
+    #[test]
+    fn emote_tag_exclusions_stay_unsupported() {
+        let excluded: [(TtsEngine, &str); 6] = [
+            (TtsEngine::ElevenLabs, "eleven_v3_conversational"),
+            (TtsEngine::ElevenLabs, "eleven_multilingual_v2"),
+            (TtsEngine::ElevenLabs, "eleven_flash_v2_5"),
+            (TtsEngine::Fish, "drama-3"),
+            (TtsEngine::Fish, ""),
+            (TtsEngine::OpenAI, "gpt-4o-mini-tts"),
+        ];
+        for (engine, model) in excluded {
+            assert!(
+                !super::supports_emote_tags(&engine, model),
+                "{engine:?} {model} must NOT support emote tags"
+            );
         }
     }
 

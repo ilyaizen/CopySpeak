@@ -59,7 +59,9 @@
       "history": "היסטוריה",
       "effects": "אפקטים",
       "advanced": "מתקדם",
-      "about": "אודות"
+      "about": "אודות",
+      "playback": "השמעה",
+      "postProcess": "עיבוד לאחר"
     },
     "sections": {
       "general": "כללי",
@@ -120,7 +122,9 @@
       "startMinimizedLabel": "התחל ממוזער",
       "startMinimizedTooltip": "הפעל את היישום ממוזער לאזור ההודעות",
       "minimizeToTray": "מזער לאזור ההודעות בסגירה",
-      "minimizeToTrayTooltip": "מזער לאזור ההודעות במקום לצאת בעת סגירת החלון"
+      "minimizeToTrayTooltip": "מזער לאזור ההודעות במקום לצאת בעת סגירת החלון",
+      "experimental": "תכונות ניסיוניות",
+      "experimentalDescription": "מציג ומפעיל תכונות ניסיוניות — Dramatize ואפקטים. כבוי, הן מוסתרות ומנוטרלות; ההגדרות השמורות נשמרות."
     },
     "playback": {
       "title": "הגדרות השמעה",
@@ -132,13 +136,8 @@
       "streamingDescription": "התחל השמעה ברגע שהשמע מגיע. מנועי ענן נתמכים: ElevenLabs ו-Cartesia. כאשר מבוטל, השתמש בסינתזה אצווה והמתן לסיום כל בקשה לפני ההשמעה.",
       "duck": "הנמכת אפליקציות אחרות",
       "duckDescription": "הנמך את השמע של אפליקציות אחרות בזמן ש-CopySpeak מדבר, ואז שחזר אותו. כרגע Windows בלבד.",
-      "duckMode": "מצב הנמכה",
-      "duckModeLower": "הנמך",
-      "duckModeMute": "השתק",
       "duckLevel": "רמת הנמכה",
       "duckLevelDescription": "הרמה שאליה יורדות אפליקציות אחרות, באחוזים מהרמה הנוכחית שלהן",
-      "duckFade": "דהייה (מילישניות)",
-      "duckFadeDescription": "משך הדהייה בהנמכה ובשחזור; 0 למעבר מיידי",
       "playbackSpeed": "מהירות",
       "playbackSpeedDescription": "מהירות ההשמעה (0.5x - 2x)",
       "pitch": "גובה צליל",
@@ -249,8 +248,6 @@
       "baseUrl": "כתובת בסיס",
       "baseUrlTooltip": "שורש ה-API התואם OpenAI, למשל https://api.groq.com/openai/v1",
       "addProvider": "הוסף ספק",
-      "deleteProvider": "מחק ספק",
-      "deleteProviderTooltip": "הסר ספק זה מהרשימה. ניתן להוסיף מחדש ספקים מובנים על ידי איפוס ההגדרות.",
       "refreshModels": "שלוף רשימת מודלים",
       "modelsEmpty": "נקודת הקצה לא החזירה מודלים.",
       "model": "מודל",
@@ -344,7 +341,8 @@
       "debugMode": "מצב ניפוי שגיאות",
       "debugModeTooltip": "הפעל יומן מפורט ומידע סטטוס נוסף",
       "refreshing": "מרענן...",
-      "noLogs": "אין יומנים זמינים"
+      "noLogs": "אין יומנים זמינים",
+      "updateStatusTooltip": "תוצאת בדיקת העדכונים האחרונה."
     },
     "importExport": {
       "tooltip": "ייצא, ייבא או אפס את ההגדרות שלך",
@@ -834,7 +832,10 @@
   "quick": {
     "doubleCopy": "העתקה כפולה",
     "doubleCopyTooltip": "עקוב אחר הלוח לזיהוי העתקה כפולה",
-    "effectsTooltip": "החל אפקט שמע על ההשמעה של TTS"
+    "effectsTooltip": "החל אפקט שמע על ההשמעה של TTS",
+    "dramatize": "דרמטיזציה",
+    "dramatizeTooltip": "משכתב את הטקסט עם תגיות רגש לפני ההקראה. משתמש במודל השפה לעיבוד שלאחר מכן, ואם הוא נכשל — מקריא את הטקסט המקורי.",
+    "dramatizeUnsupported": "דרמטיזציה דורשת מודל קול שקורא תגיות רגש. מודל הפרופיל הפעיל אינו תומך בכך."
   },
   "recent": {
     "viewAll": "הצג את כל ההיסטוריה",

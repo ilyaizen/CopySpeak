@@ -225,13 +225,10 @@ export interface EngineCatalogEntry {
   voices: VoiceCatalogEntry[];
 }
 
-export type DuckMode = "lower" | "mute";
-
 export interface DuckConfig {
   enabled: boolean;
-  mode: DuckMode;
+  /** Volume other apps are lowered to, as a percent of their own level. */
   level_percent: number;
-  fade_ms: number;
 }
 
 export interface PlaybackConfig {
@@ -274,6 +271,8 @@ export interface GeneralConfig {
   update_checks_enabled?: boolean;
   auto_save_profiles?: boolean;
   locale: SupportedLocale;
+  /** Master switch for Experimental features (Dramatize, effects). */
+  experimental_enabled?: boolean;
 }
 
 export type AudioFormat = "wav" | "mp3" | "ogg" | "flac";

@@ -17,8 +17,8 @@
   import { invoke } from "#lib/services/tauri";
   import { toast } from "svelte-sonner";
   import { onMount, onDestroy } from "svelte";
-  import { tick } from "svelte";
   import { _ } from "svelte-i18n";
+  import { History, Info, Settings, Sparkles, Volume2, Wrench } from "@lucide/svelte";
   import { hideSaveBar } from "#lib/stores/save-bar.svelte";
   import { syncSaveBarOrAutoSave, flushAutoSave } from "#lib/stores/auto-save.svelte";
 
@@ -27,11 +27,10 @@
   let localConfig = $state<AppConfig | null>(null);
   let originalConfig = $state<AppConfig | null>(null);
   let isLoading = $state(true);
-  type SettingsTab = "general" | "history" | "advanced" | "about";
+  type SettingsSection = "general" | "playback" | "history" | "advanced" | "postProcess" | "about";
 
-  let activeTab = $state<SettingsTab>("general");
-
-  let isScrolling = $state(false);
+  // Sidebar highlight: set by the scroll-spy, or directly by a sidebar click.
+  let activeSection = $state<SettingsSection>("general");
 
   const retriggerModeOptions = [
     { value: "stop", label: $_("settings.playback.stopAndRestart") },
@@ -72,14 +71,117 @@
     }
   }
 
-  const tabs = [
-    { id: "general" as const, labelKey: "settings.tabs.general" },
-    { id: "history" as const, labelKey: "settings.tabs.history" },
-    { id: "advanced" as const, labelKey: "settings.tabs.advanced" },
-    { id: "about" as const, labelKey: "settings.tabs.about" }
+  // The Post-processing entry exists only while Experimental is on; turning
+  // the flag off while viewing it falls back to Advanced in the effect below.
+  const sections: {
+    id: SettingsSection;
+    labelKey: string;
+    icon: typeof Settings;
+    experimental?: boolean;
+  }[] = [
+    { id: "general", labelKey: "settings.tabs.general", icon: Settings },
+    { id: "playback", labelKey: "settings.tabs.playback", icon: Volume2 },
+    { id: "history", labelKey: "settings.tabs.history", icon: History },
+    { id: "advanced", labelKey: "settings.tabs.advanced", icon: Wrench },
+    {
+      id: "postProcess",
+      labelKey: "settings.tabs.postProcess",
+      icon: Sparkles,
+      experimental: true
+    },
+    { id: "about", labelKey: "settings.tabs.about", icon: Info }
   ];
 
-  const TAB_ORDER: SettingsTab[] = ["general", "history", "advanced", "about"];
+  let visibleSections = $derived(
+    sections.filter(
+      (section) => !section.experimental || localConfig?.general.experimental_enabled === true
+    )
+  );
+
+  $effect(() => {
+    if (!visibleSections.some((section) => section.id === activeSection)) {
+      activeSection = "advanced";
+    }
+  });
+
+  // Scroll-spy. Every section renders on one page. A sidebar click scrolls to
+  // its section; an IntersectionObserver highlights the section crossing the
+  // reading band (20%-40% of the window). The layout's <main> is the scroll
+  // container, not the window, so scroll events are captured on the document.
+  let isScrollingToSection = false;
+  let scrollSettleTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function scrollContainerOf(el: HTMLElement): HTMLElement | null {
+    let node: HTMLElement | null = el.parentElement;
+    while (node) {
+      const { overflowY } = getComputedStyle(node);
+      if (
+        (overflowY === "auto" || overflowY === "scroll") &&
+        node.scrollHeight > node.clientHeight
+      ) {
+        return node;
+      }
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  // A short last section never reaches the reading band, so at the bottom of
+  // the scroll container the last visible section is the active one.
+  function atScrollBottom(): boolean {
+    const probe = document.getElementById("general");
+    const scroller = probe ? scrollContainerOf(probe) : null;
+    if (!scroller) return false;
+    return scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 2;
+  }
+
+  function scheduleScrollRelease() {
+    clearTimeout(scrollSettleTimer);
+    // Smooth scrolling emits scroll events until it lands; release once they stop.
+    scrollSettleTimer = setTimeout(() => {
+      isScrollingToSection = false;
+    }, 150);
+  }
+
+  function onDocumentScroll() {
+    if (isScrollingToSection) {
+      scheduleScrollRelease();
+      return;
+    }
+    if (!atScrollBottom()) return;
+    const last = visibleSections.at(-1);
+    if (last) activeSection = last.id;
+  }
+
+  function scrollToSection(id: SettingsSection) {
+    activeSection = id;
+    isScrollingToSection = true;
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scheduleScrollRelease();
+  }
+
+  $effect(() => {
+    // Re-created whenever the section list changes, so the Post-processing entry
+    // is observed while it exists and dropped while it does not.
+    if (isLoading || !localConfig) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (isScrollingToSection || atScrollBottom()) return;
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            // SAFETY: only the section ids from `sections` are observed.
+            activeSection = entry.target.id as SettingsSection;
+          }
+        }
+      },
+      { rootMargin: "-20% 0px -60% 0px", threshold: 0 }
+    );
+    for (const section of visibleSections) {
+      const el = document.getElementById(section.id);
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  });
 
   const hasChanges = $derived(
     originalConfig !== null &&
@@ -87,49 +189,6 @@
       JSON.stringify(localConfig) !== JSON.stringify(originalConfig)
   );
   let errors = $state<Record<string, string>>({});
-
-  let observer: IntersectionObserver | null = null;
-
-  function setupScrollSpy() {
-    observer = new IntersectionObserver(
-      (entries) => {
-        if (isScrolling) return;
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            // SAFETY: the observer only watches the tab sections whose ids are SettingsTab.
-            const id = entry.target.id as SettingsTab;
-            if (TAB_ORDER.includes(id)) {
-              activeTab = id;
-            }
-          }
-        }
-      },
-      { rootMargin: "-20% 0px -60% 0px", threshold: 0 }
-    );
-
-    for (const tab of tabs) {
-      const el = document.getElementById(tab.id);
-      if (el) observer.observe(el);
-    }
-  }
-
-  function destroyScrollSpy() {
-    observer?.disconnect();
-    observer = null;
-  }
-
-  async function scrollToTab(tabId: SettingsTab) {
-    isScrolling = true;
-    activeTab = tabId;
-    await tick();
-    const el = document.getElementById(tabId);
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-    setTimeout(() => {
-      isScrolling = false;
-    }, 600);
-  }
 
   async function loadConfig() {
     isLoading = true;
@@ -196,18 +255,18 @@
   }
 
   onMount(async () => {
+    document.addEventListener("scroll", onDocumentScroll, { capture: true, passive: true });
     await loadConfig();
     // saveConfig reloads the page, so this also reports a failed re-register.
     const hotkeyError = await invoke<string | null>("get_hotkey_error").catch(() => null);
     if (hotkeyError)
       toast.error($_("toast.error.hotkeyRegistration", { values: { error: hotkeyError } }));
-    await tick();
-    setupScrollSpy();
   });
 
   onDestroy(() => {
     flushAutoSave();
-    destroyScrollSpy();
+    document.removeEventListener("scroll", onDocumentScroll, { capture: true });
+    clearTimeout(scrollSettleTimer);
   });
 </script>
 
@@ -223,178 +282,176 @@
     </div>
   {:else if localConfig}
     <div class="flex min-w-0 flex-col items-stretch gap-4 md:flex-row md:items-start">
-      <!-- Left Sidebar - Scroll Spy Navigation -->
-      <aside class="min-w-0 shrink-0 self-stretch md:w-28">
+      <!-- Left sidebar: each entry scrolls to its section -->
+      <aside class="min-w-0 shrink-0 self-stretch md:w-36">
         <nav class="sticky top-0">
           <div class="flex flex-wrap gap-1 md:flex-col">
-            {#each tabs as tab}
+            {#each visibleSections as section (section.id)}
+              {@const Icon = section.icon}
               <button
-                class="rounded-md px-2 py-1.5 text-start text-sm font-medium whitespace-nowrap transition-colors md:w-full {activeTab ===
-                tab.id
+                class="flex items-center gap-2 rounded-md px-2 py-1.5 text-start text-sm font-medium whitespace-nowrap transition-colors md:w-full {activeSection ===
+                section.id
                   ? 'bg-primary/10 text-primary border-primary border-s-2'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
-                onclick={() => scrollToTab(tab.id)}
+                aria-current={activeSection === section.id ? "page" : undefined}
+                onclick={() => scrollToSection(section.id)}
               >
-                {$_(tab.labelKey)}
+                <Icon class="size-4 shrink-0" />
+                {$_(section.labelKey)}
               </button>
             {/each}
           </div>
         </nav>
       </aside>
 
-      <!-- Main Content - Continuous Scroll -->
-      <main class="min-w-0 flex-1 space-y-8 pb-20">
-        <!-- General Section -->
-        <section id="general" class="scroll-mt-4">
-          <div class="border-border border-y">
-            <div class="space-y-0">
-              <!-- General -->
-              <div class="border-border border-b py-4">
-                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                  {$_("settings.sections.general")}
-                </h3>
-                <div class="space-y-4">
+      <!-- Main content: all sections stacked, one separator between them -->
+      <main class="divide-border min-w-0 flex-1 divide-y pb-20">
+        <section id="general" class="scroll-mt-4 py-6 first:pt-0">
+          <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+            {$_("settings.sections.general")}
+          </h3>
+          <div class="divide-border divide-y">
+            <div class="pb-4">
+              <div class="space-y-4">
+                <SettingRow
+                  label={$_("settings.triggers.listen")}
+                  tooltip={$_("settings.triggers.listenDescription")}
+                >
+                  <Switch
+                    id="listen-double-copy"
+                    bind:checked={localConfig.trigger.listen_enabled}
+                  />
+                </SettingRow>
+                {#if localConfig.trigger.listen_enabled}
                   <SettingRow
-                    label={$_("settings.triggers.listen")}
-                    tooltip={$_("settings.triggers.listenDescription")}
+                    label={$_("settings.triggers.doubleCopyWindow")}
+                    tooltip={$_("settings.triggers.doubleCopyWindowDescription")}
                   >
-                    <Switch
-                      id="listen-double-copy"
-                      bind:checked={localConfig.trigger.listen_enabled}
+                    <Input
+                      type="number"
+                      value={String(localConfig.trigger.double_copy_window_ms)}
+                      onchange={(e) => {
+                        if (!localConfig) return;
+                        // SAFETY: this Input is type="number", so e.target is that element.
+                        const raw = (e.target as HTMLInputElement).value;
+                        const lc = localConfig!;
+                        lc.trigger.double_copy_window_ms =
+                          raw === "" ? 1500 : Math.max(100, Number(raw));
+                      }}
+                      class="w-24"
                     />
                   </SettingRow>
-                  {#if localConfig.trigger.listen_enabled}
-                    <SettingRow
-                      label={$_("settings.triggers.doubleCopyWindow")}
-                      tooltip={$_("settings.triggers.doubleCopyWindowDescription")}
-                    >
-                      <Input
-                        type="number"
-                        value={String(localConfig.trigger.double_copy_window_ms)}
-                        onchange={(e) => {
-                          if (!localConfig) return;
-                          const raw = (e.target as HTMLInputElement).value;
-                          const lc = localConfig!;
-                          lc.trigger.double_copy_window_ms =
-                            raw === "" ? 1500 : Math.max(100, Number(raw));
-                        }}
-                        class="w-24"
-                      />
-                    </SettingRow>
-                  {/if}
-                  <HotkeySettings bind:localConfig {errors} />
-                  {#if localConfig.hud}
-                    <SettingRow
-                      label={$_("settings.hud.overlay")}
-                      tooltip={$_("settings.hud.enabledDescription")}
-                    >
-                      <Select
-                        options={HUD_OPTIONS}
-                        value={hudValue}
-                        onchange={handleHudChange}
-                        class="w-40"
-                      />
-                    </SettingRow>
-                  {/if}
-                </div>
+                {/if}
+                <HotkeySettings bind:localConfig {errors} />
+                {#if localConfig.hud}
+                  <SettingRow
+                    label={$_("settings.hud.overlay")}
+                    tooltip={$_("settings.hud.enabledDescription")}
+                  >
+                    <Select
+                      options={HUD_OPTIONS}
+                      value={hudValue}
+                      onchange={handleHudChange}
+                      class="w-40"
+                    />
+                  </SettingRow>
+                {/if}
               </div>
+            </div>
 
-              <!-- Startup -->
-              <div class="border-border border-b py-4">
-                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                  {$_("settings.sections.startup")}
-                </h3>
-                <GeneralSettings bind:localConfig />
-              </div>
+            <div class="py-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.startup")}
+              </h3>
+              <GeneralSettings bind:localConfig />
+            </div>
 
-              <!-- Appearance -->
-              <div class="border-border border-b py-4">
-                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                  {$_("settings.sections.appearance")}
-                </h3>
-                <AppearanceSettings bind:localConfig />
-              </div>
-
-              <!-- Playback -->
-              <div class="py-4">
-                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                  {$_("settings.sections.playback")}
-                </h3>
-                <PlaybackSettings bind:localConfig {retriggerModeOptions} />
-              </div>
+            <div class="pt-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.appearance")}
+              </h3>
+              <AppearanceSettings bind:localConfig />
             </div>
           </div>
         </section>
 
-        <!-- History Section -->
-        <section id="history" class="scroll-mt-4">
-          <div class="border-border border-y">
-            <div class="space-y-0">
-              <div class="py-4">
-                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                  {$_("settings.sections.history")}
-                </h3>
-                <HistorySettings bind:localConfig onRunCleanup={handleRunCleanup} />
-              </div>
-            </div>
-          </div>
+        <section id="playback" class="scroll-mt-4 py-6 first:pt-0">
+          <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+            {$_("settings.sections.playback")}
+          </h3>
+          <PlaybackSettings bind:localConfig {retriggerModeOptions} />
         </section>
 
-        <!-- Advanced Section -->
-        <section id="advanced" class="scroll-mt-4">
-          <div class="border-border border-y">
-            <div class="space-y-0">
-              <!-- Advanced -->
-              <div class="border-border border-b py-4">
-                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                  {$_("settings.sections.pagination")}
-                </h3>
-
-                <PaginationSettings bind:localConfig />
-              </div>
-
-              <!-- Sanitization -->
-              <div class="border-border border-b py-4">
-                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                  {$_("settings.sections.sanitization")}
-                </h3>
-                <SanitizationSettings bind:localConfig />
-              </div>
-
-              <!-- LLM Post-Processing -->
-              <div class="py-4">
-                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                  {$_("settings.sections.postProcess")}
-                </h3>
-                <PostProcessSettings bind:localConfig />
-              </div>
-            </div>
-          </div>
+        <section id="history" class="scroll-mt-4 py-6 first:pt-0">
+          <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+            {$_("settings.sections.history")}
+          </h3>
+          <HistorySettings bind:localConfig onRunCleanup={handleRunCleanup} />
         </section>
 
-        <!-- About Section -->
-        <section id="about" class="scroll-mt-4">
-          <div class="border-border border-y">
-            <div class="space-y-0">
-              <!-- App Info -->
-              <div class="border-border border-b py-4">
-                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                  {$_("settings.sections.appInfo")}
-                </h3>
-                <AboutSettings bind:localConfig showDebugMode={true} />
-              </div>
+        <section id="advanced" class="scroll-mt-4 py-6 first:pt-0">
+          <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+            {$_("settings.tabs.advanced")}
+          </h3>
+          <div class="divide-border divide-y">
+            <div class="pb-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.pagination")}
+              </h3>
+              <PaginationSettings bind:localConfig />
+            </div>
 
-              <!-- Import / Export -->
-              <div class="py-4">
-                <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                  {$_("settings.sections.importExport")}
-                </h3>
-                <ImportExportSettings
-                  {localConfig}
-                  onImport={handleImport}
-                  onReset={resetToDefaults}
+            <div class="py-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.sanitization")}
+              </h3>
+              <SanitizationSettings bind:localConfig />
+            </div>
+
+            <div class="pt-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.general.experimental")}
+              </h3>
+              <SettingRow
+                label={$_("settings.general.experimental")}
+                tooltip={$_("settings.general.experimentalDescription")}
+              >
+                <Switch
+                  id="experimental-enabled"
+                  bind:checked={localConfig.general.experimental_enabled}
                 />
-              </div>
+              </SettingRow>
+            </div>
+          </div>
+        </section>
+
+        {#if localConfig.general.experimental_enabled === true}
+          <section id="postProcess" class="scroll-mt-4 py-6 first:pt-0">
+            <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+              {$_("settings.sections.postProcess")}
+            </h3>
+            <PostProcessSettings bind:localConfig />
+          </section>
+        {/if}
+
+        <section id="about" class="scroll-mt-4 py-6 first:pt-0">
+          <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+            {$_("settings.sections.appInfo")}
+          </h3>
+          <div class="divide-border divide-y">
+            <div class="pb-4">
+              <AboutSettings bind:localConfig showDebugMode={true} />
+            </div>
+
+            <div class="pt-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.importExport")}
+              </h3>
+              <ImportExportSettings
+                {localConfig}
+                onImport={handleImport}
+                onReset={resetToDefaults}
+              />
             </div>
           </div>
         </section>

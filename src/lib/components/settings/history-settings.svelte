@@ -3,7 +3,6 @@
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { Slider } from "#lib/components/ui/slider/index.js";
   import { Button } from "#lib/components/ui/button/index.js";
-  import InfoTooltip from "#lib/components/ui/info-tooltip.svelte";
   import {
     AlertDialog,
     AlertDialogAction,
@@ -30,155 +29,153 @@
   }
 </script>
 
-<div class="space-y-4">
-  <SettingRow
-    label={$_("settings.history.enabled")}
-    tooltip={$_("settings.history.enabledDescription")}
-  >
-    <Switch id="history-enabled" bind:checked={localConfig.history.enabled} />
-  </SettingRow>
+<div class="divide-border divide-y">
+  <div class="pb-4">
+    <SettingRow
+      label={$_("settings.history.enabled")}
+      tooltip={$_("settings.history.enabledDescription")}
+    >
+      <Switch id="history-enabled" bind:checked={localConfig.history.enabled} />
+    </SettingRow>
+
+    {#if localConfig.history.enabled && localConfig.history.storage_mode === "persistent"}
+      <SettingRow
+        label={$_("settings.history.generationsFolder")}
+        tooltip={$_("settings.history.generationsFolderDescription")}
+      >
+        <input
+          id="persistent-dir"
+          type="text"
+          class="border-input placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full max-w-64 rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+          placeholder={$_("settings.history.generationsFolderPlaceholder")}
+          bind:value={localConfig.history.persistent_dir}
+        />
+      </SettingRow>
+    {/if}
+  </div>
 
   {#if localConfig.history.enabled}
-    {#if localConfig.history.storage_mode === "persistent"}
-      <div class="space-y-2">
-        <label for="persistent-dir" class="flex items-center gap-1.5">
-          <span class="text-sm font-medium">{$_("settings.history.generationsFolder")}</span>
-          <InfoTooltip text={$_("settings.history.generationsFolderDescription")} />
-        </label>
-        <div class="flex gap-2">
+    <div class="py-4">
+      <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+        {$_("settings.history.autoDeleteTitle")}
+      </h3>
+      <div class="space-y-4">
+        <label class="flex items-center gap-2">
           <input
-            id="persistent-dir"
-            type="text"
-            class="border-input placeholder:text-muted-foreground focus-visible:ring-ring flex h-9 w-full rounded-md border bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium focus-visible:ring-1 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-            placeholder={$_("settings.history.generationsFolderPlaceholder")}
-            bind:value={localConfig.history.persistent_dir}
+            type="radio"
+            name="auto_delete"
+            checked={isKeepLatest(localConfig.history.auto_delete)}
+            onchange={() => {
+              localConfig.history.auto_delete = { keep_latest: 15 };
+            }}
           />
-        </div>
+          <span class="text-sm"
+            >{$_("settings.history.autoDeleteKeepLatest")}
+            {isKeepLatest(localConfig.history.auto_delete)
+              ? localConfig.history.auto_delete.keep_latest
+              : 15}</span
+          >
+        </label>
+        {#if isKeepLatest(localConfig.history.auto_delete)}
+          <Slider
+            min={1}
+            max={1000}
+            step={1}
+            value={localConfig.history.auto_delete.keep_latest}
+            onchange={(val: number) => {
+              localConfig.history.auto_delete = {
+                keep_latest: val
+              };
+            }}
+          />
+        {/if}
+
+        <label class="flex items-center gap-2">
+          <input
+            type="radio"
+            name="auto_delete"
+            checked={localConfig.history.auto_delete === "never"}
+            onchange={() => {
+              localConfig.history.auto_delete = "never";
+            }}
+          />
+          <span class="text-sm">{$_("settings.history.autoDeleteNever")}</span>
+        </label>
+
+        <label class="flex items-center gap-2">
+          <input
+            type="radio"
+            name="auto_delete"
+            checked={isAfterDays(localConfig.history.auto_delete)}
+            onchange={() => {
+              localConfig.history.auto_delete = { after_days: 30 };
+            }}
+          />
+          <span class="text-sm"
+            >{$_("settings.history.autoDeleteAfterDays")}
+            {isAfterDays(localConfig.history.auto_delete)
+              ? localConfig.history.auto_delete.after_days
+              : 30}
+            {$_("settings.history.days")}</span
+          >
+        </label>
+        {#if isAfterDays(localConfig.history.auto_delete)}
+          <Slider
+            min={1}
+            max={365}
+            step={1}
+            value={localConfig.history.auto_delete.after_days}
+            onchange={(val: number) => {
+              localConfig.history.auto_delete = {
+                after_days: val
+              };
+            }}
+          />
+        {/if}
       </div>
-    {/if}
-
-    <hr class="border-border" />
-
-    <h4 class="text-card-foreground text-sm font-medium">
-      {$_("settings.history.autoDeleteTitle")}
-    </h4>
-
-    <div class="space-y-4">
-      <label class="flex items-center gap-2">
-        <input
-          type="radio"
-          name="auto_delete"
-          checked={isKeepLatest(localConfig.history.auto_delete)}
-          onchange={() => {
-            localConfig.history.auto_delete = { keep_latest: 15 };
-          }}
-        />
-        <span class="text-sm"
-          >{$_("settings.history.autoDeleteKeepLatest")}
-          {isKeepLatest(localConfig.history.auto_delete)
-            ? localConfig.history.auto_delete.keep_latest
-            : 15}</span
-        >
-      </label>
-      {#if isKeepLatest(localConfig.history.auto_delete)}
-        <Slider
-          min={1}
-          max={1000}
-          step={1}
-          value={localConfig.history.auto_delete.keep_latest}
-          onchange={(val: number) => {
-            localConfig.history.auto_delete = {
-              keep_latest: val
-            };
-          }}
-        />
-      {/if}
-
-      <label class="flex items-center gap-2">
-        <input
-          type="radio"
-          name="auto_delete"
-          checked={localConfig.history.auto_delete === "never"}
-          onchange={() => {
-            localConfig.history.auto_delete = "never";
-          }}
-        />
-        <span class="text-sm">{$_("settings.history.autoDeleteNever")}</span>
-      </label>
-
-      <label class="flex items-center gap-2">
-        <input
-          type="radio"
-          name="auto_delete"
-          checked={isAfterDays(localConfig.history.auto_delete)}
-          onchange={() => {
-            localConfig.history.auto_delete = { after_days: 30 };
-          }}
-        />
-        <span class="text-sm"
-          >{$_("settings.history.autoDeleteAfterDays")}
-          {isAfterDays(localConfig.history.auto_delete)
-            ? localConfig.history.auto_delete.after_days
-            : 30}
-          {$_("settings.history.days")}</span
-        >
-      </label>
-      {#if isAfterDays(localConfig.history.auto_delete)}
-        <Slider
-          min={1}
-          max={365}
-          step={1}
-          value={localConfig.history.auto_delete.after_days}
-          onchange={(val: number) => {
-            localConfig.history.auto_delete = {
-              after_days: val
-            };
-          }}
-        />
-      {/if}
     </div>
 
-    <hr class="border-border" />
-
-    <div class="space-y-2">
-      <h4 class="text-card-foreground text-sm font-medium">
+    <div class="pt-4">
+      <h3 class="text-muted-foreground mb-3 text-sm font-medium">
         {$_("settings.history.manualCleanupTitle")}
-      </h4>
-      <p class="text-muted-foreground text-xs">
-        {$_("settings.history.manualCleanupDescription")}
-      </p>
-      <AlertDialog>
-        <AlertDialogTrigger>
-          <Button variant="outline" size="sm">{$_("settings.history.runCleanup")}</Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{$_("settings.history.cleanupDialog.title")}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {$_("settings.history.cleanupDialog.description")}
-              <ul class="mt-2 list-inside list-disc space-y-1">
-                {#if localConfig.history.cleanup_orphaned_files}
-                  <li>{$_("settings.history.cleanupDialog.orphanedFiles")}</li>
-                {/if}
-              </ul>
-              {$_("settings.history.cleanupDialog.cannotUndo")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{$_("settings.history.cleanupDialog.cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              onclick={() => {
-                if (onRunCleanup) {
-                  onRunCleanup();
-                }
-              }}
-              class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {$_("settings.history.cleanupDialog.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      </h3>
+      <SettingRow
+        label={$_("settings.history.runCleanup")}
+        tooltip={$_("settings.history.manualCleanupDescription")}
+      >
+        <AlertDialog>
+          <AlertDialogTrigger>
+            <Button variant="outline" size="sm">{$_("settings.history.runCleanup")}</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{$_("settings.history.cleanupDialog.title")}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {$_("settings.history.cleanupDialog.description")}
+                <ul class="mt-2 list-inside list-disc space-y-1">
+                  {#if localConfig.history.cleanup_orphaned_files}
+                    <li>{$_("settings.history.cleanupDialog.orphanedFiles")}</li>
+                  {/if}
+                </ul>
+                {$_("settings.history.cleanupDialog.cannotUndo")}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{$_("settings.history.cleanupDialog.cancel")}</AlertDialogCancel>
+              <AlertDialogAction
+                onclick={() => {
+                  if (onRunCleanup) {
+                    onRunCleanup();
+                  }
+                }}
+                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {$_("settings.history.cleanupDialog.confirm")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </SettingRow>
     </div>
   {/if}
 </div>

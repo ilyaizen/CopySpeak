@@ -12,6 +12,7 @@
 import { isTauri } from "#lib/services/tauri.js";
 import { invoke } from "@tauri-apps/api/core";
 import type { AppConfig, EffectId } from "#lib/types";
+import { effectiveEffect } from "#lib/effects-gate";
 import { applyFadeIn, audioBufferToWavBlob, detectAudioMimeType } from "./playback/audio-utils.js";
 import { AudioAnalyser, type EmitPayload } from "./playback/analyser.js";
 import { PcmStreamScheduler, type StreamChunkPayload } from "./playback/pcm-stream.js";
@@ -778,7 +779,7 @@ class PlaybackStore {
           const config = await invoke<AppConfig>("get_config");
           const { volume } = config.playback;
           const profile = config.tts.profiles.find((p) => p.id === config.tts.active_profile_id);
-          const effect = profile?.effects?.enabled ? profile.effects.active_effect : "none";
+          const effect = effectiveEffect(config);
           this.syncPlaybackConfig(volume, profile?.speed ?? 1.0, profile?.pitch ?? 1.0, effect);
         } catch (e) {
           console.error("[PlaybackStore] Failed to re-sync after config-changed:", e);

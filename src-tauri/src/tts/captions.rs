@@ -17,6 +17,55 @@ pub struct CaptionAlignment {
 }
 
 impl CaptionAlignment {
+    /// Remove `[...]` emote-tag text and its word entries. Engines interpret
+    /// tags instead of speaking them, so tag characters must never be
+    /// highlighted — including characters a native-timestamps API echoes
+    /// back into its alignment stream. Word offsets are shifted left by the
+    /// removed UTF-16 units and stay valid against the stripped text; words
+    /// overlapping a tag are dropped with it.
+    pub fn stripped_of_emote_tags(&self) -> CaptionAlignment {
+        let spans = crate::emote::find_tag_spans(&self.text);
+        if spans.is_empty() {
+            return self.clone();
+        }
+        let removed_before = |offset: usize| -> usize {
+            spans
+                .iter()
+                .filter(|span| span.end_utf16 <= offset)
+                .map(|span| span.end_utf16 - span.start_utf16)
+                .sum()
+        };
+        let inside_tag = |offset: usize| -> bool {
+            spans
+                .iter()
+                .any(|span| span.start_utf16 <= offset && offset < span.end_utf16)
+        };
+        let mut text = String::with_capacity(self.text.len());
+        let mut last_byte = 0usize;
+        for span in &spans {
+            text.push_str(&self.text[last_byte..span.start_byte]);
+            last_byte = span.end_byte;
+        }
+        text.push_str(&self.text[last_byte..]);
+        let words = self
+            .words
+            .iter()
+            .filter(|word| {
+                !inside_tag(word.text_start) && word.text_end > 0 && !inside_tag(word.text_end - 1)
+            })
+            .map(|word| {
+                let shift = removed_before(word.text_start);
+                WordTiming {
+                    text_start: word.text_start - shift,
+                    text_end: word.text_end - shift,
+                    start_ms: word.start_ms,
+                    end_ms: word.end_ms,
+                }
+            })
+            .collect();
+        CaptionAlignment { text, words }
+    }
+
     pub fn validate(&self) -> Result<(), String> {
         let len = self.text.encode_utf16().count();
         let boundaries: Vec<usize> = std::iter::once(0)
@@ -153,11 +202,15 @@ pub fn concat_speech(fragments: Vec<(SpeechAudio, String)>) -> Result<SpeechAudi
 /// estimation recipe — per-request durations are exact, intra-request word
 /// placement is approximate, and validation drops whatever does not fit).
 /// Words are the same alphanumeric runs the browser bridge aligns with, so a
-/// highlighted unit is identical on both sides.
+/// highlighted unit is identical on both sides. `[...]` emote tags are
+/// excluded first: engines interpret them instead of speaking them, so a tag
+/// word would take audio time no word occupies and shift every later
+/// highlight.
 pub fn estimate_alignment(text: &str, duration_ms: f64) -> CaptionAlignment {
-    let (spans, _) = crate::text_map::tokenize(text);
+    let stripped = crate::emote::strip_tags(text);
+    let (spans, _) = crate::text_map::tokenize(&stripped);
     CaptionAlignment {
-        text: text.to_string(),
+        text: stripped,
         words: proportional_words(&spans, duration_ms),
     }
 }
@@ -446,5 +499,114 @@ mod tests {
                 .data_size,
             36000
         );
+    }
+}
+
+#[cfg(test)]
+mod emote_tag_tests {
+    use super::*;
+
+    fn word_texts(captions: &CaptionAlignment) -> Vec<String> {
+        let units: Vec<u16> = captions.text.encode_utf16().collect();
+        captions
+            .words
+            .iter()
+            .map(|word| String::from_utf16_lossy(&units[word.text_start..word.text_end]))
+            .collect()
+    }
+
+    /// Estimated captions (Fish and every engine without native timings) must
+    /// not give emote tags audio time: the engine never speaks them, so a tag
+    /// word would shift every following highlight.
+    #[test]
+    fn estimated_captions_exclude_emote_tags() {
+        let caps = estimate_alignment("[happy] Hello world [sighs] again", 1000.0);
+        caps.validate().unwrap();
+        assert_eq!(caps.text, "Hello world again", "{caps:?}");
+        assert_eq!(word_texts(&caps), vec!["Hello", "world", "again"]);
+    }
+
+    #[test]
+    fn plain_text_estimation_is_unchanged() {
+        let caps = estimate_alignment("Hello world", 1000.0);
+        caps.validate().unwrap();
+        assert_eq!(caps.text, "Hello world");
+        assert_eq!(caps.words.len(), 2);
+        assert_eq!(word_texts(&caps), vec!["Hello", "world"]);
+    }
+
+    /// Tag-free captions pass through the strip untouched (the ElevenLabs
+    /// emission path runs it on every snapshot).
+    #[test]
+    fn stripping_tag_free_captions_is_a_no_op() {
+        let caps = CaptionAlignment {
+            text: "Hello 😀 world".into(),
+            words: vec![
+                WordTiming {
+                    text_start: 0,
+                    text_end: 5,
+                    start_ms: 0.0,
+                    end_ms: 100.0,
+                },
+                WordTiming {
+                    text_start: 10,
+                    text_end: 15,
+                    start_ms: 200.0,
+                    end_ms: 300.0,
+                },
+            ],
+        };
+        let stripped = caps.stripped_of_emote_tags();
+        assert_eq!(stripped, caps);
+    }
+
+    /// Native captions that echo tag characters lose them: tag text and its
+    /// word entries are removed, later words shift left, offsets stay valid.
+    #[test]
+    fn stripping_removes_tag_words_and_shifts_offsets() {
+        let caps = CaptionAlignment {
+            text: "[sighs] Hello world".into(),
+            words: vec![
+                WordTiming {
+                    text_start: 0,
+                    text_end: 7,
+                    start_ms: 0.0,
+                    end_ms: 5.0,
+                }, // "[sighs]"
+                WordTiming {
+                    text_start: 7,
+                    text_end: 8,
+                    start_ms: 5.0,
+                    end_ms: 10.0,
+                }, // " "
+                WordTiming {
+                    text_start: 8,
+                    text_end: 13,
+                    start_ms: 10.0,
+                    end_ms: 300.0,
+                }, // "Hello"
+                WordTiming {
+                    text_start: 13,
+                    text_end: 14,
+                    start_ms: 300.0,
+                    end_ms: 310.0,
+                }, // " "
+                WordTiming {
+                    text_start: 14,
+                    text_end: 19,
+                    start_ms: 310.0,
+                    end_ms: 600.0,
+                }, // "world"
+            ],
+        };
+        let stripped = caps.stripped_of_emote_tags();
+        stripped.validate().unwrap();
+        assert_eq!(stripped.text, " Hello world");
+        let words = word_texts(&stripped);
+        assert_eq!(words, vec![" ", "Hello", " ", "world"]);
+        assert_eq!(stripped.words[1].start_ms, 10.0);
+        assert_eq!(stripped.words[1].text_start, 1);
+        assert_eq!(stripped.words[3].text_start, 7);
+        assert_eq!(stripped.words[3].text_end, 12);
     }
 }
