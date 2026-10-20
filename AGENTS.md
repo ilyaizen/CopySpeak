@@ -11,7 +11,7 @@ CopySpeak: A lightweight and modern cross-platform AI text-to-speech orchestrato
 ## Current priorities
 
 - Next release: low time-to-first-audio (TTFA) and a small VRAM footprint, so local engines run on low-VRAM GPUs and CPU-only machines.
-- Chatterbox is deferred: too slow for immediate, responsive TTS. Keep its uncommitted work (`scripts/chatterbox/`, `scripts/install-chatterbox.ps1`, `scripts/test-chatterbox.py`, Chatterbox hunks in tracked engine files) out of release commits. Don't delete it.
+- Chatterbox is dropped (2026-10-20): too large, and not coming back. Its WIP lived on `feat/chatterbox`, now deleted. Do not reintroduce it without asking.
 - Judge new engines by TTFA and VRAM footprint before adding them.
 
 ## Workflow
