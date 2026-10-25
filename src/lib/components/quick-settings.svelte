@@ -3,9 +3,15 @@
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { Slider } from "#lib/components/ui/slider/index.js";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
+  import { Select } from "#lib/components/ui/select/index.js";
   import { listeningStore } from "#lib/stores/listening-store.svelte";
   import { invoke } from "#lib/services/tauri";
   import type { AppConfig, VoiceProfile } from "#lib/types";
+  import {
+    activeTemplate,
+    switchDisabledFor,
+    templateOptions
+  } from "#lib/components/settings/post-process-templates";
 
   interface Props {
     config?: AppConfig;
@@ -26,8 +32,9 @@
   const profilePitch = $derived(activeProfile?.pitch ?? 1.0);
   const profileEffectsEnabled = $derived(activeProfile?.effects.enabled ?? false);
 
-  // Dramatize needs emote-tag support for the active profile's (engine, model) pair.
-  // The backend catalog owns that answer; the model key mirrors `effective_model`.
+  // Post-process needs emote-tag support only for preserve-class templates
+  // (Dramatize). The backend catalog owns that answer; the model key mirrors
+  // `effective_model`.
   function profileModel(profile: VoiceProfile | null): string {
     if (!profile) return "";
     const key =
@@ -35,26 +42,29 @@
     return key ? String(profile.engine_options[key] ?? "") : "";
   }
 
-  let dramatizeSupported = $state(false);
+  let emoteSupported = $state(false);
   $effect(() => {
     const engine = activeProfile?.engine;
     const model = profileModel(activeProfile);
     if (!engine) {
-      dramatizeSupported = false;
+      emoteSupported = false;
       return;
     }
     let stale = false;
     invoke<boolean>("supports_emote_tags", { engine, model })
       .then((ok) => {
-        if (!stale) dramatizeSupported = ok;
+        if (!stale) emoteSupported = ok;
       })
       .catch(() => {
-        if (!stale) dramatizeSupported = false;
+        if (!stale) emoteSupported = false;
       });
     return () => {
       stale = true;
     };
   });
+
+  // The active template drives the Post-process switch's disabled state.
+  let template = $derived(config ? activeTemplate(config.post_process) : undefined);
 
   // Live drag values: shown while a slider is dragged, cleared on commit so the
   // profile becomes the source of truth again (also handles profile switching).
@@ -114,19 +124,31 @@
           }}
         />
       </SettingRow>
-      <!-- Dramatize: the post-process switch; disabled when the profile's model cannot read emote tags -->
+      <!-- Post-process: the switch binds config.post_process.enabled; the dropdown
+           picks the active template. Disabled ONLY when the active template is
+           preserve-class and the engine cannot read emote tags — a rewrite
+           template (Concise) runs on any engine. -->
       <SettingRow
-        label={$_("quick.dramatize")}
-        tooltip={dramatizeSupported
-          ? $_("quick.dramatizeTooltip")
-          : $_("quick.dramatizeUnsupported")}
+        label={$_("quick.postProcess")}
+        tooltip={switchDisabledFor(template, emoteSupported)
+          ? $_("quick.postProcessUnsupported")
+          : $_("quick.postProcessTooltip")}
       >
-        <Switch
-          id="qs-dramatize"
-          aria-label={$_("quick.dramatize")}
-          disabled={!dramatizeSupported}
-          bind:checked={config.post_process.enabled}
-        />
+        <div class="flex items-center gap-2">
+          {#if template}
+            <Select
+              options={templateOptions(config.post_process.templates)}
+              bind:value={config.post_process.active_template_id}
+              class="w-32"
+            />
+          {/if}
+          <Switch
+            id="qs-post-process"
+            aria-label={$_("quick.postProcess")}
+            disabled={switchDisabledFor(template, emoteSupported)}
+            bind:checked={config.post_process.enabled}
+          />
+        </div>
       </SettingRow>
     {/if}
     <!-- Volume slider — 0–100% range with integer steps for precise control -->

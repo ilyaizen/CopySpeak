@@ -896,7 +896,7 @@ fn main() {
             commands::test_local_engine,
             // Post-processing models
             commands::list_post_process_models,
-            commands::get_default_post_process_prompt,
+            commands::get_builtin_post_process_templates,
             // Browser companion bridge (commands live in browser_bridge.rs)
             crate::browser_bridge::browser_reading_progress,
             crate::browser_bridge::browser_reading_finished,

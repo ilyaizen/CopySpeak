@@ -152,7 +152,7 @@ fn speak_cmd(client: &Client, base: &str, args: &[String]) -> Result<String, (i3
     let mut effect: Option<String> = None;
     let mut profile: Option<String> = None;
     let mut persist = false;
-    let mut condense = false;
+    let mut post_process = false;
     let mut wait = false;
     let mut ack: Option<String> = None;
 
@@ -173,7 +173,8 @@ fn speak_cmd(client: &Client, base: &str, args: &[String]) -> Result<String, (i3
                 profile = args.get(i).cloned();
             }
             "--persist" => persist = true,
-            "--condense" => condense = true,
+            // `--condense` is the retired flag name, kept as an alias.
+            "--post-process" | "--condense" => post_process = true,
             "--wait" => wait = true,
             "--ack" => {
                 i += 1;
@@ -219,7 +220,7 @@ fn speak_cmd(client: &Client, base: &str, args: &[String]) -> Result<String, (i3
         "effect": effect,
         "profile": profile,
         "persist_selection": persist,
-        "condense": condense,
+        "post_process": post_process,
         "wait": wait,
     })
     .to_string();
@@ -296,11 +297,12 @@ CopySpeak CLI — controls the running CopySpeak instance.
 Usage: copyspeak <command> [options]
 
 Commands:
-  speak \"<text>\" [--profile X] [--engine X] [--effect X] [--persist] [--condense] [--wait] [--ack <path>]
+  speak \"<text>\" [--profile X] [--engine X] [--effect X] [--persist] [--post-process] [--wait] [--ack <path>]
       Speak the given text. Use --profile to pick a preset profile by id.
       --persist also saves engine/effect/profile as the active selection.
-      --condense asks the post-process condenser for this request (needs it
-      enabled; honors the require_request_flag gate). --wait blocks until
+      --post-process asks the post-process LLM to run for this request
+      (needs it enabled; honors the require_request_flag gate; --condense
+      is the retired spelling). --wait blocks until
       playback finishes; --ack <path> then writes a tiny silent WAV (for
       callers like Hermes that require an output file).
   profiles                 List all configured profiles.

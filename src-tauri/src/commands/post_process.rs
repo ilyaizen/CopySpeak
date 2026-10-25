@@ -5,12 +5,12 @@ use crate::config::AppConfig;
 use std::sync::Mutex;
 use tauri::State;
 
-/// The backend's current default Dramatize prompt. The settings panel's
-/// "Restore default" reads this instead of duplicating the prompt in the
-/// frontend, so the two can never drift.
+/// The builtin prompt templates (id, name, class, prompt). The settings
+/// panel's "Reset to builtin" reads these instead of duplicating the
+/// prompts in the frontend, so the two can never drift.
 #[tauri::command]
-pub fn get_default_post_process_prompt() -> String {
-    crate::config::DEFAULT_POST_PROCESS_PROMPT.to_string()
+pub fn get_builtin_post_process_templates() -> Vec<crate::config::PostProcessTemplate> {
+    crate::config::builtin_templates()
 }
 
 /// Validate the active provider's API key via GET {base_url}/models

@@ -18,14 +18,14 @@ use std::time::Instant;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
-    active_engine, create_backend, create_backend_from_effective, dramatize_gate,
-    engine_identifier, engine_str, resolve_effective, voice_display_name, SynthesisGuard,
+    active_engine, create_backend, create_backend_from_effective, engine_identifier, engine_str,
+    post_process_gate, resolve_effective, voice_display_name, SynthesisGuard,
 };
 use crate::commands::{
     AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent,
     PlaybackStreamFailedEvent,
 };
-use crate::post_process::dramatize_skip_reason;
+use crate::post_process::post_process_skip_reason;
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
 
@@ -642,7 +642,7 @@ pub async fn speak_now(
     history: State<'_, Mutex<HistoryLog>>,
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     text: Option<String>,
-    condense: Option<bool>,
+    post_process: Option<bool>,
     trigger: Option<TriggerSource>,
 ) -> Result<(), String> {
     let trigger = trigger.map(|source| (source, browser_bridge::new_trigger_id()));
@@ -656,7 +656,7 @@ pub async fn speak_now(
         text,
         None,
         true,
-        condense.unwrap_or(false),
+        post_process.unwrap_or(false),
         trigger,
     )
     .await;
@@ -726,7 +726,7 @@ async fn speak_now_internal(
     text: Option<String>,
     _profile_id: Option<String>,
     reuse_saved_audio: bool,
-    condense: bool,
+    post_process_flag: bool,
     trigger: Option<(TriggerSource, String)>,
 ) -> Result<(), String> {
     let text = get_text_or_clipboard(text)?;
@@ -778,20 +778,32 @@ async fn speak_now_internal(
         )
     };
     let eff = resolve_effective(&tts_config);
-    let gate = dramatize_gate(&tts_config, experimental_enabled);
+    let gate = post_process_gate(&tts_config, experimental_enabled);
 
     // Optional LLM post-processing (e.g., Groq) — best-effort; falls back to
-    // the input text on any failure so synthesis is never blocked. Re-runs
-    // sanitization on the condenser OUTPUT (tag-safe; see try_process).
-    // Dramatize inserts an LLM round trip before any audio: show the waiting
-    // HUD first so the delay is visible.
-    if dramatize_skip_reason(&post_process_config, condense, text.chars().count(), &gate).is_none()
+    // the input text on any failure so synthesis is never blocked. Output
+    // re-sanitization branches on the template class (tag-safe for preserve,
+    // standard for rewrite; see try_process).
+    // Post-processing inserts an LLM round trip before any audio: show the
+    // waiting HUD first so the delay is visible.
+    if post_process_skip_reason(
+        &post_process_config,
+        post_process_flag,
+        text.chars().count(),
+        &gate,
+    )
+    .is_none()
     {
         hud::show_hud_synthesizing(&app, Some(text.clone()));
     }
-    let text =
-        crate::post_process::try_process(text, &post_process_config, &sanitization, condense, gate)
-            .await;
+    let text = crate::post_process::try_process(
+        text,
+        &post_process_config,
+        &sanitization,
+        post_process_flag,
+        gate,
+    )
+    .await;
     let _ = app.emit("reading-started", &text);
     // File output plays nothing, so there is no speak for a page to follow.
     if let Some((trigger, id)) = &trigger {
@@ -1302,7 +1314,7 @@ async fn speak_queued_internal(
         )
     };
     let eff = resolve_effective(&tts_config);
-    let gate = dramatize_gate(&tts_config, experimental_enabled);
+    let gate = post_process_gate(&tts_config, experimental_enabled);
 
     // Aborts issued before this run starts do not reach it. speak_queued takes
     // no queue lock, so a shared flag cleared here could also un-abort a run
@@ -1310,13 +1322,14 @@ async fn speak_queued_internal(
     let scope = AbortScope::begin();
 
     // Optional LLM post-processing — best-effort; falls back on failure.
-    // Double-copy dramatizes in global mode (request flag false) when the
-    // gate allows it; re-sanitizes condenser output tag-safe like speak_now.
-    // Dramatize inserts an LLM round trip before any audio: show the waiting
-    // HUD first so the delay is visible.
-    let dramatizing =
-        dramatize_skip_reason(&post_process_config, false, text.chars().count(), &gate).is_none();
-    if dramatizing {
+    // Double-copy processes in global mode (request flag false) when the
+    // gate allows it; output re-sanitization matches speak_now's class
+    // branch. Post-processing inserts an LLM round trip before any audio:
+    // show the waiting HUD first so the delay is visible.
+    let post_processing =
+        post_process_skip_reason(&post_process_config, false, text.chars().count(), &gate)
+            .is_none();
+    if post_processing {
         hud::show_hud_synthesizing(&app, Some(text.clone()));
     }
     let text =
@@ -1329,7 +1342,7 @@ async fn speak_queued_internal(
 
     log_tts_debug("Queue", &format!("{:?}", active_backend), &text);
 
-    if !dramatizing {
+    if !post_processing {
         // Keep the previous HUD timing when no LLM delay precedes synthesis.
         hud::show_hud_synthesizing(&app, Some(text.clone()));
     }

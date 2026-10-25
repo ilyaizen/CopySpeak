@@ -163,10 +163,24 @@
     post_process: {
       enabled: false,
       provider_id: "groq",
-      prompt: "",
       min_chars: 200,
       require_request_flag: false,
       timeout_secs: 5,
+      templates: [
+        {
+          id: "dramatize",
+          name: "Dramatize",
+          class: "preserve",
+          prompt: "You add expressive audio tags to text for a speech synthesizer. Text:\n${output}"
+        },
+        {
+          id: "concise",
+          name: "Concise",
+          class: "rewrite",
+          prompt: "You compress text so it is fast to listen to. Text:\n${output}"
+        }
+      ],
+      active_template_id: "dramatize",
       providers: [
         {
           id: "groq",

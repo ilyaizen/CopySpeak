@@ -124,7 +124,7 @@
       "minimizeToTray": "Réduire dans la zone de notification à la fermeture",
       "minimizeToTrayTooltip": "Réduire dans la zone de notification au lieu de quitter lors de la fermeture de la fenêtre",
       "experimental": "Fonctions expérimentales",
-      "experimentalDescription": "Affiche et active les fonctions expérimentales — Dramatize et Effets. Désactivé, elles sont masquées et forcées à l’arrêt ; les réglages enregistrés sont conservés."
+      "experimentalDescription": "Affiche et active les fonctions expérimentales — Post-traitement et Effets. Désactivé, elles sont masquées et forcées à l’arrêt ; les réglages enregistrés sont conservés."
     },
     "playback": {
       "title": "Paramètres de lecture",
@@ -232,15 +232,13 @@
       "enabled": "Activer le post-traitement",
       "enabledDescription": "Passer le texte nettoyé au modèle de chat du fournisseur actif avant la TTS. En cas d'échec, le texte original est utilisé.",
       "minChars": "Longueur minimale",
-      "minCharsTooltip": "Ne condenser que les textes d'au moins ce nombre de caractères ; les textes plus courts sont lus tels quels. 0 condense tout.",
+      "minCharsTooltip": "Ne post_processr que les textes d'au moins ce nombre de caractères ; les textes plus courts sont lus tels quels. 0 post_process tout.",
       "requireRequestFlag": "Uniquement sur demande",
-      "requireRequestFlagTooltip": "Ne condenser que si l'appelant le demande explicitement (champ condense du serveur de contrôle ou CLI --condense). Désactivé : tout texte admissible est condensé.",
+      "requireRequestFlagTooltip": "Ne post_processr que si l'appelant le demande explicitement (champ post_process du serveur de contrôle ou CLI --post_process). Désactivé : tout texte admissible est condensé.",
       "apiKey": "Clé API",
       "apiKeyPlaceholder": "gsk_...",
       "apiKeyHelp": "Créez une clé sur console.groq.com",
       "testKey": "Tester",
-      "testOk": "La clé API Groq est valide",
-      "testFail": "Clé non valide",
       "provider": "Fournisseur",
       "providerTooltip": "Tout point de terminaison compatible OpenAI fonctionne. Ajoutez le vôtre avec le bouton +.",
       "name": "Nom",
@@ -254,7 +252,17 @@
       "modelTooltip": "Les petits modèles sont plus rapides ; les grands suivent les instructions de façon plus fiable.",
       "prompt": "Modèle de prompt",
       "promptHelp": "Utilisez ${output} là où le texte copié doit être inséré.",
-      "restoreDefault": "Rétablir le prompt par défaut"
+      "template": "Modèle",
+      "templateTooltip": "Le modèle de prompt appliqué avant la lecture. Les modèles intégrés sont modifiables et réinitialisables ; ne supprimez que les vôtres.",
+      "addTemplate": "Ajouter un modèle",
+      "deleteTemplate": "Supprimer le modèle",
+      "templateName": "Nom",
+      "templateNameTooltip": "Nom affiché de ce modèle.",
+      "templateClass": "Classe",
+      "templateClassTooltip": "Conserver : le LLM ne peut qu'ajouter des balises de delivery — chaque mot est conservé et le moteur doit lire les balises d'émotion. Réécrire : le LLM peut reformuler librement ; fonctionne avec n'importe quel moteur.",
+      "classPreserve": "Conserver les mots",
+      "classRewrite": "Réécriture libre",
+      "resetTemplate": "Réinitialiser au modèle intégré"
     },
     "effects": {
       "enabled": "Activer les effets",
@@ -867,9 +875,9 @@
     "doubleCopy": "Double copie",
     "doubleCopyTooltip": "Surveiller le presse-papiers pour la double copie",
     "effectsTooltip": "Appliquer un effet audio à la lecture TTS",
-    "dramatize": "Dramatiser",
-    "dramatizeTooltip": "Réécrit le texte avec des balises d'émotion avant la lecture. Utilise votre LLM de post-traitement et lit le texte d'origine en cas d'échec.",
-    "dramatizeUnsupported": "La dramatisation nécessite un modèle vocal qui lit les balises d'émotion. Le modèle du profil actif ne le permet pas."
+    "postProcess": "Post-traitement",
+    "postProcessTooltip": "Applique le modèle de post-traitement actif au texte avant la lecture. Si le LLM échoue, le texte original est lu.",
+    "postProcessUnsupported": "Le modèle actif conserve chaque mot et nécessite un modèle de voix qui lit les balises d'émotion. Un modèle de réécriture comme Concise fonctionne avec n'importe quel moteur."
   },
   "recent": {
     "viewAll": "Voir tout l'historique",

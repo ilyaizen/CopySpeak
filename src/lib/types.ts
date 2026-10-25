@@ -361,16 +361,30 @@ export interface PostProcessProvider {
   model: string;
 }
 
+/** What the LLM may do to the text; drives the whole pipeline. */
+export type PostProcessTemplateClass = "preserve" | "rewrite";
+
+export interface PostProcessTemplate {
+  id: string;
+  name: string;
+  class: PostProcessTemplateClass;
+  prompt: string;
+}
+
 export interface PostProcessConfig {
   enabled: boolean;
   provider_id: string;
-  prompt: string;
   providers: PostProcessProvider[];
-  /** Minimum input length (chars) before the condenser runs; 0 = always. */
+  /** Prompt library; exactly one active. Backend normalize() seeds builtins. */
+  templates: PostProcessTemplate[];
+  active_template_id: string;
+  /** Legacy single prompt; empty once folded into a template. */
+  prompt?: string;
+  /** Minimum input length (chars) before post-processing runs; 0 = always. */
   min_chars: number;
-  /** Condense only requests that explicitly ask (control server / CLI). */
+  /** Post-process only requests that explicitly ask (control server / CLI). */
   require_request_flag: boolean;
-  /** Condenser HTTP timeout in seconds; 0 = none. Config-file-only. */
+  /** Post-process HTTP timeout in seconds; 0 = none. Config-file-only. */
   timeout_secs: number;
 }
 

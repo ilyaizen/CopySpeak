@@ -124,7 +124,7 @@
       "minimizeToTray": "关闭时最小化到托盘",
       "minimizeToTrayTooltip": "关闭窗口时最小化到系统托盘，而不是退出",
       "experimental": "实验性功能",
-      "experimentalDescription": "显示并启用实验性功能 — Dramatize 与音效。关闭时这些功能会隐藏并强制关闭；已保存的设置会保留。"
+      "experimentalDescription": "显示并启用实验性功能 — 后处理与音效。关闭时这些功能会隐藏并强制关闭；已保存的设置会保留。"
     },
     "playback": {
       "title": "播放设置",
@@ -232,15 +232,13 @@
       "enabled": "启用后处理",
       "enabledDescription": "在 TTS 之前，将清理后的文本交给当前服务商的聊天模型处理。失败时回退为原文。",
       "minChars": "最小长度",
-      "minCharsTooltip": "仅精简不少于此字符数的文本；较短的文本按原文朗读。0 表示全部精简。",
+      "minCharsTooltip": "仅处理不少于此字符数的文本；较短的文本按原文朗读。0 表示全部处理。",
       "requireRequestFlag": "仅在请求时",
-      "requireRequestFlagTooltip": "仅当调用方明确要求时才精简（控制服务器的 condense 字段或 CLI --condense）。关闭时：所有符合条件的文本都会精简。",
+      "requireRequestFlagTooltip": "仅当调用方明确要求时才处理（控制服务器的 post_process 字段或 CLI --post_process）。关闭时：所有符合条件的文本都会处理。",
       "apiKey": "API 密钥",
       "apiKeyPlaceholder": "gsk_...",
       "apiKeyHelp": "在 console.groq.com 创建密钥",
       "testKey": "测试",
-      "testOk": "Groq API 密钥有效",
-      "testFail": "密钥无效",
       "provider": "服务商",
       "providerTooltip": "任何兼容 OpenAI 的端点均可使用。用 + 按钮添加你自己的服务商。",
       "name": "名称",
@@ -254,7 +252,17 @@
       "modelTooltip": "较小的模型更快；较大的模型更可靠地遵循指令。",
       "prompt": "提示词模板",
       "promptHelp": "在需要插入复制文本的位置使用 ${output}。",
-      "restoreDefault": "恢复默认提示词"
+      "template": "模板",
+      "templateTooltip": "朗读前应用的提示词模板。内置模板可编辑和重置；仅可删除自建模板。",
+      "addTemplate": "添加模板",
+      "deleteTemplate": "删除模板",
+      "templateName": "名称",
+      "templateNameTooltip": "此模板的显示名称。",
+      "templateClass": "类型",
+      "templateClassTooltip": "保留：LLM 只能添加朗读标签——每个单词都保留，且引擎必须能读取情绪标签。改写：LLM 可自由改写措辞；适用于任何引擎。",
+      "classPreserve": "保留原词",
+      "classRewrite": "自由改写",
+      "resetTemplate": "重置为内置"
     },
     "effects": {
       "enabled": "启用效果",
@@ -867,9 +875,9 @@
     "doubleCopy": "双击复制",
     "doubleCopyTooltip": "监控剪贴板的双击复制",
     "effectsTooltip": "对 TTS 播放应用音频效果",
-    "dramatize": "戏剧化",
-    "dramatizeTooltip": "朗读前用情绪标签改写文本。使用你的后处理 LLM；若失败，则朗读原文。",
-    "dramatizeUnsupported": "戏剧化需要能读取情绪标签的语音模型。当前配置文件的模型不支持。"
+    "postProcess": "后处理",
+    "postProcessTooltip": "朗读前对文本应用当前的后处理模板。若 LLM 失败，则朗读原文。",
+    "postProcessUnsupported": "当前模板保留每个单词，需要能读取情绪标签的语音模型。像 Concise 这样的改写模板适用于任何引擎。"
   },
   "recent": {
     "viewAll": "查看全部历史记录",

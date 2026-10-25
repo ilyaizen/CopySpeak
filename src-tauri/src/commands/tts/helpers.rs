@@ -616,17 +616,18 @@ pub(crate) fn effective_model(eff: &EffectiveTtsRequest) -> String {
     .unwrap_or_default()
 }
 
-/// The Dramatize gate for the active profile: the Experimental master switch,
-/// per-(engine, model) emote-tag support, the engine's prompt dialect (xAI and
-/// Mistral read their own tag vocabularies — the generic prompt makes xAI
-/// speak its tags aloud), and whether the engine's dialect includes `<...>`
-/// wraps that the word comparison must strip (xAI).
-pub(crate) fn dramatize_gate(
+/// The post-process gate for the active profile: the Experimental master
+/// switch, per-(engine, model) emote-tag support (preserve-class templates
+/// only), the engine's prompt dialect (xAI and Mistral read their own tag
+/// vocabularies — the generic prompt makes xAI speak its tags aloud), and
+/// whether the engine's dialect includes `<...>` wraps that the word
+/// comparison must strip (xAI).
+pub(crate) fn post_process_gate(
     tts_config: &TtsConfig,
     experimental_enabled: bool,
-) -> crate::post_process::DramatizeGate {
+) -> crate::post_process::PostProcessGate {
     let eff = resolve_effective(tts_config);
-    crate::post_process::DramatizeGate {
+    crate::post_process::PostProcessGate {
         experimental_enabled,
         emote_supported: crate::tts::catalog::supports_emote_tags(
             &eff.engine,

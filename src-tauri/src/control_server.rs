@@ -22,9 +22,11 @@ struct SpeakRequest {
     text: String,
     engine: Option<String>,
     effect: Option<String>,
-    /// Ask the post-process condenser for this request even when the global
+    /// Ask the post-process LLM to run for this request even when the global
     /// `require_request_flag` gate would otherwise skip it (Hermes callers).
-    condense: Option<bool>,
+    /// `condense` is the pre-0.2.15 wire name, kept as an alias.
+    #[serde(alias = "condense")]
+    post_process: Option<bool>,
     /// Block until webview playback finishes (or the user stops it) before
     /// answering; serializes sentence-by-sentence Hermes callers.
     wait: Option<bool>,
@@ -261,7 +263,7 @@ async fn speak(app: AppHandle, request: SpeakRequest) -> Result<(), String> {
         history,
         telemetry_state,
         Some(text),
-        Some(request.condense.unwrap_or(false)),
+        Some(request.post_process.unwrap_or(false)),
         // Control-server speaks never surface in pages.
         None,
     )
@@ -438,14 +440,15 @@ ab",
         match parse_request(&speak_request(&request)) {
             Ok(ControlRequest::Speak(speak)) => {
                 assert_eq!(speak.wait, None);
-                assert_eq!(speak.condense, None);
+                assert_eq!(speak.post_process, None);
             }
             _ => panic!("expected a speak request"),
         }
     }
 
     /// Legacy callers send profile/persist_selection fields the server drops;
-    /// parsing must keep accepting them alongside the new condense/wait fields.
+    /// parsing must keep accepting them alongside the post_process/wait
+    /// fields. `condense` is the retired wire name and must keep working.
     #[test]
     fn speak_request_tolerates_unknown_fields() {
         let request = serde_json::json!({
@@ -457,8 +460,20 @@ ab",
         });
         match parse_request(&speak_request(&request)) {
             Ok(ControlRequest::Speak(speak)) => {
-                assert_eq!(speak.condense, Some(true));
+                assert_eq!(speak.post_process, Some(true));
                 assert_eq!(speak.wait, Some(false));
+            }
+            _ => panic!("expected a speak request"),
+        }
+    }
+
+    /// The current wire name parses too.
+    #[test]
+    fn speak_request_accepts_post_process_field() {
+        let request = serde_json::json!({ "text": "hello", "post_process": true });
+        match parse_request(&speak_request(&request)) {
+            Ok(ControlRequest::Speak(speak)) => {
+                assert_eq!(speak.post_process, Some(true));
             }
             _ => panic!("expected a speak request"),
         }

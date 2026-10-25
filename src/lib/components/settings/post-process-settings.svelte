@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { RefreshCw } from "@lucide/svelte";
+  import { RefreshCw, Trash2 } from "@lucide/svelte";
 
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
@@ -10,7 +10,19 @@
   import { invoke } from "@tauri-apps/api/core";
   import { toast } from "svelte-sonner";
   import { _ } from "svelte-i18n";
-  import type { AppConfig, PostProcessConfig } from "#lib/types";
+  import type {
+    AppConfig,
+    PostProcessConfig,
+    PostProcessTemplate,
+    PostProcessTemplateClass
+  } from "#lib/types";
+  import {
+    activeTemplate,
+    createCustomTemplate,
+    fallbackTemplateId,
+    isBuiltinTemplate,
+    templateOptions
+  } from "./post-process-templates";
 
   let { localConfig = $bindable() }: { localConfig: AppConfig } = $props();
 
@@ -32,6 +44,14 @@
   });
 
   let providerOptions = $derived(pp.providers.map((p) => ({ value: p.id, label: p.label })));
+
+  // Template library: exactly one active template at a time.
+  let templateOpts = $derived(templateOptions(pp.templates));
+  let currentTemplate = $derived(activeTemplate(pp));
+  const classOptions = $derived([
+    { value: "preserve", label: $_("settings.postProcess.classPreserve") },
+    { value: "rewrite", label: $_("settings.postProcess.classRewrite") }
+  ]);
 
   let modelOptions = $state<{ value: string; label: string }[]>([]);
   let isRefreshingModels = $state(false);
@@ -100,10 +120,40 @@
     }
   }
 
-  async function restoreDefaultPrompt() {
-    // The backend default is the single source of truth; a frontend copy
-    // would drift the next time the prompt changes.
-    localConfig.post_process.prompt = await invoke<string>("get_default_post_process_prompt");
+  function handleClassChange(e: Event) {
+    // SAFETY: this handler is only bound to the class <select>; its target is
+    // that element and its options enumerate exactly the two
+    // PostProcessTemplateClass values.
+    if (!currentTemplate) return;
+    const raw = (e.target as HTMLSelectElement).value;
+    currentTemplate.class = raw as PostProcessTemplateClass;
+  }
+
+  function addTemplate() {
+    const created = createCustomTemplate(pp.templates);
+    pp.templates = [...pp.templates, created];
+    pp.active_template_id = created.id;
+  }
+
+  function deleteTemplate() {
+    const victim = currentTemplate;
+    if (!victim || isBuiltinTemplate(victim.id)) return;
+    pp.templates = pp.templates.filter((t) => t.id !== victim.id);
+    // Mirrors the backend's dangling-id repair: Dramatize, then first entry.
+    pp.active_template_id = fallbackTemplateId(pp.templates);
+  }
+
+  async function resetBuiltin() {
+    const target = currentTemplate;
+    if (!target) return;
+    // The backend's builtin seeds are the single source of truth; a frontend
+    // copy would drift the next time a builtin prompt changes.
+    const builtins = await invoke<PostProcessTemplate[]>("get_builtin_post_process_templates");
+    const match = builtins.find((b) => b.id === target.id);
+    if (!match) return;
+    target.name = match.name;
+    target.class = match.class;
+    target.prompt = match.prompt;
   }
 </script>
 
@@ -238,24 +288,74 @@
         {/if}
       {/if}
 
-      <div class="space-y-2">
-        <div class="flex items-center justify-between">
+      <!-- Template library: builtins are editable and resettable but never
+           deletable; customs default to rewrite and are deletable. -->
+      <SettingRow
+        label={$_("settings.postProcess.template")}
+        tooltip={$_("settings.postProcess.templateTooltip")}
+      >
+        <div class="flex items-center gap-2">
+          <Select options={templateOpts} bind:value={pp.active_template_id} class="w-44" />
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label={$_("settings.postProcess.addTemplate")}
+            onclick={addTemplate}
+          >
+            +
+          </Button>
+          {#if currentTemplate && !isBuiltinTemplate(currentTemplate.id)}
+            <Button
+              variant="outline"
+              size="icon-sm"
+              aria-label={$_("settings.postProcess.deleteTemplate")}
+              onclick={deleteTemplate}
+            >
+              <Trash2 class="size-4" />
+            </Button>
+          {/if}
+          {#if currentTemplate && isBuiltinTemplate(currentTemplate.id)}
+            <Button variant="ghost" size="sm" onclick={resetBuiltin}>
+              {$_("settings.postProcess.resetTemplate")}
+            </Button>
+          {/if}
+        </div>
+      </SettingRow>
+
+      {#if currentTemplate}
+        <SettingRow
+          label={$_("settings.postProcess.templateName")}
+          tooltip={$_("settings.postProcess.templateNameTooltip")}
+        >
+          <Input bind:value={currentTemplate.name} class="w-56" />
+        </SettingRow>
+
+        <SettingRow
+          label={$_("settings.postProcess.templateClass")}
+          tooltip={$_("settings.postProcess.templateClassTooltip")}
+        >
+          <Select
+            options={classOptions}
+            value={currentTemplate.class}
+            onchange={handleClassChange}
+            class="w-44"
+          />
+        </SettingRow>
+
+        <div class="space-y-2">
           <div class="flex items-center gap-1.5">
             <label class="text-sm font-medium" for="post-process-prompt"
               >{$_("settings.postProcess.prompt")}</label
             >
             <InfoTooltip text={$_("settings.postProcess.promptHelp")} />
           </div>
-          <Button variant="ghost" size="sm" onclick={restoreDefaultPrompt}>
-            {$_("settings.postProcess.restoreDefault")}
-          </Button>
+          <textarea
+            id="post-process-prompt"
+            rows="10"
+            class="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 font-mono text-xs focus-visible:ring-1 focus-visible:outline-none"
+            bind:value={currentTemplate.prompt}></textarea>
         </div>
-        <textarea
-          id="post-process-prompt"
-          rows="10"
-          class="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring w-full rounded-md border px-3 py-2 font-mono text-xs focus-visible:ring-1 focus-visible:outline-none"
-          bind:value={localConfig.post_process.prompt}></textarea>
-      </div>
+      {/if}
     </div>
   {/if}
 </div>

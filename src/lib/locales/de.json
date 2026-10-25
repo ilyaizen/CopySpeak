@@ -124,7 +124,7 @@
       "minimizeToTray": "Beim Schließen in den Infobereich minimieren",
       "minimizeToTrayTooltip": "Beim Schließen des Fensters in den Infobereich minimieren, statt die Anwendung zu beenden",
       "experimental": "Experimentelle Funktionen",
-      "experimentalDescription": "Zeigt und aktiviert experimentelle Funktionen – Dramatize und Effekte. Aus blendet sie aus und schaltet sie ab; gespeicherte Einstellungen bleiben."
+      "experimentalDescription": "Zeigt und aktiviert experimentelle Funktionen – Post-process und Effekte. Aus blendet sie aus und schaltet sie ab; gespeicherte Einstellungen bleiben."
     },
     "playback": {
       "title": "Wiedergabeeinstellungen",
@@ -232,15 +232,13 @@
       "enabled": "Nachbearbeitung aktivieren",
       "enabledDescription": "Bereinigten Text vor der TTS durch das Chatmodell des aktiven Anbieters schicken. Bei Fehlern wird der Originaltext verwendet.",
       "minChars": "Mindestlänge",
-      "minCharsTooltip": "Nur Text ab dieser Zeichenanzahl verdichten; kürzerer Text wird wörtlich gesprochen. 0 verdichtet alles.",
+      "minCharsTooltip": "Nur Text ab dieser Zeichenanzahl verarbeiten; kürzerer Text wird wörtlich gesprochen. 0 verarbeitet alles.",
       "requireRequestFlag": "Nur auf Anfrage",
-      "requireRequestFlagTooltip": "Nur verdichten, wenn ein Aufrufer es ausdrücklich verlangt (condense-Feld des Steuerservers oder CLI --condense). Aus: Jeder passende Text wird verdichtet.",
+      "requireRequestFlagTooltip": "Nur verarbeiten, wenn ein Aufrufer es ausdrücklich verlangt (post_process-Feld des Steuerservers oder CLI --post_process). Aus: Jeder passende Text wird verarbeitet.",
       "apiKey": "API-Schlüssel",
       "apiKeyPlaceholder": "gsk_...",
       "apiKeyHelp": "Schlüssel unter console.groq.com erstellen",
       "testKey": "Testen",
-      "testOk": "Groq-API-Schlüssel ist gültig",
-      "testFail": "Ungültiger Schlüssel",
       "provider": "Anbieter",
       "providerTooltip": "Jeder OpenAI-kompatible Endpunkt funktioniert. Eigene mit der Schaltfläche + hinzufügen.",
       "name": "Name",
@@ -254,7 +252,17 @@
       "modelTooltip": "Kleinere Modelle sind schneller; größere befolgen Anweisungen zuverlässiger.",
       "prompt": "Prompt-Vorlage",
       "promptHelp": "${output} an der Stelle einsetzen, an der der kopierte Text stehen soll.",
-      "restoreDefault": "Standard-Prompt wiederherstellen"
+      "template": "Vorlage",
+      "templateTooltip": "Die vor dem Sprechen angewandte Prompt-Vorlage. Eingebaute Vorlagen lassen sich bearbeiten und zurücksetzen; eigene lassen sich löschen.",
+      "addTemplate": "Vorlage hinzufügen",
+      "deleteTemplate": "Vorlage löschen",
+      "templateName": "Name",
+      "templateNameTooltip": "Anzeigename dieser Vorlage.",
+      "templateClass": "Klasse",
+      "templateClassTooltip": "Bewahren: das LLM darf nur Sprech-Tags ergänzen — jedes Wort bleibt erhalten, und die Engine muss Emote-Tags lesen. Umschreiben: das LLM darf frei umformulieren; funktioniert mit jeder Engine.",
+      "classPreserve": "Wörter bewahren",
+      "classRewrite": "Frei umschreiben",
+      "resetTemplate": "Auf eingebaut zurücksetzen"
     },
     "effects": {
       "enabled": "Effekte aktivieren",
@@ -867,9 +875,9 @@
     "doubleCopy": "Doppelt kopieren",
     "doubleCopyTooltip": "Zwischenablage auf doppeltes Kopieren überwachen",
     "effectsTooltip": "Audioeffekt auf die TTS-Wiedergabe anwenden",
-    "dramatize": "Dramatisieren",
-    "dramatizeTooltip": "Schreibt den Text vor dem Sprechen mit Emote-Tags um. Nutzt dein Post-Processing-LLM und spricht bei einem Fehler den Originaltext.",
-    "dramatizeUnsupported": "Dramatisieren braucht ein Stimmmodell, das Emote-Tags liest. Das Modell des aktiven Profils unterstützt das nicht."
+    "postProcess": "Post-Processing",
+    "postProcessTooltip": "Wendet die aktive Post-Processing-Vorlage vor dem Sprechen an. Schlägt das LLM fehl, wird der Originaltext gesprochen.",
+    "postProcessUnsupported": "Die aktive Vorlage bewahrt jedes Wort und braucht ein Stimmmodell, das Emote-Tags liest. Eine Umschreib-Vorlage wie Concise funktioniert mit jeder Engine."
   },
   "recent": {
     "viewAll": "Gesamten Verlauf anzeigen",

@@ -124,7 +124,7 @@
       "minimizeToTray": "Minimize to Tray on Close",
       "minimizeToTrayTooltip": "Minimize to system tray instead of exiting when closing the window",
       "experimental": "Experimental features",
-      "experimentalDescription": "Shows and enables experimental features — Dramatize and Effects. Off, they are hidden and forced off; saved settings are kept."
+      "experimentalDescription": "Shows and enables experimental features — Post-process and Effects. Off, they are hidden and forced off; saved settings are kept."
     },
     "playback": {
       "title": "Playback Settings",
@@ -232,15 +232,13 @@
       "enabled": "Enable Post-Processing",
       "enabledDescription": "Sends each reading through the active provider's model before speech; off, text is spoken as-is, and failures fall back to the original text.",
       "minChars": "Minimum Length",
-      "minCharsTooltip": "Dramatizes only texts at least this many characters; shorter text is spoken verbatim. 0 dramatizes everything.",
+      "minCharsTooltip": "Runs the active template only on texts at least this many characters; shorter text is spoken verbatim. 0 processes everything.",
       "requireRequestFlag": "Only On Request",
-      "requireRequestFlagTooltip": "Off: every read is dramatized, including double-copy. On: only requests that ask for it (control server `condense`, CLI `--condense`).",
+      "requireRequestFlagTooltip": "Off: every read is processed, including double-copy. On: only requests that ask for it (control server `post_process`, CLI `--post-process`).",
       "apiKey": "API Key",
       "apiKeyPlaceholder": "gsk_...",
       "apiKeyHelp": "Key for the selected provider, created in its console.",
       "testKey": "Test",
-      "testOk": "Groq API key is valid",
-      "testFail": "Invalid key",
       "provider": "Provider",
       "providerTooltip": "Any OpenAI-compatible endpoint works. Add your own with the + button.",
       "name": "Name",
@@ -254,7 +252,17 @@
       "modelTooltip": "Smaller models are faster; larger models follow instructions more reliably.",
       "prompt": "Prompt Template",
       "promptHelp": "Use ${output} where the copied text should be inserted.",
-      "restoreDefault": "Restore Default Prompt"
+      "template": "Template",
+      "templateTooltip": "The prompt template applied before speech. Builtins can be edited and reset; delete only your own.",
+      "addTemplate": "Add template",
+      "deleteTemplate": "Delete template",
+      "templateName": "Name",
+      "templateNameTooltip": "Display name for this template.",
+      "templateClass": "Class",
+      "templateClassTooltip": "Preserve: the LLM may only add delivery tags — every word is kept, and the engine must read emote tags. Rewrite: the LLM may reword freely; works with any engine.",
+      "classPreserve": "Preserve words",
+      "classRewrite": "Free rewrite",
+      "resetTemplate": "Reset to builtin"
     },
     "effects": {
       "enabled": "Enable Effects",
@@ -867,9 +875,9 @@
     "doubleCopy": "Double-copy",
     "doubleCopyTooltip": "Monitor clipboard for double-copy",
     "effectsTooltip": "Apply audio effect to TTS playback",
-    "dramatize": "Dramatize",
-    "dramatizeTooltip": "Rewrites text with emote tags before it is spoken. Uses your post-processing LLM and speaks the original text if that fails.",
-    "dramatizeUnsupported": "Dramatize needs a voice model that reads emote tags. The active profile's model does not support it."
+    "postProcess": "Post-process",
+    "postProcessTooltip": "Runs the active post-process template on the text before it is spoken. Speaks the original text if the LLM fails.",
+    "postProcessUnsupported": "The active template preserves every word and needs a voice model that reads emote tags. A rewrite template like Concise works on any engine."
   },
   "recent": {
     "viewAll": "View all history",

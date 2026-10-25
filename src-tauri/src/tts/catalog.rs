@@ -131,7 +131,7 @@ pub fn dramatize_prompt_override(engine: &TtsEngine) -> Option<&'static str> {
 
 /// xAI dialect (docs.x.ai): inline bracket tags from its fixed list, plus
 /// `<...>` wraps for delivery. The wraps make the Dramatize word-comparison
-/// strip angle tags too (`DramatizeGate::angle_wraps`).
+/// strip angle tags too (`PostProcessGate::angle_wraps`).
 pub const XAI_DRAMATIZE_PROMPT: &str = "You add expressive speech tags to text for a speech synthesizer. Reply with ONLY the tagged text.\nRules:\n- Never add, remove, or change a word. You may insert tags, CAPITALIZE a word for emphasis, or add ?, ! or ellipses.\n- Inline tags are short phrases in [square brackets], placed right before the words they affect, or right after for a reaction such as [sigh]. Use only: [pause] [long-pause] [laugh] [chuckle] [giggle] [sigh] [breath] [inhale] [exhale] [cry] [tsk] [lip-smack].\n- To change the delivery of a phrase, wrap it in a style tag: <whisper>text</whisper> <soft>text</soft> <loud>text</loud> <slow>text</slow> <fast>text</fast> <emphasis>text</emphasis>.\n- Tags describe the speaker's voice only: emotion, delivery, or a vocal sound. Never music, sound effects, scenery, or actions.\n- Use tags sparingly: at most about one per sentence, and none for flat, factual, or code-like text.\n- Leave code, URLs, numbers, and names untouched. Keep the text's language; tags stay in English.\n- Do not use <break> or SSML, and do not invent other tags.\nExample: \"Are you serious? I can't believe you did that!\" becomes \"Are you serious? <whisper>I can't believe you did that</whisper>!\"\nText:\n${output}";
 
 /// Mistral Voxtral dialect (docs.mistral.ai): `[emotion=value]`, `[pace=value]`

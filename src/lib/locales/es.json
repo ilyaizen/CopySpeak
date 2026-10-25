@@ -124,7 +124,7 @@
       "minimizeToTray": "Minimizar a la bandeja al cerrar",
       "minimizeToTrayTooltip": "Minimizar a la bandeja del sistema en lugar de salir al cerrar la ventana",
       "experimental": "Funciones experimentales",
-      "experimentalDescription": "Muestra y activa funciones experimentales: Dramatize y Efectos. Desactivado las oculta y las fuerza a apagarse; la configuración guardada se conserva."
+      "experimentalDescription": "Muestra y activa funciones experimentales: Posprocesamiento y Efectos. Desactivado las oculta y las fuerza a apagarse; la configuración guardada se conserva."
     },
     "playback": {
       "title": "Ajustes de reproducción",
@@ -234,13 +234,11 @@
       "minChars": "Longitud mínima",
       "minCharsTooltip": "Condensa solo textos de al menos esta cantidad de caracteres; los más cortos se leen tal cual. 0 condensa todo.",
       "requireRequestFlag": "Solo bajo petición",
-      "requireRequestFlagTooltip": "Condensa solo cuando quien llama lo pide explícitamente (campo condense del servidor de control o CLI --condense). Desactivado: se condensa todo texto que cumpla el requisito.",
+      "requireRequestFlagTooltip": "Condensa solo cuando quien llama lo pide explícitamente (campo post_process del servidor de control o CLI --post_process). Desactivado: se condensa todo texto que cumpla el requisito.",
       "apiKey": "Clave de API",
       "apiKeyPlaceholder": "gsk_...",
       "apiKeyHelp": "Crea una clave en console.groq.com",
       "testKey": "Probar",
-      "testOk": "La clave de API de Groq es válida",
-      "testFail": "Clave no válida",
       "provider": "Proveedor",
       "providerTooltip": "Funciona cualquier endpoint compatible con OpenAI. Añade el tuyo con el botón +.",
       "name": "Nombre",
@@ -254,7 +252,17 @@
       "modelTooltip": "Los modelos pequeños son más rápidos; los grandes siguen las instrucciones con más fiabilidad.",
       "prompt": "Plantilla de instrucciones",
       "promptHelp": "Usa ${output} donde debe insertarse el texto copiado.",
-      "restoreDefault": "Restaurar instrucciones predeterminadas"
+      "template": "Plantilla",
+      "templateTooltip": "La plantilla de prompt que se aplica antes de leer. Las integradas se pueden editar y restablecer; borra solo las tuyas.",
+      "addTemplate": "Añadir plantilla",
+      "deleteTemplate": "Eliminar plantilla",
+      "templateName": "Nombre",
+      "templateNameTooltip": "Nombre visible de esta plantilla.",
+      "templateClass": "Clase",
+      "templateClassTooltip": "Conservar: el LLM solo puede añadir etiquetas de entonación — se conserva cada palabra y el motor debe leer etiquetas de emoción. Reescribir: el LLM puede cambiar las palabras libremente; funciona con cualquier motor.",
+      "classPreserve": "Conservar palabras",
+      "classRewrite": "Reescritura libre",
+      "resetTemplate": "Restablecer a integrada"
     },
     "effects": {
       "enabled": "Activar efectos",
@@ -867,9 +875,9 @@
     "doubleCopy": "Doble copia",
     "doubleCopyTooltip": "Vigilar el portapapeles para detectar la doble copia",
     "effectsTooltip": "Aplicar un efecto de audio a la reproducción TTS",
-    "dramatize": "Dramatizar",
-    "dramatizeTooltip": "Reescribe el texto con etiquetas de emoción antes de leerlo. Usa tu LLM de posprocesado y, si falla, lee el texto original.",
-    "dramatizeUnsupported": "Dramatizar requiere un modelo de voz que lea etiquetas de emoción. El modelo del perfil activo no lo admite."
+    "postProcess": "Posprocesamiento",
+    "postProcessTooltip": "Aplica la plantilla de posprocesamiento activa al texto antes de leerlo. Si el LLM falla, lee el texto original.",
+    "postProcessUnsupported": "La plantilla activa conserva cada palabra y necesita un modelo de voz que lea etiquetas de emoción. Una plantilla de reescritura como Concise funciona con cualquier motor."
   },
   "recent": {
     "viewAll": "Ver todo el historial",
