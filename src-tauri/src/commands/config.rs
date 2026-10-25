@@ -73,6 +73,9 @@ pub fn get_config(config: State<'_, Mutex<AppConfig>>) -> AppConfig {
     cfg.tts.elevenlabs.api_key =
         secrets::resolve(&cfg.tts.elevenlabs.api_key, &["ELEVENLABS_API_KEY"]);
     cfg.tts.cartesia.api_key = secrets::resolve(&cfg.tts.cartesia.api_key, &["CARTESIA_API_KEY"]);
+    cfg.tts.fish.api_key = secrets::resolve(&cfg.tts.fish.api_key, &["FISH_API_KEY"]);
+    cfg.tts.xai.api_key = secrets::resolve(&cfg.tts.xai.api_key, &["XAI_API_KEY"]);
+    cfg.tts.mistral.api_key = secrets::resolve(&cfg.tts.mistral.api_key, &["MISTRAL_API_KEY"]);
     cfg.tts.google.api_key = secrets::resolve(
         &cfg.tts.google.api_key,
         &["GEMINI_API_KEY", "GOOGLE_API_KEY"],
@@ -180,6 +183,10 @@ pub fn set_config(
         strip_env(&new_config.tts.elevenlabs.api_key, &["ELEVENLABS_API_KEY"]);
     new_config.tts.cartesia.api_key =
         strip_env(&new_config.tts.cartesia.api_key, &["CARTESIA_API_KEY"]);
+    new_config.tts.fish.api_key = strip_env(&new_config.tts.fish.api_key, &["FISH_API_KEY"]);
+    new_config.tts.xai.api_key = strip_env(&new_config.tts.xai.api_key, &["XAI_API_KEY"]);
+    new_config.tts.mistral.api_key =
+        strip_env(&new_config.tts.mistral.api_key, &["MISTRAL_API_KEY"]);
     new_config.tts.google.api_key = strip_env(
         &new_config.tts.google.api_key,
         &["GEMINI_API_KEY", "GOOGLE_API_KEY"],
