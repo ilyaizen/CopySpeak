@@ -841,6 +841,7 @@ fn main() {
             commands::check_mistral_credentials,
             commands::check_openai_credentials,
             commands::has_engine_credentials,
+            commands::get_env_key_sources,
             commands::check_post_process_credentials,
             commands::list_elevenlabs_voices,
             commands::get_elevenlabs_voice_by_id,

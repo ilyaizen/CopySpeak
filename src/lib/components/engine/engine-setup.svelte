@@ -24,11 +24,14 @@
   let {
     localConfig = $bindable(),
     isDirty = false,
-    onSave
+    onSave,
+    envKeySources = {}
   }: {
     localConfig: AppConfig;
     isDirty: boolean;
     onSave: () => Promise<void>;
+    /** engine → winning env var for keys currently provided by .env. */
+    envKeySources?: Record<string, string>;
   } = $props();
 
   const ALL = [...CLOUD_ENGINES, ...LOCAL_ENGINES, UV_ENTRY];
@@ -230,6 +233,7 @@
       onTest={() => runTest(selected)}
       onInstall={() => runInstall(selected)}
       {runtimeProbeKey}
+      {envKeySources}
     />
   </main>
 

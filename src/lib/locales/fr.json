@@ -580,11 +580,17 @@
       "testPassed": "Test du moteur réussi",
       "testFailed": "Échec du test du moteur",
       "cancel": "Annuler",
-      "save": "Enregistrer"
+      "save": "Enregistrer",
+      "envSentinel": "•••• (depuis .env)"
     },
     "error": {
       "loadFailed": "Impossible de charger les paramètres du moteur",
       "loadDescription": "Une erreur s'est produite lors du chargement de la configuration du moteur."
+    },
+    "envKeyDialog": {
+      "title": "La clé du .env est active",
+      "body": "{engine} utilise actuellement la clé API de {envVar} dans votre fichier .env. La clé saisie sera enregistrée, mais ne prendra effet qu'après avoir supprimé {envVar} du .env et redémarré l'application.",
+      "confirm": "Enregistrer quand même"
     }
   },
   "engines": {

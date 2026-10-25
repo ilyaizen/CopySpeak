@@ -6,6 +6,7 @@ use crate::config::{self, AppConfig};
 use crate::secrets;
 use reqwest::header::{HeaderValue, AUTHORIZATION};
 use serde_json::Value;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Emitter, State};
@@ -66,27 +67,77 @@ pub fn get_config(config: State<'_, Mutex<AppConfig>>) -> AppConfig {
         log::debug!("[IPC] get_config called");
     }
     let mut cfg = config.lock().unwrap().clone();
-    // Hydrate API keys from .env so the frontend shows them as masked values.
-    // Env vars are loaded by secrets::load_dotenv() at startup and never
-    // written back to config.json — the UI still saves to config.json only.
-    cfg.tts.openai.api_key = secrets::resolve(&cfg.tts.openai.api_key, &["OPENAI_API_KEY"]);
-    cfg.tts.elevenlabs.api_key =
-        secrets::resolve(&cfg.tts.elevenlabs.api_key, &["ELEVENLABS_API_KEY"]);
-    cfg.tts.cartesia.api_key = secrets::resolve(&cfg.tts.cartesia.api_key, &["CARTESIA_API_KEY"]);
-    cfg.tts.fish.api_key = secrets::resolve(&cfg.tts.fish.api_key, &["FISH_API_KEY"]);
-    cfg.tts.xai.api_key = secrets::resolve(&cfg.tts.xai.api_key, &["XAI_API_KEY"]);
-    cfg.tts.mistral.api_key = secrets::resolve(&cfg.tts.mistral.api_key, &["MISTRAL_API_KEY"]);
-    cfg.tts.google.api_key = secrets::resolve(
-        &cfg.tts.google.api_key,
-        &["GEMINI_API_KEY", "GOOGLE_API_KEY"],
-    );
-    cfg.tts.microsoft.api_key = secrets::resolve(
-        &cfg.tts.microsoft.api_key,
-        &["MICROSOFT_API_KEY", "AZURE_API_KEY"],
-    );
+    // API keys are deliberately NOT hydrated from .env here: env-provided keys
+    // win at synthesis time (secrets::resolve is env-first), but the raw
+    // secret never leaves the backend. The frontend renders a localized
+    // "from .env" sentinel from get_env_key_sources instead, so a typed key
+    // that env precedence would shadow is a visible, warned choice — not a
+    // silent no-op. Env vars are loaded by secrets::load_dotenv() at startup
+    // and never written back to config.json.
+    // The Microsoft endpoint is not a secret; hydrate it so the field shows
+    // the effective value.
     cfg.tts.microsoft.endpoint =
         secrets::resolve(&cfg.tts.microsoft.endpoint, &["MICROSOFT_ENDPOINT"]);
     cfg
+}
+
+/// Canonical engine → env-var lists for cloud API keys. ONE table shared by
+/// `set_config`'s strip pass and `get_env_key_sources`. Order within a list is
+/// precedence: first non-empty wins, matching `secrets::resolve`. The Microsoft
+/// endpoint is hydrated/stripped separately (not a secret, not in this table).
+const ENGINE_API_KEY_ENV_VARS: &[(&str, &[&str])] = &[
+    ("openai", &["OPENAI_API_KEY"]),
+    ("elevenlabs", &["ELEVENLABS_API_KEY"]),
+    ("cartesia", &["CARTESIA_API_KEY"]),
+    ("fish", &["FISH_API_KEY"]),
+    ("xai", &["XAI_API_KEY"]),
+    ("mistral", &["MISTRAL_API_KEY"]),
+    ("google", &["GEMINI_API_KEY", "GOOGLE_API_KEY"]),
+    ("microsoft", &["MICROSOFT_API_KEY", "AZURE_API_KEY"]),
+];
+
+/// Mutable accessor for a cloud engine's persisted `api_key`, keyed by the
+/// engine names used in `ENGINE_API_KEY_ENV_VARS`. `None` for unknown engines.
+fn tts_api_key_mut<'a>(config: &'a mut AppConfig, engine: &str) -> Option<&'a mut String> {
+    match engine {
+        "openai" => Some(&mut config.tts.openai.api_key),
+        "elevenlabs" => Some(&mut config.tts.elevenlabs.api_key),
+        "cartesia" => Some(&mut config.tts.cartesia.api_key),
+        "fish" => Some(&mut config.tts.fish.api_key),
+        "xai" => Some(&mut config.tts.xai.api_key),
+        "mistral" => Some(&mut config.tts.mistral.api_key),
+        "google" => Some(&mut config.tts.google.api_key),
+        "microsoft" => Some(&mut config.tts.microsoft.api_key),
+        _ => None,
+    }
+}
+
+/// First non-empty env var among `env_names` — the same precedence
+/// `secrets::resolve` applies when choosing the active key. `None` when none
+/// of the listed vars is set to a non-empty value.
+fn winning_env_var(env_names: &[&str]) -> Option<String> {
+    env_names
+        .iter()
+        .find(|name| {
+            std::env::var(name)
+                .map(|v| !v.trim().is_empty())
+                .unwrap_or(false)
+        })
+        .map(|name| name.to_string())
+}
+
+/// Engines whose API key is currently provided by the environment, mapped to
+/// the env var that wins. The frontend renders a localized "from .env"
+/// sentinel from this map instead of ever receiving the raw secret, and
+/// confirms before saving a typed key that env precedence would keep shadowing.
+#[tauri::command]
+pub fn get_env_key_sources() -> HashMap<String, String> {
+    ENGINE_API_KEY_ENV_VARS
+        .iter()
+        .filter_map(|(engine, env_names)| {
+            winning_env_var(env_names).map(|var| (engine.to_string(), var))
+        })
+        .collect()
 }
 
 #[tauri::command]
@@ -178,23 +229,12 @@ pub fn set_config(
             ui_val.to_string()
         }
     }
-    new_config.tts.openai.api_key = strip_env(&new_config.tts.openai.api_key, &["OPENAI_API_KEY"]);
-    new_config.tts.elevenlabs.api_key =
-        strip_env(&new_config.tts.elevenlabs.api_key, &["ELEVENLABS_API_KEY"]);
-    new_config.tts.cartesia.api_key =
-        strip_env(&new_config.tts.cartesia.api_key, &["CARTESIA_API_KEY"]);
-    new_config.tts.fish.api_key = strip_env(&new_config.tts.fish.api_key, &["FISH_API_KEY"]);
-    new_config.tts.xai.api_key = strip_env(&new_config.tts.xai.api_key, &["XAI_API_KEY"]);
-    new_config.tts.mistral.api_key =
-        strip_env(&new_config.tts.mistral.api_key, &["MISTRAL_API_KEY"]);
-    new_config.tts.google.api_key = strip_env(
-        &new_config.tts.google.api_key,
-        &["GEMINI_API_KEY", "GOOGLE_API_KEY"],
-    );
-    new_config.tts.microsoft.api_key = strip_env(
-        &new_config.tts.microsoft.api_key,
-        &["MICROSOFT_API_KEY", "AZURE_API_KEY"],
-    );
+    for (engine, env_names) in ENGINE_API_KEY_ENV_VARS {
+        if let Some(key) = tts_api_key_mut(&mut new_config, engine) {
+            let stripped = strip_env(key, env_names);
+            *key = stripped;
+        }
+    }
     new_config.tts.microsoft.endpoint =
         strip_env(&new_config.tts.microsoft.endpoint, &["MICROSOFT_ENDPOINT"]);
 
@@ -380,4 +420,82 @@ pub fn set_debug_mode(enabled: bool) -> Result<(), String> {
     crate::logging::set_debug_mode(enabled);
     log::info!("Debug mode set to: {}", enabled);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    /// Process env is global; serialize the env-mutating tests.
+    static ENV_LOCK: Mutex<()> = Mutex::new(());
+
+    #[test]
+    fn winning_env_var_prefers_first_non_empty() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        std::env::set_var("COPYTEST_A", "   ");
+        std::env::set_var("COPYTEST_B", "token");
+        assert_eq!(
+            winning_env_var(&["COPYTEST_A", "COPYTEST_B"]),
+            Some("COPYTEST_B".to_string())
+        );
+        assert_eq!(
+            winning_env_var(&["COPYTEST_B", "COPYTEST_A"]),
+            Some("COPYTEST_B".to_string())
+        );
+        std::env::remove_var("COPYTEST_A");
+        std::env::remove_var("COPYTEST_B");
+    }
+
+    #[test]
+    fn winning_env_var_is_none_when_unset() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        std::env::remove_var("COPYTEST_UNSET");
+        assert_eq!(winning_env_var(&["COPYTEST_UNSET"]), None);
+    }
+
+    #[test]
+    fn engine_env_table_covers_every_cloud_engine() {
+        let engines: Vec<&str> = ENGINE_API_KEY_ENV_VARS
+            .iter()
+            .map(|(engine, _)| *engine)
+            .collect();
+        assert_eq!(
+            engines,
+            [
+                "openai",
+                "elevenlabs",
+                "cartesia",
+                "fish",
+                "xai",
+                "mistral",
+                "google",
+                "microsoft"
+            ]
+        );
+        for (_, env_names) in ENGINE_API_KEY_ENV_VARS {
+            assert!(!env_names.is_empty());
+        }
+    }
+
+    #[test]
+    fn tts_api_key_mut_targets_every_listed_engine() {
+        let mut config = AppConfig::default();
+        for (engine, _) in ENGINE_API_KEY_ENV_VARS {
+            assert!(tts_api_key_mut(&mut config, engine).is_some());
+        }
+        assert!(tts_api_key_mut(&mut config, "not-an-engine").is_none());
+    }
+
+    #[test]
+    fn get_env_key_sources_maps_set_env_vars() {
+        let _guard = ENV_LOCK.lock().unwrap();
+        std::env::set_var("FISH_API_KEY", "fish-token");
+        let sources = get_env_key_sources();
+        assert_eq!(
+            sources.get("fish").map(String::as_str),
+            Some("FISH_API_KEY")
+        );
+        std::env::remove_var("FISH_API_KEY");
+    }
 }

@@ -3,6 +3,17 @@
   import { invoke } from "#lib/services/tauri";
   import { toast } from "svelte-sonner";
   import { _ } from "svelte-i18n";
+  import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle
+  } from "#lib/components/ui/alert-dialog/index.js";
+  import { firstEnvKeyConflict } from "#lib/components/engine/env-keys";
   import { hideSaveBar } from "#lib/stores/save-bar.svelte";
   import { syncSaveBarOrAutoSave, flushAutoSave } from "#lib/stores/auto-save.svelte";
   import EngineSetup from "#lib/components/engine/engine-setup.svelte";
@@ -13,6 +24,10 @@
   let localConfig = $state<AppConfig | null>(null);
   let originalConfig = $state<AppConfig | null>(null);
   let isLoading = $state(true);
+  // engine → winning env var for engines whose key currently comes from .env.
+  let envKeySources = $state<Record<string, string>>({});
+  // Non-null shows the env-key override warning for that engine.
+  let envKeyConflict = $state<{ engine: string; envVar: string } | null>(null);
 
   const hasChanges = $derived(
     originalConfig !== null &&
@@ -26,6 +41,8 @@
       const config = await invoke<AppConfig>("get_config");
       localConfig = JSON.parse(JSON.stringify(config));
       originalConfig = JSON.parse(JSON.stringify(config));
+      // Absent in browser mode — the sentinel simply never shows there.
+      envKeySources = await invoke<Record<string, string>>("get_env_key_sources").catch(() => ({}));
     } catch (e) {
       console.error("Failed to load config:", e);
       toast.error($_("toast.error.loadConfig"));
@@ -34,7 +51,14 @@
     }
   }
 
-  async function saveConfig() {
+  // SAFETY: engine ids on tts are exactly the CredentialTarget keys
+  // get_env_key_sources reports; each per-engine struct carries api_key.
+  function ttsKeys(config: AppConfig | null): Record<string, { api_key?: string }> {
+    if (!config) return {};
+    return config.tts as unknown as Record<string, { api_key?: string }>;
+  }
+
+  async function performSave() {
     if (!localConfig) return;
     try {
       await invoke("set_config", { newConfig: localConfig });
@@ -45,6 +69,30 @@
       toast.error(`${$_("engine.error.loadFailed")}: ${e}`);
       throw e;
     }
+  }
+
+  async function saveConfig() {
+    if (!localConfig) return;
+    // An env-sourced engine with a freshly typed key needs the override
+    // warning first: env precedence keeps the .env key active after saving.
+    for (const engine of Object.keys(envKeySources)) {
+      const conflict = firstEnvKeyConflict(
+        engine,
+        envKeySources[engine],
+        ttsKeys(localConfig)[engine],
+        ttsKeys(originalConfig)[engine]
+      );
+      if (conflict) {
+        envKeyConflict = conflict;
+        return;
+      }
+    }
+    await performSave();
+  }
+
+  function confirmEnvKeySave() {
+    envKeyConflict = null;
+    void performSave();
   }
 
   function cancelChanges() {
@@ -98,3 +146,32 @@
     </div>
   {/if}
 </div>
+
+<AlertDialog
+  open={envKeyConflict !== null}
+  onOpenChange={(open) => {
+    if (!open) envKeyConflict = null;
+  }}
+>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>{$_("engine.envKeyDialog.title")}</AlertDialogTitle>
+      <AlertDialogDescription>
+        {#if envKeyConflict}
+          {$_("engine.envKeyDialog.body", {
+            values: {
+              engine: $_(`engine.${envKeyConflict.engine}.title`),
+              envVar: envKeyConflict.envVar
+            }
+          })}
+        {/if}
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel>{$_("common.cancel")}</AlertDialogCancel>
+      <AlertDialogAction onclick={confirmEnvKeySave}>
+        {$_("engine.envKeyDialog.confirm")}
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>

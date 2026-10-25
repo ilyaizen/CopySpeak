@@ -580,11 +580,17 @@
       "testPassed": "Prueba del motor superada",
       "testFailed": "Prueba del motor fallida",
       "cancel": "Cancelar",
-      "save": "Guardar"
+      "save": "Guardar",
+      "envSentinel": "•••• (de .env)"
     },
     "error": {
       "loadFailed": "No se pudieron cargar los ajustes del motor",
       "loadDescription": "Se produjo un error al cargar la configuración del motor."
+    },
+    "envKeyDialog": {
+      "title": "La clave de .env está activa",
+      "body": "{engine} está usando actualmente la clave API de {envVar} en tu archivo .env. La clave escrita se guardará, pero no surtirá efecto hasta que elimines {envVar} de .env y reinicies la app.",
+      "confirm": "Guardar de todos modos"
     }
   },
   "engines": {

@@ -580,11 +580,17 @@
       "testPassed": "نجح اختبار المحرك",
       "testFailed": "فشل اختبار المحرك",
       "cancel": "إلغاء",
-      "save": "حفظ"
+      "save": "حفظ",
+      "envSentinel": "•••• (من ‎.env)"
     },
     "error": {
       "loadFailed": "تعذّر تحميل إعدادات المحرك",
       "loadDescription": "حدث خطأ أثناء تحميل تهيئة المحرك."
+    },
+    "envKeyDialog": {
+      "title": "‎مفتاح من ‎.env نشط",
+      "body": "{engine} يستخدم حاليًا مفتاح API من {envVar} في ملف ‎.env. سيتم حفظ المفتاح الذي كتبته، لكنه لن يعمل حتى تحذف {envVar} من ‎.env وتعيد تشغيل التطبيق.",
+      "confirm": "حفظ على أي حال"
     }
   },
   "engines": {

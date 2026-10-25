@@ -580,11 +580,17 @@
       "testPassed": "引擎测试通过",
       "testFailed": "引擎测试失败",
       "cancel": "取消",
-      "save": "保存"
+      "save": "保存",
+      "envSentinel": "••••（来自 .env）"
     },
     "error": {
       "loadFailed": "无法加载引擎设置",
       "loadDescription": "加载引擎配置时出错。"
+    },
+    "envKeyDialog": {
+      "title": ".env 中的密钥已生效",
+      "body": "{engine} 当前正在使用 .env 文件中 {envVar} 提供的 API 密钥。输入的密钥会被保存，但在从 .env 中移除 {envVar} 并重启应用之前不会生效。",
+      "confirm": "仍要保存"
     }
   },
   "engines": {

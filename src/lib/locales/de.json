@@ -580,11 +580,17 @@
       "testPassed": "Engine-Test bestanden",
       "testFailed": "Engine-Test fehlgeschlagen",
       "cancel": "Abbrechen",
-      "save": "Speichern"
+      "save": "Speichern",
+      "envSentinel": "•••• (aus .env)"
     },
     "error": {
       "loadFailed": "Engine-Einstellungen konnten nicht geladen werden",
       "loadDescription": "Beim Laden Ihrer Engine-Konfiguration ist ein Fehler aufgetreten."
+    },
+    "envKeyDialog": {
+      "title": "Schlüssel aus .env ist aktiv",
+      "body": "{engine} verwendet derzeit den API-Schlüssel aus {envVar} in deiner .env-Datei. Der eingegebene Schlüssel wird gespeichert, wird aber erst wirksam, wenn du {envVar} aus .env entfernst und die App neu startest.",
+      "confirm": "Trotzdem speichern"
     }
   },
   "engines": {

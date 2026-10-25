@@ -43,7 +43,8 @@
     testMessage = "",
     onTest,
     onInstall,
-    runtimeProbeKey = 0
+    runtimeProbeKey = 0,
+    envKeySources = {}
   }: {
     entry: EngineSetupEntry;
     localConfig: AppConfig;
@@ -53,6 +54,8 @@
     onInstall?: () => void;
     /** Bump to re-probe runtime status (e.g. after an install settles). */
     runtimeProbeKey?: number;
+    /** engine → winning env var for keys currently provided by .env. */
+    envKeySources?: Record<string, string>;
   } = $props();
 
   // Only local engines with an installer have a runtime status to show.
@@ -93,6 +96,19 @@
     e.preventDefault();
     openExternal(entry.docsUrl);
   }
+
+  // .env-supplied keys: the backend never sends the raw secret — this map
+  // (from get_env_key_sources) says which engine's key currently comes from
+  // .env. While the field is untouched we show a sentinel placeholder and no
+  // eye toggle (nothing to reveal); a typed key stays editable and the parent
+  // warns at save when env precedence would keep shadowing it.
+  const envVarName = $derived(
+    entry.credentialTarget ? envKeySources[entry.credentialTarget] : undefined
+  );
+  const showingEnvSentinel = $derived.by(() => {
+    if (!envVarName || !entry.credentialTarget) return false;
+    return (tts()[entry.credentialTarget]?.api_key ?? "") === "";
+  });
 </script>
 
 <section>
@@ -145,9 +161,11 @@
             <Input
               id="api-key"
               type={revealedFields[entry.credentialTarget! + "-api_key"] ? "text" : "password"}
-              placeholder={entry.placeholderKey
-                ? $_(`engine.apiSetup.${entry.placeholderKey}`)
-                : ""}
+              placeholder={showingEnvSentinel
+                ? $_("engine.apiSetup.envSentinel")
+                : entry.placeholderKey
+                  ? $_(`engine.apiSetup.${entry.placeholderKey}`)
+                  : ""}
               value={tts()[entry.credentialTarget]?.api_key ?? ""}
               oninput={(e) => {
                 const t = tts();
@@ -156,23 +174,25 @@
                 }
               }}
             />
-            <button
-              type="button"
-              class="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer transition-colors"
-              onclick={() => {
-                const key = entry.credentialTarget! + "-api_key";
-                revealedFields = { ...revealedFields, [key]: !revealedFields[key] };
-              }}
-              aria-label={revealedFields[entry.credentialTarget! + "-api_key"]
-                ? "Hide API key"
-                : "Show API key"}
-            >
-              {#if revealedFields[entry.credentialTarget! + "-api_key"]}
-                <EyeOff size={14} />
-              {:else}
-                <Eye size={14} />
-              {/if}
-            </button>
+            {#if !showingEnvSentinel}
+              <button
+                type="button"
+                class="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer transition-colors"
+                onclick={() => {
+                  const key = entry.credentialTarget! + "-api_key";
+                  revealedFields = { ...revealedFields, [key]: !revealedFields[key] };
+                }}
+                aria-label={revealedFields[entry.credentialTarget! + "-api_key"]
+                  ? "Hide API key"
+                  : "Show API key"}
+              >
+                {#if revealedFields[entry.credentialTarget! + "-api_key"]}
+                  <EyeOff size={14} />
+                {:else}
+                  <Eye size={14} />
+                {/if}
+              </button>
+            {/if}
           </div>
         </div>
       {/if}

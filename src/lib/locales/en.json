@@ -580,11 +580,17 @@
       "testPassed": "Engine Test Passed",
       "testFailed": "Engine Test Failed",
       "cancel": "Cancel",
-      "save": "Save"
+      "save": "Save",
+      "envSentinel": "•••• (from .env)"
     },
     "error": {
       "loadFailed": "Failed to Load Engine Settings",
       "loadDescription": "An error occurred while loading your engine configuration."
+    },
+    "envKeyDialog": {
+      "title": "Key from .env is active",
+      "body": "{engine} is currently using the API key from {envVar} in your .env file. Your typed key will be saved, but it won't take effect until you remove {envVar} from .env and restart the app.",
+      "confirm": "Save anyway"
     }
   },
   "engines": {
