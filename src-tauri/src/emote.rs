@@ -19,17 +19,31 @@ pub(crate) struct TagSpan {
 }
 
 /// Find every complete tag: up to 64 units of content, no brackets or
-/// newlines inside, no nesting (a second `[` restarts the candidate — tags
-/// never nest, and `[a[b]` is likelier mangled markup than a tag). Longer or
-/// unterminated bracket content is left for the normal sanitizer passes.
+/// newlines inside, no nesting (a second open delimiter restarts the
+/// candidate — tags never nest, and `[a[b]` is likelier mangled markup than
+/// a tag). Longer or unterminated bracket content is left for the normal
+/// sanitizer passes.
 pub(crate) fn find_tag_spans(text: &str) -> Vec<TagSpan> {
+    scan_tag_spans(text, '[', ']')
+}
+
+/// Find every complete `<...>` style tag — xAI's wrapping speech tags
+/// (`<whisper>…</whisper>`, `<soft>`, …). Same shape rules as the bracket
+/// scanner. Only the xAI dialect paths consume this; the generic sanitizer
+/// and estimation paths stay bracket-only so stray comparison operators in
+/// normal text are never treated as tags there.
+pub(crate) fn find_angle_tag_spans(text: &str) -> Vec<TagSpan> {
+    scan_tag_spans(text, '<', '>')
+}
+
+fn scan_tag_spans(text: &str, open_ch: char, close_ch: char) -> Vec<TagSpan> {
     let mut spans = Vec::new();
     let mut open: Option<(usize, usize)> = None; // (utf16, byte)
     let mut utf16 = 0usize;
     for (byte, ch) in text.char_indices() {
         match ch {
-            '[' => open = Some((utf16, byte)),
-            ']' => {
+            _ if ch == open_ch => open = Some((utf16, byte)),
+            _ if ch == close_ch => {
                 if let Some((open_utf16, open_byte)) = open {
                     let content_units = utf16 - open_utf16 - 1;
                     if (1..=64).contains(&content_units) {
@@ -56,13 +70,30 @@ pub(crate) fn find_tag_spans(text: &str) -> Vec<TagSpan> {
 /// to single spaces. The result's offsets are NOT those of `text`; consumers
 /// that need offset mapping use [`find_tag_spans`] directly.
 pub(crate) fn strip_tags(text: &str) -> String {
-    let spans = find_tag_spans(text);
+    strip_spans(text, &find_tag_spans(text))
+}
+
+/// Remove both bracket tags and `<...>` wraps, collapsing the whitespace they
+/// leave behind. Used only by the xAI dialect paths (word comparison, native
+/// caption stripping), where the engine also interprets angle wraps instead
+/// of speaking them.
+pub(crate) fn strip_tags_and_angle_wraps(text: &str) -> String {
+    let mut spans = find_tag_spans(text);
+    spans.extend(find_angle_tag_spans(text));
+    spans.sort_by_key(|span| span.start_byte);
+    strip_spans(text, &spans)
+}
+
+fn strip_spans(text: &str, spans: &[TagSpan]) -> String {
     if spans.is_empty() {
         return text.to_string();
     }
     let mut out = String::with_capacity(text.len());
     let mut last = 0usize;
-    for span in &spans {
+    for span in spans {
+        if span.start_byte < last {
+            continue; // overlap guard; spans from one scanner never nest
+        }
         out.push_str(&text[last..span.start_byte]);
         last = span.end_byte;
     }

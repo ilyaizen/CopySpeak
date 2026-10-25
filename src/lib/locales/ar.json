@@ -305,6 +305,16 @@
         "description": "TTS سحابي معبّر (S2)",
         "detail": "API سحابي مبني على نماذج Fish Audio S2. يتطلب مفتاح API."
       },
+      "xai": {
+        "title": "xAI",
+        "description": "TTS سحابي معبّر (Grok)",
+        "detail": "واجهة سحابية مدعومة بأصوات TTS من xAI. يتطلب مفتاح API."
+      },
+      "mistral": {
+        "title": "Mistral",
+        "description": "TTS سحابي معبّر (Voxtral)",
+        "detail": "واجهة سحابية مدعومة بنموذج Voxtral TTS من Mistral. يتطلب مفتاح API."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "TTS محلي بتقنية ONNX فائق الخفة",
@@ -402,6 +412,22 @@
       "description": "سحابي: أصوات ذكاء اصطناعي معبّرة مع استنساخ الصوت. يتطلب مفتاح API واتصالاً بالإنترنت.",
       "apiKey": "مفتاح API",
       "apiKeyDescription": "يُخزَّن مفتاح API محليًا ولا يُشار أبدًا.",
+      "check": "تحقق",
+      "testEngine": "اختبار المحرك"
+    },
+    "xai": {
+      "title": "xAI",
+      "description": "سحابي: أصوات Grok مع تسميات الكلمات الأصلية ووسوم نطق معبّرة. يتطلب مفتاح API واتصالاً بالإنترنت.",
+      "apiKey": "مفتاح API",
+      "apiKeyDescription": "يتم تخزين مفتاح API الخاص بك محلياً ولا تتم مشاركته أبداً.",
+      "check": "تحقق",
+      "testEngine": "اختبار المحرك"
+    },
+    "mistral": {
+      "title": "Mistral",
+      "description": "سحابي: أصوات Voxtral مع وسوم عاطفة وسرعة وأصوات نطق. يتطلب مفتاح API واتصالاً بالإنترنت.",
+      "apiKey": "مفتاح API",
+      "apiKeyDescription": "يتم تخزين مفتاح API الخاص بك محلياً ولا تتم مشاركته أبداً.",
       "check": "تحقق",
       "testEngine": "اختبار المحرك"
     },
@@ -539,6 +565,8 @@
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
       "placeholderFish": "مفتاح API الخاص بـ Fish Audio",
+      "placeholderXai": "مفتاح API الخاص بـ xAI",
+      "placeholderMistral": "مفتاح API الخاص بـ Mistral",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "نقطة النهاية",

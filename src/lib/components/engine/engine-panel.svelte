@@ -82,6 +82,8 @@
       elevenlabs: c.elevenlabs,
       cartesia: c.cartesia,
       fish: c.fish,
+      xai: c.xai,
+      mistral: c.mistral,
       google: c.google,
       microsoft: c.microsoft
     };

@@ -305,6 +305,16 @@
         "description": "Выразительный облачный TTS (S2)",
         "detail": "Облачный API на основе моделей Fish Audio S2. Требуется API-ключ."
       },
+      "xai": {
+        "title": "xAI",
+        "description": "Выразительный облачный TTS (Grok)",
+        "detail": "Облачный API на голосах TTS от xAI. Требуется API-ключ."
+      },
+      "mistral": {
+        "title": "Mistral",
+        "description": "Выразительный облачный TTS (Voxtral)",
+        "detail": "Облачный API на модели Voxtral TTS от Mistral. Требуется API-ключ."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "Сверхлёгкий локальный ONNX TTS",
@@ -400,6 +410,22 @@
     "fish": {
       "title": "Fish Audio",
       "description": "Облако: выразительные ИИ-голоса с клонированием голоса. Требуется API-ключ и интернет-соединение.",
+      "apiKey": "API-ключ",
+      "apiKeyDescription": "Ваш API-ключ хранится локально и никогда не передаётся.",
+      "check": "Проверить",
+      "testEngine": "Тест движка"
+    },
+    "xai": {
+      "title": "xAI",
+      "description": "Облако: голоса Grok с нативными подписями к словам и выразительными речевыми тегами. Требуется API-ключ и подключение к интернету.",
+      "apiKey": "API-ключ",
+      "apiKeyDescription": "Ваш API-ключ хранится локально и никогда не передаётся.",
+      "check": "Проверить",
+      "testEngine": "Тест движка"
+    },
+    "mistral": {
+      "title": "Mistral",
+      "description": "Облако: голоса Voxtral с тегами эмоций, темпа и звуков. Требуется API-ключ и подключение к интернету.",
       "apiKey": "API-ключ",
       "apiKeyDescription": "Ваш API-ключ хранится локально и никогда не передаётся.",
       "check": "Проверить",
@@ -539,6 +565,8 @@
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
       "placeholderFish": "API-ключ Fish Audio",
+      "placeholderXai": "API-ключ xAI",
+      "placeholderMistral": "API-ключ Mistral",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "Эндпоинт",

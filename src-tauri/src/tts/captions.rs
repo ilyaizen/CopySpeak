@@ -25,6 +25,20 @@ impl CaptionAlignment {
     /// overlapping a tag are dropped with it.
     pub fn stripped_of_emote_tags(&self) -> CaptionAlignment {
         let spans = crate::emote::find_tag_spans(&self.text);
+        self.stripped_of_spans(&spans)
+    }
+
+    /// Same, and additionally removes `<...>` style wraps: the xAI dialect's
+    /// wrapping speech tags are interpreted too, and its API echoes them back
+    /// into the alignment stream alongside the bracket tags.
+    pub fn stripped_of_all_emote_tags(&self) -> CaptionAlignment {
+        let mut spans = crate::emote::find_tag_spans(&self.text);
+        spans.extend(crate::emote::find_angle_tag_spans(&self.text));
+        spans.sort_by_key(|span| span.start_utf16);
+        self.stripped_of_spans(&spans)
+    }
+
+    fn stripped_of_spans(&self, spans: &[crate::emote::TagSpan]) -> CaptionAlignment {
         if spans.is_empty() {
             return self.clone();
         }
@@ -42,7 +56,7 @@ impl CaptionAlignment {
         };
         let mut text = String::with_capacity(self.text.len());
         let mut last_byte = 0usize;
-        for span in &spans {
+        for span in spans {
             text.push_str(&self.text[last_byte..span.start_byte]);
             last_byte = span.end_byte;
         }

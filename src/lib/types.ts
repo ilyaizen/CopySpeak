@@ -52,6 +52,8 @@ export type TtsEngine =
   | "elevenlabs"
   | "cartesia"
   | "fish"
+  | "xai"
+  | "mistral"
   | "google"
   | "microsoft"
   | "edge"
@@ -110,6 +112,19 @@ export interface FishConfig {
   format: string;
 }
 
+export interface XaiConfig {
+  api_key: string;
+  voice_id: string;
+  voice_name?: string;
+  speed?: number;
+}
+
+export interface MistralConfig {
+  api_key: string;
+  voice_id: string;
+  voice_name?: string;
+}
+
 export interface TtsConfig {
   active_backend: TtsEngine;
   active_profile_id: string;
@@ -122,6 +137,8 @@ export interface TtsConfig {
   elevenlabs: ElevenLabsConfig;
   cartesia: CartesiaConfig;
   fish: FishConfig;
+  xai: XaiConfig;
+  mistral: MistralConfig;
   edge?: EdgeTtsConfig;
   google: GoogleTtsConfig;
   microsoft: MicrosoftTtsConfig;

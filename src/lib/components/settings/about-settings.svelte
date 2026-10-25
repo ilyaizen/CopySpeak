@@ -188,6 +188,28 @@
         </div>
       </div>
 
+      <!-- xAI -->
+      <div>
+        <div class="flex items-center gap-1.5">
+          <Label class="text-sm">{$_("settings.about.xai.title")}</Label>
+          <InfoTooltip
+            text={$_("settings.about.xai.description")}
+            detail={$_("settings.about.xai.detail")}
+          />
+        </div>
+      </div>
+
+      <!-- Mistral -->
+      <div>
+        <div class="flex items-center gap-1.5">
+          <Label class="text-sm">{$_("settings.about.mistral.title")}</Label>
+          <InfoTooltip
+            text={$_("settings.about.mistral.description")}
+            detail={$_("settings.about.mistral.detail")}
+          />
+        </div>
+      </div>
+
       <!-- Kitten -->
       <div>
         <div class="flex items-center gap-1.5">

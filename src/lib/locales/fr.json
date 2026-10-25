@@ -305,6 +305,16 @@
         "description": "TTS cloud expressif (S2)",
         "detail": "API cloud basée sur les modèles S2 de Fish Audio. Nécessite une clé API."
       },
+      "xai": {
+        "title": "xAI",
+        "description": "TTS cloud expressif (Grok)",
+        "detail": "API cloud propulsée par les voix TTS de xAI. Nécessite une clé API."
+      },
+      "mistral": {
+        "title": "Mistral",
+        "description": "TTS cloud expressif (Voxtral)",
+        "detail": "API cloud propulsée par le modèle Voxtral TTS de Mistral. Nécessite une clé API."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "TTS ONNX locale ultra-légère",
@@ -402,6 +412,22 @@
       "description": "Cloud : voix IA expressives avec clonage vocal. Nécessite une clé API et une connexion internet.",
       "apiKey": "Clé API",
       "apiKeyDescription": "Votre clé API est stockée localement et n'est jamais partagée.",
+      "check": "Vérifier",
+      "testEngine": "Tester le moteur"
+    },
+    "xai": {
+      "title": "xAI",
+      "description": "Cloud : voix Grok avec sous-titres de mots natifs et balises vocales expressives. Nécessite une clé API et une connexion internet.",
+      "apiKey": "Clé API",
+      "apiKeyDescription": "Votre clé API est stockée localement et jamais partagée.",
+      "check": "Vérifier",
+      "testEngine": "Tester le moteur"
+    },
+    "mistral": {
+      "title": "Mistral",
+      "description": "Cloud : voix Voxtral avec balises d'émotion, de rythme et sonores. Nécessite une clé API et une connexion internet.",
+      "apiKey": "Clé API",
+      "apiKeyDescription": "Votre clé API est stockée localement et jamais partagée.",
       "check": "Vérifier",
       "testEngine": "Tester le moteur"
     },
@@ -539,6 +565,8 @@
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
       "placeholderFish": "Clé API Fish Audio",
+      "placeholderXai": "Clé API xAI",
+      "placeholderMistral": "Clé API Mistral",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "Point de terminaison",

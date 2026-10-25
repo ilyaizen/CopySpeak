@@ -837,6 +837,8 @@ fn main() {
             commands::check_elevenlabs_credentials,
             commands::check_cartesia_credentials,
             commands::check_fish_credentials,
+            commands::check_xai_credentials,
+            commands::check_mistral_credentials,
             commands::check_openai_credentials,
             commands::has_engine_credentials,
             commands::check_post_process_credentials,

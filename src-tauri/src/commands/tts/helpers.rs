@@ -171,6 +171,10 @@ pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<
         TtsEngine::Fish => Box::new(crate::tts::fish::FishTtsBackend::new(
             tts_config.fish.clone(),
         )),
+        TtsEngine::Xai => Box::new(crate::tts::xai::XaiTtsBackend::new(tts_config.xai.clone())),
+        TtsEngine::Mistral => Box::new(crate::tts::mistral::MistralTtsBackend::new(
+            tts_config.mistral.clone(),
+        )),
         TtsEngine::Http => Box::new(crate::tts::http::HttpTtsBackend::new(
             tts_config.http.clone(),
         )),
@@ -300,6 +304,23 @@ pub(crate) fn create_backend_from_effective(
             }
             Box::new(crate::tts::fish::FishTtsBackend::new(config))
         }
+        TtsEngine::Xai => {
+            // Voice comes from eff.voice (profile-owned); speed is the one knob.
+            let mut config = tts_config.xai.clone();
+            config.voice_id = eff.voice.clone();
+            config.voice_name = eff.voice_label.clone().or(config.voice_name);
+            if let Some(speed) = eff.engine_options.xai().and_then(|o| o.speed) {
+                config.speed = Some(speed);
+            }
+            Box::new(crate::tts::xai::XaiTtsBackend::new(config))
+        }
+        TtsEngine::Mistral => {
+            // Voice comes from eff.voice (profile-owned); v1 has no knobs.
+            let mut config = tts_config.mistral.clone();
+            config.voice_id = eff.voice.clone();
+            config.voice_name = eff.voice_label.clone().or(config.voice_name);
+            Box::new(crate::tts::mistral::MistralTtsBackend::new(config))
+        }
         TtsEngine::Http => {
             let mut config = tts_config.http.clone();
             config.voice = eff.voice.clone();
@@ -377,6 +398,8 @@ pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> S
         TtsEngine::ElevenLabs => tts_config.elevenlabs.voice_id.clone(),
         TtsEngine::Cartesia => tts_config.cartesia.voice_id.clone(),
         TtsEngine::Fish => tts_config.fish.voice_id.clone(),
+        TtsEngine::Xai => tts_config.xai.voice_id.clone(),
+        TtsEngine::Mistral => tts_config.mistral.voice_id.clone(),
         TtsEngine::Http => tts_config.http.voice.clone(),
         TtsEngine::Google => tts_config.google.voice_name.clone(),
         TtsEngine::Microsoft => tts_config.microsoft.voice_name.clone(),
@@ -404,6 +427,8 @@ pub(crate) fn engine_identifier(active: &TtsEngine) -> String {
         TtsEngine::ElevenLabs => "elevenlabs".to_string(),
         TtsEngine::Cartesia => "cartesia".to_string(),
         TtsEngine::Fish => "fish".to_string(),
+        TtsEngine::Xai => "xai".to_string(),
+        TtsEngine::Mistral => "mistral".to_string(),
         TtsEngine::Http => "http".to_string(),
         TtsEngine::Google => "google".to_string(),
         TtsEngine::Microsoft => "microsoft".to_string(),
@@ -476,6 +501,22 @@ pub(crate) fn voice_display_name(
             if voice_id.trim().is_empty() {
                 // Fish's built-in default voice.
                 "fish".to_string()
+            } else {
+                slugify_filename_part(voice_id)
+            }
+        }),
+        TtsEngine::Xai => voice_label.map(slugify_filename_part).unwrap_or_else(|| {
+            if voice_id.trim().is_empty() {
+                // The API's default voice (eve).
+                "eve".to_string()
+            } else {
+                slugify_filename_part(voice_id)
+            }
+        }),
+        TtsEngine::Mistral => voice_label.map(slugify_filename_part).unwrap_or_else(|| {
+            if voice_id.trim().is_empty() {
+                // The docs' example preset (Sheila).
+                "sheila".to_string()
             } else {
                 slugify_filename_part(voice_id)
             }
@@ -575,8 +616,11 @@ pub(crate) fn effective_model(eff: &EffectiveTtsRequest) -> String {
     .unwrap_or_default()
 }
 
-/// The Dramatize gate for the active profile: the Experimental master switch
-/// plus per-(engine, model) emote-tag support.
+/// The Dramatize gate for the active profile: the Experimental master switch,
+/// per-(engine, model) emote-tag support, the engine's prompt dialect (xAI and
+/// Mistral read their own tag vocabularies — the generic prompt makes xAI
+/// speak its tags aloud), and whether the engine's dialect includes `<...>`
+/// wraps that the word comparison must strip (xAI).
 pub(crate) fn dramatize_gate(
     tts_config: &TtsConfig,
     experimental_enabled: bool,
@@ -588,6 +632,8 @@ pub(crate) fn dramatize_gate(
             &eff.engine,
             &effective_model(&eff),
         ),
+        prompt_override: crate::tts::catalog::dramatize_prompt_override(&eff.engine),
+        angle_wraps: eff.engine == TtsEngine::Xai,
     }
 }
 
@@ -617,6 +663,8 @@ pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
         TtsEngine::ElevenLabs => "elevenlabs",
         TtsEngine::Cartesia => "cartesia",
         TtsEngine::Fish => "fish",
+        TtsEngine::Xai => "xai",
+        TtsEngine::Mistral => "mistral",
         TtsEngine::Http => "http",
         TtsEngine::Google => "google",
         TtsEngine::Microsoft => "microsoft",

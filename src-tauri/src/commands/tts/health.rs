@@ -133,6 +133,8 @@ fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
         "elevenlabs" => Ok(TtsEngine::ElevenLabs),
         "cartesia" => Ok(TtsEngine::Cartesia),
         "fish" => Ok(TtsEngine::Fish),
+        "xai" => Ok(TtsEngine::Xai),
+        "mistral" => Ok(TtsEngine::Mistral),
         "google" => Ok(TtsEngine::Google),
         "microsoft" => Ok(TtsEngine::Microsoft),
         "edge" => Ok(TtsEngine::Edge),
@@ -226,6 +228,9 @@ fn effective_backend_name(eff: &EffectiveTtsRequest, tts: &TtsConfig) -> String 
             first_set(&[&cartesia, &tts.cartesia.model_id])
         ),
         TtsEngine::Fish => format!("Fish Audio ({})", first_set(&[&fish, &tts.fish.model])),
+        // xAI has no model parameter — voice is the only selection knob.
+        TtsEngine::Xai => "xAI".to_string(),
+        TtsEngine::Mistral => format!("Mistral ({})", crate::tts::mistral::MISTRAL_TTS_MODEL),
         TtsEngine::Http => format!("HTTP ({})", first_set(&[&http, &tts.http.url_template])),
         TtsEngine::Google => format!("Google ({})", first_set(&[&google, &tts.google.model])),
         TtsEngine::Microsoft => format!(
@@ -267,6 +272,8 @@ pub fn test_tts_engine_config(
             format!("Cartesia ({})", first_set(&[&tts_config.cartesia.model_id]))
         }
         TtsEngine::Fish => format!("Fish Audio ({})", first_set(&[&tts_config.fish.model])),
+        TtsEngine::Xai => "xAI".to_string(),
+        TtsEngine::Mistral => format!("Mistral ({})", crate::tts::mistral::MISTRAL_TTS_MODEL),
         TtsEngine::Http => format!("HTTP ({})", first_set(&[&tts_config.http.url_template])),
         TtsEngine::Google => format!("Google ({})", first_set(&[&tts_config.google.model])),
         TtsEngine::Microsoft => {

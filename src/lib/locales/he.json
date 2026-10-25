@@ -305,6 +305,16 @@
         "description": "TTS ענן אקספרסיבי (S2)",
         "detail": "API ענן מבוסס מודלי Fish Audio S2. דורש מפתח API."
       },
+      "xai": {
+        "title": "xAI",
+        "description": "TTS ענן אקספרסיבי (Grok)",
+        "detail": "API ענן מבוסס קולות ה-TTS של xAI. דורש מפתח API."
+      },
+      "mistral": {
+        "title": "Mistral",
+        "description": "TTS ענן אקספרסיבי (Voxtral)",
+        "detail": "API ענן מבוסס מודל ה-Voxtral TTS של Mistral. דורש מפתח API."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "ONNX מקומי קל משקל במיוחד",
@@ -402,6 +412,22 @@
       "description": "ענן: קולות AI אקספרסיביים עם שיבוט קול. דורש מפתח API וחיבור לאינטרנט.",
       "apiKey": "מפתח API",
       "apiKeyDescription": "מפתח ה-API שלך מאוחסן מקומית ולעולם אינו משותף.",
+      "check": "בדיקה",
+      "testEngine": "בדיקת מנוע"
+    },
+    "xai": {
+      "title": "xAI",
+      "description": "ענן: קולות Grok עם כתוביות מילים מקוריות ותגי דיבור אקספרסיביים. דורש מפתח API וחיבור לאינטרנט.",
+      "apiKey": "מפתח API",
+      "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
+      "check": "בדיקה",
+      "testEngine": "בדיקת מנוע"
+    },
+    "mistral": {
+      "title": "Mistral",
+      "description": "ענן: קולות Voxtral עם תגי רגש, קצב וצליל. דורש מפתח API וחיבור לאינטרנט.",
+      "apiKey": "מפתח API",
+      "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
       "check": "בדיקה",
       "testEngine": "בדיקת מנוע"
     },
@@ -539,6 +565,8 @@
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
       "placeholderFish": "מפתח API של Fish Audio",
+      "placeholderXai": "מפתח API של xAI",
+      "placeholderMistral": "מפתח API של Mistral",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "נקודת קצה",

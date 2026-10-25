@@ -305,6 +305,16 @@
         "description": "TTS en la nube expresivo (S2)",
         "detail": "API en la nube basada en los modelos S2 de Fish Audio. Requiere una clave de API."
       },
+      "xai": {
+        "title": "xAI",
+        "description": "TTS en la nube expresivo (Grok)",
+        "detail": "API en la nube con las voces TTS de xAI. Requiere una clave de API."
+      },
+      "mistral": {
+        "title": "Mistral",
+        "description": "TTS en la nube expresivo (Voxtral)",
+        "detail": "API en la nube con el modelo Voxtral TTS de Mistral. Requiere una clave de API."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "TTS local ONNX ultraligero",
@@ -402,6 +412,22 @@
       "description": "Nube: Voces de IA expresivas con clonación de voz. Requiere una clave de API y conexión a internet.",
       "apiKey": "Clave de API",
       "apiKeyDescription": "Tu clave de API se almacena localmente y nunca se comparte.",
+      "check": "Comprobar",
+      "testEngine": "Probar motor"
+    },
+    "xai": {
+      "title": "xAI",
+      "description": "Nube: voces Grok con subtítulos de palabras nativos y etiquetas de voz expresivas. Requiere una clave de API y conexión a internet.",
+      "apiKey": "Clave de API",
+      "apiKeyDescription": "Tu clave de API se guarda localmente y nunca se comparte.",
+      "check": "Comprobar",
+      "testEngine": "Probar motor"
+    },
+    "mistral": {
+      "title": "Mistral",
+      "description": "Nube: voces Voxtral con etiquetas de emoción, ritmo y sonido. Requiere una clave de API y conexión a internet.",
+      "apiKey": "Clave de API",
+      "apiKeyDescription": "Tu clave de API se guarda localmente y nunca se comparte.",
       "check": "Comprobar",
       "testEngine": "Probar motor"
     },
@@ -539,6 +565,8 @@
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
       "placeholderFish": "Clave de API de Fish Audio",
+      "placeholderXai": "Clave de API de xAI",
+      "placeholderMistral": "Clave de API de Mistral",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "Endpoint",

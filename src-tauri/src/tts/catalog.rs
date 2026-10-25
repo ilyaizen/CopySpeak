@@ -105,13 +105,40 @@ fn voice(
 /// every other engine) stay excluded until someone listens to a tagged read
 /// on them; support is per model, never per engine.
 pub fn supports_emote_tags(engine: &TtsEngine, model: &str) -> bool {
-    let supported: &[&str] = match engine {
-        TtsEngine::ElevenLabs => &["eleven_v4", "eleven_v4_turbo", "eleven_v3"],
-        TtsEngine::Fish => &["s2.1-pro", "s2.1-pro-free", "s2-pro"],
-        _ => &[],
-    };
-    supported.contains(&model)
+    match engine {
+        // xAI and Mistral carry no model knob (no model parameter / pinned
+        // model): the engine itself interprets its dialect tags, whatever the
+        // (empty) model string says.
+        TtsEngine::Xai | TtsEngine::Mistral => true,
+        TtsEngine::ElevenLabs => matches!(model, "eleven_v4" | "eleven_v4_turbo" | "eleven_v3"),
+        TtsEngine::Fish => matches!(model, "s2.1-pro" | "s2.1-pro-free" | "s2-pro"),
+        _ => false,
+    }
 }
+
+/// The Dramatize prompt speaking THIS engine's tag dialect, `None` for
+/// engines that read the generic bracket dialect (the user-configured
+/// `DEFAULT_POST_PROCESS_PROMPT`). An engine-specific prompt is not a style
+/// preference: feeding xAI's `[happy]`-shaped default makes it speak the tag
+/// aloud, since its inline tag list is fixed.
+pub fn dramatize_prompt_override(engine: &TtsEngine) -> Option<&'static str> {
+    match engine {
+        TtsEngine::Xai => Some(XAI_DRAMATIZE_PROMPT),
+        TtsEngine::Mistral => Some(MISTRAL_DRAMATIZE_PROMPT),
+        _ => None,
+    }
+}
+
+/// xAI dialect (docs.x.ai): inline bracket tags from its fixed list, plus
+/// `<...>` wraps for delivery. The wraps make the Dramatize word-comparison
+/// strip angle tags too (`DramatizeGate::angle_wraps`).
+pub const XAI_DRAMATIZE_PROMPT: &str = "You add expressive speech tags to text for a speech synthesizer. Reply with ONLY the tagged text.\nRules:\n- Never add, remove, or change a word. You may insert tags, CAPITALIZE a word for emphasis, or add ?, ! or ellipses.\n- Inline tags are short phrases in [square brackets], placed right before the words they affect, or right after for a reaction such as [sigh]. Use only: [pause] [long-pause] [laugh] [chuckle] [giggle] [sigh] [breath] [inhale] [exhale] [cry] [tsk] [lip-smack].\n- To change the delivery of a phrase, wrap it in a style tag: <whisper>text</whisper> <soft>text</soft> <loud>text</loud> <slow>text</slow> <fast>text</fast> <emphasis>text</emphasis>.\n- Tags describe the speaker's voice only: emotion, delivery, or a vocal sound. Never music, sound effects, scenery, or actions.\n- Use tags sparingly: at most about one per sentence, and none for flat, factual, or code-like text.\n- Leave code, URLs, numbers, and names untouched. Keep the text's language; tags stay in English.\n- Do not use <break> or SSML, and do not invent other tags.\nExample: \"Are you serious? I can't believe you did that!\" becomes \"Are you serious? <whisper>I can't believe you did that</whisper>!\"\nText:\n${output}";
+
+/// Mistral Voxtral dialect (docs.mistral.ai): `[emotion=value]`, `[pace=value]`
+/// (tag applies from its position to the next tag), and bracketed
+/// disfluencies. Values must come from the documented lists — the API silently
+/// ignores unknown values.
+pub const MISTRAL_DRAMATIZE_PROMPT: &str = "You add expressive emotion, pace, and sound tags to text for a speech synthesizer. Reply with ONLY the tagged text.\nRules:\n- Never add, remove, or change a word. You may insert tags, CAPITALIZE a word for emphasis, or add ?, ! or ellipses.\n- Set the delivery with [emotion=value]. Values: amused, angry, anxious, apologetic, calm, confident, curious, excited, frustrated, grateful, happy, hopeful, playful, proud, sad, sarcastic, skeptical, surprised, tense, tired, urgent, warm.\n- Set the speed with [pace=value]. Values: very-slow, slow, moderate, fast, very-fast.\n- Place each tag right before the text it applies to; it stays in effect until the next tag. Combine at most one emotion and one pace, one after the other: [emotion=calm][pace=slow]\n- Add vocal sounds inline in [square brackets]: [laugh] [chuckle] [sigh] [breath] [gasp] [um] [uh] [cough] [yawn].\n- Tags are never spoken. They describe the speaker's voice only, and are used sparingly: at most about one per sentence, none for flat, factual, or code-like text.\n- Leave code, URLs, numbers, and names untouched. Keep the text's language; tags stay in English.\nExample: \"Are you serious? I can't believe you did that!\" becomes \"[emotion=surprised] Are you serious? [emotion=frustrated][sigh] I can't believe you did that!\"\nText:\n${output}";
 
 pub fn list_engines() -> Vec<EngineCatalogEntry> {
     vec![
@@ -992,6 +1019,110 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             ],
         },
         EngineCatalogEntry {
+            engine: TtsEngine::Xai,
+            label: "xAI".into(),
+            description: "xAI cloud TTS with native word captions and expressive speech tags."
+                .into(),
+            docs_url: "https://docs.x.ai/developers/model-capabilities/audio/voice".into(),
+            supports_voice_refresh: true,
+            supports_pitch: false,
+            supports_captions: true,
+            supports_bracket_emotes: false,
+            options: vec![option(
+                "speed",
+                "Speed",
+                EngineOptionKind::Number,
+                "Native synthesis speed rendered by the API, 0.7 to 1.5 (unset = normal). Multiplies with the profile's playback speed.",
+                serde_json::json!(null),
+            )],
+            // 26 built-in voices — fetched from GET /v1/tts/voices docs
+            // (2026-10-25). Custom voices are covered by manual voice-ID entry;
+            // the refresh button hits the live API for the current set.
+            voices: vec![
+                voice("eve", "Eve", Some("en"), Some("The API's default voice"), None),
+                voice("ara", "Ara", Some("en"), None, None),
+                voice("carina", "Carina", Some("en"), None, None),
+                voice("zagan", "Zagan", Some("en"), None, None),
+                voice("helix", "Helix", Some("en"), None, None),
+                voice("orion", "Orion", Some("en"), None, None),
+                voice("luna", "Luna", Some("en"), None, None),
+                voice("iris", "Iris", Some("en"), None, None),
+                voice("altair", "Altair", Some("en"), None, None),
+                voice("zenith", "Zenith", Some("en"), None, None),
+                voice("perseus", "Perseus", Some("en"), None, None),
+                voice("helios", "Helios", Some("en"), None, None),
+                voice("lux", "Lux", Some("en"), None, None),
+                voice("kepler", "Kepler", Some("en"), None, None),
+                voice("rigel", "Rigel", Some("en"), None, None),
+                voice("cosmo", "Cosmo", Some("en"), None, None),
+                voice("celeste", "Celeste", Some("en"), None, None),
+                voice("ursa", "Ursa", Some("en"), None, None),
+                voice("sirius", "Sirius", Some("en"), None, None),
+                voice("lumen", "Lumen", Some("en"), None, None),
+                voice("castor", "Castor", Some("en"), None, None),
+                voice("naksh", "Naksh", Some("en"), None, None),
+                voice("atlas", "Atlas", Some("en"), None, None),
+                voice("leo", "Leo", Some("en"), None, None),
+                voice("rex", "Rex", Some("en"), None, None),
+                voice("sal", "Sal", Some("en"), None, None),
+            ],
+        },
+        EngineCatalogEntry {
+            engine: TtsEngine::Mistral,
+            label: "Mistral".into(),
+            description: "Mistral Voxtral cloud TTS with emotion, pace, and sound tags.".into(),
+            docs_url: "https://docs.mistral.ai/studio/audio/text-to-speech/overview".into(),
+            supports_voice_refresh: true,
+            supports_pitch: false,
+            supports_captions: false,
+            supports_bracket_emotes: false,
+            // No engine options in v1: the model is pinned
+            // (voxtral-mini-tts-3-0), the container is wav, and the voice
+            // comes from the profile.
+            options: vec![],
+            // 36 Voxtral 3 preset voices — from docs.mistral.ai
+            // (2026-10-25). Cloned voices are covered by manual voice-ID
+            // entry; the refresh button hits the live /v2/audio/voices list.
+            voices: vec![
+                voice("voice_478", "Sheila", Some("en-US"), None, None),
+                voice("voice_447", "Margaret", Some("en-US"), None, None),
+                voice("voice_485", "Rob", Some("en-US"), None, None),
+                voice("voice_3150", "James", Some("en-US"), None, None),
+                voice("voice_1787", "Mary", Some("en-GB"), None, None),
+                voice("voice_1786", "Sky", Some("en-GB"), None, None),
+                voice("voice_1788", "David", Some("en-GB"), None, None),
+                voice("voice_590", "Harriet", Some("en-GB"), None, None),
+                voice("voice_591", "Fred", Some("en-GB"), None, None),
+                voice("voice_3149", "Hugo", Some("en-GB"), None, None),
+                voice("voice_3147", "Howard", Some("en-GB"), None, None),
+                voice("voice_592", "Marie", Some("fr"), None, None),
+                voice("voice_3137", "Manon", Some("fr"), None, None),
+                voice("voice_589", "Lea", Some("fr"), None, None),
+                voice("voice_3141", "Camille", Some("fr"), None, None),
+                voice("voice_483", "Elena", Some("es"), None, None),
+                voice("voice_481", "Heidi", Some("de"), None, None),
+                voice("voice_482", "Lorenzo", Some("it"), None, None),
+                voice("voice_480", "Gabriela", Some("pt"), None, None),
+                voice("voice_479", "Maryam", Some("ar"), None, None),
+                voice("voice_3143", "Jordi", Some("ca"), None, None),
+                voice("voice_3139", "Ananya", Some("hi"), None, None),
+                voice("voice_3153", "Himanshu", Some("hi"), None, None),
+                voice("voice_3146", "Olivia", Some("hu"), None, None),
+                voice("voice_3133", "Haruto", Some("ja"), None, None),
+                voice("voice_3136", "Sung", Some("ko"), None, None),
+                voice("voice_3135", "Jin", Some("ko"), None, None),
+                voice("voice_3145", "Lotte", Some("nl"), None, None),
+                voice("voice_3134", "Lars", Some("no"), None, None),
+                voice("voice_3154", "Leon", Some("pl"), None, None),
+                voice("voice_3155", "Irina", Some("ro"), None, None),
+                voice("voice_3132", "Tatiana", Some("ru"), None, None),
+                voice("voice_3138", "Oran", Some("tr"), None, None),
+                voice("voice_3140", "Taras", Some("uk"), None, None),
+                voice("voice_3144", "Huong", Some("vi"), None, None),
+                voice("voice_3142", "Mei", Some("zh"), None, None),
+            ],
+        },
+        EngineCatalogEntry {
             engine: TtsEngine::Google,
             label: "Google Gemini".into(),
             description: "Gemini native audio generation.".into(),
@@ -1191,6 +1322,8 @@ mod tests {
             TtsEngine::ElevenLabs,
             TtsEngine::Cartesia,
             TtsEngine::Fish,
+            TtsEngine::Xai,
+            TtsEngine::Mistral,
             TtsEngine::Google,
             TtsEngine::Microsoft,
             TtsEngine::Kitten,
@@ -1207,7 +1340,7 @@ mod tests {
                 1
             );
         }
-        assert_eq!(entries.len(), 13);
+        assert_eq!(entries.len(), 15);
     }
 
     #[test]
@@ -1235,6 +1368,7 @@ mod tests {
                 TtsEngine::ElevenLabs,
                 TtsEngine::Fish,
                 TtsEngine::Cartesia,
+                TtsEngine::Xai,
             ]
         );
     }
@@ -1281,13 +1415,17 @@ mod tests {
 
     #[test]
     fn emote_tag_support_is_per_engine_model_pair() {
-        let supported: [(TtsEngine, &str); 6] = [
+        let supported: [(TtsEngine, &str); 8] = [
             (TtsEngine::ElevenLabs, "eleven_v4"),
             (TtsEngine::ElevenLabs, "eleven_v4_turbo"),
             (TtsEngine::ElevenLabs, "eleven_v3"),
             (TtsEngine::Fish, "s2.1-pro"),
             (TtsEngine::Fish, "s2.1-pro-free"),
             (TtsEngine::Fish, "s2-pro"),
+            // xAI and Mistral have no model parameter: any model string
+            // counts, including the empty one the Dramatize gate passes.
+            (TtsEngine::Xai, ""),
+            (TtsEngine::Mistral, "voxtral-mini-tts-3-0"),
         ];
         for (engine, model) in supported {
             assert!(

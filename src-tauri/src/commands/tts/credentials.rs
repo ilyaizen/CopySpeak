@@ -171,6 +171,110 @@ pub fn check_fish_credentials(
     }
 }
 
+/// Validate an xAI API key via GET /v1/tts/voices (no synthesis credits consumed).
+#[tauri::command]
+pub fn check_xai_credentials(
+    config: State<'_, Mutex<AppConfig>>,
+) -> Result<CredentialCheckResult, String> {
+    if crate::logging::is_debug_mode() {
+        log::debug!("[IPC] check_xai_credentials called");
+    }
+
+    let api_key =
+        crate::secrets::resolve(&config.lock().unwrap().tts.xai.api_key, &["XAI_API_KEY"]);
+
+    if api_key.trim().is_empty() {
+        return Ok(CredentialCheckResult {
+            success: false,
+            message: "API key is empty. Enter your xAI API key.".into(),
+            error_type: Some("api_key_missing".into()),
+        });
+    }
+
+    let client = reqwest::blocking::Client::new();
+    match client
+        .get("https://api.x.ai/v1/tts/voices")
+        .bearer_auth(&api_key)
+        .send()
+    {
+        Ok(resp) => match resp.status().as_u16() {
+            200 => Ok(CredentialCheckResult {
+                success: true,
+                message: "xAI API key is valid.".into(),
+                error_type: None,
+            }),
+            401 | 403 => Ok(CredentialCheckResult {
+                success: false,
+                message: "Authentication failed. Check your xAI API key.".into(),
+                error_type: Some("auth_failed".into()),
+            }),
+            status => Ok(CredentialCheckResult {
+                success: false,
+                message: format!("xAI API returned unexpected status: {}", status),
+                error_type: Some("http_error".into()),
+            }),
+        },
+        Err(e) => Ok(CredentialCheckResult {
+            success: false,
+            message: format!("Network error: {}", e),
+            error_type: Some("http_error".into()),
+        }),
+    }
+}
+
+/// Validate a Mistral API key via GET /v1/models (no synthesis credits consumed).
+#[tauri::command]
+pub fn check_mistral_credentials(
+    config: State<'_, Mutex<AppConfig>>,
+) -> Result<CredentialCheckResult, String> {
+    if crate::logging::is_debug_mode() {
+        log::debug!("[IPC] check_mistral_credentials called");
+    }
+
+    let api_key = crate::secrets::resolve(
+        &config.lock().unwrap().tts.mistral.api_key,
+        &["MISTRAL_API_KEY"],
+    );
+
+    if api_key.trim().is_empty() {
+        return Ok(CredentialCheckResult {
+            success: false,
+            message: "API key is empty. Enter your Mistral API key.".into(),
+            error_type: Some("api_key_missing".into()),
+        });
+    }
+
+    let client = reqwest::blocking::Client::new();
+    match client
+        .get("https://api.mistral.ai/v1/models")
+        .bearer_auth(&api_key)
+        .send()
+    {
+        Ok(resp) => match resp.status().as_u16() {
+            200 => Ok(CredentialCheckResult {
+                success: true,
+                message: "Mistral API key is valid.".into(),
+                error_type: None,
+            }),
+            401 | 403 => Ok(CredentialCheckResult {
+                success: false,
+                message: "Authentication failed. Check your Mistral API key.".into(),
+                error_type: Some("auth_failed".into()),
+            }),
+            status => Ok(CredentialCheckResult {
+                success: false,
+                message: format!("Mistral API returned unexpected status: {}", status),
+                error_type: Some("http_error".into()),
+            }),
+        },
+        Err(e) => Ok(CredentialCheckResult {
+            success: false,
+            message: format!("Network error: {}", e),
+            error_type: Some("http_error".into()),
+        }),
+    }
+}
+
 /// Check whether an engine has credentials available (config.json or .env),
 /// without making any HTTP requests. Used by the UI to hide the "set up
 /// credentials" hint when .env already supplies the key.
@@ -189,6 +293,10 @@ pub fn has_engine_credentials(engine: String, config: State<'_, Mutex<AppConfig>
             !crate::secrets::resolve(&cfg.tts.cartesia.api_key, &["CARTESIA_API_KEY"]).is_empty()
         }
         "fish" => !crate::secrets::resolve(&cfg.tts.fish.api_key, &["FISH_API_KEY"]).is_empty(),
+        "xai" => !crate::secrets::resolve(&cfg.tts.xai.api_key, &["XAI_API_KEY"]).is_empty(),
+        "mistral" => {
+            !crate::secrets::resolve(&cfg.tts.mistral.api_key, &["MISTRAL_API_KEY"]).is_empty()
+        }
         "google" => !crate::secrets::resolve(
             &cfg.tts.google.api_key,
             &["GEMINI_API_KEY", "GOOGLE_API_KEY"],

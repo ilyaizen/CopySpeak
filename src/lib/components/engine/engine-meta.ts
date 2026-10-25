@@ -12,6 +12,8 @@ export type CredentialTarget =
   | "elevenlabs"
   | "cartesia"
   | "fish"
+  | "xai"
+  | "mistral"
   | "google"
   | "microsoft";
 
@@ -79,6 +81,22 @@ export const CLOUD_ENGINES: EngineSetupEntry[] = [
     credentialTarget: "cartesia",
     placeholderKey: "placeholderCartesia",
     docsUrl: "https://docs.cartesia.ai/api-reference/tts/bytes"
+  },
+  {
+    id: "xai",
+    kind: "cloud",
+    credential: "api_key",
+    credentialTarget: "xai",
+    placeholderKey: "placeholderXai",
+    docsUrl: "https://docs.x.ai/developers/model-capabilities/audio/voice"
+  },
+  {
+    id: "mistral",
+    kind: "cloud",
+    credential: "api_key",
+    credentialTarget: "mistral",
+    placeholderKey: "placeholderMistral",
+    docsUrl: "https://docs.mistral.ai/studio/audio/text-to-speech/overview"
   },
   {
     id: "google",

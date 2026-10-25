@@ -305,6 +305,16 @@
         "description": "Expressive cloud TTS (S2)",
         "detail": "Cloud API powered by the Fish Audio S2 models. Requires an API key."
       },
+      "xai": {
+        "title": "xAI",
+        "description": "Expressive cloud TTS (Grok)",
+        "detail": "Cloud API powered by xAI's TTS voices. Requires an API key."
+      },
+      "mistral": {
+        "title": "Mistral",
+        "description": "Expressive cloud TTS (Voxtral)",
+        "detail": "Cloud API powered by Mistral's Voxtral TTS model. Requires an API key."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "Ultra-lightweight local ONNX TTS",
@@ -400,6 +410,22 @@
     "fish": {
       "title": "Fish Audio",
       "description": "Cloud: Expressive AI voices with voice cloning. Requires an API key and internet connection.",
+      "apiKey": "API Key",
+      "apiKeyDescription": "Your API key is stored locally and never shared.",
+      "check": "Check",
+      "testEngine": "Test Engine"
+    },
+    "xai": {
+      "title": "xAI",
+      "description": "Cloud: Grok voices with native word captions and expressive speech tags. Requires an API key and internet connection.",
+      "apiKey": "API Key",
+      "apiKeyDescription": "Your API key is stored locally and never shared.",
+      "check": "Check",
+      "testEngine": "Test Engine"
+    },
+    "mistral": {
+      "title": "Mistral",
+      "description": "Cloud: Voxtral voices with emotion, pace, and sound tags. Requires an API key and internet connection.",
       "apiKey": "API Key",
       "apiKeyDescription": "Your API key is stored locally and never shared.",
       "check": "Check",
@@ -539,6 +565,8 @@
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
       "placeholderFish": "Fish Audio API key",
+      "placeholderXai": "xAI API key",
+      "placeholderMistral": "Mistral API key",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "Endpoint",

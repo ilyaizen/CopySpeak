@@ -29,6 +29,8 @@
     "elevenlabs",
     "fish",
     "cartesia",
+    "xai",
+    "mistral",
     "google",
     "microsoft"
   ];

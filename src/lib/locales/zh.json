@@ -305,6 +305,16 @@
         "description": "富有表现力的云端 TTS（S2）",
         "detail": "基于 Fish Audio S2 模型的云 API。需要 API 密钥。"
       },
+      "xai": {
+        "title": "xAI",
+        "description": "富有表现力的云端 TTS（Grok）",
+        "detail": "由 xAI 的 TTS 声音驱动的云端 API。需要 API 密钥。"
+      },
+      "mistral": {
+        "title": "Mistral",
+        "description": "富有表现力的云端 TTS（Voxtral）",
+        "detail": "由 Mistral 的 Voxtral TTS 模型驱动的云端 API。需要 API 密钥。"
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "超轻量本地 ONNX TTS",
@@ -402,6 +412,22 @@
       "description": "云端：富有表现力的 AI 声音，支持声音克隆。需要 API 密钥和网络连接。",
       "apiKey": "API 密钥",
       "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会被分享。",
+      "check": "检查",
+      "testEngine": "测试引擎"
+    },
+    "xai": {
+      "title": "xAI",
+      "description": "云端：Grok 声音，带原生逐词字幕与表现力语音标签。需要 API 密钥和网络连接。",
+      "apiKey": "API 密钥",
+      "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会共享。",
+      "check": "检查",
+      "testEngine": "测试引擎"
+    },
+    "mistral": {
+      "title": "Mistral",
+      "description": "云端：Voxtral 声音，带情感、语速与声音标签。需要 API 密钥和网络连接。",
+      "apiKey": "API 密钥",
+      "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会共享。",
       "check": "检查",
       "testEngine": "测试引擎"
     },
@@ -539,6 +565,8 @@
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
       "placeholderFish": "Fish Audio API 密钥",
+      "placeholderXai": "xAI API 密钥",
+      "placeholderMistral": "Mistral API 密钥",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "端点",

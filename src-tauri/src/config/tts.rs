@@ -14,6 +14,8 @@ pub enum TtsEngine {
     ElevenLabs,
     Cartesia,
     Fish,
+    Xai,
+    Mistral,
     Google,
     Microsoft,
     Edge,
@@ -221,6 +223,77 @@ impl Default for FishConfig {
 }
 
 impl FishConfig {
+    pub fn validate(&self) -> Vec<ValidationError> {
+        Vec::new()
+    }
+}
+
+// ── xAI Grok TTS ──────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct XaiConfig {
+    // Credential — persisted. Profile owns voice/speed; language ("auto"),
+    // container (wav @ 24 kHz) and timestamps are pinned in the backend, and
+    // xAI exposes no model parameter (voice is the only selection knob).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub api_key: String,
+    #[serde(skip_serializing, default)]
+    pub voice_id: String,
+    /// Cached voice name for display.
+    #[serde(skip_serializing, default)]
+    pub voice_name: Option<String>,
+    /// Native synthesis speed (0.7–1.5, None = the API's 1.0).
+    #[serde(skip_serializing, default)]
+    pub speed: Option<f32>,
+}
+
+impl Default for XaiConfig {
+    fn default() -> Self {
+        Self {
+            api_key: String::new(),
+            voice_id: "eve".into(),
+            voice_name: Some("Eve".into()),
+            speed: None,
+        }
+    }
+}
+
+impl XaiConfig {
+    pub fn validate(&self) -> Vec<ValidationError> {
+        Vec::new()
+    }
+}
+
+// ── Mistral Voxtral TTS ───────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MistralConfig {
+    // Credential — persisted. Profile owns voice; the model is pinned in the
+    // backend (voxtral-mini-tts-3-0, no model knob), the container is wav,
+    // and there is no timing endpoint (no captions).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub api_key: String,
+    #[serde(skip_serializing, default)]
+    pub voice_id: String,
+    /// Cached voice name for display.
+    #[serde(skip_serializing, default)]
+    pub voice_name: Option<String>,
+}
+
+impl Default for MistralConfig {
+    fn default() -> Self {
+        Self {
+            api_key: String::new(),
+            // Sheila — the docs' example preset (en-US).
+            voice_id: "voice_478".into(),
+            voice_name: Some("Sheila".into()),
+        }
+    }
+}
+
+impl MistralConfig {
     pub fn validate(&self) -> Vec<ValidationError> {
         Vec::new()
     }
@@ -502,6 +575,22 @@ pub struct FishEngineOptions {
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
+pub struct XaiEngineOptions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// Native synthesis speed rendered by the API (0.7–1.5; unset = 1.0).
+    /// Multiplies with the profile's playback speed, which CopySpeak applies
+    /// separately with TimeStretcher.
+    pub speed: Option<f32>,
+}
+
+/// Mistral takes no engine knobs in v1: the model is pinned, the container is
+/// wav, and voice selection is the profile's own `voice` field.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MistralEngineOptions {}
+
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct GoogleEngineOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub model: Option<String>,
@@ -597,6 +686,8 @@ pub enum ProfileEngineOptions {
     ElevenLabs(ElevenLabsEngineOptions),
     Cartesia(CartesiaEngineOptions),
     Fish(FishEngineOptions),
+    Xai(XaiEngineOptions),
+    Mistral(MistralEngineOptions),
     Google(GoogleEngineOptions),
     Microsoft(MicrosoftEngineOptions),
     Edge(EdgeEngineOptions),
@@ -630,6 +721,8 @@ impl ProfileEngineOptions {
                 | (Self::ElevenLabs(_), TtsEngine::ElevenLabs)
                 | (Self::Cartesia(_), TtsEngine::Cartesia)
                 | (Self::Fish(_), TtsEngine::Fish)
+                | (Self::Xai(_), TtsEngine::Xai)
+                | (Self::Mistral(_), TtsEngine::Mistral)
                 | (Self::Google(_), TtsEngine::Google)
                 | (Self::Microsoft(_), TtsEngine::Microsoft)
                 | (Self::Edge(_), TtsEngine::Edge)
@@ -670,6 +763,8 @@ impl ProfileEngineOptions {
                 Self::Cartesia(serde_json::from_value(value).unwrap_or_default())
             }
             TtsEngine::Fish => Self::Fish(serde_json::from_value(value).unwrap_or_default()),
+            TtsEngine::Xai => Self::Xai(serde_json::from_value(value).unwrap_or_default()),
+            TtsEngine::Mistral => Self::Mistral(serde_json::from_value(value).unwrap_or_default()),
             TtsEngine::Google => Self::Google(serde_json::from_value(value).unwrap_or_default()),
             TtsEngine::Microsoft => {
                 Self::Microsoft(serde_json::from_value(value).unwrap_or_default())
@@ -741,6 +836,21 @@ impl ProfileEngineOptions {
             _ => None,
         }
     }
+    pub fn xai(&self) -> Option<&XaiEngineOptions> {
+        match self {
+            Self::Xai(o) => Some(o),
+            _ => None,
+        }
+    }
+    // Kept for the uniform per-engine options surface; read here once
+    // Mistral grows a profile knob (mirrors every other engine's getter).
+    #[allow(dead_code)]
+    pub fn mistral(&self) -> Option<&MistralEngineOptions> {
+        match self {
+            Self::Mistral(o) => Some(o),
+            _ => None,
+        }
+    }
     pub fn google(&self) -> Option<&GoogleEngineOptions> {
         match self {
             Self::Google(o) => Some(o),
@@ -787,6 +897,8 @@ impl Serialize for ProfileEngineOptions {
             Self::ElevenLabs(o) => ("elevenlabs", serde_json::to_value(o)),
             Self::Cartesia(o) => ("cartesia", serde_json::to_value(o)),
             Self::Fish(o) => ("fish", serde_json::to_value(o)),
+            Self::Xai(o) => ("xai", serde_json::to_value(o)),
+            Self::Mistral(o) => ("mistral", serde_json::to_value(o)),
             Self::Google(o) => ("google", serde_json::to_value(o)),
             Self::Microsoft(o) => ("microsoft", serde_json::to_value(o)),
             Self::Edge(o) => ("edge", serde_json::to_value(o)),
@@ -836,6 +948,8 @@ impl<'de> Deserialize<'de> for ProfileEngineOptions {
             Some("elevenlabs") => Ok(Self::from_engine_map(&TtsEngine::ElevenLabs, map)),
             Some("cartesia") => Ok(Self::from_engine_map(&TtsEngine::Cartesia, map)),
             Some("fish") => Ok(Self::from_engine_map(&TtsEngine::Fish, map)),
+            Some("xai") => Ok(Self::from_engine_map(&TtsEngine::Xai, map)),
+            Some("mistral") => Ok(Self::from_engine_map(&TtsEngine::Mistral, map)),
             Some("google") => Ok(Self::from_engine_map(&TtsEngine::Google, map)),
             Some("microsoft") => Ok(Self::from_engine_map(&TtsEngine::Microsoft, map)),
             Some("edge") => Ok(Self::from_engine_map(&TtsEngine::Edge, map)),
@@ -976,6 +1090,10 @@ pub struct TtsConfig {
     #[serde(default)]
     pub fish: FishConfig,
     #[serde(default)]
+    pub xai: XaiConfig,
+    #[serde(default)]
+    pub mistral: MistralConfig,
+    #[serde(default)]
     pub google: GoogleTtsConfig,
     #[serde(default)]
     pub microsoft: MicrosoftTtsConfig,
@@ -1073,6 +1191,38 @@ fn default_fish_profile() -> VoiceProfile {
             model: Some("s2.1-pro-free".into()),
             format: Some("wav".into()),
         }),
+    }
+}
+
+fn default_xai_profile() -> VoiceProfile {
+    VoiceProfile {
+        id: "profile-a7c31f08".into(),
+        name: "xAI".into(),
+        description: None,
+        engine: TtsEngine::Xai,
+        voice: "eve".into(),
+        voice_label: Some("Eve".into()),
+        speed: 1.0,
+        pitch: 1.0,
+        effects: ProfileEffects::default(),
+        text_processing: ProfileTextProcessing::default(),
+        engine_options: ProfileEngineOptions::Xai(XaiEngineOptions::default()),
+    }
+}
+
+fn default_mistral_profile() -> VoiceProfile {
+    VoiceProfile {
+        id: "profile-c2d94b6a".into(),
+        name: "Mistral".into(),
+        description: None,
+        engine: TtsEngine::Mistral,
+        voice: "voice_478".into(),
+        voice_label: Some("Sheila".into()),
+        speed: 1.0,
+        pitch: 1.0,
+        effects: ProfileEffects::default(),
+        text_processing: ProfileTextProcessing::default(),
+        engine_options: ProfileEngineOptions::Mistral(MistralEngineOptions::default()),
     }
 }
 
@@ -1227,6 +1377,8 @@ impl Default for TtsConfig {
                 default_kokoro_profile(),
                 default_elevenlabs_profile(),
                 default_fish_profile(),
+                default_xai_profile(),
+                default_mistral_profile(),
                 cartesia_profile,
                 default_google_profile(),
             ],
@@ -1250,6 +1402,8 @@ impl Default for TtsConfig {
             elevenlabs: ElevenLabsConfig::default(),
             cartesia: CartesiaConfig::default(),
             fish: FishConfig::default(),
+            xai: XaiConfig::default(),
+            mistral: MistralConfig::default(),
             google: GoogleTtsConfig::default(),
             microsoft: MicrosoftTtsConfig::default(),
             edge: EdgeTtsConfig::default(),
@@ -1276,6 +1430,8 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             TtsEngine::ElevenLabs => tts.elevenlabs.voice_id.clone(),
             TtsEngine::Cartesia => tts.cartesia.voice_id.clone(),
             TtsEngine::Fish => tts.fish.voice_id.clone(),
+            TtsEngine::Xai => tts.xai.voice_id.clone(),
+            TtsEngine::Mistral => tts.mistral.voice_id.clone(),
             TtsEngine::Google => tts.google.voice_name.clone(),
             TtsEngine::Microsoft => tts.microsoft.voice_name.clone(),
             TtsEngine::Edge => tts.edge.voice.clone(),
@@ -1293,6 +1449,8 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
                 TtsEngine::ElevenLabs => tts.elevenlabs.voice_name.clone(),
                 TtsEngine::Cartesia => tts.cartesia.voice_name.clone(),
                 TtsEngine::Fish => tts.fish.voice_name.clone(),
+                TtsEngine::Xai => tts.xai.voice_name.clone(),
+                TtsEngine::Mistral => tts.mistral.voice_name.clone(),
                 _ => None,
             });
         tts.active_profile_id = "default".into();
@@ -1445,6 +1603,12 @@ impl TtsConfig {
             }
             TtsEngine::Fish => {
                 errors.extend(self.fish.validate());
+            }
+            TtsEngine::Xai => {
+                errors.extend(self.xai.validate());
+            }
+            TtsEngine::Mistral => {
+                errors.extend(self.mistral.validate());
             }
             TtsEngine::Google => {
                 errors.extend(self.google.validate());

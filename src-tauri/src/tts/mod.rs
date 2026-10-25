@@ -14,8 +14,10 @@ pub mod google;
 pub mod http;
 pub mod local_daemon;
 pub mod microsoft;
+pub mod mistral;
 pub mod openai;
 pub mod stream;
+pub mod xai;
 
 use stream::ChunkStream;
 

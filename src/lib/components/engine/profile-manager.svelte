@@ -50,6 +50,8 @@
     "elevenlabs",
     "fish",
     "cartesia",
+    "xai",
+    "mistral",
     "google",
     "microsoft",
     "kitten",
@@ -126,6 +128,20 @@
       voice: "",
       voiceLabel: "Fish default voice",
       engineOptions: { engine: "fish", model: "s2.1-pro-free", format: "wav" }
+    },
+    {
+      name: "xAI — Eve",
+      engine: "xai",
+      voice: "eve",
+      voiceLabel: "Eve",
+      engineOptions: { engine: "xai" }
+    },
+    {
+      name: "Mistral — Sheila",
+      engine: "mistral",
+      voice: "voice_478",
+      voiceLabel: "Sheila",
+      engineOptions: { engine: "mistral" }
     }
   ];
 

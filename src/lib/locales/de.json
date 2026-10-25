@@ -305,6 +305,16 @@
         "description": "Ausdrucksstarke Cloud-TTS (S2)",
         "detail": "Cloud-API auf Basis der Fish-Audio-S2-Modelle. Erfordert einen API-Schlüssel."
       },
+      "xai": {
+        "title": "xAI",
+        "description": "Ausdrucksstarke Cloud-TTS (Grok)",
+        "detail": "Cloud-API mit den xAI-TTS-Stimmen. Erfordert einen API-Schlüssel."
+      },
+      "mistral": {
+        "title": "Mistral",
+        "description": "Ausdrucksstarke Cloud-TTS (Voxtral)",
+        "detail": "Cloud-API mit Mistrals Voxtral-TTS-Modell. Erfordert einen API-Schlüssel."
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "Ultraleichte lokale ONNX-TTS",
@@ -402,6 +412,22 @@
       "description": "Cloud: Ausdrucksstarke KI-Stimmen mit Voice Cloning. Erfordert API-Schlüssel und Internetverbindung.",
       "apiKey": "API-Schlüssel",
       "apiKeyDescription": "Ihr API-Schlüssel wird lokal gespeichert und niemals weitergegeben.",
+      "check": "Prüfen",
+      "testEngine": "Engine testen"
+    },
+    "xai": {
+      "title": "xAI",
+      "description": "Cloud: Grok-Stimmen mit nativen Wort-Captions und ausdrucksstarken Sprach-Tags. Erfordert einen API-Schlüssel und eine Internetverbindung.",
+      "apiKey": "API-Schlüssel",
+      "apiKeyDescription": "Ihr API-Schlüssel wird lokal gespeichert und niemals geteilt.",
+      "check": "Prüfen",
+      "testEngine": "Engine testen"
+    },
+    "mistral": {
+      "title": "Mistral",
+      "description": "Cloud: Voxtral-Stimmen mit Emotions-, Tempo- und Sprach-Tags. Erfordert einen API-Schlüssel und eine Internetverbindung.",
+      "apiKey": "API-Schlüssel",
+      "apiKeyDescription": "Ihr API-Schlüssel wird lokal gespeichert und niemals geteilt.",
       "check": "Prüfen",
       "testEngine": "Engine testen"
     },
@@ -539,6 +565,8 @@
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
       "placeholderFish": "Fish-Audio-API-Schlüssel",
+      "placeholderXai": "xAI API-Schlüssel",
+      "placeholderMistral": "Mistral API-Schlüssel",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "Endpunkt",

@@ -281,7 +281,7 @@ mod tests {
             .profiles
             .iter()
             .any(|profile| profile.engine == TtsEngine::Edge));
-        assert_eq!(tts.profiles.len(), 7);
+        assert_eq!(tts.profiles.len(), 9);
         // The ACTIVE profile is the bundled Kokoro one.
         assert_eq!(tts.active_profile_id, "profile-kokoro-default");
         assert_eq!(

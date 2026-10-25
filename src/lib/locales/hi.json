@@ -305,6 +305,16 @@
         "description": "अभिव्यक्तिपूर्ण क्लाउड TTS (S2)",
         "detail": "Fish Audio S2 मॉडल पर आधारित क्लाउड API। API कुंजी आवश्यक है।"
       },
+      "xai": {
+        "title": "xAI",
+        "description": "अभिव्यक्त क्लाउड TTS (Grok)",
+        "detail": "xAI की TTS आवाज़ों पर आधारित क्लाउड API। API कुंजी आवश्यक है।"
+      },
+      "mistral": {
+        "title": "Mistral",
+        "description": "अभिव्यक्त क्लाउड TTS (Voxtral)",
+        "detail": "Mistral के Voxtral TTS मॉडल पर आधारित क्लाउड API। API कुंजी आवश्यक है।"
+      },
       "kitten": {
         "title": "Kitten TTS",
         "description": "बेहद हल्का लोकल ONNX TTS",
@@ -402,6 +412,22 @@
       "description": "क्लाउड: वॉइस क्लोनिंग के साथ अभिव्यक्तिपूर्ण AI आवाज़ें। API कुंजी और इंटरनेट कनेक्शन आवश्यक है।",
       "apiKey": "API कुंजी",
       "apiKeyDescription": "आपकी API कुंजी केवल स्थानीय रूप से संग्रहीत होती है और कभी साझा नहीं की जाती।",
+      "check": "जाँचें",
+      "testEngine": "इंजन परीक्षण"
+    },
+    "xai": {
+      "title": "xAI",
+      "description": "क्लाउड: मूल शब्द कैप्शन और अभिव्यक्त वाक् टैग के साथ Grok आवाज़ें। API कुंजी और इंटरनेट कनेक्शन आवश्यक है।",
+      "apiKey": "API कुंजी",
+      "apiKeyDescription": "आपकी API कुंजी स्थानीय रूप से संग्रहीत होती है और कभी साझा नहीं की जाती।",
+      "check": "जाँचें",
+      "testEngine": "इंजन परीक्षण"
+    },
+    "mistral": {
+      "title": "Mistral",
+      "description": "क्लाउड: भावना, गति और ध्वनि टैग के साथ Voxtral आवाज़ें। API कुंजी और इंटरनेट कनेक्शन आवश्यक है।",
+      "apiKey": "API कुंजी",
+      "apiKeyDescription": "आपकी API कुंजी स्थानीय रूप से संग्रहीत होती है और कभी साझा नहीं की जाती।",
       "check": "जाँचें",
       "testEngine": "इंजन परीक्षण"
     },
@@ -539,6 +565,8 @@
       "placeholderElevenlabs": "xi-...",
       "placeholderCartesia": "sk_car_...",
       "placeholderFish": "Fish Audio API कुंजी",
+      "placeholderXai": "xAI API कुंजी",
+      "placeholderMistral": "Mistral API कुंजी",
       "placeholderGoogle": "AIza...",
       "placeholderMicrosoft": "________________",
       "endpointLabel": "एंडपॉइंट",

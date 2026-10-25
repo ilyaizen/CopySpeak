@@ -42,7 +42,7 @@ struct ResponseMessage {
 /// Run the configured prompt against `text` using the active provider's
 /// OpenAI-compatible endpoint. Returns `Ok(processed)` on success. Caller is
 /// responsible for the fallback — this never silently returns the original.
-pub async fn process(text: &str, cfg: &PostProcessConfig) -> Result<String, String> {
+pub async fn process(text: &str, prompt: &str, cfg: &PostProcessConfig) -> Result<String, String> {
     let provider = cfg
         .active_provider()
         .ok_or_else(|| "No post-process provider configured".to_string())?;
@@ -58,7 +58,7 @@ pub async fn process(text: &str, cfg: &PostProcessConfig) -> Result<String, Stri
         return Err(format!("{} base URL is empty", provider.label));
     }
 
-    let user_content = build_prompt(&cfg.prompt, text);
+    let user_content = build_prompt(prompt, text);
 
     // timeout_secs > 0 bounds the whole request; 0 = never (the
     // daemon_idle_timeout_secs convention). Without a timeout a stalled
@@ -152,9 +152,14 @@ pub async fn try_process(
         }
         return text;
     }
-    match process(&text, cfg).await {
+    // Engines with their own tag dialect (xAI, Mistral) must be prompted in
+    // that dialect: the generic `[happy]`-shaped prompt produces tags the
+    // engine would speak aloud. The user's configured prompt stays in charge
+    // for every engine on the shared bracket dialect.
+    let prompt = gate.prompt_override.unwrap_or(cfg.prompt.as_str());
+    match process(&text, &prompt, cfg).await {
         Ok(processed) => {
-            if !words_preserved(&text, &processed) {
+            if !words_preserved(&text, &processed, gate.angle_wraps) {
                 warn!("[PostProcess] LLM output changed the spoken words; using the original text");
                 return text;
             }
@@ -180,6 +185,13 @@ pub async fn try_process(
 pub struct DramatizeGate {
     pub experimental_enabled: bool,
     pub emote_supported: bool,
+    /// The engine's own Dramatize prompt dialect (`catalog::
+    /// dramatize_prompt_override`); `None` keeps the user-configured prompt.
+    pub prompt_override: Option<&'static str>,
+    /// The engine's dialect also interprets `<...>` wraps (xAI): the
+    /// word-comparison and caption paths must strip them, not read them as
+    /// spoken words.
+    pub angle_wraps: bool,
 }
 
 /// Why a reading will not be dramatized. `ExperimentalOff` and `Unsupported`
@@ -233,12 +245,21 @@ pub(crate) fn dramatize_skip_reason(
 
 /// True when `tagged` keeps every word of `original`: lowercase alphanumeric
 /// runs compared in order, with `[...]` emote tags, added punctuation, and
-/// emphasis capitalization ignored. Guards against the LLM rewriting,
-/// truncating, or padding the text — tags may be inserted, words may not.
-pub(crate) fn words_preserved(original: &str, tagged: &str) -> bool {
+/// emphasis capitalization ignored. `angle_wraps` additionally ignores
+/// `<...>` style tags (the xAI dialect's `<whisper>`-family wraps), whose
+/// names would otherwise read as added words. Guards against the LLM
+/// rewriting, truncating, or padding the text — tags may be inserted, words
+/// may not.
+pub(crate) fn words_preserved(original: &str, tagged: &str, angle_wraps: bool) -> bool {
+    let strip = |text: &str| -> String {
+        if angle_wraps {
+            crate::emote::strip_tags_and_angle_wraps(text)
+        } else {
+            crate::emote::strip_tags(text)
+        }
+    };
     fn words(text: &str) -> Vec<String> {
-        crate::emote::strip_tags(text)
-            .chars()
+        text.chars()
             .fold(Vec::new(), |mut runs, ch| {
                 if ch.is_alphanumeric() {
                     runs.last_mut()
@@ -251,7 +272,7 @@ pub(crate) fn words_preserved(original: &str, tagged: &str) -> bool {
             .map(|run| run.to_lowercase())
             .collect()
     }
-    words(original) == words(tagged)
+    words(&strip(original)) == words(&strip(tagged))
 }
 
 /// Substitute `${output}` in the prompt template with the actual text. If the
@@ -305,6 +326,8 @@ mod tests {
         DramatizeGate {
             experimental_enabled: true,
             emote_supported: true,
+            prompt_override: None,
+            angle_wraps: false,
         }
     }
 
@@ -327,6 +350,8 @@ mod tests {
         let experimental_off = DramatizeGate {
             experimental_enabled: false,
             emote_supported: true,
+            prompt_override: None,
+            angle_wraps: false,
         };
         assert!(matches!(
             dramatize_skip_reason(&cfg, false, 1000, &experimental_off),
@@ -335,6 +360,8 @@ mod tests {
         let unsupported = DramatizeGate {
             experimental_enabled: true,
             emote_supported: false,
+            prompt_override: None,
+            angle_wraps: false,
         };
         assert!(matches!(
             dramatize_skip_reason(&cfg, false, 1000, &unsupported),
@@ -385,22 +412,41 @@ mod tests {
     fn words_preserved_accepts_tags_emphasis_and_punctuation() {
         assert!(words_preserved(
             "Hello world, again.",
-            "[sighs] Hello [happy] WORLD, again!"
+            "[sighs] Hello [happy] WORLD, again!",
+            false
         ));
         assert!(words_preserved(
             "Are you serious? I can't believe you did that!",
-            "[appalled] Are you serious? [sighs] I can't believe you did that!"
+            "[appalled] Are you serious? [sighs] I can't believe you did that!",
+            false
         ));
-        assert!(words_preserved("", ""));
+        assert!(words_preserved("", "", false));
     }
 
     #[test]
     fn words_preserved_rejects_rewrites_truncations_and_additions() {
-        assert!(!words_preserved("Hello world", "Hello brave world"));
-        assert!(!words_preserved("Hello world again", "Hello world"));
-        assert!(!words_preserved("Hello world", "Hello earth"));
-        assert!(!words_preserved("Calm text", "[sighs]"));
-        assert!(!words_preserved("Hello", ""));
+        assert!(!words_preserved("Hello world", "Hello brave world", false));
+        assert!(!words_preserved("Hello world again", "Hello world", false));
+        assert!(!words_preserved("Hello world", "Hello earth", false));
+        assert!(!words_preserved("Calm text", "[sighs]", false));
+        assert!(!words_preserved("Hello", "", false));
+    }
+
+    /// The xAI dialect's `<...>` wraps are tags, not words: without the angle
+    /// flag the wrap names read as added words and the output would always be
+    /// discarded; with it they pass.
+    #[test]
+    fn words_preserved_handles_angle_wraps_only_when_asked() {
+        assert!(!words_preserved(
+            "Are you serious?",
+            "Are you serious? <whisper>I can't believe it</whisper>",
+            false
+        ));
+        assert!(words_preserved(
+            "Are you serious? I can't believe it",
+            "Are you serious? <whisper>I can't believe it</whisper>",
+            true
+        ));
     }
 
     /// Below min_chars the condenser must not run: short text returns
@@ -448,6 +494,8 @@ mod tests {
         let gate = DramatizeGate {
             experimental_enabled: false,
             emote_supported: true,
+            prompt_override: None,
+            angle_wraps: false,
         };
         let out = try_process(
             "[sighs] untouched".to_string(),
@@ -467,7 +515,7 @@ mod tests {
         // words_preserved is pure; this pins the contract try_process relies
         // on: a tag-only diff passes, any word diff fails. The discard branch
         // inside try_process itself needs a provider seam and is not covered here.
-        assert!(words_preserved("one two", "[happy] one two"));
-        assert!(!words_preserved("one two", "one three"));
+        assert!(words_preserved("one two", "[happy] one two", false));
+        assert!(!words_preserved("one two", "one three", false));
     }
 }

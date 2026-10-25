@@ -51,6 +51,8 @@ fn get_provider_voice(cfg: &AppConfig) -> (Option<String>, Option<String>) {
         TtsEngine::ElevenLabs => "ElevenLabs".to_string(),
         TtsEngine::Cartesia => "Cartesia".to_string(),
         TtsEngine::Fish => "Fish Audio".to_string(),
+        TtsEngine::Xai => "xAI".to_string(),
+        TtsEngine::Mistral => "Mistral".to_string(),
         TtsEngine::Http => "HTTP".to_string(),
         TtsEngine::Google => "Google".to_string(),
         TtsEngine::Microsoft => "Microsoft".to_string(),

@@ -63,6 +63,17 @@
         voice_name: undefined,
         format: "wav"
       },
+      xai: {
+        api_key: "",
+        voice_id: "eve",
+        voice_name: "Eve",
+        speed: undefined
+      },
+      mistral: {
+        api_key: "",
+        voice_id: "voice_478",
+        voice_name: "Sheila"
+      },
       edge: { voice: "en-US-AvaMultilingualNeural" },
       google: { api_key: "", model: "", voice_name: "", output_format: "" },
       microsoft: { api_key: "", endpoint: "", model: "", voice_name: "", output_format: "" },
