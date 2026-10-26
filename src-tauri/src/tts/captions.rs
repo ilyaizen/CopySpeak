@@ -136,8 +136,12 @@ pub fn concat_speech(fragments: Vec<(SpeechAudio, String)>) -> Result<SpeechAudi
         words: Vec::new(),
     };
     for (speech, text) in fragments {
-        let source =
-            rodio::Decoder::new(std::io::Cursor::new(speech.bytes)).map_err(|e| e.to_string())?;
+        // Providers ship streaming-style headers with placeholder sizes (xAI:
+        // data = i32::MAX; Fish: 0xFFFFFF00) that rodio trusts and dies on
+        // with "end of stream"; clamp them to the real byte count first.
+        let mut bytes = speech.bytes;
+        crate::audio::wav::clamp_chunk_sizes_to_file(&mut bytes);
+        let source = rodio::Decoder::new(std::io::Cursor::new(bytes)).map_err(|e| e.to_string())?;
         let meta = super::stream::AudioFormatMeta {
             sample_rate: source.sample_rate(),
             channels: source.channels(),
@@ -429,6 +433,33 @@ mod tests {
     #[test]
     fn concatenation_still_rejects_undecodable_audio() {
         assert!(concat_speech(vec![(vec![1, 2, 3].into(), "Hi".into())]).is_err());
+    }
+
+    #[test]
+    fn concat_clamps_streaming_placeholder_headers() {
+        // xAI ships data = i32::MAX and a sign-bit-set RIFF size; rodio's
+        // symphonia decoder trusts those fields and used to fail the whole
+        // concatenation with "end of stream" (the 2026-10-26 Read-aloud
+        // break). Placeholder headers must decode like honest ones.
+        let meta = super::super::stream::AudioFormatMeta {
+            sample_rate: 24000,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        let placeholder = |pcm: Vec<u8>| {
+            let mut wav = super::super::stream::pcm_to_wav(&pcm, &meta);
+            let riff: u32 = 0x8000_0000 + (wav.len() as u32 - 8);
+            wav[4..8].copy_from_slice(&riff.to_le_bytes());
+            wav[40..44].copy_from_slice(&u32::MAX.to_le_bytes());
+            wav
+        };
+        let speech = concat_speech(vec![
+            (placeholder(vec![0; 16000]).into(), "A".into()),
+            (placeholder(vec![0; 16000]).into(), "B".into()),
+        ])
+        .unwrap();
+        let info = crate::audio::wav::parse_wav_header(&speech.bytes).unwrap();
+        assert_eq!(info.data_size, 32000);
     }
 
     #[test]

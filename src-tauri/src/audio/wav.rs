@@ -325,3 +325,105 @@ pub fn extract_envelope(audio_bytes: &[u8], num_bars: usize) -> Result<Amplitude
         duration_ms,
     })
 }
+
+/// Clamp declared RIFF/data chunk sizes to the bytes actually present.
+///
+/// Streaming-style providers emit placeholder sizes before knowing the final
+/// length: xAI ships `data` = `i32::MAX` (and a RIFF size with the sign bit
+/// set), Fish ships `0xFFFFFF00`. Browsers clamp to the real byte count and
+/// play fine, but rodio's symphonia decoder trusts the declared size and dies
+/// with "end of stream" the moment it reads past EOF, and header-based
+/// duration math measures a bogus value. Rewrites both fields in place;
+/// honest headers and non-WAV bytes pass through untouched.
+pub(crate) fn clamp_chunk_sizes_to_file(bytes: &mut [u8]) {
+    if bytes.len() < 12 || &bytes[0..4] != b"RIFF" || &bytes[8..12] != b"WAVE" {
+        return;
+    }
+    let riff_len = (bytes.len() - 8).min(u32::MAX as usize) as u32;
+    bytes[4..8].copy_from_slice(&riff_len.to_le_bytes());
+
+    let mut offset = 12usize;
+    while offset + 8 <= bytes.len() {
+        let declared = u32::from_le_bytes([
+            bytes[offset + 4],
+            bytes[offset + 5],
+            bytes[offset + 6],
+            bytes[offset + 7],
+        ]) as usize;
+        let available = bytes.len() - (offset + 8);
+        if &bytes[offset..offset + 4] == b"data" && declared > available {
+            // Patching requires declared > available, so available < u32::MAX
+            // here and the cast cannot truncate.
+            bytes[offset + 4..offset + 8].copy_from_slice(&(available as u32).to_le_bytes());
+        }
+        // Walk with the (possibly clamped) size; odd chunks carry a pad byte.
+        let size = u32::from_le_bytes([
+            bytes[offset + 4],
+            bytes[offset + 5],
+            bytes[offset + 6],
+            bytes[offset + 7],
+        ]) as usize;
+        offset += 8 + size + (size % 2);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Canonical 44-byte-header WAV, hand-rolled so the test does not depend
+    /// on the tts module's writer.
+    fn canonical_wav(pcm: &[u8]) -> Vec<u8> {
+        let mut wav = Vec::with_capacity(44 + pcm.len());
+        wav.extend_from_slice(b"RIFF");
+        wav.extend_from_slice(&((36 + pcm.len()) as u32).to_le_bytes());
+        wav.extend_from_slice(b"WAVE");
+        wav.extend_from_slice(b"fmt ");
+        wav.extend_from_slice(&16u32.to_le_bytes());
+        wav.extend_from_slice(&1u16.to_le_bytes()); // PCM
+        wav.extend_from_slice(&1u16.to_le_bytes()); // mono
+        wav.extend_from_slice(&24000u32.to_le_bytes());
+        wav.extend_from_slice(&48000u32.to_le_bytes()); // byte rate
+        wav.extend_from_slice(&2u16.to_le_bytes()); // block align
+        wav.extend_from_slice(&16u16.to_le_bytes());
+        wav.extend_from_slice(b"data");
+        wav.extend_from_slice(&(pcm.len() as u32).to_le_bytes());
+        wav.extend_from_slice(pcm);
+        wav
+    }
+
+    /// xAI's wire shape: RIFF size with the sign bit set, data = i32::MAX.
+    fn xai_placeholder_wav(pcm: &[u8]) -> Vec<u8> {
+        let mut wav = canonical_wav(pcm);
+        let riff: u32 = 0x8000_0000 + (wav.len() as u32 - 8);
+        wav[4..8].copy_from_slice(&riff.to_le_bytes());
+        wav[40..44].copy_from_slice(&u32::MAX.to_le_bytes());
+        wav
+    }
+
+    #[test]
+    fn clamp_fixes_streaming_placeholder_sizes() {
+        let pcm = vec![0xABu8; 1600];
+        let mut wav = xai_placeholder_wav(&pcm);
+        clamp_chunk_sizes_to_file(&mut wav);
+        let info = parse_wav_header(&wav).unwrap();
+        assert_eq!(info.data_offset, 44);
+        assert_eq!(info.data_size, 1600);
+        assert_eq!(&wav[44..], &pcm[..], "PCM must be untouched");
+    }
+
+    #[test]
+    fn clamp_leaves_honest_files_unchanged() {
+        let mut wav = canonical_wav(&vec![0x11; 800]);
+        let before = wav.clone();
+        clamp_chunk_sizes_to_file(&mut wav);
+        assert_eq!(wav, before);
+    }
+
+    #[test]
+    fn clamp_ignores_non_wav_bytes() {
+        let mut garbage = vec![1u8, 2, 3];
+        clamp_chunk_sizes_to_file(&mut garbage);
+        assert_eq!(garbage, vec![1u8, 2, 3]);
+    }
+}

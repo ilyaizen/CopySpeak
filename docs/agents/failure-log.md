@@ -59,6 +59,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Change a model default in all four places together: the catalog `default_value` in `tts/catalog.rs`, the `*Config::default()` impl and the bundled `default_*_profile()` in `config/tts.rs`, and `play-page.svelte`'s mock; a catalog-only edit leaves fresh installs on the old model.
 - Read an HTTP response's body inside the SAME `block_on_async` call that sends the request: with no ambient tokio runtime each call builds a fresh runtime, and a `reqwest::Response` carried across calls loses its connection driver — `.bytes()` fails with `error decoding response body`. openai/google/microsoft carry the split (masked by the app's ambient runtime); fish.rs shows the correct single-block shape.
 - Emote-tag support is per (engine, model) pair in `tts/catalog.rs::supports_emote_tags`, not per engine — `eleven_v3_conversational` and Fish `drama-3` stay excluded until someone listens to a tagged read on them.
+- Clamp provider WAV headers with `audio/wav.rs::clamp_chunk_sizes_to_file` before ANY in-app decode, not just duration math: xAI ships `data` = `i32::MAX` and a sign-bit-set RIFF size, Fish ships `0xFFFFFF00`; browsers clamp and play fine, but rodio's symphonia decoder trusts the field and every fragment concat of such a provider dies with "end of stream" (single-fragment reads never decode, which hides the bug). xAI clamps at the source; concat_speech clamps every fragment.
 
 ## Browser companion
 
@@ -88,6 +89,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Text pipeline
 
+- Rename request flags in both `src-tauri/src/cli.rs` and `scripts/copyspeak.mjs`; Rust CLI tests do not cover the Node helper used by Hermes, so verify its emitted `/speak` payload separately.
 - Fold Cyrillic homoglyphs only inside a word that also holds a Latin letter (`fold_homoglyphs`); a per-character fold turned every Russian word into mixed script ("привет" → "пpивeт").
 - Keep U+200C (ZWNJ) out of both invisible-character regexes in `tts_normalize.rs`; Persian and Indic words are spelled with it.
 - Add a script's sentence terminator to both `is_sentence_end` in `pagination.rs` and the phrase regex in `captions.ts`; text with no terminator force-splits at exact character counts, mid-word.

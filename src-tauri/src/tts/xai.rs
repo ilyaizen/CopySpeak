@@ -126,9 +126,13 @@ impl XaiTtsBackend {
 
             let envelope: TtsEnvelope = serde_json::from_str(&body_text)
                 .map_err(|e| TtsError::Http(format!("Failed to parse xAI TTS envelope: {e}")))?;
-            let bytes = STANDARD
+            let mut bytes = STANDARD
                 .decode(envelope.audio.as_bytes())
                 .map_err(|e| TtsError::Http(format!("Invalid xAI audio payload: {e}")))?;
+            // xAI writes streaming placeholders (data = i32::MAX, RIFF size
+            // with the sign bit set). Browsers clamp and play fine, but every
+            // in-app decoder and history file needs honest sizes.
+            crate::audio::wav::clamp_chunk_sizes_to_file(&mut bytes);
             log::info!(
                 "xAI TTS synthesis complete: {} bytes, {} chars of timing data",
                 bytes.len(),
