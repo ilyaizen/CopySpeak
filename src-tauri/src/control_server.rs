@@ -34,6 +34,7 @@ struct SpeakRequest {
 
 enum ControlRequest {
     Health,
+    Stop,
     Speak(SpeakRequest),
 }
 
@@ -106,6 +107,13 @@ fn handle_connection(
 
     let response = match read_result.and_then(|()| parse_request(&buffer)) {
         Ok(ControlRequest::Health) => http_response(200, "OK", r#"{"ok":true,"app":"CopySpeak"}"#),
+        Ok(ControlRequest::Stop) => {
+            // Same path as the UI stop: webview stop event + Rodio net. The
+            // webview's handleStop emits the terminal playback signal, which
+            // releases any blocking `/speak --wait` caller (Hermes barge-in).
+            crate::commands::stop_all_audio(&app, &app.state::<Mutex<AudioPlayer>>());
+            http_response(200, "OK", r#"{"ok":true}"#)
+        }
         Ok(ControlRequest::Speak(request)) => {
             match tauri::async_runtime::block_on(handle_speak(app, request, wait_lock)) {
                 Ok(()) => http_response(200, "OK", r#"{"ok":true}"#),
@@ -197,8 +205,14 @@ fn parse_request(buffer: &[u8]) -> Result<ControlRequest, (u16, String)> {
     if request_line.starts_with("GET /health ") {
         return Ok(ControlRequest::Health);
     }
+    if request_line.starts_with("POST /stop ") {
+        return Ok(ControlRequest::Stop);
+    }
     if !request_line.starts_with("POST /speak ") {
-        return Err((404, "expected GET /health or POST /speak".to_string()));
+        return Err((
+            404,
+            "expected GET /health, POST /stop or POST /speak".to_string(),
+        ));
     }
 
     let content_length = content_length(&headers).unwrap_or(0);
@@ -343,6 +357,12 @@ mod tests {
         // Malformed / unresolvable values fail closed.
         assert!(!is_loopback_addr(""));
         assert!(!is_loopback_addr("not an address"));
+    }
+
+    #[test]
+    fn parse_request_routes_stop_without_body() {
+        let raw = b"POST /stop HTTP/1.1\r\nContent-Length: 0\r\n\r\n";
+        assert!(matches!(parse_request(raw), Ok(ControlRequest::Stop)));
     }
 
     /// A known-slow client changes its mind and disconnects instead of

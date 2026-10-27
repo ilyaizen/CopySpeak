@@ -69,6 +69,17 @@ pub fn emit_playback_stop(app: &tauri::AppHandle) {
     }
 }
 
+/// Stop all audio from a non-webview caller (control server `/stop`): the
+/// same two stops as the UI command — webview stop event, then the Rodio
+/// safety net. The webview's `handleStop` emits the terminal playback
+/// signal, releasing any blocking `/speak --wait` caller.
+pub fn stop_all_audio(app: &tauri::AppHandle, player: &Mutex<AudioPlayer>) {
+    emit_playback_stop(app);
+    let mut p = player.lock().unwrap();
+    p.stop();
+    p.set_playing_entry_id(None);
+}
+
 #[tauri::command]
 pub fn stop_speaking(
     app: tauri::AppHandle,
@@ -77,12 +88,7 @@ pub fn stop_speaking(
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] stop_speaking called");
     }
-    // Emit event so frontend audio element stops
-    emit_playback_stop(&app);
-    // Keep Rodio stop as safety net
-    let mut p = player.lock().unwrap();
-    p.stop();
-    p.set_playing_entry_id(None);
+    stop_all_audio(&app, &player);
     Ok(())
 }
 

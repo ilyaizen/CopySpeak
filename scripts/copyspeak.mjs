@@ -58,6 +58,7 @@ const [cmd, subcmd, ...rest] = process.argv.slice(2);
 
 if (!cmd || has([cmd], ["-h", "--help"])) {
   console.log(`copyspeak health
+copyspeak stop
 copyspeak speak --profile pi "hello"
 copyspeak speak -p pi --stdin [--post-process] [--wait] [--ack <path>]
   --condense is a backward-compatible alias for --post-process.
@@ -69,6 +70,8 @@ copyspeak voices list --engine elevenlabs`);
 
 if (cmd === "health") {
   console.log(JSON.stringify(await request("/health"), null, 2));
+} else if (cmd === "stop") {
+  console.log(JSON.stringify(await request("/stop", { method: "POST" })));
 } else if (cmd === "speak") {
   const args = [subcmd, ...rest].filter(Boolean);
   const profile = argValue(args, ["--profile", "-p"]);
