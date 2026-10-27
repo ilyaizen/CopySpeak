@@ -7,13 +7,16 @@ function fragment(index: number): QueuedFragment {
 
 function createQueue() {
   const played: number[] = [];
+  let completed = false;
   const queue = new FragmentQueue({
     onFragmentPlay: async (fragment) => {
       played.push(fragment.index);
     },
-    onQueueComplete: () => {}
+    onQueueComplete: () => {
+      completed = true;
+    }
   });
-  return { queue, played };
+  return { queue, played, isCompleted: () => completed };
 }
 
 describe("FragmentQueue", () => {
@@ -71,5 +74,58 @@ describe("FragmentQueue", () => {
     queue.handleFragmentEnded(); // 1 done, plays 2
     expect(played).toEqual([0, 1, 1, 2]);
     expect(queue.getCurrentIndex()).toBe(2);
+  });
+
+  it("waits for delayed next fragment without prematurely completing", async () => {
+    const { queue, played, isCompleted } = createQueue();
+    queue.enqueue(fragment(0)); // total is 5, index is 0
+    await queue.startProcessing();
+    expect(played).toEqual([0]);
+    expect(queue.isWaitingForNext()).toBe(false);
+
+    // Fragment 0 finishes playing, but fragment 1 has not arrived yet from backend
+    queue.handleFragmentEnded();
+    expect(queue.isWaitingForNext()).toBe(true);
+    expect(isCompleted()).toBe(false);
+
+    // Later, backend delivers fragment 1
+    queue.enqueue(fragment(1));
+    expect(queue.isWaitingForNext()).toBe(false);
+    expect(played).toEqual([0, 1]);
+    expect(queue.getCurrentIndex()).toBe(1);
+  });
+
+  it("handles terminal completion when waiting for delayed fragment after backend failure", async () => {
+    const { queue, isCompleted } = createQueue();
+    queue.enqueue(fragment(0));
+    await queue.startProcessing();
+    queue.handleFragmentEnded();
+
+    expect(queue.isWaitingForNext()).toBe(true);
+    expect(isCompleted()).toBe(false);
+
+    // Backend stream failed or aborted; mark terminal
+    queue.markTerminal();
+    expect(queue.isWaitingForNext()).toBe(false);
+    expect(isCompleted()).toBe(true);
+  });
+
+  it("supports full replay of all received fragments", async () => {
+    const { queue, played, isCompleted } = createQueue();
+    const total = 2;
+    queue.enqueue({ audioBase64: "a0", index: 0, total, text: "Part 0" });
+    queue.enqueue({ audioBase64: "a1", index: 1, total, text: "Part 1" });
+    await queue.startProcessing();
+    queue.handleFragmentEnded();
+    queue.handleFragmentEnded();
+
+    expect(played).toEqual([0, 1]);
+    expect(isCompleted()).toBe(true);
+    expect(queue.canReplay()).toBe(true);
+
+    // Replay
+    const replayed = await queue.replay();
+    expect(replayed).toBe(true);
+    expect(played).toEqual([0, 1, 0]);
   });
 });

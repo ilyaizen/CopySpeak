@@ -1208,7 +1208,7 @@ async fn speak_now_internal(
         // keep each request under the provider's input limit (OpenAI rejects
         // anything past 4096 characters). Each fragment then streams on its own,
         // so long text is both accepted and low-latency.
-        let wav = synthesize_paginated(
+        let (wav, emitted_fragments) = synthesize_paginated(
             &app,
             backend_arc.clone(),
             &text,
@@ -1224,7 +1224,7 @@ async fn speak_now_internal(
             &pagination_config,
         )
         .await?;
-        (wav, streaming_playback)
+        (wav, streaming_playback || emitted_fragments)
     } else if streaming_playback {
         let wav = synthesize_streaming_and_emit(
             &app,
@@ -1327,12 +1327,12 @@ async fn synthesize_paginated(
     session_id: Option<String>,
     scope: AbortScope,
     pagination_config: &crate::config::PaginationConfig,
-) -> Result<SpeechAudio, String> {
+) -> Result<(SpeechAudio, bool), String> {
     let fragments = pagination::paginate_text(text, pagination_config);
 
     if fragments.len() <= 1 {
         // Only one fragment — fall back to normal synthesis
-        return if streaming {
+        let speech = if streaming {
             synthesize_streaming_and_emit(
                 app,
                 backend_arc.clone(),
@@ -1354,7 +1354,8 @@ async fn synthesize_paginated(
             )
             .await
             .map_err(|e| report_section_failure(app, 0, 1, scope, e))
-        };
+        }?;
+        return Ok((speech, false));
     }
 
     log::info!(
@@ -1376,7 +1377,7 @@ async fn synthesize_paginated(
         // Check for abort
         if scope.aborted() {
             log::info!("[TTS] Pagination aborted by user");
-            return Ok(Vec::new().into());
+            return Ok((Vec::new().into(), false));
         }
 
         // Emit progress update
@@ -1426,13 +1427,43 @@ async fn synthesize_paginated(
         .map_err(|e| report_section_failure(app, i, fragments.len(), scope, e))?;
 
         if scope.aborted() {
-            return Ok(Vec::new().into());
+            return Ok((Vec::new().into(), false));
+        }
+        if !streaming {
+            if i == 0 {
+                hud::show_hud(
+                    app,
+                    extract_envelope_or_default(&frag_wav.bytes),
+                    Some(text.to_string()),
+                );
+            }
+            emit_audio_fragment(
+                app,
+                &frag_wav,
+                i,
+                fragments.len(),
+                fragment.text.clone(),
+                session_id.as_deref(),
+                scope,
+            );
         }
         fragment_audio.push((frag_wav, fragment.text.clone()));
     }
 
     crate::tts::captions::concat_speech(fragment_audio)
-        .map_err(|e| format!("Failed to concatenate audio fragments: {e}"))
+        .map(|speech| (speech, !streaming))
+        // A concat failure lands after fragments were already emitted and may
+        // be playing: surface it as a reading failure so the webview queue
+        // stops waiting for the final fragment that will never arrive.
+        .map_err(|e| {
+            report_section_failure(
+                app,
+                0,
+                1,
+                scope,
+                format!("Failed to concatenate audio fragments: {e}"),
+            )
+        })
 }
 
 /// Handle file output mode

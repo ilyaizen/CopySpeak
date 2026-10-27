@@ -75,7 +75,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-async function sendAudio(index?: number, sessionId?: string) {
+async function sendAudio(index?: number, sessionId?: string, total = 2) {
   const name = index === undefined ? "audio-ready" : "audio-fragment-ready";
   await listeners.get(name)!({
     payload:
@@ -84,8 +84,8 @@ async function sendAudio(index?: number, sessionId?: string) {
         : {
             audio_base64: "YQ==",
             fragment_index: index,
-            fragment_total: 2,
-            is_final: index === 1,
+            fragment_total: total,
+            is_final: index === total - 1,
             text: `Part ${index}`,
             session_id: sessionId ?? null
           }
@@ -187,6 +187,60 @@ it("does not label a failed browser reading completed when its audio drains", as
       status: "error"
     })
   );
+});
+
+it("releases a reading waiting for its next fragment when the section failure lands", async () => {
+  vi.mocked(emit).mockClear();
+  await sendAudio(0);
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(1));
+  audio.dispatchEvent(new Event("ended"));
+  // The next fragment is still synthesizing: the gap must not complete anything.
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", null);
+  await listeners.get("reading-failed")!({
+    payload: "Reading stopped: section 2 of 5 failed, so the rest of the passage was not read."
+  });
+  await vi.waitFor(() => expect(emit).toHaveBeenCalledWith("playback-finished", null));
+});
+
+it("replays the rendered audio, not a previous reading's fragments, once a new reading starts", async () => {
+  await sendAudio(0);
+  await sendAudio(1);
+  audio.dispatchEvent(new Event("ended"));
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(2));
+  audio.dispatchEvent(new Event("ended"));
+  // A new reading that never queues fragments (streamed) starts.
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  await playbackStore.handleReplay();
+  // The queue replay would activate fragment 0; the rendered-audio fallback
+  // plays without touching the fragment index.
+  expect(playbackStore.currentFragmentIndex).toBeNull();
+  expect(playSpy).toHaveBeenCalledTimes(3);
+});
+
+it("releases a queued reading when the bridge cancels its session", async () => {
+  vi.mocked(emit).mockClear();
+  await sendAudio(0, "trigger-a");
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(1));
+  audio.dispatchEvent(new Event("ended"));
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", null);
+  await listeners.get("browser-reading")!({
+    payload: { active: false, session_id: "trigger-a" }
+  });
+  await vi.waitFor(() => expect(emit).toHaveBeenCalledWith("playback-finished", null));
+});
+
+it("replays every fragment from the beginning on the Play page", async () => {
+  await sendAudio(0);
+  await sendAudio(1);
+  audio.dispatchEvent(new Event("ended"));
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(2));
+  audio.dispatchEvent(new Event("ended"));
+  await playbackStore.handleReplay();
+  expect(playbackStore.currentFragmentIndex).toBe(0);
+  expect(playSpy).toHaveBeenCalledTimes(3);
+  audio.dispatchEvent(new Event("ended"));
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(4));
+  expect(playbackStore.currentFragmentIndex).toBe(1);
 });
 
 it("plays grouped fragments in order and retains the reading for Replay", async () => {
@@ -535,7 +589,7 @@ it("finishes a failed streamed reading when nothing is playing, so /speak --wait
 it("reports a followed page session by id, and only the current one", async () => {
   const calls = () => vi.mocked(invoke).mock.calls;
   vi.mocked(invoke).mockClear();
-  await sendAudio(0, "trigger-1");
+  await sendAudio(0, "trigger-1", 1);
   expect(calls()).toContainEqual([
     "browser_reading_progress",
     expect.objectContaining({ sessionId: "trigger-1", fragmentIndex: 0 })
@@ -548,7 +602,7 @@ it("reports a followed page session by id, and only the current one", async () =
 
   // A late end notice for a replaced session leaves its successor followed.
   vi.mocked(invoke).mockClear();
-  await sendAudio(0, "b");
+  await sendAudio(0, "b", 1);
   await listeners.get("browser-reading")!({ payload: { active: false, session_id: "a" } });
   audio.dispatchEvent(new Event("ended"));
   expect(calls()).toContainEqual([
@@ -570,7 +624,7 @@ it("announces each fragment as it becomes audible, with its text", async () => {
 it("does not complete a queued trigger when the earlier clip drains before its audio arrives", async () => {
   const calls = () => vi.mocked(invoke).mock.calls;
   vi.mocked(invoke).mockClear();
-  await sendAudio(0, "trigger-a");
+  await sendAudio(0, "trigger-a", 1);
   // The bridge cancels A when B starts; B's clip has not arrived yet.
   await listeners.get("browser-reading")!({ payload: { active: false, session_id: "trigger-a" } });
   audio.dispatchEvent(new Event("ended"));
@@ -579,11 +633,11 @@ it("does not complete a queued trigger when the earlier clip drains before its a
 
 it("keeps following a queued trigger after the earlier clip drains, once its audio arrives", async () => {
   const calls = () => vi.mocked(invoke).mock.calls;
-  await sendAudio(0, "trigger-a");
+  await sendAudio(0, "trigger-a", 1);
   await listeners.get("browser-reading")!({ payload: { active: false, session_id: "trigger-a" } });
   audio.dispatchEvent(new Event("ended"));
   vi.mocked(invoke).mockClear();
-  await sendAudio(0, "trigger-b");
+  await sendAudio(0, "trigger-b", 1);
   expect(calls()).toContainEqual([
     "browser_reading_progress",
     expect.objectContaining({ sessionId: "trigger-b", fragmentIndex: 0 })

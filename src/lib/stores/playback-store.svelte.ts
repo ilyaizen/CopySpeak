@@ -471,7 +471,10 @@ class PlaybackStore {
       if (this._streamSessionId === sessionId) this.handleStop();
       return;
     }
+    // Only an idle queue may be released here: an active one belongs to
+    // another reading, whose failure this event does not describe.
     if (this.isPlaying || this.isLoadingAudio || this._fragmentQueue.isProcessing()) return;
+    this._fragmentQueue.markTerminal();
     this.emitPlaybackFinished();
   }
 
@@ -497,6 +500,10 @@ class PlaybackStore {
   async handleReplay(): Promise<void> {
     this.historyReadingId = null;
     if (!this._audioEl) return;
+    if (this._fragmentQueue.canReplay()) {
+      await this._fragmentQueue.replay();
+      return;
+    }
     const url = await this.buildPlaybackUrl(this.pitch);
     if (url) {
       this._audioEl.src = url;
@@ -698,7 +705,7 @@ class PlaybackStore {
         console.log("[PlaybackStore] audio-ready received");
         this._fragmentQueue.enqueue({
           audioBase64: e.payload,
-          index: 1,
+          index: 0,
           total: 1,
           text: ""
         });
@@ -772,6 +779,9 @@ class PlaybackStore {
         (e) => {
           if (!e.payload.active && e.payload.session_id === this._browserSessionId) {
             this._browserSessionId = null;
+            // The bridge cancelled or replaced this reading; a queue waiting
+            // for its next fragment must not wait forever.
+            this._fragmentQueue.markTerminal();
           }
         }
       );
@@ -782,6 +792,10 @@ class PlaybackStore {
       const unReadingFailed = await listen<string>("reading-failed", (event) => {
         this._readingFailure = event.payload;
         this.error = event.payload;
+        // The reading stops at the failed section: release a queue waiting for
+        // a further fragment so playback-finished fires and /speak --wait
+        // returns instead of hanging to its cap.
+        this._fragmentQueue.markTerminal();
         toast.error(event.payload, { duration: 15000 });
       });
 
@@ -820,6 +834,10 @@ class PlaybackStore {
           // A new reading owns the failure state from here on.
           this._readingFailure = null;
           this.error = null;
+          // Drop fragments a finished earlier reading retained for Replay; a
+          // reading that never queues fragments (streamed) must not inherit
+          // them. An active queue still serves its own reading.
+          if (!this._fragmentQueue.isProcessing()) this._fragmentQueue.reset();
         }
         this.isSynthesizing = e.payload;
       });

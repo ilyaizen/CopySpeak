@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Long readings start speaking sooner** — Play-page, hotkey and control-server readings using non-streaming engines begin as each section is synthesized, while the complete reading remains available for replay and history.
 - **Startup and tray preferences work together** — Start in tray now applies on launch without flashing the main window; first-run setup and a missing tray still open normally. Hiding the tray disables hidden startup and close-to-tray behavior without discarding your preferences. Closing with Exit selected quits the whole app, including its background HUD. Launch-on-login registration errors now surface when saving settings instead of silently succeeding.
 - **Predictable tray controls** — left-click opens and restores CopySpeak on Windows without interrupting speech; right-click offers Open, Stop reading, Settings and Quit. Settings opens the Settings page. The branded tray icon changes hue for idle, synthesis, playback and pause.
 
