@@ -59,7 +59,8 @@ const [cmd, subcmd, ...rest] = process.argv.slice(2);
 if (!cmd || has([cmd], ["-h", "--help"])) {
   console.log(`copyspeak health
 copyspeak speak --profile pi "hello"
-copyspeak speak -p pi --stdin [--condense] [--wait] [--ack <path>]
+copyspeak speak -p pi --stdin [--post-process] [--wait] [--ack <path>]
+  --condense is a backward-compatible alias for --post-process.
 copyspeak profiles list|use <id>|show <id>
 copyspeak engines list
 copyspeak voices list --engine elevenlabs`);
@@ -73,7 +74,7 @@ if (cmd === "health") {
   const profile = argValue(args, ["--profile", "-p"]);
   const stdin = has(args, ["--stdin"]);
   const persist = has(args, ["--persist", "--set-active"]);
-  const condense = has(args, ["--condense"]);
+  const postProcess = has(args, ["--post-process", "--condense"]);
   const wait = has(args, ["--wait"]);
   const ack = argValue(args, ["--ack"]);
   const text = stdin
@@ -95,7 +96,7 @@ if (cmd === "health") {
       text,
       profile,
       persist_selection: persist || undefined,
-      condense: condense || undefined,
+      post_process: postProcess || undefined,
       wait: wait || undefined
     })
   });
