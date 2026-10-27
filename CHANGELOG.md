@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Clipboard truncation no longer cuts a word in half** — a reading capped by the maximum-text-length setting now ends at the last whole word before the cap (a URL or single token with no boundary is still hard-cut), and never discards a leading word entirely (from the X-CopySpeak fork).
 
+- **Unpunctuated text is no longer cut mid-word** — readings without sentence boundaries (long word runs, URLs, CJK text without clause punctuation) now split at word and clause edges instead of exact character counts: oversized tails are split into parts, CJK runs break after full-width clause punctuation, and tokens like versions, domains, IPs and dotted initialisms stay whole (from the X-CopySpeak fork).
+
+- **Pinned taskbar icons survive hide-to-tray** — the app now sets an explicit Windows AppUserModelID at startup, so a button pinned to the taskbar keeps its icon and grouping when the main window hides to the tray. A pin that is already broken keeps its stale target and must be re-pinned once (from the X-CopySpeak fork).
+
 ### Changed
 
 - **Edge requests share a process-wide cooldown** — `Retry-After` is honored (capped at five minutes) or an escalating 5/10/20 s ladder capped at 60 s applies; request starts are spaced at least one second apart, and 403/429 refusals are never retried. Failures surface as safe status messages, not raw tracebacks.
