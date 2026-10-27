@@ -274,7 +274,7 @@ mod tests {
     fn test_default_tts_config_uses_kokoro_profile() {
         let tts = TtsConfig::default();
         assert_eq!(TtsEngine::default(), TtsEngine::Kokoro);
-        assert_eq!(tts.schema_version, 6);
+        assert_eq!(tts.schema_version, 7);
         assert_eq!(tts.active_backend, TtsEngine::Kokoro);
         // The Edge seed profile is back (engine revived on edge-tts 7.3.1):
         // zero-download fallback for onboarding.
@@ -322,6 +322,126 @@ mod tests {
         crate::config::tts::migrate_add_kokoro_profile_v6(&mut tts);
         assert_eq!(tts.profiles.len(), before + 1);
         assert_eq!(tts.schema_version, 6);
+    }
+
+    #[test]
+    fn v7_promotes_installer_shape_local_piper_and_refreshes_the_mirror() {
+        let mut tts = TtsConfig::default();
+        let mut profile = default_kokoro_profile();
+        profile.id = "piper-local".into();
+        profile.engine = TtsEngine::Local;
+        profile.voice = "en_US-joe-medium".into();
+        profile.voice_label = None;
+        profile.engine_options = ProfileEngineOptions::Local(LocalEngineOptions {
+            command: Some("uv".into()),
+            args_template: Some(
+                [
+                    "run",
+                    "--project",
+                    "{engine_dir}/piper",
+                    "python",
+                    "{engine_dir}/piper/scripts/copyspeak-piper.py",
+                    "--text-file",
+                    "{input}",
+                    "--voice",
+                    "{voice}",
+                    "--output",
+                    "{output}",
+                ]
+                .iter()
+                .map(|s| s.to_string())
+                .collect(),
+            ),
+        });
+        tts.profiles.push(profile);
+        tts.active_backend = TtsEngine::Local;
+        tts.active_profile_id = "piper-local".into();
+
+        crate::config::tts::migrate_tts_profiles_v7(&mut tts);
+
+        assert_eq!(tts.schema_version, 7);
+        let promoted = tts.profiles.iter().find(|p| p.id == "piper-local").unwrap();
+        assert_eq!(promoted.engine, TtsEngine::Piper);
+        assert!(matches!(
+            promoted.engine_options,
+            ProfileEngineOptions::Piper(_)
+        ));
+        assert_eq!(promoted.voice_label.as_deref(), Some("Joe"));
+        // The derived mirror follows the promoted active profile.
+        assert_eq!(tts.active_backend, TtsEngine::Piper);
+    }
+
+    #[test]
+    fn v7_leaves_hand_written_local_commands_alone() {
+        let mut tts = TtsConfig::default();
+        let mut profile = default_kokoro_profile();
+        profile.id = "my-cli".into();
+        profile.engine = TtsEngine::Local;
+        profile.engine_options = ProfileEngineOptions::Local(LocalEngineOptions {
+            command: Some("python".into()),
+            args_template: Some(vec!["-m".into(), "my_tts".into(), "{input}".into()]),
+        });
+        let before = profile.clone();
+        tts.profiles.push(profile);
+
+        crate::config::tts::migrate_tts_profiles_v7(&mut tts);
+
+        let kept = tts.profiles.iter().find(|p| p.id == "my-cli").unwrap();
+        assert_eq!(kept.engine, TtsEngine::Local);
+        assert_eq!(kept.engine_options, before.engine_options);
+        assert_eq!(tts.schema_version, 7);
+    }
+
+    #[test]
+    fn v7_remaps_legacy_and_unset_gemini_models_but_not_custom_ones() {
+        let mut tts = TtsConfig::default();
+        let mut legacy = default_google_profile();
+        legacy.id = "g-legacy".into();
+        legacy.engine_options = ProfileEngineOptions::Google(GoogleEngineOptions {
+            model: Some(crate::config::tts::LEGACY_GEMINI_TTS_MODEL.into()),
+            output_format: Some("wav".into()),
+        });
+        let mut unset = default_google_profile();
+        unset.id = "g-unset".into();
+        unset.engine_options = ProfileEngineOptions::Google(GoogleEngineOptions {
+            model: None,
+            output_format: Some("wav".into()),
+        });
+        let mut custom = default_google_profile();
+        custom.id = "g-custom".into();
+        custom.engine_options = ProfileEngineOptions::Google(GoogleEngineOptions {
+            model: Some("gemini-3.8-flash-lite-tts".into()),
+            output_format: Some("wav".into()),
+        });
+        tts.profiles.extend([legacy, unset, custom]);
+        tts.google.model = crate::config::tts::LEGACY_GEMINI_TTS_MODEL.into();
+
+        crate::config::tts::migrate_tts_profiles_v7(&mut tts);
+
+        let model = |tts: &TtsConfig, id: &str| {
+            tts.profiles
+                .iter()
+                .find(|p| p.id == id)
+                .unwrap()
+                .engine_options
+                .google()
+                .unwrap()
+                .model
+                .clone()
+                .unwrap()
+        };
+        assert_eq!(
+            model(&tts, "g-legacy"),
+            crate::config::tts::GEMINI_TTS_MODEL
+        );
+        assert_eq!(model(&tts, "g-unset"), crate::config::tts::GEMINI_TTS_MODEL);
+        assert_eq!(model(&tts, "g-custom"), "gemini-3.8-flash-lite-tts");
+        assert_eq!(tts.google.model, crate::config::tts::GEMINI_TTS_MODEL);
+
+        // Idempotent: a second pass changes nothing.
+        crate::config::tts::migrate_tts_profiles_v7(&mut tts);
+        assert_eq!(model(&tts, "g-custom"), "gemini-3.8-flash-lite-tts");
+        assert_eq!(tts.schema_version, 7);
     }
 
     #[test]

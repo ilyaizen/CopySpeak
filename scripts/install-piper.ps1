@@ -186,17 +186,12 @@ $profileJson = @"
   "schema_version": 1,
   "id": "piper-local",
   "name": "Piper (Local)",
-  "engine": "local",
+  "engine": "piper",
   "voice": "$chosenVoice",
   "speed": 1.0,
   "pitch": 1.0,
   "effects": { "enabled": false, "active_effect": "none" },
-  "engine_options": {
-    "engine": "local",
-    "preset": "piper",
-    "command": "uv",
-    "args_template": ["run", "--project", "{engine_dir}/piper", "python", "{engine_dir}/piper/scripts/copyspeak-piper.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}"]
-  }
+  "engine_options": { "engine": "piper", "cuda": false }
 }
 "@
 

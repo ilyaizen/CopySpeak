@@ -325,6 +325,13 @@ fn migrate_add_kokoro_profile_v6(cfg: &mut AppConfig) {
     log::info!("Config migrated to schema v6 (add bundled Kokoro profile)");
 }
 
+/// Migrate v6 → v7: promote Piper `Local` presets to the first-class engine and
+/// retire the deprecated Gemini TTS model id.
+fn migrate_tts_profiles_v7(cfg: &mut AppConfig) {
+    tts::migrate_tts_profiles_v7(&mut cfg.tts);
+    log::info!("Config migrated to schema v7 (Piper engine promotion, Gemini TTS model)");
+}
+
 /// Bring every profile's speed and pitch back inside the supported ranges.
 /// Profiles saved before speed and pitch became independent knobs could carry a
 /// pitch of up to 2.0, which is a full octave once it no longer also changes
@@ -378,6 +385,11 @@ pub fn load_or_default() -> AppConfig {
             // Migrate v5 -> v6: add the bundled first-class Kokoro profile.
             if cfg.tts.schema_version < 6 {
                 migrate_add_kokoro_profile_v6(&mut cfg);
+            }
+
+            // Migrate v6 -> v7: Piper engine promotion + Gemini TTS model.
+            if cfg.tts.schema_version < 7 {
+                migrate_tts_profiles_v7(&mut cfg);
             }
 
             clamp_profile_rates(&mut cfg);

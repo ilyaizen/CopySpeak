@@ -301,6 +301,19 @@ impl MistralConfig {
 
 // ── Google Gemini TTS ─────────────────────────────────────────────────────────
 
+/// Current Gemini TTS model. `gemini-3.8-flash-tts` shares the 2.5 preview's
+/// request schema, so only the id changes; what differs is the audio container
+/// (unary returns `audio/wav`, streaming returns headerless `audio/l16`) and
+/// that 3.8 treats the text part strictly as a verbatim transcript. `tts::google`
+/// handles both.
+pub(crate) const GEMINI_TTS_MODEL: &str = "gemini-3.8-flash-tts";
+
+/// The Gemini TTS model every CopySpeak release shipped before the 3.8 switch.
+/// Google scheduled it for shutdown on 2026-11-17, and it rejects an unframed
+/// transcript with HTTP 400 ("Model tried to generate text, but it should only
+/// be used for TTS"), so profiles pinned to it are migrated in v7.
+pub(crate) const LEGACY_GEMINI_TTS_MODEL: &str = "gemini-2.5-flash-preview-tts";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct GoogleTtsConfig {
@@ -319,7 +332,7 @@ impl Default for GoogleTtsConfig {
     fn default() -> Self {
         Self {
             api_key: String::new(),
-            model: "gemini-3.8-flash-tts".into(),
+            model: GEMINI_TTS_MODEL.into(),
             voice_name: "Kore".into(),
             output_format: "wav".into(),
         }
@@ -1155,7 +1168,7 @@ fn default_cartesia_profile() -> VoiceProfile {
     }
 }
 
-fn default_google_profile() -> VoiceProfile {
+pub(crate) fn default_google_profile() -> VoiceProfile {
     VoiceProfile {
         id: "profile-296ae5c8".into(),
         name: "Gemini".into(),
@@ -1168,7 +1181,7 @@ fn default_google_profile() -> VoiceProfile {
         effects: ProfileEffects::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::Google(GoogleEngineOptions {
-            model: Some("gemini-3.8-flash-tts".into()),
+            model: Some(GEMINI_TTS_MODEL.into()),
             output_format: Some("wav".into()),
         }),
     }
@@ -1351,6 +1364,99 @@ pub(crate) fn migrate_add_kokoro_profile_v6(tts: &mut TtsConfig) {
     tts.schema_version = 6;
 }
 
+/// v6 -> v7: repair profiles written while an engine's wrapper contract was
+/// still the generic `Local` preset, and retire the deprecated Gemini TTS model
+/// id. Idempotent. User-authored engine options are preserved for anything that
+/// only resembles the installer's Piper preset.
+pub(crate) fn migrate_tts_profiles_v7(tts: &mut TtsConfig) {
+    for profile in &mut tts.profiles {
+        // Piper shipped as a `Local` preset long after it became a first-class
+        // engine (only Pocket ever had a promotion), so a Piper profile still
+        // ran through the generic CLI path: no daemon, no GPU toggle, and — the
+        // user-visible symptom — a CWD-relative wrapper path, so the wrapper
+        // resolved `voices/` against the app install directory and failed with
+        // "voice model not found ... Available: []".
+        //
+        // Matched on the installer's own shape (the `uv` command plus the
+        // engine-dir wrapper path), not on a bare filename substring, so a
+        // hand-written local CLI that merely mentions the wrapper is left
+        // exactly as the user configured it.
+        let is_piper_preset = profile.engine == TtsEngine::Local
+            && profile.engine_options.local().is_some_and(|o| {
+                let command_is_uv = o
+                    .command
+                    .as_deref()
+                    .map(str::trim)
+                    .is_some_and(|c| c == "uv");
+                let wrapper_is_piper = o.args_template.as_ref().is_some_and(|args| {
+                    [
+                        "scripts/copyspeak-piper.py",
+                        "{engine_dir}/piper/scripts/copyspeak-piper.py",
+                    ]
+                    .into_iter()
+                    .any(|wrapper| {
+                        args.iter().map(String::as_str).eq([
+                            "run",
+                            "--project",
+                            "{engine_dir}/piper",
+                            "python",
+                            wrapper,
+                            "--text-file",
+                            "{input}",
+                            "--voice",
+                            "{voice}",
+                            "--output",
+                            "{output}",
+                        ])
+                    })
+                });
+                command_is_uv && wrapper_is_piper
+            });
+        if is_piper_preset {
+            profile.engine = TtsEngine::Piper;
+            profile.engine_options = ProfileEngineOptions::default_for(&TtsEngine::Piper);
+            if profile.voice_label.is_none() {
+                profile.voice_label = catalog_voice_label(&profile.engine, &profile.voice);
+            }
+            log::info!(
+                "Config migrated: promoted Piper profile {:?} to the first-class engine",
+                profile.id
+            );
+        }
+
+        // Gemini TTS: the 2.5 preview model answers an unframed transcript with
+        // HTTP 400 and is being retired. Move a profile still pinned to it (or
+        // with no model at all) onto the current model; a model the user typed
+        // themselves is left alone.
+        if profile.engine == TtsEngine::Google {
+            if let ProfileEngineOptions::Google(google) = &mut profile.engine_options {
+                let unset_or_legacy = google
+                    .model
+                    .as_deref()
+                    .map(str::trim)
+                    .is_none_or(|model| model.is_empty() || model == LEGACY_GEMINI_TTS_MODEL);
+                if unset_or_legacy {
+                    google.model = Some(GEMINI_TTS_MODEL.into());
+                    log::info!(
+                        "Config migrated: Gemini profile {:?} -> {GEMINI_TTS_MODEL}",
+                        profile.id
+                    );
+                }
+            }
+        }
+    }
+    // Keep the global (credential-only) Gemini config in step with the default
+    // so a profile that omits the model inherits the current one.
+    if tts.google.model.trim().is_empty() || tts.google.model == LEGACY_GEMINI_TTS_MODEL {
+        tts.google.model = GEMINI_TTS_MODEL.into();
+    }
+    // A promoted profile changes which engine is active, so the derived mirror
+    // must be refreshed — an untouched `active_backend` would still say `Local`
+    // until the user saved something.
+    sync_active_backend_mirror(tts);
+    tts.schema_version = 7;
+}
+
 impl Default for TtsConfig {
     fn default() -> Self {
         let cartesia_profile = default_cartesia_profile();
@@ -1361,7 +1467,7 @@ impl Default for TtsConfig {
         // endpoint). Existing configs on disk are unaffected — defaults only
         // apply when no config file exists.
         Self {
-            schema_version: 6,
+            schema_version: 7,
             active_backend: TtsEngine::Kokoro,
             active_profile_id: KOKORO_DEFAULT_PROFILE_ID.into(),
             profiles: vec![

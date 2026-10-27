@@ -86,9 +86,16 @@ def read_text(args) -> str:
     sys.exit(2)
 
 
-def resolve_model(name: str) -> Path:
-    # Wrapper lives in <engine_dir>/scripts/; voices live in <engine_dir>/voices/.
-    voices_dir = Path(__file__).resolve().parent.parent / "voices"
+def resolve_model(name: str, voices_dir_override: str | None = None) -> Path:
+    # Voices live beside the uv project (preferred, so a moved engine keeps
+    # working), or beside this wrapper as the script-relative fallback.
+    project_voices = Path(sys.prefix).parent / "voices"
+    if voices_dir_override:
+        voices_dir = Path(voices_dir_override).expanduser()
+    elif Path(sys.prefix).name == ".venv" and project_voices.is_dir():
+        voices_dir = project_voices
+    else:
+        voices_dir = Path(__file__).resolve().parent.parent / "voices"
     # ponytail: resolve by exact basename, else first .onnx whose stem ends with the voice name.
     model = voices_dir / f"{name}.onnx"
     if model.exists():
@@ -271,6 +278,10 @@ def main() -> int:
     parser.add_argument("--text", help="Inline text to synthesize")
     parser.add_argument("--text-file", help="Path to a UTF-8 text file to synthesize")
     parser.add_argument("--voice", default="en_US-joe-medium", help="Voice model basename in voices/")
+    parser.add_argument(
+        "--voices-dir",
+        help="Directory holding <voice>.onnx (default: the uv project's voices dir)",
+    )
     parser.add_argument("--output", help="Output WAV file path (required unless --serve)")
     parser.add_argument("--serve", action="store_true", help="Keep the model in RAM and read JSON requests on stdin")
     parser.add_argument("--device", default="cpu", choices=["cpu", "cuda"], help="Inference device")
@@ -285,7 +296,7 @@ def main() -> int:
         text = read_text(args)
 
     try:
-        model = resolve_model(args.voice)
+        model = resolve_model(args.voice, args.voices_dir)
     except FileNotFoundError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 1
