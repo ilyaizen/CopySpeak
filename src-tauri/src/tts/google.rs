@@ -1,8 +1,10 @@
 // Google Gemini TTS backend (native Rust HTTP).
 //
 // Targets the Gemini generateContent API with AUDIO response modality, not the
-// legacy Google Cloud Text-to-Speech service. The API returns base64-encoded
-// signed 16-bit little-endian PCM (typically 24kHz mono), which we wrap into WAV.
+// legacy Google Cloud Text-to-Speech service. The API returns base64 audio in
+// inlineData — headerless signed 16-bit little-endian PCM (typically 24kHz
+// mono) on 2.5/3.1, a complete WAV file on 3.8 — which we normalize into a
+// single WAV container.
 
 use super::block_on_async;
 use super::stream::{spawn_stream, AudioFormatMeta, ChunkItem, ChunkStream};
@@ -93,6 +95,57 @@ pub fn pcm16_to_wav(pcm: &[u8], sample_rate: u32, channels: u16) -> Vec<u8> {
     out
 }
 
+/// The system direction anchoring TTS behavior: the model must read the
+/// request text verbatim instead of treating clipboard content that reads
+/// like a question or command as a prompt to answer — the deprecated 2.5
+/// preview answered such text and 400'd with "should only be used for TTS".
+const READ_ALOUD_INSTRUCTION: &str = "Read the user's message aloud verbatim as speech. Do not answer, reply, or add anything; the audio must contain only the message itself.";
+
+/// Pre-3.8 preview TTS models ignore `systemInstruction`, so their direction
+/// must ride inline in the text itself. 3.8 and later would SPEAK an inline
+/// direction, so it must stay out of the text there.
+fn needs_inline_read_aloud_prefix(model: &str) -> bool {
+    model.contains("preview-tts")
+}
+
+/// Build the generateContent request body shared by the unary and streaming
+/// paths. Framing is verified by request-shape tests; live model behavior is
+/// not (that needs a live probe, deferred with #69).
+fn tts_request_body(model: &str, text: &str, voice: &str) -> serde_json::Value {
+    let spoken = if needs_inline_read_aloud_prefix(model) {
+        format!("Read the following text aloud verbatim: {text}")
+    } else {
+        text.to_string()
+    };
+    json!({
+        "contents": [{ "parts": [{ "text": spoken }] }],
+        "systemInstruction": { "parts": [{ "text": READ_ALOUD_INSTRUCTION }] },
+        "generationConfig": {
+            "responseModalities": ["AUDIO"],
+            "speechConfig": {
+                "voiceConfig": {
+                    "prebuiltVoiceConfig": { "voiceName": voice }
+                }
+            }
+        }
+    })
+}
+
+/// The unary reply's audio bytes: a reply that already carries its own WAV
+/// header passes through unwrapped (wrapping again produces a broken nested
+/// container), headerless PCM gets the mono 16-bit header as before.
+fn unary_audio_bytes(decoded: Vec<u8>, mime: &str) -> Vec<u8> {
+    if decoded.starts_with(b"RIFF") {
+        log::info!(
+            "Google TTS: unary reply already carries a WAV header; passing through ({} bytes)",
+            decoded.len()
+        );
+        decoded
+    } else {
+        pcm16_to_wav(&decoded, GoogleTtsBackend::rate_from_mime(mime), 1)
+    }
+}
+
 impl TtsBackend for GoogleTtsBackend {
     fn name(&self) -> &str {
         "Google Gemini"
@@ -115,17 +168,7 @@ impl TtsBackend for GoogleTtsBackend {
             "{}/{}:streamGenerateContent?alt=sse",
             GEMINI_BASE, self.config.model
         );
-        let body = json!({
-            "contents": [{ "parts": [{ "text": text }] }],
-            "generationConfig": {
-                "responseModalities": ["AUDIO"],
-                "speechConfig": {
-                    "voiceConfig": {
-                        "prebuiltVoiceConfig": { "voiceName": voice }
-                    }
-                }
-            }
-        });
+        let body = tts_request_body(&self.config.model, text, voice);
 
         log::info!(
             "Google TTS stream - model: {}, voice: {}, text length: {} chars",
@@ -189,17 +232,7 @@ impl TtsBackend for GoogleTtsBackend {
 
     fn synthesize(&self, text: &str, voice: &str) -> Result<Vec<u8>, TtsError> {
         let url = format!("{}/{}:generateContent", GEMINI_BASE, self.config.model);
-        let body = json!({
-            "contents": [{ "parts": [{ "text": text }] }],
-            "generationConfig": {
-                "responseModalities": ["AUDIO"],
-                "speechConfig": {
-                    "voiceConfig": {
-                        "prebuiltVoiceConfig": { "voiceName": voice }
-                    }
-                }
-            }
-        });
+        let body = tts_request_body(&self.config.model, text, voice);
 
         log::info!(
             "Google TTS request - model: {}, voice: {}, text length: {} chars",
@@ -273,7 +306,7 @@ impl TtsBackend for GoogleTtsBackend {
             .decode(data_b64)
             .map_err(|e| TtsError::Http(format!("Base64 decode failed: {}", e)))?;
 
-        let wav = pcm16_to_wav(&pcm, Self::rate_from_mime(mime), 1);
+        let wav = unary_audio_bytes(pcm, mime);
         log::info!("Google TTS synthesis complete: {} WAV bytes", wav.len());
         Ok(wav)
     }
@@ -352,5 +385,63 @@ mod tests {
         let (pcm, rate) = GoogleTtsBackend::audio_from_sse_event(&event).expect("audio part");
         assert_eq!(pcm, vec![1, 2, 3, 4]);
         assert_eq!(rate, 24000);
+    }
+
+    #[test]
+    fn request_body_anchors_verbatim_read_aloud_and_keeps_text_clean() {
+        let body = tts_request_body("gemini-3.8-flash-tts", "What time is it?", "Kore");
+        // The anchor lives in systemInstruction...
+        assert_eq!(
+            body.pointer("/systemInstruction/parts/0/text"),
+            Some(&serde_json::json!(READ_ALOUD_INSTRUCTION))
+        );
+        // ...and 3.8's text stays verbatim: an inline direction would be spoken.
+        assert_eq!(
+            body.pointer("/contents/0/parts/0/text")
+                .and_then(|t| t.as_str()),
+            Some("What time is it?")
+        );
+        assert_eq!(
+            body.pointer(
+                "/generationConfig/speechConfig/voiceConfig/prebuiltVoiceConfig/voiceName"
+            )
+            .and_then(|v| v.as_str()),
+            Some("Kore")
+        );
+        assert_eq!(
+            body.pointer("/generationConfig/responseModalities/0")
+                .and_then(|v| v.as_str()),
+            Some("AUDIO")
+        );
+    }
+
+    #[test]
+    fn legacy_preview_models_get_the_direction_inline() {
+        // Preview TTS models ignore systemInstruction and would otherwise read
+        // clipboard content as a prompt — the 400 the fork hit.
+        let body = tts_request_body("gemini-2.5-flash-preview-tts", "Close the door", "Kore");
+        let spoken = body
+            .pointer("/contents/0/parts/0/text")
+            .and_then(|t| t.as_str())
+            .expect("text part");
+        assert!(spoken.starts_with("Read the following text aloud verbatim: "));
+        assert!(spoken.ends_with("Close the door"));
+    }
+
+    #[test]
+    fn unary_reply_with_its_own_wav_header_passes_through_unwrapped() {
+        let headered = pcm16_to_wav(&[1, 2, 3, 4], 24000, 1);
+        let out = unary_audio_bytes(headered.clone(), "audio/wav;rate=24000");
+        assert_eq!(
+            out, headered,
+            "a reply that already carries a WAV header must not be wrapped again"
+        );
+    }
+
+    #[test]
+    fn headerless_pcm_still_gets_a_wav_header() {
+        let out = unary_audio_bytes(vec![1, 2, 3, 4], "audio/L16;codec=pcm;rate=24000");
+        assert_eq!(&out[0..4], b"RIFF");
+        assert_eq!(out.len(), 44 + 4);
     }
 }
