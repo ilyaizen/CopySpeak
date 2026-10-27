@@ -325,6 +325,38 @@ use tauri::{
 use tauri::Listener;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
+/// The Windows AppUserModelID. Must match the `identifier` in tauri.conf.json
+/// so the taskbar can tie a pinned button to this process.
+#[cfg(target_os = "windows")]
+const APP_USER_MODEL_ID: &str = "com.copyspeak.tts";
+
+/// Give the process an explicit AppUserModelID on Windows.
+///
+/// Without this the taskbar has no stable identity to attach a pin to, so a
+/// button pinned to the taskbar loses its icon (and stops grouping with running
+/// instances) once the main window hides to the tray. Tauri does not set this
+/// for you. Must match the identifier in tauri.conf.json.
+#[cfg(target_os = "windows")]
+fn set_windows_app_user_model_id() {
+    use windows::core::{HSTRING, PCWSTR};
+    use windows::Win32::UI::Shell::SetCurrentProcessExplicitAppUserModelID;
+
+    // Bind the HSTRING to a local so the wide buffer outlives the call, then
+    // pass it as a PCWSTR (the form windows-core 0.58 accepts).
+    let app_id = HSTRING::from(APP_USER_MODEL_ID);
+    // SAFETY: `app_id` is a live HSTRING for the whole call, so the PCWSTR
+    // points at valid, null-terminated UTF-16. The function only reads it.
+    let result = unsafe { SetCurrentProcessExplicitAppUserModelID(PCWSTR(app_id.as_ptr())) };
+    match result {
+        Ok(()) => log::info!("[App] AppUserModelID set to {APP_USER_MODEL_ID}"),
+        Err(e) => log::warn!("[App] Failed to set AppUserModelID: {e}"),
+    }
+}
+
+/// No-op on non-Windows platforms (kept call-site unconditional).
+#[cfg(not(target_os = "windows"))]
+fn set_windows_app_user_model_id() {}
+
 fn main() {
     // Linux: GTK derives the Wayland app_id / X11 WM_CLASS from
     // g_get_prgname() (tao never propagates the gtk app id to the window
@@ -336,6 +368,9 @@ fn main() {
     if let Err(e) = logging::init_logging() {
         eprintln!("Failed to initialize logging: {}", e);
     }
+
+    // Identify the process to the Windows taskbar before any window is created.
+    set_windows_app_user_model_id();
 
     // Linux: Wayland toplevels cannot self-position (tao set_position is
     // silently ignored), so the HUD needs XWayland. WEBKIT_DISABLE_COMPOSITING_MODE
