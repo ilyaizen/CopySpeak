@@ -16,14 +16,34 @@
     label={$_("settings.general.launchOnLogin")}
     tooltip={$_("settings.general.launchOnLoginTooltip")}
   >
-    <Switch id="launch-on-login" bind:checked={localConfig.general.launch_on_login} />
+    <Switch
+      id="launch-on-login"
+      aria-label={$_("settings.general.launchOnLogin")}
+      bind:checked={localConfig.general.launch_on_login}
+    />
+  </SettingRow>
+
+  <SettingRow
+    label={$_("settings.general.showTrayIcon")}
+    tooltip={$_("settings.general.showTrayIconTooltip")}
+  >
+    <Switch
+      id="show-tray-icon"
+      aria-label={$_("settings.general.showTrayIcon")}
+      bind:checked={localConfig.general.show_tray_icon}
+    />
   </SettingRow>
 
   <SettingRow
     label={$_("settings.general.startMinimizedLabel")}
     tooltip={$_("settings.general.startMinimizedTooltip")}
   >
-    <Switch id="start-minimized" bind:checked={localConfig.general.start_minimized} />
+    <Switch
+      id="start-minimized"
+      aria-label={$_("settings.general.startMinimizedLabel")}
+      disabled={!localConfig.general.show_tray_icon}
+      bind:checked={localConfig.general.start_minimized}
+    />
   </SettingRow>
 
   <SettingRow
@@ -32,6 +52,8 @@
   >
     <Switch
       id="minimize-to-tray"
+      aria-label={$_("settings.general.minimizeToTray")}
+      disabled={!localConfig.general.show_tray_icon}
       checked={localConfig.general.close_behavior === "minimize-to-tray"}
       onchange={(v) => {
         localConfig.general.close_behavior = v ? "minimize-to-tray" : "exit";

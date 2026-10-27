@@ -282,6 +282,7 @@ export type AppearanceMode = "system" | "light" | "dark";
 export interface GeneralConfig {
   launch_on_login: boolean;
   start_minimized: boolean;
+  show_tray_icon: boolean;
   debug_mode: boolean;
   close_behavior: CloseBehavior;
   appearance: AppearanceMode;

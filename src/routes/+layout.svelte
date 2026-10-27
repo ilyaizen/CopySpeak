@@ -56,6 +56,7 @@
   const isWeb = import.meta.env.VITE_IS_VERCEL;
 
   let unlistenSpeak: (() => void) | null = null;
+  let unlistenSettings: (() => void) | null = null;
   // HMR can destroy this instance while onMount still awaits; a listener that
   // resolves afterwards would outlive it and every double-copy would speak twice.
   let destroyed = false;
@@ -84,6 +85,14 @@
     if (isHud) {
       console.log("[LAYOUT] HUD detected, skipping app shell");
       return;
+    }
+
+    if (isTauri) {
+      const { listen } = await import("@tauri-apps/api/event");
+      unlistenSettings = await listen("open-settings", () => {
+        void goto("/settings");
+      });
+      if (destroyed) unlistenSettings();
     }
 
     // Wait for i18n to be ready before syncing locale
@@ -177,6 +186,7 @@
     if (isWeb) return;
     await stopHistoryEventListeners();
     if (unlistenSpeak) unlistenSpeak();
+    if (unlistenSettings) unlistenSettings();
   });
 </script>
 

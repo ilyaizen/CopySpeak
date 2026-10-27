@@ -109,6 +109,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Icons
 
+- Drive tray playback status from the webview store, never `AudioPlayer`: Rodio is only a safety net, and refreshing the tray from its callbacks must not re-lock the player. Preserve the branded icon’s color and artwork; macOS template mode strips color.
 - An asset-only icon swap does not re-embed the exe icon: tauri-build's generated `.rc` references `icons/icon.ico` by path, so cargo relinks without recompiling the resource. Touch `src-tauri/build.rs` (or `cargo clean -p copyspeak`) to force the resource rebuild, then verify by pixel-comparing `ExtractAssociatedIcon` output against the new ico's 32px frame. The tray's `include_bytes!` icons re-embed on the same rebuild; the installed `%LOCALAPPDATA%` app only changes on the next release install.
 - Strip trailing whitespace when installing a designer-exported SVG verbatim: `git diff --check` fails on QuiverAI/Arrow-exported indentation lines, and whitespace-only stripping is render-safe (verify with a byte-compare of a re-render).
 
@@ -131,6 +132,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Settings
 
+- Gate hidden startup and close-to-tray on an actually available tray; create the main window hidden, show first-run setup explicitly, and use one unminimize/show/focus helper for tray and second-instance reopening. Propagate OS autostart registration failures before persisting the new preference.
 - Force the last visible settings section active at the bottom of the scroll container: a short last section never reaches the scroll-spy reading band, and the layout `<main>` scrolls, not the window, so capture scroll events on the document.
 
 ## Experimental gating

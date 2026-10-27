@@ -108,6 +108,8 @@
       "tryAgain": "Erneut versuchen"
     },
     "general": {
+      "showTrayIcon": "Symbol im Infobereich anzeigen",
+      "showTrayIconTooltip": "CopySpeak im Infobereich anzeigen. Ohne Symbol öffnet sich die Anwendung normal und wird beim Schließen des Fensters beendet.",
       "language": "Sprache",
       "languageDescription": "Bevorzugte Sprache auswählen",
       "launchOnLogin": "Bei Anmeldung starten",
@@ -120,10 +122,10 @@
       "autoSave": "Änderungen automatisch speichern",
       "autoSaveDescription": "Änderungen in Einstellungen, Engines und Stimmen 800 ms nach der letzten Änderung automatisch speichern — ohne Speichern/Abbrechen-Leiste",
       "launchOnLoginTooltip": "CopySpeak beim Anmelden starten",
-      "startMinimizedLabel": "Minimiert starten",
-      "startMinimizedTooltip": "Die Anwendung minimiert im Infobereich starten",
-      "minimizeToTray": "Beim Schließen in den Infobereich minimieren",
-      "minimizeToTrayTooltip": "Beim Schließen des Fensters in den Infobereich minimieren, statt die Anwendung zu beenden",
+      "startMinimizedLabel": "Im Infobereich starten",
+      "startMinimizedTooltip": "Mit ausgeblendetem Fenster starten, wenn das Symbol im Infobereich aktiviert ist. Die Ersteinrichtung wird immer normal geöffnet.",
+      "minimizeToTray": "Beim Schließen im Infobereich behalten",
+      "minimizeToTrayTooltip": "CopySpeak beim Schließen des Fensters im Infobereich weiterlaufen lassen. Ausgeschaltet wird die Anwendung beim Schließen beendet.",
       "experimental": "Experimentelle Funktionen",
       "experimentalDescription": "Das Ausschalten pausiert Verlauf, Nachbearbeitung, Effekte und das Absenken anderer Apps, behält jedoch deren Einstellungen und gespeicherte Lesungen bei. Der Verlauf belegt Speicherplatz; die Nachbearbeitung kann Netzwerknutzung und Verzögerungen verursachen. Das erneute Einschalten stellt die gespeicherten Optionen wieder her, einschließlich des Absenkens anderer Apps.",
       "profileEffects": "Effekte werden pro Stimmprofil unter Stimmen konfiguriert."
@@ -938,6 +940,8 @@
     }
   },
   "tray": {
+    "open": "CopySpeak öffnen",
+    "stop": "Vorlesen stoppen",
     "listening": "● Lauscht",
     "paused": "○ Pausiert",
     "speakClipboard": "Zwischenablage jetzt vorlesen",

@@ -71,6 +71,24 @@ async function mountSettings() {
   return view;
 }
 
+it("keeps hidden-start and close-to-tray preferences but disables them without a tray", async () => {
+  config.general.show_tray_icon = true;
+  config.general.start_minimized = true;
+  config.general.close_behavior = "minimize-to-tray";
+  const view = await mountSettings();
+  const showTray = view.getByRole("switch", { name: "Show tray icon" });
+  const startInTray = view.getByRole("switch", { name: "Start in tray" });
+  const closeToTray = view.getByRole("switch", { name: "Close to tray" });
+  await fireEvent.click(showTray);
+  expect(startInTray.hasAttribute("disabled")).toBe(true);
+  expect(closeToTray.hasAttribute("disabled")).toBe(true);
+  expect(startInTray.getAttribute("aria-checked")).toBe("true");
+  expect(closeToTray.getAttribute("aria-checked")).toBe("true");
+  await fireEvent.click(showTray);
+  expect(startInTray.hasAttribute("disabled")).toBe(false);
+  expect(closeToTray.hasAttribute("disabled")).toBe(false);
+});
+
 it("keeps streaming in Advanced while legacy experimental flags are inert and hidden", async () => {
   config.history.enabled = true;
   config.post_process.enabled = true;

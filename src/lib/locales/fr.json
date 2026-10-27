@@ -108,6 +108,8 @@
       "tryAgain": "Réessayer"
     },
     "general": {
+      "showTrayIcon": "Afficher l’icône de notification",
+      "showTrayIconTooltip": "Afficher CopySpeak dans la zone de notification. Sans cette icône, l’application s’ouvre normalement et fermer la fenêtre quitte l’application.",
       "language": "Langue",
       "languageDescription": "Choisissez votre langue préférée",
       "launchOnLogin": "Lancer à l'ouverture de session",
@@ -120,10 +122,10 @@
       "autoSave": "Enregistrement automatique",
       "autoSaveDescription": "Enregistre automatiquement 800 ms après la dernière modification dans Paramètres, Moteurs et Voix — sans barre Enregistrer/Annuler",
       "launchOnLoginTooltip": "Lancer CopySpeak à l'ouverture de session",
-      "startMinimizedLabel": "Démarrer réduit",
-      "startMinimizedTooltip": "Démarrer l'application réduite dans la zone de notification",
-      "minimizeToTray": "Réduire dans la zone de notification à la fermeture",
-      "minimizeToTrayTooltip": "Réduire dans la zone de notification au lieu de quitter lors de la fermeture de la fenêtre",
+      "startMinimizedLabel": "Démarrer dans la zone de notification",
+      "startMinimizedTooltip": "Démarrer avec la fenêtre masquée lorsque l’icône de notification est activée. La configuration initiale s’ouvre toujours normalement.",
+      "minimizeToTray": "Fermer dans la zone de notification",
+      "minimizeToTrayTooltip": "Laisser CopySpeak fonctionner dans la zone de notification à la fermeture de la fenêtre. Si désactivé, fermer la fenêtre quitte l’application.",
       "experimental": "Fonctions expérimentales",
       "experimentalDescription": "Désactiver cette option met en pause l'Historique, le Post-traitement, les Effets et l'Atténuation, mais conserve leurs réglages et les lectures enregistrées. L'historique utilise de l'espace disque ; le post-traitement peut ajouter du trafic réseau et du délai. La réactiver rétablit vos choix enregistrés, y compris l'Atténuation.",
       "profileEffects": "Les effets sont configurés par profil vocal dans Voix."
@@ -938,6 +940,8 @@
     }
   },
   "tray": {
+    "open": "Ouvrir CopySpeak",
+    "stop": "Arrêter la lecture",
     "listening": "● À l'écoute",
     "paused": "○ En pause",
     "speakClipboard": "Lire le presse-papiers maintenant",

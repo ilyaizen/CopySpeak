@@ -108,6 +108,8 @@
       "tryAgain": "Reintentar"
     },
     "general": {
+      "showTrayIcon": "Mostrar icono en la bandeja",
+      "showTrayIconTooltip": "Mostrar CopySpeak en la bandeja del sistema. Sin el icono, la aplicación se abre normalmente y se cierra al cerrar la ventana.",
       "language": "Idioma",
       "languageDescription": "Selecciona tu idioma preferido",
       "launchOnLogin": "Iniciar con la sesión",
@@ -120,10 +122,10 @@
       "autoSave": "Guardar cambios automáticamente",
       "autoSaveDescription": "Guarda los cambios automáticamente 800 ms después del último cambio en Configuración, Motores y Voces, sin barra de Guardar/Cancelar",
       "launchOnLoginTooltip": "Abrir CopySpeak al iniciar sesión",
-      "startMinimizedLabel": "Iniciar minimizado",
-      "startMinimizedTooltip": "Iniciar la aplicación minimizada en la bandeja del sistema",
-      "minimizeToTray": "Minimizar a la bandeja al cerrar",
-      "minimizeToTrayTooltip": "Minimizar a la bandeja del sistema en lugar de salir al cerrar la ventana",
+      "startMinimizedLabel": "Iniciar en la bandeja",
+      "startMinimizedTooltip": "Iniciar con la ventana oculta cuando el icono de la bandeja está activado. La configuración inicial siempre se abre normalmente.",
+      "minimizeToTray": "Cerrar a la bandeja",
+      "minimizeToTrayTooltip": "Mantener CopySpeak en ejecución en la bandeja al cerrar la ventana. Si se desactiva, cerrar la ventana cierra la aplicación.",
       "experimental": "Funciones experimentales",
       "experimentalDescription": "Desactivar esto pausa el Historial, el Posprocesamiento, los Efectos y la Atenuación, pero conserva sus ajustes y las lecturas guardadas. El historial ocupa espacio en disco; el posprocesamiento puede aumentar el uso de red y la demora. Volver a activarlo restaura las opciones guardadas, incluida la Atenuación.",
       "profileEffects": "Los efectos se configuran por perfil de voz en Voces."
@@ -947,6 +949,8 @@
     }
   },
   "tray": {
+    "open": "Abrir CopySpeak",
+    "stop": "Detener lectura",
     "listening": "● Escuchando",
     "paused": "○ En pausa",
     "speakClipboard": "Leer el portapapeles ahora",

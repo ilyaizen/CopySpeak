@@ -15,29 +15,49 @@ use tauri::{AppHandle, Emitter, State};
 /// Deletes the config file and returns default settings
 #[tauri::command]
 pub fn reset_config(
+    app: AppHandle,
     config: State<'_, Mutex<AppConfig>>,
     player: State<'_, Mutex<AudioPlayer>>,
+    is_listening: State<'_, Arc<AtomicBool>>,
 ) -> Result<AppConfig, String> {
     log::info!("[IPC] reset_config called - resetting to factory defaults");
 
     // Create default config
     let default_config = AppConfig::default();
 
-    // Delete config file from disk
     let path = config::config_path();
-    if path.exists() {
-        if let Err(e) = std::fs::remove_file(&path) {
-            log::error!("Failed to delete config file: {}", e);
-            return Err(format!("Failed to delete config file: {}", e));
-        }
-        log::info!("Deleted config file: {:?}", path);
-    }
-
-    // Update in-memory state
-    let was_duck_effective = config.lock().unwrap().is_duck_effective();
     let mut cfg = config.lock().unwrap();
+    let was_duck_effective = cfg.is_duck_effective();
+    let old_show_tray_icon = cfg.general.show_tray_icon;
+    if !old_show_tray_icon {
+        crate::tray::sync_visibility(&app, true)?;
+    }
+    let persisted = crate::autostart::persist_with_autostart(
+        cfg.general.launch_on_login,
+        default_config.general.launch_on_login,
+        || match std::fs::remove_file(&path) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(format!("Failed to delete config file: {error}")),
+        },
+    );
+    if let Err(error) = persisted {
+        if !old_show_tray_icon {
+            if let Err(rollback) = crate::tray::sync_visibility(&app, false) {
+                return Err(format!(
+                    "{error}; failed to restore tray visibility: {rollback}"
+                ));
+            }
+        }
+        return Err(error);
+    }
     *cfg = default_config.clone();
     drop(cfg);
+    is_listening.store(default_config.trigger.listen_enabled, Ordering::Relaxed);
+    crate::update_tray_icon(&app);
+    if let Err(error) = crate::tray_labels::apply(&app) {
+        log::warn!("[Tray] Could not reset labels: {error}");
+    }
 
     // Factory defaults leave Duck off: un-duck a reading in progress.
     if was_duck_effective {
@@ -51,13 +71,6 @@ pub fn reset_config(
         let mut p = player.lock().unwrap();
         p.set_mode(cfg.playback.on_retrigger.clone());
         p.set_volume(cfg.playback.volume);
-    }
-
-    // Sync autostart setting
-    if let Err(e) =
-        crate::autostart::sync_autostart_with_config(default_config.general.launch_on_login)
-    {
-        log::error!("Failed to sync autostart after reset: {}", e);
     }
 
     // Update debug mode
@@ -244,12 +257,11 @@ pub fn set_config(
     new_config.tts.microsoft.endpoint =
         strip_env(&new_config.tts.microsoft.endpoint, &["MICROSOFT_ENDPOINT"]);
 
-    let (old_mode, old_volume, old_autostart, old_debug_mode, old_listen_enabled, old_hotkey) = {
+    let (old_mode, old_volume, old_debug_mode, old_listen_enabled, old_hotkey) = {
         let cfg = config.lock().unwrap();
         (
             cfg.playback.on_retrigger.clone(),
             cfg.playback.volume,
-            cfg.general.launch_on_login,
             cfg.general.debug_mode,
             cfg.trigger.listen_enabled,
             cfg.hotkey.clone(),
@@ -266,7 +278,7 @@ pub fn set_config(
     let new_duck_effective = new_config.is_duck_effective();
     let mode_changed = old_mode != new_config.playback.on_retrigger;
     let volume_changed = old_volume != new_config.playback.volume;
-    let autostart_changed = old_autostart != new_config.general.launch_on_login;
+
     let debug_mode_changed = old_debug_mode != new_config.general.debug_mode;
     let listen_enabled_changed = old_listen_enabled != new_config.trigger.listen_enabled;
     let hotkey_changed = old_hotkey != new_config.hotkey;
@@ -275,10 +287,10 @@ pub fn set_config(
 
     if crate::logging::is_debug_mode() {
         log::debug!(
-            "[IPC] Config changes - mode: {}, volume: {}, autostart: {}, debug_mode: {}, listen_enabled: {}, hotkey: {}",
+            "[IPC] Config changes - mode: {}, volume: {}, debug_mode: {}, listen_enabled: {}, hotkey: {}",
             mode_changed,
             volume_changed,
-            autostart_changed,
+
             debug_mode_changed,
             listen_enabled_changed,
             hotkey_changed
@@ -290,9 +302,27 @@ pub fn set_config(
     crate::config::sync_active_backend_mirror(&mut new_config.tts);
 
     let mut cfg = config.lock().unwrap();
+    let old_show_tray_icon = cfg.general.show_tray_icon;
+    let tray_visibility_changed = old_show_tray_icon != new_config.general.show_tray_icon;
+    if tray_visibility_changed {
+        crate::tray::sync_visibility(&app, new_config.general.show_tray_icon)?;
+    }
+    let persisted = crate::autostart::persist_with_autostart(
+        cfg.general.launch_on_login,
+        new_config.general.launch_on_login,
+        || config::save(&new_config),
+    );
+    if let Err(error) = persisted {
+        if tray_visibility_changed {
+            if let Err(rollback) = crate::tray::sync_visibility(&app, old_show_tray_icon) {
+                return Err(format!(
+                    "{error}; failed to restore tray visibility: {rollback}"
+                ));
+            }
+        }
+        return Err(error);
+    }
     *cfg = new_config;
-
-    config::save(&cfg)?;
 
     if debug_mode_changed {
         crate::logging::set_debug_mode(cfg.general.debug_mode);
@@ -308,16 +338,6 @@ pub fn set_config(
         }
         if volume_changed {
             p.set_volume(cfg.playback.volume);
-        }
-    }
-
-    if autostart_changed {
-        let enabled = {
-            let cfg = config.lock().unwrap();
-            cfg.general.launch_on_login
-        };
-        if let Err(e) = crate::autostart::sync_autostart_with_config(enabled) {
-            log::error!("Failed to sync autostart: {}", e);
         }
     }
 
@@ -374,6 +394,7 @@ pub fn set_config(
     if let Err(e) = crate::tray_labels::apply(&app) {
         log::error!("Failed to update tray labels: {}", e);
     }
+    crate::update_tray_icon(&app);
 
     // Emit config-changed event so frontend can react
     let _ = app.emit("config-changed", ());
@@ -415,6 +436,7 @@ pub fn config_exists() -> bool {
 
 #[tauri::command]
 pub fn set_listening(
+    app: AppHandle,
     is_listening: State<'_, Arc<AtomicBool>>,
     enabled: bool,
 ) -> Result<(), String> {
@@ -422,6 +444,10 @@ pub fn set_listening(
         log::debug!("[IPC] set_listening called (enabled: {})", enabled);
     }
     is_listening.store(enabled, Ordering::Relaxed);
+    crate::update_tray_icon(&app);
+    if let Err(error) = crate::tray_labels::apply(&app) {
+        log::warn!("[Tray] Could not update listening label: {error}");
+    }
     log::info!("set_listening: {}", enabled);
     Ok(())
 }

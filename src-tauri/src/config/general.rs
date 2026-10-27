@@ -35,6 +35,8 @@ pub struct GeneralConfig {
     #[serde(alias = "start_with_windows")]
     pub launch_on_login: bool,
     pub start_minimized: bool,
+    #[serde(default = "default_show_tray_icon")]
+    pub show_tray_icon: bool,
     #[serde(default)]
     pub debug_mode: bool,
     #[serde(default)]
@@ -56,6 +58,10 @@ pub struct GeneralConfig {
 }
 
 fn default_update_checks_enabled() -> bool {
+    true
+}
+
+fn default_show_tray_icon() -> bool {
     true
 }
 

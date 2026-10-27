@@ -26,6 +26,7 @@ mod sanitize;
 mod secrets;
 mod telemetry;
 mod text_map;
+mod tray;
 mod tray_labels;
 mod tts;
 
@@ -56,32 +57,7 @@ impl AbortScope {
 }
 
 pub fn update_tray_icon(app_handle: &tauri::AppHandle) {
-    if let Some(tray) = app_handle.tray_by_id("main") {
-        let is_playing = {
-            let player = app_handle.state::<std::sync::Mutex<audio::AudioPlayer>>();
-            player.lock().map(|p| p.is_playing()).unwrap_or(false)
-        };
-
-        let is_synthesizing = {
-            let status = app_handle.state::<JobStatus>();
-            status.is_synthesizing.load(Ordering::Relaxed)
-        };
-
-        let is_busy = is_playing || is_synthesizing;
-
-        // Using include_bytes for simplicity, you might want to load this from a path
-        // if this was dynamic, but since it's static we can embed it.
-        // Assuming the icons are pngs, Tauri `Image` handles it from bytes easily
-        let result = if is_busy {
-            tauri::image::Image::from_bytes(include_bytes!("../icons/app-icon-inverted.png"))
-        } else {
-            tauri::image::Image::from_bytes(include_bytes!("../icons/icon.png"))
-        };
-
-        if let Ok(img) = result {
-            let _ = tray.set_icon(Some(img));
-        }
-    }
+    tray::refresh(app_handle);
 }
 
 /// Kill a process tree by PID (used for aborting CLI TTS synthesis).
@@ -277,7 +253,7 @@ fn try_register_hotkey(
 }
 
 /// Abort any in-progress synthesis and stop playback.
-/// Called from the abort_synthesis command and tray icon click handler.
+/// Called from the abort_synthesis command and the tray Stop reading action.
 pub fn do_abort_synthesis(app: &tauri::AppHandle) {
     log::info!("[Abort] Aborting synthesis");
 
@@ -317,11 +293,13 @@ use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    tray::TrayIconBuilder,
     Emitter, Manager, State,
 };
 // `Listener` provides `app.listen`; used by the non-Windows hud:stop block
 // and the playback-finished hook that unblocks control-server wait requests.
+#[cfg(target_os = "windows")]
+use tauri::tray::{MouseButton, MouseButtonState, TrayIconEvent};
 use tauri::Listener;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
@@ -401,7 +379,12 @@ fn main() {
     tauri::Builder::default()
         .setup(|app| {
             // --- Load config ---
+            // Capture first-run state before config loading can migrate/save it.
+            let has_config = config::config_path().exists();
             let cfg = config::load_or_default();
+            let start_minimized = cfg.general.start_minimized;
+            let show_tray_icon = cfg.general.show_tray_icon;
+            let listen_enabled = cfg.trigger.listen_enabled;
             tts::local_daemon::set_idle_timeout(cfg.tts.daemon_idle_timeout_secs);
             app.manage(std::sync::Mutex::new(cfg));
 
@@ -468,7 +451,7 @@ fn main() {
             app.manage(std::sync::Mutex::new(telemetry));
 
             // --- Init listening state (shared with clipboard thread) ---
-            let is_listening = Arc::new(AtomicBool::new(true));
+            let is_listening = Arc::new(AtomicBool::new(listen_enabled));
             app.manage(is_listening.clone());
 
             // --- Init Job status ---
@@ -484,6 +467,7 @@ fn main() {
             app.manage(bridge);
 
             // --- Build system tray ---
+            app.manage(tray::TrayState::new()?);
             let version = app.package_info().version.to_string();
             let version_item = MenuItem::with_id(
                 app,
@@ -499,8 +483,19 @@ fn main() {
                 let locale = cfg.lock().unwrap().general.locale.clone();
                 tray_labels::labels_for(&locale)
             };
-            let toggle_item =
-                MenuItem::with_id(app, "toggle", labels.listening, true, None::<&str>)?;
+            let open_item = MenuItem::with_id(app, "open", &labels.open, true, None::<&str>)?;
+            let stop_item = MenuItem::with_id(app, "stop", &labels.stop, false, None::<&str>)?;
+            let toggle_item = MenuItem::with_id(
+                app,
+                "toggle",
+                if listen_enabled {
+                    &labels.listening
+                } else {
+                    &labels.paused
+                },
+                true,
+                None::<&str>,
+            )?;
             let speak_item =
                 MenuItem::with_id(app, "speak", labels.speak_clipboard, true, None::<&str>)?;
             let sep2 = PredefinedMenuItem::separator(app)?;
@@ -509,6 +504,8 @@ fn main() {
             let sep3 = PredefinedMenuItem::separator(app)?;
             let quit_item = MenuItem::with_id(app, "quit", labels.quit, true, Some("Ctrl+Q"))?;
             app.manage(tray_labels::TrayItems {
+                open: open_item.clone(),
+                stop: stop_item.clone(),
                 toggle: toggle_item.clone(),
                 speak: speak_item.clone(),
                 settings: settings_item.clone(),
@@ -520,8 +517,10 @@ fn main() {
                 &[
                     &version_item,
                     &sep1,
+                    &open_item,
                     &toggle_item,
                     &speak_item,
+                    &stop_item,
                     &sep2,
                     &settings_item,
                     &sep3,
@@ -530,17 +529,22 @@ fn main() {
             )?;
 
             let is_listening_for_tray = is_listening.clone();
-            let _tray = TrayIconBuilder::with_id("main")
+            let tray_result = TrayIconBuilder::with_id("main")
                 .menu(&menu)
                 .tooltip("CopySpeak")
-                .icon(app.default_window_icon().unwrap().clone())
+                .icon(tray::initial_icon(app.handle()))
+                .icon_as_template(false)
+                .show_menu_on_left_click(!cfg!(target_os = "windows"))
                 .on_menu_event(move |app, event| {
                     match event.id.as_ref() {
+                        "open" => tray::show_main_window(app),
+                        "stop" => do_abort_synthesis(app),
                         "toggle" => {
                             // Toggle listening state
                             let new_state = !is_listening_for_tray.load(Ordering::Relaxed);
                             is_listening_for_tray.store(new_state, Ordering::Relaxed);
                             log::info!("Tray: toggle listening -> {}", new_state);
+                            update_tray_icon(app);
 
                             // Update menu item label
                             if let Err(e) = tray_labels::apply(app) {
@@ -579,12 +583,7 @@ fn main() {
                                 }
                             });
                         }
-                        "settings" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
-                        }
+                        "settings" => tray::show_settings(app),
                         "quit" => {
                             tts::local_daemon::shutdown();
                             app.exit(0);
@@ -592,74 +591,54 @@ fn main() {
                         _ => {}
                     }
                 })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        let app = tray.app_handle();
-
-                        let is_synthesizing = {
-                            let status = app.state::<JobStatus>();
-                            status.is_synthesizing.load(Ordering::Relaxed)
-                        };
-
-                        let is_playing = {
-                            let player = app.state::<std::sync::Mutex<audio::AudioPlayer>>();
-                            player.lock().map(|p| p.is_playing()).unwrap_or(false)
-                        };
-
-                        if is_synthesizing {
-                            // Abort synthesis when tray icon clicked during synthesis
-                            do_abort_synthesis(app);
-                        } else if is_playing {
-                            // Toggle pause when tray icon clicked during playback
-                            let _ = app.emit("playback-toggle-pause", ());
-                            {
-                                let player_state =
-                                    app.state::<std::sync::Mutex<audio::AudioPlayer>>();
-                                if let Ok(mut p) = player_state.lock() {
-                                    p.toggle_pause();
-                                };
-                            }
-                        } else {
-                            // Show window when idle
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
-                            }
+                .on_tray_icon_event(|icon, event| {
+                    // Opening the window must never interrupt a reading.
+                    #[cfg(target_os = "windows")]
+                    if matches!(
+                        event,
+                        TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            button_state: MouseButtonState::Up,
+                            ..
+                        } | TrayIconEvent::DoubleClick {
+                            button: MouseButton::Left,
+                            ..
                         }
+                    ) {
+                        tray::show_main_window(icon.app_handle());
                     }
+                    #[cfg(not(target_os = "windows"))]
+                    let _ = (icon, event);
                 })
-                .build(app)?;
+                .build(app);
 
-            // --- Intercept main window close to minimize to tray ---
-            if let Some(main_window) = app.get_webview_window("main") {
-                let app_handle = app.handle().clone();
-                main_window.on_window_event(move |event| {
-                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                        let close_behavior = {
-                            let cfg: State<std::sync::Mutex<config::AppConfig>> =
-                                app_handle.state();
-                            let cfg = cfg.lock().unwrap();
-                            cfg.general.close_behavior.clone()
-                        };
-
-                        match close_behavior {
-                            config::CloseBehavior::MinimizeToTray => {
-                                api.prevent_close();
-                                if let Some(window) = app_handle.get_webview_window("main") {
-                                    let _ = window.hide();
-                                }
-                                log::info!("Main window minimized to tray");
-                            }
-                            config::CloseBehavior::Exit => {
-                                // Let the window close, app will exit
-                            }
-                        }
+            // A failed/disabled tray must not strand a hidden app.
+            let tray_available = match tray_result {
+                Ok(icon) => match icon.set_visible(show_tray_icon) {
+                    Ok(()) => show_tray_icon,
+                    Err(error) => {
+                        log::warn!("[Tray] Could not apply visibility: {error}");
+                        false
                     }
+                },
+                Err(error) => {
+                    log::warn!("[Tray] Creation failed; opening main window: {error}");
+                    false
+                }
+            };
+            let start_hidden =
+                tray::should_start_hidden(has_config, start_minimized, tray_available);
+            tray::set_available(app.handle(), tray_available);
+
+            if let Some(main_window) = app.get_webview_window("main") {
+                let handle = app.handle().clone();
+                main_window.on_window_event(move |event| match event {
+                    tauri::WindowEvent::CloseRequested { api, .. } => {
+                        api.prevent_close();
+                        tray::close_main_window(&handle);
+                    }
+                    tauri::WindowEvent::ThemeChanged(_) => update_tray_icon(&handle),
+                    _ => {}
                 });
             }
 
@@ -697,10 +676,15 @@ fn main() {
                         }
                     });
                 }
-                if let Some(main_window) = app.get_webview_window("main") {
-                    let _ = main_window.set_focus();
-                }
             }
+
+            if start_hidden {
+                tray::hide_main_window(app.handle());
+            } else {
+                tray::show_main_window(app.handle());
+            }
+            update_tray_icon(app.handle());
+            log::info!("[Startup] hidden={start_hidden}, tray_available={tray_available}");
 
             // --- Warm the active local engine so the first utterance skips the model load ---
             // Off-thread: nothing below depends on it, and it holds the config mutex.
@@ -839,12 +823,12 @@ fn main() {
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.show();
-                let _ = window.set_focus();
-            }
+            #[cfg(target_os = "macos")]
+            tray::recover(app);
+            tray::show_main_window(app);
         }))
         .invoke_handler(tauri::generate_handler![
+            tray::set_tray_playback_state,
             commands::get_config,
             commands::set_config,
             commands::get_hotkey_error,
@@ -944,9 +928,18 @@ fn main() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building CopySpeak")
-        .run(|_app, event| {
-            if let tauri::RunEvent::Exit = event {
+        .run(|app, event| match event {
+            tauri::RunEvent::Exit => {
+                tts::local_daemon::shutdown();
                 crate::audio_duck::restore_blocking();
+            }
+            #[cfg(target_os = "macos")]
+            tauri::RunEvent::Reopen { .. } => {
+                tray::recover(app);
+                tray::show_main_window(app);
+            }
+            _ => {
+                let _ = app;
             }
         });
 }

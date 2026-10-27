@@ -38,6 +38,7 @@ export function testConfig(): AppConfig {
     general: {
       launch_on_login: false,
       start_minimized: true,
+      show_tray_icon: true,
       debug_mode: false,
       close_behavior: "minimize-to-tray",
       appearance: "system",

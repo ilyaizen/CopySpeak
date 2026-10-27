@@ -248,9 +248,88 @@ pub fn sync_autostart_with_config(enabled: bool) -> Result<(), String> {
     }
 }
 
+/// Keep saved preferences and OS registration together; propagate OS failures.
+pub fn persist_with_autostart(
+    old: bool,
+    new: bool,
+    persist: impl FnOnce() -> Result<(), String>,
+) -> Result<(), String> {
+    persist_change(old, new, persist, sync_autostart_with_config)
+}
+
+fn persist_change(
+    old: bool,
+    new: bool,
+    persist: impl FnOnce() -> Result<(), String>,
+    mut register: impl FnMut(bool) -> Result<(), String>,
+) -> Result<(), String> {
+    if old != new {
+        register(new)?;
+    }
+    if let Err(error) = persist() {
+        if old != new {
+            if let Err(rollback) = register(old) {
+                return Err(format!(
+                    "{error}; failed to restore launch-on-login: {rollback}"
+                ));
+            }
+        }
+        return Err(error);
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn failed_autostart_change_does_not_persist_settings() {
+        let mut persisted = false;
+        let result = persist_change(
+            false,
+            true,
+            || {
+                persisted = true;
+                Ok(())
+            },
+            |_| Err("registration denied".into()),
+        );
+        assert_eq!(result, Err("registration denied".into()));
+        assert!(!persisted);
+    }
+
+    #[test]
+    fn failed_config_save_restores_previous_autostart() {
+        let mut registrations = Vec::new();
+        let result = persist_change(
+            false,
+            true,
+            || Err("disk full".into()),
+            |enabled| {
+                registrations.push(enabled);
+                Ok(())
+            },
+        );
+        assert_eq!(result, Err("disk full".into()));
+        assert_eq!(registrations, vec![true, false]);
+    }
+
+    #[test]
+    fn unchanged_autostart_does_not_touch_os_registration() {
+        let mut registrations = Vec::new();
+        let result = persist_change(
+            true,
+            true,
+            || Ok(()),
+            |enabled| {
+                registrations.push(enabled);
+                Ok(())
+            },
+        );
+        assert!(result.is_ok());
+        assert!(registrations.is_empty());
+    }
 
     #[test]
     fn test_get_current_exe_path() {

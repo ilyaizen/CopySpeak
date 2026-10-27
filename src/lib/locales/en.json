@@ -108,6 +108,8 @@
       "tryAgain": "Try Again"
     },
     "general": {
+      "showTrayIcon": "Show tray icon",
+      "showTrayIconTooltip": "Show CopySpeak in the system tray. When hidden, the app opens normally and closing the window quits.",
       "language": "Language",
       "languageDescription": "Select your preferred language",
       "launchOnLogin": "Launch at login",
@@ -120,10 +122,10 @@
       "autoSave": "Auto-save changes",
       "autoSaveDescription": "Save edits automatically 800ms after the last change on Settings, Engines, and Voices — no Save/Cancel bar",
       "launchOnLoginTooltip": "Launch CopySpeak when you log in",
-      "startMinimizedLabel": "Start Minimized",
-      "startMinimizedTooltip": "Start the application minimized to system tray",
-      "minimizeToTray": "Minimize to Tray on Close",
-      "minimizeToTrayTooltip": "Minimize to system tray instead of exiting when closing the window",
+      "startMinimizedLabel": "Start in tray",
+      "startMinimizedTooltip": "Start with the window hidden when the tray icon is enabled. First-run setup always opens normally.",
+      "minimizeToTray": "Close to tray",
+      "minimizeToTrayTooltip": "Keep CopySpeak running in the tray when the window closes. Off, closing the window quits the app.",
       "experimental": "Experimental features",
       "experimentalDescription": "Turning this off pauses History, Post-process, Effects, and Duck but keeps their settings and saved readings. History uses disk space; post-processing can add network use and delay. Turning it back on restores saved choices, including Duck.",
       "profileEffects": "Effects are configured per voice profile in Voices."
@@ -947,6 +949,8 @@
     }
   },
   "tray": {
+    "open": "Open CopySpeak",
+    "stop": "Stop reading",
     "listening": "● Listening",
     "paused": "○ Paused",
     "speakClipboard": "Speak Clipboard Now",

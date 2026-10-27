@@ -566,6 +566,14 @@ mod tests {
         assert_eq!(stamped.version, CONFIG_VERSION);
     }
 
+    #[test]
+    fn legacy_configs_keep_the_tray_visible() {
+        let legacy: GeneralConfig =
+            serde_json::from_str(r#"{"launch_on_login": false, "start_minimized": true}"#).unwrap();
+        assert!(legacy.show_tray_icon);
+        assert!(AppConfig::default().general.show_tray_icon);
+    }
+
     /// Experimental features (Dramatize, post-processing panel, effects) are
     /// opt-in: fresh and legacy configs must both land on `false`.
     #[test]

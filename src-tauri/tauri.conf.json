@@ -59,7 +59,7 @@
         "minWidth": 360,
         "minHeight": 400,
         "center": true,
-        "visible": true,
+        "visible": false,
         "devtools": true
       },
       {

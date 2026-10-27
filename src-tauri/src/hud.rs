@@ -430,10 +430,10 @@ pub fn emit_synthesis_progress(
     total_chars: usize,
     processed_chars: usize,
 ) {
-    let (config, hud_effective) = {
+    let hud_effective = {
         let state = app.state::<std::sync::Mutex<AppConfig>>();
         let cfg = state.lock().unwrap();
-        (cfg.hud.clone(), cfg.is_hud_effective())
+        cfg.is_hud_effective()
     };
 
     if !hud_effective {

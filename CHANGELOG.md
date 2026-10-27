@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Startup and tray preferences work together** — Start in tray now applies on launch without flashing the main window; first-run setup and a missing tray still open normally. Hiding the tray disables hidden startup and close-to-tray behavior without discarding your preferences. Closing with Exit selected quits the whole app, including its background HUD. Launch-on-login registration errors now surface when saving settings instead of silently succeeding.
+- **Predictable tray controls** — left-click opens and restores CopySpeak on Windows without interrupting speech; right-click offers Open, Stop reading, Settings and Quit. Settings opens the Settings page. The branded tray icon changes hue for idle, synthesis, playback and pause.
+
 - **Transient synthesis failures retry** — standalone 429/500/502/503/504 statuses and transport dropouts (timeout, connection reset/refused/closed, reqwest causes hidden in the error chain) retry twice with 500 ms/1 s backoff, cancellation-aware, on the non-streaming path only, so one flaky provider request no longer kills a reading.
 - **Incomplete readings say so** — when a section's synthesis fails permanently, the reading stops there and a global "Reading stopped: section N of M failed…" notice names it (toast plus error state), instead of a stalled HUD and a console-only log. Browser companion sessions stay up while buffered audio drains, then report the failure instead of "completed".
 - **The Play page's configured fragment size is now used** — the non-streaming paginated `speak_now` path gated pagination on your saved fragment size but then split with the default anyway, so a configured fragment size was silently ignored there (a fix contributed by the X-CopySpeak fork).

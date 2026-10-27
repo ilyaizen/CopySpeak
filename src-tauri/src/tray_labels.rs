@@ -25,6 +25,8 @@ const CATALOGS: &[(&str, &str)] = &[
 
 /// Tray items whose text follows the locale and the listening state.
 pub struct TrayItems {
+    pub open: MenuItem<Wry>,
+    pub stop: MenuItem<Wry>,
     pub toggle: MenuItem<Wry>,
     pub speak: MenuItem<Wry>,
     pub settings: MenuItem<Wry>,
@@ -32,6 +34,8 @@ pub struct TrayItems {
 }
 
 pub struct TrayLabels {
+    pub open: String,
+    pub stop: String,
     pub listening: String,
     pub paused: String,
     pub speak_clipboard: String,
@@ -66,6 +70,8 @@ pub fn labels_for(locale: &str) -> TrayLabels {
             .unwrap_or_else(|| panic!("en.json has no tray.{key}"))
     };
     TrayLabels {
+        open: pick("open"),
+        stop: pick("stop"),
         listening: pick("listening"),
         paused: pick("paused"),
         speak_clipboard: pick("speakClipboard"),
@@ -91,6 +97,8 @@ pub fn apply(app: &AppHandle) -> tauri::Result<()> {
         labels.paused
     };
     let items = app.state::<TrayItems>();
+    items.open.set_text(labels.open)?;
+    items.stop.set_text(labels.stop)?;
     items.toggle.set_text(toggle_text)?;
     items.speak.set_text(labels.speak_clipboard)?;
     items.settings.set_text(labels.settings)?;
@@ -102,7 +110,15 @@ pub fn apply(app: &AppHandle) -> tauri::Result<()> {
 mod tests {
     use super::*;
 
-    const KEYS: [&str; 5] = ["listening", "paused", "speakClipboard", "settings", "quit"];
+    const KEYS: [&str; 7] = [
+        "open",
+        "stop",
+        "listening",
+        "paused",
+        "speakClipboard",
+        "settings",
+        "quit",
+    ];
 
     #[test]
     fn every_bundled_catalog_has_every_tray_label() {

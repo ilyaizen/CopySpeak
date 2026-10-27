@@ -108,6 +108,8 @@
       "tryAgain": "重试"
     },
     "general": {
+      "showTrayIcon": "显示托盘图标",
+      "showTrayIconTooltip": "在系统托盘中显示 CopySpeak。隐藏图标后，应用会正常打开，关闭窗口将退出应用。",
       "language": "语言",
       "languageDescription": "选择界面语言",
       "launchOnLogin": "登录时启动",
@@ -120,10 +122,10 @@
       "autoSave": "自动保存更改",
       "autoSaveDescription": "在“设置”“引擎”“语音”页面上，最后一次修改 800 毫秒后自动保存——不显示保存/取消栏",
       "launchOnLoginTooltip": "登录时启动 CopySpeak",
-      "startMinimizedLabel": "启动时最小化",
-      "startMinimizedTooltip": "启动时将应用最小化到系统托盘",
-      "minimizeToTray": "关闭时最小化到托盘",
-      "minimizeToTrayTooltip": "关闭窗口时最小化到系统托盘，而不是退出",
+      "startMinimizedLabel": "启动到托盘",
+      "startMinimizedTooltip": "启用托盘图标时，启动后隐藏窗口。首次设置始终正常打开。",
+      "minimizeToTray": "关闭到托盘",
+      "minimizeToTrayTooltip": "关闭窗口后让 CopySpeak 继续在托盘中运行。关闭此选项后，关闭窗口将退出应用。",
       "experimental": "实验性功能",
       "experimentalDescription": "关闭此项将暂停历史记录、后处理、效果和音量压低，但会保留其设置和已保存的朗读记录。历史记录占用磁盘空间；后处理可能会增加网络使用和延迟。重新开启将恢复保存的选择，包括音量压低。",
       "profileEffects": "效果在“语音”中按语音配置文件进行配置。"
@@ -938,6 +940,8 @@
     }
   },
   "tray": {
+    "open": "打开 CopySpeak",
+    "stop": "停止朗读",
     "listening": "● 监听中",
     "paused": "○ 已暂停",
     "speakClipboard": "立即朗读剪贴板",
