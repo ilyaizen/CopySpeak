@@ -93,7 +93,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Rename request flags in both `src-tauri/src/cli.rs` and `scripts/copyspeak.mjs`; Rust CLI tests do not cover the Node helper used by Hermes, so verify its emitted `/speak` payload separately.
 - Fold Cyrillic homoglyphs only inside a word that also holds a Latin letter (`fold_homoglyphs`); a per-character fold turned every Russian word into mixed script ("привет" → "пpивeт").
 - Keep U+200C (ZWNJ) out of both invisible-character regexes in `tts_normalize.rs`; Persian and Indic words are spelled with it.
-- Add a script's sentence terminator to both `is_sentence_end` in `pagination.rs` and the phrase regex in `captions.ts`; text with no terminator force-splits at exact character counts, mid-word.
+- Add a script's sentence terminator to both `is_sentence_end` in `pagination.rs` and the phrase regex in `captions.ts`; text with no terminator falls to whitespace-snapped force-splits — no mid-word cuts since #88, but sentence-level breaks degrade to clause/word boundaries.
 - The post-process output re-sanitize deletes single-word bracket tags (`remove_citations` matches `[sighs]` while `[clears throat]` survives by accident); route LLM output through `sanitize_text_tag_safe`, never the plain pipeline.
 
 ## Linux

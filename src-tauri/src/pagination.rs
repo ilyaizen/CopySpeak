@@ -90,6 +90,29 @@ fn detect_sentence_boundaries(text: &str) -> Vec<SentenceBoundary> {
 
         // Check for sentence-ending punctuation
         if is_sentence_end(c) {
+            // `!`/`?` glued to a following word (`Hello!World`) are token
+            // punctuation, not sentence ends: the run up to the next whitespace
+            // carries letters, so cutting there would sever the token.
+            if matches!(c, '!' | '?')
+                && chars.get(i + 1).is_some_and(|next| !next.is_whitespace())
+                && chars[i + 1..]
+                    .iter()
+                    .take_while(|next| !next.is_whitespace())
+                    .any(|next| next.is_alphanumeric())
+            {
+                i += 1;
+                continue;
+            }
+
+            // A period that joins two word characters is a token separator, not
+            // a sentence end: decimals (3.14), versions (v0.2.10), domains and
+            // paths (example.com, file.rs), and dotted identifiers. Treating
+            // them as boundaries is what let pagination cut mid-token.
+            if is_intra_token_period(&chars, i) {
+                i += 1;
+                continue;
+            }
+
             // Skip if this looks like an abbreviation (e.g., "Mr.", "Dr.", "etc.")
             if is_abbreviation(&chars, i) {
                 i += 1;
@@ -128,6 +151,49 @@ fn is_sentence_end(c: char) -> bool {
         c,
         '.' | '!' | '?' | '。' | '！' | '？' | '।' | '॥' | '؟' | '۔' | '։' | '።' | '။' | '។'
     )
+}
+
+/// True when the `.` at `pos` sits between two word characters, so it belongs to
+/// a single token rather than ending a sentence. Covers decimals (`3.14`),
+/// versions (`v0.2.10`), domains and file names (`example.com`, `file.rs`), IPs
+/// (`192.168.1.1`), dotted initialisms (`U.S.A.`, `Ph.D.`) and dotted
+/// identifiers (`System.Console`).
+///
+/// A genuine sentence period is followed by whitespace, a quote/bracket, or
+/// end-of-text — not by another word character. Erring toward "one token" is
+/// deliberate: the requirement is to never break a word, and treating a run-on
+/// sentence (`blue.It`) as a single token only means it paginates on whitespace
+/// instead of after the period, which is still word-safe.
+fn is_intra_token_period(chars: &[char], pos: usize) -> bool {
+    if chars.get(pos) != Some(&'.') {
+        return false;
+    }
+    if chars
+        .get(pos + 1)
+        .is_some_and(|next| matches!(next, '.' | '/' | '\\'))
+    {
+        return true;
+    }
+    let prev_is_word = pos > 0
+        && (is_token_char(chars[pos - 1]) || matches!(chars[pos - 1], '_' | '/' | '\\' | '.'));
+    match chars.get(pos + 1) {
+        // A word character after the period means one token (`example.com`).
+        Some(&next) => {
+            prev_is_word && (is_token_char(next) || matches!(next, '_' | '/' | '\\' | '.'))
+        }
+        // A trailing period is intra-token only when it closes an initialism
+        // (`U.S.A.`, `Ph.D.`) — a single uppercase letter that is itself
+        // preceded by a period. A trailing sentence end (`too.`) stays a
+        // boundary, so run-on prose still splits where a sentence ends.
+        None => prev_is_word && chars[pos - 1].is_uppercase() && pos >= 2 && chars[pos - 2] == '.',
+    }
+}
+
+/// Characters that can appear inside an unbroken token. Digits and letters are
+/// the common case; the surrounding tests only need to know that the period did
+/// not separate two words.
+fn is_token_char(c: char) -> bool {
+    c.is_alphanumeric()
 }
 
 /// Check if the punctuation at position is likely part of an abbreviation.
@@ -293,16 +359,26 @@ pub fn paginate_text(text: &str, config: &PaginationConfig) -> Vec<TextFragment>
         // else: sentence fits within max_size from fragment_start, keep accumulating
     }
 
-    // Add the final fragment (text from fragment_start to end)
+    // Add the final fragment (text from fragment_start to end). The tail is
+    // often a single unpunctuated sentence (chat, a list, a pasted URL), so an
+    // oversized tail must be split rather than accepted as one giant fragment.
     if fragment_start < chars.len() {
         let final_text: String = chars[fragment_start..].iter().collect();
         if !final_text.trim().is_empty() {
-            pieces.push((fragment_start, chars.len()));
+            if chars.len() - fragment_start > max_size {
+                for (start, end) in force_split_ranges(&final_text, max_size) {
+                    pieces.push((fragment_start + start, fragment_start + end));
+                }
+            } else {
+                pieces.push((fragment_start, chars.len()));
+            }
         }
     }
 
-    // If we only have one fragment, return it
-    if pieces.len() <= 1 {
+    // Nothing splittable (e.g. whitespace-only input) — speak it verbatim. A
+    // single computed piece must still be built: collapsing it back to the
+    // whole text would discard the computed slice and lose source spans.
+    if pieces.is_empty() {
         return vec![TextFragment::new(text.to_string(), 0, 1)];
     }
 
@@ -339,18 +415,106 @@ fn build_fragments(_text: &str, chars: &[char], pieces: Vec<(usize, usize)>) -> 
         .collect()
 }
 
-/// Fallback: split text at exact character positions when no sentence
+/// Ceiling for a single unbreakable token. Tokens at or below this are kept
+/// whole so a word is never severed; anything larger (a blob no engine will
+/// accept anyway) is hard-split as a last resort. 4096 matches the provider
+/// input limit already enforced in the synthesis path (OpenAI rejects past it).
+const TOKEN_HARD_CAP: usize = 4096;
+
+/// Fallback: split text into `max_size`-bounded ranges when no usable sentence
 /// boundaries exist. Returns untrimmed char ranges into `text`.
+///
+/// Cuts land on whitespace whenever one is reachable, so a word is never broken
+/// in half. A token longer than `max_size` is kept whole (up to
+/// [`TOKEN_HARD_CAP`]) rather than split; only a token past that ceiling is
+/// hard-cut, because no engine would accept it otherwise.
 fn force_split_ranges(text: &str, max_size: usize) -> Vec<(usize, usize)> {
+    let chars: Vec<char> = text.chars().collect();
+    let len = chars.len();
+    if max_size == 0 {
+        return if len == 0 { Vec::new() } else { vec![(0, len)] };
+    }
+
     let mut ranges = Vec::new();
-    let len = text.chars().count();
     let mut start = 0;
     while start < len {
-        let end = (start + max_size).min(len);
-        ranges.push((start, end));
-        start = end;
+        // Skip leading whitespace so a fragment never begins with a blank.
+        while start < len && chars[start].is_whitespace() {
+            start += 1;
+        }
+        if start >= len {
+            break;
+        }
+
+        let limit = (start + max_size).min(len);
+        if limit >= len {
+            ranges.push((start, len));
+            break;
+        }
+
+        // Prefer the last whitespace at or before the limit, then pull it just
+        // past the boundary so the whitespace stays with the preceding piece.
+        let end = match (start..limit).rev().find(|&i| chars[i].is_whitespace()) {
+            Some(space) => {
+                let mut cut = space + 1;
+                while cut < limit && chars[cut].is_whitespace() {
+                    cut += 1;
+                }
+                cut
+            }
+            None => {
+                match (start + 1..limit)
+                    .rev()
+                    .find(|&index| is_cjk_clause_delimiter(chars[index]))
+                {
+                    Some(sep) => sep + 1,
+                    None => {
+                        // One unbreakable token: keep it whole so no word is
+                        // severed, capped so an enormous blob is still bounded.
+                        let mut token_end = start;
+                        while token_end < len && !chars[token_end].is_whitespace() {
+                            token_end += 1;
+                        }
+                        if token_end > start + TOKEN_HARD_CAP {
+                            log::warn!(
+                                "[Pagination] unbreakable token of {} chars exceeds {}; hard-splitting",
+                                token_end - start,
+                                TOKEN_HARD_CAP
+                            );
+                            start + TOKEN_HARD_CAP
+                        } else {
+                            token_end
+                        }
+                    }
+                }
+            }
+        };
+
+        if end <= start {
+            // Defensive: never emit an empty range and never stall.
+            ranges.push((start, limit));
+            start = limit;
+        } else {
+            ranges.push((start, end));
+            start = end;
+        }
     }
     ranges
+}
+
+/// Full-width CJK clause punctuation. CJK prose has no inter-word whitespace, so
+/// these are the only meaningful break opportunities inside a long run: a break
+/// after a full-width comma reads naturally, an arbitrary character cut does not.
+fn is_cjk_clause_delimiter(c: char) -> bool {
+    matches!(
+        c,
+        // ，。！？ Ideographic comma/full stop + full-width ! ? ｜ 、
+        '\u{FF0C}' | '\u{3002}' | '\u{FF01}' | '\u{FF1F}' | '\u{3001}'
+            // ： ； （ ） 【 】 《 》 「 」 『 』
+            | '\u{FF1A}' | '\u{FF1B}' | '\u{FF08}' | '\u{FF09}'
+            | '\u{3010}' | '\u{3011}' | '\u{300A}' | '\u{300B}'
+            | '\u{300C}' | '\u{300D}' | '\u{300E}' | '\u{300F}'
+    )
 }
 
 /// Check if text should be paginated based on length and configuration.
@@ -590,6 +754,238 @@ mod tests {
     }
 
     #[test]
+    fn test_force_split_never_breaks_a_word() {
+        let config = PaginationConfig {
+            enabled: true,
+            fragment_size: 20,
+        };
+        // No punctuation at all, so every cut is a forced one.
+        let text = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu";
+        let fragments = paginate_text(text, &config);
+
+        assert!(fragments.len() > 1);
+        for fragment in &fragments {
+            let trimmed = fragment.text.trim();
+            assert!(
+                !trimmed.is_empty(),
+                "fragment must not be blank: {:?}",
+                fragments
+            );
+            // A fragment may only start/end on whitespace, never mid-word.
+            assert!(
+                fragment.text.starts_with(trimmed) && fragment.text.ends_with(trimmed),
+                "fragment carries unexpected whitespace: {:?}",
+                fragment.text
+            );
+        }
+        // No word may be severed by a fragment boundary.
+        let rejoined: String = fragments
+            .iter()
+            .map(|f| f.text.as_str())
+            .collect::<Vec<_>>()
+            .join(" ");
+        for word in text.split_whitespace() {
+            assert!(
+                rejoined.split_whitespace().any(|w| w == word),
+                "word {word:?} was broken across a fragment boundary: {rejoined:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_oversized_tail_after_a_short_sentence_is_split() {
+        let config = PaginationConfig {
+            enabled: true,
+            fragment_size: 50,
+        };
+        // One short sentence, then a long unpunctuated tail. The tail used to be
+        // emitted as a single 200-char fragment because only single-sentence
+        // fragments were force-split.
+        let tail = "word ".repeat(40);
+        let text = format!("Short. {}", tail.trim());
+        let fragments = paginate_text(&text, &config);
+
+        assert!(
+            fragments.len() > 1,
+            "long tail was not paginated: {} fragments",
+            fragments.len()
+        );
+        for fragment in &fragments {
+            assert!(
+                fragment.text.chars().count() <= config.fragment_size as usize,
+                "fragment exceeds budget: {:?}",
+                fragment.text
+            );
+        }
+    }
+
+    #[test]
+    fn test_version_and_decimal_periods_are_not_sentence_ends() {
+        let text = "Upgrade to v0.2.10 now. It fixes pi at 3.14 and example.com too.";
+        let boundaries = detect_sentence_boundaries(text);
+        // Only the two real sentence ends (after "now" and "too").
+        assert_eq!(boundaries.len(), 2, "boundaries: {boundaries:?}");
+    }
+
+    #[test]
+    fn test_missing_space_after_sentence_period_stays_word_safe() {
+        // `blue.It` is ambiguous: it could be a run-on sentence or a dotted
+        // token. Word integrity wins, so it is treated as one token and split on
+        // whitespace rather than after the period. What matters is that no word
+        // is cut and the boundary count stays deterministic.
+        let text = "The sky is blue.It looks nice.";
+        let fragments = paginate_text(
+            text,
+            &PaginationConfig {
+                enabled: true,
+                fragment_size: 100,
+            },
+        );
+        // Fits in one fragment, so nothing is split regardless.
+        assert_eq!(fragments.len(), 1);
+    }
+
+    #[test]
+    fn test_dotted_initialisms_and_identifiers_are_single_tokens() {
+        // Initialisms, filenames and dotted identifiers must never be split by
+        // pagination. (A lone short token trivially yields one fragment; the
+        // real risk is a boundary landing inside the token.)
+        let config = PaginationConfig {
+            enabled: true,
+            fragment_size: 40,
+        };
+        for token in [
+            "U.S.A.",
+            "Ph.D.",
+            "System.Console",
+            "README.TXT",
+            "192.168.1.1",
+        ] {
+            let text = format!("Please send the parcel to the {token} office and confirm");
+            let fragments = paginate_text(&text, &config);
+            for fragment in &fragments {
+                for word in fragment.text.split_whitespace() {
+                    assert!(
+                        text.split_whitespace().any(|w| w == word),
+                        "{token:?} was split: fragment word {word:?} is not a whole source word"
+                    );
+                }
+            }
+            // The token itself must appear whole in some fragment.
+            assert!(
+                fragments
+                    .iter()
+                    .any(|f| f.text.split_whitespace().any(|w| w == token)),
+                "{token:?} did not survive pagination: {:?}",
+                fragments.iter().map(|f| &f.text).collect::<Vec<_>>()
+            );
+        }
+    }
+
+    #[test]
+    fn test_initialisms_are_never_split_mid_token() {
+        let config = PaginationConfig {
+            enabled: true,
+            fragment_size: 12,
+        };
+        let text = "Send it to the U.S.A. office now and Ph.D. students later on";
+        let fragments = paginate_text(text, &config);
+        // Every emitted fragment must be composed of whole words from the source.
+        for fragment in &fragments {
+            for word in fragment.text.split_whitespace() {
+                assert!(
+                    text.contains(word),
+                    "fragment word {word:?} is not a whole source word"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_cjk_run_splits_on_cjk_punctuation() {
+        // No whitespace at all: the only sane break is after a full-width comma.
+        let text = "这是第一句话，这是第二句话，这是第三句话，这是第四句话";
+        let ranges = force_split_ranges(text, 12);
+        assert!(ranges.len() > 1, "CJK run should split: {ranges:?}");
+        let chars: Vec<char> = text.chars().collect();
+        for (_, end) in &ranges {
+            if *end < chars.len() {
+                assert!(
+                    is_cjk_clause_delimiter(chars[*end - 1]),
+                    "CJK cut at {end} is not on a clause delimiter"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_oversized_token_is_kept_whole() {
+        let config = PaginationConfig {
+            enabled: true,
+            fragment_size: 20,
+        };
+        // A 70-char unbreakable token is longer than fragment_size but well under
+        // TOKEN_HARD_CAP, so it must survive intact instead of being severed.
+        let token = "x".repeat(70);
+        let text = format!("alpha {token} omega");
+        let fragments = paginate_text(&text, &config);
+        assert!(
+            fragments.iter().any(|f| f.text == token),
+            "word was split: {:?}",
+            fragments.iter().map(|f| &f.text).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_token_beyond_hard_cap_is_split() {
+        let config = PaginationConfig {
+            enabled: true,
+            fragment_size: 50,
+        };
+        // Past the ceiling there is no engine-safe option but to cut.
+        let text = "y".repeat(TOKEN_HARD_CAP + 100);
+        let fragments = paginate_text(&text, &config);
+        assert!(fragments.len() > 1);
+    }
+
+    #[test]
+    fn test_punctuation_inside_latin_tokens_is_preserved() {
+        for token in [
+            "https://example.com/some/very/long/path/that/keeps/going/and/going",
+            "client/server",
+            "1,000,000",
+            "https://example.com/path?token=abcdef",
+            "https://example.com/.well-known/security.txt",
+            "../path/file.txt",
+            "some_.name",
+            "Hello!World?Test",
+        ] {
+            let fragments = paginate_text(
+                &format!("before {token} after"),
+                &PaginationConfig {
+                    enabled: true,
+                    fragment_size: 5,
+                },
+            );
+            assert!(
+                fragments.iter().any(|fragment| fragment.text == token),
+                "{fragments:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_whitespace_only_text_is_a_single_fragment() {
+        let config = PaginationConfig {
+            enabled: true,
+            fragment_size: 5,
+        };
+        let fragments = paginate_text("          ", &config);
+        assert_eq!(fragments.len(), 1);
+        assert_eq!(fragments[0].text, "          ");
+    }
+
+    #[test]
     fn test_should_paginate() {
         let config = PaginationConfig {
             enabled: true,
@@ -628,8 +1024,10 @@ mod tests {
 
     #[test]
     fn test_hindi_text_splits_at_danda() {
-        // Without the danda as a sentence end the whole text is one sentence and
-        // gets force-split at exact character counts, mid-word.
+        // The danda must stay a sentence end: without it the whole text is one
+        // sentence and falls to force-split. That fallback now snaps cuts to
+        // whitespace, so words survive either way — the danda still gives
+        // sentence-level fragments that each end on it.
         let text = "यह एक परीक्षण वाक्य है। ".repeat(6);
         let config = PaginationConfig {
             fragment_size: 60,
@@ -639,6 +1037,12 @@ mod tests {
         assert!(fragments.len() > 1);
         for fragment in &fragments {
             assert!(fragment.text.ends_with('।'), "{:?}", fragment.text);
+            for word in fragment.text.split_whitespace() {
+                assert!(
+                    text.split_whitespace().any(|w| w == word),
+                    "word {word:?} was broken across a fragment boundary"
+                );
+            }
         }
     }
 
