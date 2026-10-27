@@ -340,6 +340,11 @@
         "description": "Compact local TTS",
         "detail": "Kyutai Pocket: a 100M-parameter model built to run on the CPU, with voices in six languages."
       },
+      "edge": {
+        "title": "Edge-TTS",
+        "description": "Microsoft Edge neural TTS (free)",
+        "detail": "Free, high-quality neural voices from Microsoft Edge's online TTS service. No API key required."
+      },
       "google": {
         "title": "Google Gemini TTS",
         "description": "Google's Gemini-based cloud TTS",
@@ -467,6 +472,10 @@
       "description": "Cloud: Microsoft Foundry Speech. Requires a region endpoint and API key.",
       "apiKey": "API Key",
       "endpoint": "Endpoint"
+    },
+    "edge": {
+      "title": "Edge TTS",
+      "description": "Cloud: Microsoft Edge read-aloud voices. Free, no API key required, but needs an internet connection."
     },
     "http": {
       "title": "HTTP",
@@ -800,7 +809,7 @@
       },
       "engines": {
         "title": "Offline & Cloud TTS Engines",
-        "description": "Kokoro, Piper, Kitten, Qwen3 and Pocket run fully offline. OpenAI, ElevenLabs, Cartesia, Google, Microsoft or any HTTP endpoint for cloud voices."
+        "description": "Kokoro, Piper, Kitten, Qwen3 and Pocket run fully offline. OpenAI, ElevenLabs, Cartesia, Google, Microsoft, Edge or any HTTP endpoint for cloud voices."
       },
       "hud": {
         "title": "HUD Overlay",

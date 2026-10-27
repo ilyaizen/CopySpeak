@@ -243,6 +243,17 @@
         </div>
       </div>
 
+      <!-- Edge-TTS -->
+      <div>
+        <div class="flex items-center gap-1.5">
+          <Label class="text-sm">{$_("settings.about.edge.title")}</Label>
+          <InfoTooltip
+            text={$_("settings.about.edge.description")}
+            detail={$_("settings.about.edge.detail")}
+          />
+        </div>
+      </div>
+
       <!-- Google Gemini TTS -->
       <div>
         <div class="flex items-center gap-1.5">

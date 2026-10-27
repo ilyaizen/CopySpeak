@@ -1297,6 +1297,88 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             ],
             voices: vec![],
         },
+        EngineCatalogEntry {
+            engine: TtsEngine::Edge,
+            label: "Edge-TTS".into(),
+            description: "Free Microsoft Read Aloud voices via edge-tts. No API key required."
+                .into(),
+            docs_url: "https://github.com/rany2/edge-tts".into(),
+            supports_voice_refresh: false,
+            supports_pitch: false,
+            supports_captions: true,
+            supports_bracket_emotes: false,
+            options: vec![],
+            voices: [
+                // Genders sourced from `edge-tts --list-voices` (Microsoft's own
+                // readaloud metadata), lowercased to match the cloud engines.
+                // ── US ──────────────────────────────────────────
+                (
+                    "en-US-AvaMultilingualNeural",
+                    "Ava, Multilingual",
+                    Some("female"),
+                ),
+                (
+                    "en-US-EmmaMultilingualNeural",
+                    "Emma, Multilingual",
+                    Some("female"),
+                ),
+                (
+                    "en-US-AndrewMultilingualNeural",
+                    "Andrew, Multilingual",
+                    Some("male"),
+                ),
+                (
+                    "en-US-BrianMultilingualNeural",
+                    "Brian, Multilingual",
+                    Some("male"),
+                ),
+                ("en-US-AriaNeural", "Aria", Some("female")),
+                ("en-US-JennyNeural", "Jenny", Some("female")),
+                ("en-US-GuyNeural", "Guy", Some("male")),
+                // ponytail: Davis & Amber are absent from the live edge-tts list
+                // (likely deprecated by Microsoft); gender unknown → None.
+                ("en-US-DavisNeural", "Davis", None),
+                ("en-US-AmberNeural", "Amber", None),
+                ("en-US-AnaNeural", "Ana", Some("female")),
+                ("en-US-AndrewNeural", "Andrew", Some("male")),
+                ("en-US-AvaNeural", "Ava", Some("female")),
+                ("en-US-BrianNeural", "Brian", Some("male")),
+                ("en-US-ChristopherNeural", "Christopher", Some("male")),
+                ("en-US-EmmaNeural", "Emma", Some("female")),
+                ("en-US-EricNeural", "Eric", Some("male")),
+                ("en-US-MichelleNeural", "Michelle", Some("female")),
+                ("en-US-RogerNeural", "Roger", Some("male")),
+                ("en-US-SteffanNeural", "Steffan", Some("male")),
+                // ── GB ──────────────────────────────────────────
+                ("en-GB-SoniaNeural", "Sonia", Some("female")),
+                ("en-GB-RyanNeural", "Ryan", Some("male")),
+                ("en-GB-LibbyNeural", "Libby", Some("female")),
+                ("en-GB-MaisieNeural", "Maisie", Some("female")),
+                ("en-GB-ThomasNeural", "Thomas", Some("male")),
+                // ── AU ──────────────────────────────────────────
+                ("en-AU-NatashaNeural", "Natasha", Some("female")),
+                (
+                    "en-AU-WilliamMultilingualNeural",
+                    "William, Multilingual",
+                    Some("male"),
+                ),
+                // ── CA ──────────────────────────────────────────
+                ("en-CA-ClaraNeural", "Clara", Some("female")),
+                ("en-CA-LiamNeural", "Liam", Some("male")),
+                // ── IE ──────────────────────────────────────────
+                ("en-IE-ConnorNeural", "Connor", Some("male")),
+                ("en-IE-EmilyNeural", "Emily", Some("female")),
+            ]
+            .iter()
+            .map(|(id, label, gender)| {
+                // Edge ids encode the BCP-47 locale (en-US, en-GB, …); keep it as
+                // the grouping key so the picker clusters by region, with gender
+                // surfaced as per-row meta (see voice-picker.svelte::useLocale).
+                let locale: String = id.split('-').take(2).collect::<Vec<_>>().join("-");
+                voice(id, label, Some(locale.as_str()), None, *gender)
+            })
+            .collect(),
+        },
     ]
 }
 
@@ -1326,6 +1408,7 @@ mod tests {
             TtsEngine::Mistral,
             TtsEngine::Google,
             TtsEngine::Microsoft,
+            TtsEngine::Edge,
             TtsEngine::Kitten,
             TtsEngine::Qwen,
             TtsEngine::Piper,
@@ -1340,7 +1423,7 @@ mod tests {
                 1
             );
         }
-        assert_eq!(entries.len(), 15);
+        assert_eq!(entries.len(), 16);
     }
 
     #[test]
@@ -1369,6 +1452,7 @@ mod tests {
                 TtsEngine::Fish,
                 TtsEngine::Cartesia,
                 TtsEngine::Xai,
+                TtsEngine::Edge,
             ]
         );
     }

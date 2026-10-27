@@ -72,6 +72,15 @@
       installable: true
     },
     {
+      id: "edge",
+      name: "Edge-TTS",
+      tagline: "Works instantly",
+      detail:
+        "Free Microsoft Read Aloud voices. No API key, no downloads — start listening right away.",
+      recommended: false,
+      keyless: true
+    },
+    {
       id: "cartesia",
       name: "Cartesia",
       tagline: "Premium cloud voices",
@@ -292,8 +301,8 @@
                 </p>
               {:else}
                 <p class="text-muted-foreground text-sm">
-                  Click below to install Kokoro. The download streams here — cloud or local engines
-                  can also be set up later from the Engines page.
+                  Click below to install Kokoro. The download streams here — Edge-TTS is there
+                  instantly if you'd rather skip it.
                 </p>
               {/if}
             </div>
@@ -325,7 +334,9 @@
               Install Kokoro & Get Started
             {:else}
               {$_("onboarding.complete")}
-              — {engineChoices.find((c) => c.id === selectedEngine)?.name}
+              {#if selectedEngine !== "edge"}
+                — {engineChoices.find((c) => c.id === selectedEngine)?.name}
+              {/if}
             {/if}
           </Button>
         </div>

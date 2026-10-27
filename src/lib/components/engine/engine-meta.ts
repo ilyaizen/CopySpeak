@@ -46,10 +46,16 @@ export interface EngineSetupEntry {
 }
 
 // Cloud engines: API-key (or none). Each can be tested via test_tts_engine_config.
-// Edge-TTS is deliberately absent: Microsoft killed the free Read-Aloud protocol
-// edge-tts uses (2026-10, rany2/edge-tts#490), so the engine is hidden from the
-// UI until upstream ships a fix (see docs_internal/archive/edge-tts.md).
 export const CLOUD_ENGINES: EngineSetupEntry[] = [
+  {
+    id: "edge",
+    kind: "cloud",
+    // Cloud endpoint, reached through the local pinned `edge-tts` client
+    // (uv resolves `edge-tts==7.3.1` on demand — no app installer; a missing
+    // uv binary surfaces the command in the synthesis error).
+    credential: "none",
+    docsUrl: "https://github.com/rany2/edge-tts"
+  },
   {
     id: "openai",
     kind: "cloud",

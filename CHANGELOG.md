@@ -7,14 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Edge-TTS is back** — Microsoft's free Read Aloud voices return on the fixed `edge-tts` 7.3.1 client, which moved to Microsoft's current host and handles the 403 clock-skew retry itself. Onboarding, the Engines page, About and the profile editor offer Edge again, and fresh installs get a keyless Edge fallback profile; existing configs can simply pick Edge.
+
 ### Fixed
 
+- **Transient synthesis failures retry** — standalone 429/500/502/503/504 statuses and transport dropouts (timeout, connection reset/refused/closed, reqwest causes hidden in the error chain) retry twice with 500 ms/1 s backoff, cancellation-aware, on the non-streaming path only, so one flaky provider request no longer kills a reading.
+- **Incomplete readings say so** — when a section's synthesis fails permanently, the reading stops there and a global "Reading stopped: section N of M failed…" notice names it (toast plus error state), instead of a stalled HUD and a console-only log. Browser companion sessions stay up while buffered audio drains, then report the failure instead of "completed".
 - **The Play page's configured fragment size is now used** — the non-streaming paginated `speak_now` path gated pagination on your saved fragment size but then split with the default anyway, so a configured fragment size was silently ignored there (a fix contributed by the X-CopySpeak fork).
 
 - **Clipboard truncation no longer cuts a word in half** — a reading capped by the maximum-text-length setting now ends at the last whole word before the cap (a URL or single token with no boundary is still hard-cut), and never discards a leading word entirely (from the X-CopySpeak fork).
 
 ### Changed
 
+- **Edge requests share a process-wide cooldown** — `Retry-After` is honored (capped at five minutes) or an escalating 5/10/20 s ladder capped at 60 s applies; request starts are spaced at least one second apart, and 403/429 refusals are never retried. Failures surface as safe status messages, not raw tracebacks.
+- **Clipboard truncation warns wherever you are** — the shortened-text notice is now a global toast, not a Play-page-only banner.
 - **Kokoro streams while it synthesizes** — the wrapper now yields one chunk per native inference window instead of joining the whole fragment, so a warm Kokoro daemon starts speaking after the first window instead of after the last. Captions arrive as a cumulative snapshot per window, the same way Piper streams per sentence (from the X-CopySpeak fork).
 
 - **Changing the engine warms it immediately** — switching profile in Settings, saving engine settings, or completing onboarding now prewarms the active engine in the background, so the first reading after a change no longer pays the full model load. Saving an unchanged config is a no-op (from the X-CopySpeak fork).

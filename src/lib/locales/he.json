@@ -340,6 +340,11 @@
         "description": "TTS מקומי קומפקטי",
         "detail": "Kyutai Pocket: מודל בן 100 מיליון פרמטרים שנבנה לרוץ על המעבד, עם קולות בשש שפות."
       },
+      "edge": {
+        "title": "Edge-TTS",
+        "description": "TTS נוירוני של Microsoft Edge (חינם)",
+        "detail": "קולות נוירוניים חינמיים ואיכותיים משירות ה-TTS המקוון של Microsoft Edge. לא נדרש מפתח API."
+      },
       "google": {
         "title": "Google Gemini TTS",
         "description": "TTS בענן מבוסס Gemini של Google",
@@ -467,6 +472,10 @@
       "description": "ענן: Microsoft Foundry Speech. דורש נקודת קצה אזורית ומפתח API.",
       "apiKey": "מפתח API",
       "endpoint": "נקודת קצה"
+    },
+    "edge": {
+      "title": "Edge TTS",
+      "description": "ענן: קולות הקראה של Microsoft Edge. חינם, ללא מפתח API, אך דורש חיבור לאינטרנט."
     },
     "http": {
       "title": "HTTP",
