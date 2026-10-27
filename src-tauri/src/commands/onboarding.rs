@@ -143,6 +143,13 @@ pub fn complete_onboarding(
         config::save(&cfg)?;
     }
 
+    // The freshly installed engine is cold; prewarm off-thread so the first
+    // reading after onboarding skips the model load.
+    {
+        let tts = { config.lock().unwrap().tts.clone() };
+        crate::commands::spawn_background_prewarm(tts);
+    }
+
     let _ = app.emit("config-changed", ());
     Ok(status)
 }

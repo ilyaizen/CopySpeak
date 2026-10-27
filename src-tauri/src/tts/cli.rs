@@ -433,11 +433,12 @@ impl CliTtsBackend {
     }
 }
 
-/// Static streaming claim for a daemon-eligible engine. kokoro and pocket yield
-/// the whole utterance as one frame, so they never stream. Warm-up is a
-/// separate runtime check (`TtsBackend::runtime_ready`).
+/// Static streaming claim for a daemon-eligible engine. pocket yields the whole
+/// utterance as one frame, so it never streams. Kokoro's wrapper yields one
+/// chunk per native inference window. Warm-up is a separate runtime check
+/// (`TtsBackend::runtime_ready`).
 fn claims_streaming(engine: &str) -> bool {
-    !matches!(engine, "kokoro" | "pocket")
+    !matches!(engine, "pocket")
 }
 
 impl TtsBackend for CliTtsBackend {
@@ -1024,9 +1025,9 @@ mod tests {
 
     #[test]
     fn single_chunk_engines_never_advertise_streaming() {
-        // kokoro and pocket hand back the whole utterance as one frame, so a
-        // warm daemon has nothing to stream.
-        assert!(!claims_streaming("kokoro"));
+        // pocket hands back the whole utterance as one frame, so a warm daemon
+        // has nothing to stream. Kokoro yields per inference window and streams
+        // like the incremental engines below.
         assert!(!claims_streaming("pocket"));
     }
 
@@ -1034,7 +1035,7 @@ mod tests {
     fn incremental_engines_claim_streaming() {
         // Whether the daemon is warm is a runtime question, answered by
         // `runtime_ready` and gated at the call sites.
-        for engine in ["piper", "kitten", "qwen"] {
+        for engine in ["piper", "kitten", "qwen", "kokoro"] {
             assert!(claims_streaming(engine), "{engine} should claim streaming");
         }
     }

@@ -169,10 +169,8 @@ impl TriggerContext {
 
             // Apply max_text_length truncation
             let final_text = if sanitized_text.chars().count() > max_text_length as usize {
-                let truncated: String = sanitized_text
-                    .chars()
-                    .take(max_text_length as usize)
-                    .collect();
+                let truncated =
+                    truncate_at_word_boundary(&sanitized_text, max_text_length as usize);
                 log::info!(
                     "[Clipboard] Text truncated from {} to {} chars (max: {})",
                     sanitized_text.chars().count(),
@@ -290,6 +288,64 @@ impl ClipboardState {
     }
 }
 
+/// Truncate `text` to at most `max_chars` characters without severing a word.
+///
+/// Cuts at the last whitespace at or before the limit so a reading never starts
+/// with half a word. A single token longer than `max_chars` (a URL, a base64
+/// blob) has no boundary to snap to, so it is hard-truncated at the limit.
+/// Always returns non-empty for non-empty input.
+fn truncate_at_word_boundary(text: &str, max_chars: usize) -> String {
+    if max_chars == 0 {
+        return String::new();
+    }
+
+    let chars: Vec<char> = text.chars().collect();
+    if chars.len() <= max_chars {
+        return text.to_string();
+    }
+
+    let window = &chars[..max_chars];
+    // Cutting exactly at the cap is already clean when either side of the cut
+    // is not a word character (e.g. the cap lands on a space, or the next
+    // character starts a new word). Only back up when the cut would bisect a
+    // word, so we never give up a valid complete word.
+    let boundary_is_clean = match chars.get(max_chars) {
+        Some(&next) => !window[max_chars - 1].is_alphanumeric() || !next.is_alphanumeric(),
+        None => true,
+    };
+    let candidate: String = if boundary_is_clean {
+        window.iter().collect()
+    } else {
+        match window.iter().rposition(|c| c.is_whitespace()) {
+            // Keep the whitespace itself out of the result; trailing blanks
+            // would otherwise be re-trimmed downstream anyway.
+            Some(space) if space > 0 => window[..space].iter().collect(),
+            // Whitespace only at index 0, or none at all: fall back to the hard
+            // cap so we never return an empty string for real content.
+            _ => window.iter().collect(),
+        }
+    };
+    // A leading-space window can still be whitespace-only; keep real content.
+    let trimmed = candidate.trim_end();
+    if !trimmed.is_empty() {
+        return trimmed.to_string();
+    }
+    // The window itself is all whitespace (e.g. " leading" with max_chars == 1).
+    // Extend to the end of the next word so real content is never discarded.
+    let mut end = max_chars;
+    while end < chars.len() && chars[end].is_whitespace() {
+        end += 1;
+    }
+    while end < chars.len() && !chars[end].is_whitespace() {
+        end += 1;
+    }
+    chars[..end]
+        .iter()
+        .collect::<String>()
+        .trim_start()
+        .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -331,5 +387,36 @@ mod tests {
 
         // 4th copy -> Triggers again!
         assert!(state.on_change("hello", 800));
+    }
+
+    #[test]
+    fn test_truncate_keeps_words_whole() {
+        assert_eq!(
+            truncate_at_word_boundary("alpha beta gamma delta", 12),
+            "alpha beta"
+        );
+        // No boundary to snap to: hard cap so content is still produced.
+        assert_eq!(truncate_at_word_boundary("abcdefghijkl", 5), "abcde");
+        // At or under the limit is returned untouched.
+        assert_eq!(truncate_at_word_boundary("short", 10), "short");
+    }
+
+    #[test]
+    fn test_truncate_keeps_a_complete_word_ending_at_the_cap() {
+        // The cap lands exactly at the end of a word followed by a space, so the
+        // whole valid prefix is kept instead of backing up to an earlier space.
+        assert_eq!(
+            truncate_at_word_boundary("alpha beta gamma", 10),
+            "alpha beta"
+        );
+        // Cap mid-word still backs up to the previous boundary.
+        assert_eq!(truncate_at_word_boundary("alpha beta gamma", 9), "alpha");
+    }
+
+    #[test]
+    fn test_truncate_never_returns_empty_for_real_content() {
+        // Single long word, and a word whose only whitespace is at index 0.
+        assert!(!truncate_at_word_boundary("supercalifragilistic", 4).is_empty());
+        assert!(!truncate_at_word_boundary(" leading", 1).is_empty());
     }
 }

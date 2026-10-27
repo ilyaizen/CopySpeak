@@ -891,6 +891,7 @@ async fn speak_now_internal(
             streaming_playback,
             session_id.clone(),
             scope,
+            &pagination_config,
         )
         .await?;
         (wav, streaming_playback)
@@ -993,9 +994,9 @@ async fn synthesize_paginated(
     streaming: bool,
     session_id: Option<String>,
     scope: AbortScope,
+    pagination_config: &crate::config::PaginationConfig,
 ) -> Result<SpeechAudio, String> {
-    let pagination_config = crate::config::PaginationConfig::default();
-    let fragments = pagination::paginate_text(text, &pagination_config);
+    let fragments = pagination::paginate_text(text, pagination_config);
 
     if fragments.len() <= 1 {
         // Only one fragment — fall back to normal synthesis

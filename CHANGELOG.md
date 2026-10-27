@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The Play page's configured fragment size is now used** — the non-streaming paginated `speak_now` path gated pagination on your saved fragment size but then split with the default anyway, so a configured fragment size was silently ignored there (a fix contributed by the X-CopySpeak fork).
+
+- **Clipboard truncation no longer cuts a word in half** — a reading capped by the maximum-text-length setting now ends at the last whole word before the cap (a URL or single token with no boundary is still hard-cut), and never discards a leading word entirely (from the X-CopySpeak fork).
+
+### Changed
+
+- **Kokoro streams while it synthesizes** — the wrapper now yields one chunk per native inference window instead of joining the whole fragment, so a warm Kokoro daemon starts speaking after the first window instead of after the last. Captions arrive as a cumulative snapshot per window, the same way Piper streams per sentence (from the X-CopySpeak fork).
+
+- **Changing the engine warms it immediately** — switching profile in Settings, saving engine settings, or completing onboarding now prewarms the active engine in the background, so the first reading after a change no longer pays the full model load. Saving an unchanged config is a no-op (from the X-CopySpeak fork).
+
 ## [0.2.14] - 2026-10-20
 
 ### Added

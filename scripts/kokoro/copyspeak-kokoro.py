@@ -164,10 +164,15 @@ def native_words(text_spans, durations, sample_count, sample_offset):
 
 
 def stream(kokoro, voice: str, text: str, frontend):
-    """Yield one complete alignment before a fragment's buffered PCM.
+    """Yield one chunk per native inference window.
 
     Bypass create_timed's rescaling/trimming/pause insertion. The raw inference
     durations and waveform must come from the same call.
+
+    Yielding per window (rather than joining the whole fragment first) is what
+    lets playback start after the first window instead of after the last: the
+    Rust side forwards each chunk to the player as it lands. Captions stay a
+    cumulative snapshot, so every yield re-states all words aligned so far.
     """
     import numpy as np
 
@@ -175,9 +180,11 @@ def stream(kokoro, voice: str, text: str, frontend):
     with contextlib.redirect_stdout(sys.stderr):
         _, tokens = frontend(text, preprocess=False)
     vocab = kokoro.tokenizer.vocab
-    pcm, words, sample_offset = [], [], 0
+    words, sample_offset = [], 0
     # Validate the entire fragment before inference or releasing any PCM.
     batches = list(caption_batches(text, tokens, vocab))
+    if not batches:
+        raise ValueError("Kokoro produced no pronunciation for this text")
     for phones, spans in batches:
         ids = [vocab[p] for p in phones]
         samples, durations = kokoro.sess.run(["waveform", "duration"], {
@@ -190,11 +197,8 @@ def stream(kokoro, voice: str, text: str, frontend):
         if len(durations) != len(ids) + 2 or not np.isfinite(samples).all():
             raise ValueError("Kokoro native alignment does not match the generated audio")
         words.extend(native_words(spans, durations, len(samples), sample_offset))
-        pcm.append(pcm16(samples))
+        yield pcm16(samples), 24000, 1, {"text": text, "words": list(words)}
         sample_offset += len(samples)
-    if not pcm:
-        raise ValueError("Kokoro produced no pronunciation for this text")
-    yield b"".join(pcm), 24000, 1, {"text": text, "words": words}
 
 
 def write_wav(output: str, pcm: bytes, rate: int, channels: int) -> None:
@@ -241,16 +245,26 @@ def serve(kokoro, voice: str, frontend) -> int:
         if not line:
             continue
         try:
-            pcm, rate, channels, captions = next(stream(kokoro, voice, json.loads(line)["text"], frontend))
+            chunks = stream(kokoro, voice, json.loads(line)["text"], frontend)
+            first = next(chunks, None)
+            if first is None:
+                raise RuntimeError("no audio produced")
+            pcm, rate, channels, captions = first
             frame({
                 "ok": True,
                 "sample_rate": rate,
                 "channels": channels,
                 "bits_per_sample": 16,
             })
-            frame({"captions": captions})
-            frame({"chunk": len(pcm)})
-            out.write(pcm)
+            while True:
+                frame({"captions": captions})
+                frame({"chunk": len(pcm)})
+                out.write(pcm)
+                out.flush()
+                nxt = next(chunks, None)
+                if nxt is None:
+                    break
+                pcm, rate, channels, captions = nxt
             frame({"end": True})
         except Exception as exc:  # pragma: no cover - environment dependent
             frame({"ok": False, "error": str(exc)})
@@ -322,8 +336,16 @@ def main() -> int:
         return serve(kokoro, args.voice, frontend)
 
     try:
-        pcm, rate, channels, captions = next(stream(kokoro, args.voice, text, frontend))
-        write_wav(args.output, pcm, rate, channels)
+        # `stream` yields one chunk per native inference window, so the whole
+        # fragment must be concatenated here — taking only the first window
+        # would write a truncated WAV and a partial caption snapshot.
+        parts, captions = [], None
+        rate = channels = None
+        for pcm, rate, channels, captions in stream(kokoro, args.voice, text, frontend):
+            parts.append(pcm)
+        if not parts:
+            raise RuntimeError("no audio produced")
+        write_wav(args.output, b"".join(parts), rate, channels)
         Path(args.output + ".captions.json").write_text(json.dumps(captions), encoding="utf-8")
         print(f"OK -> {args.output}", file=sys.stderr)
         return 0

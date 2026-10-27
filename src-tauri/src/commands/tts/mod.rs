@@ -20,7 +20,7 @@ mod voices;
 // public function.
 pub use credentials::*;
 pub use health::*;
-pub(crate) use helpers::prewarm_active_profile;
+pub(crate) use helpers::{prewarm_active_profile, spawn_background_prewarm};
 pub use profiles::*;
 pub use synthesis::*;
 pub use voices::*;

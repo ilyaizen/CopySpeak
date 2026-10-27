@@ -391,6 +391,14 @@ pub(crate) fn prewarm_active_profile(tts_config: &TtsConfig) {
     create_backend_from_effective(&eff, tts_config).prewarm(&eff.voice);
 }
 
+/// Re-prewarm the active engine off-thread after a settings, profile or
+/// onboarding change. `local_daemon::prewarm` no-ops while a daemon matching
+/// the resolved command is running or starting, so this is cheap on every save
+/// and swaps in a new daemon when the engine options changed.
+pub(crate) fn spawn_background_prewarm(tts_config: TtsConfig) {
+    std::thread::spawn(move || prewarm_active_profile(&tts_config));
+}
+
 pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> String {
     match active {
         TtsEngine::Local => tts_config.voice.clone(),

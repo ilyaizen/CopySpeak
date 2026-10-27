@@ -15,7 +15,11 @@ pub fn set_active_profile(
     cfg.tts.active_profile_id = id;
     sync_active_backend_mirror(&mut cfg.tts);
     config::save(&cfg)?;
+    let tts = cfg.tts.clone();
     drop(cfg);
+    // The newly selected engine may be cold; prewarm it off-thread so the
+    // first reading after a profile switch skips the model load.
+    crate::commands::spawn_background_prewarm(tts);
     let _ = app.emit("config-changed", ());
     Ok(())
 }

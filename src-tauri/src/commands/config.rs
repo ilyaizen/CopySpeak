@@ -353,6 +353,14 @@ pub fn set_config(
         log::info!("[LocalDaemon] idle timeout set to {}s", secs);
     }
 
+    // A save may have changed the active engine, its model, voice or device;
+    // prewarm off-thread so the next reading skips the cold load. The daemon
+    // keyed on the resolved command no-ops while it is already warm.
+    {
+        let tts = { config.lock().unwrap().tts.clone() };
+        crate::commands::spawn_background_prewarm(tts);
+    }
+
     // Duck is gated by Experimental: a save that turns either switch off while
     // a reading plays must un-duck immediately through the same worker
     // (restore is a no-op when nothing is ducked; playback-finished and crash
