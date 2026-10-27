@@ -168,6 +168,7 @@
       "enabledDescription": "Muestra la superposición de la forma de onda durante la reproducción",
       "overlay": "Superposición HUD",
       "position": "Posición",
+      "positionDescription": "Dónde aparece la superposición HUD en pantalla.",
       "testHud": "Probar la pantalla HUD",
       "topLeft": "Arriba a la izquierda",
       "topCenter": "Arriba al centro",

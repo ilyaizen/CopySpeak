@@ -168,6 +168,7 @@
       "enabledDescription": "إظهار طبقة الموجة الصوتية أثناء التشغيل",
       "overlay": "طبقة HUD",
       "position": "الموضع",
+      "positionDescription": "أين يظهر تراكب HUD على الشاشة.",
       "testHud": "اختبار عرض HUD",
       "topLeft": "أعلى اليسار",
       "topCenter": "أعلى الوسط",

@@ -14,7 +14,6 @@
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
-  import { Select } from "#lib/components/ui/select/index.js";
   import { invoke } from "#lib/services/tauri";
   import { toast } from "svelte-sonner";
   import { onMount, onDestroy, tick } from "svelte";
@@ -23,7 +22,7 @@
   import { hideSaveBar } from "#lib/stores/save-bar.svelte";
   import { syncSaveBarOrAutoSave, flushAutoSave } from "#lib/stores/auto-save.svelte";
 
-  import type { AppConfig, HudPosition, RetriggerMode } from "#lib/types";
+  import type { AppConfig, RetriggerMode } from "#lib/types";
   import { isHistoryEffective, isPostProcessEffective } from "#lib/experimental-gates";
 
   let localConfig = $state<AppConfig | null>(null);
@@ -38,39 +37,6 @@
     { value: "interrupt", label: $_("settings.playback.stopAndRestart") },
     { value: "queue", label: $_("settings.playback.queueAfterCurrent") }
   ] satisfies { value: RetriggerMode; label: string }[]);
-
-  const HUD_OPTIONS = [
-    { value: "disabled", label: "Disabled" },
-    { value: "top-left", label: $_("settings.hud.topLeft") },
-    { value: "top-center", label: $_("settings.hud.topCenter") },
-    { value: "top-right", label: $_("settings.hud.topRight") },
-    { value: "bottom-left", label: $_("settings.hud.bottomLeft") },
-    { value: "bottom-center", label: $_("settings.hud.bottomCenter") },
-    { value: "bottom-right", label: $_("settings.hud.bottomRight") }
-  ];
-
-  let hudValue = $derived(
-    localConfig?.hud
-      ? localConfig.hud.enabled
-        ? localConfig.hud.position
-        : "disabled"
-      : "disabled"
-  );
-
-  function handleHudChange(e: Event) {
-    // SAFETY: this handler is only bound to the HUD <select>, whose target is that element.
-    const target = e.target as HTMLSelectElement;
-    const value = target.value;
-    if (!localConfig?.hud) return;
-
-    if (value === "disabled") {
-      localConfig.hud.enabled = false;
-    } else {
-      localConfig.hud.enabled = true;
-      // SAFETY: the only non-disabled option values are the HudPosition ids.
-      localConfig.hud.position = value as HudPosition;
-    }
-  }
 
   const historyEffective = $derived(isHistoryEffective(localConfig));
   const postProcessEffective = $derived(isPostProcessEffective(localConfig));
@@ -349,19 +315,6 @@
                   </SettingRow>
                 {/if}
                 <HotkeySettings bind:localConfig {errors} />
-                {#if localConfig.hud}
-                  <SettingRow
-                    label={$_("settings.hud.overlay")}
-                    tooltip={$_("settings.hud.enabledDescription")}
-                  >
-                    <Select
-                      options={HUD_OPTIONS}
-                      value={hudValue}
-                      onchange={handleHudChange}
-                      class="w-40"
-                    />
-                  </SettingRow>
-                {/if}
               </div>
             </div>
 

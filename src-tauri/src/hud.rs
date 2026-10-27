@@ -249,14 +249,14 @@ pub fn move_hud_offscreen(window: &WebviewWindow) {
 }
 
 pub fn show_hud(app: &AppHandle, envelope: AmplitudeEnvelope, text: Option<String>) {
-    let (config, provider, voice) = {
+    let (config, hud_effective, provider, voice) = {
         let state = app.state::<std::sync::Mutex<AppConfig>>();
         let cfg = state.lock().unwrap();
         let (p, v) = get_provider_voice(&cfg);
-        (cfg.hud.clone(), p, v)
+        (cfg.hud.clone(), cfg.is_hud_effective(), p, v)
     };
 
-    if !config.enabled {
+    if !hud_effective {
         log::debug!("HUD disabled in config, not showing");
         return;
     }
@@ -305,14 +305,14 @@ pub fn show_hud(app: &AppHandle, envelope: AmplitudeEnvelope, text: Option<Strin
 }
 
 pub fn show_hud_synthesizing(app: &AppHandle, text: Option<String>) {
-    let (config, provider, voice) = {
+    let (config, hud_effective, provider, voice) = {
         let state = app.state::<std::sync::Mutex<AppConfig>>();
         let cfg = state.lock().unwrap();
         let (p, v) = get_provider_voice(&cfg);
-        (cfg.hud.clone(), p, v)
+        (cfg.hud.clone(), cfg.is_hud_effective(), p, v)
     };
 
-    if !config.enabled {
+    if !hud_effective {
         log::debug!("HUD disabled in config, not showing synthesizing state");
         return;
     }
@@ -354,14 +354,14 @@ pub fn show_hud_synthesizing(app: &AppHandle, text: Option<String>) {
 /// Show HUD for playback of existing audio file.
 /// Emits hud:playback_start event - frontend will stream amplitude data.
 pub fn show_hud_playback(app: &AppHandle, text: Option<String>, audio_duration_ms: Option<u64>) {
-    let (config, provider, voice) = {
+    let (config, hud_effective, provider, voice) = {
         let state = app.state::<std::sync::Mutex<AppConfig>>();
         let cfg = state.lock().unwrap();
         let (p, v) = get_provider_voice(&cfg);
-        (cfg.hud.clone(), p, v)
+        (cfg.hud.clone(), cfg.is_hud_effective(), p, v)
     };
 
-    if !config.enabled {
+    if !hud_effective {
         log::debug!("HUD disabled in config, not showing for playback");
         return;
     }
@@ -430,13 +430,13 @@ pub fn emit_synthesis_progress(
     total_chars: usize,
     processed_chars: usize,
 ) {
-    let config = {
+    let (config, hud_effective) = {
         let state = app.state::<std::sync::Mutex<AppConfig>>();
         let cfg = state.lock().unwrap();
-        cfg.hud.clone()
+        (cfg.hud.clone(), cfg.is_hud_effective())
     };
 
-    if !config.enabled {
+    if !hud_effective {
         return;
     }
 
@@ -458,13 +458,13 @@ pub fn emit_synthesis_progress(
 }
 
 pub fn show_hud_clipboard_copied(app: &AppHandle, trigger_window_ms: u64) {
-    let config = {
+    let (config, hud_effective) = {
         let state = app.state::<std::sync::Mutex<AppConfig>>();
         let cfg = state.lock().unwrap();
-        cfg.hud.clone()
+        (cfg.hud.clone(), cfg.is_hud_effective())
     };
 
-    if !config.enabled {
+    if !hud_effective {
         return;
     }
 

@@ -168,6 +168,7 @@
       "enabledDescription": "Afficher la forme d'onde en superposition pendant la lecture",
       "overlay": "Superposition HUD",
       "position": "Position",
+      "positionDescription": "Où la surcouche HUD apparaît à l'écran.",
       "testHud": "Tester l'affichage HUD",
       "topLeft": "En haut à gauche",
       "topCenter": "En haut au centre",

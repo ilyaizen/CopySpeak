@@ -168,6 +168,7 @@
       "enabledDescription": "播放时显示波形浮层",
       "overlay": "HUD 浮层",
       "position": "位置",
+      "positionDescription": "HUD 悬浮窗在屏幕上的显示位置。",
       "testHud": "测试 HUD 显示",
       "topLeft": "左上",
       "topCenter": "顶部居中",

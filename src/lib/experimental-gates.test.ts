@@ -2,7 +2,8 @@ import { describe, expect, test } from "vite-plus/test";
 import {
   isHistoryEffective,
   isPostProcessEffective,
-  isDuckEffective
+  isDuckEffective,
+  isHudEffective
 } from "#lib/experimental-gates";
 
 describe("isHistoryEffective", () => {
@@ -103,5 +104,39 @@ describe("isDuckEffective", () => {
         playback: { duck: { enabled: false } }
       })
     ).toBe(false);
+  });
+});
+
+describe("isHudEffective", () => {
+  test("returns true when both experimental and hud are enabled", () => {
+    expect(
+      isHudEffective({
+        general: { experimental_enabled: true },
+        hud: { enabled: true }
+      })
+    ).toBe(true);
+  });
+
+  test("returns false when experimental is off even if hud is enabled", () => {
+    expect(
+      isHudEffective({
+        general: { experimental_enabled: false },
+        hud: { enabled: true }
+      })
+    ).toBe(false);
+  });
+
+  test("returns false when hud is off", () => {
+    expect(
+      isHudEffective({
+        general: { experimental_enabled: true },
+        hud: { enabled: false }
+      })
+    ).toBe(false);
+  });
+
+  test("handles null or undefined config safely", () => {
+    expect(isHudEffective(null)).toBe(false);
+    expect(isHudEffective(undefined)).toBe(false);
   });
 });

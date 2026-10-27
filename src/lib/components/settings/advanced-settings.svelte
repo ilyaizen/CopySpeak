@@ -2,11 +2,38 @@
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { Slider } from "#lib/components/ui/slider/index.js";
-  import type { AppConfig } from "#lib/types";
+  import { Select } from "#lib/components/ui/select/index.js";
+  import type { AppConfig, HudPosition } from "#lib/types";
   import { _ } from "svelte-i18n";
 
   let { localConfig = $bindable() }: { localConfig: AppConfig } = $props();
   const supportsDuck = navigator.userAgent.includes("Windows");
+
+  const HUD_OPTIONS = [
+    { value: "disabled", label: "Disabled" },
+    { value: "top-left", label: $_("settings.hud.topLeft") },
+    { value: "top-center", label: $_("settings.hud.topCenter") },
+    { value: "top-right", label: $_("settings.hud.topRight") },
+    { value: "bottom-left", label: $_("settings.hud.bottomLeft") },
+    { value: "bottom-center", label: $_("settings.hud.bottomCenter") },
+    { value: "bottom-right", label: $_("settings.hud.bottomRight") }
+  ];
+
+  let hudValue = $derived(localConfig.hud.enabled ? localConfig.hud.position : "disabled");
+
+  function handleHudChange(e: Event) {
+    // SAFETY: this handler is only bound to the HUD <select>, whose target is that element.
+    const target = e.target as HTMLSelectElement;
+    const value = target.value;
+
+    if (value === "disabled") {
+      localConfig.hud.enabled = false;
+    } else {
+      localConfig.hud.enabled = true;
+      // SAFETY: the only non-disabled option values are the HudPosition ids.
+      localConfig.hud.position = value as HudPosition;
+    }
+  }
 </script>
 
 <div class="divide-border divide-y">
@@ -93,6 +120,30 @@
               </div>
             </SettingRow>
           {/if}
+        {/if}
+        <SettingRow
+          label={$_("settings.hud.overlay")}
+          tooltip={$_("settings.hud.enabledDescription")}
+        >
+          <Switch
+            id="hud-enabled"
+            aria-label={$_("settings.hud.overlay")}
+            bind:checked={localConfig.hud.enabled}
+          />
+        </SettingRow>
+        {#if localConfig.hud.enabled}
+          <SettingRow
+            label={$_("settings.hud.position")}
+            tooltip={$_("settings.hud.positionDescription")}
+          >
+            <Select
+              id="hud-position"
+              options={HUD_OPTIONS}
+              value={hudValue}
+              onchange={handleHudChange}
+              class="w-40"
+            />
+          </SettingRow>
         {/if}
         <p class="text-muted-foreground text-sm leading-relaxed">
           {$_("settings.general.profileEffects")}

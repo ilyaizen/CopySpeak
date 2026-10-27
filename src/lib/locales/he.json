@@ -168,6 +168,7 @@
       "enabledDescription": "הצג שכבת גלי קול במהלך ההשמעה",
       "overlay": "שכבת HUD",
       "position": "מיקום",
+      "positionDescription": "היכן שכבת ה-HUD מופיעה על המסך.",
       "testHud": "בדוק תצוגת HUD",
       "topLeft": "למעלה משמאל",
       "topCenter": "למעלה במרכז",

@@ -593,4 +593,25 @@ mod tests {
         config.playback.duck.enabled = true;
         assert!(config.is_duck_effective());
     }
+
+    #[test]
+    fn effective_hud_predicate_truth_table() {
+        let mut config = AppConfig::default();
+
+        config.general.experimental_enabled = false;
+        config.hud.enabled = false;
+        assert!(!config.is_hud_effective());
+
+        config.general.experimental_enabled = false;
+        config.hud.enabled = true;
+        assert!(!config.is_hud_effective());
+
+        config.general.experimental_enabled = true;
+        config.hud.enabled = false;
+        assert!(!config.is_hud_effective());
+
+        config.general.experimental_enabled = true;
+        config.hud.enabled = true;
+        assert!(config.is_hud_effective());
+    }
 }

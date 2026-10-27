@@ -19,6 +19,11 @@ export interface DuckGateConfig {
   playback?: { duck?: { enabled?: boolean } };
 }
 
+export interface HudGateConfig {
+  general?: { experimental_enabled?: boolean };
+  hud?: { enabled?: boolean };
+}
+
 /** Resolves true only when both Experimental and History are enabled. */
 export function isHistoryEffective(config?: HistoryGateConfig | null): boolean {
   return config?.general?.experimental_enabled === true && config?.history?.enabled === true;
@@ -32,4 +37,9 @@ export function isPostProcessEffective(config?: PostProcessGateConfig | null): b
 /** Resolves true only when both Experimental and Duck are enabled. */
 export function isDuckEffective(config?: DuckGateConfig | null): boolean {
   return config?.general?.experimental_enabled === true && config?.playback?.duck?.enabled === true;
+}
+
+/** Resolves true only when both Experimental and the HUD overlay are enabled. */
+export function isHudEffective(config?: HudGateConfig | null): boolean {
+  return config?.general?.experimental_enabled === true && config?.hud?.enabled === true;
 }

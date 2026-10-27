@@ -168,6 +168,7 @@
       "enabledDescription": "Shows the waveform overlay during playback; off, playback is audio-only.",
       "overlay": "HUD Overlay",
       "position": "Position",
+      "positionDescription": "Where the HUD overlay appears on screen.",
       "testHud": "Test HUD Display",
       "topLeft": "Top Left",
       "topCenter": "Top Center",

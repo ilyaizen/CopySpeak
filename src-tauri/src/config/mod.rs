@@ -247,6 +247,10 @@ impl AppConfig {
         self.general.experimental_enabled && self.history.enabled
     }
 
+    pub fn is_hud_effective(&self) -> bool {
+        self.general.experimental_enabled && self.hud.enabled
+    }
+
     pub fn is_duck_effective(&self) -> bool {
         self.general.experimental_enabled && self.playback.duck.enabled
     }

@@ -168,6 +168,7 @@
       "enabledDescription": "प्लेबैक के दौरान वेवफ़ॉर्म ओवरले दिखाएँ",
       "overlay": "HUD ओवरले",
       "position": "स्थिति",
+      "positionDescription": "स्क्रीन पर HUD ओवरले कहाँ दिखाई देता है।",
       "testHud": "HUD डिस्प्ले परखें",
       "topLeft": "ऊपर बाएँ",
       "topCenter": "ऊपर बीच में",

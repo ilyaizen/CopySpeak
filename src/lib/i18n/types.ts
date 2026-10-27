@@ -159,6 +159,7 @@ export type TranslationKeys =
   | "settings.hud.enabledDescription"
   | "settings.hud.overlay"
   | "settings.hud.position"
+  | "settings.hud.positionDescription"
   | "settings.hud.testHud"
   | "settings.hud.topLeft"
   | "settings.hud.topCenter"

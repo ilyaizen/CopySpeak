@@ -75,6 +75,7 @@ it("keeps streaming in Advanced while legacy experimental flags are inert and hi
   config.history.enabled = true;
   config.post_process.enabled = true;
   config.playback.duck.enabled = true;
+  config.hud.enabled = true;
   const view = await mountSettings();
   const nav = within(view.getByRole("navigation"));
   expect(nav.getAllByRole("button").map((button) => button.textContent?.trim())).toEqual([
@@ -90,6 +91,7 @@ it("keeps streaming in Advanced while legacy experimental flags are inert and hi
   expect(view.container.querySelector("#history")).toBeNull();
   expect(view.container.querySelector("#postProcess")).toBeNull();
   expect(view.container.querySelector("#playback-duck")).toBeNull();
+  expect(view.container.querySelector("#hud-enabled")).toBeNull();
 });
 
 it("mounts opted-in detail sections once and returns focus to Advanced when hidden", async () => {
@@ -100,8 +102,10 @@ it("mounts opted-in detail sections once and returns focus to Advanced when hidd
   expect(view.container.querySelector("#postProcess")).toBeNull();
   await fireEvent.click(view.container.querySelector("#history-enabled")!);
   await fireEvent.click(view.container.querySelector("#post-process-enabled")!);
+  await fireEvent.click(view.container.querySelector("#hud-enabled")!);
   expect(view.container.querySelectorAll("#history-enabled")).toHaveLength(1);
   expect(view.container.querySelectorAll("#post-process-enabled")).toHaveLength(1);
+  expect(view.container.querySelector("#hud-position")).not.toBeNull();
   expect(view.container.querySelector("#history")).not.toBeNull();
   expect(view.container.querySelector("#postProcess textarea")).not.toBeNull();
   const nav = within(view.getByRole("navigation"));

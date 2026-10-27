@@ -168,6 +168,7 @@
       "enabledDescription": "Показывать волну поверх экрана во время воспроизведения",
       "overlay": "HUD-оверлей",
       "position": "Положение",
+      "positionDescription": "Где на экране появляется оверлей HUD.",
       "testHud": "Проверить HUD",
       "topLeft": "Вверху слева",
       "topCenter": "Вверху по центру",

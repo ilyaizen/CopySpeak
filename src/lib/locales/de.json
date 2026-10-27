@@ -168,6 +168,7 @@
       "enabledDescription": "Wellenform-Overlay während der Wiedergabe anzeigen",
       "overlay": "HUD-Overlay",
       "position": "Position",
+      "positionDescription": "Wo das HUD-Overlay auf dem Bildschirm erscheint.",
       "testHud": "HUD-Anzeige testen",
       "topLeft": "Oben links",
       "topCenter": "Oben mittig",
