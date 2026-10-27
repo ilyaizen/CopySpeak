@@ -14,7 +14,7 @@ use crate::tts::TtsBackend;
 use crate::AbortScope;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
@@ -63,16 +63,346 @@ fn log_tts_debug(tag: &str, backend: &str, text: &str) {
     }
 }
 
-/// Synthesize audio using spawn_blocking
+/// Synthesize audio using spawn_blocking, retrying transient failures.
+///
+/// Bounded: two retries after the initial attempt, 500 ms / 1 s backoff, and
+/// the abort scope is polled during backoff. The batch path never emits PCM
+/// before returning, so a retry cannot duplicate audio the user already
+/// heard; the streaming path (which does) is never retried.
 async fn synthesize_async(
     backend: Arc<Box<dyn TtsBackend>>,
     text: String,
     voice: String,
+    scope: AbortScope,
 ) -> Result<SpeechAudio, String> {
-    tokio::task::spawn_blocking(move || backend.synthesize_with_captions(&text, &voice))
+    let result = retry_synthesis(
+        || {
+            let backend = backend.clone();
+            let text = text.clone();
+            let voice = voice.clone();
+            async move {
+                tokio::task::spawn_blocking(move || backend.synthesize_with_captions(&text, &voice))
+                    .await
+                    .map_err(|e| format!("Task join error: {e}"))?
+                    .map_err(|e| e.to_string())
+            }
+        },
+        || scope.aborted(),
+        // A backend that just told us the provider refused this request keeps
+        // that verdict: retrying amplifies throttling rather than recovering.
+        || !backend.failure_is_final(),
+        Duration::from_millis(500),
+    )
+    .await;
+    if scope.aborted() {
+        // The abort paths downstream key on empty bytes plus the scope, so a
+        // cancelled retry surfaces as "nothing synthesized", not an error.
+        Ok(Vec::new().into())
+    } else {
+        result
+    }
+}
+
+/// Wording for a section that could not be synthesized.
+///
+/// Pure so it can be asserted directly. The reading loop returns after this
+/// error, so this section and every later one are never spoken; wording that
+/// only describes the *already synthesized* fragments would read as though
+/// the whole passage had been read.
+fn section_failure_message(index: usize, total: usize, error: &str) -> String {
+    if total <= 1 {
+        format!("Reading failed: {error}")
+    } else if index.saturating_add(1) >= total {
+        // The final section failed, so nothing follows it; claiming "the rest
+        // of the passage was not read" would describe text that does not exist.
+        // `saturating_add` keeps a defensive index from panicking in here.
+        format!(
+            "Reading stopped: the final section ({} of {}) failed. {error}",
+            index.saturating_add(1),
+            total
+        )
+    } else {
+        format!(
+            "Reading stopped: section {} of {} failed, so the rest of the passage was not read. {error}",
+            index + 1,
+            total
+        )
+    }
+}
+
+/// Report a permanently failed reading section once, globally.
+///
+/// Emits `reading-failed` naming the failed section and returns the message
+/// for the caller to propagate. Gated on the abort scope so an aborted
+/// reading is never reported as a failure.
+fn report_section_failure(
+    app: &AppHandle,
+    index: usize,
+    total: usize,
+    scope: AbortScope,
+    error: String,
+) -> String {
+    let message = section_failure_message(index, total, &error);
+    if !scope.aborted() {
+        log::error!("[TTS] {message}");
+        let _ = app.emit("reading-failed", &message);
+    }
+    message
+}
+
+fn transient_synthesis_error(message: &str) -> bool {
+    let message = message.to_ascii_lowercase();
+    // Every condition is evaluated; a permanent code must not short-circuit the
+    // scan. edge-tts reports its real failure as
+    // `NoAudioReceived("No audio was received...")` next to the `403` from the
+    // refused handshake. A first-token-wins form would read that `403`,
+    // return "permanent", and never reach the phrase list below — so the
+    // transient no-audio failure would never be retried.
+    let retryable_status =
+        (message.contains("http") || message.contains("status") || message.contains("api error"))
+            && message
+                .split(|character: char| !character.is_ascii_alphanumeric())
+                .any(|token| matches!(token, "429" | "500" | "502" | "503" | "504"));
+    if retryable_status {
+        return true;
+    }
+    [
+        "timeout",
+        "timed out",
+        "connection reset",
+        "connection closed",
+        "connection aborted",
+        "connection refused",
+        "no audio was received",
+        "daemon closed its output",
+        // reqwest's own transport failures. Its `Display` prints only the error
+        // kind ("error sending request"), so a timeout or a cut connection is
+        // recognised by the kind even when the reason chain is unavailable.
+        "error sending request",
+        "request or response body error",
+    ]
+    .iter()
+    .any(|reason| message.contains(reason))
+}
+
+async fn retry_synthesis<T, Operation, Attempt, Cancelled, CanRetry>(
+    mut operation: Operation,
+    is_cancelled: Cancelled,
+    can_retry: CanRetry,
+    retry_delay: Duration,
+) -> Result<T, String>
+where
+    Operation: FnMut() -> Attempt,
+    Attempt: std::future::Future<Output = Result<T, String>>,
+    Cancelled: Fn() -> bool,
+    CanRetry: Fn() -> bool,
+{
+    for attempt in 0..3 {
+        if is_cancelled() {
+            return Err("Reading cancelled".into());
+        }
+        match operation().await {
+            Ok(value) => return Ok(value),
+            Err(error) => {
+                if is_cancelled() {
+                    return Err("Reading cancelled".into());
+                }
+                if attempt == 2 || !can_retry() || !transient_synthesis_error(&error) {
+                    return Err(error);
+                }
+                log::warn!(
+                    "[TTS] Transient synthesis failure; retry {}/2: {}",
+                    attempt + 1,
+                    error
+                );
+                let deadline = tokio::time::Instant::now() + retry_delay * (attempt + 1);
+                while tokio::time::Instant::now() < deadline {
+                    if is_cancelled() {
+                        return Err("Reading cancelled".into());
+                    }
+                    tokio::time::sleep(
+                        Duration::from_millis(50)
+                            .min(deadline.saturating_duration_since(tokio::time::Instant::now())),
+                    )
+                    .await;
+                }
+            }
+        }
+    }
+    unreachable!("retry_synthesis returns within 3 attempts")
+}
+
+#[cfg(test)]
+mod retry_tests {
+    use super::*;
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+    #[tokio::test]
+    async fn retries_transient_errors_without_skipping_text() {
+        let attempts = AtomicUsize::new(0);
+        let result = retry_synthesis(
+            || {
+                std::future::ready(if attempts.fetch_add(1, Ordering::SeqCst) < 2 {
+                    Err("HTTP error: 503 Service Unavailable".into())
+                } else {
+                    Ok("complete section")
+                })
+            },
+            || false,
+            || true,
+            Duration::ZERO,
+        )
+        .await;
+        assert_eq!(result.unwrap(), "complete section");
+        assert_eq!(attempts.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn permanent_and_partially_played_failures_are_not_retried() {
+        for (error, can_retry) in [("401 Unauthorized", true), ("HTTP 503", false)] {
+            let attempts = AtomicUsize::new(0);
+            let result: Result<(), String> = retry_synthesis(
+                || {
+                    attempts.fetch_add(1, Ordering::SeqCst);
+                    std::future::ready(Err(error.into()))
+                },
+                || false,
+                || can_retry,
+                Duration::ZERO,
+            )
+            .await;
+            assert_eq!(result.unwrap_err(), error);
+            assert_eq!(attempts.load(Ordering::SeqCst), 1);
+        }
+    }
+
+    #[tokio::test]
+    async fn retries_are_bounded_and_cancellation_prevents_another_attempt() {
+        let attempts = AtomicUsize::new(0);
+        let result: Result<(), String> = retry_synthesis(
+            || {
+                attempts.fetch_add(1, Ordering::SeqCst);
+                std::future::ready(Err("HTTP 429".into()))
+            },
+            || false,
+            || true,
+            Duration::ZERO,
+        )
+        .await;
+        assert_eq!(result.unwrap_err(), "HTTP 429");
+        assert_eq!(attempts.load(Ordering::SeqCst), 3);
+        let cancelled = AtomicBool::new(false);
+        let result: Result<(), String> = retry_synthesis(
+            || {
+                cancelled.store(true, Ordering::SeqCst);
+                std::future::ready(Err("HTTP 503".into()))
+            },
+            || cancelled.load(Ordering::SeqCst),
+            || true,
+            Duration::ZERO,
+        )
+        .await;
+        assert_eq!(result.unwrap_err(), "Reading cancelled");
+    }
+
+    #[tokio::test]
+    async fn cancellation_interrupts_backoff_before_another_request() {
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let signal = cancelled.clone();
+        let cancel_task = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(20)).await;
+            signal.store(true, Ordering::SeqCst);
+        });
+        let attempts = AtomicUsize::new(0);
+        let result: Result<(), String> = tokio::time::timeout(
+            Duration::from_secs(1),
+            retry_synthesis(
+                || {
+                    attempts.fetch_add(1, Ordering::SeqCst);
+                    std::future::ready(Err("HTTP 503".into()))
+                },
+                || cancelled.load(Ordering::SeqCst),
+                || true,
+                Duration::from_secs(60),
+            ),
+        )
         .await
-        .map_err(|e| format!("Task join error: {e}"))?
-        .map_err(|e| e.to_string())
+        .unwrap();
+        cancel_task.await.unwrap();
+        assert_eq!(result.unwrap_err(), "Reading cancelled");
+        assert_eq!(attempts.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn status_classification_does_not_retry_permanent_or_incidental_numbers() {
+        // A permanent HTTP status is not retried on its own.
+        assert!(!transient_synthesis_error(
+            "HTTP 401 Unauthorized: invalid API key"
+        ));
+        assert!(!transient_synthesis_error(
+            "HTTP 403: voice model not found"
+        ));
+        assert!(!transient_synthesis_error(
+            "voice model 50300 was not found"
+        ));
+        assert!(!transient_synthesis_error(
+            "invalid transcript contains 503"
+        ));
+        assert!(transient_synthesis_error(
+            "HTTP error: Google API error 503 Service Unavailable"
+        ));
+        assert!(transient_synthesis_error(
+            "WSServerHandshakeError: 503 Invalid response status"
+        ));
+    }
+
+    #[test]
+    fn transient_signal_beats_a_coincidental_permanent_status() {
+        // The exact shape of the fork user's Edge failure: the refused
+        // handshake's 403 precedes the real no-audio error, and must not mask it.
+        assert!(transient_synthesis_error(
+            "edge-tts exit exit status: 1: NoAudioReceived(\"No audio was received. \
+             Please verify that your parameters are correct.\") status=403"
+        ));
+        // A retryable status counts wherever it appears in the string.
+        assert!(transient_synthesis_error(
+            "status 403 handled; upstream returned 503"
+        ));
+        // A provider status error need not say "http" or "status".
+        assert!(transient_synthesis_error(
+            "ElevenLabs API error 503 Service Unavailable: overloaded"
+        ));
+        // reqwest reports transport failures as a bare error kind.
+        assert!(transient_synthesis_error(
+            "Request failed: error sending request"
+        ));
+        assert!(transient_synthesis_error(
+            "Streaming synthesis failed mid-stream: request or response body error"
+        ));
+        assert!(transient_synthesis_error(
+            "Request failed: error sending request: operation timed out"
+        ));
+        // A response-body read failure keeps its cause in the flattened chain.
+        assert!(transient_synthesis_error(
+            "Failed to read bytes: request or response body error: connection reset by peer"
+        ));
+        // A local CLI `exit status: 1` is not itself a transient signal.
+        assert!(!transient_synthesis_error(
+            "edge-tts exit exit status: 1: ERROR: voice model not found"
+        ));
+    }
+
+    #[test]
+    fn failure_message_states_that_the_rest_was_not_read() {
+        let many = section_failure_message(3, 10, "HTTP 503 Service Unavailable");
+        assert!(many.contains("section 4 of 10"));
+        assert!(many.contains("the rest of the passage was not read"));
+        // A single-section reading has no "section 1 of 1" to report.
+        assert_eq!(
+            section_failure_message(0, 1, "HTTP 503"),
+            "Reading failed: HTTP 503"
+        );
+    }
 }
 
 /// Extract envelope with default fallback
@@ -910,7 +1240,9 @@ async fn speak_now_internal(
         (wav, true)
     } else {
         // Simple synthesis
-        let wav = synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?;
+        let wav = synthesize_async(backend_arc.clone(), text.clone(), voice.clone(), scope)
+            .await
+            .map_err(|e| report_section_failure(&app, 0, 1, scope, e))?;
         (wav, false)
     };
 
@@ -1012,8 +1344,16 @@ async fn synthesize_paginated(
                 scope,
             )
             .await
+            .map_err(|e| report_section_failure(app, 0, 1, scope, e))
         } else {
-            synthesize_async(backend_arc.clone(), text.to_string(), voice.to_string()).await
+            synthesize_async(
+                backend_arc.clone(),
+                text.to_string(),
+                voice.to_string(),
+                scope,
+            )
+            .await
+            .map_err(|e| report_section_failure(app, 0, 1, scope, e))
         };
     }
 
@@ -1079,10 +1419,11 @@ async fn synthesize_paginated(
                 backend_arc.clone(),
                 fragment.text.clone(),
                 voice.to_string(),
+                scope,
             )
             .await
         }
-        .map_err(|e| format!("Fragment {} synthesis failed: {}", i + 1, e))?;
+        .map_err(|e| report_section_failure(app, i, fragments.len(), scope, e))?;
 
         if scope.aborted() {
             return Ok(Vec::new().into());
@@ -1515,9 +1856,17 @@ async fn speak_queued_internal(
                 session_id.clone(),
                 scope,
             )
-            .await?
+            .await
+            .map_err(|e| report_section_failure(&app, index, total, scope, e))?
         } else {
-            synthesize_async(backend_arc.clone(), fragment.text.clone(), voice.clone()).await?
+            synthesize_async(
+                backend_arc.clone(),
+                fragment.text.clone(),
+                voice.clone(),
+                scope,
+            )
+            .await
+            .map_err(|e| report_section_failure(&app, index, total, scope, e))?
         };
         let fragment_duration = fragment_start.elapsed();
         if scope.aborted() {
@@ -1726,7 +2075,9 @@ pub async fn speak_history_entry(
     let synthesis_start = Instant::now();
 
     // Synthesize
-    let wav_bytes = synthesize_async(backend_arc.clone(), text.clone(), voice.clone()).await?;
+    let wav_bytes = synthesize_async(backend_arc.clone(), text.clone(), voice.clone(), scope)
+        .await
+        .map_err(|e| report_section_failure(&app, 0, 1, scope, e))?;
     if scope.aborted() {
         return Ok(());
     }

@@ -146,7 +146,12 @@ impl TtsBackend for GoogleTtsBackend {
                 .json(&body)
                 .send()
                 .await
-                .map_err(|e| TtsError::Http(format!("Google stream request failed: {e}")))?;
+                .map_err(|e| {
+                    TtsError::Http(format!(
+                        "Google stream request failed: {}",
+                        super::http::flatten_error(&e)
+                    ))
+                })?;
             let status = response.status();
             if !status.is_success() {
                 let error_text = response.text().await.unwrap_or_default();
@@ -156,11 +161,12 @@ impl TtsBackend for GoogleTtsBackend {
             }
 
             let mut buffer = String::new();
-            while let Some(chunk) = response
-                .chunk()
-                .await
-                .map_err(|e| TtsError::Http(format!("Google stream read failed: {e}")))?
-            {
+            while let Some(chunk) = response.chunk().await.map_err(|e| {
+                TtsError::Http(format!(
+                    "Google stream read failed: {}",
+                    super::http::flatten_error(&e)
+                ))
+            })? {
                 buffer.push_str(&String::from_utf8_lossy(&chunk));
                 for payload in Self::drain_sse_payloads(&mut buffer) {
                     let Some((pcm, rate)) = Self::audio_from_sse_event(&payload) else {
@@ -222,7 +228,10 @@ impl TtsBackend for GoogleTtsBackend {
                 start_time.elapsed(),
                 e
             );
-            TtsError::Http(format!("Request failed: {}", e))
+            TtsError::Http(format!(
+                "Request failed: {}",
+                super::http::flatten_error(&e)
+            ))
         })?;
 
         let status = response.status();
@@ -232,8 +241,12 @@ impl TtsBackend for GoogleTtsBackend {
             start_time.elapsed()
         );
 
-        let text_body = block_on_async(async { response.text().await })
-            .map_err(|e| TtsError::Http(format!("Failed to read body: {}", e)))?;
+        let text_body = block_on_async(async { response.text().await }).map_err(|e| {
+            TtsError::Http(format!(
+                "Failed to read body: {}",
+                super::http::flatten_error(&e)
+            ))
+        })?;
 
         if !status.is_success() {
             log::error!("Google API error {}: {}", status, text_body);

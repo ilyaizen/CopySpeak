@@ -100,7 +100,12 @@ impl XaiTtsBackend {
                 .json(&body)
                 .send()
                 .await
-                .map_err(|e| TtsError::Http(format!("Request failed: {e}")))?;
+                .map_err(|e| {
+                    TtsError::Http(format!(
+                        "Request failed: {}",
+                        super::http::flatten_error(&e)
+                    ))
+                })?;
 
             let status = response.status();
             log::info!(
@@ -111,10 +116,12 @@ impl XaiTtsBackend {
             );
 
             // Same block: read the envelope text while the connection is live.
-            let body_text = response
-                .text()
-                .await
-                .map_err(|e| TtsError::Http(format!("Failed to read response body: {e}")))?;
+            let body_text = response.text().await.map_err(|e| {
+                TtsError::Http(format!(
+                    "Failed to read response body: {}",
+                    super::http::flatten_error(&e)
+                ))
+            })?;
 
             if !status.is_success() {
                 log::error!("xAI API error {}: {}", status, body_text);
@@ -166,12 +173,19 @@ impl XaiTtsBackend {
                 .header("Accept", "application/json")
                 .send()
                 .await
-                .map_err(|e| TtsError::Http(format!("Failed to fetch voices: {}", e)))?;
+                .map_err(|e| {
+                    TtsError::Http(format!(
+                        "Failed to fetch voices: {}",
+                        super::http::flatten_error(&e)
+                    ))
+                })?;
             let status = response.status();
-            let body = response
-                .text()
-                .await
-                .map_err(|e| TtsError::Http(format!("Failed to read voices response: {}", e)))?;
+            let body = response.text().await.map_err(|e| {
+                TtsError::Http(format!(
+                    "Failed to read voices response: {}",
+                    super::http::flatten_error(&e)
+                ))
+            })?;
             Ok::<_, TtsError>((status, body))
         })?;
 

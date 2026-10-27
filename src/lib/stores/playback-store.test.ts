@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
 import { playbackStore } from "./playback-store.svelte";
 import { emit, emitTo, listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
+import { toast } from "svelte-sonner";
 import { PcmStreamScheduler } from "./playback/pcm-stream";
 
 const { listeners, live, ipc } = vi.hoisted(() => ({
@@ -13,6 +14,7 @@ const { listeners, live, ipc } = vi.hoisted(() => ({
 }));
 vi.mock("#lib/services/tauri.js", () => ({ isTauri: true }));
 vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async () => undefined) }));
+vi.mock("svelte-sonner", () => ({ toast: { error: vi.fn(), warning: vi.fn() } }));
 vi.mock("@tauri-apps/api/event", () => ({
   listen: vi.fn(async (name, callback) => {
     await ipc.ready;
@@ -146,6 +148,45 @@ it("emits playback-finished when a reading ends and when it is stopped", async (
   vi.mocked(emit).mockClear();
   playbackStore.handleStop();
   expect(emit).toHaveBeenCalledWith("playback-finished", null);
+});
+
+it("reports an incomplete reading and clears it when the next reading starts", async () => {
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  await sendAudio(0);
+  await sendAudio(1);
+  const message =
+    "Reading stopped: section 3 of 5 failed, so the rest of the passage was not read. HTTP 503";
+  await listeners.get("reading-failed")!({ payload: message });
+  expect(playbackStore.error).toBe(message);
+  expect(toast.error).toHaveBeenCalledWith(message, { duration: 15000 });
+  // A new reading owns the failure state from here on.
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  expect(playbackStore.error).toBeNull();
+});
+
+it("warns about clipboard truncation independently of the active route", async () => {
+  await listeners.get("text-truncated")!({
+    payload: { original_length: 120000, truncated_length: 99999, max_length: 100000 }
+  });
+  expect(toast.warning).toHaveBeenCalledWith(expect.stringContaining("120000 to 99999"), {
+    duration: 15000
+  });
+});
+
+it("does not label a failed browser reading completed when its audio drains", async () => {
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  await sendAudio(0, "b1");
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(1));
+  await listeners.get("reading-failed")!({
+    payload: "Reading stopped: section 2 of 5 failed, so the rest of the passage was not read."
+  });
+  audio.dispatchEvent(new Event("ended"));
+  await vi.waitFor(() =>
+    expect(vi.mocked(invoke)).toHaveBeenCalledWith("browser_reading_finished", {
+      sessionId: "b1",
+      status: "error"
+    })
+  );
 });
 
 it("plays grouped fragments in order and retains the reading for Replay", async () => {

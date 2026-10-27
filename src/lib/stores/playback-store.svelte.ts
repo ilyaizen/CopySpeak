@@ -11,6 +11,7 @@
 
 import { isTauri } from "#lib/services/tauri.js";
 import { invoke } from "@tauri-apps/api/core";
+import { toast } from "svelte-sonner";
 import type { AppConfig, EffectId } from "#lib/types";
 import { effectiveEffect } from "#lib/effects-gate";
 import { applyFadeIn, audioBufferToWavBlob, detectAudioMimeType } from "./playback/audio-utils.js";
@@ -63,6 +64,8 @@ class PlaybackStore {
   private _stopping = false;
   private _playbackGeneration = 0;
   private _readingText = "";
+  /** Failure message for the current reading; retained until the next starts. */
+  private _readingFailure: string | null = null;
   private _fragmentCaptions: CaptionAlignment | null = null;
   private _streamStopped = false;
   /** Session of the reading that created the live PCM scheduler. */
@@ -390,13 +393,15 @@ class PlaybackStore {
     this.totalFragments = null;
     this._pcmScheduler = null;
     this._streamSessionId = null;
-    this.reportBrowserFinished("completed");
+    // A reading that hit reading-failed ends in "error"; a normal one in
+    // "completed". The bridge keeps a delivered session up for this report.
+    this.reportBrowserFinished(this._readingFailure === null ? "completed" : "error");
     void this._emit?.("hud:stop", null);
     this.emitPlaybackFinished();
   }
 
   /** Tell the bridge the followed audio ended, so the page clears its highlight. */
-  private reportBrowserFinished(status: "completed" | "cancelled"): void {
+  private reportBrowserFinished(status: "completed" | "cancelled" | "error"): void {
     const sessionId = this._browserSessionId;
     if (sessionId === null) return;
     this._browserSessionId = null;
@@ -771,6 +776,28 @@ class PlaybackStore {
         }
       );
 
+      // A section failed permanently after bounded retries; the reading stops
+      // there and the already-buffered audio drains. Retained until the next
+      // reading starts so the terminal report says "error", not "completed".
+      const unReadingFailed = await listen<string>("reading-failed", (event) => {
+        this._readingFailure = event.payload;
+        this.error = event.payload;
+        toast.error(event.payload, { duration: 15000 });
+      });
+
+      // Global truncation notice: the Play page keeps its inline banner, but a
+      // capped clipboard must not stay silent when another page is open.
+      const unTruncated = await listen<{
+        original_length: number;
+        truncated_length: number;
+        max_length: number;
+      }>("text-truncated", (event) => {
+        toast.warning(
+          `Copied text was shortened from ${event.payload.original_length} to ${event.payload.truncated_length} characters by the reading limit (${event.payload.max_length}).`,
+          { duration: 15000 }
+        );
+      });
+
       // Effects/speed/pitch chosen outside the Play page (Effects page, profile
       // switch) only ever reach the backend config; re-sync here so the next
       // reading uses them instead of the values this store held at startup.
@@ -790,6 +817,9 @@ class PlaybackStore {
         if (e.payload) {
           this.historyReadingId = null;
           this._streamStopped = false;
+          // A new reading owns the failure state from here on.
+          this._readingFailure = null;
+          this.error = null;
         }
         this.isSynthesizing = e.payload;
       });
@@ -811,6 +841,8 @@ class PlaybackStore {
         unSkipBackward,
         unSkipForward,
         unBrowserReading,
+        unReadingFailed,
+        unTruncated,
         unConfigChanged,
         unSynthesis,
         unAbort

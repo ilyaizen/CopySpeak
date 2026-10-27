@@ -194,6 +194,10 @@ struct BrowserSession {
     position_ms: AtomicU64,
     status: AtomicU8,
     cancelled: AtomicBool,
+    /// Set when any synthesis audio event reached the bridge. A reading that
+    /// fails after delivery must not tear the session down mid-audio: the
+    /// frontend reports the terminal state when the buffered audio drains.
+    delivered: AtomicBool,
     /// Unix only: the connected host stream, so the state ticker can push
     /// `state` frames on the session's own socket (Windows projects through
     /// the global pipe handle instead).
@@ -610,6 +614,9 @@ fn record_fragment_captions(
         return;
     };
     drop(sessions);
+    // Tauri invokes Rust listeners synchronously on the emitting thread, so
+    // this lands strictly before a later synthesis failure is classified.
+    session.delivered.store(true, Ordering::Relaxed);
     record_on(&session, index, text, captions);
 }
 
@@ -1024,6 +1031,7 @@ fn start_browser_reading(
         position_ms: AtomicU64::new(0),
         status: AtomicU8::new(SessionStatus::Buffering as u8),
         cancelled: AtomicBool::new(false),
+        delivered: AtomicBool::new(false),
         #[cfg(not(target_os = "windows"))]
         stream: Mutex::new(Some(pipe.clone())),
     });
@@ -1071,7 +1079,13 @@ fn start_browser_reading(
                 sessions.get(&reading_id_clone).cloned()
             };
             if let Some(session) = session_arc {
-                finish_session(&app_clone, &session, SessionStatus::Error);
+                // Audio already reached the page: leave the session up so the
+                // buffered fragments drain; the store reports the terminal
+                // state (`error` after reading-failed) when playback ends.
+                // Ending here would tear the companion bar off mid-audio.
+                if !session.delivered.load(Ordering::Relaxed) {
+                    finish_session(&app_clone, &session, SessionStatus::Error);
+                }
             }
         }
     });
@@ -1126,6 +1140,7 @@ pub fn begin_trigger(app: &AppHandle, trigger_id: &str, trigger: &SpeakTrigger, 
         position_ms: AtomicU64::new(0),
         status: AtomicU8::new(SessionStatus::Buffering as u8),
         cancelled: AtomicBool::new(false),
+        delivered: AtomicBool::new(false),
         #[cfg(not(target_os = "windows"))]
         stream: Mutex::new(bridge.client.lock().unwrap().clone()),
     });
@@ -1279,6 +1294,7 @@ pub async fn browser_reading_finished(
 ) -> Result<(), String> {
     let session_status = match status.as_str() {
         "completed" => SessionStatus::Completed,
+        "error" => SessionStatus::Error,
         _ => SessionStatus::Cancelled,
     };
     let bridge = app.state::<BrowserBridge>();
@@ -1598,6 +1614,7 @@ mod tests {
             position_ms: AtomicU64::new(0),
             status: AtomicU8::new(SessionStatus::Playing as u8),
             cancelled: AtomicBool::new(false),
+            delivered: AtomicBool::new(false),
             #[cfg(not(target_os = "windows"))]
             stream: Mutex::new(None),
         }

@@ -76,7 +76,12 @@ impl TtsBackend for OpenAiTtsBackend {
                 .json(&body)
                 .send()
                 .await
-                .map_err(|e| TtsError::Http(format!("OpenAI stream request failed: {e}")))?;
+                .map_err(|e| {
+                    TtsError::Http(format!(
+                        "OpenAI stream request failed: {}",
+                        super::http::flatten_error(&e)
+                    ))
+                })?;
             let status = response.status();
             if !status.is_success() {
                 let error_text = response.text().await.unwrap_or_default();
@@ -87,7 +92,8 @@ impl TtsBackend for OpenAiTtsBackend {
             let mut total_bytes = 0usize;
             while let Some(chunk) = response.chunk().await.map_err(|e| {
                 TtsError::Http(format!(
-                    "OpenAI stream read failed after {total_bytes} bytes: {e}"
+                    "OpenAI stream read failed after {total_bytes} bytes: {}",
+                    super::http::flatten_error(&e)
                 ))
             })? {
                 if chunk.is_empty() {
@@ -153,7 +159,10 @@ impl TtsBackend for OpenAiTtsBackend {
         .map_err(|e| {
             let elapsed = start_time.elapsed();
             log::error!("OpenAI TTS request failed after {:?}: {}", elapsed, e);
-            TtsError::Http(format!("Request failed: {}", e))
+            TtsError::Http(format!(
+                "Request failed: {}",
+                super::http::flatten_error(&e)
+            ))
         })?;
 
         let elapsed = start_time.elapsed();
@@ -178,7 +187,10 @@ impl TtsBackend for OpenAiTtsBackend {
 
         let bytes = block_on_async(async { response.bytes().await }).map_err(|e| {
             log::error!("Failed to read response bytes: {}", e);
-            TtsError::Http(format!("Failed to read bytes: {}", e))
+            TtsError::Http(format!(
+                "Failed to read bytes: {}",
+                super::http::flatten_error(&e)
+            ))
         })?;
 
         log::info!(

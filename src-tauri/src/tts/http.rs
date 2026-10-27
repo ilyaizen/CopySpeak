@@ -14,6 +14,23 @@ use crate::config::HttpTtsConfig;
 use reqwest::Client;
 use std::time::Duration;
 
+/// Flatten a reqwest error's `source()` chain into the message.
+///
+/// reqwest's `Display` prints only the error kind ("error sending request");
+/// the transient cause (timeout, refused, reset) hides in `source()`. The
+/// retry classifier matches phrases, so every provider request and
+/// response-read site stringifies reqwest errors through this.
+pub fn flatten_error(err: &(dyn std::error::Error + 'static)) -> String {
+    let mut message = err.to_string();
+    let mut source = std::error::Error::source(err);
+    while let Some(cause) = source {
+        message.push_str(": ");
+        message.push_str(&cause.to_string());
+        source = cause.source();
+    }
+    message
+}
+
 pub struct HttpTtsBackend {
     config: HttpTtsConfig,
 }
@@ -81,7 +98,7 @@ impl TtsBackend for HttpTtsBackend {
             }
             req.send()
                 .await
-                .map_err(|e| TtsError::Http(format!("Request failed: {}", e)))
+                .map_err(|e| TtsError::Http(format!("Request failed: {}", flatten_error(&e))))
         })?;
 
         let status = response.status();
@@ -92,7 +109,7 @@ impl TtsBackend for HttpTtsBackend {
         );
 
         let bytes = block_on_async(async { response.bytes().await })
-            .map_err(|e| TtsError::Http(format!("Failed to read bytes: {}", e)))?;
+            .map_err(|e| TtsError::Http(format!("Failed to read bytes: {}", flatten_error(&e))))?;
 
         if !status.is_success() {
             let error_text = String::from_utf8_lossy(&bytes);
@@ -137,5 +154,38 @@ mod tests {
     fn test_fill_placeholders() {
         let out = HttpTtsBackend::fill(r#"{"input":"{text}","voice":"{voice}"}"#, "hello", "amy");
         assert_eq!(out, r#"{"input":"hello","voice":"amy"}"#);
+    }
+
+    /// Two-level cause chain: reqwest hides timeouts and refused connections
+    /// behind `source()`, and the retry classifier matches those phrases.
+    #[derive(Debug)]
+    struct ChainedError(&'static str, Option<Box<ChainedError>>);
+
+    impl std::fmt::Display for ChainedError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.0)
+        }
+    }
+
+    impl std::error::Error for ChainedError {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            self.1
+                .as_ref()
+                .map(|c| c as &(dyn std::error::Error + 'static))
+        }
+    }
+
+    #[test]
+    fn flatten_error_includes_the_whole_source_chain() {
+        let err = ChainedError(
+            "error sending request",
+            Some(Box::new(ChainedError("operation timed out", None))),
+        );
+        assert_eq!(
+            flatten_error(&err),
+            "error sending request: operation timed out"
+        );
+        let bare = ChainedError("error sending request", None);
+        assert_eq!(flatten_error(&bare), "error sending request");
     }
 }

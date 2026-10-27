@@ -255,7 +255,12 @@ impl CartesiaTtsBackend {
                 .json(&body)
                 .send()
                 .await
-                .map_err(|e| TtsError::Http(format!("Cartesia stream request failed: {e}")))?;
+                .map_err(|e| {
+                    TtsError::Http(format!(
+                        "Cartesia stream request failed: {}",
+                        super::http::flatten_error(&e)
+                    ))
+                })?;
             let status = response.status();
             if !status.is_success() {
                 let error_text = response.text().await.unwrap_or_default();
@@ -267,7 +272,8 @@ impl CartesiaTtsBackend {
             let mut decoder = CartesiaSseDecoder::new(text);
             while let Some(chunk) = response.chunk().await.map_err(|e| {
                 TtsError::Http(format!(
-                    "Cartesia stream read failed after {total_bytes} bytes: {e}"
+                    "Cartesia stream read failed after {total_bytes} bytes: {}",
+                    super::http::flatten_error(&e)
                 ))
             })? {
                 if chunk.is_empty() {
@@ -306,12 +312,19 @@ impl CartesiaTtsBackend {
                 .header("Accept", "application/json")
                 .send()
                 .await
-                .map_err(|e| TtsError::Http(format!("Failed to fetch voices: {}", e)))?;
+                .map_err(|e| {
+                    TtsError::Http(format!(
+                        "Failed to fetch voices: {}",
+                        super::http::flatten_error(&e)
+                    ))
+                })?;
             let status = response.status();
-            let body = response
-                .text()
-                .await
-                .map_err(|e| TtsError::Http(format!("Failed to read voices response: {}", e)))?;
+            let body = response.text().await.map_err(|e| {
+                TtsError::Http(format!(
+                    "Failed to read voices response: {}",
+                    super::http::flatten_error(&e)
+                ))
+            })?;
             Ok::<_, TtsError>((status, body))
         })?;
 
@@ -395,7 +408,10 @@ impl TtsBackend for CartesiaTtsBackend {
                 start_time.elapsed(),
                 e
             );
-            TtsError::Http(format!("Request failed: {}", e))
+            TtsError::Http(format!(
+                "Request failed: {}",
+                super::http::flatten_error(&e)
+            ))
         })?;
 
         let status = response.status();
@@ -417,7 +433,10 @@ impl TtsBackend for CartesiaTtsBackend {
 
         let bytes = block_on_async(async { response.bytes().await }).map_err(|e| {
             log::error!("Failed to read Cartesia response bytes: {}", e);
-            TtsError::Http(format!("Failed to read bytes: {}", e))
+            TtsError::Http(format!(
+                "Failed to read bytes: {}",
+                super::http::flatten_error(&e)
+            ))
         })?;
 
         log::info!(

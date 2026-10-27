@@ -80,12 +80,19 @@ impl FishTtsBackend {
                 .header("Accept", "application/json")
                 .send()
                 .await
-                .map_err(|e| TtsError::Http(format!("Failed to fetch voices: {}", e)))?;
+                .map_err(|e| {
+                    TtsError::Http(format!(
+                        "Failed to fetch voices: {}",
+                        super::http::flatten_error(&e)
+                    ))
+                })?;
             let status = response.status();
-            let body = response
-                .text()
-                .await
-                .map_err(|e| TtsError::Http(format!("Failed to read voices response: {}", e)))?;
+            let body = response.text().await.map_err(|e| {
+                TtsError::Http(format!(
+                    "Failed to read voices response: {}",
+                    super::http::flatten_error(&e)
+                ))
+            })?;
             Ok::<_, TtsError>((status, body))
         })?;
 
@@ -183,7 +190,12 @@ impl TtsBackend for FishTtsBackend {
                 .json(&body)
                 .send()
                 .await
-                .map_err(|e| TtsError::Http(format!("Request failed: {e}")))?;
+                .map_err(|e| {
+                    TtsError::Http(format!(
+                        "Request failed: {}",
+                        super::http::flatten_error(&e)
+                    ))
+                })?;
 
             let status = response.status();
 
@@ -209,7 +221,10 @@ impl TtsBackend for FishTtsBackend {
             // across calls loses its connection driver.
             let bytes = response.bytes().await.map_err(|e| {
                 log::error!("Failed to read response bytes: {}", e);
-                TtsError::Http(format!("Failed to read bytes: {}", e))
+                TtsError::Http(format!(
+                    "Failed to read bytes: {}",
+                    super::http::flatten_error(&e)
+                ))
             })?;
 
             log::info!(
@@ -339,7 +354,12 @@ impl FishTtsBackend {
                 .json(&body)
                 .send()
                 .await
-                .map_err(|e| TtsError::Http(format!("Fish Audio stream request failed: {e}")))?;
+                .map_err(|e| {
+                    TtsError::Http(format!(
+                        "Fish Audio stream request failed: {}",
+                        super::http::flatten_error(&e)
+                    ))
+                })?;
             let status = response.status();
             if !status.is_success() {
                 let error_text = response.text().await.unwrap_or_default();
@@ -350,7 +370,8 @@ impl FishTtsBackend {
             let mut total_bytes = 0usize;
             while let Some(chunk) = response.chunk().await.map_err(|e| {
                 TtsError::Http(format!(
-                    "Fish Audio stream read failed after {total_bytes} bytes: {e}"
+                    "Fish Audio stream read failed after {total_bytes} bytes: {}",
+                    super::http::flatten_error(&e)
                 ))
             })? {
                 if chunk.is_empty() {

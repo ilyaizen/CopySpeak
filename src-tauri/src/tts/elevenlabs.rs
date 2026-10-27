@@ -279,7 +279,7 @@ impl ElevenLabsTtsBackend {
                         );
                     sink.send(ChunkItem::Failed(format!(
                         "ElevenLabs stream request failed: {}",
-                        e
+                        super::http::flatten_error(&e)
                     )));
                     return Ok(());
                 }
@@ -357,7 +357,8 @@ impl ElevenLabsTtsBackend {
                             );
                         sink.send(ChunkItem::Failed(format!(
                             "ElevenLabs stream read failed after {} bytes: {}",
-                            total_bytes, e
+                            total_bytes,
+                            super::http::flatten_error(&e)
                         )));
                         return Ok(());
                     }
@@ -418,11 +419,19 @@ impl ElevenLabsTtsBackend {
                     .header("Accept", "application/json")
                     .send()
                     .await
-                    .map_err(|e| TtsError::Http(format!("Failed to fetch voices: {}", e)))?;
+                    .map_err(|e| {
+                        TtsError::Http(format!(
+                            "Failed to fetch voices: {}",
+                            super::http::flatten_error(&e)
+                        ))
+                    })?;
 
                 let status = response.status();
                 let body = response.bytes().await.map_err(|e| {
-                    TtsError::Http(format!("Failed to read voices response: {}", e))
+                    TtsError::Http(format!(
+                        "Failed to read voices response: {}",
+                        super::http::flatten_error(&e)
+                    ))
                 })?;
 
                 Ok((status, body.to_vec()))
@@ -636,13 +645,20 @@ impl ElevenLabsTtsBackend {
                     .header("Accept", "application/json")
                     .send()
                     .await
-                    .map_err(|e| TtsError::Http(format!("Failed to fetch voice: {}", e)))?;
+                    .map_err(|e| {
+                        TtsError::Http(format!(
+                            "Failed to fetch voice: {}",
+                            super::http::flatten_error(&e)
+                        ))
+                    })?;
 
                 let status = response.status();
-                let body = response
-                    .text()
-                    .await
-                    .map_err(|e| TtsError::Http(format!("Failed to read voice response: {}", e)))?;
+                let body = response.text().await.map_err(|e| {
+                    TtsError::Http(format!(
+                        "Failed to read voice response: {}",
+                        super::http::flatten_error(&e)
+                    ))
+                })?;
 
                 Ok((status, body))
             });
@@ -810,7 +826,10 @@ impl TtsBackend for ElevenLabsTtsBackend {
         .map_err(|e| {
             let elapsed = start_time.elapsed();
             log::error!("ElevenLabs TTS request failed after {:?}: {}", elapsed, e);
-            TtsError::Http(format!("Request failed: {}", e))
+            TtsError::Http(format!(
+                "Request failed: {}",
+                super::http::flatten_error(&e)
+            ))
         })?;
 
         let elapsed = start_time.elapsed();
@@ -846,7 +865,10 @@ impl TtsBackend for ElevenLabsTtsBackend {
 
         let bytes = block_on_async(async { response.bytes().await }).map_err(|e| {
             log::error!("Failed to read response bytes: {}", e);
-            TtsError::Http(format!("Failed to read bytes: {}", e))
+            TtsError::Http(format!(
+                "Failed to read bytes: {}",
+                super::http::flatten_error(&e)
+            ))
         })?;
 
         log::info!(
