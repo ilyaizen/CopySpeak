@@ -158,15 +158,8 @@
 </script>
 
 <div class="space-y-4">
-  <SettingRow
-    label={$_("settings.postProcess.enabled")}
-    tooltip={$_("settings.postProcess.enabledDescription")}
-  >
-    <Switch id="post-process-enabled" bind:checked={localConfig.post_process.enabled} />
-  </SettingRow>
-
   {#if localConfig.post_process.enabled}
-    <div class="border-border mt-4 space-y-4 border-t pt-4">
+    <div class="space-y-4">
       <SettingRow
         label={$_("settings.postProcess.minChars")}
         tooltip={$_("settings.postProcess.minCharsTooltip")}

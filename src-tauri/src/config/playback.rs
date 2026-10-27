@@ -29,7 +29,7 @@ pub struct DuckConfig {
 impl Default for DuckConfig {
     fn default() -> Self {
         Self {
-            enabled: true,
+            enabled: false,
             level_percent: 20,
         }
     }

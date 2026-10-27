@@ -2,6 +2,7 @@
   import GeneralSettings from "#lib/components/settings/general-settings.svelte";
   import AppearanceSettings from "#lib/components/settings/appearance-settings.svelte";
   import PlaybackSettings from "#lib/components/settings/playback-settings.svelte";
+  import AdvancedSettings from "#lib/components/settings/advanced-settings.svelte";
   import PaginationSettings from "#lib/components/settings/pagination-settings.svelte";
   import HotkeySettings from "#lib/components/settings/hotkey-settings.svelte";
   import SanitizationSettings from "#lib/components/settings/sanitization-settings.svelte";
@@ -16,13 +17,14 @@
   import { Select } from "#lib/components/ui/select/index.js";
   import { invoke } from "#lib/services/tauri";
   import { toast } from "svelte-sonner";
-  import { onMount, onDestroy } from "svelte";
+  import { onMount, onDestroy, tick } from "svelte";
   import { _ } from "svelte-i18n";
   import { History, Info, Settings, Sparkles, Volume2, Wrench } from "@lucide/svelte";
   import { hideSaveBar } from "#lib/stores/save-bar.svelte";
   import { syncSaveBarOrAutoSave, flushAutoSave } from "#lib/stores/auto-save.svelte";
 
-  import type { AppConfig, HudPosition } from "#lib/types";
+  import type { AppConfig, HudPosition, RetriggerMode } from "#lib/types";
+  import { isHistoryEffective, isPostProcessEffective } from "#lib/experimental-gates";
 
   let localConfig = $state<AppConfig | null>(null);
   let originalConfig = $state<AppConfig | null>(null);
@@ -32,11 +34,10 @@
   // Sidebar highlight: set by the scroll-spy, or directly by a sidebar click.
   let activeSection = $state<SettingsSection>("general");
 
-  const retriggerModeOptions = [
-    { value: "stop", label: $_("settings.playback.stopAndRestart") },
-    { value: "queue", label: $_("settings.playback.queueAfterCurrent") },
-    { value: "ignore", label: $_("settings.playback.ignoreNewTrigger") }
-  ];
+  const retriggerModeOptions = $derived([
+    { value: "interrupt", label: $_("settings.playback.stopAndRestart") },
+    { value: "queue", label: $_("settings.playback.queueAfterCurrent") }
+  ] satisfies { value: RetriggerMode; label: string }[]);
 
   const HUD_OPTIONS = [
     { value: "disabled", label: "Disabled" },
@@ -71,36 +72,40 @@
     }
   }
 
-  // The Post-processing entry exists only while Experimental is on; turning
-  // the flag off while viewing it falls back to Advanced in the effect below.
+  const historyEffective = $derived(isHistoryEffective(localConfig));
+  const postProcessEffective = $derived(isPostProcessEffective(localConfig));
   const sections: {
     id: SettingsSection;
     labelKey: string;
     icon: typeof Settings;
-    experimental?: boolean;
   }[] = [
     { id: "general", labelKey: "settings.tabs.general", icon: Settings },
     { id: "playback", labelKey: "settings.tabs.playback", icon: Volume2 },
-    { id: "history", labelKey: "settings.tabs.history", icon: History },
     { id: "advanced", labelKey: "settings.tabs.advanced", icon: Wrench },
+    { id: "history", labelKey: "settings.tabs.history", icon: History },
     {
       id: "postProcess",
       labelKey: "settings.tabs.postProcess",
-      icon: Sparkles,
-      experimental: true
+      icon: Sparkles
     },
     { id: "about", labelKey: "settings.tabs.about", icon: Info }
   ];
 
   let visibleSections = $derived(
     sections.filter(
-      (section) => !section.experimental || localConfig?.general.experimental_enabled === true
+      (section) =>
+        (section.id !== "history" || historyEffective) &&
+        (section.id !== "postProcess" || postProcessEffective)
     )
   );
 
   $effect(() => {
     if (!visibleSections.some((section) => section.id === activeSection)) {
       activeSection = "advanced";
+      void tick().then(() => {
+        scrollToSection("advanced");
+        document.getElementById("advanced")?.focus({ preventScroll: true });
+      });
     }
   });
 
@@ -293,6 +298,7 @@
                 section.id
                   ? 'bg-primary/10 text-primary border-primary border-s-2'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
+                aria-controls={section.id}
                 aria-current={activeSection === section.id ? "page" : undefined}
                 onclick={() => scrollToSection(section.id)}
               >
@@ -308,7 +314,7 @@
       <main class="divide-border min-w-0 flex-1 divide-y pb-20">
         <section id="general" class="scroll-mt-4 py-6 first:pt-0">
           <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-            {$_("settings.sections.general")}
+            {$_("settings.sections.triggers")}
           </h3>
           <div class="divide-border divide-y">
             <div class="pb-4">
@@ -375,24 +381,22 @@
           </div>
         </section>
 
-        <section id="playback" class="scroll-mt-4 py-6 first:pt-0">
-          <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-            {$_("settings.sections.playback")}
-          </h3>
+        <section
+          id="playback"
+          aria-label={$_("settings.tabs.playback")}
+          class="scroll-mt-4 py-6 first:pt-0"
+        >
           <PlaybackSettings bind:localConfig {retriggerModeOptions} />
         </section>
 
-        <section id="history" class="scroll-mt-4 py-6 first:pt-0">
-          <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-            {$_("settings.sections.history")}
-          </h3>
-          <HistorySettings bind:localConfig onRunCleanup={handleRunCleanup} />
-        </section>
-
-        <section id="advanced" class="scroll-mt-4 py-6 first:pt-0">
-          <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+        <section
+          id="advanced"
+          tabindex="-1"
+          class="focus-visible:ring-ring scroll-mt-4 py-6 outline-none first:pt-0 focus-visible:ring-2"
+        >
+          <h2 class="mb-4 text-base font-semibold">
             {$_("settings.tabs.advanced")}
-          </h3>
+          </h2>
           <div class="divide-border divide-y">
             <div class="pb-4">
               <h3 class="text-muted-foreground mb-3 text-sm font-medium">
@@ -408,36 +412,35 @@
               <SanitizationSettings bind:localConfig />
             </div>
 
-            <div class="pt-4">
-              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                {$_("settings.general.experimental")}
-              </h3>
-              <SettingRow
-                label={$_("settings.general.experimental")}
-                tooltip={$_("settings.general.experimentalDescription")}
-              >
-                <Switch
-                  id="experimental-enabled"
-                  bind:checked={localConfig.general.experimental_enabled}
-                />
-              </SettingRow>
-            </div>
+            <AdvancedSettings bind:localConfig />
           </div>
         </section>
 
-        {#if localConfig.general.experimental_enabled === true}
-          <section id="postProcess" class="scroll-mt-4 py-6 first:pt-0">
-            <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-              {$_("settings.sections.postProcess")}
-            </h3>
+        {#if historyEffective}
+          <section
+            id="history"
+            aria-label={$_("settings.tabs.history")}
+            class="scroll-mt-4 py-6 first:pt-0"
+          >
+            <HistorySettings bind:localConfig onRunCleanup={handleRunCleanup} />
+          </section>
+        {/if}
+
+        {#if postProcessEffective}
+          <section
+            id="postProcess"
+            aria-label={$_("settings.tabs.postProcess")}
+            class="scroll-mt-4 py-6 first:pt-0"
+          >
             <PostProcessSettings bind:localConfig />
           </section>
         {/if}
 
-        <section id="about" class="scroll-mt-4 py-6 first:pt-0">
-          <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-            {$_("settings.sections.appInfo")}
-          </h3>
+        <section
+          id="about"
+          aria-label={$_("settings.tabs.about")}
+          class="scroll-mt-4 py-6 first:pt-0"
+        >
           <div class="divide-border divide-y">
             <div class="pb-4">
               <AboutSettings bind:localConfig showDebugMode={true} />

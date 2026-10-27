@@ -819,7 +819,7 @@ async fn speak_now_internal(
     let backend: Box<dyn TtsBackend> = create_backend_from_effective(&eff, &tts_config);
     let engine_str_for_cache = engine_str(&active_backend);
 
-    let history_on = config.lock().unwrap().history.enabled;
+    let history_on = config.lock().unwrap().is_history_effective();
     let cached = if reuse_saved_audio {
         find_cached_reading(
             &history,
@@ -1148,7 +1148,7 @@ fn handle_file_output(
         .map(|e| e.duration_ms)
         .unwrap_or(0);
 
-    let history_on = config.lock().unwrap().history.enabled;
+    let history_on = config.lock().unwrap().is_history_effective();
     if history_on {
         add_history_with_metadata(
             history,
@@ -1199,7 +1199,7 @@ fn handle_playback_output(
     let voice_name = voice_display_name(active_backend, tts_config, voice, voice_label);
     let audio_ext = backend_arc.file_extension().to_string();
 
-    let history_on = config.lock().unwrap().history.enabled;
+    let history_on = config.lock().unwrap().is_history_effective();
     if history_on {
         let history_path =
             save_to_history_storage(config, speech, &engine_id, &voice_name, &audio_ext);
@@ -1421,7 +1421,7 @@ async fn speak_queued_internal(
     // Repeated text replays saved audio — only when the saved-audio store holds
     // every fragment, so a reading never mixes saved and fresh parts nor leaves
     // a partial batch in history.
-    let history_on = config.lock().unwrap().history.enabled;
+    let history_on = config.lock().unwrap().is_history_effective();
     let mut saved: Option<std::vec::IntoIter<SpeechAudio>> = fragments
         .iter()
         .map(|f| find_cached_speech(&history, history_on, &f.text, &engine_str_val, &voice))
@@ -1688,7 +1688,7 @@ pub async fn speak_history_entry(
 
     let (tts_config, history_on) = {
         let cfg = config.lock().unwrap();
-        (cfg.tts.clone(), cfg.history.enabled)
+        (cfg.tts.clone(), cfg.is_history_effective())
     };
 
     let active_backend = active_engine(&tts_config);

@@ -472,4 +472,125 @@ mod tests {
                 .unwrap();
         assert!(!legacy.experimental_enabled);
     }
+
+    #[test]
+    fn fresh_defaults_for_duck_and_effects_are_safe_and_streaming_is_on() {
+        let config = AppConfig::default();
+        assert!(
+            !config.playback.duck.enabled,
+            "duck must default to disabled"
+        );
+        assert_eq!(
+            config.playback.duck.level_percent, 20,
+            "duck level defaults to 20%"
+        );
+        assert!(
+            config.playback.streaming_enabled,
+            "streaming must default to enabled"
+        );
+        assert!(!config.history.enabled, "history must default to disabled");
+        assert!(
+            !config.post_process.enabled,
+            "post_process must default to disabled"
+        );
+        assert!(
+            !config.general.experimental_enabled,
+            "experimental must default to disabled"
+        );
+
+        let pe = ProfileEffects::default();
+        assert!(!pe.enabled, "ProfileEffects default must be disabled");
+        assert_eq!(
+            pe.active_effect,
+            EffectId::None,
+            "ProfileEffects default effect must be None"
+        );
+
+        for profile in &config.tts.profiles {
+            assert!(
+                !profile.effects.enabled,
+                "default profile '{}' effects must be disabled",
+                profile.name
+            );
+            assert_eq!(
+                profile.effects.active_effect,
+                EffectId::None,
+                "default profile '{}' active_effect must be None",
+                profile.name
+            );
+        }
+    }
+
+    #[test]
+    fn missing_fields_deserialize_to_safe_defaults() {
+        let playback: PlaybackConfig =
+            serde_json::from_str(r#"{"on_retrigger": "interrupt"}"#).unwrap();
+        assert!(!playback.duck.enabled);
+        assert_eq!(playback.duck.level_percent, 20);
+        assert!(playback.streaming_enabled);
+
+        let pe: ProfileEffects = serde_json::from_str(r#"{}"#).unwrap();
+        assert!(!pe.enabled);
+        assert_eq!(pe.active_effect, EffectId::None);
+    }
+
+    #[test]
+    fn explicit_legacy_values_are_preserved() {
+        let json = r#"{
+            "on_retrigger": "interrupt",
+            "duck": {"enabled": true, "level_percent": 35},
+            "streaming_enabled": false
+        }"#;
+        let playback: PlaybackConfig = serde_json::from_str(json).unwrap();
+        assert!(playback.duck.enabled);
+        assert_eq!(playback.duck.level_percent, 35);
+        assert!(!playback.streaming_enabled);
+
+        let pe_json = r#"{"enabled": true, "active_effect": "walkie_talkie"}"#;
+        let pe: ProfileEffects = serde_json::from_str(pe_json).unwrap();
+        assert!(pe.enabled);
+        assert_eq!(pe.active_effect, EffectId::WalkieTalkie);
+    }
+
+    #[test]
+    fn effective_history_predicate_truth_table() {
+        let mut config = AppConfig::default();
+
+        config.general.experimental_enabled = false;
+        config.history.enabled = false;
+        assert!(!config.is_history_effective());
+
+        config.general.experimental_enabled = false;
+        config.history.enabled = true;
+        assert!(!config.is_history_effective());
+
+        config.general.experimental_enabled = true;
+        config.history.enabled = false;
+        assert!(!config.is_history_effective());
+
+        config.general.experimental_enabled = true;
+        config.history.enabled = true;
+        assert!(config.is_history_effective());
+    }
+
+    #[test]
+    fn effective_duck_predicate_truth_table() {
+        let mut config = AppConfig::default();
+
+        config.general.experimental_enabled = false;
+        config.playback.duck.enabled = false;
+        assert!(!config.is_duck_effective());
+
+        config.general.experimental_enabled = false;
+        config.playback.duck.enabled = true;
+        assert!(!config.is_duck_effective());
+
+        config.general.experimental_enabled = true;
+        config.playback.duck.enabled = false;
+        assert!(!config.is_duck_effective());
+
+        config.general.experimental_enabled = true;
+        config.playback.duck.enabled = true;
+        assert!(config.is_duck_effective());
+    }
 }

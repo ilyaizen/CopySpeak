@@ -288,7 +288,7 @@ export interface GeneralConfig {
   update_checks_enabled?: boolean;
   auto_save_profiles?: boolean;
   locale: SupportedLocale;
-  /** Master switch for Experimental features (Dramatize, effects). */
+  /** Master switch for History, Post-process, profile Effects, and Duck. */
   experimental_enabled?: boolean;
 }
 

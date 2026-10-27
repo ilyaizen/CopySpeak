@@ -136,3 +136,4 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 - Experimental off FORCES features off at synthesis time (post-process, effects); it does not only hide the UI. Saved settings stay for re-enabling.
 - Read the active effect through `effectiveEffect` (`src/lib/effects-gate.ts`), never `profile.effects` directly: the config-changed re-sync read the profile and bypassed the Experimental gate.
+- Gate every history IPC that deletes stored audio (`run_history_cleanup` included): the synthesis saves and the automatic cleanup service do not cover the explicit command path.

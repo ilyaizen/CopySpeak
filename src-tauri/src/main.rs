@@ -3,14 +3,15 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-mod emote;
 mod audio;
+mod audio_duck;
 mod autostart;
 mod browser_bridge;
 mod clipboard;
 mod commands;
 mod config;
 mod control_server;
+mod emote;
 mod fragment_queue;
 mod history;
 mod history_manager;
@@ -19,7 +20,6 @@ mod hud;
 mod hud_layershell;
 mod logging;
 mod pagination;
-mod audio_duck;
 mod playback_signal;
 mod post_process;
 mod sanitize;
@@ -728,7 +728,13 @@ fn main() {
             let app_handle_for_duck = app.handle().clone();
             app.listen("playback-started", move |_| {
                 let cfg: State<std::sync::Mutex<config::AppConfig>> = app_handle_for_duck.state();
-                let duck = cfg.lock().unwrap().playback.duck.clone();
+                let duck = {
+                    let cfg = cfg.lock().unwrap();
+                    if !cfg.is_duck_effective() {
+                        return;
+                    }
+                    cfg.playback.duck.clone()
+                };
                 crate::audio_duck::duck(&duck);
             });
             // A previous run may have crashed while ducked.

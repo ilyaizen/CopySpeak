@@ -243,6 +243,14 @@ impl Default for AppConfig {
 }
 
 impl AppConfig {
+    pub fn is_history_effective(&self) -> bool {
+        self.general.experimental_enabled && self.history.enabled
+    }
+
+    pub fn is_duck_effective(&self) -> bool {
+        self.general.experimental_enabled && self.playback.duck.enabled
+    }
+
     pub fn validate(&self) -> ValidationResult {
         let mut errors = Vec::new();
 

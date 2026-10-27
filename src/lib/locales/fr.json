@@ -70,14 +70,15 @@
       "playback": "Lecture",
       "hud": "Superposition HUD",
       "history": "Historique",
-      "triggers": "Déclencheurs",
+      "triggers": "Déclencheurs de lecture",
       "hotkeys": "Raccourcis clavier",
-      "pagination": "Avancé",
+      "pagination": "Préparation du texte",
       "sanitization": "Nettoyage du texte",
       "postProcess": "Post-traitement LLM",
       "effects": "Effets",
       "appInfo": "Infos sur l'application",
-      "importExport": "Importer / Exporter"
+      "importExport": "Importer / Exporter",
+      "audioDelivery": "Diffusion audio"
     },
     "categories": {
       "general": "Général",
@@ -124,16 +125,17 @@
       "minimizeToTray": "Réduire dans la zone de notification à la fermeture",
       "minimizeToTrayTooltip": "Réduire dans la zone de notification au lieu de quitter lors de la fermeture de la fenêtre",
       "experimental": "Fonctions expérimentales",
-      "experimentalDescription": "Affiche et active les fonctions expérimentales — Post-traitement et Effets. Désactivé, elles sont masquées et forcées à l’arrêt ; les réglages enregistrés sont conservés."
+      "experimentalDescription": "Désactiver cette option met en pause l'Historique, le Post-traitement, les Effets et l'Atténuation, mais conserve leurs réglages et les lectures enregistrées. L'historique utilise de l'espace disque ; le post-traitement peut ajouter du trafic réseau et du délai. La réactiver rétablit vos choix enregistrés, y compris l'Atténuation.",
+      "profileEffects": "Les effets sont configurés par profil vocal dans Voix."
     },
     "playback": {
       "title": "Paramètres de lecture",
-      "onRetrigger": "Comportement en cas de nouveau déclenchement",
+      "onRetrigger": "Lorsqu'une nouvelle lecture démarre",
       "onRetriggerDescription": "Ce qui se passe quand la TTS est déclenchée pendant une lecture en cours",
       "volume": "Volume",
       "volumeDescription": "Volume de lecture audio (0-100 %)",
       "streaming": "Diffuser l'audio en continu",
-      "streamingDescription": "Lance la lecture dès l'arrivée de l'audio. Moteurs cloud pris en charge : ElevenLabs et Cartesia. Désactivé : synthèse par lots, chaque requête est attendue avant la lecture.",
+      "streamingDescription": "Lance la lecture dès que l'audio arrive sur les moteurs cloud compatibles et les moteurs locaux prêts. Désactivé, la lecture attend la fin de la synthèse.",
       "duck": "Atténuer les autres applications",
       "duckDescription": "Baisse le son des autres applications pendant que CopySpeak parle, puis le rétablit. Windows uniquement pour l'instant.",
       "duckLevel": "Niveau d'atténuation",
@@ -142,9 +144,8 @@
       "playbackSpeedDescription": "Vitesse de lecture (0,5x - 2x)",
       "pitch": "Hauteur",
       "pitchDescription": "Décalage de hauteur (0,5x - 2x)",
-      "stopAndRestart": "Arrêter et recommencer",
-      "queueAfterCurrent": "Mettre en file après la lecture en cours",
-      "ignoreNewTrigger": "Ignorer le nouveau déclenchement"
+      "stopAndRestart": "Interrompre la lecture en cours",
+      "queueAfterCurrent": "Mettre en file après la lecture en cours"
     },
     "triggers": {
       "title": "Paramètres des déclencheurs",
@@ -177,8 +178,8 @@
     },
     "history": {
       "title": "Paramètres de l'historique",
-      "enabled": "Activer l'historique",
-      "enabledDescription": "Conserver un journal de toutes les opérations TTS",
+      "enabled": "Enregistrer l'historique de lecture",
+      "enabledDescription": "Enregistre les lectures indexées pour les réécouter plus tard. Désactivé, le petit cache vocal fonctionne toujours ; l'historique existant est conservé.",
       "storageMode": "Mode de stockage",
       "persistent": "Persistant",
       "temporary": "Temporaire",
@@ -229,7 +230,7 @@
     "postProcess": {
       "title": "Post-traitement LLM",
       "description": "Réécrire le texte copié avec un fournisseur LLM compatible OpenAI pour une lecture concise et agréable à écouter.",
-      "enabled": "Activer le post-traitement",
+      "enabled": "Post-traiter le texte",
       "enabledDescription": "Passer le texte nettoyé au modèle de chat du fournisseur actif avant la TTS. En cas d'échec, le texte original est utilisé.",
       "minChars": "Longueur minimale",
       "minCharsTooltip": "Ne post_processr que les textes d'au moins ce nombre de caractères ; les textes plus courts sont lus tels quels. 0 post_process tout.",

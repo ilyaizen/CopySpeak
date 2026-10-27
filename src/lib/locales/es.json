@@ -70,14 +70,15 @@
       "playback": "Reproducción",
       "hud": "Superposición HUD",
       "history": "Historial",
-      "triggers": "Activadores",
+      "triggers": "Desencadenadores de lectura",
       "hotkeys": "Atajos de teclado",
-      "pagination": "Avanzado",
+      "pagination": "Preparación de texto",
       "sanitization": "Limpieza de texto",
       "postProcess": "Posprocesado con LLM",
       "effects": "Efectos",
       "appInfo": "Información de la aplicación",
-      "importExport": "Importar / Exportar"
+      "importExport": "Importar / Exportar",
+      "audioDelivery": "Entrega de audio"
     },
     "categories": {
       "general": "General",
@@ -124,16 +125,17 @@
       "minimizeToTray": "Minimizar a la bandeja al cerrar",
       "minimizeToTrayTooltip": "Minimizar a la bandeja del sistema en lugar de salir al cerrar la ventana",
       "experimental": "Funciones experimentales",
-      "experimentalDescription": "Muestra y activa funciones experimentales: Posprocesamiento y Efectos. Desactivado las oculta y las fuerza a apagarse; la configuración guardada se conserva."
+      "experimentalDescription": "Desactivar esto pausa el Historial, el Posprocesamiento, los Efectos y la Atenuación, pero conserva sus ajustes y las lecturas guardadas. El historial ocupa espacio en disco; el posprocesamiento puede aumentar el uso de red y la demora. Volver a activarlo restaura las opciones guardadas, incluida la Atenuación.",
+      "profileEffects": "Los efectos se configuran por perfil de voz en Voces."
     },
     "playback": {
       "title": "Ajustes de reproducción",
-      "onRetrigger": "Comportamiento al activar de nuevo",
+      "onRetrigger": "Al iniciar una nueva lectura",
       "onRetriggerDescription": "Qué ocurre cuando se activa el TTS mientras ya se está reproduciendo",
       "volume": "Volumen",
       "volumeDescription": "Volumen de reproducción (0-100 %)",
       "streaming": "Transmitir audio",
-      "streamingDescription": "Empieza a reproducir mientras llega el audio. Motores en la nube compatibles: ElevenLabs y Cartesia. Si está desactivado, usa síntesis por lotes y espera a que termine cada petición antes de reproducir.",
+      "streamingDescription": "Comienza la reproducción a medida que llega el audio en motores en la nube compatibles y motores locales listos. Desactivado, la reproducción espera a que finalice la síntesis.",
       "duck": "Atenuar otras aplicaciones",
       "duckDescription": "Baja el audio de otras aplicaciones mientras CopySpeak habla y luego lo restaura. Por ahora, solo en Windows.",
       "duckLevel": "Nivel de atenuación",
@@ -142,9 +144,8 @@
       "playbackSpeedDescription": "Velocidad de reproducción (0,5x - 2x)",
       "pitch": "Tono",
       "pitchDescription": "Cambio de tono (0,5x - 2x)",
-      "stopAndRestart": "Detener y reiniciar",
-      "queueAfterCurrent": "Poner en cola tras el actual",
-      "ignoreNewTrigger": "Ignorar nuevo activador"
+      "stopAndRestart": "Interrumpir la lectura actual",
+      "queueAfterCurrent": "Poner en cola tras el actual"
     },
     "triggers": {
       "title": "Ajustes de activadores",
@@ -177,8 +178,8 @@
     },
     "history": {
       "title": "Ajustes del historial",
-      "enabled": "Activar historial",
-      "enabledDescription": "Guarda un registro de todas las operaciones de TTS",
+      "enabled": "Guardar historial de lecturas",
+      "enabledDescription": "Guarda lecturas con opción de búsqueda para reproducirlas después. Desactivado, la pequeña caché de voz sigue funcionando; el historial existente se conserva.",
       "storageMode": "Modo de almacenamiento",
       "persistent": "Permanente",
       "temporary": "Temporal",
@@ -229,7 +230,7 @@
     "postProcess": {
       "title": "Posprocesado con LLM",
       "description": "Reescribe el texto copiado con un proveedor de LLM compatible con OpenAI para que la lectura sea breve y cómoda de escuchar.",
-      "enabled": "Activar posprocesado",
+      "enabled": "Posprocesar texto",
       "enabledDescription": "Envía el texto saneado por el modelo de chat del proveedor activo antes del TTS. Si falla, se usa el texto original.",
       "minChars": "Longitud mínima",
       "minCharsTooltip": "Condensa solo textos de al menos esta cantidad de caracteres; los más cortos se leen tal cual. 0 condensa todo.",

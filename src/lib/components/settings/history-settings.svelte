@@ -1,6 +1,5 @@
 <script lang="ts">
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
-  import { Switch } from "#lib/components/ui/switch/index.js";
   import { Slider } from "#lib/components/ui/slider/index.js";
   import { Button } from "#lib/components/ui/button/index.js";
   import {
@@ -30,15 +29,8 @@
 </script>
 
 <div class="divide-border divide-y">
-  <div class="pb-4">
-    <SettingRow
-      label={$_("settings.history.enabled")}
-      tooltip={$_("settings.history.enabledDescription")}
-    >
-      <Switch id="history-enabled" bind:checked={localConfig.history.enabled} />
-    </SettingRow>
-
-    {#if localConfig.history.enabled && localConfig.history.storage_mode === "persistent"}
+  {#if localConfig.history.enabled && localConfig.history.storage_mode === "persistent"}
+    <div class="pb-4">
       <SettingRow
         label={$_("settings.history.generationsFolder")}
         tooltip={$_("settings.history.generationsFolderDescription")}
@@ -51,8 +43,8 @@
           bind:value={localConfig.history.persistent_dir}
         />
       </SettingRow>
-    {/if}
-  </div>
+    </div>
+  {/if}
 
   {#if localConfig.history.enabled}
     <div class="py-4">

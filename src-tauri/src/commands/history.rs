@@ -547,6 +547,14 @@ pub fn run_history_cleanup(
 
     let cfg = config.lock().map_err(|e| e.to_string())?;
 
+    // Retention deletes stored recordings: refuse while Experimental or
+    // History is off, same as the automatic cleanup service.
+    if !cfg.is_history_effective() {
+        return Err(
+            "History is not active — enable Experimental features and History first.".into(),
+        );
+    }
+
     // Copy the relevant history config values to avoid lifetime issues
     let cleanup_files = cfg.history.cleanup_orphaned_files;
     let auto_delete_mode = cfg.history.auto_delete.clone();

@@ -610,10 +610,7 @@
       voice_label: preset.voiceLabel,
       speed: 1.0,
       pitch: 1.0,
-      effects:
-        localConfig.general.experimental_enabled === true
-          ? { enabled: true, active_effect: "walkie_talkie" }
-          : { enabled: false, active_effect: "none" },
+      effects: { enabled: false, active_effect: "none" },
       engine_options: preset.engineOptions
     };
     localConfig.tts.profiles = [...profiles, profile];

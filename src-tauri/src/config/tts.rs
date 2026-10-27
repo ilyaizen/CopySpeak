@@ -438,8 +438,8 @@ pub struct ProfileEffects {
 impl Default for ProfileEffects {
     fn default() -> Self {
         Self {
-            enabled: true,
-            active_effect: crate::config::EffectId::WalkieTalkie,
+            enabled: false,
+            active_effect: crate::config::EffectId::None,
         }
     }
 }

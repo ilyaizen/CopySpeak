@@ -61,7 +61,7 @@
       "advanced": "Advanced",
       "about": "About",
       "playback": "Playback",
-      "postProcess": "Post-processing"
+      "postProcess": "Post-process"
     },
     "sections": {
       "general": "General",
@@ -70,14 +70,15 @@
       "playback": "Playback",
       "hud": "HUD Overlay",
       "history": "History",
-      "triggers": "Triggers",
+      "triggers": "Read triggers",
       "hotkeys": "Hotkeys",
-      "pagination": "Advanced",
+      "pagination": "Text preparation",
       "sanitization": "Sanitization",
       "postProcess": "LLM Post-Processing",
       "effects": "Effects",
       "appInfo": "App Info",
-      "importExport": "Import / Export"
+      "importExport": "Import / Export",
+      "audioDelivery": "Audio delivery"
     },
     "categories": {
       "general": "General",
@@ -124,16 +125,17 @@
       "minimizeToTray": "Minimize to Tray on Close",
       "minimizeToTrayTooltip": "Minimize to system tray instead of exiting when closing the window",
       "experimental": "Experimental features",
-      "experimentalDescription": "Shows and enables experimental features — Post-process and Effects. Off, they are hidden and forced off; saved settings are kept."
+      "experimentalDescription": "Turning this off pauses History, Post-process, Effects, and Duck but keeps their settings and saved readings. History uses disk space; post-processing can add network use and delay. Turning it back on restores saved choices, including Duck.",
+      "profileEffects": "Effects are configured per voice profile in Voices."
     },
     "playback": {
       "title": "Playback Settings",
-      "onRetrigger": "On Retrigger Behavior",
+      "onRetrigger": "When a new read starts",
       "onRetriggerDescription": "What happens when TTS is triggered while already speaking",
       "volume": "Volume",
       "volumeDescription": "Audio playback volume (0-100%)",
       "streaming": "Stream audio",
-      "streamingDescription": "Starts playback as audio arrives instead of waiting for synthesis; off, a request plays only once it has fully finished. Cloud engines only.",
+      "streamingDescription": "Start playback as audio arrives on supported cloud engines and ready local engines. Off, playback waits for synthesis to finish.",
       "duck": "Duck other apps",
       "duckDescription": "Lowers other apps' audio while CopySpeak speaks and restores it afterwards; off, other apps keep their own volume. Windows only.",
       "duckLevel": "Duck level",
@@ -142,9 +144,8 @@
       "playbackSpeedDescription": "Playback speed (0.5x - 2x)",
       "pitch": "Pitch",
       "pitchDescription": "Pitch shift (0.5x - 2x)",
-      "stopAndRestart": "Stop and restart",
-      "queueAfterCurrent": "Queue after current",
-      "ignoreNewTrigger": "Ignore new trigger"
+      "stopAndRestart": "Interrupt current reading",
+      "queueAfterCurrent": "Queue after current"
     },
     "triggers": {
       "title": "Trigger Settings",
@@ -177,8 +178,8 @@
     },
     "history": {
       "title": "History Settings",
-      "enabled": "Enable History",
-      "enabledDescription": "Keeps every reading for replay and search; off, readings are not saved.",
+      "enabled": "Save reading history",
+      "enabledDescription": "Save searchable readings for later replay. When off, the small speech cache still works; existing history is kept.",
       "storageMode": "Storage mode",
       "persistent": "Persistent",
       "temporary": "Temporary",
@@ -229,7 +230,7 @@
     "postProcess": {
       "title": "LLM Post-Processing",
       "description": "Runs text through an OpenAI-compatible LLM before speech.",
-      "enabled": "Enable Post-Processing",
+      "enabled": "Post-process text",
       "enabledDescription": "Sends each reading through the active provider's model before speech; off, text is spoken as-is, and failures fall back to the original text.",
       "minChars": "Minimum Length",
       "minCharsTooltip": "Runs the active template only on texts at least this many characters; shorter text is spoken verbatim. 0 processes everything.",

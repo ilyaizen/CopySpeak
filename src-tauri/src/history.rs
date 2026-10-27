@@ -901,14 +901,22 @@ pub fn start_cleanup_service(app_handle: tauri::AppHandle) {
             }
 
             // Re-read config to pick up any changes
-            let (should_cleanup_orphaned, auto_delete_mode) = {
+            let (history_effective, should_cleanup_orphaned, auto_delete_mode) = {
                 let config: tauri::State<std::sync::Mutex<config::AppConfig>> = app_handle.state();
                 let cfg = config.lock().unwrap();
                 (
+                    cfg.is_history_effective(),
                     cfg.history.cleanup_orphaned_files,
                     cfg.history.auto_delete.clone(),
                 )
             };
+
+            // Experimental or History off: the feature is inert — never delete
+            // stored recordings automatically. The loop still paces re-checks,
+            // so re-enabling resumes cleanup on a later cycle.
+            if !history_effective {
+                continue;
+            }
 
             let history: tauri::State<std::sync::Mutex<HistoryLog>> = app_handle.state();
 

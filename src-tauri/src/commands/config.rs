@@ -34,9 +34,15 @@ pub fn reset_config(
     }
 
     // Update in-memory state
+    let was_duck_effective = config.lock().unwrap().is_duck_effective();
     let mut cfg = config.lock().unwrap();
     *cfg = default_config.clone();
     drop(cfg);
+
+    // Factory defaults leave Duck off: un-duck a reading in progress.
+    if was_duck_effective {
+        crate::audio_duck::restore();
+    }
 
     // Apply runtime changes
     // Update audio settings
@@ -249,10 +255,15 @@ pub fn set_config(
             cfg.hotkey.clone(),
         )
     };
+    let old_duck_effective = {
+        let cfg = config.lock().unwrap();
+        cfg.is_duck_effective()
+    };
     let old_daemon_idle_timeout = {
         let cfg = config.lock().unwrap();
         cfg.tts.daemon_idle_timeout_secs
     };
+    let new_duck_effective = new_config.is_duck_effective();
     let mode_changed = old_mode != new_config.playback.on_retrigger;
     let volume_changed = old_volume != new_config.playback.volume;
     let autostart_changed = old_autostart != new_config.general.launch_on_login;
@@ -340,6 +351,15 @@ pub fn set_config(
         };
         crate::tts::local_daemon::set_idle_timeout(secs);
         log::info!("[LocalDaemon] idle timeout set to {}s", secs);
+    }
+
+    // Duck is gated by Experimental: a save that turns either switch off while
+    // a reading plays must un-duck immediately through the same worker
+    // (restore is a no-op when nothing is ducked; playback-finished and crash
+    // recovery still restore as before).
+    if old_duck_effective && !new_duck_effective {
+        log::info!("[Config] Duck became ineffective — restoring ducked apps");
+        crate::audio_duck::restore();
     }
 
     // Tray labels follow the saved locale and the listening state.

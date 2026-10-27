@@ -1,25 +1,52 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { page } from "$app/state";
-  // import { Play, Settings, Cpu, Clock, WandSparkles } from "@lucide/svelte";
   import { Play, Settings, Clock, AudioLines, Cpu } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
   import { invoke } from "@tauri-apps/api/core";
+  import { listen } from "@tauri-apps/api/event";
   import { isTauri } from "#lib/services/tauri.js";
   import type { AppConfig } from "#lib/types";
+  import { isHistoryEffective } from "#lib/experimental-gates";
 
   let historyEnabled = $state(false);
-  // let effectsEnabled = $state(false);
+  let unlistenConfig: (() => void) | null = null;
+  let destroyed = false;
+  let fetchSeq = 0;
+
+  async function updateConfig() {
+    const seq = ++fetchSeq;
+    try {
+      const config = await invoke<AppConfig>("get_config");
+      if (destroyed || seq !== fetchSeq) return;
+      historyEnabled = isHistoryEffective(config);
+    } catch {
+      // Ignore errors
+    }
+  }
 
   onMount(async () => {
-    if (isTauri) {
-      try {
-        const config = await invoke<AppConfig>("get_config");
-        historyEnabled = config.history.enabled;
-        // effectsEnabled = config.effects?.enabled ?? false;
-      } catch {
-        // Ignore errors
+    if (!isTauri) return;
+    updateConfig();
+    try {
+      const unlisten = await listen("config-changed", () => {
+        updateConfig();
+      });
+      if (destroyed) {
+        unlisten();
+      } else {
+        unlistenConfig = unlisten;
       }
+    } catch {
+      // Ignore listener errors
+    }
+  });
+
+  onDestroy(() => {
+    destroyed = true;
+    if (unlistenConfig) {
+      unlistenConfig();
+      unlistenConfig = null;
     }
   });
 
@@ -40,17 +67,6 @@
           }
         ]
       : []),
-    //
-    // ...(effectsEnabled
-    //   ? [
-    //       {
-    //         id: "effects",
-    //         label: $_("header.effects"),
-    //         href: "/effects",
-    //         icon: WandSparkles
-    //       }
-    //     ]
-    //   : []),
     {
       id: "voices",
       label: $_("header.voices"),

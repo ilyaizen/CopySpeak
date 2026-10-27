@@ -70,14 +70,15 @@
       "playback": "播放",
       "hud": "HUD 浮层",
       "history": "历史记录",
-      "triggers": "触发",
+      "triggers": "朗读触发",
       "hotkeys": "快捷键",
-      "pagination": "高级",
+      "pagination": "文本准备",
       "sanitization": "文本清理",
       "postProcess": "LLM 后处理",
       "effects": "效果",
       "appInfo": "应用信息",
-      "importExport": "导入 / 导出"
+      "importExport": "导入 / 导出",
+      "audioDelivery": "音频传输"
     },
     "categories": {
       "general": "常规",
@@ -124,16 +125,17 @@
       "minimizeToTray": "关闭时最小化到托盘",
       "minimizeToTrayTooltip": "关闭窗口时最小化到系统托盘，而不是退出",
       "experimental": "实验性功能",
-      "experimentalDescription": "显示并启用实验性功能 — 后处理与音效。关闭时这些功能会隐藏并强制关闭；已保存的设置会保留。"
+      "experimentalDescription": "关闭此项将暂停历史记录、后处理、效果和音量压低，但会保留其设置和已保存的朗读记录。历史记录占用磁盘空间；后处理可能会增加网络使用和延迟。重新开启将恢复保存的选择，包括音量压低。",
+      "profileEffects": "效果在“语音”中按语音配置文件进行配置。"
     },
     "playback": {
       "title": "播放设置",
-      "onRetrigger": "重复触发时",
+      "onRetrigger": "新朗读开始时",
       "onRetriggerDescription": "正在朗读时再次触发 TTS 的处理方式",
       "volume": "音量",
       "volumeDescription": "音频播放音量（0-100%）",
       "streaming": "流式音频",
-      "streamingDescription": "音频一到达即开始播放。支持的云引擎：ElevenLabs 和 Cartesia。关闭时使用批量合成，等每个请求完成后再播放。",
+      "streamingDescription": "音频到达支持的云端引擎和已就绪的本地引擎时即刻开始播放。关闭时，播放将在合成完成后开始。",
       "duck": "压低其他应用音量",
       "duckDescription": "CopySpeak 朗读时降低其他应用的音量，结束后恢复。目前仅支持 Windows。",
       "duckLevel": "压低程度",
@@ -142,9 +144,8 @@
       "playbackSpeedDescription": "播放速度（0.5x - 2x）",
       "pitch": "音调",
       "pitchDescription": "音调偏移（0.5x - 2x）",
-      "stopAndRestart": "停止并重新开始",
-      "queueAfterCurrent": "排在当前之后",
-      "ignoreNewTrigger": "忽略新的触发"
+      "stopAndRestart": "中断当前朗读",
+      "queueAfterCurrent": "排在当前之后"
     },
     "triggers": {
       "title": "触发设置",
@@ -177,8 +178,8 @@
     },
     "history": {
       "title": "历史记录设置",
-      "enabled": "启用历史记录",
-      "enabledDescription": "记录所有 TTS 操作",
+      "enabled": "保存朗读历史",
+      "enabledDescription": "保存支持搜索的朗读记录以供稍后重播。关闭时小型语音缓存仍会生效；已有的历史记录将保留。",
       "storageMode": "存储模式",
       "persistent": "永久",
       "temporary": "临时",
@@ -229,7 +230,7 @@
     "postProcess": {
       "title": "LLM 后处理",
       "description": "使用兼容 OpenAI 的 LLM 服务商改写复制的文本，使朗读更简洁、更易听。",
-      "enabled": "启用后处理",
+      "enabled": "文本后处理",
       "enabledDescription": "在 TTS 之前，将清理后的文本交给当前服务商的聊天模型处理。失败时回退为原文。",
       "minChars": "最小长度",
       "minCharsTooltip": "仅处理不少于此字符数的文本；较短的文本按原文朗读。0 表示全部处理。",

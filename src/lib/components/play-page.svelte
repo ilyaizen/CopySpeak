@@ -1,5 +1,6 @@
 <script lang="ts">
   import { effectiveEffect } from "#lib/effects-gate";
+  import { isHistoryEffective } from "#lib/experimental-gates";
   import { onMount, onDestroy } from "svelte";
   import { replaceState } from "$app/navigation";
   import PlaybackControls from "#lib/components/playback-controls.svelte";
@@ -27,7 +28,20 @@
     tts: {
       active_backend: "cartesia",
       active_profile_id: "default",
-      profiles: [],
+      profiles: [
+        {
+          id: "default",
+          name: "Default",
+          description: null,
+          engine: "cartesia",
+          voice: "Katie",
+          voice_label: "Katie",
+          speed: 1.0,
+          pitch: 1.0,
+          effects: { enabled: false, active_effect: "none" },
+          engine_options: {}
+        }
+      ],
       preset: "kokoro-tts",
       command: "kokoro-tts",
       args_template: [],
@@ -92,7 +106,7 @@
       on_retrigger: "interrupt",
       volume: 100,
       streaming_enabled: true,
-      duck: { enabled: true, level_percent: 20 }
+      duck: { enabled: false, level_percent: 20 }
     },
     hud: {
       enabled: false,
@@ -266,15 +280,27 @@
     }
   });
 
+  let configSeq = 0;
+  // Recent History only loads while the feature is effective, and only once —
+  // shared by first mount and config-changed re-syncs.
+  async function ensureHistoryLoaded() {
+    if (isTauri && isHistoryEffective(config) && historyStore.items.length === 0) {
+      await historyStore.loadHistory();
+    }
+  }
   async function loadConfig(external = false) {
     if (!isTauri) {
       config = mockConfig;
       return;
     }
+    const seq = ++configSeq;
     if (external) externalLoad = true;
     try {
-      config = await invoke<AppConfig>("get_config");
+      const fetched = await invoke<AppConfig>("get_config");
+      if (destroyed || seq !== configSeq) return;
+      config = fetched;
     } catch (e) {
+      if (destroyed || seq !== configSeq) return;
       error = `Failed to load config: ${e}`;
       config = mockConfig;
     }
@@ -419,10 +445,10 @@
 
   onMount(async () => {
     await loadConfig();
-    if (isTauri && historyStore.items.length === 0) await historyStore.loadHistory();
+    await ensureHistoryLoaded();
     const params = new URLSearchParams(window.location.search);
     const readingId = params.get("reading");
-    if (readingId) {
+    if (readingId && isHistoryEffective(config)) {
       replaceState(window.location.pathname, {});
       const reading = groupHistoryReadings(historyStore.items).find((r) => r.id === readingId);
       if (reading) await restoreReading(reading, params.get("regenerate") === "1");
@@ -433,6 +459,7 @@
       try {
         unlistenConfig = await listen("config-changed", async () => {
           await loadConfig(true);
+          await ensureHistoryLoaded();
         });
         if (destroyed) unlistenConfig();
         // Double-copy, hotkey and browser readings fill the field with their text.
@@ -552,7 +579,7 @@
     </div>
   {/if}
 
-  {#if config?.history.enabled}
+  {#if isHistoryEffective(config)}
     <RecentHistory compact limit={3} onRestore={restoreReading} />
   {/if}
 </div>

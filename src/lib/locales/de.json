@@ -70,14 +70,15 @@
       "playback": "Wiedergabe",
       "hud": "HUD-Overlay",
       "history": "Verlauf",
-      "triggers": "Auslöser",
+      "triggers": "Lese-Auslöser",
       "hotkeys": "Tastenkürzel",
-      "pagination": "Erweitert",
+      "pagination": "Textvorbereitung",
       "sanitization": "Textbereinigung",
       "postProcess": "LLM-Nachbearbeitung",
       "effects": "Effekte",
       "appInfo": "App-Info",
-      "importExport": "Import / Export"
+      "importExport": "Import / Export",
+      "audioDelivery": "Audioausgabe"
     },
     "categories": {
       "general": "Allgemein",
@@ -124,16 +125,17 @@
       "minimizeToTray": "Beim Schließen in den Infobereich minimieren",
       "minimizeToTrayTooltip": "Beim Schließen des Fensters in den Infobereich minimieren, statt die Anwendung zu beenden",
       "experimental": "Experimentelle Funktionen",
-      "experimentalDescription": "Zeigt und aktiviert experimentelle Funktionen – Post-process und Effekte. Aus blendet sie aus und schaltet sie ab; gespeicherte Einstellungen bleiben."
+      "experimentalDescription": "Das Ausschalten pausiert Verlauf, Nachbearbeitung, Effekte und das Absenken anderer Apps, behält jedoch deren Einstellungen und gespeicherte Lesungen bei. Der Verlauf belegt Speicherplatz; die Nachbearbeitung kann Netzwerknutzung und Verzögerungen verursachen. Das erneute Einschalten stellt die gespeicherten Optionen wieder her, einschließlich des Absenkens anderer Apps.",
+      "profileEffects": "Effekte werden pro Stimmprofil unter Stimmen konfiguriert."
     },
     "playback": {
       "title": "Wiedergabeeinstellungen",
-      "onRetrigger": "Verhalten bei erneutem Auslösen",
+      "onRetrigger": "Wenn ein neuer Lesevorgang startet",
       "onRetriggerDescription": "Was passiert, wenn TTS während einer laufenden Ausgabe erneut ausgelöst wird",
       "volume": "Lautstärke",
       "volumeDescription": "Wiedergabelautstärke (0–100 %)",
       "streaming": "Audio streamen",
-      "streamingDescription": "Wiedergabe starten, sobald Audio eintrifft. Unterstützte Cloud-Engines: ElevenLabs und Cartesia. Wenn deaktiviert, wird per Batch synthetisiert und jede Anfrage vor der Wiedergabe abgewartet.",
+      "streamingDescription": "Wiedergabe starten, sobald Audio bei unterstützten Cloud-Engines und bereiten lokalen Engines eintrifft. Ausgeschaltet wartet die Wiedergabe, bis die Synthese abgeschlossen ist.",
       "duck": "Andere Apps absenken",
       "duckDescription": "Senkt den Ton anderer Apps, während CopySpeak spricht, und stellt ihn danach wieder her. Derzeit nur unter Windows.",
       "duckLevel": "Absenkpegel",
@@ -142,9 +144,8 @@
       "playbackSpeedDescription": "Wiedergabegeschwindigkeit (0,5x – 2x)",
       "pitch": "Tonhöhe",
       "pitchDescription": "Tonhöhenverschiebung (0,5x – 2x)",
-      "stopAndRestart": "Stoppen und neu starten",
-      "queueAfterCurrent": "Nach aktueller einreihen",
-      "ignoreNewTrigger": "Neuen Auslöser ignorieren"
+      "stopAndRestart": "Aktuelle Lesung unterbrechen",
+      "queueAfterCurrent": "Nach aktueller einreihen"
     },
     "triggers": {
       "title": "Auslöser-Einstellungen",
@@ -177,8 +178,8 @@
     },
     "history": {
       "title": "Verlaufseinstellungen",
-      "enabled": "Verlauf aktivieren",
-      "enabledDescription": "Protokoll aller TTS-Vorgänge führen",
+      "enabled": "Leseverlauf speichern",
+      "enabledDescription": "Durchsuchbare Lesungen für spätere Wiedergabe speichern. Ausgeschaltet funktioniert der kleine Sprach-Cache weiterhin; vorhandener Verlauf bleibt erhalten.",
       "storageMode": "Speichermodus",
       "persistent": "Dauerhaft",
       "temporary": "Temporär",
@@ -229,7 +230,7 @@
     "postProcess": {
       "title": "LLM-Nachbearbeitung",
       "description": "Kopierten Text mit einem OpenAI-kompatiblen LLM-Anbieter in knappe, gut hörbare Sprache umschreiben.",
-      "enabled": "Nachbearbeitung aktivieren",
+      "enabled": "Text nachbearbeiten",
       "enabledDescription": "Bereinigten Text vor der TTS durch das Chatmodell des aktiven Anbieters schicken. Bei Fehlern wird der Originaltext verwendet.",
       "minChars": "Mindestlänge",
       "minCharsTooltip": "Nur Text ab dieser Zeichenanzahl verarbeiten; kürzerer Text wird wörtlich gesprochen. 0 verarbeitet alles.",
