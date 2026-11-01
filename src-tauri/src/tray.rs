@@ -66,11 +66,20 @@ impl TrayState {
             include_bytes!("../icons/tray/speaking.png"),
             include_bytes!("../icons/tray/paused.png"),
         ];
-        Ok(Self {
-            icons: bytes
+        let icons = bytes
+            .into_iter()
+            .map(Image::from_bytes)
+            .collect::<tauri::Result<Vec<_>>>()?;
+        #[cfg(target_os = "windows")]
+        let icons = {
+            let icon_size = windows_tray_icon_size();
+            icons
                 .into_iter()
-                .map(Image::from_bytes)
-                .collect::<tauri::Result<_>>()?,
+                .map(|icon| resize_tray_icon(icon, icon_size))
+                .collect()
+        };
+        Ok(Self {
+            icons,
             inner: Mutex::new(TrayInner {
                 playing: false,
                 paused: false,
@@ -83,6 +92,53 @@ impl TrayState {
     fn icon(&self, state: IconState) -> Image<'static> {
         self.icons[icon_index(state)].clone()
     }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_tray_icon_size() -> (u32, u32) {
+    use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSMICON, SM_CYSMICON};
+
+    // SAFETY: GetSystemMetrics reads process-global metrics and accepts these constants.
+    let width = unsafe { GetSystemMetrics(SM_CXSMICON) };
+    let height = unsafe { GetSystemMetrics(SM_CYSMICON) };
+    (
+        if width > 0 { width as u32 } else { 16 },
+        if height > 0 { height as u32 } else { 16 },
+    )
+}
+
+#[cfg(target_os = "windows")]
+fn resize_tray_icon(icon: Image<'static>, (width, height): (u32, u32)) -> Image<'static> {
+    use image::{imageops, ImageBuffer, Rgba};
+
+    // Filter premultiplied colors so transparent pixels cannot create dark halos.
+    let pixels = icon
+        .rgba()
+        .chunks_exact(4)
+        .flat_map(|pixel| {
+            let alpha = f32::from(pixel[3]) / 255.0;
+            [
+                f32::from(pixel[0]) / 255.0 * alpha,
+                f32::from(pixel[1]) / 255.0 * alpha,
+                f32::from(pixel[2]) / 255.0 * alpha,
+                alpha,
+            ]
+        })
+        .collect();
+    let source: ImageBuffer<Rgba<f32>, Vec<f32>> =
+        ImageBuffer::from_raw(icon.width(), icon.height(), pixels)
+            .expect("decoded tray image must contain valid RGBA pixels");
+    let resized = imageops::resize(&source, width, height, imageops::FilterType::Lanczos3);
+    let mut rgba = Vec::with_capacity((width * height * 4) as usize);
+    for pixel in resized.pixels() {
+        let alpha = pixel[3].clamp(0.0, 1.0);
+        for channel in &pixel.0[..3] {
+            let unpremultiplied = if alpha > 0.0 { channel / alpha } else { 0.0 };
+            rgba.push((unpremultiplied.clamp(0.0, 1.0) * 255.0).round() as u8);
+        }
+        rgba.push((alpha * 255.0).round() as u8);
+    }
+    Image::new_owned(rgba, width, height)
 }
 
 pub fn initial_icon(app: &AppHandle) -> Image<'static> {
@@ -261,5 +317,57 @@ mod tests {
             assert_eq!(icon_index(state), index);
             assert!(!tray.icon(state).rgba().is_empty());
         }
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn windows_tray_states_are_sized_for_the_system_small_icon() {
+        use windows::Win32::UI::WindowsAndMessaging::{GetSystemMetrics, SM_CXSMICON, SM_CYSMICON};
+
+        let tray = TrayState::new().expect("tray images must decode");
+        let size = unsafe { (GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON)) };
+        assert!(size.0 > 0 && size.1 > 0);
+        for state in [
+            IconState::Idle,
+            IconState::Synthesizing,
+            IconState::Speaking,
+            IconState::Paused,
+        ] {
+            let icon = tray.icon(state);
+            assert_eq!(
+                (icon.width(), icon.height()),
+                (size.0 as u32, size.1 as u32)
+            );
+            assert!(icon
+                .rgba()
+                .chunks_exact(4)
+                .any(|pixel| (1..255).contains(&pixel[3])));
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn tray_resize_preserves_color_across_transparent_edges() {
+        let mut rgba = Vec::new();
+        for y in 0..32 {
+            for x in 0..32 {
+                if (8..24).contains(&x) && (8..24).contains(&y) {
+                    rgba.extend_from_slice(&[30, 180, 100, 255]);
+                } else {
+                    rgba.extend_from_slice(&[255, 0, 255, 0]);
+                }
+            }
+        }
+        let resized = resize_tray_icon(Image::new_owned(rgba, 32, 32), (16, 16));
+        let mut antialiased = 0;
+        for pixel in resized.rgba().chunks_exact(4) {
+            if (8..247).contains(&pixel[3]) {
+                antialiased += 1;
+                assert!(pixel[0].abs_diff(30) <= 2, "{pixel:?}");
+                assert!(pixel[1].abs_diff(180) <= 2, "{pixel:?}");
+                assert!(pixel[2].abs_diff(100) <= 2, "{pixel:?}");
+            }
+        }
+        assert!(antialiased > 0);
     }
 }

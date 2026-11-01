@@ -623,6 +623,7 @@ dependencies = [
  "glib",
  "gtk",
  "gtk-layer-shell",
+ "image",
  "lazy_static",
  "log",
  "objc2-app-kit",

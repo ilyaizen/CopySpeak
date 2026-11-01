@@ -42,6 +42,7 @@ tokio = { version = "1", features = ["macros", "rt"] }
 tauri-build = { version = "2", features = [] }
 
 [target.'cfg(windows)'.dependencies]
+image = { version = "0.25", default-features = false }
 winreg = "0.52"
 windows = { version = "0.58", features = [
     "Win32_System_DataExchange",
