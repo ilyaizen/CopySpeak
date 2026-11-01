@@ -108,13 +108,18 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Grep `src/` for the filename before removing or renaming anything in `static/`; the 0.2.6 screenshot swap left `screenshots.svelte` requesting the deleted `screen-v0.1.8.png` and the live landing page shipped a broken image.
 - Keep version numbers out of locale strings; they rot on every release (all nine locales carried `v0.1.8` inside the screenshot caption).
 - The landing flag `VITE_IS_VERCEL` is never read from the environment: `vite.config.js` `define` maps it from `process.env.VERCEL` (what Vercel's runners set). Local previews must run `bun run dev:landing` / `preview:landing` (they set `VERCEL=1`); exporting `VITE_IS_VERCEL=1` yourself silently serves the Play UI.
+- Format imported HTML/CSS/JS under `static/` before running `bun run check`; the global formatter checks those files too.
 - Scope landing CSS under `.landing` in `landing.css`: `+layout.svelte` renders the Play UI's root too, so a bare `h2`, `footer` or `:root` rule restyles the app.
 - Target `.dark .landing` for dark-only rules: mode-watcher adds `.dark` to `<html>` and never `.light`, so light is the base selector.
 - Copy preview assets the landing uses from the untracked `docs_internal/` into `static/landing/`: the gitignored folder never deploys.
+- Never mark the providers marquee clone `inert`: each copy is narrower than the carousel viewport, so the clone is on screen for most of the loop and `inert` makes visible logos swallow clicks (events retarget to `.providers-track` with no href). Keep the clone `aria-hidden` with `tabindex="-1"` on its links — mouse-clickable, still unfocusable and silent to assistive tech.
+- Translate a source mark's ink-box origin to (0, 0) before scaling it into a tight lockup viewBox; scaling alone shifts and clips artwork whose source coordinates start elsewhere.
+- svgo 4.x rejects the providers' svgo.config.cjs `removeViewBox` override inside `preset-default` ("not part of preset-default") and its output can be slightly LARGER than the input — the viewBox still survives because svgo 4 dropped the plugin from the preset. Never "fix" the config per the warning's suggestion (a standalone `'removeViewBox'` plugin): that ENABLES the plugin and strips the viewBox the mask sizing needs.
 
 ## Icons
 
 - Drive tray playback status from the webview store, never `AudioPlayer`: Rodio is only a safety net, and refreshing the tray from its callbacks must not re-lock the player. Preserve the branded icon’s color and artwork; macOS template mode strips color.
+- Resize Windows tray artwork to the system small-icon dimensions with alpha-aware filtering before passing it to Tauri: Windows' native downscale from 512px produces jagged edges.
 - An asset-only icon swap does not re-embed the exe icon: tauri-build's generated `.rc` references `icons/icon.ico` by path, so cargo relinks without recompiling the resource. Touch `src-tauri/build.rs` (or `cargo clean -p copyspeak`) to force the resource rebuild, then verify by pixel-comparing `ExtractAssociatedIcon` output against the new ico's 32px frame. The tray's `include_bytes!` icons re-embed on the same rebuild; the installed `%LOCALAPPDATA%` app only changes on the next release install.
 - Strip trailing whitespace when installing a designer-exported SVG verbatim: `git diff --check` fails on QuiverAI/Arrow-exported indentation lines, and whitespace-only stripping is render-safe (verify with a byte-compare of a re-render).
 

@@ -476,6 +476,103 @@
   margin: 16px 0 0;
 }
 
+/* Supported engines: one continuous carousel line; the Cloud/Local group labels
+   are inline separators inside it. The row duplicates its contents for a seamless
+   marquee, edge fades are static, and animation is disabled for
+   prefers-reduced-motion. */
+.landing .providers {
+  padding: 40px 0;
+  border-top: 1px solid var(--border);
+}
+.landing .providers-carousel {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    #000 48px,
+    #000 calc(100% - 48px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0,
+    #000 48px,
+    #000 calc(100% - 48px),
+    transparent 100%
+  );
+}
+.landing .providers-track {
+  display: flex;
+  width: max-content;
+  /* ~1.9x the old cloud row's content at 90s keeps the linear speed below the
+     old 40s cloud row's px/s — slower to read, one knob for the whole line. */
+  animation: providers-marquee 90s linear infinite;
+}
+.landing .providers-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  /* ElevenLabs requires one logo-height of clear space on every side. */
+  gap: 32px;
+  margin: 0;
+  padding: 16px 0;
+  list-style: none;
+}
+/* Inside each marquee the row must stay single-file; the trailing
+   padding makes both copies identical so the -50% loop has no seam. */
+.landing .providers-track .providers-list {
+  flex-wrap: nowrap;
+  padding-right: 32px;
+}
+@keyframes providers-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing .providers-track {
+    animation: none;
+  }
+  /* Static content is wider than the row, so hand scroll back to the user. */
+  .landing .providers-carousel {
+    overflow-x: auto;
+  }
+}
+.landing .providers-list a {
+  display: inline-flex;
+  align-items: center;
+  font: 600 14px/20px var(--sans);
+  text-decoration: none;
+}
+/* Provider marks: one SVG per owner, alpha-masked and painted with the text
+   color, so a single file serves both themes (no light/dark variants, no DOM
+   swapping). Explicit sizes reserve layout before the mask loads. */
+.landing .provider-mark {
+  display: inline-block;
+  flex: none;
+  background-color: currentColor;
+  -webkit-mask-image: var(--mark);
+  mask-image: var(--mark);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+.landing .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* features: a single running transcript */
 .landing .section {
   padding: 72px 0;
@@ -577,6 +674,9 @@
   }
   .landing .section {
     padding: 56px 0;
+  }
+  .landing .providers {
+    padding: 32px 0;
   }
   .landing .nav a {
     padding: 0 8px;
