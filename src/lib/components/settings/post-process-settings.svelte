@@ -10,12 +10,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { toast } from "svelte-sonner";
   import { _ } from "svelte-i18n";
-  import type {
-    AppConfig,
-    PostProcessConfig,
-    PostProcessTemplate,
-    PostProcessTemplateClass
-  } from "#lib/types";
+  import type { AppConfig, PostProcessConfig, PostProcessTemplate } from "#lib/types";
   import {
     activeTemplate,
     createCustomTemplate,
@@ -121,12 +116,10 @@
   }
 
   function handleClassChange(e: Event) {
-    // SAFETY: this handler is only bound to the class <select>; its target is
-    // that element and its options enumerate exactly the two
-    // PostProcessTemplateClass values.
-    if (!currentTemplate) return;
-    const raw = (e.target as HTMLSelectElement).value;
-    currentTemplate.class = raw as PostProcessTemplateClass;
+    const target = e.target;
+    if (!currentTemplate || !(target instanceof HTMLSelectElement)) return;
+    const raw = target.value;
+    if (raw === "preserve" || raw === "rewrite") currentTemplate.class = raw;
   }
 
   function addTemplate() {

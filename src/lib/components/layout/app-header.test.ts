@@ -3,12 +3,15 @@ import { render, waitFor } from "@testing-library/svelte";
 import { waitForI18nReady } from "#lib/i18n";
 import AppHeader from "./app-header.svelte";
 
+// Declared before the hoisted mock block below; types are erased, so the hoist is safe.
+type ConfigResponse = ReturnType<typeof makeConfig>;
+
 const { listeners, unlistened, ipc, mockInvoke } = vi.hoisted(() => ({
   listeners: new Map<string, (event: { payload: unknown }) => Promise<void> | void>(),
   unlistened: new Set<() => void>(),
   ipc: {
     listenGate: Promise.resolve(),
-    configResolvers: [] as Array<(config: unknown) => void>
+    configResolvers: new Array<(config: ConfigResponse) => void>()
   },
   mockInvoke: vi.fn()
 }));
@@ -109,8 +112,8 @@ describe("app-header history gating", () => {
   });
 
   it("discards stale config fetch responses when a newer fetch resolves first", async () => {
-    let resolveFirst!: (val: unknown) => void;
-    const firstFetchPromise = new Promise((resolve) => {
+    let resolveFirst!: (val: ConfigResponse) => void;
+    const firstFetchPromise = new Promise<ConfigResponse>((resolve) => {
       resolveFirst = resolve;
     });
 
