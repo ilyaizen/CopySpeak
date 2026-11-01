@@ -799,6 +799,11 @@
       "playDemo": "डेमो चलाएँ",
       "previewLabel": "Preview"
     },
+    "providers": {
+      "title": "समर्थित इंजन",
+      "cloud": "क्लाउड",
+      "offline": "स्थानीय"
+    },
     "features": {
       "title": "विशेषताएँ",
       "doubleCopy": {

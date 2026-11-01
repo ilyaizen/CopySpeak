@@ -799,6 +799,11 @@
       "playDemo": "Lire la démo",
       "previewLabel": "Preview"
     },
+    "providers": {
+      "title": "Moteurs pris en charge",
+      "cloud": "Cloud",
+      "offline": "Local"
+    },
     "features": {
       "title": "Fonctionnalités",
       "doubleCopy": {

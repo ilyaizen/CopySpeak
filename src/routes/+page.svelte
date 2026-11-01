@@ -1,6 +1,7 @@
 <script lang="ts">
   import PlayPage from "#lib/components/play-page.svelte";
   import Hero from "#lib/components/landing/hero.svelte";
+  import Providers from "#lib/components/landing/providers.svelte";
   import Features from "#lib/components/landing/features.svelte";
   import Screenshots from "#lib/components/landing/screenshots.svelte";
   import Footer from "#lib/components/landing/footer.svelte";
@@ -8,6 +9,7 @@
 
 {#if import.meta.env.VITE_IS_VERCEL}
   <Hero />
+  <Providers />
   <Features />
   <Screenshots />
   <Footer />

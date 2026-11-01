@@ -808,6 +808,11 @@
       "playDemo": "Play demo",
       "previewLabel": "Preview"
     },
+    "providers": {
+      "title": "Supported engines",
+      "cloud": "Cloud",
+      "offline": "Local"
+    },
     "features": {
       "title": "Features",
       "doubleCopy": {

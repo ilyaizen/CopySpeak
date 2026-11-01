@@ -799,6 +799,11 @@
       "playDemo": "Demo abspielen",
       "previewLabel": "Preview"
     },
+    "providers": {
+      "title": "Unterstützte Engines",
+      "cloud": "Cloud",
+      "offline": "Lokal"
+    },
     "features": {
       "title": "Funktionen",
       "doubleCopy": {

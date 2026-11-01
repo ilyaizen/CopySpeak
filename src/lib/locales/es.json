@@ -808,6 +808,11 @@
       "playDemo": "Reproducir demo",
       "previewLabel": "Preview"
     },
+    "providers": {
+      "title": "Motores compatibles",
+      "cloud": "Nube",
+      "offline": "Local"
+    },
     "features": {
       "title": "Funciones",
       "doubleCopy": {

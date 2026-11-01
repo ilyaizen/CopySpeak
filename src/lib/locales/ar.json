@@ -799,6 +799,11 @@
       "playDemo": "تشغيل العرض",
       "previewLabel": "Preview"
     },
+    "providers": {
+      "title": "المحركات المدعومة",
+      "cloud": "سحابية",
+      "offline": "محلية"
+    },
     "features": {
       "title": "الميزات",
       "doubleCopy": {

@@ -808,6 +808,11 @@
       "playDemo": "הפעלת ההדגמה",
       "previewLabel": "Preview"
     },
+    "providers": {
+      "title": "מנועים נתמכים",
+      "cloud": "ענן",
+      "offline": "מקומיים"
+    },
     "features": {
       "title": "תכונות",
       "doubleCopy": {

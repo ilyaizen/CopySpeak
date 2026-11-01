@@ -799,6 +799,11 @@
       "playDemo": "Запустить демо",
       "previewLabel": "Preview"
     },
+    "providers": {
+      "title": "Поддерживаемые движки",
+      "cloud": "Облако",
+      "offline": "Локально"
+    },
     "features": {
       "title": "Возможности",
       "doubleCopy": {
