@@ -802,7 +802,10 @@
       "download": "הורדה",
       "github": "GitHub",
       "version": "v{version}",
-      "chip": "Copied ×2",
+      "listen": "האזנה",
+      "stopListening": "עצירה",
+      "pauseDemo": "השהיית ההדגמה",
+      "playDemo": "הפעלת ההדגמה",
       "previewLabel": "Preview"
     },
     "features": {

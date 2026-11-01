@@ -793,7 +793,10 @@
       "download": "下载",
       "github": "GitHub",
       "version": "v{version}",
-      "chip": "Copied ×2",
+      "listen": "收听",
+      "stopListening": "停止",
+      "pauseDemo": "暂停演示",
+      "playDemo": "播放演示",
       "previewLabel": "Preview"
     },
     "features": {

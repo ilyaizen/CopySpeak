@@ -802,7 +802,10 @@
       "download": "Download",
       "github": "GitHub",
       "version": "v{version}",
-      "chip": "Copied ×2",
+      "listen": "Listen",
+      "stopListening": "Stop",
+      "pauseDemo": "Pause demo",
+      "playDemo": "Play demo",
       "previewLabel": "Preview"
     },
     "features": {

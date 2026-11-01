@@ -793,7 +793,10 @@
       "download": "Скачать",
       "github": "GitHub",
       "version": "v{version}",
-      "chip": "Copied ×2",
+      "listen": "Слушать",
+      "stopListening": "Стоп",
+      "pauseDemo": "Пауза демо",
+      "playDemo": "Запустить демо",
       "previewLabel": "Preview"
     },
     "features": {

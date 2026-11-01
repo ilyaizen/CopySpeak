@@ -793,7 +793,10 @@
       "download": "डाउनलोड",
       "github": "GitHub",
       "version": "v{version}",
-      "chip": "Copied ×2",
+      "listen": "सुनें",
+      "stopListening": "रोकें",
+      "pauseDemo": "डेमो रोकें",
+      "playDemo": "डेमो चलाएँ",
       "previewLabel": "Preview"
     },
     "features": {

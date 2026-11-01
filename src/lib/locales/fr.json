@@ -793,7 +793,10 @@
       "download": "Télécharger",
       "github": "GitHub",
       "version": "v{version}",
-      "chip": "Copied ×2",
+      "listen": "Écouter",
+      "stopListening": "Arrêter",
+      "pauseDemo": "Mettre la démo en pause",
+      "playDemo": "Lire la démo",
       "previewLabel": "Preview"
     },
     "features": {

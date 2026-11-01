@@ -59,9 +59,12 @@
 }
 .landing::before {
   z-index: -2;
+  inset: -15% 0; /* 130% of the viewport: 15% headroom per edge for the scroll drift */
   background: url("/landing/bg-white.webp") center top / cover no-repeat;
   opacity: 0.28;
   filter: contrast(1.08) blur(0.75px);
+  /* --bg-shift is written by hero.svelte from the .landing scroll position */
+  transform: translate3d(0, var(--bg-shift, 0px), 0) scale(1.03);
 }
 .dark .landing::before {
   background-image: url("/landing/bg-black.webp");
@@ -254,26 +257,6 @@
     0 0 130px oklch(0.95 0 0 / 0.18),
     0 0 36px oklch(0.95 0 0 / 0.14);
 }
-.landing .stage::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: var(--border);
-  opacity: 0.5;
-  -webkit-mask-image:
-    url("/landing/tile.svg"), linear-gradient(to bottom, #000 40%, transparent 100%);
-  mask-image: url("/landing/tile.svg"), linear-gradient(to bottom, #000 40%, transparent 100%);
-  -webkit-mask-composite: source-in;
-  mask-composite: intersect;
-  -webkit-mask-size:
-    96px 40px,
-    100% 100%;
-  mask-size:
-    96px 40px,
-    100% 100%;
-}
 .landing .win {
   position: relative;
   max-width: 600px;
@@ -304,10 +287,23 @@
 }
 .landing .w {
   border-radius: 2px;
+  transition:
+    background-color 0.12s ease-out,
+    color 0.12s ease-out;
 }
+/* static default (no JS / reduced motion): speaking frame with one word lit */
 .landing .w.now {
   background: var(--accent);
   color: var(--accent-ink);
+}
+/* copied selection: CSS Highlight API paints one range; .sel is the fallback */
+.landing .promise.sel .w {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+::highlight(copied) {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
 }
 .landing .copied {
   display: flex;
@@ -421,6 +417,121 @@
   inset-inline-start: 16px;
   bottom: 8px;
   margin: 0;
+}
+.landing .demo-controls {
+  position: absolute;
+  inset-inline-end: 16px;
+  bottom: 4px;
+  display: flex;
+  gap: 8px;
+}
+.landing .demo-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--background);
+  color: var(--muted-foreground);
+  font: 500 11px/16px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.landing .demo-toggle .icon {
+  width: 12px;
+  height: 12px;
+}
+.landing .demo-toggle:hover,
+.landing .demo-toggle[aria-pressed="true"] {
+  background: var(--muted);
+  color: var(--foreground);
+}
+
+/* animated phases, driven by hero.svelte */
+@media (prefers-reduced-motion: no-preference) {
+  .landing .stage[data-phase] .hud {
+    transition:
+      opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .landing .stage[data-phase] .wave i {
+    animation: landing-wave 900ms ease-in-out infinite alternate;
+  }
+  .landing .stage[data-phase] .wave i:nth-child(2) {
+    animation-delay: -0.2s;
+  }
+  .landing .stage[data-phase] .wave i:nth-child(3) {
+    animation-delay: -0.45s;
+  }
+  .landing .stage[data-phase] .wave i:nth-child(4) {
+    animation-delay: -0.1s;
+  }
+  .landing .stage[data-phase] .wave i:nth-child(5) {
+    animation-delay: -0.6s;
+  }
+  .landing .stage[data-phase] .wave i:nth-child(6) {
+    animation-delay: -0.3s;
+  }
+  .landing .stage[data-phase] .wave i:nth-child(7) {
+    animation-delay: -0.7s;
+  }
+  .landing .stage[data-phase="idle"] .hud,
+  .landing .stage[data-phase="selected"] .hud,
+  .landing .stage[data-phase="copy1"] .hud,
+  .landing .stage[data-phase="copy2"] .hud,
+  .landing .stage[data-phase="done"] .hud {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  .landing .stage[data-phase] .copied {
+    transition: opacity 0.2s ease-out;
+  }
+  .landing .stage[data-phase="idle"] .copied,
+  .landing .stage[data-phase="selected"] .copied,
+  .landing .stage[data-phase="done"] .copied {
+    opacity: 0;
+  }
+  .landing .stage[data-phase="copy1"] .window-bar i,
+  .landing .stage[data-phase="copy2"] .window-bar i,
+  .landing .stage[data-phase="speaking"] .window-bar i {
+    animation: landing-drain 1500ms linear forwards;
+  }
+  .landing .stage[data-phase="idle"] .window-bar i,
+  .landing .stage[data-phase="selected"] .window-bar i,
+  .landing .stage[data-phase="done"] .window-bar i {
+    animation: none;
+    width: 0;
+  }
+  .landing .stage[data-phase="speaking"] .w.live {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .landing .stage[data-phase="speaking"] .w.unsaid {
+    color: var(--muted-foreground);
+  }
+  .landing .stage.paused .wave i,
+  .landing .stage.paused .window-bar i {
+    animation-play-state: paused;
+  }
+}
+@keyframes landing-wave {
+  from {
+    transform: scaleY(0.25);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes landing-drain {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0;
+  }
 }
 
 /* actions */
