@@ -11,7 +11,7 @@
   },
   "header": {
     "play": "Abspielen",
-    "voices": "Stimmen",
+    "voices": "Profile",
     "engines": "Engines",
     "history": "Verlauf",
     "settings": "Einstellungen",
@@ -127,7 +127,7 @@
       "minimizeToTray": "Beim Schließen im Infobereich behalten",
       "minimizeToTrayTooltip": "CopySpeak beim Schließen des Fensters im Infobereich weiterlaufen lassen. Ausgeschaltet wird die Anwendung beim Schließen beendet.",
       "experimental": "Experimentelle Funktionen",
-      "experimentalDescription": "Das Ausschalten pausiert Verlauf, Nachbearbeitung, Effekte und das Absenken anderer Apps, behält jedoch deren Einstellungen und gespeicherte Lesungen bei. Der Verlauf belegt Speicherplatz; die Nachbearbeitung kann Netzwerknutzung und Verzögerungen verursachen. Das erneute Einschalten stellt die gespeicherten Optionen wieder her, einschließlich des Absenkens anderer Apps.",
+      "experimentalDescription": "Das Ausschalten pausiert Verlauf, Nachbearbeitung und Effekte, behält jedoch deren Einstellungen und gespeicherte Lesungen bei. Der Verlauf belegt Speicherplatz; die Nachbearbeitung kann Netzwerknutzung und Verzögerungen verursachen. Das erneute Einschalten stellt die gespeicherten Optionen wieder her.",
       "profileEffects": "Effekte werden pro Stimmprofil unter Stimmen konfiguriert."
     },
     "playback": {
@@ -138,9 +138,9 @@
       "volumeDescription": "Wiedergabelautstärke (0–100 %)",
       "streaming": "Audio streamen",
       "streamingDescription": "Wiedergabe starten, sobald Audio bei unterstützten Cloud-Engines und bereiten lokalen Engines eintrifft. Ausgeschaltet wartet die Wiedergabe, bis die Synthese abgeschlossen ist.",
-      "duck": "Andere Apps absenken",
+      "duck": "Andere Apps beim Vorlesen leiser stellen",
       "duckDescription": "Senkt den Ton anderer Apps, während CopySpeak spricht, und stellt ihn danach wieder her. Derzeit nur unter Windows.",
-      "duckLevel": "Absenkpegel",
+      "duckLevel": "Lautstärke anderer Apps beim Vorlesen",
       "duckLevelDescription": "Lautstärke, auf die andere Apps sinken, in Prozent ihres eigenen Pegels",
       "playbackSpeed": "Geschwindigkeit",
       "playbackSpeedDescription": "Wiedergabegeschwindigkeit (0,5x – 2x)",

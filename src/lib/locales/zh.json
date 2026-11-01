@@ -11,7 +11,7 @@
   },
   "header": {
     "play": "播放",
-    "voices": "语音",
+    "voices": "配置文件",
     "engines": "引擎",
     "history": "历史记录",
     "settings": "设置",
@@ -127,7 +127,7 @@
       "minimizeToTray": "关闭到托盘",
       "minimizeToTrayTooltip": "关闭窗口后让 CopySpeak 继续在托盘中运行。关闭此选项后，关闭窗口将退出应用。",
       "experimental": "实验性功能",
-      "experimentalDescription": "关闭此项将暂停历史记录、后处理、效果和音量压低，但会保留其设置和已保存的朗读记录。历史记录占用磁盘空间；后处理可能会增加网络使用和延迟。重新开启将恢复保存的选择，包括音量压低。",
+      "experimentalDescription": "关闭此项将暂停历史记录、后处理和效果，但会保留其设置和已保存的朗读记录。历史记录占用磁盘空间；后处理可能会增加网络使用和延迟。重新开启将恢复保存的选择。",
       "profileEffects": "效果在“语音”中按语音配置文件进行配置。"
     },
     "playback": {
@@ -138,9 +138,9 @@
       "volumeDescription": "音频播放音量（0-100%）",
       "streaming": "流式音频",
       "streamingDescription": "音频到达支持的云端引擎和已就绪的本地引擎时即刻开始播放。关闭时，播放将在合成完成后开始。",
-      "duck": "压低其他应用音量",
+      "duck": "朗读时压低其他应用",
       "duckDescription": "CopySpeak 朗读时降低其他应用的音量，结束后恢复。目前仅支持 Windows。",
-      "duckLevel": "压低程度",
+      "duckLevel": "朗读时其他应用的音量",
       "duckLevelDescription": "其他应用降至的音量，按其自身音量的百分比计算",
       "playbackSpeed": "语速",
       "playbackSpeedDescription": "播放速度（0.5x - 2x）",

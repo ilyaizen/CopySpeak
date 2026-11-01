@@ -11,7 +11,7 @@
   },
   "header": {
     "play": "Lecture",
-    "voices": "Voix",
+    "voices": "Profils",
     "engines": "Moteurs",
     "history": "Historique",
     "settings": "Paramètres",
@@ -127,7 +127,7 @@
       "minimizeToTray": "Fermer dans la zone de notification",
       "minimizeToTrayTooltip": "Laisser CopySpeak fonctionner dans la zone de notification à la fermeture de la fenêtre. Si désactivé, fermer la fenêtre quitte l’application.",
       "experimental": "Fonctions expérimentales",
-      "experimentalDescription": "Désactiver cette option met en pause l'Historique, le Post-traitement, les Effets et l'Atténuation, mais conserve leurs réglages et les lectures enregistrées. L'historique utilise de l'espace disque ; le post-traitement peut ajouter du trafic réseau et du délai. La réactiver rétablit vos choix enregistrés, y compris l'Atténuation.",
+      "experimentalDescription": "Désactiver cette option met en pause l'Historique, le Post-traitement et les Effets, mais conserve leurs réglages et les lectures enregistrées. L'historique utilise de l'espace disque ; le post-traitement peut ajouter du trafic réseau et du délai. La réactiver rétablit vos choix enregistrés.",
       "profileEffects": "Les effets sont configurés par profil vocal dans Voix."
     },
     "playback": {
@@ -138,9 +138,9 @@
       "volumeDescription": "Volume de lecture audio (0-100 %)",
       "streaming": "Diffuser l'audio en continu",
       "streamingDescription": "Lance la lecture dès que l'audio arrive sur les moteurs cloud compatibles et les moteurs locaux prêts. Désactivé, la lecture attend la fin de la synthèse.",
-      "duck": "Atténuer les autres applications",
+      "duck": "Baisser les autres apps pendant la lecture",
       "duckDescription": "Baisse le son des autres applications pendant que CopySpeak parle, puis le rétablit. Windows uniquement pour l'instant.",
-      "duckLevel": "Niveau d'atténuation",
+      "duckLevel": "Volume des autres apps pendant la lecture",
       "duckLevelDescription": "Volume auquel descendent les autres applications, en pourcentage de leur propre niveau",
       "playbackSpeed": "Vitesse",
       "playbackSpeedDescription": "Vitesse de lecture (0,5x - 2x)",

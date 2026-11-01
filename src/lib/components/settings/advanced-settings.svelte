@@ -1,13 +1,11 @@
 <script lang="ts">
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Switch } from "#lib/components/ui/switch/index.js";
-  import { Slider } from "#lib/components/ui/slider/index.js";
   import { Select } from "#lib/components/ui/select/index.js";
   import type { AppConfig, HudPosition } from "#lib/types";
   import { _ } from "svelte-i18n";
 
   let { localConfig = $bindable() }: { localConfig: AppConfig } = $props();
-  const supportsDuck = navigator.userAgent.includes("Windows");
 
   const HUD_OPTIONS = [
     { value: "disabled", label: "Disabled" },
@@ -88,39 +86,6 @@
             bind:checked={localConfig.post_process.enabled}
           />
         </SettingRow>
-        {#if supportsDuck}
-          <SettingRow
-            label={$_("settings.playback.duck")}
-            tooltip={$_("settings.playback.duckDescription")}
-          >
-            <Switch
-              id="playback-duck"
-              aria-label={$_("settings.playback.duck")}
-              bind:checked={localConfig.playback.duck.enabled}
-            />
-          </SettingRow>
-          {#if localConfig.playback.duck.enabled}
-            <SettingRow
-              label={$_("settings.playback.duckLevel")}
-              tooltip={$_("settings.playback.duckLevelDescription")}
-            >
-              <div class="flex items-center gap-3">
-                <span class="text-muted-foreground w-10 text-end text-sm tabular-nums"
-                  >{localConfig.playback.duck.level_percent}%</span
-                >
-                <Slider
-                  id="duck-level"
-                  aria-label={$_("settings.playback.duckLevel")}
-                  min={0}
-                  max={100}
-                  step={5}
-                  bind:value={localConfig.playback.duck.level_percent}
-                  class="w-32"
-                />
-              </div>
-            </SettingRow>
-          {/if}
-        {/if}
         <SettingRow
           label={$_("settings.hud.overlay")}
           tooltip={$_("settings.hud.enabledDescription")}

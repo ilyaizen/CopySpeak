@@ -12,31 +12,46 @@
   let localConfig = $state<AppConfig | null>(null);
   let originalConfig = $state<AppConfig | null>(null);
   let isLoading = $state(true);
+  // HMR can destroy this instance while onMount still awaits; a listener that
+  // resolves afterwards would outlive it and fire alongside the new instance's.
+  let destroyed = false;
   const hasChanges = $derived(
     originalConfig !== null &&
       localConfig !== null &&
       JSON.stringify(localConfig) !== JSON.stringify(originalConfig)
   );
 
-  async function loadConfig() {
-    isLoading = true;
+  // Monotonic token: a config-changed reload can overlap the initial load (or
+  // another reload); only the newest response may land.
+  let loadSeq = 0;
+
+  // `initial` shows the full-page spinner. Background reloads keep the
+  // ProfileManager mounted so its selection and open dialogs survive.
+  async function loadConfig(initial = false) {
+    const seq = ++loadSeq;
+    if (initial) isLoading = true;
     try {
       const config = await invoke<AppConfig>("get_config");
-      localConfig = JSON.parse(JSON.stringify(config));
-      originalConfig = JSON.parse(JSON.stringify(config));
+      if (destroyed || seq !== loadSeq) return;
+      localConfig = structuredClone(config);
+      originalConfig = structuredClone(config);
     } catch (e) {
+      if (destroyed || seq !== loadSeq) return;
       console.error("Failed to load config:", e);
       toast.error($_("toast.error.loadConfig"));
     } finally {
-      isLoading = false;
+      if (seq === loadSeq) isLoading = false;
     }
   }
 
   async function saveConfig() {
     if (!localConfig) return;
+    // Snapshot what is sent: edits made while the save is in flight must stay
+    // dirty instead of being marked saved.
+    const sent = $state.snapshot(localConfig);
     try {
-      await invoke("set_config", { newConfig: localConfig });
-      originalConfig = JSON.parse(JSON.stringify(localConfig));
+      await invoke("set_config", { newConfig: sent });
+      originalConfig = sent;
       toast.success($_("toast.success.voicesSaved"));
     } catch (e) {
       console.error("Failed to save config:", e);
@@ -46,7 +61,7 @@
 
   function cancelChanges() {
     if (!originalConfig) return;
-    localConfig = JSON.parse(JSON.stringify(originalConfig));
+    localConfig = $state.snapshot(originalConfig);
   }
 
   $effect(() => {
@@ -62,17 +77,17 @@
   });
 
   let unlistenConfig: (() => void) | null = null;
-  // HMR can destroy this instance while onMount still awaits; a listener that
-  // resolves afterwards would outlive it and fire alongside the new instance's.
-  let destroyed = false;
 
   onMount(async () => {
-    await loadConfig();
-    if (isTauri) {
+    await loadConfig(true);
+    if (isTauri && !destroyed) {
       try {
         const { listen } = await import("@tauri-apps/api/event");
-        unlistenConfig = await listen("config-changed", async () => {
-          await loadConfig();
+        unlistenConfig = await listen("config-changed", () => {
+          // Never clobber unsaved edits with an external change; the save bar
+          // still owns them. Our own saves leave nothing dirty, so they reload.
+          if (hasChanges) return;
+          void loadConfig();
         });
         if (destroyed) unlistenConfig();
       } catch {}
@@ -104,7 +119,7 @@
     <div class="flex min-h-[60vh] items-center justify-center px-6">
       <div class="mx-auto w-full max-w-sm text-center">
         <h2 class="mb-2 text-xl font-semibold">{$_("voices.loadFailed")}</h2>
-        <Button onclick={loadConfig}>{$_("common.tryAgain")}</Button>
+        <Button onclick={() => loadConfig(true)}>{$_("common.tryAgain")}</Button>
       </div>
     </div>
   {/if}

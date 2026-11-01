@@ -686,24 +686,16 @@ mod tests {
     }
 
     #[test]
-    fn effective_duck_predicate_truth_table() {
+    fn effective_duck_predicate_ignores_experimental() {
         let mut config = AppConfig::default();
 
-        config.general.experimental_enabled = false;
-        config.playback.duck.enabled = false;
-        assert!(!config.is_duck_effective());
-
-        config.general.experimental_enabled = false;
-        config.playback.duck.enabled = true;
-        assert!(!config.is_duck_effective());
-
-        config.general.experimental_enabled = true;
-        config.playback.duck.enabled = false;
-        assert!(!config.is_duck_effective());
-
-        config.general.experimental_enabled = true;
-        config.playback.duck.enabled = true;
-        assert!(config.is_duck_effective());
+        for experimental in [false, true] {
+            config.general.experimental_enabled = experimental;
+            config.playback.duck.enabled = false;
+            assert!(!config.is_duck_effective());
+            config.playback.duck.enabled = true;
+            assert!(config.is_duck_effective());
+        }
     }
 
     #[test]

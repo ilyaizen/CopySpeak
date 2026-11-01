@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import { page } from "$app/state";
-  import { Play, Settings, Clock, AudioLines, Cpu } from "@lucide/svelte";
+  import { Play, Settings, Clock, MicVocal, Cpu } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
   import { invoke } from "@tauri-apps/api/core";
   import { listen } from "@tauri-apps/api/event";
@@ -71,7 +71,7 @@
       id: "voices",
       label: $_("header.voices"),
       href: "/voices",
-      icon: AudioLines
+      icon: MicVocal
     },
     {
       id: "engines",

@@ -148,3 +148,8 @@
     transform: translateY(0);
   }
 }
+
+/* RTL: the play triangle points in the reading direction. */
+[dir="rtl"] .lucide-play {
+  transform: scaleX(-1);
+}

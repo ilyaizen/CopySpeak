@@ -2,7 +2,6 @@ import { describe, expect, test } from "vite-plus/test";
 import {
   isHistoryEffective,
   isPostProcessEffective,
-  isDuckEffective,
   isHudEffective
 } from "#lib/experimental-gates";
 
@@ -73,35 +72,6 @@ describe("isPostProcessEffective", () => {
       isPostProcessEffective({
         general: { experimental_enabled: true },
         post_process: { enabled: false }
-      })
-    ).toBe(false);
-  });
-});
-
-describe("isDuckEffective", () => {
-  test("returns true when both experimental and duck are enabled", () => {
-    expect(
-      isDuckEffective({
-        general: { experimental_enabled: true },
-        playback: { duck: { enabled: true } }
-      })
-    ).toBe(true);
-  });
-
-  test("returns false when experimental is off", () => {
-    expect(
-      isDuckEffective({
-        general: { experimental_enabled: false },
-        playback: { duck: { enabled: true } }
-      })
-    ).toBe(false);
-  });
-
-  test("returns false when duck is off", () => {
-    expect(
-      isDuckEffective({
-        general: { experimental_enabled: true },
-        playback: { duck: { enabled: false } }
       })
     ).toBe(false);
   });

@@ -11,7 +11,7 @@
   },
   "header": {
     "play": "Play",
-    "voices": "Voices",
+    "voices": "Profiles",
     "engines": "Engines",
     "history": "History",
     "settings": "Settings",
@@ -61,7 +61,7 @@
       "advanced": "Advanced",
       "about": "About",
       "playback": "Playback",
-      "postProcess": "Post-process"
+      "postProcess": "Post-Process"
     },
     "sections": {
       "general": "General",
@@ -70,15 +70,15 @@
       "playback": "Playback",
       "hud": "HUD Overlay",
       "history": "History",
-      "triggers": "Read triggers",
+      "triggers": "Read Triggers",
       "hotkeys": "Hotkeys",
-      "pagination": "Text preparation",
+      "pagination": "Text Preparation",
       "sanitization": "Sanitization",
       "postProcess": "LLM Post-Processing",
       "effects": "Effects",
       "appInfo": "App Info",
       "importExport": "Import / Export",
-      "audioDelivery": "Audio delivery"
+      "audioDelivery": "Audio Delivery"
     },
     "categories": {
       "general": "General",
@@ -127,7 +127,7 @@
       "minimizeToTray": "Close to tray",
       "minimizeToTrayTooltip": "Keep CopySpeak running in the tray when the window closes. Off, closing the window quits the app.",
       "experimental": "Experimental features",
-      "experimentalDescription": "Turning this off pauses History, Post-process, Effects, and Duck but keeps their settings and saved readings. History uses disk space; post-processing can add network use and delay. Turning it back on restores saved choices, including Duck.",
+      "experimentalDescription": "Turning this off pauses History, Post-process, and Effects but keeps their settings and saved readings. History uses disk space; post-processing can add network use and delay. Turning it back on restores saved choices.",
       "profileEffects": "Effects are configured per voice profile in Voices."
     },
     "playback": {
@@ -138,9 +138,9 @@
       "volumeDescription": "Audio playback volume (0-100%)",
       "streaming": "Stream audio",
       "streamingDescription": "Start playback as audio arrives on supported cloud engines and ready local engines. Off, playback waits for synthesis to finish.",
-      "duck": "Duck other apps",
+      "duck": "Lower other apps while speaking",
       "duckDescription": "Lowers other apps' audio while CopySpeak speaks and restores it afterwards; off, other apps keep their own volume. Windows only.",
-      "duckLevel": "Duck level",
+      "duckLevel": "Other apps' volume while speaking",
       "duckLevelDescription": "Volume other apps drop to, as a percent of their own level",
       "playbackSpeed": "Speed",
       "playbackSpeedDescription": "Playback speed (0.5x - 2x)",

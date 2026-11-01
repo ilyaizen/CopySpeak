@@ -84,14 +84,14 @@
     engineOptions: Record<string, EngineOptionValue>;
   }[] = [
     {
-      name: "Kitten TTS — Rosie",
+      name: "Kitten TTS - Rosie",
       engine: "kitten",
       voice: "Rosie",
       voiceLabel: "Rosie",
       engineOptions: { engine: "kitten" }
     },
     {
-      name: "Qwen3-TTS — Aiden",
+      name: "Qwen3-TTS - Aiden",
       engine: "qwen",
       voice: "Aiden",
       voiceLabel: "Aiden",
@@ -102,42 +102,42 @@
       }
     },
     {
-      name: "Piper — Amy",
+      name: "Piper - Amy",
       engine: "piper",
       voice: "en_US-amy-medium",
       voiceLabel: "Amy",
       engineOptions: { engine: "piper" }
     },
     {
-      name: "Kokoro — Heart",
+      name: "Kokoro - Heart",
       engine: "kokoro",
       voice: "af_heart",
       voiceLabel: "Heart",
       engineOptions: { engine: "kokoro" }
     },
     {
-      name: "Pocket — Alba",
+      name: "Pocket - Alba",
       engine: "pocket",
       voice: "alba",
       voiceLabel: "Alba",
       engineOptions: { engine: "pocket" }
     },
     {
-      name: "Fish Audio — Default Voice",
+      name: "Fish Audio - Default Voice",
       engine: "fish",
       voice: "",
       voiceLabel: "Fish default voice",
       engineOptions: { engine: "fish", model: "s2.1-pro-free", format: "wav" }
     },
     {
-      name: "xAI — Eve",
+      name: "xAI - Eve",
       engine: "xai",
       voice: "eve",
       voiceLabel: "Eve",
       engineOptions: { engine: "xai" }
     },
     {
-      name: "Mistral — Sheila",
+      name: "Mistral - Sheila",
       engine: "mistral",
       voice: "voice_478",
       voiceLabel: "Sheila",

@@ -108,8 +108,17 @@ it("keeps streaming in Advanced while legacy experimental flags are inert and hi
   expect(within(advanced).getAllByRole("heading", { name: "Advanced" })).toHaveLength(1);
   expect(view.container.querySelector("#history")).toBeNull();
   expect(view.container.querySelector("#postProcess")).toBeNull();
-  expect(view.container.querySelector("#playback-duck")).toBeNull();
   expect(view.container.querySelector("#hud-enabled")).toBeNull();
+});
+
+it("shows Duck in Playback on Windows without Experimental", async () => {
+  vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (Windows NT 10.0)");
+  config.general.experimental_enabled = false;
+  config.playback.duck.enabled = true;
+  const view = await mountSettings();
+  expect(view.container.querySelector("#playback #playback-duck")).not.toBeNull();
+  expect(view.container.querySelector("#playback #duck-level")).not.toBeNull();
+  expect(view.container.querySelector("#advanced #playback-duck")).toBeNull();
 });
 
 it("mounts opted-in detail sections once and returns focus to Advanced when hidden", async () => {
@@ -174,7 +183,6 @@ it("auto-saves advanced mutations without clearing legacy opt-in preferences", a
 
 it("keeps Duck Windows-only without resetting its saved preference", async () => {
   vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (Macintosh)");
-  config.general.experimental_enabled = true;
   config.playback.duck.enabled = true;
   const view = await mountSettings();
   expect(view.container.querySelector("#playback-duck")).toBeNull();

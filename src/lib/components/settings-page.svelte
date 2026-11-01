@@ -4,6 +4,7 @@
   import PlaybackSettings from "#lib/components/settings/playback-settings.svelte";
   import AdvancedSettings from "#lib/components/settings/advanced-settings.svelte";
   import PaginationSettings from "#lib/components/settings/pagination-settings.svelte";
+  import IdleShutdownSettings from "#lib/components/settings/idle-shutdown-settings.svelte";
   import HotkeySettings from "#lib/components/settings/hotkey-settings.svelte";
   import SanitizationSettings from "#lib/components/settings/sanitization-settings.svelte";
   import PostProcessSettings from "#lib/components/settings/post-process-settings.svelte";
@@ -355,7 +356,10 @@
               <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                 {$_("settings.sections.pagination")}
               </h3>
-              <PaginationSettings bind:localConfig />
+              <div class="space-y-4">
+                <PaginationSettings bind:localConfig />
+                <IdleShutdownSettings bind:localConfig />
+              </div>
             </div>
 
             <div class="py-4">

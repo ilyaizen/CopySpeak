@@ -252,8 +252,9 @@ impl AppConfig {
         self.general.experimental_enabled && self.hud.enabled
     }
 
+    /// Duck is a plain Playback setting, not gated by Experimental.
     pub fn is_duck_effective(&self) -> bool {
-        self.general.experimental_enabled && self.playback.duck.enabled
+        self.playback.duck.enabled
     }
 
     pub fn validate(&self) -> ValidationResult {

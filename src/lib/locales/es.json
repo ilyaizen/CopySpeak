@@ -11,7 +11,7 @@
   },
   "header": {
     "play": "Reproducir",
-    "voices": "Voces",
+    "voices": "Perfiles",
     "engines": "Motores",
     "history": "Historial",
     "settings": "Configuración",
@@ -127,7 +127,7 @@
       "minimizeToTray": "Cerrar a la bandeja",
       "minimizeToTrayTooltip": "Mantener CopySpeak en ejecución en la bandeja al cerrar la ventana. Si se desactiva, cerrar la ventana cierra la aplicación.",
       "experimental": "Funciones experimentales",
-      "experimentalDescription": "Desactivar esto pausa el Historial, el Posprocesamiento, los Efectos y la Atenuación, pero conserva sus ajustes y las lecturas guardadas. El historial ocupa espacio en disco; el posprocesamiento puede aumentar el uso de red y la demora. Volver a activarlo restaura las opciones guardadas, incluida la Atenuación.",
+      "experimentalDescription": "Desactivar esto pausa el Historial, el Posprocesamiento y los Efectos, pero conserva sus ajustes y las lecturas guardadas. El historial ocupa espacio en disco; el posprocesamiento puede aumentar el uso de red y la demora. Volver a activarlo restaura las opciones guardadas.",
       "profileEffects": "Los efectos se configuran por perfil de voz en Voces."
     },
     "playback": {
@@ -138,9 +138,9 @@
       "volumeDescription": "Volumen de reproducción (0-100 %)",
       "streaming": "Transmitir audio",
       "streamingDescription": "Comienza la reproducción a medida que llega el audio en motores en la nube compatibles y motores locales listos. Desactivado, la reproducción espera a que finalice la síntesis.",
-      "duck": "Atenuar otras aplicaciones",
+      "duck": "Bajar otras apps al leer",
       "duckDescription": "Baja el audio de otras aplicaciones mientras CopySpeak habla y luego lo restaura. Por ahora, solo en Windows.",
-      "duckLevel": "Nivel de atenuación",
+      "duckLevel": "Volumen de otras apps al leer",
       "duckLevelDescription": "Volumen al que bajan las otras aplicaciones, como porcentaje de su nivel propio",
       "playbackSpeed": "Velocidad",
       "playbackSpeedDescription": "Velocidad de reproducción (0,5x - 2x)",
