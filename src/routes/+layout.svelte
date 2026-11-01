@@ -3,7 +3,8 @@
   import { onMount, onDestroy } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { ModeWatcher, setMode } from "mode-watcher";
+  import { ModeWatcher, setMode, toggleMode } from "mode-watcher";
+  import { Moon, Sun } from "@lucide/svelte";
   import { invoke, isTauri } from "#lib/services/tauri";
   import AppHeader from "#lib/components/layout/app-header.svelte";
   import AppFooter from "#lib/components/layout/app-footer.svelte";
@@ -11,13 +12,13 @@
   import { startHistoryEventListeners, stopHistoryEventListeners } from "#lib/utils/history-events";
   import type { AppConfig } from "#lib/types";
   import "./+layout.css";
+  import "#lib/components/landing/landing.css";
   import { Sonner } from "#lib/components/ui/sonner/index.js";
   import { TooltipProvider } from "#lib/components/ui/tooltip/index.js";
   import GlobalPlayer from "#lib/components/global-player.svelte";
   import { playbackStore } from "#lib/stores/playback-store.svelte";
   import { waitForI18nReady } from "#lib/i18n";
   import { isRtl } from "#lib/i18n/store";
-  import ThemeToggle from "#lib/components/theme-toggle.svelte";
   import { saveBar } from "#lib/stores/save-bar.svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { _ } from "svelte-i18n";
@@ -192,24 +193,39 @@
 
 <svelte:head>
   {#if isWeb}
-    <title>CopySpeak - AI Text-to-Speech</title>
+    <title>CopySpeak: AI text-to-speech for your clipboard</title>
+    <meta
+      name="description"
+      content="AI text-to-speech for your clipboard. Copy the same text twice and hear it read aloud."
+    />
   {/if}
 </svelte:head>
 
 {#if isWeb}
-  <ModeWatcher />
-  <div class="bg-background h-screen overflow-x-auto overflow-y-auto" dir={$isRtl ? "rtl" : "ltr"}>
-    <header class="border-border bg-background sticky top-0 z-50 border-b">
-      <div class="mx-auto flex max-w-5xl items-center justify-between px-6 py-3">
-        <a href="/" class="flex items-center gap-3">
-          <img src="/app-logo.png" alt={$_("app.logoAlt")} class="h-8 w-8" />
-          <span class="text-foreground font-mono text-lg font-semibold">CopySpeak</span>
+  <ModeWatcher defaultMode="dark" />
+  <div class="landing h-screen overflow-x-auto overflow-y-auto" dir={$isRtl ? "rtl" : "ltr"}>
+    <div class="wrap">
+      <header class="top">
+        <a class="brand" href="/">
+          <img src="/landing/app-logo.svg" alt="" width="24" height="24" />
+          <span>{$_("app.title")}</span>
         </a>
-        <div class="flex items-center gap-4">
-          <ThemeToggle />
+        <div class="top-end">
+          <nav class="nav" aria-label={$_("header.navAria")}>
+            <a href="/" aria-current="page">{$_("landing.nav.home")}</a>
+          </nav>
+          <button
+            class="theme"
+            type="button"
+            onclick={() => toggleMode()}
+            aria-label={$_("common.toggleTheme")}
+          >
+            <Sun class="icon sun" />
+            <Moon class="icon moon" />
+          </button>
         </div>
-      </div>
-    </header>
+      </header>
+    </div>
     <main>
       <MotionWrapper>
         {@render children()}

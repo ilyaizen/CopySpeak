@@ -786,13 +786,15 @@
     "activeTooltip": "应用于每次 TTS 播放的效果。即时切换，无需重启。"
   },
   "landing": {
+    "nav": {
+      "home": "Home"
+    },
     "hero": {
-      "title": "CopySpeak",
-      "subtitle": "现代 AI TTS 编排器",
-      "description": "一款轻量的跨平台应用，用 AI 语音朗读剪贴板文本——内置离线引擎，云端引擎可选。支持 Windows、macOS 和 Linux。",
       "download": "下载",
       "github": "GitHub",
-      "version": "v{version}"
+      "version": "v{version}",
+      "chip": "Copied ×2",
+      "previewLabel": "Preview"
     },
     "features": {
       "title": "功能",
@@ -816,21 +818,18 @@
         "title": "文本清理",
         "description": "自动去除 Markdown、展开网址并规范化文本——还可选 AI 改写，让朗读更自然。"
       },
-      "configurable": {
-        "title": "高度可配置",
-        "description": "播放速度、音调、音量、触发方式、音频特效以及九种界面语言。支持深色和浅色主题。"
+      "browser": {
+        "title": "Browser companion",
+        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
       }
     },
     "screenshots": {
-      "title": "截图",
-      "subtitle": "看看 CopySpeak 的实际效果",
-      "caption": "带“播放”标签页的主界面",
-      "alt": "CopySpeak 截图"
+      "alt": "CopySpeak 截图",
+      "caption": "带“播放”标签页的主界面"
     },
     "footer": {
       "github": "GitHub",
-      "license": "MIT 许可证",
-      "madeWith": "使用 Rust、Svelte 和 AI 打造。"
+      "license": "MIT 许可证"
     }
   },
   "footer": {

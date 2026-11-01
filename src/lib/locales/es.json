@@ -795,13 +795,15 @@
     "activeTooltip": "El efecto que se aplica a cada reproducción del TTS. Cámbialo al instante sin reiniciar."
   },
   "landing": {
+    "nav": {
+      "home": "Home"
+    },
     "hero": {
-      "title": "CopySpeak",
-      "subtitle": "Orquestador moderno de TTS con IA",
-      "description": "Una aplicación ligera y multiplataforma que lee en voz alta el texto de tu portapapeles con voces de IA — motores locales incluidos, motores en la nube opcionales. Windows, macOS y Linux.",
       "download": "Descargar",
       "github": "GitHub",
-      "version": "v{version}"
+      "version": "v{version}",
+      "chip": "Copied ×2",
+      "previewLabel": "Preview"
     },
     "features": {
       "title": "Funciones",
@@ -825,21 +827,18 @@
         "title": "Limpieza de texto",
         "description": "Eliminación de Markdown, expansión de URL y normalización — más una reescritura opcional con IA para una voz más amena."
       },
-      "configurable": {
-        "title": "Muy configurable",
-        "description": "Velocidad, tono, volumen, activadores, efectos de audio y nueve idiomas de interfaz. Temas oscuro y claro."
+      "browser": {
+        "title": "Browser companion",
+        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
       }
     },
     "screenshots": {
-      "title": "Capturas",
-      "subtitle": "Mira CopySpeak en acción",
-      "caption": "Interfaz principal con la pestaña Reproducir",
-      "alt": "Captura de pantalla de CopySpeak"
+      "alt": "Captura de pantalla de CopySpeak",
+      "caption": "Interfaz principal con la pestaña Reproducir"
     },
     "footer": {
       "github": "GitHub",
-      "license": "Licencia MIT",
-      "madeWith": "Hecho con Rust, Svelte y IA."
+      "license": "Licencia MIT"
     }
   },
   "footer": {

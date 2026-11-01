@@ -795,51 +795,50 @@
     "activeTooltip": "The effect applied to every TTS playback. Switch instantly without restarting."
   },
   "landing": {
+    "nav": {
+      "home": "Home"
+    },
     "hero": {
-      "title": "CopySpeak",
-      "subtitle": "Modern AI TTS Orchestrator",
-      "description": "A lightweight cross-platform app that reads your clipboard aloud with AI voices — offline engines built in, cloud engines optional. Windows, macOS, and Linux.",
       "download": "Download",
       "github": "GitHub",
-      "version": "v{version}"
+      "version": "v{version}",
+      "chip": "Copied ×2",
+      "previewLabel": "Preview"
     },
     "features": {
       "title": "Features",
       "doubleCopy": {
         "title": "Double-Copy Trigger",
-        "description": "Copy text twice within 1.5 seconds to trigger speech instantly. No hotkeys needed."
+        "description": "Copy the same text twice within 1.5 s to hear it. No hotkeys to learn."
       },
       "engines": {
         "title": "Offline & Cloud TTS Engines",
         "description": "Kokoro, Piper, Kitten, Qwen3 and Pocket run fully offline. OpenAI, ElevenLabs, Cartesia, Google, Microsoft, Edge or any HTTP endpoint for cloud voices."
       },
       "hud": {
-        "title": "HUD Overlay",
-        "description": "Floating heads-up display with a real-time waveform and live word-highlighting captions."
+        "title": "HUD and live captions",
+        "description": "A floating waveform and word-level captions, synced to the audio clock."
       },
       "history": {
         "title": "History",
-        "description": "Persistent generation history with playback and audio export — or switch it off and readings stay out of your logs."
+        "description": "Every generation is kept unless you switch history off. Manage them in batches and export the audio."
       },
       "sanitization": {
-        "title": "Text Sanitization",
-        "description": "Markdown stripping, URL expansion, and normalization — plus an optional AI rewrite pass for listener-friendly speech."
+        "title": "Text sanitization",
+        "description": "Strips markdown, expands URLs and normalizes text before it is spoken."
       },
-      "configurable": {
-        "title": "Highly Configurable",
-        "description": "Playback speed, pitch, volume, triggers, audio effects, and nine interface languages. Dark and light themes."
+      "browser": {
+        "title": "Browser companion",
+        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
       }
     },
     "screenshots": {
-      "title": "Screenshots",
-      "subtitle": "See CopySpeak in action",
-      "caption": "Main interface with the Play tab",
-      "alt": "CopySpeak screenshot"
+      "alt": "CopySpeak Play page with the quick controls",
+      "caption": "Play page, listening for a double-copy, with volume, speed and pitch controls"
     },
     "footer": {
       "github": "GitHub",
-      "license": "MIT License",
-      "madeWith": "Made with Rust, Svelte, and AI."
+      "license": "MIT License"
     }
   },
   "footer": {

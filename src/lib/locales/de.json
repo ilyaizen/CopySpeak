@@ -786,13 +786,15 @@
     "activeTooltip": "Der Effekt, der auf jede TTS-Wiedergabe angewendet wird. Sofort umschaltbar ohne Neustart."
   },
   "landing": {
+    "nav": {
+      "home": "Home"
+    },
     "hero": {
-      "title": "CopySpeak",
-      "subtitle": "Moderner KI-TTS-Orchestrator",
-      "description": "Eine schlanke plattformübergreifende App, die Ihren Zwischenablage-Text mit KI-Stimmen vorliest — Offline-Engines integriert, Cloud-Engines optional. Windows, macOS und Linux.",
       "download": "Herunterladen",
       "github": "GitHub",
-      "version": "v{version}"
+      "version": "v{version}",
+      "chip": "Copied ×2",
+      "previewLabel": "Preview"
     },
     "features": {
       "title": "Funktionen",
@@ -816,21 +818,18 @@
         "title": "Textbereinigung",
         "description": "Markdown-Entfernung, Ausschreiben von URLs und Normalisierung — plus optionaler KI-Umschreibpass für eine gut verständliche Sprache."
       },
-      "configurable": {
-        "title": "Umfassend konfigurierbar",
-        "description": "Wiedergabegeschwindigkeit, Tonhöhe, Lautstärke, Auslöser, Audioeffekte und neun Oberflächensprachen. Dunkles und helles Design."
+      "browser": {
+        "title": "Browser companion",
+        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
       }
     },
     "screenshots": {
-      "title": "Screenshots",
-      "subtitle": "CopySpeak in Aktion",
-      "caption": "Hauptoberfläche mit Tab Abspielen",
-      "alt": "CopySpeak-Screenshot"
+      "alt": "CopySpeak-Screenshot",
+      "caption": "Hauptoberfläche mit Tab Abspielen"
     },
     "footer": {
       "github": "GitHub",
-      "license": "MIT-Lizenz",
-      "madeWith": "Entwickelt mit Rust, Svelte und KI."
+      "license": "MIT-Lizenz"
     }
   },
   "footer": {

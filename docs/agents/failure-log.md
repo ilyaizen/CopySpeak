@@ -108,6 +108,9 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Grep `src/` for the filename before removing or renaming anything in `static/`; the 0.2.6 screenshot swap left `screenshots.svelte` requesting the deleted `screen-v0.1.8.png` and the live landing page shipped a broken image.
 - Keep version numbers out of locale strings; they rot on every release (all nine locales carried `v0.1.8` inside the screenshot caption).
 - The landing flag `VITE_IS_VERCEL` is never read from the environment: `vite.config.js` `define` maps it from `process.env.VERCEL` (what Vercel's runners set). Local previews must run `bun run dev:landing` / `preview:landing` (they set `VERCEL=1`); exporting `VITE_IS_VERCEL=1` yourself silently serves the Play UI.
+- Scope landing CSS under `.landing` in `landing.css`: `+layout.svelte` renders the Play UI's root too, so a bare `h2`, `footer` or `:root` rule restyles the app.
+- Target `.dark .landing` for dark-only rules: mode-watcher adds `.dark` to `<html>` and never `.light`, so light is the base selector.
+- Copy preview assets the landing uses from the untracked `docs_internal/` into `static/landing/`: the gitignored folder never deploys.
 
 ## Icons
 

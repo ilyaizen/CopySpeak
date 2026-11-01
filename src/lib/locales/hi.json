@@ -786,13 +786,15 @@
     "activeTooltip": "हर TTS प्लेबैक पर लागू होने वाला इफ़ेक्ट। बिना रीस्टार्ट किए तुरंत बदलें।"
   },
   "landing": {
+    "nav": {
+      "home": "Home"
+    },
     "hero": {
-      "title": "CopySpeak",
-      "subtitle": "आधुनिक AI TTS ऑर्केस्ट्रेटर",
-      "description": "एक हल्का क्रॉस-प्लेटफ़ॉर्म ऐप जो AI आवाज़ों से क्लिपबोर्ड का टेक्स्ट ज़ोर से पढ़ता है — ऑफ़लाइन इंजन बिल्ट-इन, क्लाउड इंजन वैकल्पिक। Windows, macOS और Linux।",
       "download": "डाउनलोड",
       "github": "GitHub",
-      "version": "v{version}"
+      "version": "v{version}",
+      "chip": "Copied ×2",
+      "previewLabel": "Preview"
     },
     "features": {
       "title": "विशेषताएँ",
@@ -816,21 +818,18 @@
         "title": "टेक्स्ट सफ़ाई",
         "description": "Markdown हटाना, URL विस्तार और टेक्स्ट सामान्यीकरण — साथ में सुनने में आसान आवाज़ के लिए वैकल्पिक AI रीराइट।"
       },
-      "configurable": {
-        "title": "भरपूर कॉन्फ़िगरेशन",
-        "description": "प्लेबैक गति, पिच, वॉल्यूम, ट्रिगर, ऑडियो इफ़ेक्ट और नौ इंटरफ़ेस भाषाएँ। डार्क और लाइट थीम।"
+      "browser": {
+        "title": "Browser companion",
+        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
       }
     },
     "screenshots": {
-      "title": "स्क्रीनशॉट",
-      "subtitle": "CopySpeak को काम करते देखें",
-      "caption": "चलाएँ टैब के साथ मुख्य इंटरफ़ेस",
-      "alt": "CopySpeak का स्क्रीनशॉट"
+      "alt": "CopySpeak का स्क्रीनशॉट",
+      "caption": "चलाएँ टैब के साथ मुख्य इंटरफ़ेस"
     },
     "footer": {
       "github": "GitHub",
-      "license": "MIT लाइसेंस",
-      "madeWith": "Rust, Svelte और AI से बना।"
+      "license": "MIT लाइसेंस"
     }
   },
   "footer": {

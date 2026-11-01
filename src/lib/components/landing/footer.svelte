@@ -1,41 +1,29 @@
 <script lang="ts">
+  import { _ } from "svelte-i18n";
+  import { Download } from "@lucide/svelte";
   import Github from "#lib/components/icons/github.svelte";
-  import { VERSION } from "#lib/version";
-  // import LanguageSwitcher from "./language-switcher.svelte";
 
+  const DOWNLOAD_URL = "https://github.com/ilyaizen/CopySpeak/releases";
   const GITHUB_URL = "https://github.com/ilyaizen/CopySpeak";
 </script>
 
-<footer class="border-border bg-muted/30 border-t px-6 py-8">
-  <div class="mx-auto max-w-5xl">
-    <div class="flex flex-col items-center justify-between gap-4 sm:flex-row">
-      <div class="flex items-center gap-3">
-        <img src="/app-logo.png" alt="CopySpeak" class="h-8 w-8" />
-        <span class="text-foreground font-mono text-sm font-semibold">CopySpeak v{VERSION}</span>
-      </div>
-
-      <div class="flex items-center gap-6">
-        <!-- <LanguageSwitcher /> -->
-
-        <a
-          href={GITHUB_URL}
-          class="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm transition-colors"
-        >
-          <Github class="h-4 w-4" />
-          GitHub
-        </a>
-
-        <a
-          href="https://github.com/ilyaizen/CopySpeak/blob/main/LICENSE"
-          class="text-muted-foreground hover:text-foreground text-sm transition-colors"
-        >
-          MIT License
-        </a>
-      </div>
+<div class="coda">
+  <section class="close">
+    <div class="actions">
+      <a class="btn primary" href={DOWNLOAD_URL}>
+        <Download class="icon" />
+        <span>{$_("landing.hero.download")}</span>
+      </a>
+      <a class="btn" href={GITHUB_URL}>
+        <Github class="icon" />
+        <span>{$_("landing.hero.github")}</span>
+      </a>
     </div>
+  </section>
+</div>
 
-    <div class="text-muted-foreground mt-6 text-center text-xs sm:text-start">
-      Made with Rust, Svelte, and AI.
-    </div>
-  </div>
+<footer class="small">
+  <a href={GITHUB_URL}>{$_("landing.footer.github")}</a>
+  <span aria-hidden="true">·</span>
+  <span>{$_("landing.footer.license")}</span>
 </footer>
