@@ -786,13 +786,15 @@
     "activeTooltip": "Эффект, применяемый к каждому воспроизведению. Переключается мгновенно, без перезапуска."
   },
   "landing": {
+    "nav": {
+      "home": "Home"
+    },
     "hero": {
-      "title": "CopySpeak",
-      "subtitle": "Современный оркестратор ИИ-озвучки",
-      "description": "Лёгкое кроссплатформенное приложение, которое читает вслух текст из буфера обмена голосами ИИ — офлайн-движки встроены, облачные опциональны. Windows, macOS и Linux.",
       "download": "Скачать",
       "github": "GitHub",
-      "version": "v{version}"
+      "version": "v{version}",
+      "chip": "Copied ×2",
+      "previewLabel": "Preview"
     },
     "features": {
       "title": "Возможности",
@@ -816,21 +818,18 @@
         "title": "Очистка текста",
         "description": "Удаление Markdown, раскрытие URL и нормализация текста — плюс необязательная ИИ-перезапись для более лёгкой на слух речи."
       },
-      "configurable": {
-        "title": "Гибкая настройка",
-        "description": "Скорость, высота тона, громкость, триггеры, аудиоэффекты и девять языков интерфейса. Тёмная и светлая темы."
+      "browser": {
+        "title": "Browser companion",
+        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
       }
     },
     "screenshots": {
-      "title": "Скриншоты",
-      "subtitle": "CopySpeak в действии",
-      "caption": "Главный экран с вкладкой «Воспроизведение»",
-      "alt": "Снимок экрана CopySpeak"
+      "alt": "Снимок экрана CopySpeak",
+      "caption": "Главный экран с вкладкой «Воспроизведение»"
     },
     "footer": {
       "github": "GitHub",
-      "license": "Лицензия MIT",
-      "madeWith": "Сделано на Rust, Svelte и с помощью ИИ."
+      "license": "Лицензия MIT"
     }
   },
   "footer": {

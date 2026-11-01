@@ -795,13 +795,15 @@
     "activeTooltip": "האפקט שמוחל על כל השמעת TTS. ניתן להחליף מיד, ללא הפעלה מחדש."
   },
   "landing": {
+    "nav": {
+      "home": "Home"
+    },
     "hero": {
-      "title": "CopySpeak",
-      "subtitle": "מתזמר TTS מודרני מבוסס AI",
-      "description": "אפליקציה קלה ורב-פלטפורמית שמקריאה בקול טקסט מהלוח עם קולות AI — מנועים מקומיים מובנים ומנועי ענן אופציונליים. Windows, macOS ו-Linux.",
       "download": "הורדה",
       "github": "GitHub",
-      "version": "v{version}"
+      "version": "v{version}",
+      "chip": "Copied ×2",
+      "previewLabel": "Preview"
     },
     "features": {
       "title": "תכונות",
@@ -825,21 +827,18 @@
         "title": "ניקוי טקסט",
         "description": "הסרת Markdown, הרחבת כתובות URL ונרמול טקסט — ובנוסף ניסוח מחדש אופציונלי ב-AI לדיבור נעים להאזנה."
       },
-      "configurable": {
-        "title": "הגדרות רבות",
-        "description": "מהירות השמעה, גובה צליל, עוצמה, גורמים מפעילים, אפקטים קוליים ותשע שפות ממשק. ערכות נושא כהה ובהירה."
+      "browser": {
+        "title": "Browser companion",
+        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
       }
     },
     "screenshots": {
-      "title": "צילומי מסך",
-      "subtitle": "ראה את CopySpeak בפעולה",
-      "caption": "ממשק ראשי עם לשונית ההשמעה",
-      "alt": "צילום מסך של CopySpeak"
+      "alt": "צילום מסך של CopySpeak",
+      "caption": "ממשק ראשי עם לשונית ההשמעה"
     },
     "footer": {
       "github": "GitHub",
-      "license": "רישיון MIT",
-      "madeWith": "נכתב עם Rust, Svelte ו-AI."
+      "license": "רישיון MIT"
     }
   },
   "footer": {

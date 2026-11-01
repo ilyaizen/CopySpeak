@@ -786,13 +786,15 @@
     "activeTooltip": "المؤثر المطبَّق على كل تشغيل. يمكن التبديل فورًا دون إعادة التشغيل."
   },
   "landing": {
+    "nav": {
+      "home": "Home"
+    },
     "hero": {
-      "title": "CopySpeak",
-      "subtitle": "منسّق حديث لتحويل النص إلى كلام بالذكاء الاصطناعي",
-      "description": "تطبيق خفيف متعدد المنصات يقرأ نص الحافظة بصوت عالٍ بأصوات ذكاء اصطناعي — محركات محلية مدمجة ومحركات سحابية اختيارية. ويندوز وماك ولينكس.",
       "download": "تنزيل",
       "github": "GitHub",
-      "version": "v{version}"
+      "version": "v{version}",
+      "chip": "Copied ×2",
+      "previewLabel": "Preview"
     },
     "features": {
       "title": "الميزات",
@@ -816,21 +818,18 @@
         "title": "تنظيف النص",
         "description": "إزالة Markdown وتوسيع الروابط وتوحيد النص — مع إعادة صياغة اختيارية بالذكاء الاصطناعي لكلام أسهل إصغاءً."
       },
-      "configurable": {
-        "title": "قابل للتخصيص بدرجة كبيرة",
-        "description": "سرعة التشغيل وطبقته ومستوى الصوت والمشغِّلات والمؤثرات الصوتية وتسع لغات للواجهة. سمات داكنة وفاتحة."
+      "browser": {
+        "title": "Browser companion",
+        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
       }
     },
     "screenshots": {
-      "title": "لقطات الشاشة",
-      "subtitle": "شاهد CopySpeak أثناء العمل",
-      "caption": "الواجهة الرئيسية مع تبويب التشغيل",
-      "alt": "لقطة شاشة لتطبيق CopySpeak"
+      "alt": "لقطة شاشة لتطبيق CopySpeak",
+      "caption": "الواجهة الرئيسية مع تبويب التشغيل"
     },
     "footer": {
       "github": "GitHub",
-      "license": "رخصة MIT",
-      "madeWith": "صُنع باستخدام Rust وSvelte والذكاء الاصطناعي."
+      "license": "رخصة MIT"
     }
   },
   "footer": {
