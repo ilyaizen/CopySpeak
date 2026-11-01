@@ -9,7 +9,7 @@ import type { PostProcessConfig, PostProcessTemplate } from "#lib/types";
 export const BUILTIN_TEMPLATE_IDS = ["dramatize", "concise"] as const;
 
 export function isBuiltinTemplate(id: string): boolean {
-  return (BUILTIN_TEMPLATE_IDS as readonly string[]).includes(id);
+  return BUILTIN_TEMPLATE_IDS.some((builtin) => builtin === id);
 }
 
 /** The active template, falling back to the first entry like the backend. */

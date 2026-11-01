@@ -14,6 +14,7 @@
     AlertDialogTitle
   } from "#lib/components/ui/alert-dialog/index.js";
   import { firstEnvKeyConflict } from "#lib/components/engine/env-keys";
+  import type { CredentialTarget } from "#lib/components/engine/engine-meta";
   import { hideSaveBar } from "#lib/stores/save-bar.svelte";
   import { syncSaveBarOrAutoSave, flushAutoSave } from "#lib/stores/auto-save.svelte";
   import EngineSetup from "#lib/components/engine/engine-setup.svelte";
@@ -51,11 +52,20 @@
     }
   }
 
-  // SAFETY: engine ids on tts are exactly the CredentialTarget keys
-  // get_env_key_sources reports; each per-engine struct carries api_key.
-  function ttsKeys(config: AppConfig | null): Record<string, { api_key?: string }> {
-    if (!config) return {};
-    return config.tts as unknown as Record<string, { api_key?: string }>;
+  // Cloud engines that take an API key. Every section of TtsConfig named here carries api_key.
+  const CREDENTIAL_TARGETS = [
+    "openai",
+    "elevenlabs",
+    "cartesia",
+    "fish",
+    "xai",
+    "mistral",
+    "google",
+    "microsoft"
+  ] satisfies CredentialTarget[];
+
+  function savedKey(config: AppConfig | null, engine: CredentialTarget) {
+    return config?.tts[engine];
   }
 
   async function performSave() {
@@ -75,12 +85,13 @@
     if (!localConfig) return;
     // An env-sourced engine with a freshly typed key needs the override
     // warning first: env precedence keeps the .env key active after saving.
-    for (const engine of Object.keys(envKeySources)) {
+    for (const engine of CREDENTIAL_TARGETS) {
+      if (!(engine in envKeySources)) continue;
       const conflict = firstEnvKeyConflict(
         engine,
         envKeySources[engine],
-        ttsKeys(localConfig)[engine],
-        ttsKeys(originalConfig)[engine]
+        savedKey(localConfig, engine),
+        savedKey(originalConfig, engine)
       );
       if (conflict) {
         envKeyConflict = conflict;
