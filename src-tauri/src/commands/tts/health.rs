@@ -84,6 +84,7 @@ mod tests {
             voice_label: None,
             pitch: 1.0,
             effects: Default::default(),
+            post_process: Default::default(),
             text_processing: Default::default(),
             engine_options: ProfileEngineOptions::Cartesia(CartesiaEngineOptions {
                 model_id: model_id.map(String::from),

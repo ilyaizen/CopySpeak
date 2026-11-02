@@ -44,6 +44,7 @@ export function testConfig(): AppConfig {
       appearance: "system",
       locale: "en",
       experimental_enabled: false,
+      effects_enabled: true,
       update_checks_enabled: false,
       auto_save_profiles: false
     },

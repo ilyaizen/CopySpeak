@@ -570,14 +570,16 @@ pub(crate) struct EffectiveTtsRequest {
     pub voice_label: Option<String>,
     pub pitch: f32,
     pub effects: crate::config::ProfileEffects,
-    pub text_processing: ProfileTextProcessing,
-    pub engine_options: ProfileEngineOptions,
+    pub post_process: crate::config::ProfilePostProcess,
+    pub text_processing: crate::config::ProfileTextProcessing,
+    pub engine_options: crate::config::ProfileEngineOptions,
 }
 
 pub(crate) fn resolve_effective_for_profile(
     tts_config: &TtsConfig,
     profile_id: Option<&str>,
 ) -> Result<EffectiveTtsRequest, String> {
+    let profile_id = profile_id.filter(|s| !s.trim().is_empty());
     let selected_id = profile_id.unwrap_or(&tts_config.active_profile_id);
     let profile = tts_config
         .profiles
@@ -598,6 +600,7 @@ pub(crate) fn resolve_effective_for_profile(
         voice_label: profile.voice_label.clone(),
         pitch: profile.pitch,
         effects: profile.effects.clone(),
+        post_process: profile.post_process.clone(),
         text_processing: profile.text_processing.clone(),
         engine_options: profile.engine_options.clone(),
     })
@@ -630,16 +633,15 @@ pub(crate) fn effective_model(eff: &EffectiveTtsRequest) -> String {
 /// vocabularies — the generic prompt makes xAI speak its tags aloud), and
 /// whether the engine's dialect includes `<...>` wraps that the word
 /// comparison must strip (xAI).
-pub(crate) fn post_process_gate(
-    tts_config: &TtsConfig,
+pub(crate) fn post_process_gate_for_effective(
+    eff: &EffectiveTtsRequest,
     experimental_enabled: bool,
 ) -> crate::post_process::PostProcessGate {
-    let eff = resolve_effective(tts_config);
     crate::post_process::PostProcessGate {
         experimental_enabled,
         emote_supported: crate::tts::catalog::supports_emote_tags(
             &eff.engine,
-            &effective_model(&eff),
+            &effective_model(eff),
         ),
         prompt_override: crate::tts::catalog::dramatize_prompt_override(&eff.engine),
         angle_wraps: eff.engine == TtsEngine::Xai,
@@ -653,11 +655,12 @@ pub(crate) fn resolve_effective(tts_config: &TtsConfig) -> EffectiveTtsRequest {
         EffectiveTtsRequest {
             profile_id: None,
             profile_name: None,
+            engine: engine.clone(),
             voice: voice_for_backend(&engine, tts_config),
             voice_label: None,
-            engine,
             pitch: 1.0,
             effects: crate::config::ProfileEffects::default(),
+            post_process: crate::config::ProfilePostProcess::default(),
             text_processing: ProfileTextProcessing::default(),
             engine_options,
         }
@@ -683,5 +686,59 @@ pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
         TtsEngine::Piper => "piper",
         TtsEngine::Kokoro => "kokoro",
         TtsEngine::Pocket => "pocket",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{ProfileEngineOptions, VoiceProfile};
+
+    #[test]
+    fn resolve_effective_resolves_profile_engine_when_active_backend_differs() {
+        let mut tts = TtsConfig::default();
+        tts.active_backend = TtsEngine::Kokoro;
+        tts.profiles.push(VoiceProfile {
+            id: "piper-prof".into(),
+            name: "Piper Voice".into(),
+            description: None,
+            engine: TtsEngine::Piper,
+            voice: "en_US-lessac".into(),
+            voice_label: Some("Lessac".into()),
+            speed: 1.0,
+            pitch: 1.0,
+            effects: Default::default(),
+            post_process: Default::default(),
+            text_processing: Default::default(),
+            engine_options: ProfileEngineOptions::default_for(&TtsEngine::Piper),
+        });
+
+        // Profile-addressed lookup
+        let eff = resolve_effective_for_profile(&tts, Some("piper-prof")).unwrap();
+        assert_eq!(eff.engine, TtsEngine::Piper);
+        assert_eq!(eff.voice, "en_US-lessac");
+        assert_eq!(engine_str(&eff.engine), "piper");
+        assert_eq!(engine_identifier(&eff.engine), "piper");
+
+        // Active profile lookup when active_profile_id is set to that profile
+        tts.active_profile_id = "piper-prof".into();
+        let eff_active = resolve_effective(&tts);
+        assert_eq!(eff_active.engine, TtsEngine::Piper);
+        assert_eq!(active_engine(&tts), TtsEngine::Piper);
+    }
+
+    #[test]
+    fn voice_display_name_uses_resolved_profile_engine() {
+        let tts = TtsConfig::default();
+        let name = voice_display_name(
+            &TtsEngine::Piper,
+            &tts,
+            "en_US-lessac-medium",
+            Some("Lessac"),
+        );
+        assert_eq!(name, "lessac");
+
+        let name_no_label = voice_display_name(&TtsEngine::OpenAI, &tts, "Alloy", None);
+        assert_eq!(name_no_label, "alloy");
     }
 }

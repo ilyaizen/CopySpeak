@@ -5,7 +5,7 @@
 // `rewrite` templates may change words and run on any engine.
 //
 // Failure policy: this module never silently swallows errors. `process()`
-// surfaces them; `try_process()` is the single fallback wrapper that callers
+// surfaces them; `try_process_for_profile()` is the fallback wrapper that callers
 // in the synthesis pipeline use to keep TTS running on LLM failure.
 
 use crate::config::{
@@ -126,12 +126,26 @@ fn is_local_provider(provider: &PostProcessProvider) -> bool {
     provider.base_url.contains("localhost") || provider.base_url.contains("127.0.0.1")
 }
 
-/// Whether this request wants post-processing. `require_request_flag: false`
-/// (global mode) processes every qualifying text; `true` processes only
-/// callers that explicitly set the flag (control server `post_process`, CLI
-/// `--post-process`).
-fn post_process_requested(cfg: &PostProcessConfig, request_flag: bool) -> bool {
-    !cfg.require_request_flag || request_flag
+/// Whether post-processing is requested for this read under the active profile's
+/// automatic post-processing setting, or because of an explicit request flag.
+///
+/// Precedence rules:
+/// - If caller sets explicit `request_flag` (CLI `--post-process`, control server `post_process: true`),
+///   it is honored regardless of `require_request_flag` or `profile_enabled`.
+/// - Otherwise, automatic post-processing runs when `profile_enabled` is true AND
+///   `cfg.require_request_flag` is false.
+pub(crate) fn post_process_requested_for_profile(
+    cfg: &PostProcessConfig,
+    profile_enabled: bool,
+    request_flag: bool,
+) -> bool {
+    if request_flag {
+        return true;
+    }
+    if cfg.require_request_flag {
+        return false;
+    }
+    profile_enabled
 }
 
 /// The prompt for this reading, resolved from the active template's class.
@@ -162,14 +176,23 @@ fn active_prompt<'a>(cfg: &'a PostProcessConfig, gate: &PostProcessGate) -> &'a 
 /// (tag-safe variant). Rewrite output is plain spoken text — brackets in it
 /// are literal and the standard pipeline sanitizer strips them like any
 /// other input.
-pub async fn try_process(
+/// When automatic processing is evaluated,
+/// it honors `profile_enabled`. Explicit requests (`request_flag = true`) run regardless.
+pub async fn try_process_for_profile(
     text: String,
     cfg: &PostProcessConfig,
+    profile_enabled: bool,
     sanitization: &SanitizationConfig,
     request_flag: bool,
     gate: PostProcessGate,
 ) -> String {
-    if let Some(reason) = post_process_skip_reason(cfg, request_flag, text.chars().count(), &gate) {
+    if let Some(reason) = post_process_skip_reason_for_profile(
+        cfg,
+        profile_enabled,
+        request_flag,
+        text.chars().count(),
+        &gate,
+    ) {
         if reason.loud() {
             log::info!("[PostProcess] post-process skipped for this reading: {reason:?}");
         }
@@ -248,8 +271,9 @@ impl SkipReason {
 /// `min_chars`; global mode keeps the length gate. Synthesis sites also call
 /// this to decide whether the waiting HUD must show before the LLM round
 /// trip.
-pub(crate) fn post_process_skip_reason(
+pub(crate) fn post_process_skip_reason_for_profile(
     cfg: &PostProcessConfig,
+    profile_enabled: bool,
     request_flag: bool,
     text_len: usize,
     gate: &PostProcessGate,
@@ -257,7 +281,7 @@ pub(crate) fn post_process_skip_reason(
     if !cfg.enabled {
         return Some(SkipReason::Disabled);
     }
-    if !post_process_requested(cfg, request_flag) {
+    if !post_process_requested_for_profile(cfg, profile_enabled, request_flag) {
         return Some(SkipReason::NotRequested);
     }
     if !request_flag && text_len < cfg.min_chars {
@@ -343,8 +367,8 @@ mod tests {
             require_request_flag: false,
             ..Default::default()
         };
-        assert!(post_process_requested(&cfg, false));
-        assert!(post_process_requested(&cfg, true));
+        assert!(post_process_requested_for_profile(&cfg, true, false));
+        assert!(post_process_requested_for_profile(&cfg, true, true));
     }
 
     #[test]
@@ -353,8 +377,66 @@ mod tests {
             require_request_flag: true,
             ..Default::default()
         };
-        assert!(!post_process_requested(&cfg, false));
-        assert!(post_process_requested(&cfg, true));
+        assert!(!post_process_requested_for_profile(&cfg, true, false));
+        assert!(post_process_requested_for_profile(&cfg, true, true));
+    }
+
+    #[test]
+    fn post_process_requested_for_profile_respects_profile_and_explicit_flag() {
+        let cfg = PostProcessConfig {
+            enabled: true,
+            require_request_flag: false,
+            ..Default::default()
+        };
+        // Automatic processing: follows profile setting
+        assert!(post_process_requested_for_profile(&cfg, true, false));
+        assert!(!post_process_requested_for_profile(&cfg, false, false));
+
+        // Explicit request: runs regardless of profile setting
+        assert!(post_process_requested_for_profile(&cfg, false, true));
+        assert!(post_process_requested_for_profile(&cfg, true, true));
+
+        // Strict mode: ignores automatic profile flag, requires explicit flag
+        let strict = PostProcessConfig {
+            enabled: true,
+            require_request_flag: true,
+            ..Default::default()
+        };
+        assert!(!post_process_requested_for_profile(&strict, true, false));
+        assert!(post_process_requested_for_profile(&strict, false, true));
+    }
+
+    #[test]
+    fn post_process_skip_reason_for_profile_gating() {
+        let cfg = PostProcessConfig {
+            enabled: true,
+            min_chars: 10,
+            ..Default::default()
+        };
+        let gate = permissive_gate();
+
+        // Profile disabled: skips with NotRequested for automatic run
+        assert_eq!(
+            post_process_skip_reason_for_profile(&cfg, false, false, 50, &gate),
+            Some(SkipReason::NotRequested)
+        );
+
+        // Profile disabled, but explicit request flag present: runs (bypasses profile disabled)
+        assert!(post_process_skip_reason_for_profile(&cfg, false, true, 50, &gate).is_none());
+
+        // Global enabled false: acts as global feature gate, blocks both automatic and explicit
+        let global_off = PostProcessConfig {
+            enabled: false,
+            ..Default::default()
+        };
+        assert_eq!(
+            post_process_skip_reason_for_profile(&global_off, true, false, 50, &gate),
+            Some(SkipReason::Disabled)
+        );
+        assert_eq!(
+            post_process_skip_reason_for_profile(&global_off, true, true, 50, &gate),
+            Some(SkipReason::Disabled)
+        );
     }
 
     fn permissive_gate() -> PostProcessGate {
@@ -372,8 +454,14 @@ mod tests {
             enabled: true,
             ..Default::default()
         };
-        assert!(post_process_skip_reason(&cfg, false, 1000, &permissive_gate()).is_none());
-        assert!(post_process_skip_reason(&cfg, true, 1000, &permissive_gate()).is_none());
+        assert!(
+            post_process_skip_reason_for_profile(&cfg, true, false, 1000, &permissive_gate())
+                .is_none()
+        );
+        assert!(
+            post_process_skip_reason_for_profile(&cfg, true, true, 1000, &permissive_gate())
+                .is_none()
+        );
     }
 
     #[test]
@@ -390,7 +478,7 @@ mod tests {
             angle_wraps: false,
         };
         assert!(matches!(
-            post_process_skip_reason(&cfg, false, 1000, &experimental_off),
+            post_process_skip_reason_for_profile(&cfg, true, false, 1000, &experimental_off),
             Some(SkipReason::ExperimentalOff)
         ));
         let unsupported = PostProcessGate {
@@ -400,7 +488,7 @@ mod tests {
             angle_wraps: false,
         };
         assert!(matches!(
-            post_process_skip_reason(&cfg, false, 1000, &unsupported),
+            post_process_skip_reason_for_profile(&cfg, true, false, 1000, &unsupported),
             Some(SkipReason::Unsupported)
         ));
     }
@@ -420,8 +508,8 @@ mod tests {
             prompt_override: Some("engine dialect"),
             angle_wraps: false,
         };
-        assert!(post_process_skip_reason(&cfg, false, 1000, &gate).is_none());
-        assert!(post_process_skip_reason(&cfg, true, 1000, &gate).is_none());
+        assert!(post_process_skip_reason_for_profile(&cfg, true, false, 1000, &gate).is_none());
+        assert!(post_process_skip_reason_for_profile(&cfg, true, true, 1000, &gate).is_none());
     }
 
     #[test]
@@ -432,7 +520,7 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(
-            post_process_skip_reason(&disabled, false, 1000, &gate),
+            post_process_skip_reason_for_profile(&disabled, true, false, 1000, &gate),
             Some(SkipReason::Disabled)
         ));
         let strict = PostProcessConfig {
@@ -441,7 +529,7 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(
-            post_process_skip_reason(&strict, false, 1000, &gate),
+            post_process_skip_reason_for_profile(&strict, true, false, 1000, &gate),
             Some(SkipReason::NotRequested)
         ));
     }
@@ -457,10 +545,10 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(
-            post_process_skip_reason(&cfg, false, 100, &gate),
+            post_process_skip_reason_for_profile(&cfg, true, false, 100, &gate),
             Some(SkipReason::TooShort)
         ));
-        assert!(post_process_skip_reason(&cfg, true, 100, &gate).is_none());
+        assert!(post_process_skip_reason_for_profile(&cfg, true, true, 100, &gate).is_none());
     }
 
     /// Preserve-class: the engine's tag-dialect override replaces the
@@ -542,9 +630,10 @@ mod tests {
             ..Default::default()
         };
         let sanitization = SanitizationConfig::default();
-        let out = try_process(
+        let out = try_process_for_profile(
             "short clip".to_string(),
             &cfg,
+            true,
             &sanitization,
             false,
             permissive_gate(),
@@ -561,7 +650,15 @@ mod tests {
         };
         let sanitization = SanitizationConfig::default();
         let text = "x".repeat(500);
-        let out = try_process(text.clone(), &cfg, &sanitization, false, permissive_gate()).await;
+        let out = try_process_for_profile(
+            text.clone(),
+            &cfg,
+            true,
+            &sanitization,
+            false,
+            permissive_gate(),
+        )
+        .await;
         assert_eq!(out, text);
     }
 
@@ -579,9 +676,10 @@ mod tests {
             prompt_override: None,
             angle_wraps: false,
         };
-        let out = try_process(
+        let out = try_process_for_profile(
             "[sighs] untouched".to_string(),
             &cfg,
+            true,
             &SanitizationConfig::default(),
             false,
             gate,
@@ -594,9 +692,9 @@ mod tests {
     /// discarded and the original text is spoken instead.
     #[tokio::test]
     async fn words_preserved_passes_tag_only_and_fails_word_diffs() {
-        // words_preserved is pure; this pins the contract try_process relies
+        // words_preserved is pure; this pins the contract try_process_for_profile relies
         // on for preserve-class templates: a tag-only diff passes, any word
-        // diff fails. The discard branch inside try_process itself needs a
+        // diff fails. The discard branch inside try_process_for_profile itself needs a
         // provider seam and is not covered here.
         assert!(words_preserved("one two", "[happy] one two", false));
         assert!(!words_preserved("one two", "one three", false));

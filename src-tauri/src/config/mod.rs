@@ -27,7 +27,7 @@ mod tts;
 mod tests;
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU32;
 use std::sync::{Mutex, OnceLock};
 
@@ -210,6 +210,7 @@ impl Default for AppConfig {
                 auto_save_profiles: false,
                 locale: "en".to_string(),
                 experimental_enabled: false,
+                effects_enabled: true,
             },
             trigger: TriggerConfig {
                 listen_enabled: true,
@@ -359,14 +360,22 @@ pub fn config_path() -> PathBuf {
 
 /// Load config from disk, or return defaults if missing/corrupt.
 pub fn load_or_default() -> AppConfig {
-    let path = config_path();
-    match std::fs::read_to_string(&path) {
+    load_or_default_from(&config_path())
+}
+
+/// `load_or_default` with the config path injected, so tests can round-trip a
+/// real file in a temp directory instead of the user's live config.
+fn load_or_default_from(path: &Path) -> AppConfig {
+    match std::fs::read_to_string(path) {
         Ok(contents) => {
             let mut cfg: AppConfig = serde_json::from_str(&contents).unwrap_or_else(|e| {
                 log::warn!("Config parse error, using defaults: {e}");
                 AppConfig::default()
             });
 
+            // The legacy migration resets the version to 2 on every load.
+            // Capture the on-disk version before it for the one-time v8 seed.
+            let original_tts_schema_version = cfg.tts.schema_version;
             // Migrate legacy single-engine TTS config into the profile model.
             cfg.tts = migrate_tts_config(cfg.tts);
 
@@ -400,6 +409,12 @@ pub fn load_or_default() -> AppConfig {
                 migrate_tts_profiles_v7(&mut cfg);
             }
 
+            // Migrate v7 -> v8: per-profile post-process ownership.
+            if original_tts_schema_version < 8 {
+                migrate_post_process_to_profiles_v8(&mut cfg);
+            }
+            cfg.tts.schema_version = 8;
+
             clamp_profile_rates(&mut cfg);
 
             // `version` is informational (shown in exports); always reflect the
@@ -424,11 +439,16 @@ fn stamp_config_version(mut config: AppConfig) -> AppConfig {
 
 /// Save config to disk. Creates parent directory if needed.
 pub fn save(config: &AppConfig) -> Result<(), String> {
-    let path = config_path();
+    save_to(&config_path(), config)
+}
+
+/// `save` with the config path injected, so tests can write a real file in a
+/// temp directory instead of the user's live config.
+fn save_to(path: &Path, config: &AppConfig) -> Result<(), String> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create config dir: {e}"))?;
     }
     let json = serde_json::to_string_pretty(config).map_err(|e| format!("Serialize error: {e}"))?;
-    std::fs::write(&path, json).map_err(|e| format!("Write error: {e}"))?;
+    std::fs::write(path, json).map_err(|e| format!("Write error: {e}"))?;
     Ok(())
 }

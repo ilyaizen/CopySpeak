@@ -94,6 +94,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Text pipeline
 
+- Capture the on-disk TTS schema version before `migrate_tts_config`: it resets the version to 2 on every load, so a later schema-gated migration otherwise overwrites per-profile preferences at every restart.
 - Rename request flags in both `src-tauri/src/cli.rs` and `scripts/copyspeak.mjs`; Rust CLI tests do not cover the Node helper used by Hermes, so verify its emitted `/speak` payload separately.
 - Fold Cyrillic homoglyphs only inside a word that also holds a Latin letter (`fold_homoglyphs`); a per-character fold turned every Russian word into mixed script ("привет" → "пpивeт").
 - Keep U+200C (ZWNJ) out of both invisible-character regexes in `tts_normalize.rs`; Persian and Indic words are spelled with it.

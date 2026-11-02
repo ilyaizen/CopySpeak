@@ -4,7 +4,8 @@
   import { Copy, Download, Upload, X } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
   import { portal } from "#lib/utils";
-  import type { VoiceProfile, TtsEngine, EffectId } from "#lib/types";
+  import type { VoiceProfile } from "#lib/types";
+  import { isValidProfile, normalizeImportedProfile } from "./profile-validation";
 
   type DialogMode = "export" | "import" | "delete";
 
@@ -22,50 +23,9 @@
     onClose: () => void;
   } = $props();
 
-  const ENGINES: TtsEngine[] = [
-    "local",
-    "http",
-    "openai",
-    "elevenlabs",
-    "fish",
-    "cartesia",
-    "xai",
-    "mistral",
-    "google",
-    "microsoft"
-  ];
-  const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy", "cyberpunk"];
-
   let exportJson = $state("");
   let importJson = $state("");
   let importError = $state<string | null>(null);
-
-  // Untrusted import JSON is validated field by field; prototype tags stand in
-  // for `typeof` and every check runs on the imported object directly.
-  // JSON.parse's own return type is the owner contract for imported payloads.
-  type ParsedJson = ReturnType<typeof JSON.parse>;
-  const isObjectTag = (x: ParsedJson): boolean =>
-    Object.prototype.toString.call(x) === "[object Object]";
-  const isStringTag = (x: ParsedJson): boolean =>
-    Object.prototype.toString.call(x) === "[object String]";
-
-  function isValidProfile(p: ParsedJson): p is VoiceProfile {
-    if (!p || !isObjectTag(p)) return false;
-    // SAFETY: the prototype tag above establishes a plain object; id/name/
-    // engine/voice are string-tagged and engine/effect come from the registries.
-    const o = p as VoiceProfile;
-    return (
-      isStringTag(o.id) &&
-      isStringTag(o.name) &&
-      isStringTag(o.engine) &&
-      ENGINES.includes(o.engine) &&
-      isStringTag(o.voice) &&
-      Number.isFinite(o.speed) &&
-      Number.isFinite(o.pitch) &&
-      isObjectTag(o.effects) &&
-      EFFECTS.includes(o.effects.active_effect)
-    );
-  }
 
   $effect(() => {
     if (mode === "export" && profile) {
@@ -125,7 +85,7 @@
           "Invalid profile: missing required fields (id, name, engine, voice, speed, pitch, effects)";
         return;
       }
-      onImport(parsed);
+      onImport(normalizeImportedProfile(parsed));
     } catch (e) {
       importError = e instanceof SyntaxError ? "Invalid JSON" : String(e);
     }

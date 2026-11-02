@@ -12,7 +12,7 @@
   onMount(async () => {
     try {
       const config = await invoke<AppConfig>("get_config");
-      experimental = config.general.experimental_enabled === true;
+      experimental = config.general.experimental_enabled === true && config.general.effects_enabled;
     } catch {
       experimental = false;
     }

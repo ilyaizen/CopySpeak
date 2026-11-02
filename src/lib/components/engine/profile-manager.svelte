@@ -11,6 +11,7 @@
   import { Input } from "#lib/components/ui/input/index.js";
   import { Select } from "#lib/components/ui/select/index.js";
   import { Slider } from "#lib/components/ui/slider/index.js";
+  import { Switch } from "#lib/components/ui/switch/index.js";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { invoke } from "@tauri-apps/api/core";
   import {
@@ -27,6 +28,10 @@
   import VoiceBrowser from "./voice-browser.svelte";
   import { findSetupEntry } from "./engine-meta";
   import { choicesWithCurrent } from "./select-choices";
+  import {
+    resolveProfileTemplate,
+    templateOptions
+  } from "#lib/components/settings/post-process-templates";
   import type {
     AppConfig,
     EngineCatalogEntry,
@@ -681,6 +686,7 @@
       speed: 1.0,
       pitch: 1.0,
       effects: { enabled: false, active_effect: "none" },
+      post_process: { enabled: false, active_template_id: null },
       engine_options: preset.engineOptions
     };
     localConfig.tts.profiles = [...profiles, profile];
@@ -898,16 +904,44 @@
             />
           </div>
         </SettingRow>
-        {#if localConfig.general.experimental_enabled === true}
+        {#if localConfig.general.experimental_enabled === true && localConfig.general.effects_enabled}
           <SettingRow label={$_("common.effect")}>
             <Select
+              aria-label={$_("common.effect")}
               options={effectOptions}
-              value={active.effects.active_effect}
+              value={active.effects?.enabled ? active.effects.active_effect : "none"}
               onchange={(e) => {
                 // SAFETY: the Select options enumerate EFFECTS, so the value is an EffectId and e.target is the Select.
                 const v = (e.target as HTMLSelectElement).value as EffectId;
                 localConfig.tts.profiles[activeIndex].effects.active_effect = v;
                 localConfig.tts.profiles[activeIndex].effects.enabled = v !== "none";
+              }}
+              class="w-56"
+            />
+          </SettingRow>
+        {/if}
+        {#if localConfig.general.experimental_enabled === true && localConfig.post_process.enabled}
+          <SettingRow label={$_("quick.postProcess")} tooltip={$_("quick.postProcessTooltip")}>
+            <Switch
+              aria-label={$_("quick.postProcess")}
+              bind:checked={localConfig.tts.profiles[activeIndex].post_process.enabled}
+            />
+          </SettingRow>
+          <SettingRow
+            label={$_("settings.postProcess.template")}
+            tooltip={$_("settings.postProcess.templateTooltip")}
+          >
+            <Select
+              options={templateOptions(localConfig.post_process.templates)}
+              value={resolveProfileTemplate(
+                localConfig.post_process,
+                active.post_process.active_template_id
+              )?.id ?? ""}
+              onchange={(e) => {
+                if (e.target instanceof HTMLSelectElement) {
+                  localConfig.tts.profiles[activeIndex].post_process.active_template_id =
+                    e.target.value;
+                }
               }}
               class="w-56"
             />

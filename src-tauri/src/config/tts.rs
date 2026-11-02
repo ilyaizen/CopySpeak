@@ -443,6 +443,22 @@ impl HttpTtsConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
+pub struct ProfilePostProcess {
+    pub enabled: bool,
+    pub active_template_id: Option<String>,
+}
+
+impl Default for ProfilePostProcess {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            active_template_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct ProfileEffects {
     pub enabled: bool,
     pub active_effect: crate::config::EffectId,
@@ -995,6 +1011,8 @@ pub struct VoiceProfile {
     pub speed: f32,
     pub pitch: f32,
     pub effects: ProfileEffects,
+    #[serde(default)]
+    pub post_process: ProfilePostProcess,
     pub text_processing: ProfileTextProcessing,
     pub engine_options: ProfileEngineOptions,
 }
@@ -1018,6 +1036,7 @@ impl Default for VoiceProfile {
             speed: 1.0,
             pitch: 1.0,
             effects: ProfileEffects::default(),
+            post_process: ProfilePostProcess::default(),
             text_processing: ProfileTextProcessing::default(),
             engine_options: ProfileEngineOptions::default_for(&TtsEngine::Kokoro),
         }
@@ -1136,6 +1155,7 @@ fn default_elevenlabs_profile() -> VoiceProfile {
         speed: 1.1,
         pitch: 0.9,
         effects: ProfileEffects::default(),
+        post_process: ProfilePostProcess::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::ElevenLabs(ElevenLabsEngineOptions {
             model_id: Some("eleven_v4_turbo".into()),
@@ -1158,6 +1178,7 @@ fn default_cartesia_profile() -> VoiceProfile {
         speed: 0.9,
         pitch: 1.3,
         effects: ProfileEffects::default(),
+        post_process: ProfilePostProcess::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::Cartesia(CartesiaEngineOptions {
             model_id: Some("sonic-3.6".into()),
@@ -1179,6 +1200,7 @@ pub(crate) fn default_google_profile() -> VoiceProfile {
         speed: 1.1,
         pitch: 0.85,
         effects: ProfileEffects::default(),
+        post_process: ProfilePostProcess::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::Google(GoogleEngineOptions {
             model: Some(GEMINI_TTS_MODEL.into()),
@@ -1199,6 +1221,7 @@ fn default_fish_profile() -> VoiceProfile {
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
+        post_process: ProfilePostProcess::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::Fish(FishEngineOptions {
             model: Some("s2.1-pro-free".into()),
@@ -1218,6 +1241,7 @@ fn default_xai_profile() -> VoiceProfile {
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
+        post_process: ProfilePostProcess::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::Xai(XaiEngineOptions::default()),
     }
@@ -1234,6 +1258,7 @@ fn default_mistral_profile() -> VoiceProfile {
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
+        post_process: ProfilePostProcess::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::Mistral(MistralEngineOptions::default()),
     }
@@ -1253,6 +1278,7 @@ fn default_kitten_profile() -> VoiceProfile {
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
+        post_process: ProfilePostProcess::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::Kitten(KittenEngineOptions::default()),
     }
@@ -1285,6 +1311,7 @@ fn default_qwen_profile() -> VoiceProfile {
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
+        post_process: ProfilePostProcess::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::Qwen(QwenEngineOptions {
             model: Some("Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice".into()),
@@ -1326,6 +1353,7 @@ pub(crate) fn default_edge_profile() -> VoiceProfile {
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
+        post_process: ProfilePostProcess::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::default_for(&TtsEngine::Edge),
     }
@@ -1345,6 +1373,7 @@ pub(crate) fn default_kokoro_profile() -> VoiceProfile {
         speed: 1.0,
         pitch: 1.0,
         effects: ProfileEffects::default(),
+        post_process: ProfilePostProcess::default(),
         text_processing: ProfileTextProcessing::default(),
         engine_options: ProfileEngineOptions::Kokoro(KokoroEngineOptions::default()),
     }
@@ -1457,6 +1486,27 @@ pub(crate) fn migrate_tts_profiles_v7(tts: &mut TtsConfig) {
     tts.schema_version = 7;
 }
 
+/// Migrate v7 -> v8: populate per-profile post_process ownership from
+/// existing global post_process settings (enabled + active_template_id).
+/// Preserves global post_process.enabled as a master gate while per-profile
+/// boolean governs automatic processing.
+pub(crate) fn migrate_post_process_to_profiles_v8(cfg: &mut crate::config::AppConfig) {
+    let global_enabled = cfg.post_process.enabled;
+    let global_template_id = cfg.post_process.active_template_id.clone();
+
+    for profile in &mut cfg.tts.profiles {
+        profile.post_process = ProfilePostProcess {
+            enabled: global_enabled,
+            active_template_id: if global_template_id.is_empty() {
+                None
+            } else {
+                Some(global_template_id.clone())
+            },
+        };
+    }
+    cfg.tts.schema_version = 8;
+}
+
 impl Default for TtsConfig {
     fn default() -> Self {
         let cartesia_profile = default_cartesia_profile();
@@ -1467,7 +1517,7 @@ impl Default for TtsConfig {
         // endpoint). Existing configs on disk are unaffected — defaults only
         // apply when no config file exists.
         Self {
-            schema_version: 7,
+            schema_version: 8,
             active_backend: TtsEngine::Kokoro,
             active_profile_id: KOKORO_DEFAULT_PROFILE_ID.into(),
             profiles: vec![
@@ -1564,6 +1614,7 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             speed: 1.0,
             pitch: 1.0,
             effects: ProfileEffects::default(),
+            post_process: ProfilePostProcess::default(),
             text_processing: ProfileTextProcessing::default(),
             engine_options: ProfileEngineOptions::default_for(&tts.active_backend),
         }];

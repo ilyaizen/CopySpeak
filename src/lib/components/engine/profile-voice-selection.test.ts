@@ -78,6 +78,7 @@ function configWith(engine: "kokoro" | "elevenlabs", voiceId: string, label: str
       speed: 1.0,
       pitch: 1.0,
       effects: { enabled: false, active_effect: "none" },
+      post_process: { enabled: false, active_template_id: null },
       engine_options: {}
     }
   ];

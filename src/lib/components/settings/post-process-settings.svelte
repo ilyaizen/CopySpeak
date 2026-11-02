@@ -13,6 +13,7 @@
   import type { AppConfig, PostProcessConfig, PostProcessTemplate } from "#lib/types";
   import {
     activeTemplate,
+    clearDeletedTemplateFromProfiles,
     createCustomTemplate,
     fallbackTemplateId,
     isBuiltinTemplate,
@@ -134,6 +135,9 @@
     pp.templates = pp.templates.filter((t) => t.id !== victim.id);
     // Mirrors the backend's dangling-id repair: Dramatize, then first entry.
     pp.active_template_id = fallbackTemplateId(pp.templates);
+    if (localConfig.tts?.profiles) {
+      clearDeletedTemplateFromProfiles(localConfig.tts.profiles, victim.id);
+    }
   }
 
   async function resetBuiltin() {

@@ -55,6 +55,12 @@ pub struct GeneralConfig {
     /// it is turned back on.
     #[serde(default)]
     pub experimental_enabled: bool,
+    #[serde(default = "default_effects_enabled")]
+    pub effects_enabled: bool,
+}
+
+fn default_effects_enabled() -> bool {
+    true
 }
 
 fn default_update_checks_enabled() -> bool {

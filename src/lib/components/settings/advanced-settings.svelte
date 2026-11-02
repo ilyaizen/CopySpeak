@@ -71,6 +71,13 @@
     {#if localConfig.general.experimental_enabled === true}
       <div class="border-border mt-4 space-y-4 border-s ps-4">
         <HotkeySettings bind:localConfig {errors} />
+        <SettingRow label={$_("common.effects")} tooltip={$_("settings.general.profileEffects")}>
+          <Switch
+            id="effects-enabled"
+            aria-label={$_("common.effects")}
+            bind:checked={localConfig.general.effects_enabled}
+          />
+        </SettingRow>
         <SettingRow
           label={$_("settings.general.autoSave")}
           tooltip={$_("settings.general.autoSaveDescription")}
