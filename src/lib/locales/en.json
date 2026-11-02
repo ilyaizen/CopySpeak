@@ -884,7 +884,11 @@
   "voicePicker": {
     "select": "Select voice…",
     "search": "Search voices…",
-    "customId": "Custom / manual id…"
+    "customId": "Custom / manual id…",
+    "refresh": "Refresh",
+    "refreshFailed": "Couldn't refresh: {error}",
+    "notInList": "Not in list",
+    "noMatch": "No voices match “{query}”."
   },
   "hotkey": {
     "set": "Set",

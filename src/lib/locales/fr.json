@@ -875,7 +875,11 @@
   "voicePicker": {
     "select": "Sélectionner une voix…",
     "search": "Rechercher des voix…",
-    "customId": "ID personnalisé / manuel…"
+    "customId": "ID personnalisé / manuel…",
+    "refresh": "Actualiser",
+    "refreshFailed": "Échec de l’actualisation : {error}",
+    "notInList": "Absente de la liste",
+    "noMatch": "Aucune voix ne correspond à « {query} »."
   },
   "hotkey": {
     "set": "Définir",

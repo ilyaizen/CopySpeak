@@ -875,7 +875,11 @@
   "voicePicker": {
     "select": "Stimme auswählen…",
     "search": "Stimmen suchen…",
-    "customId": "Eigene / manuelle ID…"
+    "customId": "Eigene / manuelle ID…",
+    "refresh": "Aktualisieren",
+    "refreshFailed": "Aktualisierung fehlgeschlagen: {error}",
+    "notInList": "Nicht in der Liste",
+    "noMatch": "Keine Stimme passt zu „{query}“."
   },
   "hotkey": {
     "set": "Festlegen",

@@ -155,7 +155,7 @@ impl MistralTtsBackend {
             let page_token = next_token.clone();
             let page_key = api_key.clone();
             let (status, body) = block_on_async(async move {
-                let client = Client::new();
+                let client = super::http::voice_list_client()?;
                 let mut request = client
                     .get(MISTRAL_VOICES_URL)
                     .bearer_auth(page_key)

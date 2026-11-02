@@ -884,7 +884,11 @@
   "voicePicker": {
     "select": "בחר קול…",
     "search": "חפש קולות…",
-    "customId": "מזהה מותאם / ידני…"
+    "customId": "מזהה מותאם / ידני…",
+    "refresh": "רענון",
+    "refreshFailed": "הרענון נכשל: {error}",
+    "notInList": "לא ברשימה",
+    "noMatch": "אין קולות שתואמים ל־„{query}”."
   },
   "hotkey": {
     "set": "הגדר",

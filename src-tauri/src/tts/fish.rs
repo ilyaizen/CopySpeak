@@ -57,9 +57,10 @@ impl FishTtsBackend {
         body
     }
 
-    /// List voices from the Fish Audio model library (top-ranked community
-    /// voice models). `reference_id` on the TTS request is one of these `_id`s
-    /// (or an id of the caller's own cloned model).
+    /// List the account's own voice models (`self=true`: models owned by the
+    /// key's workspace, including private clones), not the public community
+    /// library. `reference_id` on the TTS request is one of these `_id`s. The
+    /// caller merges in the built-in default voice, which is not a model.
     pub fn list_voices(&self) -> Result<Vec<Voice>, TtsError> {
         let api_key = self.api_key();
         if api_key.trim().is_empty() {
@@ -68,13 +69,14 @@ impl FishTtsBackend {
             ));
         }
         let (status, body) = block_on_async(async move {
-            let client = Client::new();
+            let client = super::http::voice_list_client()?;
             let response = client
                 .get(FISH_MODEL_LIST_URL)
                 .query(&[
+                    ("self", "true"),
                     ("page_size", "100"),
                     ("page_number", "1"),
-                    ("sort_by", "score"),
+                    ("sort_by", "created_at"),
                 ])
                 .bearer_auth(api_key)
                 .header("Accept", "application/json")

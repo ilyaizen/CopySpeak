@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { _ } from "svelte-i18n";
   import { Button } from "#lib/components/ui/button/index.js";
   import {
@@ -68,7 +69,20 @@
   let catalog = $state<EngineCatalogEntry[]>([]);
   let catalogLoading = $state(false);
   let voicesByEngine = $state<Partial<Record<TtsEngine, VoiceCatalogEntry[]>>>({});
-  let voicesLoadingFor = $state<TtsEngine | null>(null);
+  // Per engine, so refreshing one engine never clears another's spinner.
+  let voicesRefreshing = $state<Partial<Record<TtsEngine, boolean>>>({});
+  // Last refresh failure per engine, shown in the picker until the next success.
+  let voiceErrors = $state<Partial<Record<TtsEngine, string | null>>>({});
+  // Engines whose shown list came from the provider (cache or a refresh).
+  let providerListLoaded = $state<Partial<Record<TtsEngine, boolean>>>({});
+  let voiceCacheLoaded = $state(false);
+  // Engines already given their first fetch while this page is open, so a
+  // failing provider is not retried in a loop. Not reactive on purpose.
+  const firstFetchTried = new Set<TtsEngine>();
+
+  interface CachedVoiceList {
+    voices: VoiceCatalogEntry[];
+  }
 
   type DialogMode = "export" | "import" | "delete";
   let dialogMode = $state<DialogMode | null>(null);
@@ -340,6 +354,7 @@
         next[entry.engine as TtsEngine] = entry.voices;
       }
       voicesByEngine = next;
+      await loadCachedVoices();
     } catch (err) {
       toast.error($_("profiles.toast.catalogFailed", { values: { error: String(err) } }));
     } finally {
@@ -347,19 +362,63 @@
     }
   }
 
-  async function refreshVoices(engine: TtsEngine) {
-    voicesLoadingFor = engine;
+  // Overlay the last successful provider lists (saved by the backend on every
+  // refresh) over the built-in ones, so opening Profiles never needs the API.
+  async function loadCachedVoices() {
+    try {
+      // SAFETY: get_cached_voices serializes HashMap<engine id, CachedVoiceList>.
+      const cached = (await invoke("get_cached_voices")) as Record<string, CachedVoiceList>;
+      for (const [engine, list] of Object.entries(cached ?? {})) {
+        // SAFETY: cache keys are the backend's engine ids, the same values as TtsEngine.
+        const id = engine as TtsEngine;
+        voicesByEngine[id] = list.voices;
+        providerListLoaded[id] = true;
+      }
+    } catch (err) {
+      console.warn("Voice cache unavailable; using built-in lists:", err);
+    } finally {
+      voiceCacheLoaded = true;
+    }
+  }
+
+  // Manual refreshes report through toasts; background ones only through the
+  // picker's error line. A failure keeps the previous list on screen.
+  async function refreshVoices(engine: TtsEngine, background = false) {
+    if (voicesRefreshing[engine]) return;
+    voicesRefreshing[engine] = true;
     try {
       // SAFETY: list_tts_voices serializes the Rust catalog as VoiceCatalogEntry[].
       const voices = (await invoke("list_tts_voices", { engine })) as VoiceCatalogEntry[];
-      voicesByEngine = { ...voicesByEngine, [engine]: voices };
-      toast.success($_("profiles.toast.voicesLoaded", { values: { count: voices.length } }));
+      voicesByEngine[engine] = voices;
+      providerListLoaded[engine] = true;
+      voiceErrors[engine] = null;
+      if (!background) {
+        toast.success($_("profiles.toast.voicesLoaded", { values: { count: voices.length } }));
+      }
     } catch (err) {
-      toast.error($_("profiles.toast.voiceRefreshFailed", { values: { error: String(err) } }));
+      voiceErrors[engine] = String(err);
+      if (!background) {
+        toast.error($_("profiles.toast.voiceRefreshFailed", { values: { error: String(err) } }));
+      }
     } finally {
-      voicesLoadingFor = null;
+      voicesRefreshing[engine] = false;
     }
   }
+
+  // First fetch: the active engine has no provider list yet (nothing cached)
+  // and its credentials resolve. A cached list is never refreshed
+  // automatically; only the picker's Refresh button fetches again.
+  // Attempted once per engine per page visit, so a failure does not retry-loop.
+  $effect(() => {
+    if (!active || !voiceCacheLoaded) return;
+    const engine = active.engine;
+    if (!activeCatalogEntry?.supports_voice_refresh) return;
+    if (credentialsResolved[engine] !== true) return;
+    if (firstFetchTried.has(engine)) return;
+    if (providerListLoaded[engine]) return;
+    firstFetchTried.add(engine);
+    untrack(() => void refreshVoices(engine, true));
+  });
 
   function optionValue(
     profile: VoiceProfile,
@@ -545,9 +604,20 @@
         applyPresetDefaults(activeIndex, defaultPreset);
       }
     }
-    const firstVoice = catalogVoicesFor(engine)[0];
-    if (firstVoice && !localConfig.tts.profiles[activeIndex].voice) {
-      setVoice(activeIndex, firstVoice.id);
+    // Voice ids are per engine: keep the voice only when the new engine
+    // lists it, else take the engine's first voice (or its default when it
+    // lists none). Local presets set their own voice above.
+    if (engine !== "local") {
+      const profile = localConfig.tts.profiles[activeIndex];
+      const voices = catalogVoicesFor(engine);
+      if (!voices.some((v) => v.id === profile.voice)) {
+        if (voices[0]) {
+          setVoice(activeIndex, voices[0].id);
+        } else {
+          profile.voice = "";
+          profile.voice_label = null;
+        }
+      }
     }
     if (active && active.id !== "default") {
       localConfig.tts.active_backend = engine;
@@ -752,8 +822,10 @@
             <VoicePicker
               voices={activeVoiceCatalog}
               value={active.voice}
-              loading={voicesLoadingFor === active.engine}
+              valueLabel={active.voice_label}
+              loading={!!voicesRefreshing[active.engine]}
               supportsRefresh={!!activeCatalogEntry?.supports_voice_refresh}
+              error={voiceErrors[active.engine] ?? null}
               onselect={(id) => {
                 manualOverride = false;
                 setVoice(activeIndex, id);

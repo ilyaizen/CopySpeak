@@ -884,7 +884,11 @@
   "voicePicker": {
     "select": "Seleccionar voz…",
     "search": "Buscar voces…",
-    "customId": "ID personalizado / manual…"
+    "customId": "ID personalizado / manual…",
+    "refresh": "Actualizar",
+    "refreshFailed": "No se pudo actualizar: {error}",
+    "notInList": "No está en la lista",
+    "noMatch": "Ninguna voz coincide con «{query}»."
   },
   "hotkey": {
     "set": "Definir",

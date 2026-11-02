@@ -297,14 +297,14 @@ impl CartesiaTtsBackend {
 
     /// Fetch available voices from the Cartesia API.
     /// GET https://api.cartesia.ai/voices — returns the account's voice library.
-    /// On failure the caller falls back to the static catalog list.
+    /// Errors propagate: the Profiles picker keeps its last good list and says why.
     pub fn list_voices(&self) -> Result<Vec<CartesiaVoice>, TtsError> {
         let api_key = crate::secrets::resolve(&self.config.api_key, &["CARTESIA_API_KEY"]);
         if api_key.trim().is_empty() {
             return Err(TtsError::Unavailable("Cartesia API key is missing".into()));
         }
         let (status, body) = block_on_async(async move {
-            let client = Client::new();
+            let client = super::http::voice_list_client()?;
             let response = client
                 .get("https://api.cartesia.ai/voices")
                 .header("X-API-Key", api_key)

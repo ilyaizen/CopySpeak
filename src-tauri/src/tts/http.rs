@@ -31,6 +31,18 @@ pub fn flatten_error(err: &(dyn std::error::Error + 'static)) -> String {
     message
 }
 
+/// Per-request cap for provider voice-list calls. The Profiles picker waits
+/// on them; a stalled provider must fail with an error, not spin forever.
+pub const VOICE_LIST_TIMEOUT: Duration = Duration::from_secs(20);
+
+/// HTTP client for provider voice-list requests, bounded by `VOICE_LIST_TIMEOUT`.
+pub fn voice_list_client() -> Result<Client, TtsError> {
+    Client::builder()
+        .timeout(VOICE_LIST_TIMEOUT)
+        .build()
+        .map_err(|e| TtsError::Http(format!("Failed to build HTTP client: {}", e)))
+}
+
 pub struct HttpTtsBackend {
     config: HttpTtsConfig,
 }

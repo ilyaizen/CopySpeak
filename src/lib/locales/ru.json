@@ -875,7 +875,11 @@
   "voicePicker": {
     "select": "Выберите голос…",
     "search": "Поиск голосов…",
-    "customId": "Свой / ручной ID…"
+    "customId": "Свой / ручной ID…",
+    "refresh": "Обновить",
+    "refreshFailed": "Не удалось обновить: {error}",
+    "notInList": "Нет в списке",
+    "noMatch": "Нет голосов, соответствующих «{query}»."
   },
   "hotkey": {
     "set": "Задать",

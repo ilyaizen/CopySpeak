@@ -1,5 +1,5 @@
 use crate::config::TtsEngine;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EngineCatalogEntry {
@@ -37,7 +37,7 @@ pub enum EngineOptionKind {
     Textarea,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VoiceCatalogEntry {
     pub id: String,
     pub label: String,

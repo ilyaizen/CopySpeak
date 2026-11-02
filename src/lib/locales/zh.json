@@ -875,7 +875,11 @@
   "voicePicker": {
     "select": "选择语音…",
     "search": "搜索语音…",
-    "customId": "自定义 / 手动 ID…"
+    "customId": "自定义 / 手动 ID…",
+    "refresh": "刷新",
+    "refreshFailed": "刷新失败：{error}",
+    "notInList": "不在列表中",
+    "noMatch": "没有与“{query}”匹配的语音。"
   },
   "hotkey": {
     "set": "设置",

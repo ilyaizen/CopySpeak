@@ -875,7 +875,11 @@
   "voicePicker": {
     "select": "اختر الصوت…",
     "search": "ابحث عن الأصوات…",
-    "customId": "معرّف مخصص / يدوي…"
+    "customId": "معرّف مخصص / يدوي…",
+    "refresh": "تحديث",
+    "refreshFailed": "تعذر التحديث: {error}",
+    "notInList": "غير موجود في القائمة",
+    "noMatch": "لا توجد أصوات تطابق «{query}»."
   },
   "hotkey": {
     "set": "تعيين",
