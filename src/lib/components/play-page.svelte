@@ -526,7 +526,7 @@
         <label for="reading-text" class="sr-only">{$_("play.textLabel")}</label>
         <Textarea
           id="reading-text"
-          class="field-sizing-fixed bg-card dark:bg-input/30 min-h-48 flex-1 resize-none p-4 text-base leading-relaxed"
+          class="bg-card dark:bg-input/30 field-sizing-fixed min-h-48 flex-1 resize-none p-4 text-base leading-relaxed"
           placeholder={$_("play.placeholder")}
           bind:value={manualText}
         />
