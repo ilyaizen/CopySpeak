@@ -146,6 +146,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Settings
 
+- Pass the current locale direction to Bits UI tooltip content: its floating wrapper defaults to `dir="ltr"` even when the document is RTL, scrambling mixed Hebrew or Arabic and Latin text.
 - Gate hidden startup and close-to-tray on an actually available tray; create the main window hidden, show first-run setup explicitly, and use one unminimize/show/focus helper for tray and second-instance reopening. Propagate OS autostart registration failures before persisting the new preference.
 - Force the last visible settings section active at the bottom of the scroll container: a short last section never reaches the scroll-spy reading band, and the layout `<main>` scrolls, not the window, so capture scroll events on the document.
 
