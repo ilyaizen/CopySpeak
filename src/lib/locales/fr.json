@@ -181,7 +181,7 @@
     },
     "history": {
       "title": "Paramètres de l'historique",
-      "enabled": "Enregistrer l'historique de lecture",
+      "enabled": "Historique",
       "enabledDescription": "Enregistre les lectures indexées pour les réécouter plus tard. Désactivé, le petit cache vocal fonctionne toujours ; l'historique existant est conservé.",
       "storageMode": "Mode de stockage",
       "persistent": "Persistant",
@@ -222,7 +222,8 @@
       "stripLinks": "Liens",
       "stripLinksDescription": "Retirer la syntaxe des liens Markdown, garder le texte du lien",
       "stripBoldItalic": "Gras et italique",
-      "stripBoldItalicDescription": "Retirer les marqueurs **gras** et *italique*",
+      "stripBoldItalicDescription": "Retirer les marqueurs **gras** et *italique* — désactivé par défaut pour que les moteurs puissent les prononcer avec emphase",
+      "syntaxOptions": "Options de syntaxe",
       "stripLists": "Listes",
       "stripListsDescription": "Retirer les puces et numéros de liste",
       "stripBlockquotes": "Citations",

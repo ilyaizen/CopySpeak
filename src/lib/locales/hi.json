@@ -181,7 +181,7 @@
     },
     "history": {
       "title": "इतिहास सेटिंग्स",
-      "enabled": "रीडिंग इतिहास सहेजें",
+      "enabled": "इतिहास",
       "enabledDescription": "बाद में दोबारा सुनने के लिए खोजने योग्य रीडिंग सहेजें। बंद होने पर, छोटा स्पीच कैश काम करता रहता है; मौजूदा इतिहास बना रहता है।",
       "storageMode": "स्टोरेज मोड",
       "persistent": "स्थायी",
@@ -222,7 +222,8 @@
       "stripLinks": "लिंक",
       "stripLinksDescription": "Markdown लिंक सिंटैक्स हटाएँ, लिंक टेक्स्ट रखें",
       "stripBoldItalic": "बोल्ड और इटैलिक",
-      "stripBoldItalicDescription": "**बोल्ड** और *इटैलिक* चिह्न हटाएँ",
+      "stripBoldItalicDescription": "**बोल्ड** और *इटैलिक* चिह्न हटाएँ — डिफ़ॉल्ट रूप से बंद, ताकि इंजन इन्हें ज़ोर के साथ बोल सकें",
+      "syntaxOptions": "सिंटैक्स विकल्प",
       "stripLists": "सूचियाँ",
       "stripListsDescription": "बुलेट और क्रमांकित सूची चिह्न हटाएँ",
       "stripBlockquotes": "उद्धरण",

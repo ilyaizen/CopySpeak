@@ -181,7 +181,7 @@
     },
     "history": {
       "title": "历史记录设置",
-      "enabled": "保存朗读历史",
+      "enabled": "历史记录",
       "enabledDescription": "保存支持搜索的朗读记录以供稍后重播。关闭时小型语音缓存仍会生效；已有的历史记录将保留。",
       "storageMode": "存储模式",
       "persistent": "永久",
@@ -222,7 +222,8 @@
       "stripLinks": "链接",
       "stripLinksDescription": "去除 Markdown 链接语法，保留链接文字",
       "stripBoldItalic": "粗体和斜体",
-      "stripBoldItalicDescription": "去除 **粗体** 和 *斜体* 标记",
+      "stripBoldItalicDescription": "去除 **粗体** 和 *斜体* 标记 — 默认关闭，以便引擎将其作为重音朗读",
+      "syntaxOptions": "语法选项",
       "stripLists": "列表",
       "stripListsDescription": "去除项目符号和编号列表标记",
       "stripBlockquotes": "引用",

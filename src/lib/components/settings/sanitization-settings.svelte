@@ -1,6 +1,12 @@
 <script lang="ts">
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Switch } from "#lib/components/ui/switch/index.js";
+  import {
+    Collapsible as CollapsibleRoot,
+    CollapsibleTrigger,
+    CollapsibleContent
+  } from "#lib/components/ui/collapsible/index.js";
+  import { ChevronRight } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
 
   let {
@@ -8,6 +14,10 @@
   }: {
     localConfig: import("#lib/types").AppConfig;
   } = $props();
+
+  // The seven per-syntax toggles stay collapsed by default so the section
+  // remains scannable; the trigger expands them in place.
+  let markdownOptionsOpen = $state(false);
 
   function updateSanitization(updates: Partial<any>) {
     Object.assign(localConfig.sanitization, updates);
@@ -76,20 +86,32 @@
       </SettingRow>
 
       {#if localConfig.sanitization.markdown.enabled}
-        <div class="border-border ms-2 space-y-3 border-s-2 ps-4">
-          {#each markdownToggles as toggle}
-            <SettingRow
-              label={$_(`settings.sanitization.${toggle.labelKey}`)}
-              tooltip={$_(`settings.sanitization.${toggle.tooltipKey}`)}
-            >
-              <Switch
-                id={`markdown-${toggle.key}`}
-                checked={localConfig.sanitization.markdown[toggle.key]}
-                onchange={(v) => updateMarkdown(toggle.key, v)}
-              />
-            </SettingRow>
-          {/each}
-        </div>
+        <CollapsibleRoot bind:open={markdownOptionsOpen}>
+          <CollapsibleTrigger
+            class="text-muted-foreground hover:text-foreground -ms-1 inline-flex items-center gap-1 rounded-sm text-sm font-medium transition-colors"
+          >
+            <ChevronRight
+              class="h-4 w-4 transition-transform {markdownOptionsOpen ? 'rotate-90' : ''}"
+            />
+            {$_("settings.sanitization.syntaxOptions")}
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div class="border-border ms-2 mt-3 space-y-3 border-s-2 ps-4">
+              {#each markdownToggles as toggle}
+                <SettingRow
+                  label={$_(`settings.sanitization.${toggle.labelKey}`)}
+                  tooltip={$_(`settings.sanitization.${toggle.tooltipKey}`)}
+                >
+                  <Switch
+                    id={`markdown-${toggle.key}`}
+                    checked={localConfig.sanitization.markdown[toggle.key]}
+                    onchange={(v) => updateMarkdown(toggle.key, v)}
+                  />
+                </SettingRow>
+              {/each}
+            </div>
+          </CollapsibleContent>
+        </CollapsibleRoot>
       {/if}
 
       <SettingRow

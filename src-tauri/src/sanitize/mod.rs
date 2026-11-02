@@ -117,8 +117,10 @@ mod tests {
     #[test]
     fn tag_safe_resanitize_still_cleans_surrounding_text() {
         let out = sanitize_text_tag_safe("[happy]  See   **bold** text", &default_config());
-        assert!(!out.contains("**"), "{out:?}");
+        // Bold/italic markers survive by default (strip_bold_italic=false);
+        // the surrounding whitespace cleanup still applies.
         assert!(!out.contains("  "), "{out:?}");
-        assert!(out.contains("See bold text"), "{out:?}");
+        assert!(out.contains("[happy]"), "{out:?}");
+        assert!(out.contains("See **bold** text"), "{out:?}");
     }
 }

@@ -181,7 +181,7 @@
     },
     "history": {
       "title": "History Settings",
-      "enabled": "Save Reading History",
+      "enabled": "History",
       "enabledDescription": "Save searchable readings for later replay. When off, the small speech cache still works; existing history is kept.",
       "storageMode": "Storage mode",
       "persistent": "Persistent",
@@ -222,7 +222,8 @@
       "stripLinks": "Links",
       "stripLinksDescription": "Strip markdown link syntax, keep the link text",
       "stripBoldItalic": "Bold & Italic",
-      "stripBoldItalicDescription": "Remove **bold** and *italic* markers",
+      "stripBoldItalicDescription": "Remove **bold** and *italic* markers — off by default so engines can voice them as emphasis",
+      "syntaxOptions": "Syntax options",
       "stripLists": "Lists",
       "stripListsDescription": "Remove bullet and numbered list markers",
       "stripBlockquotes": "Blockquotes",

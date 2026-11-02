@@ -100,6 +100,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Keep U+200C (ZWNJ) out of both invisible-character regexes in `tts_normalize.rs`; Persian and Indic words are spelled with it.
 - Add a script's sentence terminator to both `is_sentence_end` in `pagination.rs` and the phrase regex in `captions.ts`; text with no terminator falls to whitespace-snapped force-splits — no mid-word cuts since #88, but sentence-level breaks degrade to clause/word boundaries.
 - The post-process output re-sanitize deletes single-word bracket tags (`remove_citations` matches `[sighs]` while `[clears throat]` survives by accident); route LLM output through `sanitize_text_tag_safe`, never the plain pipeline.
+- Flipping a `MarkdownSanitizationConfig` default fails every test that builds the config via `..Default::default()` and asserts the old behavior; grep those tests in the same change and pin the flipped field explicitly where the test means to exercise the toggle.
 
 ## Linux
 
@@ -151,6 +152,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Gate hidden startup and close-to-tray on an actually available tray; create the main window hidden, show first-run setup explicitly, and use one unminimize/show/focus helper for tray and second-instance reopening. Propagate OS autostart registration failures before persisting the new preference.
 - Force the last visible settings section active at the bottom of the scroll container: a short last section never reaches the scroll-spy reading band, and the layout `<main>` scrolls, not the window, so capture scroll events on the document.
 - Spread ground parallax across the full scroll range while keeping the texture within its overscan; clamping raw scroll distance makes it stop moving early on long Settings pages.
+- The ui `collapsible` index exports `Collapsible` as the Root component only, not a namespace: `Collapsible.Trigger`/`.Content` type-error in svelte-check — import `CollapsibleRoot`/`CollapsibleTrigger`/`CollapsibleContent` by name.
 
 ## Experimental gating
 

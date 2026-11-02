@@ -10,6 +10,7 @@
     Volume2,
     Zap,
     KeyRound,
+    Gift,
     Download,
     Loader2,
     Check,
@@ -45,6 +46,8 @@
     keyless: boolean;
     /** Installs inline (streamed) before completing onboarding. */
     installable?: boolean;
+    /** Has a free tier, so the API key costs nothing to try. */
+    freeTier?: boolean;
   };
 
   // Shared-model engine: one download covers every voice. Mirrors the default
@@ -84,9 +87,31 @@
       id: "cartesia",
       name: "Cartesia",
       tagline: "Premium cloud voices",
-      detail: "Fast, high-quality voices. Requires an API key — you can add it later in Settings.",
+      detail:
+        "Fast, high-quality voices with a free tier to start. Requires an API key — you can add it later in Settings.",
       recommended: false,
-      keyless: false
+      keyless: false,
+      freeTier: true
+    },
+    {
+      id: "elevenlabs",
+      name: "ElevenLabs",
+      tagline: "Premium cloud voices",
+      detail:
+        "High-quality multilingual voices with a free tier to start. Requires an API key — you can add it later in Settings.",
+      recommended: false,
+      keyless: false,
+      freeTier: true
+    },
+    {
+      id: "fish",
+      name: "Fish Audio",
+      tagline: "Premium cloud voices",
+      detail:
+        "Expressive, natural voices with a free model included. Requires an API key — you can add it later in Settings.",
+      recommended: false,
+      keyless: false,
+      freeTier: true
     }
   ];
 
@@ -225,7 +250,7 @@
                   : "border-border hover:border-primary/60 rounded-lg border p-4 text-start transition-all focus-visible:ring-2 focus-visible:outline-none"}
               >
                 <div class="flex items-center justify-between gap-3">
-                  <div class="flex items-center gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
                     <span class="font-medium">{choice.name}</span>
                     {#if choice.recommended}
                       <span
@@ -241,6 +266,14 @@
                       >
                         <Check class="h-3 w-3" />
                         Installed
+                      </span>
+                    {/if}
+                    {#if choice.freeTier}
+                      <span
+                        class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400"
+                      >
+                        <Gift class="h-3 w-3" />
+                        Free tier
                       </span>
                     {/if}
                   </div>

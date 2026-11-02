@@ -181,7 +181,7 @@
     },
     "history": {
       "title": "Ajustes del historial",
-      "enabled": "Guardar historial de lecturas",
+      "enabled": "Historial",
       "enabledDescription": "Guarda lecturas con opción de búsqueda para reproducirlas después. Desactivado, la pequeña caché de voz sigue funcionando; el historial existente se conserva.",
       "storageMode": "Modo de almacenamiento",
       "persistent": "Permanente",
@@ -222,7 +222,8 @@
       "stripLinks": "Enlaces",
       "stripLinksDescription": "Quita la sintaxis de los enlaces de Markdown y conserva el texto del enlace",
       "stripBoldItalic": "Negrita y cursiva",
-      "stripBoldItalicDescription": "Elimina los marcadores **negrita** y *cursiva*",
+      "stripBoldItalicDescription": "Elimina los marcadores **negrita** y *cursiva* — desactivado de forma predeterminada para que los motores los articulen como énfasis",
+      "syntaxOptions": "Opciones de sintaxis",
       "stripLists": "Listas",
       "stripListsDescription": "Elimina los marcadores de listas con viñetas y numeradas",
       "stripBlockquotes": "Citas",

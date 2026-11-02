@@ -208,6 +208,7 @@ export type TranslationKeys =
   | "settings.sanitization.stripLinksDescription"
   | "settings.sanitization.stripBoldItalic"
   | "settings.sanitization.stripBoldItalicDescription"
+  | "settings.sanitization.syntaxOptions"
   | "settings.sanitization.stripLists"
   | "settings.sanitization.stripListsDescription"
   | "settings.sanitization.stripBlockquotes"

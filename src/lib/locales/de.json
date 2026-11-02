@@ -181,7 +181,7 @@
     },
     "history": {
       "title": "Verlaufseinstellungen",
-      "enabled": "Leseverlauf speichern",
+      "enabled": "Verlauf",
       "enabledDescription": "Durchsuchbare Lesungen für spätere Wiedergabe speichern. Ausgeschaltet funktioniert der kleine Sprach-Cache weiterhin; vorhandener Verlauf bleibt erhalten.",
       "storageMode": "Speichermodus",
       "persistent": "Dauerhaft",
@@ -222,7 +222,8 @@
       "stripLinks": "Links",
       "stripLinksDescription": "Markdown-Link-Syntax entfernen, Linktext beibehalten",
       "stripBoldItalic": "Fett & Kursiv",
-      "stripBoldItalicDescription": "**Fett**- und *Kursiv*-Markierungen entfernen",
+      "stripBoldItalicDescription": "**Fett**- und *Kursiv*-Markierungen entfernen — standardmäßig aus, damit Engines sie als Betonung sprechen können",
+      "syntaxOptions": "Syntaxoptionen",
       "stripLists": "Listen",
       "stripListsDescription": "Aufzählungs- und Nummerierungszeichen entfernen",
       "stripBlockquotes": "Zitate",

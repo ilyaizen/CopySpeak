@@ -181,7 +181,7 @@
     },
     "history": {
       "title": "إعدادات السجل",
-      "enabled": "حفظ سجل القراءة",
+      "enabled": "السجل",
       "enabledDescription": "حفظ قراءات قابلة للبحث لإعادة تشغيلها لاحقًا. عند الإيقاف، تستمر ذاكرة التخزين المؤقت الصوتية الصغيرة في العمل؛ ويتم الاحتفاظ بالسجل الحالي.",
       "storageMode": "وضع التخزين",
       "persistent": "دائم",
@@ -222,7 +222,8 @@
       "stripLinks": "الروابط",
       "stripLinksDescription": "إزالة صيغة روابط Markdown، مع الإبقاء على نص الرابط",
       "stripBoldItalic": "الغامق والمائل",
-      "stripBoldItalicDescription": "إزالة علامات **الغامق** و*المائل*",
+      "stripBoldItalicDescription": "إزالة علامات **الغامق** و*المائل* — معطّل افتراضيًا حتى تتمكن المحركات من لفظها كتركيد",
+      "syntaxOptions": "خيارات بناء الجملة",
       "stripLists": "القوائم",
       "stripListsDescription": "إزالة علامات التعداد النقطي والرقمي",
       "stripBlockquotes": "الاقتباسات",

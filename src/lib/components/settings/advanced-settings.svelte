@@ -65,9 +65,6 @@
         bind:checked={localConfig.general.experimental_enabled}
       />
     </SettingRow>
-    <p class="text-muted-foreground mt-2 text-sm leading-relaxed">
-      {$_("settings.general.experimentalDescription")}
-    </p>
     {#if localConfig.general.experimental_enabled === true}
       <div class="border-border mt-4 space-y-4 border-s ps-4">
         <HotkeySettings bind:localConfig {errors} />
@@ -132,9 +129,6 @@
             />
           </SettingRow>
         {/if}
-        <p class="text-muted-foreground text-sm leading-relaxed">
-          {$_("settings.general.profileEffects")}
-        </p>
       </div>
     {/if}
   </div>

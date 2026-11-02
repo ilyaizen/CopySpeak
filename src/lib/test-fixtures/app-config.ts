@@ -62,7 +62,7 @@ export function testConfig(): AppConfig {
         strip_code_blocks: true,
         strip_inline_code: false,
         strip_links: true,
-        strip_bold_italic: true,
+        strip_bold_italic: false,
         strip_lists: true,
         strip_blockquotes: true
       },
