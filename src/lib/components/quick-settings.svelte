@@ -95,18 +95,20 @@
         onchange={handleToggle}
       />
     </SettingRow>
-    <!-- Global hotkey toggle — binds directly to config since it's a persistent preference -->
-    <SettingRow
-      label={$_("common.hotkey")}
-      tooltip={config.hotkey.shortcut || "Speak clipboard with a keyboard shortcut"}
-    >
-      <Switch
-        id="qs-hotkey"
-        aria-label={$_("common.hotkey")}
-        bind:checked={config.hotkey.enabled}
-      />
-    </SettingRow>
     {#if config.general.experimental_enabled === true}
+      {#if config.hotkey.enabled}
+        <!-- Global hotkey toggle — binds directly to config since it's a persistent preference -->
+        <SettingRow
+          label={$_("common.hotkey")}
+          tooltip={config.hotkey.shortcut || "Speak clipboard with a keyboard shortcut"}
+        >
+          <Switch
+            id="qs-hotkey"
+            aria-label={$_("common.hotkey")}
+            bind:checked={config.hotkey.enabled}
+          />
+        </SettingRow>
+      {/if}
       <!-- Effects toggle — binds to active profile's effects -->
       <SettingRow label={$_("common.effects")} tooltip={$_("quick.effectsTooltip")}>
         <Switch

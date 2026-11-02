@@ -264,7 +264,7 @@ pub fn set_config(
             cfg.playback.volume,
             cfg.general.debug_mode,
             cfg.trigger.listen_enabled,
-            cfg.hotkey.clone(),
+            cfg.effective_hotkey(),
         )
     };
     let old_duck_effective = {
@@ -281,7 +281,7 @@ pub fn set_config(
 
     let debug_mode_changed = old_debug_mode != new_config.general.debug_mode;
     let listen_enabled_changed = old_listen_enabled != new_config.trigger.listen_enabled;
-    let hotkey_changed = old_hotkey != new_config.hotkey;
+    let hotkey_changed = old_hotkey != new_config.effective_hotkey();
     let daemon_idle_timeout_changed =
         old_daemon_idle_timeout != new_config.tts.daemon_idle_timeout_secs;
 
@@ -357,7 +357,7 @@ pub fn set_config(
                 cfg.hotkey.enabled,
                 cfg.hotkey.shortcut
             );
-            cfg.hotkey.clone()
+            cfg.effective_hotkey()
         };
         if let Err(e) = crate::register_hotkey(&app, &new_hotkey) {
             log::error!("[Config] Failed to re-register hotkey: {}", e);

@@ -2,10 +2,14 @@
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { Select } from "#lib/components/ui/select/index.js";
+  import HotkeySettings from "#lib/components/settings/hotkey-settings.svelte";
   import type { AppConfig, HudPosition } from "#lib/types";
   import { _ } from "svelte-i18n";
 
-  let { localConfig = $bindable() }: { localConfig: AppConfig } = $props();
+  let {
+    localConfig = $bindable(),
+    errors
+  }: { localConfig: AppConfig; errors: Record<string, string> } = $props();
 
   const HUD_OPTIONS = [
     { value: "disabled", label: "Disabled" },
@@ -66,6 +70,7 @@
     </p>
     {#if localConfig.general.experimental_enabled === true}
       <div class="border-border mt-4 space-y-4 border-s ps-4">
+        <HotkeySettings bind:localConfig {errors} />
         <SettingRow
           label={$_("settings.general.autoSave")}
           tooltip={$_("settings.general.autoSaveDescription")}

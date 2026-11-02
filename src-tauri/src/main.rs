@@ -711,7 +711,7 @@ fn main() {
             let hotkey_config = {
                 let cfg = app.state::<std::sync::Mutex<config::AppConfig>>();
                 let cfg = cfg.lock().unwrap();
-                cfg.hotkey.clone()
+                cfg.effective_hotkey()
             };
 
             if let Err(e) = register_hotkey(app.handle(), &hotkey_config) {
@@ -788,6 +788,10 @@ fn main() {
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, _shortcut, event| {
                     if event.state() == ShortcutState::Pressed {
+                        let config = app.state::<std::sync::Mutex<config::AppConfig>>();
+                        if !config.lock().unwrap().effective_hotkey().enabled {
+                            return;
+                        }
                         log::info!("Global hotkey triggered: speak from clipboard");
                         let app_handle = app.clone();
                         tauri::async_runtime::spawn(async move {

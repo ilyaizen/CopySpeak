@@ -244,6 +244,12 @@ impl Default for AppConfig {
 }
 
 impl AppConfig {
+    pub fn effective_hotkey(&self) -> HotkeyConfig {
+        let mut hotkey = self.hotkey.clone();
+        hotkey.enabled &= self.general.experimental_enabled;
+        hotkey
+    }
+
     pub fn is_history_effective(&self) -> bool {
         self.general.experimental_enabled && self.history.enabled
     }

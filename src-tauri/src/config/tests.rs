@@ -665,6 +665,22 @@ mod tests {
     }
 
     #[test]
+    fn effective_hotkey_preserves_saved_preference() {
+        let mut config = AppConfig::default();
+        assert!(!config.hotkey.enabled);
+        for experimental in [false, true] {
+            for enabled in [false, true] {
+                config.general.experimental_enabled = experimental;
+                config.hotkey.enabled = enabled;
+                let effective = config.effective_hotkey();
+                assert_eq!(effective.enabled, experimental && enabled);
+                assert_eq!(effective.shortcut, config.hotkey.shortcut);
+                assert_eq!(config.hotkey.enabled, enabled);
+            }
+        }
+    }
+
+    #[test]
     fn effective_history_predicate_truth_table() {
         let mut config = AppConfig::default();
 

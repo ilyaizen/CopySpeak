@@ -172,6 +172,23 @@ it("shows auto-save only under Experimental and keeps it off by default", async 
   expect(autoSave.getAttribute("aria-checked")).toBe("false");
 });
 
+it("places the hotkey first under Experimental and preserves its saved preference", async () => {
+  config.hotkey.enabled = true;
+  const view = await mountSettings();
+  expect(view.container.querySelector("#hotkey-enabled")).toBeNull();
+  await fireEvent.click(view.container.querySelector("#experimental-enabled")!);
+  const hotkey = view.container.querySelector("#hotkey-enabled")!;
+  const autoSave = view.container.querySelector("#auto-save-profiles")!;
+  expect(view.container.querySelector("#advanced")?.contains(hotkey)).toBe(true);
+  expect(hotkey.compareDocumentPosition(autoSave) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(hotkey.getAttribute("aria-checked")).toBe("true");
+  expect(view.container.querySelector("#hotkey-input")).not.toBeNull();
+  await fireEvent.click(hotkey);
+  expect(view.container.querySelector("#hotkey-input")).toBeNull();
+  await fireEvent.click(view.container.querySelector("#experimental-enabled")!);
+  expect(view.container.querySelector("#hotkey-enabled")).toBeNull();
+});
+
 it("does not auto-save when Experimental is off even with a saved opt-in", async () => {
   config.general.auto_save_profiles = true;
   const view = await mountSettings();
