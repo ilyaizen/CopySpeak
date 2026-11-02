@@ -67,6 +67,16 @@
     {#if localConfig.general.experimental_enabled === true}
       <div class="border-border mt-4 space-y-4 border-s ps-4">
         <SettingRow
+          label={$_("settings.general.autoSave")}
+          tooltip={$_("settings.general.autoSaveDescription")}
+        >
+          <Switch
+            id="auto-save-profiles"
+            aria-label={$_("settings.general.autoSave")}
+            bind:checked={localConfig.general.auto_save_profiles}
+          />
+        </SettingRow>
+        <SettingRow
           label={$_("settings.history.enabled")}
           tooltip={$_("settings.history.enabledDescription")}
         >

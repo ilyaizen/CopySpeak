@@ -76,9 +76,9 @@ it("keeps hidden-start and close-to-tray preferences but disables them without a
   config.general.start_minimized = true;
   config.general.close_behavior = "minimize-to-tray";
   const view = await mountSettings();
-  const showTray = view.getByRole("switch", { name: "Show tray icon" });
-  const startInTray = view.getByRole("switch", { name: "Start in tray" });
-  const closeToTray = view.getByRole("switch", { name: "Close to tray" });
+  const showTray = view.getByRole("switch", { name: "Show Tray Icon" });
+  const startInTray = view.getByRole("switch", { name: "Start in Tray" });
+  const closeToTray = view.getByRole("switch", { name: "Close to Tray" });
   await fireEvent.click(showTray);
   expect(startInTray.hasAttribute("disabled")).toBe(true);
   expect(closeToTray.hasAttribute("disabled")).toBe(true);
@@ -123,7 +123,7 @@ it("shows Duck in Playback on Windows without Experimental", async () => {
 
 it("mounts opted-in detail sections once and returns focus to Advanced when hidden", async () => {
   const view = await mountSettings();
-  const experimental = view.getByRole("switch", { name: "Experimental features" });
+  const experimental = view.getByRole("switch", { name: "Experimental Features" });
   await fireEvent.click(experimental);
   expect(view.container.querySelector("#history")).toBeNull();
   expect(view.container.querySelector("#postProcess")).toBeNull();
@@ -163,8 +163,28 @@ it("serializes only valid retrigger values through Save and restores changes on 
   expect(saved.at(-1)?.playback.on_retrigger).toBe("queue");
 });
 
+it("shows auto-save only under Experimental and keeps it off by default", async () => {
+  const view = await mountSettings();
+  expect(view.container.querySelector("#auto-save-profiles")).toBeNull();
+  await fireEvent.click(view.container.querySelector("#experimental-enabled")!);
+  const autoSave = view.getByRole("switch", { name: "Auto-Save Changes" });
+  expect(view.container.querySelector("#advanced")?.contains(autoSave)).toBe(true);
+  expect(autoSave.getAttribute("aria-checked")).toBe("false");
+});
+
+it("does not auto-save when Experimental is off even with a saved opt-in", async () => {
+  config.general.auto_save_profiles = true;
+  const view = await mountSettings();
+  vi.useFakeTimers();
+  await fireEvent.click(view.container.querySelector("#playback-streaming")!);
+  await vi.advanceTimersByTimeAsync(AUTO_SAVE_DEBOUNCE_MS);
+  expect(saved).toHaveLength(0);
+  expect(saveBar.visible).toBe(true);
+});
+
 it("auto-saves advanced mutations without clearing legacy opt-in preferences", async () => {
   config.general.auto_save_profiles = true;
+  config.general.experimental_enabled = true;
   config.history.enabled = true;
   config.post_process.enabled = true;
   config.playback.duck.enabled = true;
@@ -175,7 +195,7 @@ it("auto-saves advanced mutations without clearing legacy opt-in preferences", a
   await vi.advanceTimersByTimeAsync(AUTO_SAVE_DEBOUNCE_MS);
   expect(saved).toHaveLength(1);
   expect(saved[0].playback.streaming_enabled).toBe(false);
-  expect(saved[0].general.experimental_enabled).toBe(false);
+  expect(saved[0].general.experimental_enabled).toBe(true);
   expect(saved[0].history.enabled).toBe(true);
   expect(saved[0].post_process.enabled).toBe(true);
   expect(saved[0].playback.duck.enabled).toBe(true);

@@ -114,7 +114,8 @@
   $effect(() => {
     syncSaveBarOrAutoSave(
       hasChanges,
-      localConfig?.general.auto_save_profiles === true,
+      localConfig?.general.experimental_enabled === true &&
+        localConfig.general.auto_save_profiles === true,
       saveConfig,
       cancelChanges,
       $_("engine.saveBar.saveChanges"),
