@@ -5,13 +5,14 @@
   import Github from "#lib/components/icons/github.svelte";
   import { VERSION } from "#lib/version";
   import { INTRO_AUDIO, INTRO_LINES } from "./intro-captions";
+  import { groundParallax } from "#lib/utils/ground-parallax";
 
   const DOWNLOAD_URL = "https://github.com/ilyaizen/CopySpeak/releases";
   const GITHUB_URL = "https://github.com/ilyaizen/CopySpeak";
 
   type Phase = "idle" | "selected" | "copy1" | "copy2" | "speaking" | "done";
 
-  // Each word carries its index in the whole poem, so highlighting and the caption window
+  // Each word carries its index in the whole intro, so highlighting and the caption window
   // run across line breaks.
   let count = 0;
   const LINES = INTRO_LINES.map((line) => line.map((w) => ({ ...w, index: count++ })));
@@ -54,7 +55,7 @@
     return i;
   }
 
-  // Copied highlight: one Range over the whole poem, so spaces and wrapped lines paint like a
+  // Copied highlight: one Range over the whole intro, so spaces and wrapped lines paint like a
   // real selection. Per-word backgrounds leave gaps; .sel is only the fallback without the API.
   // Resolved in onMount: select() only runs client-side, after mount.
   let highlights: HighlightRegistry | null = null;
@@ -89,13 +90,15 @@
 
   // Speaking clock: the audio's own position when listening, wall time for the silent loop.
   // Both read the same caption timings, so the silent demo keeps the recording's rhythm.
-  function speak(clock: () => number, onEnd: () => void) {
+  // Each caller decides when speaking ends: the silent loop after a tail past the last word,
+  // Listen when the audio itself ends. A clip shorter than that tail never reaches it.
+  function speak(clock: () => number, done: (ms: number) => boolean, onEnd: () => void) {
     select(false);
     phase = "speaking";
     const tick = () => {
       const ms = clock();
       live = indexAt(ms);
-      if (ms >= LAST_END + 300) onEnd();
+      if (done(ms)) onEnd();
       else frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -126,7 +129,11 @@
     });
     at(2500, () => {
       const t0 = performance.now();
-      speak(() => performance.now() - t0, finish);
+      speak(
+        () => performance.now() - t0,
+        (ms) => ms >= LAST_END + 300,
+        finish
+      );
     });
   }
 
@@ -167,6 +174,7 @@
     }
     speak(
       () => audio.currentTime * 1000,
+      () => audio.ended,
       () => {
         listening = false;
         if (paused) stop();
@@ -186,37 +194,9 @@
     const cleanups: (() => void)[] = [];
     highlights = "highlights" in CSS ? CSS.highlights : null;
 
-    // Ground parallax: the fixed texture layer drifts up at a fraction of scroll speed,
-    // clamped inside its oversize headroom so no edge ever shows. The .landing root is the
-    // scroll container, not the window. Reduced motion leaves --bg-shift unset.
+    // The landing root is the scroll container, not the window.
     const scroller = stage.closest<HTMLElement>(".landing");
-    if (scroller && !reduced) {
-      const FACTOR = 0.12; // texture moves at 12% of scroll speed
-      const MAX = 0.145; // share of viewport height; the layer carries 15% headroom per edge
-      let queued = false;
-      const update = () => {
-        queued = false;
-        const shift = Math.max(
-          0,
-          Math.min(scroller.scrollTop * FACTOR, scroller.clientHeight * MAX)
-        );
-        scroller.style.setProperty("--bg-shift", `${(-shift).toFixed(1)}px`);
-      };
-      const queue = () => {
-        if (!queued) {
-          queued = true;
-          requestAnimationFrame(update);
-        }
-      };
-      scroller.addEventListener("scroll", queue, { passive: true });
-      addEventListener("resize", queue);
-      update();
-      cleanups.push(() => {
-        scroller.removeEventListener("scroll", queue);
-        removeEventListener("resize", queue);
-        scroller.style.removeProperty("--bg-shift");
-      });
-    }
+    if (scroller) cleanups.push(groundParallax(scroller, scroller));
 
     if (!reduced) {
       animated = true;
@@ -249,7 +229,7 @@
 </script>
 
 <!-- Copy-twice-then-speak illustration. The silent loop runs on the real recording's caption
-     timings; Listen plays that recording with the same word highlighting. The Shakespeare
+     timings; Listen plays that recording with the same word highlighting. The intro
      lines and the chip states are art, not UI copy, so they stay English in every locale. -->
 <div class="wrap">
   <section class="hero">

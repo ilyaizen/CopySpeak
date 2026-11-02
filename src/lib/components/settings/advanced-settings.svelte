@@ -2,10 +2,14 @@
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { Select } from "#lib/components/ui/select/index.js";
+  import HotkeySettings from "#lib/components/settings/hotkey-settings.svelte";
   import type { AppConfig, HudPosition } from "#lib/types";
   import { _ } from "svelte-i18n";
 
-  let { localConfig = $bindable() }: { localConfig: AppConfig } = $props();
+  let {
+    localConfig = $bindable(),
+    errors
+  }: { localConfig: AppConfig; errors: Record<string, string> } = $props();
 
   const HUD_OPTIONS = [
     { value: "disabled", label: "Disabled" },
@@ -61,11 +65,26 @@
         bind:checked={localConfig.general.experimental_enabled}
       />
     </SettingRow>
-    <p class="text-muted-foreground mt-2 text-sm leading-relaxed">
-      {$_("settings.general.experimentalDescription")}
-    </p>
     {#if localConfig.general.experimental_enabled === true}
       <div class="border-border mt-4 space-y-4 border-s ps-4">
+        <HotkeySettings bind:localConfig {errors} />
+        <SettingRow label={$_("common.effects")} tooltip={$_("settings.general.profileEffects")}>
+          <Switch
+            id="effects-enabled"
+            aria-label={$_("common.effects")}
+            bind:checked={localConfig.general.effects_enabled}
+          />
+        </SettingRow>
+        <SettingRow
+          label={$_("settings.general.autoSave")}
+          tooltip={$_("settings.general.autoSaveDescription")}
+        >
+          <Switch
+            id="auto-save-profiles"
+            aria-label={$_("settings.general.autoSave")}
+            bind:checked={localConfig.general.auto_save_profiles}
+          />
+        </SettingRow>
         <SettingRow
           label={$_("settings.history.enabled")}
           tooltip={$_("settings.history.enabledDescription")}
@@ -110,9 +129,6 @@
             />
           </SettingRow>
         {/if}
-        <p class="text-muted-foreground text-sm leading-relaxed">
-          {$_("settings.general.profileEffects")}
-        </p>
       </div>
     {/if}
   </div>

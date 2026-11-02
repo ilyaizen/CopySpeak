@@ -39,6 +39,7 @@
           speed: 1.0,
           pitch: 1.0,
           effects: { enabled: false, active_effect: "none" },
+          post_process: { enabled: false, active_template_id: null },
           engine_options: {}
         }
       ],
@@ -131,7 +132,8 @@
       close_behavior: "minimize-to-tray",
       appearance: "system",
       locale: "en",
-      experimental_enabled: false
+      experimental_enabled: false,
+      effects_enabled: true
     },
     output: {
       enabled: false,
@@ -152,7 +154,7 @@
         strip_code_blocks: true,
         strip_inline_code: true,
         strip_links: true,
-        strip_bold_italic: true,
+        strip_bold_italic: false,
         strip_lists: true,
         strip_blockquotes: true
       },
@@ -209,7 +211,6 @@
   };
 
   let config = $state<AppConfig | null>(null);
-  let externalLoad = false;
   let manualText = $state("");
   let lastPlayedContent = $state<string | null>(null);
   let abortRequested = $state(false);
@@ -248,7 +249,84 @@
       readingView?.querySelector("[data-current]")?.scrollIntoView({ block: "nearest" });
   });
 
-  // Sync playback config to store and auto-save (debounced)
+  // ---- Config persistence -------------------------------------------------
+  //
+  // Saves are serialized writes of immutable snapshots. Each write captures
+  // `$state.snapshot(config)` when it is scheduled, so edits made while a
+  // write is in flight land in a follow-up write instead of mutating the
+  // payload, and at most one `set_config` runs at a time. A write is skipped
+  // when its snapshot already matches what the backend last confirmed, which
+  // makes load echoes and post-load debounce ticks no-ops.
+  const SAVE_DEBOUNCE_MS = 500;
+
+  interface ConfigSnapshot {
+    data: AppConfig;
+    json: string;
+  }
+
+  let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+  let saveQueueTail: Promise<void> = Promise.resolve();
+  // What the backend is known to hold: the last snapshot this page saved
+  // successfully, else the config it loaded.
+  let lastSavedJson: string | null = null;
+  // Re-arm guard: an effect re-run that changed no tracked value must not
+  // push an edit's debounce deadline out.
+  let armedSaveKey = "";
+
+  function snapshotConfig(): ConfigSnapshot | null {
+    if (!config) return null;
+    const data = $state.snapshot(config);
+    return { data, json: JSON.stringify(data) };
+  }
+
+  function armConfigSave(trackedKey: string) {
+    if (trackedKey === armedSaveKey) return;
+    armedSaveKey = trackedKey;
+    if (saveTimeout) clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+      saveTimeout = null;
+      if (destroyed) return;
+      const snapshot = snapshotConfig();
+      if (!snapshot) return;
+      void runConfigSave(snapshot).catch((e) => console.error("Config auto-save failed:", e));
+    }, SAVE_DEBOUNCE_MS);
+  }
+
+  function runConfigSave(snapshot: ConfigSnapshot): Promise<void> {
+    const write = saveQueueTail.then(async () => {
+      // Superseded by an equal write that landed while this one was queued.
+      if (snapshot.json === lastSavedJson) return;
+      await invoke("set_config", { newConfig: snapshot.data });
+      lastSavedJson = snapshot.json;
+    });
+    // A failed write must not poison the queue; the error still reaches this
+    // write's own caller via `write`.
+    saveQueueTail = write.then(
+      () => {},
+      () => {}
+    );
+    return write;
+  }
+
+  // Persists any un-persisted edits now, behind every write already queued.
+  // The snapshot is taken here — not in the debounce effect — so a Play click
+  // that beats the effect still persists what the user sees. Rejects on
+  // failure: callers must surface it and must not start synthesis.
+  async function flushPendingConfigSave(): Promise<void> {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+    while (true) {
+      await saveQueueTail;
+      const snapshot = snapshotConfig();
+      if (!snapshot || snapshot.json === lastSavedJson) return;
+      await runConfigSave(snapshot);
+    }
+  }
+
+  // Sync playback config to store and auto-save (debounced). Every quick
+  // setting the debounced save must cover feeds the tracked key.
   $effect(() => {
     if (config) {
       const c = config;
@@ -257,27 +335,22 @@
       const activeEffect = effectiveEffect(c);
       const speed = activeProfile?.speed ?? 1.0;
       const pitch = activeProfile?.pitch ?? 1.0;
+      const trackedKey = [
+        volume,
+        speed,
+        pitch,
+        activeEffect,
+        activeProfile?.post_process?.enabled,
+        activeProfile?.post_process?.active_template_id,
+        activeProfile?.effects?.enabled,
+        activeProfile?.effects?.active_effect,
+        c.hotkey?.enabled
+      ].join("\u0000");
 
       // Keep playback store in sync so audio plays at correct settings
       playbackStore.syncPlaybackConfig(volume, speed, pitch, activeEffect);
 
-      // ponytail: skip auto-save when config was loaded externally (config-changed event)
-      // to break the reload → save → emit → reload loop
-      if (externalLoad) {
-        externalLoad = false;
-        return;
-      }
-
-      const timeout = setTimeout(async () => {
-        if (isTauri) {
-          try {
-            await invoke("set_config", { newConfig: config });
-          } catch {
-            // Ignore save errors
-          }
-        }
-      }, 500);
-      return () => clearTimeout(timeout);
+      armConfigSave(trackedKey);
     }
   });
 
@@ -289,21 +362,30 @@
       await historyStore.loadHistory();
     }
   }
-  async function loadConfig(external = false) {
+  async function loadConfig() {
     if (!isTauri) {
       config = mockConfig;
+      lastSavedJson = snapshotConfig()?.json ?? null;
       return;
     }
     const seq = ++configSeq;
-    if (external) externalLoad = true;
     try {
       const fetched = await invoke<AppConfig>("get_config");
       if (destroyed || seq !== configSeq) return;
+      // A config-changed broadcast must not clobber edits this page has not
+      // persisted yet: the local snapshot is newer than the broadcast, and
+      // reloading would drop them while the queued save still re-persists
+      // them, resurrecting a stale config on the next reload.
+      if (config && snapshotConfig()?.json !== lastSavedJson) return;
       config = fetched;
+      lastSavedJson = snapshotConfig()?.json ?? null;
     } catch (e) {
       if (destroyed || seq !== configSeq) return;
       error = `Failed to load config: ${e}`;
-      config = mockConfig;
+      if (!config) {
+        config = mockConfig;
+        lastSavedJson = snapshotConfig()?.json ?? null;
+      }
     }
   }
 
@@ -326,7 +408,9 @@
     await playbackStore.handleReplay();
   }
 
-  // Unified Play handler — dispatches based on playMode
+  // Unified Play handler — dispatches based on playMode. "play" first flushes
+  // any un-persisted config edits (see flushPendingConfigSave), so synthesis
+  // never starts from settings the backend has not confirmed.
   async function handlePlay() {
     if (!isTauri) return;
     error = null;
@@ -406,6 +490,15 @@
       error = "Not running in Tauri environment";
       return;
     }
+    // A settings save that fails must block synthesis: the backend would read
+    // the previous config while the UI shows the edited one. Surface it and
+    // leave everything untouched so a retry can succeed.
+    try {
+      await flushPendingConfigSave();
+    } catch (e) {
+      error = `Failed to save settings: ${e}`;
+      return;
+    }
     generating = true;
     try {
       error = null;
@@ -435,7 +528,12 @@
       config.tts.profiles = config.tts.profiles.map((p) => (p.id === profile.id ? profile : p));
       config.tts.active_profile_id = profile.id;
       config.tts.active_backend = profile.engine;
-      if (isTauri) await invoke("set_config", { newConfig: config });
+      // Same serialized pipeline as the auto-save so a pending debounced
+      // write cannot race this one; failures surface via the catch below.
+      if (isTauri) {
+        const snapshot = snapshotConfig();
+        if (snapshot) await runConfigSave(snapshot);
+      }
       if (regenerate) await handleGenerate(true);
       else toast.success($_("play.restored"));
     } catch (e) {
@@ -459,7 +557,7 @@
     if (isTauri) {
       try {
         unlistenConfig = await listen("config-changed", async () => {
-          await loadConfig(true);
+          await loadConfig();
           await ensureHistoryLoaded();
         });
         if (destroyed) unlistenConfig();
@@ -492,6 +590,18 @@
 
   onDestroy(() => {
     destroyed = true;
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+      saveTimeout = null;
+    }
+    // Last-chance persistence for edits made on this page; no UI remains to
+    // surface an error, so log it.
+    const snapshot = snapshotConfig();
+    if (snapshot && snapshot.json !== lastSavedJson) {
+      void runConfigSave(snapshot).catch((e) =>
+        console.error("Failed to save config on unmount:", e)
+      );
+    }
     if (unlistenTruncated) unlistenTruncated();
     if (unlistenConfig) unlistenConfig();
     if (unlistenReading) unlistenReading();
@@ -511,7 +621,7 @@
           role="region"
           aria-label={$_("play.nowReadingAria")}
           dir="auto"
-          class="border-input dark:bg-input/30 min-h-48 flex-1 overflow-y-auto rounded-md border p-4 text-base leading-relaxed whitespace-pre-wrap shadow-xs"
+          class="border-input bg-card dark:bg-input/30 min-h-48 flex-1 overflow-y-auto rounded-md border p-4 text-base leading-relaxed whitespace-pre-wrap shadow-xs"
         >
           {#each captionWords as word, i (word.offset)}<span
               data-current={i === currentWord || undefined}
@@ -526,7 +636,7 @@
         <label for="reading-text" class="sr-only">{$_("play.textLabel")}</label>
         <Textarea
           id="reading-text"
-          class="field-sizing-fixed min-h-48 flex-1 resize-none p-4 text-base leading-relaxed"
+          class="bg-card dark:bg-input/30 field-sizing-fixed min-h-48 flex-1 resize-none p-4 text-base leading-relaxed"
           placeholder={$_("play.placeholder")}
           bind:value={manualText}
         />

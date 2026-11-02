@@ -181,7 +181,7 @@
     },
     "history": {
       "title": "Verlaufseinstellungen",
-      "enabled": "Leseverlauf speichern",
+      "enabled": "Verlauf",
       "enabledDescription": "Durchsuchbare Lesungen für spätere Wiedergabe speichern. Ausgeschaltet funktioniert der kleine Sprach-Cache weiterhin; vorhandener Verlauf bleibt erhalten.",
       "storageMode": "Speichermodus",
       "persistent": "Dauerhaft",
@@ -222,7 +222,8 @@
       "stripLinks": "Links",
       "stripLinksDescription": "Markdown-Link-Syntax entfernen, Linktext beibehalten",
       "stripBoldItalic": "Fett & Kursiv",
-      "stripBoldItalicDescription": "**Fett**- und *Kursiv*-Markierungen entfernen",
+      "stripBoldItalicDescription": "**Fett**- und *Kursiv*-Markierungen entfernen — standardmäßig aus, damit Engines sie als Betonung sprechen können",
+      "syntaxOptions": "Syntaxoptionen",
       "stripLists": "Listen",
       "stripListsDescription": "Aufzählungs- und Nummerierungszeichen entfernen",
       "stripBlockquotes": "Zitate",
@@ -875,7 +876,23 @@
   "voicePicker": {
     "select": "Stimme auswählen…",
     "search": "Stimmen suchen…",
-    "customId": "Eigene / manuelle ID…"
+    "customId": "Eigene / manuelle ID…",
+    "refresh": "Aktualisieren",
+    "refreshFailed": "Aktualisierung fehlgeschlagen: {error}",
+    "notInList": "Nicht in der Liste",
+    "noMatch": "Keine Stimme passt zu „{query}“.",
+    "title": "Stimme auswählen",
+    "count": "{shown} von {total}",
+    "gender": "Geschlecht",
+    "language": "Sprache",
+    "style": "Stil",
+    "all": "Alle",
+    "noFilterMatch": "Keine Stimme passt zu diesen Filtern.",
+    "previewPlay": "Vorschau",
+    "previewStop": "Vorschau beenden",
+    "previewFailed": "Diese Vorschau konnte nicht abgespielt werden.",
+    "noPreview": "Für diese Stimme gibt es keine Vorschau.",
+    "shiftEnterHint": "Umschalt+Eingabe spielt die markierte Stimme ab."
   },
   "hotkey": {
     "set": "Festlegen",

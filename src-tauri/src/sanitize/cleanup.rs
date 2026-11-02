@@ -123,6 +123,10 @@ mod tests {
     fn test_full_sanitize_enabled() {
         let config = SanitizationConfig {
             enabled: true,
+            markdown: crate::config::MarkdownSanitizationConfig {
+                strip_bold_italic: true,
+                ..Default::default()
+            },
             ..Default::default()
         };
         let input = "# Title\n**bold** w/o issue & 10km etc.";
@@ -167,6 +171,7 @@ mod tests {
             enabled: true,
             markdown: crate::config::MarkdownSanitizationConfig {
                 enabled: true,
+                strip_bold_italic: true,
                 ..Default::default()
             },
             tts_normalization: crate::config::TtsNormalizationConfig { enabled: true },
@@ -258,6 +263,7 @@ The project is valued at **100M** with 5k users. Cost is €50 per unit & ~10% p
             enabled: true,
             markdown: crate::config::MarkdownSanitizationConfig {
                 enabled: true,
+                strip_bold_italic: true,
                 ..Default::default()
             },
             tts_normalization: crate::config::TtsNormalizationConfig { enabled: false },

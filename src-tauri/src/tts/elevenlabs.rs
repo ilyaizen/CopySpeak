@@ -1,6 +1,6 @@
 use super::block_on_async;
 use super::stream::{spawn_stream, AudioFormatMeta, ChunkItem, ChunkStream};
-use super::{TtsBackend, TtsError, Voice};
+use super::{TtsBackend, TtsError};
 use crate::config::ElevenLabsConfig;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -105,40 +105,6 @@ impl ElevenLabsOutputFormat {
             | ElevenLabsOutputFormat::Flac_44100 => true,
             // MULAW is not directly supported by rodio
             ElevenLabsOutputFormat::Mulaw_8000 => false,
-        }
-    }
-
-    /// Get all available formats
-    pub fn all() -> &'static [ElevenLabsOutputFormat] {
-        &[
-            ElevenLabsOutputFormat::Mp3_44100_128,
-            ElevenLabsOutputFormat::Mp3_44100_192,
-            ElevenLabsOutputFormat::Mp3_44100_32,
-            ElevenLabsOutputFormat::Mp3_22050_32,
-            ElevenLabsOutputFormat::Pcm_44100,
-            ElevenLabsOutputFormat::Pcm_22050,
-            ElevenLabsOutputFormat::Pcm_16000,
-            ElevenLabsOutputFormat::OggVorbis_44100,
-            ElevenLabsOutputFormat::OggVorbis_22050,
-            ElevenLabsOutputFormat::Flac_44100,
-            ElevenLabsOutputFormat::Mulaw_8000,
-        ]
-    }
-
-    /// Get human-readable label
-    pub fn label(&self) -> &'static str {
-        match self {
-            ElevenLabsOutputFormat::Mp3_44100_128 => "MP3 44.1kHz 128kbps (Recommended)",
-            ElevenLabsOutputFormat::Mp3_44100_192 => "MP3 44.1kHz 192kbps (High Quality)",
-            ElevenLabsOutputFormat::Mp3_44100_32 => "MP3 44.1kHz 32kbps (Small Size)",
-            ElevenLabsOutputFormat::Mp3_22050_32 => "MP3 22.05kHz 32kbps (Low Quality)",
-            ElevenLabsOutputFormat::Pcm_44100 => "PCM 44.1kHz 16-bit (Uncompressed)",
-            ElevenLabsOutputFormat::Pcm_22050 => "PCM 22.05kHz 16-bit",
-            ElevenLabsOutputFormat::Pcm_16000 => "PCM 16kHz 16-bit",
-            ElevenLabsOutputFormat::OggVorbis_44100 => "OGG Vorbis 44.1kHz",
-            ElevenLabsOutputFormat::OggVorbis_22050 => "OGG Vorbis 22.05kHz",
-            ElevenLabsOutputFormat::Flac_44100 => "FLAC 44.1kHz (Lossless)",
-            ElevenLabsOutputFormat::Mulaw_8000 => "MULAW 8kHz (Telephony)",
         }
     }
 }
@@ -388,17 +354,9 @@ impl ElevenLabsTtsBackend {
             ));
         }
 
-        // Try fetching from API first, if it fails return default voices
-        match self.list_voices_internal() {
-            Ok(voices) => Ok(voices),
-            Err(e) => {
-                log::warn!(
-                    "ElevenLabs - failed to fetch voices from API, using defaults: {}",
-                    e
-                );
-                Ok(Self::default_voices())
-            }
-        }
+        // Errors propagate: a silent fallback to the premade list made a failed
+        // refresh indistinguishable from a successful one.
+        self.list_voices_internal()
     }
 
     /// Internal method to fetch voices from API
@@ -412,7 +370,7 @@ impl ElevenLabsTtsBackend {
         // that occurs when .send() and .bytes() are split across separate block_on_async calls.
         let fetch_result: Result<(reqwest::StatusCode, Vec<u8>), TtsError> =
             block_on_async(async move {
-                let client = Client::new();
+                let client = super::http::voice_list_client()?;
                 let response = client
                     .get(url)
                     .header("xi-api-key", api_key)
@@ -581,156 +539,6 @@ impl ElevenLabsTtsBackend {
             None => name,
             Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
         }
-    }
-
-    /// Fetch a single voice by ID from ElevenLabs API
-    /// https://elevenlabs.io/docs/api-reference/get-voices#get-voice-by-id
-    pub fn get_voice_by_id(&self, voice_id: &str) -> Result<ElevenLabsVoice, TtsError> {
-        log::debug!("ElevenLabs - fetching voice by ID: {}", voice_id);
-
-        // First check if it's a known default voice
-        if let Some(voice) = Self::default_voices()
-            .iter()
-            .find(|v| v.voice_id == voice_id)
-        {
-            log::info!(
-                "ElevenLabs - using default voice: {} ({})",
-                voice.name.as_deref().unwrap_or("Unknown"),
-                voice.voice_id
-            );
-            return Ok(voice.clone());
-        }
-
-        if crate::secrets::resolve(&self.config.api_key, &["ELEVENLABS_API_KEY"])
-            .trim()
-            .is_empty()
-        {
-            log::error!("ElevenLabs - API key is missing");
-            return Err(TtsError::Unavailable(
-                "ElevenLabs API key is missing".into(),
-            ));
-        }
-
-        // Try fetching from API
-        match self.get_voice_by_id_internal(voice_id) {
-            Ok(voice) => Ok(voice),
-            Err(e) => {
-                log::warn!(
-                    "ElevenLabs - failed to fetch voice {} from API: {}",
-                    voice_id,
-                    e
-                );
-                // Return not found error since we don't have it in defaults
-                Err(TtsError::Http(format!("Voice {} not found", voice_id)))
-            }
-        }
-    }
-
-    /// Internal method to fetch a single voice by ID from API
-    fn get_voice_by_id_internal(&self, voice_id: &str) -> Result<ElevenLabsVoice, TtsError> {
-        let url = format!("https://api.elevenlabs.io/v1/voices/{}", voice_id);
-        let api_key = crate::secrets::resolve(&self.config.api_key, &["ELEVENLABS_API_KEY"]);
-        let voice_id_owned = voice_id.to_string();
-
-        let start_time = std::time::Instant::now();
-
-        // Perform the full request-response cycle in one block to avoid body truncation
-        // that occurs when .send() and .bytes() are split across separate block_on_async calls.
-        let fetch_result: Result<(reqwest::StatusCode, String), TtsError> =
-            block_on_async(async move {
-                let client = Client::new();
-                let response = client
-                    .get(&url)
-                    .header("xi-api-key", api_key)
-                    .header("Accept", "application/json")
-                    .send()
-                    .await
-                    .map_err(|e| {
-                        TtsError::Http(format!(
-                            "Failed to fetch voice: {}",
-                            super::http::flatten_error(&e)
-                        ))
-                    })?;
-
-                let status = response.status();
-                let body = response.text().await.map_err(|e| {
-                    TtsError::Http(format!(
-                        "Failed to read voice response: {}",
-                        super::http::flatten_error(&e)
-                    ))
-                })?;
-
-                Ok((status, body))
-            });
-
-        let (status, body) = fetch_result.map_err(|e| {
-            let elapsed = start_time.elapsed();
-            log::error!(
-                "ElevenLabs - failed to fetch voice {} after {:?}: {}",
-                voice_id_owned,
-                elapsed,
-                e
-            );
-            e
-        })?;
-
-        let elapsed = start_time.elapsed();
-        log::info!(
-            "ElevenLabs - voice {} response: {} {} (took {:?})",
-            voice_id,
-            status.as_u16(),
-            status.canonical_reason().unwrap_or("Unknown"),
-            elapsed
-        );
-
-        if !status.is_success() {
-            log::error!("ElevenLabs API error {}: {}", status, body);
-            return Err(TtsError::Http(format!(
-                "ElevenLabs API error {}: {}",
-                status, body
-            )));
-        }
-
-        log::debug!("ElevenLabs - raw voice {} response: {}", voice_id, body);
-
-        let voice: ElevenLabsVoice = serde_json::from_str(&body).map_err(|e| {
-            log::error!("ElevenLabs - failed to parse voice response: {}", e);
-            log::error!("ElevenLabs - response text was: {}", body);
-            TtsError::Http(format!("Failed to parse voice response: {}", e))
-        })?;
-
-        log::info!(
-            "ElevenLabs - fetched voice: {} ({})",
-            voice.name.as_deref().unwrap_or("Unknown"),
-            voice.voice_id
-        );
-
-        Ok(voice)
-    }
-
-    /// Convert ElevenLabs voices to generic Voice structs
-    #[allow(dead_code)]
-    pub fn get_voices(&self) -> Result<Vec<Voice>, TtsError> {
-        let voices = self.list_voices()?;
-        Ok(voices
-            .into_iter()
-            .map(|v| Voice {
-                id: v.voice_id.clone(),
-                name: v.name.clone().unwrap_or_else(|| v.voice_id.clone()),
-                language: v.labels.as_ref().and_then(|l| {
-                    l.get("language")
-                        .and_then(|lang| lang.as_str().map(|s| s.to_string()))
-                }),
-                default: None,
-            })
-            .collect())
-    }
-
-    /// Resolve voice ID to human-readable name (lowercase) for display and filenames.
-    /// Uses static lookup only (no API call) to avoid runtime issues during synthesis.
-    #[allow(dead_code)]
-    pub fn resolve_voice_name(&self, voice_id: &str) -> String {
-        Self::resolve_voice_name_static(voice_id)
     }
 }
 

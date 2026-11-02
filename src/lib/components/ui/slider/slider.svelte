@@ -66,8 +66,9 @@
     class="absolute h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
   />
   <div
-    class="bg-primary pointer-events-none absolute block h-2.5 w-2.5 rounded-full transition-colors"
-    style="inset-inline-start: calc({percentage}% - 5px)"
+    data-slot="slider-thumb"
+    class="bg-primary pointer-events-none absolute block h-3 w-3 rounded-sm transition-colors"
+    style="inset-inline-start: calc({percentage}% - 6px)"
   ></div>
 </div>
 

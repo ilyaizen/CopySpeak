@@ -4,7 +4,7 @@
 // share one implementation. The backend normalize() stays the ultimate
 // authority on load; these helpers only shape frontend edits.
 
-import type { PostProcessConfig, PostProcessTemplate } from "#lib/types";
+import type { PostProcessConfig, PostProcessTemplate, VoiceProfile } from "#lib/types";
 
 export const BUILTIN_TEMPLATE_IDS = ["dramatize", "concise"] as const;
 
@@ -51,4 +51,40 @@ export function createCustomTemplate(templates: PostProcessTemplate[]): PostProc
 /** The id the active selection falls back to after a deletion. */
 export function fallbackTemplateId(templates: PostProcessTemplate[]): string {
   return templates.find((t) => t.id === "dramatize")?.id ?? templates[0]?.id ?? "";
+}
+
+/**
+ * Resolves the effective template for a profile, accounting for profile-specific
+ * overrides and dangling template references.
+ *
+ * If a profile specifies an active_template_id that exists in `config.templates`,
+ * that template is returned.
+ * If the profile does not specify an override (null or empty), or references a
+ * dangling/deleted template id, it falls back to the globally configured active
+ * template (and then to the first template if the global selection is also dangling).
+ */
+export function resolveProfileTemplate(
+  config: PostProcessConfig,
+  profileTemplateId?: string | null
+): PostProcessTemplate | undefined {
+  if (profileTemplateId) {
+    const matched = config.templates.find((t) => t.id === profileTemplateId);
+    if (matched) return matched;
+  }
+  return activeTemplate(config);
+}
+
+/**
+ * Clears dangling active_template_id references in profiles when a template is deleted,
+ * resetting them to null so they cleanly fall back to the global configured template.
+ */
+export function clearDeletedTemplateFromProfiles(
+  profiles: VoiceProfile[],
+  deletedTemplateId: string
+): void {
+  for (const profile of profiles) {
+    if (profile.post_process && profile.post_process.active_template_id === deletedTemplateId) {
+      profile.post_process.active_template_id = null;
+    }
+  }
 }

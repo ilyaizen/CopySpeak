@@ -154,7 +154,8 @@ mod tests {
 
     #[test]
     fn test_strip_lists_legend_example() {
-        let config = crate::config::MarkdownSanitizationConfig::default();
+        let mut config = crate::config::MarkdownSanitizationConfig::default();
+        config.strip_bold_italic = true;
         let input = "## Legend\n\n- **Added**: New features\n- **Changed**: Changes in existing functionality.\n- **Deprecated**: Soon-to-be removed features.\n- **Removed**: Removed features";
         let result = strip_markdown(input, &config);
         assert_eq!(result, "Legend.\n\nAdded: New features.\nChanged: Changes in existing functionality.\nDeprecated: Soon-to-be removed features.\nRemoved: Removed features.");
@@ -168,12 +169,26 @@ mod tests {
 
     #[test]
     fn test_strip_markdown_all() {
-        let config = crate::config::MarkdownSanitizationConfig::default();
+        let mut config = crate::config::MarkdownSanitizationConfig::default();
+        config.strip_bold_italic = true;
         let input = "# Title\n**bold** and *italic*\n- item\n> quote\n`code`";
         let result = strip_markdown(input, &config);
         assert!(!result.contains('#'));
         assert!(!result.contains("**"));
         assert!(!result.contains('>'));
+    }
+
+    #[test]
+    fn test_strip_markdown_keeps_bold_italic_by_default() {
+        // Bold/italic markers are preserved by default (strip_bold_italic=false):
+        // some engines render and articulate them as spoken emphasis.
+        let config = crate::config::MarkdownSanitizationConfig::default();
+        let input = "**bold**, __bold__, *italic*, and _italic_ text";
+        let result = strip_markdown(input, &config);
+        assert_eq!(
+            result, input,
+            "Bold and italic markers should be preserved by default"
+        );
     }
 
     #[test]

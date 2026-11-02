@@ -166,7 +166,7 @@ impl XaiTtsBackend {
             return Err(TtsError::Unavailable("xAI API key is missing".into()));
         }
         let (status, body) = block_on_async(async move {
-            let client = Client::new();
+            let client = super::http::voice_list_client()?;
             let response = client
                 .get(XAI_VOICES_URL)
                 .bearer_auth(api_key)
@@ -219,6 +219,9 @@ impl XaiTtsBackend {
                 name: v.name,
                 language: v.language,
                 default: None,
+                gender: None,
+                preview_url: None,
+                tags: Vec::new(),
             })
             .collect())
     }

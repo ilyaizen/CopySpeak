@@ -30,6 +30,7 @@ it("uses matching voice labels without confusing engine IDs or exposing unknown 
     speed: 1,
     pitch: 1,
     effects: { enabled: false, active_effect: "none" },
+    post_process: { enabled: false, active_template_id: null },
     engine_options: {}
   };
   const engine: EngineCatalogEntry = {
@@ -49,7 +50,8 @@ it("uses matching voice labels without confusing engine IDs or exposing unknown 
         language: null,
         description: null,
         gender: null,
-        preview_url: null
+        preview_url: null,
+        tags: []
       }
     ]
   };

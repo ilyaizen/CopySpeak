@@ -3,14 +3,13 @@
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { Slider } from "#lib/components/ui/slider/index.js";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
-  import { Select } from "#lib/components/ui/select/index.js";
+
   import { listeningStore } from "#lib/stores/listening-store.svelte";
   import { invoke } from "#lib/services/tauri";
   import type { AppConfig, VoiceProfile } from "#lib/types";
   import {
-    activeTemplate,
-    switchDisabledFor,
-    templateOptions
+    resolveProfileTemplate,
+    switchDisabledFor
   } from "#lib/components/settings/post-process-templates";
 
   interface Props {
@@ -30,7 +29,9 @@
   );
   const profileSpeed = $derived(activeProfile?.speed ?? 1.0);
   const profilePitch = $derived(activeProfile?.pitch ?? 1.0);
-  const profileEffectsEnabled = $derived(activeProfile?.effects.enabled ?? false);
+  const profileEffectsEnabled = $derived(
+    Boolean(activeProfile?.effects.enabled && activeProfile?.effects.active_effect !== "none")
+  );
 
   // Post-process needs emote-tag support only for preserve-class templates
   // (Dramatize). The backend catalog owns that answer; the model key mirrors
@@ -64,7 +65,11 @@
   });
 
   // The active template drives the Post-process switch's disabled state.
-  let template = $derived(config ? activeTemplate(config.post_process) : undefined);
+  let template = $derived(
+    config
+      ? resolveProfileTemplate(config.post_process, activeProfile?.post_process.active_template_id)
+      : undefined
+  );
 
   // Live drag values: shown while a slider is dragged, cleared on commit so the
   // profile becomes the source of truth again (also handles profile switching).
@@ -95,61 +100,74 @@
         onchange={handleToggle}
       />
     </SettingRow>
-    <!-- Global hotkey toggle — binds directly to config since it's a persistent preference -->
-    <SettingRow
-      label={$_("common.hotkey")}
-      tooltip={config.hotkey.shortcut || "Speak clipboard with a keyboard shortcut"}
-    >
-      <Switch
-        id="qs-hotkey"
-        aria-label={$_("common.hotkey")}
-        bind:checked={config.hotkey.enabled}
-      />
-    </SettingRow>
     {#if config.general.experimental_enabled === true}
-      <!-- Effects toggle — binds to active profile's effects -->
-      <SettingRow label={$_("common.effects")} tooltip={$_("quick.effectsTooltip")}>
-        <Switch
-          id="qs-effects"
-          aria-label={$_("common.effects")}
-          disabled={!activeProfile}
-          checked={profileEffectsEnabled}
-          onchange={() => {
-            if (activeProfile) {
-              activeProfile.effects.enabled = !activeProfile.effects.enabled;
-              if (!activeProfile.effects.enabled) {
-                activeProfile.effects.active_effect = "none";
+      {#if config.hotkey.enabled}
+        <!-- Global hotkey toggle — binds directly to config since it's a persistent preference -->
+        <SettingRow
+          label={$_("common.hotkey")}
+          tooltip={config.hotkey.shortcut || "Speak clipboard with a keyboard shortcut"}
+        >
+          <Switch
+            id="qs-hotkey"
+            aria-label={$_("common.hotkey")}
+            bind:checked={config.hotkey.enabled}
+          />
+        </SettingRow>
+      {/if}
+      {#if config.general.effects_enabled}
+        <!-- Effects toggle — binds to active profile's effects -->
+        <SettingRow label={$_("common.effects")} tooltip={$_("quick.effectsTooltip")}>
+          <Switch
+            id="qs-effects"
+            aria-label={$_("common.effects")}
+            disabled={!activeProfile}
+            checked={profileEffectsEnabled}
+            onchange={(checked) => {
+              if (activeProfile) {
+                if (!activeProfile.effects) {
+                  activeProfile.effects = {
+                    enabled: checked,
+                    active_effect: checked ? "walkie_talkie" : "none"
+                  };
+                } else {
+                  activeProfile.effects.enabled = checked;
+                  if (
+                    checked &&
+                    (!activeProfile.effects.active_effect ||
+                      activeProfile.effects.active_effect === "none")
+                  ) {
+                    activeProfile.effects.active_effect = "walkie_talkie";
+                  }
+                }
               }
-            }
-          }}
-        />
-      </SettingRow>
-      <!-- Post-process: the switch binds config.post_process.enabled; the dropdown
-           picks the active template. Disabled ONLY when the active template is
-           preserve-class and the engine cannot read emote tags — a rewrite
-           template (Concise) runs on any engine. -->
-      <SettingRow
-        label={$_("quick.postProcess")}
-        tooltip={switchDisabledFor(template, emoteSupported)
-          ? $_("quick.postProcessUnsupported")
-          : $_("quick.postProcessTooltip")}
-      >
-        <div class="flex items-center gap-2">
-          {#if template}
-            <Select
-              options={templateOptions(config.post_process.templates)}
-              bind:value={config.post_process.active_template_id}
-              class="w-32"
-            />
-          {/if}
+            }}
+          />
+        </SettingRow>
+      {/if}
+      {#if config.post_process.enabled}
+        <SettingRow
+          label={$_("quick.postProcess")}
+          tooltip={switchDisabledFor(template, emoteSupported)
+            ? $_("quick.postProcessUnsupported")
+            : $_("quick.postProcessTooltip")}
+        >
           <Switch
             id="qs-post-process"
             aria-label={$_("quick.postProcess")}
-            disabled={switchDisabledFor(template, emoteSupported)}
-            bind:checked={config.post_process.enabled}
+            disabled={!activeProfile || switchDisabledFor(template, emoteSupported)}
+            checked={activeProfile?.post_process?.enabled ?? false}
+            onchange={(checked) => {
+              if (activeProfile) {
+                if (!activeProfile.post_process) {
+                  activeProfile.post_process = { enabled: checked, active_template_id: null };
+                } else {
+                  activeProfile.post_process.enabled = checked;
+                }
+              }
+            }}
           />
-        </div>
-      </SettingRow>
+        </SettingRow>
+      {/if}
     {/if}
     <!-- Volume slider — 0–100% range with integer steps for precise control -->
     <SettingRow label={$_("common.volume")}>
@@ -175,7 +193,7 @@
           aria-label={$_("common.speed")}
           disabled={!activeProfile}
           min={0.5}
-          max={1.5}
+          max={2}
           step={0.05}
           value={profileSpeed}
           oninput={(v) => (speedLive = v)}

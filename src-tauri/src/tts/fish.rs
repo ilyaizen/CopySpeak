@@ -57,9 +57,11 @@ impl FishTtsBackend {
         body
     }
 
-    /// List voices from the Fish Audio model library (top-ranked community
-    /// voice models). `reference_id` on the TTS request is one of these `_id`s
-    /// (or an id of the caller's own cloned model).
+    /// List Fish's licensed library voices (`licensed=true`: real people who
+    /// granted Fish the rights), most-used first, minus `character-voice`
+    /// models. `self=true` (own models) is not used: it 401s on standard API
+    /// keys. `reference_id` on the TTS request is one of these `_id`s. The
+    /// caller merges in the built-in default voice, which is not a model.
     pub fn list_voices(&self) -> Result<Vec<Voice>, TtsError> {
         let api_key = self.api_key();
         if api_key.trim().is_empty() {
@@ -68,13 +70,14 @@ impl FishTtsBackend {
             ));
         }
         let (status, body) = block_on_async(async move {
-            let client = Client::new();
+            let client = super::http::voice_list_client()?;
             let response = client
                 .get(FISH_MODEL_LIST_URL)
                 .query(&[
+                    ("licensed", "true"),
                     ("page_size", "100"),
                     ("page_number", "1"),
-                    ("sort_by", "score"),
+                    ("sort_by", "task_count"),
                 ])
                 .bearer_auth(api_key)
                 .header("Accept", "application/json")
@@ -104,32 +107,61 @@ impl FishTtsBackend {
             )));
         }
 
-        #[derive(serde::Deserialize)]
-        struct ModelPage {
-            items: Vec<ModelEntity>,
-        }
-        #[derive(serde::Deserialize)]
-        struct ModelEntity {
-            #[serde(rename = "_id")]
-            id: String,
-            title: String,
-            #[serde(default)]
-            languages: Vec<String>,
-        }
+        parse_model_page(&body)
+    }
+}
 
-        let page: ModelPage = serde_json::from_str(&body)
-            .map_err(|e| TtsError::Http(format!("Failed to parse voices response: {}", e)))?;
-        Ok(page
-            .items
-            .into_iter()
-            .map(|m| Voice {
+/// Parse a `/model` page into voices, dropping models tagged
+/// `character-voice` (impressions and personas, not normal narration voices).
+/// The preview is the first sample clip with an audio URL, and `gender` is
+/// the `male`/`female` tag: Fish has no separate gender field.
+fn parse_model_page(body: &str) -> Result<Vec<Voice>, TtsError> {
+    #[derive(serde::Deserialize)]
+    struct ModelPage {
+        items: Vec<ModelEntity>,
+    }
+    #[derive(serde::Deserialize)]
+    struct ModelEntity {
+        #[serde(rename = "_id")]
+        id: String,
+        title: String,
+        #[serde(default)]
+        languages: Vec<String>,
+        #[serde(default)]
+        tags: Vec<String>,
+        #[serde(default)]
+        samples: Vec<ModelSample>,
+    }
+    #[derive(serde::Deserialize)]
+    struct ModelSample {
+        #[serde(default)]
+        audio: Option<String>,
+    }
+
+    let page: ModelPage = serde_json::from_str(body)
+        .map_err(|e| TtsError::Http(format!("Failed to parse voices response: {}", e)))?;
+    Ok(page
+        .items
+        .into_iter()
+        .filter(|m| !m.tags.iter().any(|t| t == "character-voice"))
+        .map(|m| {
+            let gender = m
+                .tags
+                .iter()
+                .find(|t| t.as_str() == "male" || t.as_str() == "female")
+                .cloned();
+            let preview_url = m.samples.iter().find_map(|s| s.audio.clone());
+            Voice {
                 id: m.id,
                 name: m.title,
                 language: m.languages.into_iter().next(),
                 default: None,
-            })
-            .collect())
-    }
+                gender,
+                preview_url,
+                tags: m.tags,
+            }
+        })
+        .collect())
 }
 
 impl TtsBackend for FishTtsBackend {
@@ -412,6 +444,41 @@ mod tests {
             voice_id: voice_id.into(),
             ..Default::default()
         })
+    }
+
+    #[test]
+    fn model_page_drops_character_voices() {
+        let body = r#"{"items":[
+            {"_id":"a","title":"Calm Narrator","languages":["en"],"tags":["male","narration"]},
+            {"_id":"b","title":"Uncle Roger","languages":["en"],"tags":["male","character-voice"]},
+            {"_id":"c","title":"No Tags"}
+        ]}"#;
+        let voices = parse_model_page(body).expect("parses");
+        let ids: Vec<&str> = voices.iter().map(|v| v.id.as_str()).collect();
+        assert_eq!(ids, ["a", "c"]);
+        assert_eq!(voices[0].language.as_deref(), Some("en"));
+    }
+
+    #[test]
+    fn model_page_maps_gender_tags_and_first_sample_audio() {
+        // Shape from a live `/model?licensed=true` page (2026-11-02): samples
+        // carry `audio` URLs; the first sample may have none.
+        let body = r#"{"items":[
+            {"_id":"a","title":"Calm Narrator","languages":["en"],
+             "tags":["female","narration","calm"],
+             "samples":[{"audio":null,"text":"x"},{"audio":"https://cdn.example/a.mp3","text":"y"}]},
+            {"_id":"b","title":"No Sample","languages":["ja"],"tags":["male"],"samples":[]}
+        ]}"#;
+        let voices = parse_model_page(body).expect("parses");
+        assert_eq!(voices.len(), 2);
+        assert_eq!(voices[0].gender.as_deref(), Some("female"));
+        assert_eq!(
+            voices[0].preview_url.as_deref(),
+            Some("https://cdn.example/a.mp3")
+        );
+        assert_eq!(voices[0].tags, ["female", "narration", "calm"]);
+        assert_eq!(voices[1].gender.as_deref(), Some("male"));
+        assert_eq!(voices[1].preview_url, None);
     }
 
     #[test]

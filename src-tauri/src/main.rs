@@ -711,7 +711,7 @@ fn main() {
             let hotkey_config = {
                 let cfg = app.state::<std::sync::Mutex<config::AppConfig>>();
                 let cfg = cfg.lock().unwrap();
-                cfg.hotkey.clone()
+                cfg.effective_hotkey()
             };
 
             if let Err(e) = register_hotkey(app.handle(), &hotkey_config) {
@@ -788,6 +788,10 @@ fn main() {
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(move |app, _shortcut, event| {
                     if event.state() == ShortcutState::Pressed {
+                        let config = app.state::<std::sync::Mutex<config::AppConfig>>();
+                        if !config.lock().unwrap().effective_hotkey().enabled {
+                            return;
+                        }
                         log::info!("Global hotkey triggered: speak from clipboard");
                         let app_handle = app.clone();
                         tauri::async_runtime::spawn(async move {
@@ -868,9 +872,6 @@ fn main() {
             commands::has_engine_credentials,
             commands::get_env_key_sources,
             commands::check_post_process_credentials,
-            commands::list_elevenlabs_voices,
-            commands::get_elevenlabs_voice_by_id,
-            commands::get_elevenlabs_output_formats,
             commands::get_queue_state,
             commands::get_queue_fragments,
             commands::skip_to_fragment,
@@ -913,6 +914,7 @@ fn main() {
             commands::list_tts_engines,
             commands::supports_emote_tags,
             commands::list_tts_voices,
+            commands::get_cached_voices,
             commands::install_engine,
             commands::uninstall_engine,
             commands::engine_status,

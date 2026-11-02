@@ -181,7 +181,7 @@
     },
     "history": {
       "title": "הגדרות היסטוריה",
-      "enabled": "שמור היסטוריית קריאה",
+      "enabled": "היסטוריה",
       "enabledDescription": "שמור קריאות הניתנות לחיפוש להשמעה חוזרת מאוחר יותר. כאשר כבוי, מטמון הדיבור הקטן ממשיך לפעול; ההיסטוריה הקיימת נשמרת.",
       "storageMode": "מצב אחסון",
       "persistent": "קבוע",
@@ -222,7 +222,8 @@
       "stripLinks": "קישורים",
       "stripLinksDescription": "הסר את תחביר הקישור של Markdown, שמור את טקסט הקישור",
       "stripBoldItalic": "מודגש ונטוי",
-      "stripBoldItalicDescription": "הסר את הסימונים **מודגש** ו-*נטוי*",
+      "stripBoldItalicDescription": "הסרת סימוני **מודגש** ו-*נטוי* — כבוי כברירת מחדל כך שמנועים יכולים לבטא אותם כהדגשה",
+      "syntaxOptions": "אפשרויות תחביר",
       "stripLists": "רשימות",
       "stripListsDescription": "הסר סמני רשימה עם נקודות ומספרים",
       "stripBlockquotes": "ציטוטים",
@@ -884,7 +885,23 @@
   "voicePicker": {
     "select": "בחר קול…",
     "search": "חפש קולות…",
-    "customId": "מזהה מותאם / ידני…"
+    "customId": "מזהה מותאם / ידני…",
+    "refresh": "רענון",
+    "refreshFailed": "הרענון נכשל: {error}",
+    "notInList": "לא ברשימה",
+    "noMatch": "אין קולות שתואמים ל־„{query}”.",
+    "title": "בחר קול",
+    "count": "{shown} מתוך {total}",
+    "gender": "מין",
+    "language": "שפה",
+    "style": "סגנון",
+    "all": "הכול",
+    "noFilterMatch": "אין קולות שתואמים למסננים האלה.",
+    "previewPlay": "האזנה מקדימה",
+    "previewStop": "עצור האזנה מקדימה",
+    "previewFailed": "לא ניתן היה להפעיל את ההאזנה המקדימה.",
+    "noPreview": "לקול הזה אין האזנה מקדימה.",
+    "shiftEnterHint": "Shift+Enter מפעיל את ההאזנה המקדימה לקול המסומן."
   },
   "hotkey": {
     "set": "הגדר",

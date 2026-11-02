@@ -2,6 +2,7 @@
   import { Tooltip as TooltipPrimitive } from "bits-ui";
   import { cn } from "#lib/utils.js";
   import TooltipPortal from "./tooltip-portal.svelte";
+  import { isRtl } from "#lib/i18n/store";
   import type { ComponentProps } from "svelte";
   import type { WithoutChildrenOrChild } from "#lib/utils.js";
 
@@ -10,6 +11,7 @@
     class: className,
     sideOffset = 0,
     side = "top",
+    dir = $isRtl ? "rtl" : "ltr",
     children,
     arrowClasses,
     portalProps,
@@ -26,8 +28,9 @@
     data-slot="tooltip-content"
     {sideOffset}
     {side}
+    {dir}
     class={cn(
-      "bg-foreground text-background animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-end-2 data-[side=right]:slide-in-from-start-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-(--bits-tooltip-content-transform-origin) rounded-md px-3 py-1.5 text-xs text-balance",
+      "bg-foreground text-background animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-end-2 data-[side=right]:slide-in-from-start-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit max-w-[min(28rem,calc(100vw-2rem))] origin-(--bits-tooltip-content-transform-origin) rounded-md px-3 py-1.5 text-start text-xs break-words whitespace-normal",
       className
     )}
     {...restProps}

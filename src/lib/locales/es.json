@@ -181,7 +181,7 @@
     },
     "history": {
       "title": "Ajustes del historial",
-      "enabled": "Guardar historial de lecturas",
+      "enabled": "Historial",
       "enabledDescription": "Guarda lecturas con opción de búsqueda para reproducirlas después. Desactivado, la pequeña caché de voz sigue funcionando; el historial existente se conserva.",
       "storageMode": "Modo de almacenamiento",
       "persistent": "Permanente",
@@ -222,7 +222,8 @@
       "stripLinks": "Enlaces",
       "stripLinksDescription": "Quita la sintaxis de los enlaces de Markdown y conserva el texto del enlace",
       "stripBoldItalic": "Negrita y cursiva",
-      "stripBoldItalicDescription": "Elimina los marcadores **negrita** y *cursiva*",
+      "stripBoldItalicDescription": "Elimina los marcadores **negrita** y *cursiva* — desactivado de forma predeterminada para que los motores los articulen como énfasis",
+      "syntaxOptions": "Opciones de sintaxis",
       "stripLists": "Listas",
       "stripListsDescription": "Elimina los marcadores de listas con viñetas y numeradas",
       "stripBlockquotes": "Citas",
@@ -884,7 +885,23 @@
   "voicePicker": {
     "select": "Seleccionar voz…",
     "search": "Buscar voces…",
-    "customId": "ID personalizado / manual…"
+    "customId": "ID personalizado / manual…",
+    "refresh": "Actualizar",
+    "refreshFailed": "No se pudo actualizar: {error}",
+    "notInList": "No está en la lista",
+    "noMatch": "Ninguna voz coincide con «{query}».",
+    "title": "Elegir una voz",
+    "count": "{shown} de {total}",
+    "gender": "Género",
+    "language": "Idioma",
+    "style": "Estilo",
+    "all": "Todas",
+    "noFilterMatch": "Ninguna voz coincide con estos filtros.",
+    "previewPlay": "Vista previa",
+    "previewStop": "Detener vista previa",
+    "previewFailed": "No se pudo reproducir esta vista previa.",
+    "noPreview": "Esta voz no tiene vista previa.",
+    "shiftEnterHint": "Mayús+Intro reproduce la voz resaltada."
   },
   "hotkey": {
     "set": "Definir",

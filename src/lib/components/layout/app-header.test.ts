@@ -58,6 +58,20 @@ describe("app-header history gating", () => {
     vi.restoreAllMocks();
   });
 
+  it("renders text-only navigation while preserving the active page", async () => {
+    mockInvoke.mockResolvedValueOnce(makeConfig(true, true));
+    const view = render(AppHeader);
+
+    await waitFor(() => {
+      expect(view.queryByTestId("nav-history")).not.toBeNull();
+    });
+    const home = view.getByTestId("nav-generate");
+    expect(home.getAttribute("aria-current")).toBe("page");
+    expect(home.textContent?.trim()).not.toBe("");
+    expect(view.getByRole("navigation").querySelectorAll("svg")).toHaveLength(0);
+    view.unmount();
+  });
+
   it("renders history nav item only when both experimental and history are enabled", async () => {
     mockInvoke.mockResolvedValueOnce(makeConfig(true, true));
     const view = render(AppHeader);

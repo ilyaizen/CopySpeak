@@ -6,7 +6,7 @@
 //   health.rs      — test_tts_engine
 //   synthesis.rs   — speak_now, speak_queued, speak_history_entry
 //   credentials.rs — check_elevenlabs_credentials, check_openai_credentials
-//   voices.rs      — list_elevenlabs_voices, get_elevenlabs_voice_by_id, get_elevenlabs_output_formats
+//   voices.rs      — list_tts_voices + get_cached_voices (provider voice cache)
 
 mod credentials;
 mod health;

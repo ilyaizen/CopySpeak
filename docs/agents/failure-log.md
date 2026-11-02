@@ -61,8 +61,10 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Filter Kokoro's misaki phonemes through the model vocab before inference; misaki emits unpronounceable punctuation as literal phonemes, and only a missing _letter_ phoneme is a real pronunciation gap worth aborting on.
 - Change a model default in all four places together: the catalog `default_value` in `tts/catalog.rs`, the `*Config::default()` impl and the bundled `default_*_profile()` in `config/tts.rs`, and `play-page.svelte`'s mock; a catalog-only edit leaves fresh installs on the old model.
 - Read an HTTP response's body inside the SAME `block_on_async` call that sends the request: with no ambient tokio runtime each call builds a fresh runtime, and a `reqwest::Response` carried across calls loses its connection driver — `.bytes()` fails with `error decoding response body`. openai/google/microsoft carry the split (masked by the app's ambient runtime); fish.rs shows the correct single-block shape.
+- Make any Tauri command that calls a provider `async` and run the blocking backend call in `tauri::async_runtime::spawn_blocking`, with the config lock released first: a sync `#[tauri::command]` runs on the main thread, so `list_tts_voices` froze the window for an untimed fetch while holding the config mutex. Bound provider voice-list requests with `tts::http::voice_list_client()`.
 - Emote-tag support is per (engine, model) pair in `tts/catalog.rs::supports_emote_tags`, not per engine — `eleven_v3_conversational` and Fish `drama-3` stay excluded until someone listens to a tagged read on them.
 - Clamp provider WAV headers with `audio/wav.rs::clamp_chunk_sizes_to_file` before ANY in-app decode, not just duration math: xAI ships `data` = `i32::MAX` and a sign-bit-set RIFF size, Fish ships `0xFFFFFF00`; browsers clamp and play fine, but rodio's symphonia decoder trusts the field and every fragment concat of such a provider dies with "end of stream" (single-fragment reads never decode, which hides the bug). xAI clamps at the source; concat_speech clamps every fragment.
+- Bump `VOICE_CACHE_SCHEMA` in `commands/tts/voices.rs` whenever `VoiceCatalogEntry` gains a field: a serde default alone keeps old cached lists showing no tags until Refresh, while a version mismatch makes the next Profiles visit fetch again.
 
 ## Browser companion
 
@@ -92,11 +94,13 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Text pipeline
 
+- Capture the on-disk TTS schema version before `migrate_tts_config`: it resets the version to 2 on every load, so a later schema-gated migration otherwise overwrites per-profile preferences at every restart.
 - Rename request flags in both `src-tauri/src/cli.rs` and `scripts/copyspeak.mjs`; Rust CLI tests do not cover the Node helper used by Hermes, so verify its emitted `/speak` payload separately.
 - Fold Cyrillic homoglyphs only inside a word that also holds a Latin letter (`fold_homoglyphs`); a per-character fold turned every Russian word into mixed script ("привет" → "пpивeт").
 - Keep U+200C (ZWNJ) out of both invisible-character regexes in `tts_normalize.rs`; Persian and Indic words are spelled with it.
 - Add a script's sentence terminator to both `is_sentence_end` in `pagination.rs` and the phrase regex in `captions.ts`; text with no terminator falls to whitespace-snapped force-splits — no mid-word cuts since #88, but sentence-level breaks degrade to clause/word boundaries.
 - The post-process output re-sanitize deletes single-word bracket tags (`remove_citations` matches `[sighs]` while `[clears throat]` survives by accident); route LLM output through `sanitize_text_tag_safe`, never the plain pipeline.
+- Flipping a `MarkdownSanitizationConfig` default fails every test that builds the config via `..Default::default()` and asserts the old behavior; grep those tests in the same change and pin the flipped field explicitly where the test means to exercise the toggle.
 
 ## Linux
 
@@ -112,6 +116,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Scope landing CSS under `.landing` in `landing.css`: `+layout.svelte` renders the Play UI's root too, so a bare `h2`, `footer` or `:root` rule restyles the app.
 - Target `.dark .landing` for dark-only rules: mode-watcher adds `.dark` to `<html>` and never `.light`, so light is the base selector.
 - Copy preview assets the landing uses from the untracked `docs_internal/` into `static/landing/`: the gitignored folder never deploys.
+- End the landing Listen demo on `audio.ended`, not on the silent loop's `LAST_END + 300` clock: a clip shorter than that tail never reaches it, so the button stays on Stop and the silent loop stays off.
 - Never mark the providers marquee clone `inert`: each copy is narrower than the carousel viewport, so the clone is on screen for most of the loop and `inert` makes visible logos swallow clicks (events retarget to `.providers-track` with no href). Keep the clone `aria-hidden` with `tabindex="-1"` on its links — mouse-clickable, still unfocusable and silent to assistive tech.
 - Translate a source mark's ink-box origin to (0, 0) before scaling it into a tight lockup viewBox; scaling alone shifts and clips artwork whose source coordinates start elsewhere.
 - svgo 4.x rejects the providers' svgo.config.cjs `removeViewBox` override inside `preset-default` ("not part of preset-default") and its output can be slightly LARGER than the input — the viewBox still survives because svgo 4 dropped the plugin from the preset. Never "fix" the config per the warning's suggestion (a standalone `'removeViewBox'` plugin): that ENABLES the plugin and strips the viewBox the mask sizing needs.
@@ -120,7 +125,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 - Drive tray playback status from the webview store, never `AudioPlayer`: Rodio is only a safety net, and refreshing the tray from its callbacks must not re-lock the player. Preserve the branded icon’s color and artwork; macOS template mode strips color.
 - Resize Windows tray artwork to the system small-icon dimensions with alpha-aware filtering before passing it to Tauri: Windows' native downscale from 512px produces jagged edges.
-- An asset-only icon swap does not re-embed the exe icon: tauri-build's generated `.rc` references `icons/icon.ico` by path, so cargo relinks without recompiling the resource. Touch `src-tauri/build.rs` (or `cargo clean -p copyspeak`) to force the resource rebuild, then verify by pixel-comparing `ExtractAssociatedIcon` output against the new ico's 32px frame. The tray's `include_bytes!` icons re-embed on the same rebuild; the installed `%LOCALAPPDATA%` app only changes on the next release install.
+- Keep `icons/icon.ico` in the Cargo build script's `rerun-if-changed` inputs: tauri-build's `.rc` references it by path, so without that input a changed asset leaves stale exe resources. Verify the embedded 32px frame against the source after rebuilding; the installed app changes only on the next release install.
 - Strip trailing whitespace when installing a designer-exported SVG verbatim: `git diff --check` fails on QuiverAI/Arrow-exported indentation lines, and whitespace-only stripping is render-safe (verify with a byte-compare of a re-render).
 
 ## Release
@@ -139,11 +144,15 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 - A committed bun.lock applies on fresh install even when a stale local node_modules hides the break: svelte-check 4.7.7 rejects `$props<T>()` type arguments, so type props with an `interface Props` and `let x: Props = $props()` instead.
 - `vp check`'s anti-slop `no-runtime-typeof` rejects a `typeof` branch on a value union: coerce at the call (`String(value ?? "")`) or parse the value at its I/O boundary.
+- Stub `Element.prototype.scrollIntoView`, `HTMLMediaElement.prototype.play` and `pause` in component tests: jsdom does not implement scrolling or media playback.
 
 ## Settings
 
+- Pass the current locale direction to Bits UI tooltip content: its floating wrapper defaults to `dir="ltr"` even when the document is RTL, scrambling mixed Hebrew or Arabic and Latin text.
 - Gate hidden startup and close-to-tray on an actually available tray; create the main window hidden, show first-run setup explicitly, and use one unminimize/show/focus helper for tray and second-instance reopening. Propagate OS autostart registration failures before persisting the new preference.
 - Force the last visible settings section active at the bottom of the scroll container: a short last section never reaches the scroll-spy reading band, and the layout `<main>` scrolls, not the window, so capture scroll events on the document.
+- Spread ground parallax across the full scroll range while keeping the texture within its overscan; clamping raw scroll distance makes it stop moving early on long Settings pages.
+- The ui `collapsible` index exports `Collapsible` as the Root component only, not a namespace: `Collapsible.Trigger`/`.Content` type-error in svelte-check — import `CollapsibleRoot`/`CollapsibleTrigger`/`CollapsibleContent` by name.
 
 ## Experimental gating
 

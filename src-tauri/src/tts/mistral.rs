@@ -155,7 +155,7 @@ impl MistralTtsBackend {
             let page_token = next_token.clone();
             let page_key = api_key.clone();
             let (status, body) = block_on_async(async move {
-                let client = Client::new();
+                let client = super::http::voice_list_client()?;
                 let mut request = client
                     .get(MISTRAL_VOICES_URL)
                     .bearer_auth(page_key)
@@ -224,6 +224,9 @@ impl MistralTtsBackend {
                     name: entry.name.unwrap_or(entry.id),
                     language: entry.languages.into_iter().next(),
                     default: None,
+                    gender: None,
+                    preview_url: None,
+                    tags: Vec::new(),
                 });
             }
             next_token = page.next_page_token.filter(|t| !t.trim().is_empty());

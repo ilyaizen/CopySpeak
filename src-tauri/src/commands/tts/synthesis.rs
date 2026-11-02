@@ -19,15 +19,28 @@ use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
     active_engine, create_backend, create_backend_from_effective, engine_identifier, engine_str,
-    post_process_gate, resolve_effective, voice_display_name, SynthesisGuard,
+    post_process_gate_for_effective, resolve_effective, resolve_effective_for_profile,
+    voice_display_name, SynthesisGuard,
 };
 use crate::commands::{
     AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent,
     PlaybackStreamFailedEvent,
 };
-use crate::post_process::post_process_skip_reason;
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
+
+fn post_process_for_profile(
+    config: &crate::config::PostProcessConfig,
+    profile: &crate::config::ProfilePostProcess,
+) -> crate::config::PostProcessConfig {
+    let mut effective = config.clone();
+    if let Some(id) = profile.active_template_id.as_ref() {
+        if config.templates.iter().any(|template| &template.id == id) {
+            effective.active_template_id = id.clone();
+        }
+    }
+    effective
+}
 
 /// Truncate text for preview display
 fn truncate_preview(text: &str, max_len: usize) -> String {
@@ -236,6 +249,23 @@ where
 mod retry_tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+
+    #[test]
+    fn missing_profile_template_uses_global_selection() {
+        let mut config = crate::config::PostProcessConfig::default();
+        config.active_template_id = "concise".into();
+        let mut profile = crate::config::ProfilePostProcess::default();
+        profile.active_template_id = Some("deleted".into());
+        assert_eq!(
+            post_process_for_profile(&config, &profile).active_template_id,
+            "concise"
+        );
+        profile.active_template_id = Some("dramatize".into());
+        assert_eq!(
+            post_process_for_profile(&config, &profile).active_template_id,
+            "dramatize"
+        );
+    }
 
     #[tokio::test]
     async fn retries_transient_errors_without_skipping_text() {
@@ -1086,7 +1116,6 @@ async fn speak_now_internal(
     let _synthesis_guard = SynthesisGuard::new(&app);
 
     let (
-        active_backend,
         tts_config,
         output_config,
         pagination_config,
@@ -1097,7 +1126,6 @@ async fn speak_now_internal(
     ) = {
         let cfg = config.lock().unwrap();
         (
-            cfg.tts.active_backend.clone(),
             cfg.tts.clone(),
             cfg.output.clone(),
             cfg.pagination.clone(),
@@ -1107,17 +1135,22 @@ async fn speak_now_internal(
             cfg.general.experimental_enabled,
         )
     };
-    let eff = resolve_effective(&tts_config);
-    let gate = post_process_gate(&tts_config, experimental_enabled);
+    let eff = resolve_effective_for_profile(&tts_config, _profile_id.as_deref())
+        .unwrap_or_else(|_| resolve_effective(&tts_config));
+    let gate = post_process_gate_for_effective(&eff, experimental_enabled);
+
+    let effective_post_process_config =
+        post_process_for_profile(&post_process_config, &eff.post_process);
 
     // Optional LLM post-processing (e.g., Groq) — best-effort; falls back to
     // the input text on any failure so synthesis is never blocked. Output
     // re-sanitization branches on the template class (tag-safe for preserve,
-    // standard for rewrite; see try_process).
+    // standard for rewrite; see try_process_for_profile).
     // Post-processing inserts an LLM round trip before any audio: show the
     // waiting HUD first so the delay is visible.
-    if post_process_skip_reason(
-        &post_process_config,
+    if crate::post_process::post_process_skip_reason_for_profile(
+        &effective_post_process_config,
+        eff.post_process.enabled,
         post_process_flag,
         text.chars().count(),
         &gate,
@@ -1126,9 +1159,10 @@ async fn speak_now_internal(
     {
         hud::show_hud_synthesizing(&app, Some(text.clone()));
     }
-    let text = crate::post_process::try_process(
+    let text = crate::post_process::try_process_for_profile(
         text,
-        &post_process_config,
+        &effective_post_process_config,
+        eff.post_process.enabled,
         &sanitization,
         post_process_flag,
         gate,
@@ -1142,12 +1176,12 @@ async fn speak_now_internal(
         }
     }
 
-    log_tts_debug("TTS", &format!("{:?}", active_backend), &text);
+    log_tts_debug("TTS", &format!("{:?}", eff.engine), &text);
 
     let voice = eff.voice.clone();
 
     let backend: Box<dyn TtsBackend> = create_backend_from_effective(&eff, &tts_config);
-    let engine_str_for_cache = engine_str(&active_backend);
+    let engine_str_for_cache = engine_str(&eff.engine);
 
     let history_on = config.lock().unwrap().is_history_effective();
     let cached = if reuse_saved_audio {
@@ -1197,7 +1231,10 @@ async fn speak_now_internal(
         streaming_enabled,
         backend_arc.supports_streaming(),
         backend_arc.runtime_ready(),
-        effects_active(experimental_enabled, eff.effects.enabled),
+        effects_active(
+            experimental_enabled && config.lock().unwrap().general.effects_enabled,
+            eff.effects.enabled,
+        ),
     ) && !cache_hit
         && !output_config.enabled;
     let (wav_bytes, already_streamed) = if let Some(speech) = cached {
@@ -1213,7 +1250,7 @@ async fn speak_now_internal(
             backend_arc.clone(),
             &text,
             &voice,
-            &active_backend,
+            &eff.engine,
             &telemetry_state,
             &synthesis_start,
             estimated_ms,
@@ -1248,7 +1285,7 @@ async fn speak_now_internal(
 
     // Both the paginated and streaming paths return empty bytes when the user
     // aborts mid-synthesis. do_abort_synthesis has already stopped playback and
-    // emitted synthesis-aborted, so there is nothing to save or play here.
+    // emitted synthesis-aborted, so there is nothing to play or save here.
     if scope.aborted() {
         log::info!("[TTS] Synthesis aborted; nothing to play or save");
         return Ok(());
@@ -1261,7 +1298,7 @@ async fn speak_now_internal(
     if !cache_hit {
         record_telemetry(
             &telemetry_state,
-            &engine_str(&active_backend),
+            &engine_str(&eff.engine),
             &voice,
             text.len(),
             synthesis_ms,
@@ -1282,7 +1319,7 @@ async fn speak_now_internal(
             &wav_bytes,
             &text,
             &voice,
-            &active_backend,
+            &eff.engine,
             &output_config,
             synthesis_ms,
         );
@@ -1301,7 +1338,7 @@ async fn speak_now_internal(
         &wav_bytes,
         &text,
         &voice,
-        &active_backend,
+        &eff.engine,
         &tts_config,
         backend_arc,
         synthesis_ms,
@@ -1318,7 +1355,7 @@ async fn synthesize_paginated(
     backend_arc: Arc<Box<dyn TtsBackend>>,
     text: &str,
     voice: &str,
-    active_backend: &crate::config::TtsEngine,
+    engine: &crate::config::TtsEngine,
     telemetry_state: &State<'_, Mutex<telemetry::TelemetryLog>>,
     synthesis_start: &Instant,
     _total_estimate: Option<u64>,
@@ -1367,7 +1404,7 @@ async fn synthesize_paginated(
     let char_counts: Vec<usize> = fragments.iter().map(|f| f.text.len()).collect();
     let (total_estimate, avg_confidence, _) = telemetry::get_estimate_paginated(
         telemetry_state,
-        &engine_str(active_backend),
+        &engine_str(engine),
         voice,
         &char_counts,
     );
@@ -1474,7 +1511,7 @@ fn handle_file_output(
     speech: &SpeechAudio,
     text: &str,
     voice: &str,
-    active_backend: &crate::config::TtsEngine,
+    engine: &crate::config::TtsEngine,
     output_config: &crate::config::OutputConfig,
     synthesis_ms: u64,
 ) -> Result<(), String> {
@@ -1526,7 +1563,7 @@ fn handle_file_output(
         add_history_with_metadata(
             history,
             text,
-            &engine_str(active_backend),
+            &engine_str(engine),
             voice,
             audio_duration_ms,
             Some(output_path.to_string_lossy().into_owned()),
@@ -1539,7 +1576,7 @@ fn handle_file_output(
         save_speech_cache(
             &speech_cache_dir(),
             speech,
-            &engine_str(active_backend),
+            &engine_str(engine),
             voice,
             text,
         );
@@ -1556,7 +1593,7 @@ fn handle_playback_output(
     speech: &SpeechAudio,
     text: &str,
     voice: &str,
-    active_backend: &crate::config::TtsEngine,
+    engine: &crate::config::TtsEngine,
     tts_config: &crate::config::TtsConfig,
     backend_arc: Arc<Box<dyn TtsBackend>>,
     synthesis_ms: u64,
@@ -1568,8 +1605,8 @@ fn handle_playback_output(
     let wav_bytes = &speech.bytes;
     let envelope = extract_envelope_or_default(wav_bytes);
 
-    let engine_id = engine_identifier(active_backend);
-    let voice_name = voice_display_name(active_backend, tts_config, voice, voice_label);
+    let engine_id = engine_identifier(engine);
+    let voice_name = voice_display_name(engine, tts_config, voice, voice_label);
     let audio_ext = backend_arc.file_extension().to_string();
 
     let history_on = config.lock().unwrap().is_history_effective();
@@ -1579,7 +1616,7 @@ fn handle_playback_output(
         add_history_with_metadata(
             history,
             text,
-            &engine_str(active_backend),
+            &engine_str(engine),
             voice,
             envelope.duration_ms,
             history_path,
@@ -1592,7 +1629,7 @@ fn handle_playback_output(
         save_speech_cache(
             &speech_cache_dir(),
             speech,
-            &engine_str(active_backend),
+            &engine_str(engine),
             voice,
             text,
         );
@@ -1667,7 +1704,6 @@ async fn speak_queued_internal(
     }
 
     let (
-        active_backend,
         tts_config,
         pagination_config,
         post_process_config,
@@ -1677,7 +1713,6 @@ async fn speak_queued_internal(
     ) = {
         let cfg = config.lock().unwrap();
         (
-            cfg.tts.active_backend.clone(),
             cfg.tts.clone(),
             cfg.pagination.clone(),
             cfg.post_process.clone(),
@@ -1687,7 +1722,10 @@ async fn speak_queued_internal(
         )
     };
     let eff = resolve_effective(&tts_config);
-    let gate = post_process_gate(&tts_config, experimental_enabled);
+    let gate = post_process_gate_for_effective(&eff, experimental_enabled);
+
+    let effective_post_process_config =
+        post_process_for_profile(&post_process_config, &eff.post_process);
 
     // Aborts issued before this run starts do not reach it. speak_queued takes
     // no queue lock, so a shared flag cleared here could also un-abort a run
@@ -1695,25 +1733,36 @@ async fn speak_queued_internal(
     let scope = AbortScope::begin();
 
     // Optional LLM post-processing — best-effort; falls back on failure.
-    // Double-copy processes in global mode (request flag false) when the
-    // gate allows it; output re-sanitization matches speak_now's class
+    // Double-copy processes in automatic mode (request flag false) when the
+    // profile allows it; output re-sanitization matches speak_now's class
     // branch. Post-processing inserts an LLM round trip before any audio:
     // show the waiting HUD first so the delay is visible.
-    let post_processing =
-        post_process_skip_reason(&post_process_config, false, text.chars().count(), &gate)
-            .is_none();
+    let post_processing = crate::post_process::post_process_skip_reason_for_profile(
+        &effective_post_process_config,
+        eff.post_process.enabled,
+        false,
+        text.chars().count(),
+        &gate,
+    )
+    .is_none();
     if post_processing {
         hud::show_hud_synthesizing(&app, Some(text.clone()));
     }
-    let text =
-        crate::post_process::try_process(text, &post_process_config, &sanitization, false, gate)
-            .await;
+    let text = crate::post_process::try_process_for_profile(
+        text,
+        &effective_post_process_config,
+        eff.post_process.enabled,
+        &sanitization,
+        false,
+        gate,
+    )
+    .await;
     let _ = app.emit("reading-started", &text);
     if let Some((trigger, id)) = &trigger {
         browser_bridge::begin_trigger(&app, id, trigger, &text);
     }
 
-    log_tts_debug("Queue", &format!("{:?}", active_backend), &text);
+    log_tts_debug("Queue", &format!("{:?}", eff.engine), &text);
 
     if !post_processing {
         // Keep the previous HUD timing when no LLM delay precedes synthesis.
@@ -1733,7 +1782,7 @@ async fn speak_queued_internal(
     let char_counts: Vec<usize> = fragments.iter().map(|f| f.text.len()).collect();
     let (total_estimate, avg_confidence, _) = telemetry::get_estimate_paginated(
         &telemetry_state,
-        &engine_str(&active_backend),
+        &engine_str(&eff.engine),
         &voice,
         &char_counts,
     );
@@ -1788,8 +1837,8 @@ async fn speak_queued_internal(
         None
     };
 
-    let engine_str_val = engine_str(&active_backend);
-    let engine_id_val = engine_identifier(&active_backend);
+    let engine_str_val = engine_str(&eff.engine);
+    let engine_id_val = engine_identifier(&eff.engine);
 
     // Repeated text replays saved audio — only when the saved-audio store holds
     // every fragment, so a reading never mixes saved and fresh parts nor leaves
@@ -1872,7 +1921,10 @@ async fn speak_queued_internal(
                 streaming_enabled,
                 backend_arc.supports_streaming(),
                 backend_arc.runtime_ready(),
-                effects_active(experimental_enabled, eff.effects.enabled),
+                effects_active(
+                    experimental_enabled && config.lock().unwrap().general.effects_enabled,
+                    eff.effects.enabled,
+                ),
             );
         let wav_bytes = if let Some(speech) = saved.as_mut().and_then(Iterator::next) {
             speech
@@ -1947,12 +1999,8 @@ async fn speak_queued_internal(
         }
         if !replaying && history_on {
             let audio_ext = backend_arc.file_extension().to_string();
-            let voice_name = voice_display_name(
-                &active_backend,
-                &tts_config,
-                &voice,
-                eff.voice_label.as_deref(),
-            );
+            let voice_name =
+                voice_display_name(&eff.engine, &tts_config, &voice, eff.voice_label.as_deref());
             let history_path = save_to_history_storage(
                 &config,
                 &wav_bytes,
@@ -2457,6 +2505,118 @@ mod cache_tests {
             vec![CACHE_LIMIT as u8; 4]
         );
         assert_eq!(std::fs::read_dir(&dir).unwrap().count(), CACHE_LIMIT);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn cache_lookup_matches_profile_resolved_engine_not_active_backend() {
+        use crate::config::{ProfileEngineOptions, TtsConfig, TtsEngine, VoiceProfile};
+
+        let history = Mutex::new(HistoryLog::new());
+        let text = "Profile-addressed sentence";
+        let voice = "en_US-lessac";
+
+        let mut tts = TtsConfig::default();
+        tts.active_backend = TtsEngine::Kokoro;
+        tts.profiles.push(VoiceProfile {
+            id: "piper-prof".into(),
+            name: "Piper Voice".into(),
+            description: None,
+            engine: TtsEngine::Piper,
+            voice: voice.into(),
+            voice_label: Some("Lessac".into()),
+            speed: 1.0,
+            pitch: 1.0,
+            effects: Default::default(),
+            post_process: Default::default(),
+            text_processing: Default::default(),
+            engine_options: ProfileEngineOptions::default_for(&TtsEngine::Piper),
+        });
+
+        // 1. Explicit profile addressing (speak_now_with_profile path)
+        let eff_profile = resolve_effective_for_profile(&tts, Some("piper-prof")).unwrap();
+        assert_eq!(eff_profile.engine, TtsEngine::Piper);
+        let profile_engine_str = engine_str(&eff_profile.engine);
+        let active_engine_str = engine_str(&tts.active_backend);
+        assert_ne!(profile_engine_str, active_engine_str);
+
+        let path = std::env::temp_dir().join(format!(
+            "copyspeak-prof-cache-test-{}.wav",
+            std::process::id()
+        ));
+        let meta = AudioFormatMeta {
+            sample_rate: 8000,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        std::fs::write(&path, pcm_to_wav(&[0, 0, 1, 0], &meta)).unwrap();
+        history.lock().unwrap().add(HistoryEntry {
+            id: text.to_string(),
+            timestamp: chrono::Utc::now(),
+            text: text.to_string(),
+            text_length: text.len() as u32,
+            tts_engine: profile_engine_str.to_string(),
+            voice: voice.into(),
+            speed: 1.0,
+            output_format: None,
+            output_path: Some(path.to_string_lossy().into_owned()),
+            duration_ms: 0,
+            batch_id: None,
+            app_name: None,
+            source: None,
+            filters_applied: Vec::new(),
+            success: true,
+            error_message: None,
+            attempts: 1,
+            tags: Vec::new(),
+            metadata: HashMap::new(),
+        });
+
+        // Cache hit using resolved profile engine
+        let found = find_cached_speech(&history, true, text, profile_engine_str, voice);
+        assert!(
+            found.is_some(),
+            "Must hit cache when queried with resolved profile engine"
+        );
+
+        // Cache miss if queried with active backend engine
+        let miss = find_cached_speech(&history, true, text, active_engine_str, voice);
+        assert!(
+            miss.is_none(),
+            "Must not hit cache if queried with differing active backend engine"
+        );
+
+        // 2. Active profile resolution path (speak_queued path)
+        tts.active_profile_id = "piper-prof".into();
+        let eff_queued = resolve_effective(&tts);
+        assert_eq!(eff_queued.engine, TtsEngine::Piper);
+        let queued_engine_str = engine_str(&eff_queued.engine);
+        let found_queued = find_cached_speech(&history, true, text, queued_engine_str, voice);
+        assert!(
+            found_queued.is_some(),
+            "speak_queued path must hit cache using resolved profile engine"
+        );
+
+        std::fs::remove_file(&path).unwrap();
+    }
+
+    #[test]
+    fn same_text_cache_keys_on_resolved_profile_engine() {
+        let dir = std::env::temp_dir().join(format!(
+            "copyspeak-prof-speech-cache-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+
+        let speech = SpeechAudio {
+            bytes: vec![1, 2, 3, 4],
+            captions: None,
+        };
+
+        save_speech_cache(&dir, &speech, "piper", "en_US-lessac", "Hello world");
+        assert!(read_speech_cache(&dir, "piper", "en_US-lessac", "Hello world").is_some());
+        assert!(read_speech_cache(&dir, "kokoro", "en_US-lessac", "Hello world").is_none());
+
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

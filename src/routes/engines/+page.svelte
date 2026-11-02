@@ -114,7 +114,8 @@
   $effect(() => {
     syncSaveBarOrAutoSave(
       hasChanges,
-      localConfig?.general.auto_save_profiles === true,
+      localConfig?.general.experimental_enabled === true &&
+        localConfig.general.auto_save_profiles === true,
       saveConfig,
       cancelChanges,
       $_("engine.saveBar.saveChanges"),
@@ -146,7 +147,7 @@
         <h1 class="text-xl font-semibold">{$_("engines.title")}</h1>
         <p class="text-muted-foreground mt-1 text-sm">{$_("engines.subtitle")}</p>
       </div>
-      <EngineSetup bind:localConfig isDirty={hasChanges} onSave={saveConfig} />
+      <EngineSetup bind:localConfig isDirty={hasChanges} onSave={saveConfig} {envKeySources} />
     </main>
   {:else}
     <div class="flex min-h-[60vh] items-center justify-center px-6">

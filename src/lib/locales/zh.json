@@ -181,7 +181,7 @@
     },
     "history": {
       "title": "历史记录设置",
-      "enabled": "保存朗读历史",
+      "enabled": "历史记录",
       "enabledDescription": "保存支持搜索的朗读记录以供稍后重播。关闭时小型语音缓存仍会生效；已有的历史记录将保留。",
       "storageMode": "存储模式",
       "persistent": "永久",
@@ -222,7 +222,8 @@
       "stripLinks": "链接",
       "stripLinksDescription": "去除 Markdown 链接语法，保留链接文字",
       "stripBoldItalic": "粗体和斜体",
-      "stripBoldItalicDescription": "去除 **粗体** 和 *斜体* 标记",
+      "stripBoldItalicDescription": "去除 **粗体** 和 *斜体* 标记 — 默认关闭，以便引擎将其作为重音朗读",
+      "syntaxOptions": "语法选项",
       "stripLists": "列表",
       "stripListsDescription": "去除项目符号和编号列表标记",
       "stripBlockquotes": "引用",
@@ -875,7 +876,23 @@
   "voicePicker": {
     "select": "选择语音…",
     "search": "搜索语音…",
-    "customId": "自定义 / 手动 ID…"
+    "customId": "自定义 / 手动 ID…",
+    "refresh": "刷新",
+    "refreshFailed": "刷新失败：{error}",
+    "notInList": "不在列表中",
+    "noMatch": "没有与“{query}”匹配的语音。",
+    "title": "选择语音",
+    "count": "{shown} / {total}",
+    "gender": "性别",
+    "language": "语言",
+    "style": "风格",
+    "all": "全部",
+    "noFilterMatch": "没有符合这些筛选条件的语音。",
+    "previewPlay": "试听",
+    "previewStop": "停止试听",
+    "previewFailed": "无法播放此试听。",
+    "noPreview": "该语音没有试听。",
+    "shiftEnterHint": "Shift+Enter 试听高亮的语音。"
   },
   "hotkey": {
     "set": "设置",

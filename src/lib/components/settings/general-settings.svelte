@@ -60,11 +60,4 @@
       }}
     />
   </SettingRow>
-
-  <SettingRow
-    label={$_("settings.general.autoSave")}
-    tooltip={$_("settings.general.autoSaveDescription")}
-  >
-    <Switch id="auto-save-profiles" bind:checked={localConfig.general.auto_save_profiles} />
-  </SettingRow>
 </div>

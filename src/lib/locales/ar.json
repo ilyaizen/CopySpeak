@@ -181,7 +181,7 @@
     },
     "history": {
       "title": "إعدادات السجل",
-      "enabled": "حفظ سجل القراءة",
+      "enabled": "السجل",
       "enabledDescription": "حفظ قراءات قابلة للبحث لإعادة تشغيلها لاحقًا. عند الإيقاف، تستمر ذاكرة التخزين المؤقت الصوتية الصغيرة في العمل؛ ويتم الاحتفاظ بالسجل الحالي.",
       "storageMode": "وضع التخزين",
       "persistent": "دائم",
@@ -222,7 +222,8 @@
       "stripLinks": "الروابط",
       "stripLinksDescription": "إزالة صيغة روابط Markdown، مع الإبقاء على نص الرابط",
       "stripBoldItalic": "الغامق والمائل",
-      "stripBoldItalicDescription": "إزالة علامات **الغامق** و*المائل*",
+      "stripBoldItalicDescription": "إزالة علامات **الغامق** و*المائل* — معطّل افتراضيًا حتى تتمكن المحركات من لفظها كتركيد",
+      "syntaxOptions": "خيارات بناء الجملة",
       "stripLists": "القوائم",
       "stripListsDescription": "إزالة علامات التعداد النقطي والرقمي",
       "stripBlockquotes": "الاقتباسات",
@@ -875,7 +876,23 @@
   "voicePicker": {
     "select": "اختر الصوت…",
     "search": "ابحث عن الأصوات…",
-    "customId": "معرّف مخصص / يدوي…"
+    "customId": "معرّف مخصص / يدوي…",
+    "refresh": "تحديث",
+    "refreshFailed": "تعذر التحديث: {error}",
+    "notInList": "غير موجود في القائمة",
+    "noMatch": "لا توجد أصوات تطابق «{query}».",
+    "title": "اختر صوتًا",
+    "count": "{shown} من {total}",
+    "gender": "الجنس",
+    "language": "اللغة",
+    "style": "الأسلوب",
+    "all": "الكل",
+    "noFilterMatch": "لا توجد أصوات تطابق هذه المرشحات.",
+    "previewPlay": "معاينة",
+    "previewStop": "إيقاف المعاينة",
+    "previewFailed": "تعذّر تشغيل هذه المعاينة.",
+    "noPreview": "لا تتوفر معاينة لهذا الصوت.",
+    "shiftEnterHint": "Shift+Enter يشغّل معاينة الصوت المحدد."
   },
   "hotkey": {
     "set": "تعيين",

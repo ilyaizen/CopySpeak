@@ -115,7 +115,7 @@
 
 {#if !isHudRoute}
   <footer
-    class="border-border bg-card/95 z-50 border-t px-4 py-1.5 shadow-[0_-2px_10px_rgba(0,0,0,0.08)] backdrop-blur-sm"
+    class="app-surface border-border z-50 border-t px-4 py-1.5 shadow-[0_-2px_10px_rgba(0,0,0,0.08)]"
   >
     <div class="flex items-center justify-between gap-2">
       <div class="flex min-w-0 items-center gap-2">

@@ -112,13 +112,25 @@ mod tests {
         assert!(!out.contains('['), "{out:?}");
     }
 
+    #[test]
+    fn default_pipeline_preserves_underscore_emphasis() {
+        let input = "_emphasis_ and __strong__ text";
+        let mut config = default_config();
+        assert_eq!(sanitize_text(input, &config), input);
+
+        config.markdown.strip_bold_italic = true;
+        assert_eq!(sanitize_text(input, &config), "emphasis and strong text");
+    }
+
     /// Tag safety only exempts the brackets; everything else in the tagged
     /// text still runs through the full pipeline.
     #[test]
     fn tag_safe_resanitize_still_cleans_surrounding_text() {
         let out = sanitize_text_tag_safe("[happy]  See   **bold** text", &default_config());
-        assert!(!out.contains("**"), "{out:?}");
+        // Bold/italic markers survive by default (strip_bold_italic=false);
+        // the surrounding whitespace cleanup still applies.
         assert!(!out.contains("  "), "{out:?}");
-        assert!(out.contains("See bold text"), "{out:?}");
+        assert!(out.contains("[happy]"), "{out:?}");
+        assert!(out.contains("See **bold** text"), "{out:?}");
     }
 }

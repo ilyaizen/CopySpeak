@@ -1,5 +1,5 @@
 use crate::config::TtsEngine;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize)]
 pub struct EngineCatalogEntry {
@@ -37,7 +37,7 @@ pub enum EngineOptionKind {
     Textarea,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VoiceCatalogEntry {
     pub id: String,
     pub label: String,
@@ -45,6 +45,10 @@ pub struct VoiceCatalogEntry {
     pub description: Option<String>,
     pub gender: Option<String>,
     pub preview_url: Option<String>,
+    /// Style and trait tags (`narration`, `calm`, …). Serde default keeps
+    /// cache entries written before this field readable.
+    #[serde(default)]
+    pub tags: Vec<String>,
 }
 
 fn option(
@@ -95,6 +99,7 @@ fn voice(
         description: description.map(str::to_string),
         gender: gender.map(str::to_string),
         preview_url: None,
+        tags: Vec::new(),
     }
 }
 

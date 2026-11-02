@@ -5,7 +5,6 @@
   import AdvancedSettings from "#lib/components/settings/advanced-settings.svelte";
   import PaginationSettings from "#lib/components/settings/pagination-settings.svelte";
   import IdleShutdownSettings from "#lib/components/settings/idle-shutdown-settings.svelte";
-  import HotkeySettings from "#lib/components/settings/hotkey-settings.svelte";
   import SanitizationSettings from "#lib/components/settings/sanitization-settings.svelte";
   import PostProcessSettings from "#lib/components/settings/post-process-settings.svelte";
   import HistorySettings from "#lib/components/settings/history-settings.svelte";
@@ -199,7 +198,8 @@
   $effect(() => {
     syncSaveBarOrAutoSave(
       hasChanges,
-      localConfig?.general.auto_save_profiles === true,
+      localConfig?.general.experimental_enabled === true &&
+        localConfig.general.auto_save_profiles === true,
       saveConfig,
       cancelChanges,
       $_("settings.actions.save"),
@@ -315,7 +315,6 @@
                     />
                   </SettingRow>
                 {/if}
-                <HotkeySettings bind:localConfig {errors} />
               </div>
             </div>
 
@@ -369,7 +368,7 @@
               <SanitizationSettings bind:localConfig />
             </div>
 
-            <AdvancedSettings bind:localConfig />
+            <AdvancedSettings bind:localConfig {errors} />
           </div>
         </section>
 

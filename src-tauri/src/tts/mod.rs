@@ -65,6 +65,9 @@ pub struct Voice {
     pub name: String,
     pub language: Option<String>,
     pub default: Option<bool>,
+    pub gender: Option<String>,
+    pub preview_url: Option<String>,
+    pub tags: Vec<String>,
 }
 
 /// The core abstraction. Every TTS engine implements this.

@@ -3,7 +3,7 @@ import { effectiveEffect, type EffectGateConfig } from "#lib/effects-gate";
 
 function config(experimental: boolean | undefined, enabled: boolean): EffectGateConfig {
   return {
-    general: { experimental_enabled: experimental },
+    general: { experimental_enabled: experimental, effects_enabled: true },
     tts: {
       active_profile_id: "p1",
       profiles: [{ id: "p1", effects: { enabled, active_effect: "walkie_talkie" } }]
@@ -12,6 +12,11 @@ function config(experimental: boolean | undefined, enabled: boolean): EffectGate
 }
 
 describe("effectiveEffect", () => {
+  test("global effects switch disables saved profile effects", () => {
+    const c = config(true, true);
+    c.general.effects_enabled = false;
+    expect(effectiveEffect(c)).toBe("none");
+  });
   test("experimental on plays the active profile's effect", () => {
     expect(effectiveEffect(config(true, true))).toBe("walkie_talkie");
   });

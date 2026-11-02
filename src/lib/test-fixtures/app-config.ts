@@ -44,6 +44,7 @@ export function testConfig(): AppConfig {
       appearance: "system",
       locale: "en",
       experimental_enabled: false,
+      effects_enabled: true,
       update_checks_enabled: false,
       auto_save_profiles: false
     },
@@ -61,7 +62,7 @@ export function testConfig(): AppConfig {
         strip_code_blocks: true,
         strip_inline_code: false,
         strip_links: true,
-        strip_bold_italic: true,
+        strip_bold_italic: false,
         strip_lists: true,
         strip_blockquotes: true
       },

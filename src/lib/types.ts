@@ -192,6 +192,11 @@ export interface ProfileEffects {
   active_effect: EffectId;
 }
 
+export interface ProfilePostProcess {
+  enabled: boolean;
+  active_template_id: string | null;
+}
+
 // Engine options are flat scalar settings written by the catalog UI and read by
 // the Rust side; nested payloads are not part of the contract.
 export type EngineOptionValue = string | number | boolean | string[] | null;
@@ -206,6 +211,7 @@ export interface VoiceProfile {
   speed: number;
   pitch: number;
   effects: ProfileEffects;
+  post_process: ProfilePostProcess;
   engine_options: Record<string, EngineOptionValue>;
 }
 
@@ -227,6 +233,8 @@ export interface VoiceCatalogEntry {
   description: string | null;
   gender: string | null;
   preview_url: string | null;
+  /** Style and trait tags from the provider (`narration`, `calm`, …). */
+  tags: string[];
 }
 
 export interface EngineCatalogEntry {
@@ -291,6 +299,7 @@ export interface GeneralConfig {
   locale: SupportedLocale;
   /** Master switch for History, Post-process, profile Effects, and Duck. */
   experimental_enabled?: boolean;
+  effects_enabled: boolean;
 }
 
 export type AudioFormat = "wav" | "mp3" | "ogg" | "flac";
