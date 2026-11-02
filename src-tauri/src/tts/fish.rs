@@ -57,9 +57,10 @@ impl FishTtsBackend {
         body
     }
 
-    /// List the account's own voice models (`self=true`: models owned by the
-    /// key's workspace, including private clones), not the public community
-    /// library. `reference_id` on the TTS request is one of these `_id`s. The
+    /// List Fish's licensed library voices (`licensed=true`: real people who
+    /// granted Fish the rights), most-used first, minus `character-voice`
+    /// models. `self=true` (own models) is not used: it 401s on standard API
+    /// keys. `reference_id` on the TTS request is one of these `_id`s. The
     /// caller merges in the built-in default voice, which is not a model.
     pub fn list_voices(&self) -> Result<Vec<Voice>, TtsError> {
         let api_key = self.api_key();
@@ -73,10 +74,10 @@ impl FishTtsBackend {
             let response = client
                 .get(FISH_MODEL_LIST_URL)
                 .query(&[
-                    ("self", "true"),
+                    ("licensed", "true"),
                     ("page_size", "100"),
                     ("page_number", "1"),
-                    ("sort_by", "created_at"),
+                    ("sort_by", "task_count"),
                 ])
                 .bearer_auth(api_key)
                 .header("Accept", "application/json")
@@ -106,32 +107,41 @@ impl FishTtsBackend {
             )));
         }
 
-        #[derive(serde::Deserialize)]
-        struct ModelPage {
-            items: Vec<ModelEntity>,
-        }
-        #[derive(serde::Deserialize)]
-        struct ModelEntity {
-            #[serde(rename = "_id")]
-            id: String,
-            title: String,
-            #[serde(default)]
-            languages: Vec<String>,
-        }
-
-        let page: ModelPage = serde_json::from_str(&body)
-            .map_err(|e| TtsError::Http(format!("Failed to parse voices response: {}", e)))?;
-        Ok(page
-            .items
-            .into_iter()
-            .map(|m| Voice {
-                id: m.id,
-                name: m.title,
-                language: m.languages.into_iter().next(),
-                default: None,
-            })
-            .collect())
+        parse_model_page(&body)
     }
+}
+
+/// Parse a `/model` page into voices, dropping models tagged
+/// `character-voice` (impressions and personas, not normal narration voices).
+fn parse_model_page(body: &str) -> Result<Vec<Voice>, TtsError> {
+    #[derive(serde::Deserialize)]
+    struct ModelPage {
+        items: Vec<ModelEntity>,
+    }
+    #[derive(serde::Deserialize)]
+    struct ModelEntity {
+        #[serde(rename = "_id")]
+        id: String,
+        title: String,
+        #[serde(default)]
+        languages: Vec<String>,
+        #[serde(default)]
+        tags: Vec<String>,
+    }
+
+    let page: ModelPage = serde_json::from_str(body)
+        .map_err(|e| TtsError::Http(format!("Failed to parse voices response: {}", e)))?;
+    Ok(page
+        .items
+        .into_iter()
+        .filter(|m| !m.tags.iter().any(|t| t == "character-voice"))
+        .map(|m| Voice {
+            id: m.id,
+            name: m.title,
+            language: m.languages.into_iter().next(),
+            default: None,
+        })
+        .collect())
 }
 
 impl TtsBackend for FishTtsBackend {
@@ -414,6 +424,19 @@ mod tests {
             voice_id: voice_id.into(),
             ..Default::default()
         })
+    }
+
+    #[test]
+    fn model_page_drops_character_voices() {
+        let body = r#"{"items":[
+            {"_id":"a","title":"Calm Narrator","languages":["en"],"tags":["male","narration"]},
+            {"_id":"b","title":"Uncle Roger","languages":["en"],"tags":["male","character-voice"]},
+            {"_id":"c","title":"No Tags"}
+        ]}"#;
+        let voices = parse_model_page(body).expect("parses");
+        let ids: Vec<&str> = voices.iter().map(|v| v.id.as_str()).collect();
+        assert_eq!(ids, ["a", "c"]);
+        assert_eq!(voices[0].language.as_deref(), Some("en"));
     }
 
     #[test]
