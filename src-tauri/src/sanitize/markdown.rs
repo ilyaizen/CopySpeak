@@ -183,7 +183,7 @@ mod tests {
         // Bold/italic markers are preserved by default (strip_bold_italic=false):
         // some engines render and articulate them as spoken emphasis.
         let config = crate::config::MarkdownSanitizationConfig::default();
-        let input = "**bold** and *italic* text";
+        let input = "**bold**, __bold__, *italic*, and _italic_ text";
         let result = strip_markdown(input, &config);
         assert_eq!(
             result, input,

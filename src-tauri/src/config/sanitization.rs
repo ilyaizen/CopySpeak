@@ -41,9 +41,8 @@ impl Default for MarkdownSanitizationConfig {
             strip_code_blocks: true,
             strip_inline_code: false,
             strip_links: true,
-            // Off by default: some cloud engines render and articulate **bold** /
-            // *italic* markers as spoken emphasis, so the syntax is preserved
-            // unless the user opts in to stripping it.
+            // Keep **bold**, __bold__, *italic*, and _italic_ markers by default;
+            // some TTS engines use them to add spoken emphasis.
             strip_bold_italic: false,
             strip_lists: true,
             strip_blockquotes: true,
