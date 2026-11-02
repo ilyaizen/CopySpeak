@@ -9,41 +9,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **xAI and Mistral cloud providers** — xAI speaks with native word timings for highlighting and a 0.7–1.5× speed range; Mistral uses Voxtral (`voxtral-mini-tts-3-0`). Both can refresh their voice lists and both work with Dramatize.
+- **Post-process templates** — a library of prompt templates with one active per profile. Built-ins are Dramatize, which adds emote tags and must keep every word, and Concise, which compresses for listening and may change words. Custom templates default to the rewrite class. Your old single prompt becomes a template the first time the new version loads it. The Home page has a Post-process switch with a template picker, disabled only when a word-preserving template meets an engine that cannot read emote tags.
+- **Post-processing is set per profile** — each profile has its own on/off switch and template. On upgrade, every profile inherits your previous global setting.
+- **Stop from outside the app** — `POST /stop` on the control server and `copyspeak stop` halt playback the same way the Stop button does. Hermes uses it to cut speech off when you interrupt, which also releases a blocked `speak --wait`.
+- **Voice browser** — search and filter voices by available metadata, listen to provider previews, and select with the keyboard. Voice lists load from a per-engine, per-key cache; Refresh fetches the latest list and shows provider errors instead of silently falling back.
+- **More onboarding choices** — first-run setup now offers ElevenLabs and Fish Audio beside the existing options, and cloud cards with a free tier are labelled "Free tier".
 - **Edge-TTS is back** — Microsoft's free Read Aloud voices return on the fixed `edge-tts` 7.3.1 client, which moved to Microsoft's current host and handles the 403 clock-skew retry itself. Onboarding, the Engines page, About and the profile editor offer Edge again, and fresh installs get a keyless Edge fallback profile; existing configs can simply pick Edge.
-- **Voice browser** — search and filter voices by available metadata, listen to provider previews, and select with the keyboard. Voice lists load from a per-engine, per-key cache; refresh fetches the latest list and shows provider errors instead of silently falling back.
-
-### Fixed
-
-- **Windows debug app icon** — changes to the app icon now trigger a resource rebuild, preventing an older, oversaturated icon from remaining in the executable.
-- **Fish voice refresh works with standard API keys** — the browser lists licensed library voices instead of requesting account-owned models, which returned a permission error for standard keys.
-- **Profile edits survive background reloads** — external config changes no longer overwrite unsaved edits, and a save only marks the snapshot it sent as saved.
-- **Tooltips respect right-to-left languages** — Hebrew and Arabic tooltips keep their direction and wrap within the viewport.
-- **Sharper Windows tray icon** — the app sizes branded tray icons to the system's small-icon dimensions before handing them to Windows.
-- **Gemini readings stick to the script** — requests now anchor the model to read the text verbatim instead of treating clipboard content that reads like a question or command as a prompt, older preview models get the same direction inline where they ignore it, and a reply that already carries its own WAV header is no longer wrapped a second time.
-- **Long readings start speaking sooner** — Play-page, hotkey and control-server readings using non-streaming engines begin as each section is synthesized, while the complete reading remains available for replay and history.
-- **Startup and tray preferences work together** — Start in tray now applies on launch without flashing the main window; first-run setup and a missing tray still open normally. Hiding the tray disables hidden startup and close-to-tray behavior without discarding your preferences. Closing with Exit selected quits the whole app, including its background HUD. Launch-on-login registration errors now surface when saving settings instead of silently succeeding.
-- **Predictable tray controls** — left-click opens and restores CopySpeak on Windows without interrupting speech; right-click offers Open, Stop reading, Settings and Quit. Settings opens the Settings page. The branded tray icon changes hue for idle, synthesis, playback and pause.
-
-- **Transient synthesis failures retry** — standalone 429/500/502/503/504 statuses and transport dropouts (timeout, connection reset/refused/closed, reqwest causes hidden in the error chain) retry twice with 500 ms/1 s backoff, cancellation-aware, on the non-streaming path only, so one flaky provider request no longer kills a reading.
-- **Incomplete readings say so** — when a section's synthesis fails permanently, the reading stops there and a global "Reading stopped: section N of M failed…" notice names it (toast plus error state), instead of a stalled HUD and a console-only log. Browser companion sessions stay up while buffered audio drains, then report the failure instead of "completed".
-- **The Play page's configured fragment size is now used** — the non-streaming paginated `speak_now` path gated pagination on your saved fragment size but then split with the default anyway, so a configured fragment size was silently ignored there (a fix contributed by the X-CopySpeak fork).
-
-- **Clipboard truncation no longer cuts a word in half** — a reading capped by the maximum-text-length setting now ends at the last whole word before the cap (a URL or single token with no boundary is still hard-cut), and never discards a leading word entirely (from the X-CopySpeak fork).
-
-- **Unpunctuated text is no longer cut mid-word** — readings without sentence boundaries (long word runs, URLs, CJK text without clause punctuation) now split at word and clause edges instead of exact character counts: oversized tails are split into parts, CJK runs break after full-width clause punctuation, and tokens like versions, domains, IPs and dotted initialisms stay whole (from the X-CopySpeak fork).
-
-- **Pinned taskbar icons survive hide-to-tray** — the app now sets an explicit Windows AppUserModelID at startup, so a button pinned to the taskbar keeps its icon and grouping when the main window hides to the tray. A pin that is already broken keeps its stale target and must be re-pinned once (from the X-CopySpeak fork).
 
 ### Changed
 
-- **App appearance** — stone-textured backgrounds, text-only top navigation, and a subtle fade-in between pages replace the previous app styling. The content background gently shifts when scrolling, unless reduced motion is enabled.
-- **Settings reorganized** — Voices is now Profiles; local engine idle shutdown moved to Advanced, and lowering other apps' audio moved to Playback and no longer requires Experimental. Autosave and the global hotkey now require Experimental; disabling it preserves their saved settings but turns them off.
+- **Markdown bold and italic are kept by default** — `**bold**`, `__bold__`, `*italic*` and `_italic_` now reach the engine, which can voice them as emphasis. New configs start with stripping off; saved configs keep whatever they had, so turn it off in Settings if you want the new behavior. The Markdown syntax options are collapsed by default.
+- **`condense` is now `post_process`** — the control server field is `post_process` and the CLI flag is `--post-process`. The old `condense` field and `--condense` flag still work.
+- **Piper installs become real Piper profiles** — profiles the Piper installer created as generic local commands are converted to the Piper engine with its own options; hand-written local commands are left alone. Fresh installs write Piper profiles directly.
+- **Gemini moves off the retiring preview model** — profiles pinned to `gemini-2.5-flash-preview-tts`, which Google shuts down on 2026-11-17, or with no model set, switch to `gemini-3.8-flash-tts`. Custom model ids are kept.
+- **Keys from `.env` stay out of the UI** — the Engines page marks engines whose key comes from `.env` with a badge and shows a "from .env" placeholder instead of the key itself, and the key is never sent to the app window. Typing a key over one that comes from `.env` asks for confirmation, because the `.env` value keeps winning until you remove it and restart.
+- **Settings reorganized** — Voices is now Profiles; local engine idle shutdown and streaming moved to Advanced, and lowering other apps' audio moved to Playback and no longer requires Experimental. History and Post-processing appear only when they can take effect. Autosave, the global hotkey and the HUD now require Experimental; disabling it keeps their saved settings but turns them off.
+- **Shorter Settings copy** — descriptions that repeated a row's tooltip are gone and labels are shorter ("History" instead of "Save Reading History").
+- **Safer defaults for new configs** — ducking other apps and profile effects start off; your saved values are kept.
+- **Speed up to 2×** — the speed slider now goes to 2× instead of 1.5×.
+- **App appearance** — stone-textured backgrounds, text-only top navigation, brighter light-mode form controls, and a subtle fade-in between pages replace the previous app styling. The content background gently shifts when scrolling, also on long pages, unless reduced motion is enabled.
 - **Landing page refreshed** — a new design includes an audio introduction with synchronized captions and a supported-engines carousel. The Listen demo ends when its audio finishes.
 - **Edge requests share a process-wide cooldown** — `Retry-After` is honored (capped at five minutes) or an escalating 5/10/20 s ladder capped at 60 s applies; request starts are spaced at least one second apart, and 403/429 refusals are never retried. Failures surface as safe status messages, not raw tracebacks.
 - **Clipboard truncation warns wherever you are** — the shortened-text notice is now a global toast, not a Play-page-only banner.
 - **Kokoro streams while it synthesizes** — the wrapper now yields one chunk per native inference window instead of joining the whole fragment, so a warm Kokoro daemon starts speaking after the first window instead of after the last. Captions arrive as a cumulative snapshot per window, the same way Piper streams per sentence (from the X-CopySpeak fork).
-
 - **Changing the engine warms it immediately** — switching profile in Settings, saving engine settings, or completing onboarding now prewarms the active engine in the background, so the first reading after a change no longer pays the full model load. Saving an unchanged config is a no-op (from the X-CopySpeak fork).
+
+### Fixed
+
+- **Long xAI and Fish readings play again** — readings long enough to split into several sections failed with "end of stream", because these providers send WAV headers with placeholder sizes. The app now corrects the header to the real length before decoding.
+- **Experimental off really means off** — with Experimental disabled, history no longer saves, caches or replays readings, retention cleanup no longer deletes, and ducking no longer starts, even when the hidden settings were saved as on. Saving or resetting during playback restores other apps' volume immediately.
+- **Retrigger setting saves valid values** — the menu offers Interrupt and Queue, the two values the app accepts; it previously offered options the app rejected.
+- **Play never loses your edits** — Play saves pending profile and settings edits before it starts speaking, a failed save is shown and stops the reading instead of speaking with stale settings, and a background config change no longer overwrites unsaved edits.
+- **Profile import accepts every engine** — imported profiles for Edge, Kitten, Qwen, Piper, Kokoro and Pocket were rejected as invalid; older exported profiles are also filled in with current defaults.
+- **Effects switch reflects reality** — a profile counts as having effects only when an effect is actually selected.
+- **Fish voice refresh works with standard API keys** — the browser lists licensed library voices instead of requesting account-owned models, which returned a permission error for standard keys.
+- **Profile edits survive background reloads** — external config changes no longer overwrite unsaved edits, and a save only marks the snapshot it sent as saved.
+- **Tooltips respect right-to-left languages** — Hebrew and Arabic tooltips keep their direction and wrap within the viewport.
+- **Sharper Windows tray icon** — the app sizes branded tray icons to the system's small-icon dimensions before handing them to Windows.
+- **Windows app icon updates** — changes to the app icon now trigger a resource rebuild, so an older icon no longer stays in the executable.
+- **Gemini readings stick to the script** — requests now anchor the model to read the text verbatim instead of treating clipboard content that reads like a question or command as a prompt, older preview models get the same direction inline where they ignore it, and a reply that already carries its own WAV header is no longer wrapped a second time.
+- **Long readings start speaking sooner** — Play-page, hotkey and control-server readings using non-streaming engines begin as each section is synthesized, while the complete reading remains available for replay and history.
+- **Startup and tray preferences work together** — Start in tray now applies on launch without flashing the main window; first-run setup and a missing tray still open normally. Hiding the tray disables hidden startup and close-to-tray behavior without discarding your preferences. Closing with Exit selected quits the whole app, including its background HUD. Launch-on-login registration errors now surface when saving settings instead of silently succeeding.
+- **Predictable tray controls** — left-click opens and restores CopySpeak on Windows without interrupting speech; right-click offers Open, Stop reading, Settings and Quit. Settings opens the Settings page. The branded tray icon changes hue for idle, synthesis, playback and pause.
+- **Transient synthesis failures retry** — standalone 429/500/502/503/504 statuses and transport dropouts (timeout, connection reset/refused/closed, reqwest causes hidden in the error chain) retry twice with 500 ms/1 s backoff, cancellation-aware, on the non-streaming path only, so one flaky provider request no longer kills a reading.
+- **Incomplete readings say so** — when a section's synthesis fails permanently, the reading stops there and a global "Reading stopped: section N of M failed…" notice names it (toast plus error state), instead of a stalled HUD and a console-only log. Browser companion sessions stay up while buffered audio drains, then report the failure instead of "completed".
+- **The Play page's configured fragment size is now used** — the non-streaming paginated `speak_now` path gated pagination on your saved fragment size but then split with the default anyway, so a configured fragment size was silently ignored there (a fix contributed by the X-CopySpeak fork).
+- **Clipboard truncation no longer cuts a word in half** — a reading capped by the maximum-text-length setting now ends at the last whole word before the cap (a URL or single token with no boundary is still hard-cut), and never discards a leading word entirely (from the X-CopySpeak fork).
+- **Unpunctuated text is no longer cut mid-word** — readings without sentence boundaries (long word runs, URLs, CJK text without clause punctuation) now split at word and clause edges instead of exact character counts: oversized tails are split into parts, CJK runs break after full-width clause punctuation, and tokens like versions, domains, IPs and dotted initialisms stay whole (from the X-CopySpeak fork).
+- **Pinned taskbar icons survive hide-to-tray** — the app now sets an explicit Windows AppUserModelID at startup, so a button pinned to the taskbar keeps its icon and grouping when the main window hides to the tray. A pin that is already broken keeps its stale target and must be re-pinned once (from the X-CopySpeak fork).
 
 ## [0.2.14] - 2026-10-20
 
