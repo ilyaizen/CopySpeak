@@ -205,6 +205,12 @@ jobs:
 
           # Repack. appimagetool on ubuntu-22.04 has working FUSE-less run
           # via APPIMAGE_EXTRACT_AND_RUN; NO_STRIP mirrors the build args.
+          # --appimage-extract leaves 0700 dirs; current appimagetool refuses
+          # an AppDir other users cannot read (run 41535796382). Real fix, not
+          # --no-check-permissions: the shipped AppImage must be world-readable.
+          chmod -R a+rX squashfs-root
+          chmod a+rx squashfs-root/AppRun
+
           wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool-x86_64.AppImage
           APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool-x86_64.AppImage \
