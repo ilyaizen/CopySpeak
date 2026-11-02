@@ -177,7 +177,7 @@
           aria-label={$_("common.speed")}
           disabled={!activeProfile}
           min={0.5}
-          max={1.5}
+          max={2}
           step={0.05}
           value={profileSpeed}
           oninput={(v) => (speedLive = v)}

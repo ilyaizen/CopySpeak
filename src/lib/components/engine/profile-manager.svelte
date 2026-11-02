@@ -870,7 +870,7 @@
             <Slider
               value={active.speed}
               min={0.5}
-              max={1.5}
+              max={2}
               step={0.05}
               oninput={(v) => (speedLive = v)}
               onchange={(v) => {
