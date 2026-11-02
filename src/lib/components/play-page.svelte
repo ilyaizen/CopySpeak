@@ -511,7 +511,7 @@
           role="region"
           aria-label={$_("play.nowReadingAria")}
           dir="auto"
-          class="border-input dark:bg-input/30 min-h-48 flex-1 overflow-y-auto rounded-md border p-4 text-base leading-relaxed whitespace-pre-wrap shadow-xs"
+          class="border-input bg-card dark:bg-input/30 min-h-48 flex-1 overflow-y-auto rounded-md border p-4 text-base leading-relaxed whitespace-pre-wrap shadow-xs"
         >
           {#each captionWords as word, i (word.offset)}<span
               data-current={i === currentWord || undefined}
@@ -526,7 +526,7 @@
         <label for="reading-text" class="sr-only">{$_("play.textLabel")}</label>
         <Textarea
           id="reading-text"
-          class="field-sizing-fixed min-h-48 flex-1 resize-none p-4 text-base leading-relaxed"
+          class="field-sizing-fixed bg-card dark:bg-input/30 min-h-48 flex-1 resize-none p-4 text-base leading-relaxed"
           placeholder={$_("play.placeholder")}
           bind:value={manualText}
         />

@@ -183,7 +183,7 @@
   let lastLogLine = $derived(kokoroRun?.lines[kokoroRun.lines.length - 1] ?? "");
 </script>
 
-<div class="bg-background flex min-h-screen items-center justify-center p-4 sm:p-8">
+<div class="flex min-h-dvh items-center justify-center p-4 sm:p-8">
   <div class="w-full max-w-2xl">
     <div class="space-y-6">
       <!-- Header -->

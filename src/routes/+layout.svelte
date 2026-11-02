@@ -22,6 +22,7 @@
   import { saveBar } from "#lib/stores/save-bar.svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { _ } from "svelte-i18n";
+  import { groundParallax } from "#lib/utils/ground-parallax";
 
   let { children } = $props();
 
@@ -55,6 +56,14 @@
   // so the HUD renders correctly even if page.url.pathname hasn't updated yet.
   const isHud = $derived(page.url.pathname === "/hud" || isHudByPath);
   const isWeb = import.meta.env.VITE_IS_VERCEL;
+  let appGround = $state<HTMLDivElement>();
+  let appMain = $state<HTMLElement>();
+
+  $effect(() => {
+    if (appMain && appGround) {
+      return groundParallax(appMain, appGround);
+    }
+  });
 
   let unlistenSpeak: (() => void) | null = null;
   let unlistenSettings: (() => void) | null = null;
@@ -227,7 +236,7 @@
       </header>
     </div>
     <main>
-      <MotionWrapper>
+      <MotionWrapper disableMotion>
         {@render children()}
       </MotionWrapper>
     </main>
@@ -243,7 +252,7 @@
 
   <TooltipProvider delayDuration={300}>
     <div
-      class="bg-background grid h-dvh min-w-0 overflow-hidden {isOnboarding
+      class="app-shell bg-background grid h-dvh min-w-0 overflow-hidden {isOnboarding
         ? 'grid-rows-[minmax(0,1fr)]'
         : 'grid-rows-[auto_minmax(0,1fr)_auto]'}"
       dir={$isRtl ? "rtl" : "ltr"}
@@ -252,19 +261,22 @@
         <AppHeader />
       {/if}
 
-      <main
-        class={isOnboarding
-          ? "min-h-0 min-w-0 overflow-auto"
-          : "min-h-0 min-w-0 overflow-auto px-4 py-4 sm:px-6"}
-      >
-        <MotionWrapper
+      <div bind:this={appGround} class="app-surface app-content min-h-0 min-w-0">
+        <main
+          bind:this={appMain}
           class={isOnboarding
-            ? "flex min-h-full min-w-0 flex-col"
-            : "mx-auto flex min-h-full w-full max-w-6xl min-w-0 flex-col"}
+            ? "h-full min-w-0 overflow-auto"
+            : "h-full min-w-0 overflow-auto px-4 py-4 sm:px-6"}
         >
-          {@render children()}
-        </MotionWrapper>
-      </main>
+          <MotionWrapper
+            class={isOnboarding
+              ? "flex min-h-full min-w-0 flex-col"
+              : "mx-auto flex min-h-full w-full max-w-6xl min-w-0 flex-col"}
+          >
+            {@render children()}
+          </MotionWrapper>
+        </main>
+      </div>
 
       {#if !isOnboarding}
         <AppFooter />

@@ -5,6 +5,7 @@
   import Github from "#lib/components/icons/github.svelte";
   import { VERSION } from "#lib/version";
   import { INTRO_AUDIO, INTRO_LINES } from "./intro-captions";
+  import { groundParallax } from "#lib/utils/ground-parallax";
 
   const DOWNLOAD_URL = "https://github.com/ilyaizen/CopySpeak/releases";
   const GITHUB_URL = "https://github.com/ilyaizen/CopySpeak";
@@ -193,37 +194,9 @@
     const cleanups: (() => void)[] = [];
     highlights = "highlights" in CSS ? CSS.highlights : null;
 
-    // Ground parallax: the fixed texture layer drifts up at a fraction of scroll speed,
-    // clamped inside its oversize headroom so no edge ever shows. The .landing root is the
-    // scroll container, not the window. Reduced motion leaves --bg-shift unset.
+    // The landing root is the scroll container, not the window.
     const scroller = stage.closest<HTMLElement>(".landing");
-    if (scroller && !reduced) {
-      const FACTOR = 0.12; // texture moves at 12% of scroll speed
-      const MAX = 0.145; // share of viewport height; the layer carries 15% headroom per edge
-      let queued = false;
-      const update = () => {
-        queued = false;
-        const shift = Math.max(
-          0,
-          Math.min(scroller.scrollTop * FACTOR, scroller.clientHeight * MAX)
-        );
-        scroller.style.setProperty("--bg-shift", `${(-shift).toFixed(1)}px`);
-      };
-      const queue = () => {
-        if (!queued) {
-          queued = true;
-          requestAnimationFrame(update);
-        }
-      };
-      scroller.addEventListener("scroll", queue, { passive: true });
-      addEventListener("resize", queue);
-      update();
-      cleanups.push(() => {
-        scroller.removeEventListener("scroll", queue);
-        removeEventListener("resize", queue);
-        scroller.style.removeProperty("--bg-shift");
-      });
-    }
+    if (scroller) cleanups.push(groundParallax(scroller, scroller));
 
     if (!reduced) {
       animated = true;

@@ -120,32 +120,114 @@
   }
 }
 
-/* Page motion wrapper — fades + slides up on route change */
+/* Separate surfaces keep the bars still while the content ground moves. */
+.app-surface {
+  position: relative;
+  isolation: isolate;
+  background: var(--background);
+}
+
+.app-surface::before,
+.app-surface::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.app-surface::before {
+  z-index: -2;
+  inset: 0;
+  background: url("/landing/bg-white.webp") center top / cover no-repeat;
+  opacity: 0.28;
+  filter: contrast(1.08) blur(0.75px);
+}
+
+.app-content {
+  overflow: hidden;
+}
+
+.app-content::before {
+  inset: -15% 0;
+  transform: translate3d(0, var(--bg-shift, 0px), 0) scale(1.03);
+}
+
+.dark .app-surface::before {
+  background-image: url("/landing/bg-black.webp");
+  opacity: 0.16;
+  filter: contrast(1.05) blur(0.75px);
+}
+
+.app-surface::after {
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    oklch(0.93 0.01125 190 / 0.2),
+    oklch(0.965 0.0075 190 / 0.34)
+  );
+}
+
+:root:not(.dark) .app-surface:not(.app-content)::after {
+  background: oklch(1 0 0 / 0.55);
+}
+
+:root:not(.dark) header.app-surface {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.dark .app-surface::after {
+  background: linear-gradient(
+    to bottom,
+    oklch(0.175 0.015 190 / 0.35),
+    oklch(0.145 0.01125 190 / 0.55)
+  );
+}
+
+.dark .app-content::after {
+  background:
+    radial-gradient(120% 90% at 50% 18%, transparent 55%, oklch(0.05 0 0 / 0.42) 100%),
+    linear-gradient(to bottom, oklch(0.175 0.015 190 / 0.35), oklch(0.145 0.01125 190 / 0.55));
+}
+
+.app-brand,
+.app-nav-link {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+
+.app-nav-link {
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+[dir="rtl"] .app-nav-link {
+  font-family: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* Fade the incoming page without moving its layout. */
 .motion-wrapper {
-  transform: translateY(30px);
-  animation: motion-wrapper-enter 500ms cubic-bezier(0, 0.8, 0.1, 1) forwards;
+  animation: motion-wrapper-enter 200ms linear;
 }
 
 .motion-wrapper.motion-disabled {
-  animation-duration: 0ms;
   animation-name: none;
-  transform: translateY(0);
 }
 
 @media (prefers-reduced-motion: reduce) {
   .motion-wrapper {
-    animation-duration: 0ms;
     animation-name: none;
-    transform: translateY(0);
   }
 }
 
 @keyframes motion-wrapper-enter {
   from {
-    transform: translateY(30px);
+    opacity: 0;
   }
   to {
-    transform: translateY(0);
+    opacity: 1;
   }
 }
 

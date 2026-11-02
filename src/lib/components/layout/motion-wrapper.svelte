@@ -15,20 +15,16 @@
 
   let {
     children,
-    // TEMP (2026-09-20): page slide-up animation globally disabled. Flip back
-    // to `false` to re-enable — the keyframes in +layout.css and this prop
-    // stay in place on purpose, this is not dead code.
-    disableMotion = true,
+    disableMotion = false,
     class: className = "",
     ...rest
   }: MotionWrapperProps = $props();
 
-  const motionDisabled = $derived(disableMotion);
   const resolvedClassName = $derived(`motion-wrapper${className ? ` ${className}` : ""}`);
 </script>
 
 {#key key}
-  <div class={resolvedClassName} class:motion-disabled={motionDisabled} {...rest}>
+  <div class={resolvedClassName} class:motion-disabled={disableMotion} {...rest}>
     {@render children()}
   </div>
 {/key}
