@@ -9,7 +9,10 @@ export function groundParallax(scroller: HTMLElement, ground: HTMLElement) {
       ground.style.removeProperty("--bg-shift");
       return;
     }
-    const shift = Math.max(0, Math.min(scroller.scrollTop * 0.12, scroller.clientHeight * 0.145));
+    const scrollRange = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    const maxShift = Math.min(scrollRange * 0.12, scroller.clientHeight * 0.145);
+    const progress = scrollRange ? Math.max(0, Math.min(scroller.scrollTop / scrollRange, 1)) : 0;
+    const shift = progress * maxShift;
     ground.style.setProperty("--bg-shift", `${(-shift).toFixed(1)}px`);
   };
   const queue = () => {
