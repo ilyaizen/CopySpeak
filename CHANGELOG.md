@@ -10,9 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Edge-TTS is back** — Microsoft's free Read Aloud voices return on the fixed `edge-tts` 7.3.1 client, which moved to Microsoft's current host and handles the 403 clock-skew retry itself. Onboarding, the Engines page, About and the profile editor offer Edge again, and fresh installs get a keyless Edge fallback profile; existing configs can simply pick Edge.
+- **Voice browser** — search and filter voices by available metadata, listen to provider previews, and select with the keyboard. Voice lists load from a per-engine, per-key cache; refresh fetches the latest list and shows provider errors instead of silently falling back.
 
 ### Fixed
 
+- **Windows debug app icon** — changes to the app icon now trigger a resource rebuild, preventing an older, oversaturated icon from remaining in the executable.
+- **Fish voice refresh works with standard API keys** — the browser lists licensed library voices instead of requesting account-owned models, which returned a permission error for standard keys.
+- **Profile edits survive background reloads** — external config changes no longer overwrite unsaved edits, and a save only marks the snapshot it sent as saved.
+- **Tooltips respect right-to-left languages** — Hebrew and Arabic tooltips keep their direction and wrap within the viewport.
+- **Sharper Windows tray icon** — the app sizes branded tray icons to the system's small-icon dimensions before handing them to Windows.
 - **Gemini readings stick to the script** — requests now anchor the model to read the text verbatim instead of treating clipboard content that reads like a question or command as a prompt, older preview models get the same direction inline where they ignore it, and a reply that already carries its own WAV header is no longer wrapped a second time.
 - **Long readings start speaking sooner** — Play-page, hotkey and control-server readings using non-streaming engines begin as each section is synthesized, while the complete reading remains available for replay and history.
 - **Startup and tray preferences work together** — Start in tray now applies on launch without flashing the main window; first-run setup and a missing tray still open normally. Hiding the tray disables hidden startup and close-to-tray behavior without discarding your preferences. Closing with Exit selected quits the whole app, including its background HUD. Launch-on-login registration errors now surface when saving settings instead of silently succeeding.
@@ -30,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **App appearance** — stone-textured backgrounds, text-only top navigation, and a subtle fade-in between pages replace the previous app styling. The content background gently shifts when scrolling, unless reduced motion is enabled.
+- **Settings reorganized** — Voices is now Profiles; local engine idle shutdown moved to Advanced, and lowering other apps' audio moved to Playback and no longer requires Experimental. Autosave and the global hotkey now require Experimental; disabling it preserves their saved settings but turns them off.
+- **Landing page refreshed** — a new design includes an audio introduction with synchronized captions and a supported-engines carousel. The Listen demo ends when its audio finishes.
 - **Edge requests share a process-wide cooldown** — `Retry-After` is honored (capped at five minutes) or an escalating 5/10/20 s ladder capped at 60 s applies; request starts are spaced at least one second apart, and 403/429 refusals are never retried. Failures surface as safe status messages, not raw tracebacks.
 - **Clipboard truncation warns wherever you are** — the shortened-text notice is now a global toast, not a Play-page-only banner.
 - **Kokoro streams while it synthesizes** — the wrapper now yields one chunk per native inference window instead of joining the whole fragment, so a warm Kokoro daemon starts speaking after the first window instead of after the last. Captions arrive as a cumulative snapshot per window, the same way Piper streams per sentence (from the X-CopySpeak fork).

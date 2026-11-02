@@ -141,13 +141,20 @@
       </p>
       {#each CLOUD_ENGINES as entry (entry.id)}
         <button
-          class="block w-full rounded-md px-2 py-1.5 text-start text-sm transition-colors {selectedId ===
+          class="flex w-full items-center justify-between gap-1 rounded-md px-2 py-1.5 text-start text-sm transition-colors {selectedId ===
           entry.id
             ? 'border-primary bg-primary/10 text-primary border-s-2 font-medium'
             : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
           onclick={() => (selectedId = entry.id)}
         >
           {$_(`engine.${entry.id}.title`)}
+          {#if entry.credentialTarget && envKeySources[entry.credentialTarget]}
+            <span
+              class="rounded bg-emerald-500/10 px-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
+              title={$_("engine.envKeyDialog.title")}
+              aria-label={$_("engine.envKeyDialog.title")}>.env</span
+            >
+          {/if}
         </button>
       {/each}
       <p

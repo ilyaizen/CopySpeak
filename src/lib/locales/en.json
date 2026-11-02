@@ -621,7 +621,7 @@
     "local": "Local",
     "docs": "Docs",
     "noCredentialNeeded": "No API key required.",
-    "daemonIdleTimeout": "Idle shutdown",
+    "daemonIdleTimeout": "Idle Shutdown",
     "daemonIdleTimeoutHint": "Shut down a resident local engine after this long without a read, freeing its memory. The next read restarts it (~cold start).",
     "installerSmokeTestHint": "Install, then press Test to verify the engine synthesizes audio.",
     "installCuda": "Install NVIDIA GPU runtime",

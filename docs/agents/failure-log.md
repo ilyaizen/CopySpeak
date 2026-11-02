@@ -123,7 +123,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 - Drive tray playback status from the webview store, never `AudioPlayer`: Rodio is only a safety net, and refreshing the tray from its callbacks must not re-lock the player. Preserve the branded icon’s color and artwork; macOS template mode strips color.
 - Resize Windows tray artwork to the system small-icon dimensions with alpha-aware filtering before passing it to Tauri: Windows' native downscale from 512px produces jagged edges.
-- An asset-only icon swap does not re-embed the exe icon: tauri-build's generated `.rc` references `icons/icon.ico` by path, so cargo relinks without recompiling the resource. Touch `src-tauri/build.rs` (or `cargo clean -p copyspeak`) to force the resource rebuild, then verify by pixel-comparing `ExtractAssociatedIcon` output against the new ico's 32px frame. The tray's `include_bytes!` icons re-embed on the same rebuild; the installed `%LOCALAPPDATA%` app only changes on the next release install.
+- Keep `icons/icon.ico` in the Cargo build script's `rerun-if-changed` inputs: tauri-build's `.rc` references it by path, so without that input a changed asset leaves stale exe resources. Verify the embedded 32px frame against the source after rebuilding; the installed app changes only on the next release install.
 - Strip trailing whitespace when installing a designer-exported SVG verbatim: `git diff --check` fails on QuiverAI/Arrow-exported indentation lines, and whitespace-only stripping is render-safe (verify with a byte-compare of a re-render).
 
 ## Release
@@ -149,7 +149,6 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Pass the current locale direction to Bits UI tooltip content: its floating wrapper defaults to `dir="ltr"` even when the document is RTL, scrambling mixed Hebrew or Arabic and Latin text.
 - Gate hidden startup and close-to-tray on an actually available tray; create the main window hidden, show first-run setup explicitly, and use one unminimize/show/focus helper for tray and second-instance reopening. Propagate OS autostart registration failures before persisting the new preference.
 - Force the last visible settings section active at the bottom of the scroll container: a short last section never reaches the scroll-spy reading band, and the layout `<main>` scrolls, not the window, so capture scroll events on the document.
-
 - Spread ground parallax across the full scroll range while keeping the texture within its overscan; clamping raw scroll distance makes it stop moving early on long Settings pages.
 
 ## Experimental gating
