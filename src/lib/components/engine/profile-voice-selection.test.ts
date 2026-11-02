@@ -6,7 +6,15 @@ import { testConfig } from "#lib/test-fixtures/app-config";
 import type { AppConfig, EngineCatalogEntry, VoiceCatalogEntry } from "#lib/types";
 
 function voice(id: string, label: string): VoiceCatalogEntry {
-  return { id, label, language: null, description: null, gender: null, preview_url: null };
+  return {
+    id,
+    label,
+    language: null,
+    description: null,
+    gender: null,
+    preview_url: null,
+    tags: []
+  };
 }
 
 function entry(engine: string, voices: VoiceCatalogEntry[], refresh = false): EngineCatalogEntry {
@@ -141,6 +149,27 @@ describe("profile voice selection", () => {
     // The failed refresh did not wipe the list.
     expect(view.getByRole("option", { name: /My Clone \(cached\)/ })).toBeTruthy();
     expect(config.tts.profiles[0].voice).toBe("my-clone-id");
+    view.unmount();
+  });
+
+  it("shows a first-fetch failure in the sheet when it opens", async () => {
+    refreshError = "Failed to fetch voices: HTTP error: 401";
+    const config = configWith("elevenlabs", "premade-1", "Rachel");
+    const view = render(ProfileManager, { localConfig: config });
+    await waitFor(() => expect(calls).toContain("list_tts_voices"));
+    await fireEvent.click(await waitFor(() => view.getByRole("button", { name: /Rachel/ })));
+    await waitFor(() => expect(document.body.textContent).toContain("HTTP error: 401"));
+    view.unmount();
+  });
+
+  it("moves focus to the manual id input once the sheet hands over", async () => {
+    const config = configWith("elevenlabs", "premade-1", "Rachel");
+    const view = render(ProfileManager, { localConfig: config });
+    await fireEvent.click(await waitFor(() => view.getByRole("button", { name: /Rachel/ })));
+    await fireEvent.click(view.getByRole("button", { name: /Custom \/ manual id/ }));
+    // The input is disabled until the override renders; focus must wait for that.
+    const manual = await waitFor(() => view.getByDisplayValue("premade-1"));
+    await waitFor(() => expect(document.activeElement).toBe(manual));
     view.unmount();
   });
 });

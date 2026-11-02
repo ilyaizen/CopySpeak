@@ -879,7 +879,19 @@
     "refresh": "रीफ़्रेश करें",
     "refreshFailed": "रीफ़्रेश नहीं हो सका: {error}",
     "notInList": "सूची में नहीं",
-    "noMatch": "“{query}” से मेल खाती कोई आवाज़ नहीं।"
+    "noMatch": "“{query}” से मेल खाती कोई आवाज़ नहीं।",
+    "title": "आवाज़ चुनें",
+    "count": "{shown} में से {total}",
+    "gender": "लिंग",
+    "language": "भाषा",
+    "style": "शैली",
+    "all": "सभी",
+    "noFilterMatch": "इन फ़िल्टरों से कोई आवाज़ मेल नहीं खाती।",
+    "previewPlay": "पूर्वावलोकन",
+    "previewStop": "पूर्वावलोकन रोकें",
+    "previewFailed": "यह पूर्वावलोकन नहीं चलाया जा सका।",
+    "noPreview": "इस आवाज़ का कोई पूर्वावलोकन नहीं है।",
+    "shiftEnterHint": "Shift+Enter चिह्नित आवाज़ का पूर्वावलोकन चलाता है।"
   },
   "hotkey": {
     "set": "सेट करें",

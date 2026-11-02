@@ -49,7 +49,8 @@ it("uses matching voice labels without confusing engine IDs or exposing unknown 
         language: null,
         description: null,
         gender: null,
-        preview_url: null
+        preview_url: null,
+        tags: []
       }
     ]
   };

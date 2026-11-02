@@ -69,11 +69,21 @@ pub struct CachedVoiceList {
     pub voices: Vec<VoiceCatalogEntry>,
 }
 
+/// Layout version of a stored list. Bump it when `VoiceCatalogEntry` gains a
+/// field: a serde default alone would keep old lists showing no tags until
+/// Refresh, so a version mismatch hides them and the next Profiles visit
+/// fetches again. This is a layout version, not a TTL: entries never expire
+/// by age.
+const VOICE_CACHE_SCHEMA: u32 = 1;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct StoredVoiceList {
     fetched_at_ms: i64,
     /// Fingerprint of the API key the list was fetched with.
     account: u64,
+    /// Absent in files written before versioning, so those read as 0.
+    #[serde(default)]
+    schema: u32,
     voices: Vec<VoiceCatalogEntry>,
 }
 
@@ -137,6 +147,7 @@ fn store_cached_voices(
         StoredVoiceList {
             fetched_at_ms: chrono::Utc::now().timestamp_millis(),
             account,
+            schema: VOICE_CACHE_SCHEMA,
             voices: voices.to_vec(),
         },
     );
@@ -158,7 +169,9 @@ fn load_cached_voices(path: &Path, tts: &TtsConfig) -> HashMap<String, CachedVoi
         .filter_map(|entry| {
             let key = super::helpers::engine_str(&entry.engine);
             let stored = store.get(key)?;
-            (stored.account == account_fingerprint(&entry.engine, tts)).then(|| {
+            let current = stored.schema == VOICE_CACHE_SCHEMA
+                && stored.account == account_fingerprint(&entry.engine, tts);
+            current.then(|| {
                 (
                     key.to_string(),
                     CachedVoiceList {
@@ -178,6 +191,7 @@ fn voice_entry(
     description: Option<String>,
     gender: Option<String>,
     preview_url: Option<String>,
+    tags: Vec<String>,
 ) -> VoiceCatalogEntry {
     VoiceCatalogEntry {
         id,
@@ -186,6 +200,7 @@ fn voice_entry(
         description,
         gender,
         preview_url,
+        tags,
     }
 }
 
@@ -212,6 +227,11 @@ fn fetch_provider_voices(
                             };
                             let language = label("language");
                             let gender = label("gender");
+                            // Descriptive labels double as style tags for the browser's filters.
+                            let tags = ["use_case", "descriptive", "age"]
+                                .into_iter()
+                                .filter_map(label)
+                                .collect();
                             voice_entry(
                                 voice.voice_id.clone(),
                                 voice.name.clone().unwrap_or_else(|| voice.voice_id.clone()),
@@ -219,6 +239,7 @@ fn fetch_provider_voices(
                                 voice.description.clone(),
                                 gender,
                                 voice.preview_url.clone(),
+                                tags,
                             )
                         })
                         .collect()
@@ -232,7 +253,15 @@ fn fetch_provider_voices(
                     .into_iter()
                     .map(|v| {
                         let label = v.name.unwrap_or_else(|| "Unnamed voice".into());
-                        voice_entry(v.id, label, v.language, v.description, None, None)
+                        voice_entry(
+                            v.id,
+                            label,
+                            v.language,
+                            v.description,
+                            None,
+                            None,
+                            Vec::new(),
+                        )
                     })
                     .collect()
             }),
@@ -244,7 +273,17 @@ fn fetch_provider_voices(
                     crate::tts::catalog::list_static_voices(engine),
                     voices
                         .into_iter()
-                        .map(|v| voice_entry(v.id, v.name, v.language, None, None, None))
+                        .map(|v| {
+                            voice_entry(
+                                v.id,
+                                v.name,
+                                v.language,
+                                None,
+                                v.gender,
+                                v.preview_url,
+                                v.tags,
+                            )
+                        })
                         .collect(),
                 )
             }),
@@ -254,7 +293,7 @@ fn fetch_provider_voices(
             .map(|voices| {
                 voices
                     .into_iter()
-                    .map(|v| voice_entry(v.id, v.name, v.language, None, None, None))
+                    .map(|v| voice_entry(v.id, v.name, v.language, None, None, None, Vec::new()))
                     .collect()
             }),
         TtsEngine::Mistral => crate::tts::mistral::MistralTtsBackend::new(tts.mistral.clone())
@@ -263,7 +302,7 @@ fn fetch_provider_voices(
             .map(|voices| {
                 voices
                     .into_iter()
-                    .map(|v| voice_entry(v.id, v.name, v.language, None, None, None))
+                    .map(|v| voice_entry(v.id, v.name, v.language, None, None, None, Vec::new()))
                     .collect()
             }),
         _ => Ok(crate::tts::catalog::list_static_voices(engine)),
@@ -291,7 +330,8 @@ mod tests {
 
     #[test]
     fn builtin_voices_lead_and_duplicates_are_dropped() {
-        let entry = |id: &str| voice_entry(id.into(), id.into(), None, None, None, None);
+        let entry =
+            |id: &str| voice_entry(id.into(), id.into(), None, None, None, None, Vec::new());
         let merged = with_builtin_voices(
             vec![entry("")],
             vec![entry("my-clone"), entry(""), entry("other")],
@@ -324,6 +364,7 @@ mod tests {
             None,
             None,
             None,
+            Vec::new(),
         )]
     }
 
@@ -381,6 +422,23 @@ mod tests {
 
         let cached = load_cached_voices(&path, &tts);
         assert!(cached.contains_key("xai") && cached.contains_key("mistral"));
+        let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn cache_written_before_schema_versioning_is_hidden() {
+        // Shape of a file from before `schema` and `tags` existed: the list
+        // parses (tags default), but it must not be shown as current.
+        let path = temp_cache("old-schema");
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        let tts = tts_with_xai_key("key-a");
+        let account = account_fingerprint(&TtsEngine::Xai, &tts);
+        let old = format!(
+            r#"{{"xai":{{"fetched_at_ms":1,"account":{},"voices":[{{"id":"eve","label":"Eve","language":null,"description":null,"gender":null,"preview_url":null}}]}}}}"#,
+            account
+        );
+        std::fs::write(&path, old).unwrap();
+        assert!(load_cached_voices(&path, &tts).is_empty());
         let _ = std::fs::remove_dir_all(path.parent().unwrap());
     }
 

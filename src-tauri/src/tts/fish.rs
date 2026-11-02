@@ -113,6 +113,8 @@ impl FishTtsBackend {
 
 /// Parse a `/model` page into voices, dropping models tagged
 /// `character-voice` (impressions and personas, not normal narration voices).
+/// The preview is the first sample clip with an audio URL, and `gender` is
+/// the `male`/`female` tag: Fish has no separate gender field.
 fn parse_model_page(body: &str) -> Result<Vec<Voice>, TtsError> {
     #[derive(serde::Deserialize)]
     struct ModelPage {
@@ -127,6 +129,13 @@ fn parse_model_page(body: &str) -> Result<Vec<Voice>, TtsError> {
         languages: Vec<String>,
         #[serde(default)]
         tags: Vec<String>,
+        #[serde(default)]
+        samples: Vec<ModelSample>,
+    }
+    #[derive(serde::Deserialize)]
+    struct ModelSample {
+        #[serde(default)]
+        audio: Option<String>,
     }
 
     let page: ModelPage = serde_json::from_str(body)
@@ -135,11 +144,22 @@ fn parse_model_page(body: &str) -> Result<Vec<Voice>, TtsError> {
         .items
         .into_iter()
         .filter(|m| !m.tags.iter().any(|t| t == "character-voice"))
-        .map(|m| Voice {
-            id: m.id,
-            name: m.title,
-            language: m.languages.into_iter().next(),
-            default: None,
+        .map(|m| {
+            let gender = m
+                .tags
+                .iter()
+                .find(|t| t.as_str() == "male" || t.as_str() == "female")
+                .cloned();
+            let preview_url = m.samples.iter().find_map(|s| s.audio.clone());
+            Voice {
+                id: m.id,
+                name: m.title,
+                language: m.languages.into_iter().next(),
+                default: None,
+                gender,
+                preview_url,
+                tags: m.tags,
+            }
         })
         .collect())
 }
@@ -437,6 +457,28 @@ mod tests {
         let ids: Vec<&str> = voices.iter().map(|v| v.id.as_str()).collect();
         assert_eq!(ids, ["a", "c"]);
         assert_eq!(voices[0].language.as_deref(), Some("en"));
+    }
+
+    #[test]
+    fn model_page_maps_gender_tags_and_first_sample_audio() {
+        // Shape from a live `/model?licensed=true` page (2026-11-02): samples
+        // carry `audio` URLs; the first sample may have none.
+        let body = r#"{"items":[
+            {"_id":"a","title":"Calm Narrator","languages":["en"],
+             "tags":["female","narration","calm"],
+             "samples":[{"audio":null,"text":"x"},{"audio":"https://cdn.example/a.mp3","text":"y"}]},
+            {"_id":"b","title":"No Sample","languages":["ja"],"tags":["male"],"samples":[]}
+        ]}"#;
+        let voices = parse_model_page(body).expect("parses");
+        assert_eq!(voices.len(), 2);
+        assert_eq!(voices[0].gender.as_deref(), Some("female"));
+        assert_eq!(
+            voices[0].preview_url.as_deref(),
+            Some("https://cdn.example/a.mp3")
+        );
+        assert_eq!(voices[0].tags, ["female", "narration", "calm"]);
+        assert_eq!(voices[1].gender.as_deref(), Some("male"));
+        assert_eq!(voices[1].preview_url, None);
     }
 
     #[test]

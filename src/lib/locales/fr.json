@@ -879,7 +879,19 @@
     "refresh": "Actualiser",
     "refreshFailed": "Échec de l’actualisation : {error}",
     "notInList": "Absente de la liste",
-    "noMatch": "Aucune voix ne correspond à « {query} »."
+    "noMatch": "Aucune voix ne correspond à « {query} ».",
+    "title": "Choisir une voix",
+    "count": "{shown} sur {total}",
+    "gender": "Genre",
+    "language": "Langue",
+    "style": "Style",
+    "all": "Toutes",
+    "noFilterMatch": "Aucune voix ne correspond à ces filtres.",
+    "previewPlay": "Aperçu",
+    "previewStop": "Arrêter l’aperçu",
+    "previewFailed": "Impossible de lire cet aperçu.",
+    "noPreview": "Cette voix n’a pas d’aperçu.",
+    "shiftEnterHint": "Maj+Entrée écoute la voix en surbrillance."
   },
   "hotkey": {
     "set": "Définir",

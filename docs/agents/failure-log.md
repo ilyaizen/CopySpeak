@@ -64,6 +64,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Make any Tauri command that calls a provider `async` and run the blocking backend call in `tauri::async_runtime::spawn_blocking`, with the config lock released first: a sync `#[tauri::command]` runs on the main thread, so `list_tts_voices` froze the window for an untimed fetch while holding the config mutex. Bound provider voice-list requests with `tts::http::voice_list_client()`.
 - Emote-tag support is per (engine, model) pair in `tts/catalog.rs::supports_emote_tags`, not per engine — `eleven_v3_conversational` and Fish `drama-3` stay excluded until someone listens to a tagged read on them.
 - Clamp provider WAV headers with `audio/wav.rs::clamp_chunk_sizes_to_file` before ANY in-app decode, not just duration math: xAI ships `data` = `i32::MAX` and a sign-bit-set RIFF size, Fish ships `0xFFFFFF00`; browsers clamp and play fine, but rodio's symphonia decoder trusts the field and every fragment concat of such a provider dies with "end of stream" (single-fragment reads never decode, which hides the bug). xAI clamps at the source; concat_speech clamps every fragment.
+- Bump `VOICE_CACHE_SCHEMA` in `commands/tts/voices.rs` whenever `VoiceCatalogEntry` gains a field: a serde default alone keeps old cached lists showing no tags until Refresh, while a version mismatch makes the next Profiles visit fetch again.
 
 ## Browser companion
 
@@ -141,6 +142,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 - A committed bun.lock applies on fresh install even when a stale local node_modules hides the break: svelte-check 4.7.7 rejects `$props<T>()` type arguments, so type props with an `interface Props` and `let x: Props = $props()` instead.
 - `vp check`'s anti-slop `no-runtime-typeof` rejects a `typeof` branch on a value union: coerce at the call (`String(value ?? "")`) or parse the value at its I/O boundary.
+- Stub `Element.prototype.scrollIntoView`, `HTMLMediaElement.prototype.play` and `pause` in component tests: jsdom does not implement scrolling or media playback.
 
 ## Settings
 

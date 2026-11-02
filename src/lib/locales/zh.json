@@ -879,7 +879,19 @@
     "refresh": "刷新",
     "refreshFailed": "刷新失败：{error}",
     "notInList": "不在列表中",
-    "noMatch": "没有与“{query}”匹配的语音。"
+    "noMatch": "没有与“{query}”匹配的语音。",
+    "title": "选择语音",
+    "count": "{shown} / {total}",
+    "gender": "性别",
+    "language": "语言",
+    "style": "风格",
+    "all": "全部",
+    "noFilterMatch": "没有符合这些筛选条件的语音。",
+    "previewPlay": "试听",
+    "previewStop": "停止试听",
+    "previewFailed": "无法播放此试听。",
+    "noPreview": "该语音没有试听。",
+    "shiftEnterHint": "Shift+Enter 试听高亮的语音。"
   },
   "hotkey": {
     "set": "设置",

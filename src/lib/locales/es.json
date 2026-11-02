@@ -888,7 +888,19 @@
     "refresh": "Actualizar",
     "refreshFailed": "No se pudo actualizar: {error}",
     "notInList": "No está en la lista",
-    "noMatch": "Ninguna voz coincide con «{query}»."
+    "noMatch": "Ninguna voz coincide con «{query}».",
+    "title": "Elegir una voz",
+    "count": "{shown} de {total}",
+    "gender": "Género",
+    "language": "Idioma",
+    "style": "Estilo",
+    "all": "Todas",
+    "noFilterMatch": "Ninguna voz coincide con estos filtros.",
+    "previewPlay": "Vista previa",
+    "previewStop": "Detener vista previa",
+    "previewFailed": "No se pudo reproducir esta vista previa.",
+    "noPreview": "Esta voz no tiene vista previa.",
+    "shiftEnterHint": "Mayús+Intro reproduce la voz resaltada."
   },
   "hotkey": {
     "set": "Definir",

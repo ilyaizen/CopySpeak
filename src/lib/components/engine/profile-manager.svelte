@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { untrack } from "svelte";
+  import { tick, untrack } from "svelte";
   import { _ } from "svelte-i18n";
   import { Button } from "#lib/components/ui/button/index.js";
   import {
@@ -24,7 +24,7 @@
   } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
   import ProfileExportDialog from "./profile-export-dialog.svelte";
-  import VoicePicker from "./voice-picker.svelte";
+  import VoiceBrowser from "./voice-browser.svelte";
   import { findSetupEntry } from "./engine-meta";
   import { choicesWithCurrent } from "./select-choices";
   import type {
@@ -819,7 +819,7 @@
 
         {#if showPicker}
           <SettingRow label={$_("common.voice")} tooltip={$_("profiles.voiceTooltip")}>
-            <VoicePicker
+            <VoiceBrowser
               voices={activeVoiceCatalog}
               value={active.voice}
               valueLabel={active.voice_label}
@@ -833,7 +833,8 @@
               onrefresh={() => refreshVoices(active.engine)}
               onmanual={() => {
                 manualOverride = true;
-                manualRef?.focus();
+                // The input is disabled until this update renders, so focus after it.
+                tick().then(() => manualRef?.focus());
               }}
             />
           </SettingRow>

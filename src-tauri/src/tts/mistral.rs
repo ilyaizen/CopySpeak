@@ -224,6 +224,9 @@ impl MistralTtsBackend {
                     name: entry.name.unwrap_or(entry.id),
                     language: entry.languages.into_iter().next(),
                     default: None,
+                    gender: None,
+                    preview_url: None,
+                    tags: Vec::new(),
                 });
             }
             next_token = page.next_page_token.filter(|t| !t.trim().is_empty());

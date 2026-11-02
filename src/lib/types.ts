@@ -227,6 +227,8 @@ export interface VoiceCatalogEntry {
   description: string | null;
   gender: string | null;
   preview_url: string | null;
+  /** Style and trait tags from the provider (`narration`, `calm`, …). */
+  tags: string[];
 }
 
 export interface EngineCatalogEntry {

@@ -888,7 +888,19 @@
     "refresh": "Refresh",
     "refreshFailed": "Couldn't refresh: {error}",
     "notInList": "Not in list",
-    "noMatch": "No voices match “{query}”."
+    "noMatch": "No voices match “{query}”.",
+    "title": "Choose a voice",
+    "count": "{shown} of {total}",
+    "gender": "Gender",
+    "language": "Language",
+    "style": "Style",
+    "all": "All",
+    "noFilterMatch": "No voices match these filters.",
+    "previewPlay": "Preview",
+    "previewStop": "Stop preview",
+    "previewFailed": "Couldn't play this preview.",
+    "noPreview": "This voice has no preview.",
+    "shiftEnterHint": "Shift+Enter previews the highlighted voice."
   },
   "hotkey": {
     "set": "Set",

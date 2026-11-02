@@ -888,7 +888,19 @@
     "refresh": "רענון",
     "refreshFailed": "הרענון נכשל: {error}",
     "notInList": "לא ברשימה",
-    "noMatch": "אין קולות שתואמים ל־„{query}”."
+    "noMatch": "אין קולות שתואמים ל־„{query}”.",
+    "title": "בחר קול",
+    "count": "{shown} מתוך {total}",
+    "gender": "מין",
+    "language": "שפה",
+    "style": "סגנון",
+    "all": "הכול",
+    "noFilterMatch": "אין קולות שתואמים למסננים האלה.",
+    "previewPlay": "האזנה מקדימה",
+    "previewStop": "עצור האזנה מקדימה",
+    "previewFailed": "לא ניתן היה להפעיל את ההאזנה המקדימה.",
+    "noPreview": "לקול הזה אין האזנה מקדימה.",
+    "shiftEnterHint": "Shift+Enter מפעיל את ההאזנה המקדימה לקול המסומן."
   },
   "hotkey": {
     "set": "הגדר",

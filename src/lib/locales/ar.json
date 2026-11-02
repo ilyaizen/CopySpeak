@@ -879,7 +879,19 @@
     "refresh": "تحديث",
     "refreshFailed": "تعذر التحديث: {error}",
     "notInList": "غير موجود في القائمة",
-    "noMatch": "لا توجد أصوات تطابق «{query}»."
+    "noMatch": "لا توجد أصوات تطابق «{query}».",
+    "title": "اختر صوتًا",
+    "count": "{shown} من {total}",
+    "gender": "الجنس",
+    "language": "اللغة",
+    "style": "الأسلوب",
+    "all": "الكل",
+    "noFilterMatch": "لا توجد أصوات تطابق هذه المرشحات.",
+    "previewPlay": "معاينة",
+    "previewStop": "إيقاف المعاينة",
+    "previewFailed": "تعذّر تشغيل هذه المعاينة.",
+    "noPreview": "لا تتوفر معاينة لهذا الصوت.",
+    "shiftEnterHint": "Shift+Enter يشغّل معاينة الصوت المحدد."
   },
   "hotkey": {
     "set": "تعيين",

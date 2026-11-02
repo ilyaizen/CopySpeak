@@ -219,6 +219,9 @@ impl XaiTtsBackend {
                 name: v.name,
                 language: v.language,
                 default: None,
+                gender: None,
+                preview_url: None,
+                tags: Vec::new(),
             })
             .collect())
     }
