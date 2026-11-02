@@ -1,58 +1,53 @@
-// Generated from docs_internal/elevenlabs-chris-261101-2052.wav.captions.json (per-character
+// Generated from docs_internal/elevenlabs-will-261102-0759.wav.captions.json (per-character
 // timings grouped into words). Audio: static/landing/intro.mp3. Regenerate both together.
 export const INTRO_AUDIO = "/landing/intro.mp3";
 
 export type IntroWord = { text: string; start: number; end: number };
 
-/** One entry per poem line; times are milliseconds into the audio. */
+/** One entry per display line; times are milliseconds into the audio. */
 export const INTRO_LINES: IntroWord[][] = [
   [
-    { text: "To", start: 240, end: 320 },
-    { text: "be,", start: 400, end: 960 },
-    { text: "or", start: 1200, end: 1360 },
-    { text: "not", start: 1440, end: 1600 },
-    { text: "to", start: 1680, end: 1760 },
-    { text: "be,", start: 1840, end: 2640 },
-    { text: "that", start: 2720, end: 2880 },
-    { text: "is", start: 2960, end: 3040 },
-    { text: "the", start: 3080, end: 3120 },
-    { text: "question:", start: 3200, end: 4560 }
+    { text: "The", start: 240, end: 400 },
+    { text: "time", start: 480, end: 720 },
+    { text: "has", start: 800, end: 880 },
+    { text: "come", start: 960, end: 1200 },
+    { text: "to", start: 1280, end: 1440 },
+    { text: "stop", start: 1520, end: 1840 },
+    { text: "turning", start: 1920, end: 2160 },
+    { text: "away", start: 2240, end: 2560 },
+    { text: "from", start: 2640, end: 2800 },
+    { text: "the", start: 2840, end: 2880 },
+    { text: "mugging", start: 2960, end: 3280 },
+    { text: "on", start: 3320, end: 3360 },
+    { text: "the", start: 3440, end: 3520 },
+    { text: "corner,", start: 3600, end: 4480 },
+    { text: "the", start: 4560, end: 4720 },
+    { text: "beggar", start: 4800, end: 5040 },
+    { text: "on", start: 5120, end: 5200 },
+    { text: "the", start: 5240, end: 5280 },
+    { text: "street.", start: 5360, end: 6040 }
   ],
   [
-    { text: "Whether", start: 4640, end: 4800 },
-    { text: "'tis", start: 4880, end: 5120 },
-    { text: "nobler", start: 5200, end: 5520 },
-    { text: "in", start: 5560, end: 5600 },
-    { text: "the", start: 5680, end: 5720 },
-    { text: "mind", start: 5760, end: 6160 },
-    { text: "to", start: 6280, end: 6400 },
-    { text: "suffer", start: 6440, end: 6720 }
-  ],
-  [
-    { text: "The", start: 6840, end: 6960 },
-    { text: "slings", start: 7040, end: 7360 },
-    { text: "and", start: 7440, end: 7520 },
-    { text: "arrows", start: 7600, end: 8000 },
-    { text: "of", start: 8040, end: 8080 },
-    { text: "outrageous", start: 8120, end: 8800 },
-    { text: "fortune,", start: 8880, end: 9920 }
-  ],
-  [
-    { text: "Or", start: 10000, end: 10080 },
-    { text: "to", start: 10120, end: 10160 },
-    { text: "take", start: 10240, end: 10400 },
-    { text: "arms", start: 10480, end: 10800 },
-    { text: "against", start: 10960, end: 11120 },
-    { text: "a", start: 11240, end: 11360 },
-    { text: "sea", start: 11440, end: 11520 },
-    { text: "of", start: 11600, end: 11760 },
-    { text: "troubles", start: 11800, end: 12560 }
-  ],
-  [
-    { text: "And", start: 12640, end: 12720 },
-    { text: "by", start: 12760, end: 12800 },
-    { text: "opposing", start: 12880, end: 13520 },
-    { text: "end", start: 13640, end: 13760 },
-    { text: "them.", start: 13880, end: 14240 }
+    { text: "It", start: 6400, end: 6440 },
+    { text: "is", start: 6480, end: 6640 },
+    { text: "no", start: 6720, end: 6800 },
+    { text: "longer", start: 6880, end: 7200 },
+    { text: "necessary", start: 7520, end: 7840 },
+    { text: "to", start: 7920, end: 8000 },
+    { text: "look", start: 8080, end: 8160 },
+    { text: "nervously", start: 8240, end: 8720 },
+    { text: "away,", start: 8960, end: 9520 },
+    { text: "repeating", start: 9600, end: 9920 },
+    { text: "the", start: 9960, end: 10000 },
+    { text: "mantra:", start: 10080, end: 10960 },
+    { text: '"I', start: 11080, end: 11200 },
+    { text: "can't", start: 11280, end: 11520 },
+    { text: "solve", start: 11680, end: 11840 },
+    { text: "all", start: 11920, end: 12080 },
+    { text: "the", start: 12160, end: 12240 },
+    { text: "problems", start: 12320, end: 12720 },
+    { text: "of", start: 12760, end: 12800 },
+    { text: "the", start: 12840, end: 12880 },
+    { text: 'world."', start: 12960, end: 13680 }
   ]
 ];

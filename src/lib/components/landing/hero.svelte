@@ -11,7 +11,7 @@
 
   type Phase = "idle" | "selected" | "copy1" | "copy2" | "speaking" | "done";
 
-  // Each word carries its index in the whole poem, so highlighting and the caption window
+  // Each word carries its index in the whole intro, so highlighting and the caption window
   // run across line breaks.
   let count = 0;
   const LINES = INTRO_LINES.map((line) => line.map((w) => ({ ...w, index: count++ })));
@@ -54,7 +54,7 @@
     return i;
   }
 
-  // Copied highlight: one Range over the whole poem, so spaces and wrapped lines paint like a
+  // Copied highlight: one Range over the whole intro, so spaces and wrapped lines paint like a
   // real selection. Per-word backgrounds leave gaps; .sel is only the fallback without the API.
   // Resolved in onMount: select() only runs client-side, after mount.
   let highlights: HighlightRegistry | null = null;
@@ -89,13 +89,15 @@
 
   // Speaking clock: the audio's own position when listening, wall time for the silent loop.
   // Both read the same caption timings, so the silent demo keeps the recording's rhythm.
-  function speak(clock: () => number, onEnd: () => void) {
+  // Each caller decides when speaking ends: the silent loop after a tail past the last word,
+  // Listen when the audio itself ends. A clip shorter than that tail never reaches it.
+  function speak(clock: () => number, done: (ms: number) => boolean, onEnd: () => void) {
     select(false);
     phase = "speaking";
     const tick = () => {
       const ms = clock();
       live = indexAt(ms);
-      if (ms >= LAST_END + 300) onEnd();
+      if (done(ms)) onEnd();
       else frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
@@ -126,7 +128,11 @@
     });
     at(2500, () => {
       const t0 = performance.now();
-      speak(() => performance.now() - t0, finish);
+      speak(
+        () => performance.now() - t0,
+        (ms) => ms >= LAST_END + 300,
+        finish
+      );
     });
   }
 
@@ -167,6 +173,7 @@
     }
     speak(
       () => audio.currentTime * 1000,
+      () => audio.ended,
       () => {
         listening = false;
         if (paused) stop();
@@ -249,7 +256,7 @@
 </script>
 
 <!-- Copy-twice-then-speak illustration. The silent loop runs on the real recording's caption
-     timings; Listen plays that recording with the same word highlighting. The Shakespeare
+     timings; Listen plays that recording with the same word highlighting. The intro
      lines and the chip states are art, not UI copy, so they stay English in every locale. -->
 <div class="wrap">
   <section class="hero">
