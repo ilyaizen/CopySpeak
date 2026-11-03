@@ -20,15 +20,16 @@ The former `-black`/`-white` file pairs were deleted along with the
 **Optimization (2026-11-01): all shipped files are derived from the official
 artwork, and none is a byte-exact copy anymore.** Every SVG went through svgo
 4.1.0 (`--multipass`, default preset, `removeViewBox` disabled so mask sizing
-keeps its viewBox, LF line endings). The official bytes each file derives from
+keeps its viewBox, LF line endings), except the 2026-11-03 OpenAI correction,
+which retains the source paths and their composition transforms. The official bytes each file derives from
 stay pinned in Verification table A; each shipped file's post-transform hash
 is in table B. Ink geometry was re-measured in a real browser after the pass
-(`getBBox`): every mark's ink still matches its viewBox (see Ink verification).
+(`getBBox`); the corrected OpenAI lockup was re-measured separately (see Ink verification).
 
 ## Marks shipped
 
 - **OpenAI** (`openai.svg`; **one combined lockup file**, rendered at
-  80.35×16 px). Source: the official kit
+  80.35×17.66 px). Source: the official kit
   `https://cdn.openai.com/brand/openai-logos.zip`, which the brand page's
   "Download logos" control serves after its "By using our logos, you agree to
   our Marks usage terms" checkbox; files `OAI_OpenAI-Blossom_Black.svg` and
@@ -36,12 +37,15 @@ is in table B. Ink geometry was re-measured in a real browser after the pass
   direction): the Blossom and the wordmark are merged into a single SVG** —
   the earlier side-by-side `<img>` pair (32×32 Blossom box + 12 px gap + 85×38
   wordmark box) read as two separated marks. The merge scales the wordmark's
-  ink ×1.5573 so its ink height equals the Blossom's ink height (354.674
-  viewBox units, previously 15.85 vs 15.97 px — unequal), places it after a
-  106.4-unit ink-to-ink gap (0.30 × ink height), and crops the viewBox to the
-  combined ink (1781.13×354.67): the mark fills its box, so no ink-center
-  nudge is needed. The owner-baked clear space inside the old wordmark file
-  was removed by the crop; the strip's own layout clear space exceeds it
+  ink ×1.5573 so its full ink height equals the Blossom's ink height (354.674
+  viewBox units) and places it after a 106.4-unit ink-to-ink gap (0.30 × ink
+  height). The 2026-11-03 correction translates both components by their
+  measured ink origins and centers the O's 180.5-unit cap-height ink band
+  against the Blossom; the p descender extends 36.79 units below it. The
+  resulting viewBox is 1781.13×391.47; the render box keeps the Blossom at
+  16 px. Previous baked artwork aligned their tops and cropped the p
+  descender at the Blossom's bottom. The owner-baked clear space inside the old
+  wordmark file was removed by the crop; the strip's own layout clear space exceeds it
   (32 px gaps, 16 px vertical padding vs ~12.8 px horizontal / ~11 px
   vertical equivalents at render scale). Ink measured 847.66×227.75 (wordmark,
   1212×542 viewBox) and 354.67×354.67 (Blossom, 716×716 viewBox, centered) in
@@ -60,8 +64,8 @@ is in table B. Ink geometry was re-measured in a real browser after the pass
   "exactly as provided" by construction; it stays because the provider row
   directly references the supported OpenAI engine — it is not a partnership
   lockup (co-branded lockups do require bilateral approval, and none is
-  used). svgo then baked the transform into the path data (single path,
-  render-equivalent; geometry re-verified, see Ink verification). Permission
+  used). The corrected SVG retains separate transformed source paths; live
+  geometry verification is recorded below. Permission
   route: partnercomms@openai.com; legal: legal@openai.com.
 - **ElevenLabs** (`elevenlabs.svg`; 694×90 viewBox, 16 px render height).
   Source: [brand page](https://elevenlabs.io/brand), official file
@@ -341,7 +345,7 @@ gemini.svg      3040 bytes  bf43ee08a70bc21ea65ae05fd01b2109da4fb3c8f325382ad72f
 kitten.svg     11088 bytes  6939b1db05661e5206fe821e7b4e3657e24dc64579ab44bf25c391125489530f
 mai.svg         1158 bytes  cfa44c6ea30cad5db4d86955e6ac9e0e0e18a9ae08985ccce9ba0549226abee2
 mistral.svg     2629 bytes  43cbcfa800aaf922ade071e1158a39dc002975652193efe7e4e97b8cabbb6657
-openai.svg      3324 bytes  2fc6085ca46be6f548e34bb4bba2dc0185b88b2e8c0f1d3d41f8a974416141b9
+openai.svg      4517 bytes  9bd7e251d218b2a715a586701fa5d488f735233b702357d67240df8442f48616
 piper.svg       3003 bytes  2b90b74d95d3740bb8d129613d9dcf1e37420dbcf966eee9b73e2366712f8645
 pocket.svg      4587 bytes  fe03fa84b2495cfcab3b26821b2394216a4811c16f8b9acd5dad4882f9afd5ee
 qwen.svg        5815 bytes  05b4ae2950890b5467bbcc6ebb1c013e8cb662de781124d4ef826f3c38e7f495
@@ -353,8 +357,12 @@ mark's ink matches its viewBox within ≤0.01 units, so the render boxes in
 `providers.svelte` deliver ~16 px ink: cartesia 1102×156 tight; elevenlabs
 694×90 tight; fish 1284.6×160.9 in [118,119,1285,161]; gemini 288×64.9
 tight; mai 54.46×24.16 in 56×26 (hence the 37.1×17.2 box); mistral
-91.06×16.05 in 98×22; openai 1781.13×354.68 tight (= viewBox; composed
-width = Blossom ink + 106.4 gap + scaled wordmark ink, no overlap); xai
+91.06×16.05 in 98×22; openai's corrected composition measures Blossom
+354.674×354.674 at (0, 0), wordmark 1320.051×354.674 at (461.076, 36.791),
+and O cap-height 281.092×281.092 at (461.076, 36.791). The browser measured
+each source path with `getBBox` and applied its CTM; cap and Blossom centers
+align, the ink gap is 0.30× Blossom height, and the descender fits the
+1781.127×391.465 viewBox. xai
 831.48×317.7 in 834×318. Offline row: kitten has a 5583.5×1000 viewBox,
 its cat translated from the source ink-box origin before scaling. A browser
 raster probe (1565×280) shows the cat ink spanning the full height and the
@@ -364,11 +372,9 @@ has a 0.35× cat-ink-height gap from the cat's ink box; piper
 114.36×35.69 tight (= viewBox); qwen 853×139 tight (= viewBox, raster
 wrapper, wordmark line of the official engine logo); pocket 643×100 tight
 (= viewBox, raster wrapper). The revised kitten and the merged single-line
-carousel await owner review (kitten at 18 px) in both themes. The pre-svgo combined
-OpenAI build is regenerated
-deterministically from the kit files by
-`%LOCALAPPDATA%/hermes/cache/scratch/logo-downloads/build-openai.py` (24 h
-pruned; re-create from the recipe in that script's header). The offline-row
+carousel await owner review (kitten at 18 px) in both themes. The corrected
+OpenAI lockup was measured with a fresh getBBox probe; owner visual review
+remains pending. The offline-row
 builds are regenerated the same way by
 `…/logo-downloads/offline/build-offline.py` and
 `…/logo-downloads/offline/build-kitten-lockup.py` (sources re-downloadable

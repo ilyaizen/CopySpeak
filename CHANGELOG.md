@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Post-processing is set per profile** — each profile has its own on/off switch and template. On upgrade, every profile inherits your previous global setting.
 - **Stop from outside the app** — `POST /stop` on the control server and `copyspeak stop` halt playback the same way the Stop button does. Hermes uses it to cut speech off when you interrupt, which also releases a blocked `speak --wait`.
 - **Voice browser** — search and filter voices by available metadata, listen to provider previews, and select with the keyboard. Voice lists load from a per-engine, per-key cache; Refresh fetches the latest list and shows provider errors instead of silently falling back.
-- **More onboarding choices** — first-run setup now offers ElevenLabs and Fish Audio beside the existing options, and cloud cards with a free tier are labelled "Free tier".
+- **More onboarding choices** — first-run setup now offers ElevenLabs and Fish Audio beside the existing options. Kokoro, ElevenLabs and Fish Audio are marked as recommended, Fish Audio is free through its included free model, and every card carries short copy translated into all nine languages.
 - **Edge-TTS is back** — Microsoft's free Read Aloud voices return on the fixed `edge-tts` 7.3.1 client, which moved to Microsoft's current host and handles the 403 clock-skew retry itself. Onboarding, the Engines page, About and the profile editor offer Edge again, and fresh installs get a keyless Edge fallback profile; existing configs can simply pick Edge.
 
 ### Changed
@@ -27,6 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Gemini moves off the retiring preview model** — profiles pinned to `gemini-2.5-flash-preview-tts`, which Google shuts down on 2026-11-17, or with no model set, switch to `gemini-3.8-flash-tts`. Custom model ids are kept.
 - **Keys from `.env` stay out of the UI** — the Engines page marks engines whose key comes from `.env` with a badge and shows a "from .env" placeholder instead of the key itself, and the key is never sent to the app window. Typing a key over one that comes from `.env` asks for confirmation, because the `.env` value keeps winning until you remove it and restart.
 - **Settings reorganized** — Voices is now Profiles; local engine idle shutdown and streaming moved to Advanced, and lowering other apps' audio moved to Playback and no longer requires Experimental. History and Post-processing appear only when they can take effect. Autosave, the global hotkey and the HUD now require Experimental; disabling it keeps their saved settings but turns them off.
+- **Settings layout** — Appearance is first, Import/Export follows Debug Mode, and Acknowledgments links to providers beneath their marks. About also includes the creator credit and a Buy Me a Coffee link.
+- **Language follows the system by default** — the app chooses a supported system language when none is saved, including right-to-left layout for Hebrew and Arabic. Explicitly saved languages stay unchanged.
 - **Shorter Settings copy** — descriptions that repeated a row's tooltip are gone and labels are shorter ("History" instead of "Save Reading History").
 - **Safer defaults for new configs** — ducking other apps and profile effects start off; your saved values are kept.
 - **Speed up to 2×** — the speed slider now goes to 2× instead of 1.5×.

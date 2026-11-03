@@ -71,6 +71,59 @@ async function mountSettings() {
   return view;
 }
 
+it("places appearance first and import/export after debug before acknowledgments", async () => {
+  const view = await mountSettings();
+  const general = view.container.querySelector("#general");
+  expect(general?.querySelector("h3")?.textContent?.trim()).toBe("Appearance");
+  const about = view.container.querySelector("#about");
+  if (!(about instanceof HTMLElement)) throw new Error("About section missing");
+  const debug = about.querySelector("#debug-mode");
+  if (!debug) throw new Error("Debug switch missing");
+  const importHeading = within(about).getByRole("heading", { name: "Import / Export" });
+  const acknowledgments = within(about).getByRole("heading", { name: "Acknowledgments" });
+  expect(
+    debug.compareDocumentPosition(importHeading) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  expect(
+    importHeading.compareDocumentPosition(acknowledgments) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+});
+
+it("renders linked provider names without acknowledgment tooltips", async () => {
+  const view = await mountSettings();
+  const section = view.container.querySelector('[aria-labelledby="acknowledgments-title"]');
+  if (!(section instanceof HTMLElement)) throw new Error("Acknowledgments section missing");
+  const openai = within(section).getByRole("link", { name: "OpenAI" });
+  expect(openai.getAttribute("href")).toBe(
+    "https://platform.openai.com/docs/guides/text-to-speech"
+  );
+  expect(section.querySelectorAll(".provider-mark")).toHaveLength(12);
+  expect(section.querySelectorAll("button")).toHaveLength(0);
+  for (const name of ["Kokoro", "Edge-TTS"]) {
+    const link = within(section).getByRole("link", { name });
+    const item = link.closest("li");
+    expect(item?.querySelector(".provider-text-mark")?.textContent?.trim()).toBe(name);
+  }
+  expect(within(section).getByRole("link", { name: "Microsoft" }).getAttribute("href")).toBe(
+    "https://microsoft.ai/models/mai-voice-2-1/"
+  );
+});
+
+it("shows the creator credit and support link in About", async () => {
+  const view = await mountSettings();
+  const about = view.container.querySelector("#about");
+  if (!(about instanceof HTMLElement)) throw new Error("About section missing");
+  expect(within(about).getByRole("link", { name: "Buy Me a Coffee" }).getAttribute("href")).toBe(
+    "https://www.buymeacoffee.com/ilyaizen"
+  );
+  expect(within(about).getByText(`© ${new Date().getFullYear()} Ilya Aizenberg`)).toBeTruthy();
+  const credit = within(about).getByLabelText("Made with ♥ Rust & Bots.");
+  const heart = credit.querySelector("svg");
+  expect(heart?.getAttribute("aria-hidden")).toBe("true");
+  expect(credit.textContent).not.toContain("❤️");
+  expect(credit.textContent?.trim()).toBe("Made with  Rust & Bots.");
+});
+
 it("keeps hidden-start and close-to-tray preferences but disables them without a tray", async () => {
   config.general.show_tray_icon = true;
   config.general.start_minimized = true;

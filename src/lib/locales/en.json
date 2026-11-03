@@ -288,81 +288,8 @@
       "sourceCodeDescription": "View CopySpeak on GitHub",
       "github": "GitHub",
       "acknowledgments": "Acknowledgments",
-      "openai": {
-        "title": "OpenAI TTS",
-        "description": "High-quality neural text-to-speech",
-        "detail": "CopySpeak uses OpenAI's text-to-speech API for high-quality voice synthesis."
-      },
-      "elevenlabs": {
-        "title": "ElevenLabs",
-        "description": "Advanced AI voice synthesis",
-        "detail": "Premium TTS engine with realistic voice cloning capabilities."
-      },
-      "kokoro": {
-        "title": "Kokoro TTS",
-        "description": "Open-source local TTS",
-        "detail": "Lightweight, open-source text-to-speech engine for local processing."
-      },
-      "piper": {
-        "title": "Piper",
-        "description": "Fast neural TTS",
-        "detail": "Fast, local neural text-to-speech system with low latency."
-      },
-      "cartesia": {
-        "title": "Cartesia",
-        "description": "Low-latency cloud TTS (Sonic 3.5)",
-        "detail": "Cloud API powered by the Sonic 3.5 model. Requires an API key."
-      },
-      "fish": {
-        "title": "Fish Audio",
-        "description": "Expressive cloud TTS (S2)",
-        "detail": "Cloud API powered by the Fish Audio S2 models. Requires an API key."
-      },
-      "xai": {
-        "title": "xAI",
-        "description": "Expressive cloud TTS (Grok)",
-        "detail": "Cloud API powered by xAI's TTS voices. Requires an API key."
-      },
-      "mistral": {
-        "title": "Mistral",
-        "description": "Expressive cloud TTS (Voxtral)",
-        "detail": "Cloud API powered by Mistral's Voxtral TTS model. Requires an API key."
-      },
-      "kitten": {
-        "title": "Kitten TTS",
-        "description": "Ultra-lightweight local ONNX TTS",
-        "detail": "Four selectable 25–80MB ONNX models with 8 built-in voices, optimized for CPU with optional GPU acceleration."
-      },
-      "qwen": {
-        "title": "Qwen3-TTS",
-        "description": "Multilingual local TTS",
-        "detail": "Local Qwen3-TTS CustomVoice with 9 built-in voices and optional GPU acceleration."
-      },
-      "pocket": {
-        "title": "Pocket TTS",
-        "description": "Compact local TTS",
-        "detail": "Kyutai Pocket: a 100M-parameter model built to run on the CPU, with voices in six languages."
-      },
-      "edge": {
-        "title": "Edge-TTS",
-        "description": "Microsoft Edge neural TTS (free)",
-        "detail": "Free, high-quality neural voices from Microsoft Edge's online TTS service. No API key required."
-      },
-      "google": {
-        "title": "Google Gemini TTS",
-        "description": "Google's Gemini-based cloud TTS",
-        "detail": "Cloud TTS powered by Google's Gemini models. Requires a Google AI API key."
-      },
-      "microsoft": {
-        "title": "Microsoft Foundry AI",
-        "description": "Enterprise cloud TTS via Microsoft Foundry",
-        "detail": "Enterprise-grade neural voices via Microsoft Foundry speech services. Requires an API key and endpoint."
-      },
-      "http": {
-        "title": "Custom HTTP Engine",
-        "description": "Generic HTTP/REST TTS backend",
-        "detail": "Bring-your-own-backend engine that calls any HTTP endpoint with configurable URL templates and auth."
-      },
+      "madeWith": "Made with {heart} Rust & Bots.",
+      "buyMeCoffee": "Buy Me a Coffee",
       "checkUpdates": "Check for Updates",
       "checkUpdatesTooltip": "Automatically check for new versions on startup",
       "updateStatus": "Update Status",
@@ -748,7 +675,7 @@
       "cleanup": "Cleanup failed",
       "installer": "Failed to run installer",
       "switchEngine": "Failed to switch engine",
-      "kokoroInstallFailed": "Kokoro install failed — pick another engine, or retry the install.",
+      "kokoroInstallFailed": "Kokoro install failed. Pick another engine or retry the install.",
       "kokoroInstallStart": "Kokoro install failed to start: {error}",
       "saveFailed": "Failed to save settings: {error}",
       "cleanupFailed": "Cleanup failed: {error}",
@@ -770,23 +697,38 @@
       "title": "Welcome to CopySpeak",
       "subtitle": "Configure your text-to-speech engine to get started, or skip and set it up later."
     },
-    "engineConfig": "Engine Configuration",
-    "engineDescription": "Set up your TTS engine. You can change this later in the Engine tab.",
-    "recommendation": {
-      "title": "We recommend Kitten TTS to get started",
-      "description": "Kitten TTS is a new ultra-lightweight TTS engine (25-80MB) that runs on CPU without requiring a GPU. Click the button below to install it automatically — no manual setup needed."
-    },
-    "install": "Install Kitten TTS",
-    "installing": "Installing...",
-    "complete": "Get Started",
-    "loading": "Loading configuration...",
-    "installed": "Installed!",
-    "openTerminal": "Open PowerShell terminal",
-    "checkingEngine": "Checking engine...",
-    "helpText": "You can always configure your engine later from the Engine tab.",
     "chooseEngine": "Choose your voice engine",
+    "switchAnytime": "Switch anytime in Settings.",
+    "recommended": "Recommended",
+    "noKeyNeeded": "No key needed",
+    "apiKeyInSettings": "API key in Settings",
+    "engines": {
+      "kokoro": {
+        "detail": "Natural voices, fully offline. One-time ~335 MB download."
+      },
+      "edge": {
+        "detail": "Free Microsoft voices. Nothing to install, works instantly."
+      },
+      "cartesia": {
+        "detail": "Fast premium voices. Free tier available."
+      },
+      "elevenlabs": {
+        "detail": "Premium multilingual voices. Free tier available."
+      },
+      "fish": {
+        "detail": "Expressive voices with a free model included."
+      }
+    },
+    "kokoroReady": "Kokoro is installed and ready.",
+    "kokoroInstallHint": "The download streams here. Prefer to skip it? Edge-TTS works instantly.",
+    "otherLocalEngines": "More local engines (Kitten, Qwen, Piper) can be installed later from the Engines page.",
+    "installKokoroCta": "Install Kokoro & Get Started",
+    "loading": "Loading configuration...",
+    "installing": "Installing...",
     "installingKokoro": "Installing Kokoro… (~335 MB, one time)",
-    "installFailed": "Install failed."
+    "installFailed": "Install failed.",
+    "installed": "Installed",
+    "complete": "Get Started"
   },
   "effects": {
     "title": "Audio Effects",

@@ -288,76 +288,8 @@
       "sourceCodeDescription": "CopySpeak на GitHub",
       "github": "GitHub",
       "acknowledgments": "Благодарности",
-      "openai": {
-        "title": "OpenAI TTS",
-        "description": "Качественный нейросетевой синтез речи",
-        "detail": "CopySpeak использует API синтеза речи OpenAI для качественной озвучки."
-      },
-      "elevenlabs": {
-        "title": "ElevenLabs",
-        "description": "Продвинутый ИИ-синтез голоса",
-        "detail": "Премиальный движок озвучки с реалистичным клонированием голоса."
-      },
-      "kokoro": {
-        "title": "Kokoro TTS",
-        "description": "Локальный TTS с открытым кодом",
-        "detail": "Лёгкий движок синтеза речи с открытым кодом для локальной обработки."
-      },
-      "piper": {
-        "title": "Piper",
-        "description": "Быстрый нейросетевой TTS",
-        "detail": "Быстрая локальная нейросетевая система синтеза речи с низкой задержкой."
-      },
-      "cartesia": {
-        "title": "Cartesia",
-        "description": "Облачный TTS с низкой задержкой (Sonic 3.5)",
-        "detail": "Облачный API на базе модели Sonic 3.5. Требуется API-ключ."
-      },
-      "fish": {
-        "title": "Fish Audio",
-        "description": "Выразительный облачный TTS (S2)",
-        "detail": "Облачный API на основе моделей Fish Audio S2. Требуется API-ключ."
-      },
-      "xai": {
-        "title": "xAI",
-        "description": "Выразительный облачный TTS (Grok)",
-        "detail": "Облачный API на голосах TTS от xAI. Требуется API-ключ."
-      },
-      "mistral": {
-        "title": "Mistral",
-        "description": "Выразительный облачный TTS (Voxtral)",
-        "detail": "Облачный API на модели Voxtral TTS от Mistral. Требуется API-ключ."
-      },
-      "kitten": {
-        "title": "Kitten TTS",
-        "description": "Сверхлёгкий локальный ONNX TTS",
-        "detail": "Четыре ONNX-модели на выбор (25–80 МБ) с 8 встроенными голосами, оптимизированы для CPU, есть ускорение на GPU."
-      },
-      "qwen": {
-        "title": "Qwen3-TTS",
-        "description": "Многоязычный локальный TTS",
-        "detail": "Локальный Qwen3-TTS CustomVoice с 9 встроенными голосами и необязательным ускорением на GPU."
-      },
-      "pocket": {
-        "title": "Pocket TTS",
-        "description": "Компактный локальный TTS",
-        "detail": "Kyutai Pocket: модель на 100 млн параметров для работы на CPU, с голосами на шести языках."
-      },
-      "google": {
-        "title": "Google Gemini TTS",
-        "description": "Облачный TTS Google на базе Gemini",
-        "detail": "Облачный TTS на моделях Gemini от Google. Требуется API-ключ Google AI."
-      },
-      "microsoft": {
-        "title": "Microsoft Foundry AI",
-        "description": "Корпоративный облачный TTS через Microsoft Foundry",
-        "detail": "Нейросетевые голоса корпоративного уровня через речевые сервисы Microsoft Foundry. Требуются API-ключ и эндпоинт."
-      },
-      "http": {
-        "title": "Пользовательский HTTP-движок",
-        "description": "Универсальный HTTP/REST-бэкенд TTS",
-        "detail": "Движок для собственного бэкенда: обращается к любому HTTP-эндпоинту с настраиваемыми шаблонами URL и авторизацией."
-      },
+      "madeWith": "Сделано с {heart}, Rust и ботами.",
+      "buyMeCoffee": "Угостить меня кофе",
       "checkUpdates": "Проверить обновления",
       "checkUpdatesTooltip": "Автоматически проверять наличие новых версий при запуске",
       "updateStatus": "Статус обновления",
@@ -739,7 +671,7 @@
       "cleanup": "Очистка не удалась",
       "installer": "Не удалось запустить установщик",
       "switchEngine": "Не удалось сменить движок",
-      "kokoroInstallFailed": "Не удалось установить Kokoro — выберите другой движок или повторите установку.",
+      "kokoroInstallFailed": "Не удалось установить Kokoro. Выберите другой движок или повторите установку.",
       "kokoroInstallStart": "Не удалось начать установку Kokoro: {error}",
       "saveFailed": "Не удалось сохранить настройки: {error}",
       "cleanupFailed": "Ошибка очистки: {error}",
@@ -761,23 +693,38 @@
       "title": "Добро пожаловать в CopySpeak",
       "subtitle": "Настройте движок синтеза речи, чтобы начать, или пропустите этот шаг и сделайте это позже."
     },
-    "engineConfig": "Настройка движка",
-    "engineDescription": "Настройте движок TTS. Изменить его можно позже на вкладке «Движок».",
-    "recommendation": {
-      "title": "Для начала рекомендуем Kitten TTS",
-      "description": "Kitten TTS — новый сверхлёгкий движок TTS (25–80 МБ), работающий на CPU без видеокарты. Нажмите кнопку ниже, чтобы установить его автоматически — ручная настройка не нужна."
-    },
-    "install": "Установить Kitten TTS",
-    "installing": "Установка...",
-    "complete": "Начать",
-    "loading": "Загрузка конфигурации...",
-    "installed": "Установлено!",
-    "openTerminal": "Открыть терминал PowerShell",
-    "checkingEngine": "Проверка движка...",
-    "helpText": "Движок всегда можно настроить позже на вкладке «Движок».",
     "chooseEngine": "Выберите голосовой движок",
+    "switchAnytime": "Движок можно сменить в любой момент в настройках.",
+    "recommended": "Рекомендуется",
+    "noKeyNeeded": "Без API-ключа",
+    "apiKeyInSettings": "API-ключ в настройках",
+    "engines": {
+      "kokoro": {
+        "detail": "Естественные голоса, полностью офлайн. Разовая загрузка около 335 МБ."
+      },
+      "edge": {
+        "detail": "Бесплатные голоса Microsoft. Установка не нужна, работает сразу."
+      },
+      "cartesia": {
+        "detail": "Быстрые премиум-голоса. Есть бесплатный тариф."
+      },
+      "elevenlabs": {
+        "detail": "Премиум-голоса на многих языках. Есть бесплатный тариф."
+      },
+      "fish": {
+        "detail": "Выразительные голоса, бесплатная модель включена."
+      }
+    },
+    "kokoroReady": "Kokoro установлен и готов.",
+    "kokoroInstallHint": "Загрузка отображается здесь. Хотите пропустить? Edge-TTS работает сразу.",
+    "otherLocalEngines": "Другие локальные движки (Kitten, Qwen, Piper) можно установить позже на странице движков.",
+    "installKokoroCta": "Установить Kokoro и начать",
+    "loading": "Загрузка конфигурации...",
+    "installing": "Установка...",
     "installingKokoro": "Установка Kokoro… (~335 МБ, однократно)",
-    "installFailed": "Установка не удалась."
+    "installFailed": "Установка не удалась.",
+    "installed": "Установлено",
+    "complete": "Начать"
   },
   "effects": {
     "title": "Аудиоэффекты",

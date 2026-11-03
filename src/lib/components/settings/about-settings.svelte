@@ -1,28 +1,84 @@
 <script lang="ts">
-  import { Label } from "#lib/components/ui/label/index.js";
   import { Button } from "#lib/components/ui/button/index.js";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { Badge } from "#lib/components/ui/badge/index.js";
-  import InfoTooltip from "#lib/components/ui/info-tooltip.svelte";
   import UpdateChecker from "#lib/components/update-checker.svelte";
   import { openExternal } from "#lib/utils/external-link";
   import { invoke } from "@tauri-apps/api/core";
   import { VERSION } from "#lib/version";
   import { _ } from "svelte-i18n";
   import type { AppConfig } from "#lib/types";
+  import type { Snippet } from "svelte";
 
   let {
     localConfig = $bindable(),
-    showDebugMode = false
+    showDebugMode = false,
+    children
   }: {
     localConfig: AppConfig;
     showDebugMode?: boolean;
+    children?: Snippet;
   } = $props();
+
+  const providers = [
+    {
+      name: "OpenAI",
+      url: "https://platform.openai.com/docs/guides/text-to-speech",
+      mark: "openai",
+      w: 80.35,
+      h: 17.66
+    },
+    { name: "ElevenLabs", url: "https://elevenlabs.io/docs", mark: "elevenlabs", w: 123, h: 16 },
+    { name: "Fish Audio", url: "https://docs.fish.audio/", mark: "fish", w: 128, h: 16 },
+    { name: "Cartesia", url: "https://docs.cartesia.ai/", mark: "cartesia", w: 113, h: 16 },
+    { name: "xAI", url: "https://docs.x.ai/", mark: "xai", w: 42, h: 16 },
+    { name: "Mistral", url: "https://docs.mistral.ai/", mark: "mistral", w: 98, h: 22 },
+    {
+      name: "Google Gemini",
+      url: "https://ai.google.dev/gemini-api/docs/speech-generation",
+      mark: "gemini",
+      w: 71,
+      h: 16
+    },
+    {
+      name: "Microsoft",
+      url: "https://microsoft.ai/models/mai-voice-2-1/",
+      mark: "mai",
+      w: 37.1,
+      h: 17.2
+    },
+    {
+      name: "Kitten TTS",
+      url: "https://github.com/KittenML/KittenTTS",
+      mark: "kitten",
+      w: 100.5,
+      h: 18
+    },
+    { name: "Qwen3-TTS", url: "https://github.com/QwenLM/Qwen3-TTS", mark: "qwen", w: 98.2, h: 16 },
+    {
+      name: "Piper",
+      url: "https://github.com/OHF-Voice/piper1-gpl",
+      mark: "piper",
+      w: 51.27,
+      h: 16
+    },
+    { name: "Kokoro", url: "https://github.com/thewh1teagle/kokoro-onnx", mark: "", w: 0, h: 0 },
+    {
+      name: "Pocket TTS",
+      url: "https://github.com/kyutai-labs/pocket-tts",
+      mark: "pocket",
+      w: 102.9,
+      h: 16
+    },
+    { name: "Edge-TTS", url: "https://github.com/rany2/edge-tts", mark: "", w: 0, h: 0 }
+  ];
 
   let logs = $state<string[]>([]);
   let logsPath = $state("");
   let isLoadingLogs = $state(false);
+  let credit = $derived($_("settings.about.madeWith", { values: { heart: "{heart}" } }));
+  let creditParts = $derived(credit.split("{heart}"));
 
   async function loadLogs() {
     isLoadingLogs = true;
@@ -140,152 +196,97 @@
     </div>
   {/if}
 
-  <!-- Acknowledgments Section -->
-  <div class="border-border mt-6 border-t pt-4">
-    <h3 class="mb-3 text-sm font-semibold">{$_("settings.about.acknowledgments")}</h3>
-    <div class="space-y-3">
-      <!-- OpenAI -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.openai.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.openai.description")}
-            detail={$_("settings.about.openai.detail")}
-          />
-        </div>
-      </div>
+  {@render children?.()}
 
-      <!-- ElevenLabs -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.elevenlabs.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.elevenlabs.description")}
-            detail={$_("settings.about.elevenlabs.detail")}
-          />
-        </div>
-      </div>
+  <section class="border-border border-t pt-4" aria-labelledby="acknowledgments-title">
+    <h3 id="acknowledgments-title" class="mb-4 text-sm font-semibold">
+      {$_("settings.about.acknowledgments")}
+    </h3>
+    <ul class="flex flex-wrap gap-x-8 gap-y-5">
+      {#each providers as provider (provider.name)}
+        <li class="flex min-w-0 flex-col items-center gap-2">
+          <div class="flex h-7 items-center justify-center" aria-hidden="true">
+            {#if provider.mark}
+              <span
+                class="provider-mark"
+                style:width="{provider.w}px"
+                style:height="{provider.h}px"
+                style:--mark={`url('/landing/providers/${provider.mark}.svg')`}
+              ></span>
+            {:else}
+              <span class="provider-text-mark">{provider.name}</span>
+            {/if}
+          </div>
+          <a
+            href={provider.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-muted-foreground hover:text-foreground text-center text-xs underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2"
+            onclick={(event) => {
+              if (
+                event.button !== 0 ||
+                event.ctrlKey ||
+                event.metaKey ||
+                event.shiftKey ||
+                event.altKey
+              )
+                return;
+              event.preventDefault();
+              void openExternal(provider.url);
+            }}>{provider.name}</a
+          >
+        </li>
+      {/each}
+    </ul>
+  </section>
 
-      <!-- Cartesia -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.cartesia.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.cartesia.description")}
-            detail={$_("settings.about.cartesia.detail")}
-          />
-        </div>
-      </div>
-
-      <!-- Fish Audio -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.fish.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.fish.description")}
-            detail={$_("settings.about.fish.detail")}
-          />
-        </div>
-      </div>
-
-      <!-- xAI -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.xai.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.xai.description")}
-            detail={$_("settings.about.xai.detail")}
-          />
-        </div>
-      </div>
-
-      <!-- Mistral -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.mistral.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.mistral.description")}
-            detail={$_("settings.about.mistral.detail")}
-          />
-        </div>
-      </div>
-
-      <!-- Kitten -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.kitten.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.kitten.description")}
-            detail={$_("settings.about.kitten.detail")}
-          />
-        </div>
-      </div>
-
-      <!-- Kokoro -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.kokoro.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.kokoro.description")}
-            detail={$_("settings.about.kokoro.detail")}
-          />
-        </div>
-      </div>
-
-      <!-- Piper -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.piper.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.piper.description")}
-            detail={$_("settings.about.piper.detail")}
-          />
-        </div>
-      </div>
-
-      <!-- Edge-TTS -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.edge.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.edge.description")}
-            detail={$_("settings.about.edge.detail")}
-          />
-        </div>
-      </div>
-
-      <!-- Google Gemini TTS -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.google.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.google.description")}
-            detail={$_("settings.about.google.detail")}
-          />
-        </div>
-      </div>
-
-      <!-- Microsoft Foundry AI -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.microsoft.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.microsoft.description")}
-            detail={$_("settings.about.microsoft.detail")}
-          />
-        </div>
-      </div>
-
-      <!-- Custom HTTP Engine -->
-      <div>
-        <div class="flex items-center gap-1.5">
-          <Label class="text-sm">{$_("settings.about.http.title")}</Label>
-          <InfoTooltip
-            text={$_("settings.about.http.description")}
-            detail={$_("settings.about.http.detail")}
-          />
-        </div>
-      </div>
-    </div>
+  <div class="text-muted-foreground space-y-1 border-t pt-4 text-xs">
+    <p>© {new Date().getFullYear()} Ilya Aizenberg</p>
+    <p aria-label={credit.replace("{heart}", "♥")}>
+      {creditParts[0]}<svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        class="credit-heart"
+        aria-hidden="true"
+        ><path
+          d="M12 21 3.3 12.9C-1.4 8.5 4.9 1.3 10 5.3L12 7l2-1.7c5.1-4 11.4 3.2 6.7 7.6Z"
+          fill="#e5484d"
+        /></svg
+      >{creditParts[1]}
+    </p>
+    <a
+      href="https://www.buymeacoffee.com/ilyaizen"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="hover:text-foreground inline-block underline underline-offset-4 focus-visible:outline focus-visible:outline-2"
+      onclick={(event) => {
+        if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+          return;
+        event.preventDefault();
+        void openExternal("https://www.buymeacoffee.com/ilyaizen");
+      }}>{$_("settings.about.buyMeCoffee")}</a
+    >
   </div>
 </div>
+
+<style>
+  .provider-mark {
+    display: inline-block;
+    background-color: currentColor;
+    -webkit-mask: var(--mark) center / contain no-repeat;
+    mask: var(--mark) center / contain no-repeat;
+  }
+
+  .provider-text-mark {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+  }
+
+  .credit-heart {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.12em;
+  }
+</style>

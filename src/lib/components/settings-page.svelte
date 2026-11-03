@@ -280,11 +280,18 @@
       <!-- Main content: all sections stacked, one separator between them -->
       <main class="divide-border min-w-0 flex-1 divide-y pb-20">
         <section id="general" class="scroll-mt-4 py-6 first:pt-0">
-          <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-            {$_("settings.sections.triggers")}
-          </h3>
           <div class="divide-border divide-y">
             <div class="pb-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.appearance")}
+              </h3>
+              <AppearanceSettings bind:localConfig />
+            </div>
+
+            <div class="py-4">
+              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+                {$_("settings.sections.triggers")}
+              </h3>
               <div class="space-y-4">
                 <SettingRow
                   label={$_("settings.triggers.listen")}
@@ -318,18 +325,11 @@
               </div>
             </div>
 
-            <div class="py-4">
+            <div class="pt-4">
               <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                 {$_("settings.sections.startup")}
               </h3>
               <GeneralSettings bind:localConfig />
-            </div>
-
-            <div class="pt-4">
-              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
-                {$_("settings.sections.appearance")}
-              </h3>
-              <AppearanceSettings bind:localConfig />
             </div>
           </div>
         </section>
@@ -397,12 +397,8 @@
           aria-label={$_("settings.tabs.about")}
           class="scroll-mt-4 py-6 first:pt-0"
         >
-          <div class="divide-border divide-y">
-            <div class="pb-4">
-              <AboutSettings bind:localConfig showDebugMode={true} />
-            </div>
-
-            <div class="pt-4">
+          <AboutSettings bind:localConfig showDebugMode={true}>
+            <div class="border-border border-t pt-4">
               <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                 {$_("settings.sections.importExport")}
               </h3>
@@ -412,7 +408,7 @@
                 onReset={resetToDefaults}
               />
             </div>
-          </div>
+          </AboutSettings>
         </section>
       </main>
     </div>

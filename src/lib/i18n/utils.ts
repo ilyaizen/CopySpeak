@@ -46,3 +46,10 @@ export function getSupportedLocales(): Array<{ value: SupportedLocale; label: st
 export function isSupportedLocale(value: string): value is SupportedLocale {
   return getSupportedLocales().some((locale) => locale.value === value);
 }
+
+// A nonempty saved value is an explicit choice; invalid values fall back to English.
+export function resolveLocale(saved: string, system: string): SupportedLocale {
+  if (saved) return isSupportedLocale(saved) ? saved : "en";
+  const language = system.split(/[-_]/)[0].toLowerCase();
+  return isSupportedLocale(language) ? language : "en";
+}

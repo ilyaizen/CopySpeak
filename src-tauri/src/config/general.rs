@@ -47,7 +47,8 @@ pub struct GeneralConfig {
     pub update_checks_enabled: bool,
     #[serde(default)]
     pub auto_save_profiles: bool,
-    #[serde(default = "default_locale")]
+    // Empty means no explicit language choice; the webview detects the system locale.
+    #[serde(default)]
     pub locale: String,
     /// Master switch for Experimental features (Dramatize post-processing,
     /// the Post-processing panel, Effects). Off hides them in the UI AND
@@ -69,8 +70,4 @@ fn default_update_checks_enabled() -> bool {
 
 fn default_show_tray_icon() -> bool {
     true
-}
-
-fn default_locale() -> String {
-    "en".to_string()
 }

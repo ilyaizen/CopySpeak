@@ -288,76 +288,8 @@
       "sourceCodeDescription": "عرض CopySpeak على GitHub",
       "github": "GitHub",
       "acknowledgments": "شكر وتقدير",
-      "openai": {
-        "title": "OpenAI TTS",
-        "description": "تحويل عصبي عالي الجودة للنص إلى كلام",
-        "detail": "يستخدم CopySpeak واجهة OpenAI لتحويل النص إلى كلام لتوليف صوتي عالي الجودة."
-      },
-      "elevenlabs": {
-        "title": "ElevenLabs",
-        "description": "توليف صوتي متقدم بالذكاء الاصطناعي",
-        "detail": "محرك TTS مميز بقدرات واقعية لاستنساخ الأصوات."
-      },
-      "kokoro": {
-        "title": "Kokoro TTS",
-        "description": "TTS محلي مفتوح المصدر",
-        "detail": "محرك خفيف مفتوح المصدر لتحويل النص إلى كلام بمعالجة محلية."
-      },
-      "piper": {
-        "title": "Piper",
-        "description": "TTS عصبي سريع",
-        "detail": "نظام محلي سريع لتحويل النص إلى كلام عصبيًا بزمن استجابة منخفض."
-      },
-      "cartesia": {
-        "title": "Cartesia",
-        "description": "TTS سحابي منخفض الكمون (Sonic 3.5)",
-        "detail": "واجهة API سحابية تعمل بنموذج Sonic 3.5. تتطلب مفتاح API."
-      },
-      "fish": {
-        "title": "Fish Audio",
-        "description": "TTS سحابي معبّر (S2)",
-        "detail": "API سحابي مبني على نماذج Fish Audio S2. يتطلب مفتاح API."
-      },
-      "xai": {
-        "title": "xAI",
-        "description": "TTS سحابي معبّر (Grok)",
-        "detail": "واجهة سحابية مدعومة بأصوات TTS من xAI. يتطلب مفتاح API."
-      },
-      "mistral": {
-        "title": "Mistral",
-        "description": "TTS سحابي معبّر (Voxtral)",
-        "detail": "واجهة سحابية مدعومة بنموذج Voxtral TTS من Mistral. يتطلب مفتاح API."
-      },
-      "kitten": {
-        "title": "Kitten TTS",
-        "description": "TTS محلي بتقنية ONNX فائق الخفة",
-        "detail": "أربعة نماذج ONNX قابلة للاختيار (25–80 ميغابايت) مع 8 أصوات مدمجة، محسّنة للمعالج مع تسريع GPU اختياري."
-      },
-      "qwen": {
-        "title": "Qwen3-TTS",
-        "description": "TTS محلي متعدد اللغات",
-        "detail": "Qwen3-TTS CustomVoice محلي مع 9 أصوات مدمجة وتسريع GPU اختياري."
-      },
-      "pocket": {
-        "title": "Pocket TTS",
-        "description": "TTS محلي مدمج",
-        "detail": "Kyutai Pocket: نموذج بـ100 مليون معامل مصمم للعمل على المعالج، بأصوات في ست لغات."
-      },
-      "google": {
-        "title": "Google Gemini TTS",
-        "description": "TTS سحابي من Google مبني على Gemini",
-        "detail": "TTS سحابي يعمل بنماذج Gemini من Google. يتطلب مفتاح Google AI API."
-      },
-      "microsoft": {
-        "title": "Microsoft Foundry AI",
-        "description": "TTS سحابي للمؤسسات عبر Microsoft Foundry",
-        "detail": "أصوات عصبية بمستوى المؤسسات عبر خدمات الكلام في Microsoft Foundry. يتطلب مفتاح API ونقطة نهاية."
-      },
-      "http": {
-        "title": "محرك HTTP مخصص",
-        "description": "واجهة خلفية TTS عامة عبر HTTP/REST",
-        "detail": "محرك لواجهتك الخلفية الخاصة يستدعي أي نقطة نهاية HTTP بقوالب URL ومصادقة قابلة للتهيئة."
-      },
+      "madeWith": "صُنع بـ {heart} وRust والروبوتات.",
+      "buyMeCoffee": "اشترِ لي قهوة",
       "checkUpdates": "التحقق من التحديثات",
       "checkUpdatesTooltip": "التحقق تلقائياً من الإصدارات الجديدة عند بدء التشغيل",
       "updateStatus": "حالة التحديث",
@@ -739,7 +671,7 @@
       "cleanup": "فشل التنظيف",
       "installer": "تعذّر تشغيل برنامج التثبيت",
       "switchEngine": "تعذّر تبديل المحرك",
-      "kokoroInstallFailed": "فشل تثبيت Kokoro — اختر محركاً آخر، أو أعد محاولة التثبيت.",
+      "kokoroInstallFailed": "فشل تثبيت Kokoro. اختر محركاً آخر أو أعد محاولة التثبيت.",
       "kokoroInstallStart": "تعذّر بدء تثبيت Kokoro: {error}",
       "saveFailed": "فشل حفظ الإعدادات: {error}",
       "cleanupFailed": "فشل التنظيف: {error}",
@@ -761,23 +693,38 @@
       "title": "مرحبًا بك في CopySpeak",
       "subtitle": "هيّئ محرك تحويل النص إلى كلام للبدء، أو تخطَّ هذه الخطوة وأعدّه لاحقًا."
     },
-    "engineConfig": "تهيئة المحرك",
-    "engineDescription": "أعدّ محرك TTS. يمكنك تغييره لاحقًا من تبويب المحرك.",
-    "recommendation": {
-      "title": "ننصح بالبدء بـ Kitten TTS",
-      "description": "Kitten TTS محرك TTS جديد فائق الخفة (25-80 ميغابايت) يعمل على المعالج دون الحاجة إلى GPU. انقر على الزر أدناه لتثبيته تلقائيًا — دون أي إعداد يدوي."
-    },
-    "install": "تثبيت Kitten TTS",
-    "installing": "جارٍ التثبيت...",
-    "complete": "ابدأ",
-    "loading": "جارٍ تحميل التهيئة...",
-    "installed": "تم التثبيت!",
-    "openTerminal": "فتح طرفية PowerShell",
-    "checkingEngine": "جارٍ فحص المحرك...",
-    "helpText": "يمكنك دائمًا تهيئة المحرك لاحقًا من تبويب المحرك.",
     "chooseEngine": "اختر محرك الصوت",
+    "switchAnytime": "يمكن تغيير المحرك في أي وقت من الإعدادات.",
+    "recommended": "موصى به",
+    "noKeyNeeded": "بدون مفتاح API",
+    "apiKeyInSettings": "مفتاح API في الإعدادات",
+    "engines": {
+      "kokoro": {
+        "detail": "أصوات طبيعية تعمل دون اتصال بالكامل. تنزيل لمرة واحدة بحجم 335 ميغابايت تقريباً."
+      },
+      "edge": {
+        "detail": "أصوات Microsoft مجانية. لا حاجة للتثبيت، وتعمل فوراً."
+      },
+      "cartesia": {
+        "detail": "أصوات مميزة سريعة. تتوفر خطة مجانية."
+      },
+      "elevenlabs": {
+        "detail": "أصوات مميزة متعددة اللغات. تتوفر خطة مجانية."
+      },
+      "fish": {
+        "detail": "أصوات معبرة مع نموذج مجاني مضمّن."
+      }
+    },
+    "kokoroReady": "تم تثبيت Kokoro وهو جاهز.",
+    "kokoroInstallHint": "يظهر التنزيل هنا. تفضّل التخطي؟ Edge-TTS يعمل فوراً.",
+    "otherLocalEngines": "يمكن تثبيت محركات محلية أخرى (Kitten وQwen وPiper) لاحقاً من صفحة المحركات.",
+    "installKokoroCta": "تثبيت Kokoro والبدء",
+    "loading": "جارٍ تحميل التهيئة...",
+    "installing": "جارٍ التثبيت...",
     "installingKokoro": "جارٍ تثبيت Kokoro… (~335 ميغابايت، مرة واحدة)",
-    "installFailed": "فشل التثبيت."
+    "installFailed": "فشل التثبيت.",
+    "installed": "تم التثبيت",
+    "complete": "ابدأ"
   },
   "effects": {
     "title": "المؤثرات الصوتية",

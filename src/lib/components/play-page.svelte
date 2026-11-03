@@ -131,7 +131,7 @@
       debug_mode: false,
       close_behavior: "minimize-to-tray",
       appearance: "system",
-      locale: "en",
+      locale: "",
       experimental_enabled: false,
       effects_enabled: true
     },

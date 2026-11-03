@@ -288,76 +288,8 @@
       "sourceCodeDescription": "在 GitHub 上查看 CopySpeak",
       "github": "GitHub",
       "acknowledgments": "致谢",
-      "openai": {
-        "title": "OpenAI TTS",
-        "description": "高质量神经网络文字转语音",
-        "detail": "CopySpeak 使用 OpenAI 的文字转语音 API 实现高质量语音合成。"
-      },
-      "elevenlabs": {
-        "title": "ElevenLabs",
-        "description": "先进的 AI 语音合成",
-        "detail": "高级 TTS 引擎，具备逼真的声音克隆能力。"
-      },
-      "kokoro": {
-        "title": "Kokoro TTS",
-        "description": "开源本地 TTS",
-        "detail": "轻量级开源文字转语音引擎，可在本地处理。"
-      },
-      "piper": {
-        "title": "Piper",
-        "description": "快速神经网络 TTS",
-        "detail": "快速、低延迟的本地神经网络文字转语音系统。"
-      },
-      "cartesia": {
-        "title": "Cartesia",
-        "description": "低延迟云端 TTS（Sonic 3.5）",
-        "detail": "基于 Sonic 3.5 模型的云 API。需要 API 密钥。"
-      },
-      "fish": {
-        "title": "Fish Audio",
-        "description": "富有表现力的云端 TTS（S2）",
-        "detail": "基于 Fish Audio S2 模型的云 API。需要 API 密钥。"
-      },
-      "xai": {
-        "title": "xAI",
-        "description": "富有表现力的云端 TTS（Grok）",
-        "detail": "由 xAI 的 TTS 声音驱动的云端 API。需要 API 密钥。"
-      },
-      "mistral": {
-        "title": "Mistral",
-        "description": "富有表现力的云端 TTS（Voxtral）",
-        "detail": "由 Mistral 的 Voxtral TTS 模型驱动的云端 API。需要 API 密钥。"
-      },
-      "kitten": {
-        "title": "Kitten TTS",
-        "description": "超轻量本地 ONNX TTS",
-        "detail": "四种可选的 25–80MB ONNX 模型，内置 8 种语音，针对 CPU 优化，可选 GPU 加速。"
-      },
-      "qwen": {
-        "title": "Qwen3-TTS",
-        "description": "多语言本地 TTS",
-        "detail": "本地 Qwen3-TTS CustomVoice，内置 9 种语音，可选 GPU 加速。"
-      },
-      "pocket": {
-        "title": "Pocket TTS",
-        "description": "小巧的本地 TTS",
-        "detail": "Kyutai Pocket：专为 CPU 运行打造的 1 亿参数模型，提供六种语言的语音。"
-      },
-      "google": {
-        "title": "Google Gemini TTS",
-        "description": "Google 基于 Gemini 的云端 TTS",
-        "detail": "由 Google Gemini 模型驱动的云端 TTS。需要 Google AI API 密钥。"
-      },
-      "microsoft": {
-        "title": "Microsoft Foundry AI",
-        "description": "通过 Microsoft Foundry 提供的企业级云端 TTS",
-        "detail": "通过 Microsoft Foundry 语音服务提供企业级神经网络语音。需要 API 密钥和端点。"
-      },
-      "http": {
-        "title": "自定义 HTTP 引擎",
-        "description": "通用 HTTP/REST TTS 后端",
-        "detail": "自带后端引擎，可调用任意 HTTP 端点，URL 模板和认证方式均可配置。"
-      },
+      "madeWith": "用 {heart}、Rust 和机器人制作。",
+      "buyMeCoffee": "请我喝杯咖啡",
       "checkUpdates": "检查更新",
       "checkUpdatesTooltip": "启动时自动检查新版本",
       "updateStatus": "更新状态",
@@ -739,7 +671,7 @@
       "cleanup": "清理失败",
       "installer": "无法运行安装程序",
       "switchEngine": "无法切换引擎",
-      "kokoroInstallFailed": "Kokoro 安装失败——请选择其他引擎，或重试安装。",
+      "kokoroInstallFailed": "Kokoro 安装失败。请选择其他引擎，或重试安装。",
       "kokoroInstallStart": "Kokoro 安装无法启动：{error}",
       "saveFailed": "保存设置失败：{error}",
       "cleanupFailed": "清理失败：{error}",
@@ -761,23 +693,38 @@
       "title": "欢迎使用 CopySpeak",
       "subtitle": "配置文字转语音引擎即可开始，也可以跳过，稍后再设置。"
     },
-    "engineConfig": "引擎配置",
-    "engineDescription": "设置你的 TTS 引擎。之后可在“引擎”标签页中更改。",
-    "recommendation": {
-      "title": "推荐从 Kitten TTS 开始",
-      "description": "Kitten TTS 是一款新的超轻量 TTS 引擎（25-80MB），无需 GPU 即可在 CPU 上运行。点击下方按钮即可自动安装——无需手动设置。"
-    },
-    "install": "安装 Kitten TTS",
-    "installing": "正在安装...",
-    "complete": "开始使用",
-    "loading": "正在加载配置...",
-    "installed": "已安装！",
-    "openTerminal": "打开 PowerShell 终端",
-    "checkingEngine": "正在检查引擎...",
-    "helpText": "你随时可以在“引擎”标签页中配置引擎。",
     "chooseEngine": "选择语音引擎",
+    "switchAnytime": "随时可在设置中更换引擎。",
+    "recommended": "推荐",
+    "noKeyNeeded": "无需 API 密钥",
+    "apiKeyInSettings": "在设置中填写 API 密钥",
+    "engines": {
+      "kokoro": {
+        "detail": "自然语音，完全离线。一次性下载约 335 MB。"
+      },
+      "edge": {
+        "detail": "免费的 Microsoft 语音。无需安装，立即可用。"
+      },
+      "cartesia": {
+        "detail": "快速的高级语音。提供免费额度。"
+      },
+      "elevenlabs": {
+        "detail": "高级多语言语音。提供免费额度。"
+      },
+      "fish": {
+        "detail": "富有表现力的语音，内置免费模型。"
+      }
+    },
+    "kokoroReady": "Kokoro 已安装并准备就绪。",
+    "kokoroInstallHint": "下载进度会在这里显示。想跳过？Edge-TTS 立即可用。",
+    "otherLocalEngines": "更多本地引擎（Kitten、Qwen、Piper）可稍后在引擎页面安装。",
+    "installKokoroCta": "安装 Kokoro 并开始",
+    "loading": "正在加载配置...",
+    "installing": "正在安装...",
     "installingKokoro": "正在安装 Kokoro…（约 335 MB，仅需一次）",
-    "installFailed": "安装失败。"
+    "installFailed": "安装失败。",
+    "installed": "已安装",
+    "complete": "开始使用"
   },
   "effects": {
     "title": "音频效果",

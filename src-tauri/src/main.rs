@@ -834,6 +834,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             tray::set_tray_playback_state,
             commands::get_config,
+            commands::get_saved_locale,
             commands::set_config,
             commands::get_hotkey_error,
             commands::reset_config,

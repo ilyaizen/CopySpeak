@@ -288,81 +288,8 @@
       "sourceCodeDescription": "צפה ב-CopySpeak ב-GitHub",
       "github": "GitHub",
       "acknowledgments": "קרדיטים",
-      "openai": {
-        "title": "OpenAI TTS",
-        "description": "המרת טקסט לדיבור נוירונית איכותית",
-        "detail": "CopySpeak משתמש ב-API של OpenAI להמרת טקסט לדיבור, לסינתזת קול איכותית."
-      },
-      "elevenlabs": {
-        "title": "ElevenLabs",
-        "description": "סינתזת קול AI מתקדמת",
-        "detail": "מנוע TTS פרימיום עם יכולות שכפול קול ריאליסטיות."
-      },
-      "kokoro": {
-        "title": "Kokoro TTS",
-        "description": "TTS מקומי בקוד פתוח",
-        "detail": "מנוע המרת טקסט לדיבור קל משקל וקוד פתוח לעיבוד מקומי."
-      },
-      "piper": {
-        "title": "Piper",
-        "description": "TTS נוירוני מהיר",
-        "detail": "מערכת המרת טקסט לדיבור נוירונית מקומית ומהירה, עם השהיה נמוכה."
-      },
-      "cartesia": {
-        "title": "Cartesia",
-        "description": "TTS בענן עם השהיה נמוכה (Sonic 3.5)",
-        "detail": "API בענן המופעל על ידי מודל Sonic 3.5. דורש מפתח API."
-      },
-      "fish": {
-        "title": "Fish Audio",
-        "description": "TTS ענן אקספרסיבי (S2)",
-        "detail": "API ענן מבוסס מודלי Fish Audio S2. דורש מפתח API."
-      },
-      "xai": {
-        "title": "xAI",
-        "description": "TTS ענן אקספרסיבי (Grok)",
-        "detail": "API ענן מבוסס קולות ה-TTS של xAI. דורש מפתח API."
-      },
-      "mistral": {
-        "title": "Mistral",
-        "description": "TTS ענן אקספרסיבי (Voxtral)",
-        "detail": "API ענן מבוסס מודל ה-Voxtral TTS של Mistral. דורש מפתח API."
-      },
-      "kitten": {
-        "title": "Kitten TTS",
-        "description": "ONNX מקומי קל משקל במיוחד",
-        "detail": "ארבעה דגמי ONNX לבחירה בגודל 25–80MB, עם 8 קולות מובנים, מותאמים למעבד עם האצת GPU אופציונלית."
-      },
-      "qwen": {
-        "title": "Qwen3-TTS",
-        "description": "TTS מקומי רב-לשוני",
-        "detail": "Qwen3-TTS CustomVoice מקומי עם 9 קולות מובנים והאצת GPU אופציונלית."
-      },
-      "pocket": {
-        "title": "Pocket TTS",
-        "description": "TTS מקומי קומפקטי",
-        "detail": "Kyutai Pocket: מודל בן 100 מיליון פרמטרים שנבנה לרוץ על המעבד, עם קולות בשש שפות."
-      },
-      "edge": {
-        "title": "Edge-TTS",
-        "description": "TTS נוירוני של Microsoft Edge (חינם)",
-        "detail": "קולות נוירוניים חינמיים ואיכותיים משירות ה-TTS המקוון של Microsoft Edge. לא נדרש מפתח API."
-      },
-      "google": {
-        "title": "Google Gemini TTS",
-        "description": "TTS בענן מבוסס Gemini של Google",
-        "detail": "TTS בענן המופעל על ידי מודלי Gemini של Google. דורש מפתח Google AI API."
-      },
-      "microsoft": {
-        "title": "Microsoft Foundry AI",
-        "description": "TTS ארגוני בענן דרך Microsoft Foundry",
-        "detail": "קולות נוירוניים ברמה ארגונית דרך שירותי הדיבור של Microsoft Foundry. דורש מפתח API ונקודת קצה."
-      },
-      "http": {
-        "title": "מנוע HTTP מותאם אישית",
-        "description": "קצה עורפי כללי של HTTP/REST ל-TTS",
-        "detail": "מנוע להבאת קצה עורפי משלך, שקורא לכל נקודת קצה HTTP עם תבניות כתובת והרשאות הניתנות להגדרה."
-      },
+      "madeWith": "נוצר עם {heart}, Rust ובוטים.",
+      "buyMeCoffee": "קנו לי קפה",
       "checkUpdates": "בדוק עדכונים",
       "checkUpdatesTooltip": "בדוק אוטומטית גרסאות חדשות בהפעלה",
       "updateStatus": "סטטוס עדכון",
@@ -748,7 +675,7 @@
       "cleanup": "הניקוי נכשל",
       "installer": "הפעלת המתקין נכשלה",
       "switchEngine": "החלפת המנוע נכשלה",
-      "kokoroInstallFailed": "התקנת Kokoro נכשלה — בחר מנוע אחר, או נסה להתקין שוב.",
+      "kokoroInstallFailed": "התקנת Kokoro נכשלה. בחר מנוע אחר או נסה להתקין שוב.",
       "kokoroInstallStart": "התקנת Kokoro לא הצליחה להתחיל: {error}",
       "saveFailed": "שמירת ההגדרות נכשלה: {error}",
       "cleanupFailed": "הניקוי נכשל: {error}",
@@ -770,23 +697,38 @@
       "title": "ברוך הבא ל-CopySpeak",
       "subtitle": "הגדר את מנוע ההמרה של טקסט לדיבור כדי להתחיל, או דלג והגדר אותו מאוחר יותר."
     },
-    "engineConfig": "הגדרת מנוע",
-    "engineDescription": "הגדר את מנוע ה-TTS שלך. ניתן לשנות זאת מאוחר יותר בלשונית המנוע.",
-    "recommendation": {
-      "title": "אנו ממליצים על Kitten TTS כדי להתחיל",
-      "description": "Kitten TTS הוא מנוע TTS חדש וקל במיוחד (25–80MB) שפועל על המעבד ללא צורך ב-GPU. לחץ על הכפתור למטה כדי להתקין אותו אוטומטית — ללא הגדרה ידנית."
-    },
-    "install": "התקן את Kitten TTS",
-    "installing": "מתקין...",
-    "complete": "התחל",
-    "loading": "טוען תצורה...",
-    "installed": "הותקן!",
-    "openTerminal": "פתח טרמינל PowerShell",
-    "checkingEngine": "בודק מנוע...",
-    "helpText": "תמיד תוכל להגדיר את המנוע מאוחר יותר מלשונית המנוע.",
     "chooseEngine": "בחר את מנוע הקול שלך",
+    "switchAnytime": "אפשר להחליף מנוע בכל עת בהגדרות.",
+    "recommended": "מומלץ",
+    "noKeyNeeded": "ללא מפתח API",
+    "apiKeyInSettings": "מפתח API בהגדרות",
+    "engines": {
+      "kokoro": {
+        "detail": "קולות טבעיים ללא חיבור לאינטרנט. הורדה חד-פעמית של כ-335 MB."
+      },
+      "edge": {
+        "detail": "קולות Microsoft בחינם. בלי התקנה, עובד מיד."
+      },
+      "cartesia": {
+        "detail": "קולות פרימיום מהירים. תוכנית חינמית זמינה."
+      },
+      "elevenlabs": {
+        "detail": "קולות פרימיום רב-לשוניים. תוכנית חינמית זמינה."
+      },
+      "fish": {
+        "detail": "קולות אקספרסיביים, כולל מודל חינמי."
+      }
+    },
+    "kokoroReady": "Kokoro מותקן ומוכן.",
+    "kokoroInstallHint": "ההורדה מוצגת כאן. מעדיפים לדלג? Edge-TTS עובד מיד.",
+    "otherLocalEngines": "מנועים מקומיים נוספים (Kitten, Qwen, Piper) אפשר להתקין אחר כך מעמוד המנועים.",
+    "installKokoroCta": "להתקין את Kokoro ולהתחיל",
+    "loading": "טוען תצורה...",
+    "installing": "מתקין...",
     "installingKokoro": "מתקין את Kokoro… (כ-335 MB, פעם אחת)",
-    "installFailed": "ההתקנה נכשלה."
+    "installFailed": "ההתקנה נכשלה.",
+    "installed": "הותקן",
+    "complete": "התחל"
   },
   "effects": {
     "title": "אפקטים קוליים",

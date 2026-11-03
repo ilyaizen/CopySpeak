@@ -288,76 +288,8 @@
       "sourceCodeDescription": "Voir CopySpeak sur GitHub",
       "github": "GitHub",
       "acknowledgments": "Remerciements",
-      "openai": {
-        "title": "OpenAI TTS",
-        "description": "Synthèse vocale neuronale de haute qualité",
-        "detail": "CopySpeak utilise l'API de synthèse vocale d'OpenAI pour une voix de haute qualité."
-      },
-      "elevenlabs": {
-        "title": "ElevenLabs",
-        "description": "Synthèse vocale IA avancée",
-        "detail": "Moteur TTS premium avec clonage de voix réaliste."
-      },
-      "kokoro": {
-        "title": "Kokoro TTS",
-        "description": "TTS locale open source",
-        "detail": "Moteur de synthèse vocale léger et open source pour un traitement local."
-      },
-      "piper": {
-        "title": "Piper",
-        "description": "TTS neuronale rapide",
-        "detail": "Système de synthèse vocale neuronale local et rapide, à faible latence."
-      },
-      "cartesia": {
-        "title": "Cartesia",
-        "description": "TTS cloud à faible latence (Sonic 3.5)",
-        "detail": "API cloud reposant sur le modèle Sonic 3.5. Nécessite une clé API."
-      },
-      "fish": {
-        "title": "Fish Audio",
-        "description": "TTS cloud expressif (S2)",
-        "detail": "API cloud basée sur les modèles S2 de Fish Audio. Nécessite une clé API."
-      },
-      "xai": {
-        "title": "xAI",
-        "description": "TTS cloud expressif (Grok)",
-        "detail": "API cloud propulsée par les voix TTS de xAI. Nécessite une clé API."
-      },
-      "mistral": {
-        "title": "Mistral",
-        "description": "TTS cloud expressif (Voxtral)",
-        "detail": "API cloud propulsée par le modèle Voxtral TTS de Mistral. Nécessite une clé API."
-      },
-      "kitten": {
-        "title": "Kitten TTS",
-        "description": "TTS ONNX locale ultra-légère",
-        "detail": "Quatre modèles ONNX au choix (25–80 Mo) avec 8 voix intégrées, optimisés pour le CPU avec accélération GPU en option."
-      },
-      "qwen": {
-        "title": "Qwen3-TTS",
-        "description": "TTS locale multilingue",
-        "detail": "Qwen3-TTS CustomVoice en local, avec 9 voix intégrées et accélération GPU en option."
-      },
-      "pocket": {
-        "title": "Pocket TTS",
-        "description": "TTS locale compacte",
-        "detail": "Kyutai Pocket : un modèle de 100 M de paramètres conçu pour le CPU, avec des voix en six langues."
-      },
-      "google": {
-        "title": "Google Gemini TTS",
-        "description": "TTS cloud de Google basée sur Gemini",
-        "detail": "TTS cloud reposant sur les modèles Gemini de Google. Nécessite une clé API Google AI."
-      },
-      "microsoft": {
-        "title": "Microsoft Foundry AI",
-        "description": "TTS cloud d'entreprise via Microsoft Foundry",
-        "detail": "Voix neuronales de niveau entreprise via les services vocaux Microsoft Foundry. Nécessite une clé API et un point de terminaison."
-      },
-      "http": {
-        "title": "Moteur HTTP personnalisé",
-        "description": "Back-end TTS HTTP/REST générique",
-        "detail": "Moteur pour votre propre back-end, qui appelle n'importe quel point de terminaison HTTP avec des modèles d'URL et une authentification configurables."
-      },
+      "madeWith": "Fait avec {heart}, Rust et des bots.",
+      "buyMeCoffee": "Offrez-moi un café",
       "checkUpdates": "Rechercher les mises à jour",
       "checkUpdatesTooltip": "Rechercher automatiquement de nouvelles versions au démarrage",
       "updateStatus": "État de la mise à jour",
@@ -761,23 +693,38 @@
       "title": "Bienvenue dans CopySpeak",
       "subtitle": "Configurez votre moteur de synthèse vocale pour commencer, ou passez cette étape et faites-le plus tard."
     },
-    "engineConfig": "Configuration du moteur",
-    "engineDescription": "Configurez votre moteur TTS. Vous pourrez le modifier plus tard dans l'onglet Moteur.",
-    "recommendation": {
-      "title": "Pour commencer, nous recommandons Kitten TTS",
-      "description": "Kitten TTS est un nouveau moteur TTS ultra-léger (25-80 Mo) qui fonctionne sur le CPU sans GPU. Cliquez sur le bouton ci-dessous pour l'installer automatiquement — aucune configuration manuelle requise."
-    },
-    "install": "Installer Kitten TTS",
-    "installing": "Installation...",
-    "complete": "Commencer",
-    "loading": "Chargement de la configuration...",
-    "installed": "Installé !",
-    "openTerminal": "Ouvrir un terminal PowerShell",
-    "checkingEngine": "Vérification du moteur...",
-    "helpText": "Vous pourrez toujours configurer votre moteur plus tard dans l'onglet Moteur.",
     "chooseEngine": "Choisissez votre moteur vocal",
+    "switchAnytime": "Changez de moteur à tout moment dans les Paramètres.",
+    "recommended": "Recommandé",
+    "noKeyNeeded": "Sans clé API",
+    "apiKeyInSettings": "Clé API dans les Paramètres",
+    "engines": {
+      "kokoro": {
+        "detail": "Voix naturelles 100 % hors ligne. Téléchargement unique d'environ 335 Mo."
+      },
+      "edge": {
+        "detail": "Voix Microsoft gratuites. Rien à installer, fonctionne immédiatement."
+      },
+      "cartesia": {
+        "detail": "Voix premium rapides. Offre gratuite disponible."
+      },
+      "elevenlabs": {
+        "detail": "Voix premium multilingues. Offre gratuite disponible."
+      },
+      "fish": {
+        "detail": "Voix expressives avec modèle gratuit inclus."
+      }
+    },
+    "kokoroReady": "Kokoro est installé et prêt.",
+    "kokoroInstallHint": "Le téléchargement s'affiche ici. Vous préférez le sauter ? Edge-TTS fonctionne immédiatement.",
+    "otherLocalEngines": "D'autres moteurs locaux (Kitten, Qwen, Piper) s'installent plus tard depuis la page des moteurs.",
+    "installKokoroCta": "Installer Kokoro et commencer",
+    "loading": "Chargement de la configuration...",
+    "installing": "Installation...",
     "installingKokoro": "Installation de Kokoro… (~335 Mo, une seule fois)",
-    "installFailed": "Échec de l'installation."
+    "installFailed": "Échec de l'installation.",
+    "installed": "Installé",
+    "complete": "Commencer"
   },
   "effects": {
     "title": "Effets audio",
