@@ -152,6 +152,7 @@ describe("play-page config save pipeline", () => {
   function experimentalPlayConfig(): AppConfig {
     const config = testConfig();
     config.general.experimental_enabled = true;
+    config.general.effects_enabled = true;
     // The quick-settings edits below go through the effects switch: unlike the
     // hotkey switch it stays mounted across toggles, and it needs an active
     // profile to be clickable.

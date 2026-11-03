@@ -32,7 +32,7 @@ export function testConfig(): AppConfig {
       on_retrigger: "interrupt",
       volume: 100,
       streaming_enabled: true,
-      duck: { enabled: false, level_percent: 20 }
+      duck: { enabled: true, level_percent: 10 }
     },
     hud: { enabled: false, position: "bottom-right", width: 300, height: 100, opacity: 0.85 },
     general: {
@@ -44,7 +44,7 @@ export function testConfig(): AppConfig {
       appearance: "system",
       locale: "en",
       experimental_enabled: false,
-      effects_enabled: true,
+      effects_enabled: false,
       update_checks_enabled: false,
       auto_save_profiles: false
     },

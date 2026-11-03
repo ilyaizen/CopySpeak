@@ -843,7 +843,8 @@
     "previewStop": "Detener vista previa",
     "previewFailed": "No se pudo reproducir esta vista previa.",
     "noPreview": "Esta voz no tiene vista previa.",
-    "shiftEnterHint": "Mayús+Intro reproduce la voz resaltada."
+    "shiftEnterHint": "Mayús+Intro reproduce la voz resaltada.",
+    "showMore": "Mostrar {count} más"
   },
   "hotkey": {
     "set": "Definir",

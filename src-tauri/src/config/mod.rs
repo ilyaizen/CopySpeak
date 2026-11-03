@@ -210,7 +210,7 @@ impl Default for AppConfig {
                 auto_save_profiles: false,
                 locale: String::new(),
                 experimental_enabled: false,
-                effects_enabled: true,
+                effects_enabled: false,
             },
             trigger: TriggerConfig {
                 listen_enabled: true,

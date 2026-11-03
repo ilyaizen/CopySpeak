@@ -107,7 +107,7 @@
       on_retrigger: "interrupt",
       volume: 100,
       streaming_enabled: true,
-      duck: { enabled: false, level_percent: 20 }
+      duck: { enabled: true, level_percent: 10 }
     },
     hud: {
       enabled: false,
@@ -133,7 +133,7 @@
       appearance: "system",
       locale: "",
       experimental_enabled: false,
-      effects_enabled: true
+      effects_enabled: false
     },
     output: {
       enabled: false,

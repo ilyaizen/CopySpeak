@@ -295,6 +295,61 @@ describe("voice browser selection", () => {
   });
 });
 
+describe("voice browser pagination", () => {
+  const many = (n: number) => Array.from({ length: n }, (_, i) => voice(`v${i}`, `Voice${i}`));
+
+  it("renders one page and reveals more on demand", async () => {
+    const view = render(VoiceBrowser, { voices: many(250), value: "v0", onselect: () => {} });
+    await fireEvent.click(trigger(view.container));
+    expect(options()).toHaveLength(100);
+    expect(sheet().textContent).toContain("Show 150 more");
+
+    await fireEvent.click(sheetButton("Show 150 more"));
+    expect(options()).toHaveLength(200);
+    expect(sheet().textContent).toContain("Show 50 more");
+
+    await fireEvent.click(sheetButton("Show 50 more"));
+    expect(options()).toHaveLength(250);
+    const moreButtons = [...sheet().querySelectorAll("button")].filter((b) =>
+      b.textContent?.includes("more")
+    );
+    expect(moreButtons).toHaveLength(0);
+  });
+
+  it("reveals the next page when arrowing past the rendered rows, and all on End", async () => {
+    const view = render(VoiceBrowser, { voices: many(250), value: "v0", onselect: () => {} });
+    await fireEvent.click(trigger(view.container));
+    const active = () => {
+      const id = search().getAttribute("aria-activedescendant");
+      return id ? document.getElementById(id)?.textContent?.trim() : null;
+    };
+
+    // Walk to the last rendered row, then one more: the next page appears.
+    for (let i = 0; i < 100; i += 1) {
+      await fireEvent.keyDown(search(), { key: "ArrowDown" });
+    }
+    expect(active()).toBe("Voice100");
+    expect(options()).toHaveLength(200);
+
+    // End jumps to the last match and reveals everything.
+    await fireEvent.keyDown(search(), { key: "End" });
+    expect(active()).toBe("Voice249");
+    expect(options()).toHaveLength(250);
+  });
+
+  it("restarts at one page when the search changes", async () => {
+    const view = render(VoiceBrowser, { voices: many(250), value: "v0", onselect: () => {} });
+    await fireEvent.click(trigger(view.container));
+    await fireEvent.click(sheetButton("Show 150 more"));
+    expect(options()).toHaveLength(200);
+
+    // "Voice1" matches Voice1, Voice10-19 and Voice100-199: 111 voices.
+    await fireEvent.input(search(), { target: { value: "Voice1" } });
+    expect(options()).toHaveLength(100);
+    expect(sheet().textContent).toContain("Show 11 more");
+  });
+});
+
 describe("voice browser refresh and error line", () => {
   it("renders a failed refresh in the sheet's error line", async () => {
     const view = render(VoiceBrowser, {

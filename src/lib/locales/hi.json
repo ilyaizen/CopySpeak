@@ -839,7 +839,8 @@
     "previewStop": "पूर्वावलोकन रोकें",
     "previewFailed": "यह पूर्वावलोकन नहीं चलाया जा सका।",
     "noPreview": "इस आवाज़ का कोई पूर्वावलोकन नहीं है।",
-    "shiftEnterHint": "Shift+Enter चिह्नित आवाज़ का पूर्वावलोकन चलाता है।"
+    "shiftEnterHint": "Shift+Enter चिह्नित आवाज़ का पूर्वावलोकन चलाता है।",
+    "showMore": "{count} और दिखाएँ"
   },
   "hotkey": {
     "set": "सेट करें",
