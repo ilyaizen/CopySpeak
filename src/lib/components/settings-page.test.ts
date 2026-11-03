@@ -93,10 +93,27 @@ it("renders linked provider names without acknowledgment tooltips", async () => 
   const view = await mountSettings();
   const section = view.container.querySelector('[aria-labelledby="acknowledgments-title"]');
   if (!(section instanceof HTMLElement)) throw new Error("Acknowledgments section missing");
-  const openai = within(section).getByRole("link", { name: "OpenAI" });
+  // The section centers like the About footer below it.
+  const heading = section.querySelector("h3");
+  if (!heading) throw new Error("Acknowledgments heading missing");
+  expect(heading.className).toContain("text-center");
+  const grid = section.querySelector("ul");
+  if (!grid) throw new Error("Acknowledgments grid missing");
+  expect(grid.className).toContain("justify-center");
+  // Mark and name are ONE link per provider, so they highlight together.
+  const openaiLinks = within(section).getAllByRole("link", { name: "OpenAI" });
+  expect(openaiLinks).toHaveLength(1);
+  const openai = openaiLinks[0];
   expect(openai.getAttribute("href")).toBe(
     "https://platform.openai.com/docs/guides/text-to-speech"
   );
+  expect(openai.className).toContain("group");
+  expect(openai.querySelector(".provider-mark")).toBeTruthy();
+  const nameSpan = [...openai.querySelectorAll("span")].find(
+    (s) => s.textContent?.trim() === "OpenAI"
+  );
+  if (!nameSpan) throw new Error("Provider name span missing");
+  expect(nameSpan.className).toContain("group-hover:underline");
   expect(section.querySelectorAll(".provider-mark")).toHaveLength(12);
   expect(section.querySelectorAll("button")).toHaveLength(0);
   for (const name of ["Kokoro", "Edge-TTS"]) {
@@ -116,7 +133,7 @@ it("shows the creator credit and support link in About", async () => {
   expect(within(about).getByRole("link", { name: "Buy Me a Coffee" }).getAttribute("href")).toBe(
     "https://www.buymeacoffee.com/ilyaizen"
   );
-  expect(within(about).getByText(`© ${new Date().getFullYear()} Ilya Aizenberg`)).toBeTruthy();
+  expect(within(about).getByText(`🄯 ${new Date().getFullYear()} Ilya Aizenberg`)).toBeTruthy();
   const credit = within(about).getByLabelText("Made with ♥ Rust & Bots.");
   const heart = credit.querySelector("svg");
   expect(heart?.getAttribute("aria-hidden")).toBe("true");

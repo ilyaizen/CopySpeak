@@ -61,7 +61,9 @@ pub struct GeneralConfig {
 }
 
 fn default_effects_enabled() -> bool {
-    true
+    // The master effects gate starts off: enabling Experimental reveals the
+    // switch OFF, and effects only run after it is turned on explicitly.
+    false
 }
 
 fn default_update_checks_enabled() -> bool {

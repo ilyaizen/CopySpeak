@@ -839,7 +839,8 @@
     "previewStop": "Остановить прослушивание",
     "previewFailed": "Не удалось воспроизвести пример.",
     "noPreview": "Для этого голоса нет примера.",
-    "shiftEnterHint": "Shift+Enter воспроизводит пример выделенного голоса."
+    "shiftEnterHint": "Shift+Enter воспроизводит пример выделенного голоса.",
+    "showMore": "Показать ещё {count}"
   },
   "hotkey": {
     "set": "Задать",

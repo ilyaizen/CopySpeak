@@ -199,29 +199,20 @@
   {@render children?.()}
 
   <section class="border-border border-t pt-4" aria-labelledby="acknowledgments-title">
-    <h3 id="acknowledgments-title" class="mb-4 text-sm font-semibold">
+    <h3 id="acknowledgments-title" class="mb-4 text-center text-sm font-semibold">
       {$_("settings.about.acknowledgments")}
     </h3>
-    <ul class="flex flex-wrap gap-x-8 gap-y-5">
+    <ul class="flex flex-wrap justify-center gap-x-8 gap-y-5">
       {#each providers as provider (provider.name)}
-        <li class="flex min-w-0 flex-col items-center gap-2">
-          <div class="flex h-7 items-center justify-center" aria-hidden="true">
-            {#if provider.mark}
-              <span
-                class="provider-mark"
-                style:width="{provider.w}px"
-                style:height="{provider.h}px"
-                style:--mark={`url('/landing/providers/${provider.mark}.svg')`}
-              ></span>
-            {:else}
-              <span class="provider-text-mark">{provider.name}</span>
-            {/if}
-          </div>
+        <li class="flex min-w-0">
+          <!-- Mark and name are ONE link: hovering either highlights both and
+               underlines the name. Only a plain primary click is intercepted,
+               so modified and middle clicks keep native behavior. -->
           <a
             href={provider.url}
             target="_blank"
             rel="noopener noreferrer"
-            class="text-muted-foreground hover:text-foreground text-center text-xs underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2"
+            class="text-muted-foreground hover:text-foreground group flex min-w-0 flex-1 flex-col items-center gap-2 rounded-sm transition-colors focus-visible:outline focus-visible:outline-2"
             onclick={(event) => {
               if (
                 event.button !== 0 ||
@@ -233,15 +224,31 @@
                 return;
               event.preventDefault();
               void openExternal(provider.url);
-            }}>{provider.name}</a
+            }}
           >
+            <span class="flex h-7 items-center justify-center" aria-hidden="true">
+              {#if provider.mark}
+                <span
+                  class="provider-mark"
+                  style:width="{provider.w}px"
+                  style:height="{provider.h}px"
+                  style:--mark={`url('/landing/providers/${provider.mark}.svg')`}
+                ></span>
+              {:else}
+                <span class="provider-text-mark">{provider.name}</span>
+              {/if}
+            </span>
+            <span class="text-center text-xs underline-offset-4 group-hover:underline"
+              >{provider.name}</span
+            >
+          </a>
         </li>
       {/each}
     </ul>
   </section>
 
-  <div class="text-muted-foreground space-y-1 border-t pt-4 text-xs">
-    <p>© {new Date().getFullYear()} Ilya Aizenberg</p>
+  <div class="text-muted-foreground space-y-1 border-t pt-4 text-center text-xs">
+    <p>🄯 {new Date().getFullYear()} Ilya Aizenberg</p>
     <p aria-label={credit.replace("{heart}", "♥")}>
       {creditParts[0]}<svg
         xmlns="http://www.w3.org/2000/svg"

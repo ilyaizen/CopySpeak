@@ -631,18 +631,19 @@ mod tests {
             serde_json::from_str(r#"{"launch_on_login": false, "start_minimized": false}"#)
                 .unwrap();
         assert!(!legacy.experimental_enabled);
+        assert!(
+            !legacy.effects_enabled,
+            "effects_enabled must default to disabled in partial configs"
+        );
     }
 
     #[test]
-    fn fresh_defaults_for_duck_and_effects_are_safe_and_streaming_is_on() {
+    fn fresh_defaults_duck_on_effects_off_and_streaming_is_on() {
         let config = AppConfig::default();
-        assert!(
-            !config.playback.duck.enabled,
-            "duck must default to disabled"
-        );
+        assert!(config.playback.duck.enabled, "duck must default to enabled");
         assert_eq!(
-            config.playback.duck.level_percent, 20,
-            "duck level defaults to 20%"
+            config.playback.duck.level_percent, 10,
+            "duck level defaults to 10%"
         );
         assert!(
             config.playback.streaming_enabled,
@@ -656,6 +657,10 @@ mod tests {
         assert!(
             !config.general.experimental_enabled,
             "experimental must default to disabled"
+        );
+        assert!(
+            !config.general.effects_enabled,
+            "the master effects gate must default to disabled"
         );
 
         let pe = ProfileEffects::default();
@@ -685,8 +690,8 @@ mod tests {
     fn missing_fields_deserialize_to_safe_defaults() {
         let playback: PlaybackConfig =
             serde_json::from_str(r#"{"on_retrigger": "interrupt"}"#).unwrap();
-        assert!(!playback.duck.enabled);
-        assert_eq!(playback.duck.level_percent, 20);
+        assert!(playback.duck.enabled);
+        assert_eq!(playback.duck.level_percent, 10);
         assert!(playback.streaming_enabled);
 
         let pe: ProfileEffects = serde_json::from_str(r#"{}"#).unwrap();

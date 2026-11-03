@@ -686,6 +686,7 @@ export type TranslationKeys =
   | "voicePicker.previewFailed"
   | "voicePicker.noPreview"
   | "voicePicker.shiftEnterHint"
+  | "voicePicker.showMore"
   | "hotkey.set"
   | "hotkey.setAria"
   | "hotkey.clearAria"

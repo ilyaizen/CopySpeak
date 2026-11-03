@@ -9,6 +9,11 @@
     DropdownMenuItem
   } from "#lib/components/ui/dropdown-menu/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
+  import {
+    Collapsible as CollapsibleRoot,
+    CollapsibleTrigger,
+    CollapsibleContent
+  } from "#lib/components/ui/collapsible/index.js";
   import { Select } from "#lib/components/ui/select/index.js";
   import { Slider } from "#lib/components/ui/slider/index.js";
   import { Switch } from "#lib/components/ui/switch/index.js";
@@ -21,6 +26,7 @@
     Upload,
     ExternalLink,
     AlertTriangle,
+    ChevronRight,
     Plus
   } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
@@ -319,6 +325,16 @@
   const manualLocked = $derived(
     showPicker && !manualOverride && activeVoiceCatalog.some((v) => v.id === (active?.voice ?? ""))
   );
+
+  // Engine options other than the model start collapsed, so the editor leads
+  // with engine, voice and model and hides the long tail until asked.
+  const MODEL_OPTION_KEYS = new Set(["model", "model_id"]);
+  let expandedOptions = $state(new Set<string>());
+
+  $effect(() => {
+    // A different profile or engine shows a different option set; start collapsed.
+    if (activeId && active) expandedOptions = new Set();
+  });
 
   // Passive hint: checks backend (config.json + .env) for credential presence.
   let credentialsResolved = $state<Record<string, boolean>>({});
@@ -966,69 +982,100 @@
             </a>
           </div>
 
+          {#snippet engineOptionControl(option: EngineOptionDescriptor)}
+            {#if option.kind === "number"}
+              <Input
+                type="number"
+                value={String(optionValue(active, option) ?? "")}
+                onchange={(e) => {
+                  const raw = (e.target as HTMLInputElement).value;
+                  setOptionValue(activeIndex, option.key, raw === "" ? null : Number(raw));
+                }}
+                class="w-56"
+              />
+            {:else if option.kind === "boolean"}
+              <Select
+                options={[
+                  { value: "true", label: "Enabled" },
+                  { value: "false", label: "Disabled" }
+                ]}
+                value={String(Boolean(optionValue(active, option)))}
+                onchange={(e) =>
+                  setOptionValue(
+                    activeIndex,
+                    option.key,
+                    (e.target as HTMLSelectElement).value === "true"
+                  )}
+                class="w-56"
+              />
+            {:else if option.kind === "select"}
+              <Select
+                options={selectOptions(active, option)}
+                value={String(optionValue(active, option) ?? "")}
+                onchange={(e) => {
+                  const val = (e.target as HTMLSelectElement).value;
+                  setOptionValue(activeIndex, option.key, val);
+                }}
+                class="w-56"
+              />
+            {:else if option.kind === "textarea"}
+              <textarea
+                value={optionInputValue(active, option)}
+                onchange={(e) => {
+                  const raw = (e.target as HTMLTextAreaElement).value;
+                  const value =
+                    option.key === "args_template"
+                      ? raw
+                          .split("\n")
+                          .map((line) => line.trim())
+                          .filter(Boolean)
+                      : raw;
+                  setOptionValue(activeIndex, option.key, value);
+                }}
+                class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-20 w-56 rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              ></textarea>
+            {:else}
+              <Input
+                value={optionInputValue(active, option)}
+                onchange={(e) =>
+                  setOptionValue(activeIndex, option.key, (e.target as HTMLInputElement).value)}
+                class="w-56"
+              />
+            {/if}
+          {/snippet}
+
           {#if activeCatalogEntry.options.length}
             {#each activeCatalogEntry.options as option (option.key)}
-              <SettingRow label={option.label} tooltip={option.help}>
-                {#if option.kind === "number"}
-                  <Input
-                    type="number"
-                    value={String(optionValue(active, option) ?? "")}
-                    onchange={(e) => {
-                      const raw = (e.target as HTMLInputElement).value;
-                      setOptionValue(activeIndex, option.key, raw === "" ? null : Number(raw));
-                    }}
-                    class="w-56"
-                  />
-                {:else if option.kind === "boolean"}
-                  <Select
-                    options={[
-                      { value: "true", label: "Enabled" },
-                      { value: "false", label: "Disabled" }
-                    ]}
-                    value={String(Boolean(optionValue(active, option)))}
-                    onchange={(e) =>
-                      setOptionValue(
-                        activeIndex,
-                        option.key,
-                        (e.target as HTMLSelectElement).value === "true"
-                      )}
-                    class="w-56"
-                  />
-                {:else if option.kind === "select"}
-                  <Select
-                    options={selectOptions(active, option)}
-                    value={String(optionValue(active, option) ?? "")}
-                    onchange={(e) => {
-                      const val = (e.target as HTMLSelectElement).value;
-                      setOptionValue(activeIndex, option.key, val);
-                    }}
-                    class="w-56"
-                  />
-                {:else if option.kind === "textarea"}
-                  <textarea
-                    value={optionInputValue(active, option)}
-                    onchange={(e) => {
-                      const raw = (e.target as HTMLTextAreaElement).value;
-                      const value =
-                        option.key === "args_template"
-                          ? raw
-                              .split("\n")
-                              .map((line) => line.trim())
-                              .filter(Boolean)
-                          : raw;
-                      setOptionValue(activeIndex, option.key, value);
-                    }}
-                    class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-20 w-56 rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                  ></textarea>
-                {:else}
-                  <Input
-                    value={optionInputValue(active, option)}
-                    onchange={(e) =>
-                      setOptionValue(activeIndex, option.key, (e.target as HTMLInputElement).value)}
-                    class="w-56"
-                  />
-                {/if}
-              </SettingRow>
+              {#if MODEL_OPTION_KEYS.has(option.key)}
+                <SettingRow label={option.label} tooltip={option.help}>
+                  {@render engineOptionControl(option)}
+                </SettingRow>
+              {:else}
+                <CollapsibleRoot
+                  open={expandedOptions.has(option.key)}
+                  onOpenChange={(next) => {
+                    if (next) expandedOptions.add(option.key);
+                    else expandedOptions.delete(option.key);
+                  }}
+                >
+                  <CollapsibleTrigger
+                    class="text-muted-foreground hover:text-foreground flex min-h-9 w-full min-w-0 items-center justify-between gap-x-4 py-2 text-start text-sm font-medium"
+                  >
+                    {option.label}
+                    <ChevronRight
+                      size={16}
+                      class="shrink-0 transition-transform {expandedOptions.has(option.key)
+                        ? 'rotate-90'
+                        : ''}"
+                    />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SettingRow label={option.label} tooltip={option.help}>
+                      {@render engineOptionControl(option)}
+                    </SettingRow>
+                  </CollapsibleContent>
+                </CollapsibleRoot>
+              {/if}
             {/each}
           {/if}
         </section>

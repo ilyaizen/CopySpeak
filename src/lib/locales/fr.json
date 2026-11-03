@@ -839,7 +839,8 @@
     "previewStop": "Arrêter l’aperçu",
     "previewFailed": "Impossible de lire cet aperçu.",
     "noPreview": "Cette voix n’a pas d’aperçu.",
-    "shiftEnterHint": "Maj+Entrée écoute la voix en surbrillance."
+    "shiftEnterHint": "Maj+Entrée écoute la voix en surbrillance.",
+    "showMore": "Afficher {count} de plus"
   },
   "hotkey": {
     "set": "Définir",

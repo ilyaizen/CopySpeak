@@ -839,7 +839,8 @@
     "previewStop": "停止试听",
     "previewFailed": "无法播放此试听。",
     "noPreview": "该语音没有试听。",
-    "shiftEnterHint": "Shift+Enter 试听高亮的语音。"
+    "shiftEnterHint": "Shift+Enter 试听高亮的语音。",
+    "showMore": "再显示 {count} 个"
   },
   "hotkey": {
     "set": "设置",

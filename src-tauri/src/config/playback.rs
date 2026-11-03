@@ -28,9 +28,11 @@ pub struct DuckConfig {
 
 impl Default for DuckConfig {
     fn default() -> Self {
+        // 0.2.15: ducking starts ON at 10% — a read should not blast other
+        // apps' audio to full volume out of the box. Saved values are kept.
         Self {
-            enabled: false,
-            level_percent: 20,
+            enabled: true,
+            level_percent: 10,
         }
     }
 }

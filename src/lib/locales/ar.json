@@ -839,7 +839,8 @@
     "previewStop": "إيقاف المعاينة",
     "previewFailed": "تعذّر تشغيل هذه المعاينة.",
     "noPreview": "لا تتوفر معاينة لهذا الصوت.",
-    "shiftEnterHint": "Shift+Enter يشغّل معاينة الصوت المحدد."
+    "shiftEnterHint": "Shift+Enter يشغّل معاينة الصوت المحدد.",
+    "showMore": "عرض {count} المزيد"
   },
   "hotkey": {
     "set": "تعيين",

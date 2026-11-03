@@ -33,6 +33,7 @@ it("keeps the selected effect when the quick switch is turned off", async () => 
   await waitForI18nReady();
   const config = testConfig();
   config.general.experimental_enabled = true;
+  config.general.effects_enabled = true;
   config.tts.profiles = [
     {
       id: "default",
@@ -59,6 +60,7 @@ it("preserves effect selection when re-enabling the quick effects switch", async
   await waitForI18nReady();
   const config = testConfig();
   config.general.experimental_enabled = true;
+  config.general.effects_enabled = true;
   config.tts.profiles = [
     {
       id: "default",
@@ -85,6 +87,7 @@ it("defaults to walkie_talkie when re-enabling an effect with none active", asyn
   await waitForI18nReady();
   const config = testConfig();
   config.general.experimental_enabled = true;
+  config.general.effects_enabled = true;
   config.tts.profiles = [
     {
       id: "default",

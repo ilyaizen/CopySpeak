@@ -843,7 +843,8 @@
     "previewStop": "Stop preview",
     "previewFailed": "Couldn't play this preview.",
     "noPreview": "This voice has no preview.",
-    "shiftEnterHint": "Shift+Enter previews the highlighted voice."
+    "shiftEnterHint": "Shift+Enter previews the highlighted voice.",
+    "showMore": "Show {count} more"
   },
   "hotkey": {
     "set": "Set",

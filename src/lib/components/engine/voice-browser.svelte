@@ -107,6 +107,23 @@
 
   const optionId = (i: number) => `${uid}-voice-${i}`;
 
+  // Long provider lists (1,000+ voices) render one page at a time; "Show more"
+  // and keyboard navigation past the rendered rows reveal the next page.
+  const PAGE_SIZE = 100;
+  let visibleCount = $state(PAGE_SIZE);
+  const visible = $derived(filtered.slice(0, visibleCount));
+  const hiddenCount = $derived(Math.max(filtered.length - visibleCount, 0));
+
+  // Each open and each filter change restarts at one page.
+  $effect(() => {
+    if (!open) return;
+    void query;
+    void gender;
+    void language;
+    void styleFilters;
+    visibleCount = PAGE_SIZE;
+  });
+
   // Each open and each filter change starts at the saved voice, else the top row.
   $effect(() => {
     if (!open) return;
@@ -234,6 +251,11 @@
     else if (e.key === "End") next = last;
     else return;
     e.preventDefault();
+    // Reaching past the rendered rows reveals the next page; End reveals all.
+    if (next >= visibleCount) {
+      visibleCount =
+        e.key === "End" ? filtered.length : Math.min(visibleCount + PAGE_SIZE, filtered.length);
+    }
     activeRow = next;
   }
 </script>
@@ -380,7 +402,7 @@
             : $_("voicePicker.noFilterMatch")}
         </p>
       {:else}
-        {#each filtered as v, i (v.id)}
+        {#each visible as v, i (v.id)}
           {@const chips = rowChips(v)}
           <!-- The preview button sits beside the option, not inside it: a
                listbox option must not contain interactive children. -->
@@ -443,6 +465,15 @@
             </button>
           </div>
         {/each}
+        {#if hiddenCount > 0}
+          <button
+            type="button"
+            onclick={() => (visibleCount = Math.min(visibleCount + PAGE_SIZE, filtered.length))}
+            class="text-muted-foreground hover:text-foreground mx-auto my-1 block rounded-sm px-3 py-2 text-xs"
+          >
+            {$_("voicePicker.showMore", { values: { count: hiddenCount } })}
+          </button>
+        {/if}
       {/if}
     </div>
 

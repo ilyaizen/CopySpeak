@@ -843,7 +843,8 @@
     "previewStop": "עצור האזנה מקדימה",
     "previewFailed": "לא ניתן היה להפעיל את ההאזנה המקדימה.",
     "noPreview": "לקול הזה אין האזנה מקדימה.",
-    "shiftEnterHint": "Shift+Enter מפעיל את ההאזנה המקדימה לקול המסומן."
+    "shiftEnterHint": "Shift+Enter מפעיל את ההאזנה המקדימה לקול המסומן.",
+    "showMore": "הצגת {count} נוספים"
   },
   "hotkey": {
     "set": "הגדר",
