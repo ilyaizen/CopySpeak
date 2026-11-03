@@ -119,6 +119,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - End the landing Listen demo on `audio.ended`, not on the silent loop's `LAST_END + 300` clock: a clip shorter than that tail never reaches it, so the button stays on Stop and the silent loop stays off.
 - Never mark the providers marquee clone `inert`: each copy is narrower than the carousel viewport, so the clone is on screen for most of the loop and `inert` makes visible logos swallow clicks (events retarget to `.providers-track` with no href). Keep the clone `aria-hidden` with `tabindex="-1"` on its links — mouse-clickable, still unfocusable and silent to assistive tech.
 - Translate a source mark's ink-box origin to (0, 0) before scaling it into a tight lockup viewBox; scaling alone shifts and clips artwork whose source coordinates start elsewhere.
+- Center the OpenAI wordmark's cap-height ink band against the Blossom and preserve its p descender in the viewBox; aligning the full wordmark box's top to the Blossom and cropping to the Blossom height clips the descender.
 - svgo 4.x rejects the providers' svgo.config.cjs `removeViewBox` override inside `preset-default` ("not part of preset-default") and its output can be slightly LARGER than the input — the viewBox still survives because svgo 4 dropped the plugin from the preset. Never "fix" the config per the warning's suggestion (a standalone `'removeViewBox'` plugin): that ENABLES the plugin and strips the viewBox the mask sizing needs.
 
 ## Icons
@@ -136,6 +137,8 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## i18n
 
+- Read the saved locale through the scalar `get_saved_locale` IPC before the first render; onboarding can hang on the full `get_config` payload even when a config file exists.
+- Keep tray labels in sync with the webview's effective locale, not just the saved value: an unset locale currently makes the Rust tray fall back to English while the webview follows the system language.
 - Grep components for `>Text<` and `label="Text"` after an i18n pass; literal UI text bypasses `$_` and passes locale parity.
 - Pass caught errors to `$_` values as `String(e)`; a catch binding is `unknown` and svelte-check rejects it.
 - Run `vp fmt src/lib/i18n/types.ts` after `node scripts/generate-i18n-types.js`; raw generator output reflows `NestedKeyOf` and adds trailing whitespace, so the diff picks up noise.

@@ -288,81 +288,8 @@
       "sourceCodeDescription": "Consulta CopySpeak en GitHub",
       "github": "GitHub",
       "acknowledgments": "Reconocimientos",
-      "openai": {
-        "title": "TTS de OpenAI",
-        "description": "Texto a voz neuronal de alta calidad",
-        "detail": "CopySpeak usa la API de texto a voz de OpenAI para sintetizar voces de alta calidad."
-      },
-      "elevenlabs": {
-        "title": "ElevenLabs",
-        "description": "Síntesis de voz con IA avanzada",
-        "detail": "Motor TTS premium con capacidades realistas de clonación de voz."
-      },
-      "kokoro": {
-        "title": "Kokoro TTS",
-        "description": "TTS local de código abierto",
-        "detail": "Motor de texto a voz ligero y de código abierto para procesamiento local."
-      },
-      "piper": {
-        "title": "Piper",
-        "description": "TTS neuronal rápido",
-        "detail": "Sistema de texto a voz neuronal, local, rápido y de baja latencia."
-      },
-      "cartesia": {
-        "title": "Cartesia",
-        "description": "TTS en la nube de baja latencia (Sonic 3.5)",
-        "detail": "API en la nube con el modelo Sonic 3.5. Requiere una clave de API."
-      },
-      "fish": {
-        "title": "Fish Audio",
-        "description": "TTS en la nube expresivo (S2)",
-        "detail": "API en la nube basada en los modelos S2 de Fish Audio. Requiere una clave de API."
-      },
-      "xai": {
-        "title": "xAI",
-        "description": "TTS en la nube expresivo (Grok)",
-        "detail": "API en la nube con las voces TTS de xAI. Requiere una clave de API."
-      },
-      "mistral": {
-        "title": "Mistral",
-        "description": "TTS en la nube expresivo (Voxtral)",
-        "detail": "API en la nube con el modelo Voxtral TTS de Mistral. Requiere una clave de API."
-      },
-      "kitten": {
-        "title": "Kitten TTS",
-        "description": "TTS local ONNX ultraligero",
-        "detail": "Cuatro modelos ONNX de 25–80 MB a elegir, con 8 voces integradas y optimizado para CPU con aceleración GPU opcional."
-      },
-      "qwen": {
-        "title": "Qwen3-TTS",
-        "description": "TTS local multilingüe",
-        "detail": "Qwen3-TTS CustomVoice local con 9 voces integradas y aceleración GPU opcional."
-      },
-      "pocket": {
-        "title": "Pocket TTS",
-        "description": "TTS local compacto",
-        "detail": "Kyutai Pocket: un modelo de 100 M de parámetros diseñado para funcionar en CPU, con voces en seis idiomas."
-      },
-      "edge": {
-        "title": "Edge-TTS",
-        "description": "TTS neuronal de Microsoft Edge (gratis)",
-        "detail": "Voces neuronales gratuitas y de alta calidad del servicio TTS en línea de Microsoft Edge. No requiere clave de API."
-      },
-      "google": {
-        "title": "Google Gemini TTS",
-        "description": "TTS en la nube basado en Gemini de Google",
-        "detail": "TTS en la nube con los modelos Gemini de Google. Requiere una clave de API de Google AI."
-      },
-      "microsoft": {
-        "title": "Microsoft Foundry AI",
-        "description": "TTS empresarial en la nube con Microsoft Foundry",
-        "detail": "Voces neuronales de nivel empresarial con los servicios de voz de Microsoft Foundry. Requiere una clave de API y un endpoint."
-      },
-      "http": {
-        "title": "Motor HTTP personalizado",
-        "description": "Backend TTS genérico por HTTP/REST",
-        "detail": "Motor con tu propio backend que llama a cualquier endpoint HTTP con plantillas de URL y autenticación configurables."
-      },
+      "madeWith": "Hecho con {heart}, Rust y bots.",
+      "buyMeCoffee": "Invítame a un café",
       "checkUpdates": "Buscar actualizaciones",
       "checkUpdatesTooltip": "Buscar automáticamente nuevas versiones al iniciar",
       "updateStatus": "Estado de la actualización",

@@ -4,6 +4,20 @@ mod tests {
     use crate::config::{load_or_default_from, save_to};
 
     #[test]
+    fn unset_locale_remains_distinct_from_an_explicit_english_choice() {
+        let mut config = serde_json::to_value(AppConfig::default()).unwrap();
+        assert_eq!(config["general"]["locale"], "");
+        config["general"].as_object_mut().unwrap().remove("locale");
+        let restored: AppConfig = serde_json::from_value(config).unwrap();
+        assert_eq!(restored.general.locale, "");
+        let mut explicit = restored;
+        explicit.general.locale = "en".to_string();
+        let restored: AppConfig =
+            serde_json::from_str(&serde_json::to_string(&explicit).unwrap()).unwrap();
+        assert_eq!(restored.general.locale, "en");
+    }
+
+    #[test]
     fn streaming_setting_defaults_on_and_persists_when_disabled() {
         let mut config = serde_json::to_value(AppConfig::default()).unwrap();
         assert_eq!(config["playback"]["streaming_enabled"], true);

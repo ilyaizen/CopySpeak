@@ -296,7 +296,7 @@ export interface GeneralConfig {
   appearance: AppearanceMode;
   update_checks_enabled?: boolean;
   auto_save_profiles?: boolean;
-  locale: SupportedLocale;
+  locale: SupportedLocale | "";
   /** Master switch for History, Post-process, profile Effects, and Duck. */
   experimental_enabled?: boolean;
   effects_enabled: boolean;

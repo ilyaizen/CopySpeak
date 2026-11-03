@@ -100,6 +100,13 @@ pub fn get_config(config: State<'_, Mutex<AppConfig>>) -> AppConfig {
     cfg
 }
 
+/// Read just the saved locale; startup and onboarding must not depend on the
+/// full get_config IPC payload, which has hung on fresh installs.
+#[tauri::command]
+pub fn get_saved_locale(config: State<'_, Mutex<AppConfig>>) -> String {
+    config.lock().unwrap().general.locale.clone()
+}
+
 /// Canonical engine → env-var lists for cloud API keys. ONE table shared by
 /// `set_config`'s strip pass and `get_env_key_sources`. Order within a list is
 /// precedence: first non-empty wins, matching `secrets::resolve`. The Microsoft

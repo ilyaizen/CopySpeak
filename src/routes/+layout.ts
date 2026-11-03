@@ -6,22 +6,21 @@ export const prerender = true;
 export const ssr = false;
 
 import { setLocale, waitForI18nReady } from "#lib/i18n";
-import { isSupportedLocale } from "#lib/i18n/utils";
+import { resolveLocale } from "#lib/i18n/utils";
 import { invoke, isTauri } from "#lib/services/tauri";
 import { browser } from "$app/env";
-import type { AppConfig, SupportedLocale } from "#lib/types";
+import type { SupportedLocale } from "#lib/types";
 
-// Read the saved locale from config; anything unsupported falls back to en
-async function loadSavedLocale(): Promise<SupportedLocale> {
+// Empty config locale means no explicit choice, even when another setting was saved.
+async function loadSavedLocale(systemLocale: string): Promise<SupportedLocale> {
   try {
-    const config = await invoke<AppConfig>("get_config");
-    const savedLocale: string = config.general.locale;
-    if (isSupportedLocale(savedLocale)) return savedLocale;
-    console.warn(`Locale ${savedLocale} is not supported, falling back to en`);
+    // A tiny scalar avoids the full get_config payload, which has hung on onboarding.
+    const savedLocale = await invoke<string>("get_saved_locale");
+    return resolveLocale(savedLocale, systemLocale);
   } catch (e) {
     console.error("Failed to load saved locale:", e);
   }
-  return "en";
+  return resolveLocale("", systemLocale);
 }
 
 // Apply the saved locale before the first render, so the UI never paints in English (LTR)
@@ -32,8 +31,10 @@ export async function load() {
     // Wait for svelte-i18n to fully initialize before rendering
     // This prevents "Cannot format a message without first setting the initial locale" errors
     await waitForI18nReady();
-    if (isTauri && window.location.pathname !== "/hud") {
-      locale = await loadSavedLocale();
+    if (window.location.pathname !== "/hud") {
+      locale = isTauri
+        ? await loadSavedLocale(navigator.language)
+        : resolveLocale("", navigator.language);
       setLocale(locale);
       // setLocale starts loading the catalog; wait for it so the first render has strings
       await waitForI18nReady();

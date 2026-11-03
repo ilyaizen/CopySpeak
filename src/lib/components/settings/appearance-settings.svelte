@@ -2,7 +2,7 @@
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Select } from "#lib/components/ui/select/index.js";
   import { _ } from "svelte-i18n";
-  import { getSupportedLocales } from "#lib/i18n/utils";
+  import { getSupportedLocales, resolveLocale } from "#lib/i18n/utils";
   import type { AppConfig, SupportedLocale } from "#lib/types";
 
   let {
@@ -42,7 +42,7 @@
     <Select
       id="language"
       options={localeOptions}
-      value={localConfig.general.locale}
+      value={resolveLocale(localConfig.general.locale, navigator.language)}
       onchange={handleLocaleChange}
       class="w-32"
     />

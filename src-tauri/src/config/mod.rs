@@ -208,7 +208,7 @@ impl Default for AppConfig {
                 appearance: AppearanceMode::default(),
                 update_checks_enabled: true,
                 auto_save_profiles: false,
-                locale: "en".to_string(),
+                locale: String::new(),
                 experimental_enabled: false,
                 effects_enabled: true,
             },

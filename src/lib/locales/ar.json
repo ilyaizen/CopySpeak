@@ -288,76 +288,8 @@
       "sourceCodeDescription": "عرض CopySpeak على GitHub",
       "github": "GitHub",
       "acknowledgments": "شكر وتقدير",
-      "openai": {
-        "title": "OpenAI TTS",
-        "description": "تحويل عصبي عالي الجودة للنص إلى كلام",
-        "detail": "يستخدم CopySpeak واجهة OpenAI لتحويل النص إلى كلام لتوليف صوتي عالي الجودة."
-      },
-      "elevenlabs": {
-        "title": "ElevenLabs",
-        "description": "توليف صوتي متقدم بالذكاء الاصطناعي",
-        "detail": "محرك TTS مميز بقدرات واقعية لاستنساخ الأصوات."
-      },
-      "kokoro": {
-        "title": "Kokoro TTS",
-        "description": "TTS محلي مفتوح المصدر",
-        "detail": "محرك خفيف مفتوح المصدر لتحويل النص إلى كلام بمعالجة محلية."
-      },
-      "piper": {
-        "title": "Piper",
-        "description": "TTS عصبي سريع",
-        "detail": "نظام محلي سريع لتحويل النص إلى كلام عصبيًا بزمن استجابة منخفض."
-      },
-      "cartesia": {
-        "title": "Cartesia",
-        "description": "TTS سحابي منخفض الكمون (Sonic 3.5)",
-        "detail": "واجهة API سحابية تعمل بنموذج Sonic 3.5. تتطلب مفتاح API."
-      },
-      "fish": {
-        "title": "Fish Audio",
-        "description": "TTS سحابي معبّر (S2)",
-        "detail": "API سحابي مبني على نماذج Fish Audio S2. يتطلب مفتاح API."
-      },
-      "xai": {
-        "title": "xAI",
-        "description": "TTS سحابي معبّر (Grok)",
-        "detail": "واجهة سحابية مدعومة بأصوات TTS من xAI. يتطلب مفتاح API."
-      },
-      "mistral": {
-        "title": "Mistral",
-        "description": "TTS سحابي معبّر (Voxtral)",
-        "detail": "واجهة سحابية مدعومة بنموذج Voxtral TTS من Mistral. يتطلب مفتاح API."
-      },
-      "kitten": {
-        "title": "Kitten TTS",
-        "description": "TTS محلي بتقنية ONNX فائق الخفة",
-        "detail": "أربعة نماذج ONNX قابلة للاختيار (25–80 ميغابايت) مع 8 أصوات مدمجة، محسّنة للمعالج مع تسريع GPU اختياري."
-      },
-      "qwen": {
-        "title": "Qwen3-TTS",
-        "description": "TTS محلي متعدد اللغات",
-        "detail": "Qwen3-TTS CustomVoice محلي مع 9 أصوات مدمجة وتسريع GPU اختياري."
-      },
-      "pocket": {
-        "title": "Pocket TTS",
-        "description": "TTS محلي مدمج",
-        "detail": "Kyutai Pocket: نموذج بـ100 مليون معامل مصمم للعمل على المعالج، بأصوات في ست لغات."
-      },
-      "google": {
-        "title": "Google Gemini TTS",
-        "description": "TTS سحابي من Google مبني على Gemini",
-        "detail": "TTS سحابي يعمل بنماذج Gemini من Google. يتطلب مفتاح Google AI API."
-      },
-      "microsoft": {
-        "title": "Microsoft Foundry AI",
-        "description": "TTS سحابي للمؤسسات عبر Microsoft Foundry",
-        "detail": "أصوات عصبية بمستوى المؤسسات عبر خدمات الكلام في Microsoft Foundry. يتطلب مفتاح API ونقطة نهاية."
-      },
-      "http": {
-        "title": "محرك HTTP مخصص",
-        "description": "واجهة خلفية TTS عامة عبر HTTP/REST",
-        "detail": "محرك لواجهتك الخلفية الخاصة يستدعي أي نقطة نهاية HTTP بقوالب URL ومصادقة قابلة للتهيئة."
-      },
+      "madeWith": "صُنع بـ {heart} وRust والروبوتات.",
+      "buyMeCoffee": "اشترِ لي قهوة",
       "checkUpdates": "التحقق من التحديثات",
       "checkUpdatesTooltip": "التحقق تلقائياً من الإصدارات الجديدة عند بدء التشغيل",
       "updateStatus": "حالة التحديث",

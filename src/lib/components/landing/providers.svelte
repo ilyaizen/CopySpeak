@@ -11,7 +11,7 @@
   // (Mistral's 98x22, Microsoft AI's 37.1x17.2) or where the mark is deliberately
   // scaled up (Kitten's 18px: its typeset text is smaller than the cat, so the
   // whole lockup renders above the band height). OpenAI ships as ONE combined
-  // lockup (Blossom + wordmark, tight ink viewBox) composed from the owner's kit
+  // lockup (Blossom + wordmark, including its descender) composed from the owner's kit
   // files. Marks render as CSS alpha masks painted with currentColor, so one file
   // per provider serves both themes.
   type ProviderMark = { mark: string; w: number; h: number };
@@ -21,7 +21,7 @@
     {
       name: "OpenAI",
       href: "https://openai.com",
-      mark: { mark: "openai", w: 80.35, h: 16 }
+      mark: { mark: "openai", w: 80.35, h: 17.66 }
     },
     {
       name: "ElevenLabs",

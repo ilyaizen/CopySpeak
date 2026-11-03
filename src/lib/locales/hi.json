@@ -288,76 +288,8 @@
       "sourceCodeDescription": "GitHub पर CopySpeak देखें",
       "github": "GitHub",
       "acknowledgments": "आभार",
-      "openai": {
-        "title": "OpenAI TTS",
-        "description": "उच्च गुणवत्ता वाला न्यूरल टेक्स्ट-टू-स्पीच",
-        "detail": "उच्च गुणवत्ता वाले वॉइस सिंथेसिस के लिए CopySpeak OpenAI के टेक्स्ट-टू-स्पीच API का उपयोग करता है।"
-      },
-      "elevenlabs": {
-        "title": "ElevenLabs",
-        "description": "उन्नत AI वॉइस सिंथेसिस",
-        "detail": "यथार्थवादी वॉइस क्लोनिंग क्षमता वाला प्रीमियम TTS इंजन।"
-      },
-      "kokoro": {
-        "title": "Kokoro TTS",
-        "description": "ओपन-सोर्स लोकल TTS",
-        "detail": "लोकल प्रोसेसिंग के लिए हल्का, ओपन-सोर्स टेक्स्ट-टू-स्पीच इंजन।"
-      },
-      "piper": {
-        "title": "Piper",
-        "description": "तेज़ न्यूरल TTS",
-        "detail": "कम लेटेंसी वाला तेज़, लोकल न्यूरल टेक्स्ट-टू-स्पीच सिस्टम।"
-      },
-      "cartesia": {
-        "title": "Cartesia",
-        "description": "कम लेटेंसी वाला क्लाउड TTS (Sonic 3.5)",
-        "detail": "Sonic 3.5 मॉडल पर आधारित क्लाउड API। API कुंजी आवश्यक है।"
-      },
-      "fish": {
-        "title": "Fish Audio",
-        "description": "अभिव्यक्तिपूर्ण क्लाउड TTS (S2)",
-        "detail": "Fish Audio S2 मॉडल पर आधारित क्लाउड API। API कुंजी आवश्यक है।"
-      },
-      "xai": {
-        "title": "xAI",
-        "description": "अभिव्यक्त क्लाउड TTS (Grok)",
-        "detail": "xAI की TTS आवाज़ों पर आधारित क्लाउड API। API कुंजी आवश्यक है।"
-      },
-      "mistral": {
-        "title": "Mistral",
-        "description": "अभिव्यक्त क्लाउड TTS (Voxtral)",
-        "detail": "Mistral के Voxtral TTS मॉडल पर आधारित क्लाउड API। API कुंजी आवश्यक है।"
-      },
-      "kitten": {
-        "title": "Kitten TTS",
-        "description": "बेहद हल्का लोकल ONNX TTS",
-        "detail": "चुनने योग्य चार 25–80MB ONNX मॉडल, 8 बिल्ट-इन आवाज़ों के साथ, CPU के लिए अनुकूलित और वैकल्पिक GPU त्वरण।"
-      },
-      "qwen": {
-        "title": "Qwen3-TTS",
-        "description": "बहुभाषी लोकल TTS",
-        "detail": "9 बिल्ट-इन आवाज़ों और वैकल्पिक GPU त्वरण वाला लोकल Qwen3-TTS CustomVoice।"
-      },
-      "pocket": {
-        "title": "Pocket TTS",
-        "description": "कॉम्पैक्ट लोकल TTS",
-        "detail": "Kyutai Pocket: CPU पर चलने के लिए बना 10 करोड़ पैरामीटर वाला मॉडल, छह भाषाओं में आवाज़ों के साथ।"
-      },
-      "google": {
-        "title": "Google Gemini TTS",
-        "description": "Google का Gemini-आधारित क्लाउड TTS",
-        "detail": "Google के Gemini मॉडल पर चलने वाला क्लाउड TTS। Google AI API कुंजी आवश्यक है।"
-      },
-      "microsoft": {
-        "title": "Microsoft Foundry AI",
-        "description": "Microsoft Foundry के ज़रिए एंटरप्राइज़ क्लाउड TTS",
-        "detail": "Microsoft Foundry स्पीच सेवाओं के ज़रिए एंटरप्राइज़-स्तर की न्यूरल आवाज़ें। API कुंजी और एंडपॉइंट आवश्यक हैं।"
-      },
-      "http": {
-        "title": "कस्टम HTTP इंजन",
-        "description": "सामान्य HTTP/REST TTS बैकएंड",
-        "detail": "अपना बैकएंड लाने वाला इंजन, जो कॉन्फ़िगर करने योग्य URL टेम्पलेट और प्रमाणीकरण के साथ किसी भी HTTP एंडपॉइंट को कॉल करता है।"
-      },
+      "madeWith": "{heart}, Rust और बॉट्स से बनाया गया।",
+      "buyMeCoffee": "मुझे कॉफ़ी पिलाएँ",
       "checkUpdates": "अपडेट जाँचें",
       "checkUpdatesTooltip": "स्टार्टअप पर स्वचालित रूप से नए संस्करण जाँचें",
       "updateStatus": "अपडेट स्थिति",
