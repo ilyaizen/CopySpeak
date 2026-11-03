@@ -671,7 +671,7 @@
       "cleanup": "فشل التنظيف",
       "installer": "تعذّر تشغيل برنامج التثبيت",
       "switchEngine": "تعذّر تبديل المحرك",
-      "kokoroInstallFailed": "فشل تثبيت Kokoro — اختر محركاً آخر، أو أعد محاولة التثبيت.",
+      "kokoroInstallFailed": "فشل تثبيت Kokoro. اختر محركاً آخر أو أعد محاولة التثبيت.",
       "kokoroInstallStart": "تعذّر بدء تثبيت Kokoro: {error}",
       "saveFailed": "فشل حفظ الإعدادات: {error}",
       "cleanupFailed": "فشل التنظيف: {error}",
@@ -693,23 +693,38 @@
       "title": "مرحبًا بك في CopySpeak",
       "subtitle": "هيّئ محرك تحويل النص إلى كلام للبدء، أو تخطَّ هذه الخطوة وأعدّه لاحقًا."
     },
-    "engineConfig": "تهيئة المحرك",
-    "engineDescription": "أعدّ محرك TTS. يمكنك تغييره لاحقًا من تبويب المحرك.",
-    "recommendation": {
-      "title": "ننصح بالبدء بـ Kitten TTS",
-      "description": "Kitten TTS محرك TTS جديد فائق الخفة (25-80 ميغابايت) يعمل على المعالج دون الحاجة إلى GPU. انقر على الزر أدناه لتثبيته تلقائيًا — دون أي إعداد يدوي."
-    },
-    "install": "تثبيت Kitten TTS",
-    "installing": "جارٍ التثبيت...",
-    "complete": "ابدأ",
-    "loading": "جارٍ تحميل التهيئة...",
-    "installed": "تم التثبيت!",
-    "openTerminal": "فتح طرفية PowerShell",
-    "checkingEngine": "جارٍ فحص المحرك...",
-    "helpText": "يمكنك دائمًا تهيئة المحرك لاحقًا من تبويب المحرك.",
     "chooseEngine": "اختر محرك الصوت",
+    "switchAnytime": "يمكن تغيير المحرك في أي وقت من الإعدادات.",
+    "recommended": "موصى به",
+    "noKeyNeeded": "بدون مفتاح API",
+    "apiKeyInSettings": "مفتاح API في الإعدادات",
+    "engines": {
+      "kokoro": {
+        "detail": "أصوات طبيعية تعمل دون اتصال بالكامل. تنزيل لمرة واحدة بحجم 335 ميغابايت تقريباً."
+      },
+      "edge": {
+        "detail": "أصوات Microsoft مجانية. لا حاجة للتثبيت، وتعمل فوراً."
+      },
+      "cartesia": {
+        "detail": "أصوات مميزة سريعة. تتوفر خطة مجانية."
+      },
+      "elevenlabs": {
+        "detail": "أصوات مميزة متعددة اللغات. تتوفر خطة مجانية."
+      },
+      "fish": {
+        "detail": "أصوات معبرة مع نموذج مجاني مضمّن."
+      }
+    },
+    "kokoroReady": "تم تثبيت Kokoro وهو جاهز.",
+    "kokoroInstallHint": "يظهر التنزيل هنا. تفضّل التخطي؟ Edge-TTS يعمل فوراً.",
+    "otherLocalEngines": "يمكن تثبيت محركات محلية أخرى (Kitten وQwen وPiper) لاحقاً من صفحة المحركات.",
+    "installKokoroCta": "تثبيت Kokoro والبدء",
+    "loading": "جارٍ تحميل التهيئة...",
+    "installing": "جارٍ التثبيت...",
     "installingKokoro": "جارٍ تثبيت Kokoro… (~335 ميغابايت، مرة واحدة)",
-    "installFailed": "فشل التثبيت."
+    "installFailed": "فشل التثبيت.",
+    "installed": "تم التثبيت",
+    "complete": "ابدأ"
   },
   "effects": {
     "title": "المؤثرات الصوتية",

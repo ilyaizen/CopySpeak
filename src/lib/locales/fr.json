@@ -693,23 +693,38 @@
       "title": "Bienvenue dans CopySpeak",
       "subtitle": "Configurez votre moteur de synthèse vocale pour commencer, ou passez cette étape et faites-le plus tard."
     },
-    "engineConfig": "Configuration du moteur",
-    "engineDescription": "Configurez votre moteur TTS. Vous pourrez le modifier plus tard dans l'onglet Moteur.",
-    "recommendation": {
-      "title": "Pour commencer, nous recommandons Kitten TTS",
-      "description": "Kitten TTS est un nouveau moteur TTS ultra-léger (25-80 Mo) qui fonctionne sur le CPU sans GPU. Cliquez sur le bouton ci-dessous pour l'installer automatiquement — aucune configuration manuelle requise."
-    },
-    "install": "Installer Kitten TTS",
-    "installing": "Installation...",
-    "complete": "Commencer",
-    "loading": "Chargement de la configuration...",
-    "installed": "Installé !",
-    "openTerminal": "Ouvrir un terminal PowerShell",
-    "checkingEngine": "Vérification du moteur...",
-    "helpText": "Vous pourrez toujours configurer votre moteur plus tard dans l'onglet Moteur.",
     "chooseEngine": "Choisissez votre moteur vocal",
+    "switchAnytime": "Changez de moteur à tout moment dans les Paramètres.",
+    "recommended": "Recommandé",
+    "noKeyNeeded": "Sans clé API",
+    "apiKeyInSettings": "Clé API dans les Paramètres",
+    "engines": {
+      "kokoro": {
+        "detail": "Voix naturelles 100 % hors ligne. Téléchargement unique d'environ 335 Mo."
+      },
+      "edge": {
+        "detail": "Voix Microsoft gratuites. Rien à installer, fonctionne immédiatement."
+      },
+      "cartesia": {
+        "detail": "Voix premium rapides. Offre gratuite disponible."
+      },
+      "elevenlabs": {
+        "detail": "Voix premium multilingues. Offre gratuite disponible."
+      },
+      "fish": {
+        "detail": "Voix expressives avec modèle gratuit inclus."
+      }
+    },
+    "kokoroReady": "Kokoro est installé et prêt.",
+    "kokoroInstallHint": "Le téléchargement s'affiche ici. Vous préférez le sauter ? Edge-TTS fonctionne immédiatement.",
+    "otherLocalEngines": "D'autres moteurs locaux (Kitten, Qwen, Piper) s'installent plus tard depuis la page des moteurs.",
+    "installKokoroCta": "Installer Kokoro et commencer",
+    "loading": "Chargement de la configuration...",
+    "installing": "Installation...",
     "installingKokoro": "Installation de Kokoro… (~335 Mo, une seule fois)",
-    "installFailed": "Échec de l'installation."
+    "installFailed": "Échec de l'installation.",
+    "installed": "Installé",
+    "complete": "Commencer"
   },
   "effects": {
     "title": "Effets audio",

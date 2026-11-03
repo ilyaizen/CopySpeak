@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Post-processing is set per profile** — each profile has its own on/off switch and template. On upgrade, every profile inherits your previous global setting.
 - **Stop from outside the app** — `POST /stop` on the control server and `copyspeak stop` halt playback the same way the Stop button does. Hermes uses it to cut speech off when you interrupt, which also releases a blocked `speak --wait`.
 - **Voice browser** — search and filter voices by available metadata, listen to provider previews, and select with the keyboard. Voice lists load from a per-engine, per-key cache; Refresh fetches the latest list and shows provider errors instead of silently falling back.
-- **More onboarding choices** — first-run setup now offers ElevenLabs and Fish Audio beside the existing options, and cloud cards with a free tier are labelled "Free tier".
+- **More onboarding choices** — first-run setup now offers ElevenLabs and Fish Audio beside the existing options. Kokoro, ElevenLabs and Fish Audio are marked as recommended, Fish Audio is free through its included free model, and every card carries short copy translated into all nine languages.
 - **Edge-TTS is back** — Microsoft's free Read Aloud voices return on the fixed `edge-tts` 7.3.1 client, which moved to Microsoft's current host and handles the 403 clock-skew retry itself. Onboarding, the Engines page, About and the profile editor offer Edge again, and fresh installs get a keyless Edge fallback profile; existing configs can simply pick Edge.
 
 ### Changed

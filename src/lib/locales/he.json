@@ -675,7 +675,7 @@
       "cleanup": "הניקוי נכשל",
       "installer": "הפעלת המתקין נכשלה",
       "switchEngine": "החלפת המנוע נכשלה",
-      "kokoroInstallFailed": "התקנת Kokoro נכשלה — בחר מנוע אחר, או נסה להתקין שוב.",
+      "kokoroInstallFailed": "התקנת Kokoro נכשלה. בחר מנוע אחר או נסה להתקין שוב.",
       "kokoroInstallStart": "התקנת Kokoro לא הצליחה להתחיל: {error}",
       "saveFailed": "שמירת ההגדרות נכשלה: {error}",
       "cleanupFailed": "הניקוי נכשל: {error}",
@@ -697,23 +697,38 @@
       "title": "ברוך הבא ל-CopySpeak",
       "subtitle": "הגדר את מנוע ההמרה של טקסט לדיבור כדי להתחיל, או דלג והגדר אותו מאוחר יותר."
     },
-    "engineConfig": "הגדרת מנוע",
-    "engineDescription": "הגדר את מנוע ה-TTS שלך. ניתן לשנות זאת מאוחר יותר בלשונית המנוע.",
-    "recommendation": {
-      "title": "אנו ממליצים על Kitten TTS כדי להתחיל",
-      "description": "Kitten TTS הוא מנוע TTS חדש וקל במיוחד (25–80MB) שפועל על המעבד ללא צורך ב-GPU. לחץ על הכפתור למטה כדי להתקין אותו אוטומטית — ללא הגדרה ידנית."
-    },
-    "install": "התקן את Kitten TTS",
-    "installing": "מתקין...",
-    "complete": "התחל",
-    "loading": "טוען תצורה...",
-    "installed": "הותקן!",
-    "openTerminal": "פתח טרמינל PowerShell",
-    "checkingEngine": "בודק מנוע...",
-    "helpText": "תמיד תוכל להגדיר את המנוע מאוחר יותר מלשונית המנוע.",
     "chooseEngine": "בחר את מנוע הקול שלך",
+    "switchAnytime": "אפשר להחליף מנוע בכל עת בהגדרות.",
+    "recommended": "מומלץ",
+    "noKeyNeeded": "ללא מפתח API",
+    "apiKeyInSettings": "מפתח API בהגדרות",
+    "engines": {
+      "kokoro": {
+        "detail": "קולות טבעיים ללא חיבור לאינטרנט. הורדה חד-פעמית של כ-335 MB."
+      },
+      "edge": {
+        "detail": "קולות Microsoft בחינם. בלי התקנה, עובד מיד."
+      },
+      "cartesia": {
+        "detail": "קולות פרימיום מהירים. תוכנית חינמית זמינה."
+      },
+      "elevenlabs": {
+        "detail": "קולות פרימיום רב-לשוניים. תוכנית חינמית זמינה."
+      },
+      "fish": {
+        "detail": "קולות אקספרסיביים, כולל מודל חינמי."
+      }
+    },
+    "kokoroReady": "Kokoro מותקן ומוכן.",
+    "kokoroInstallHint": "ההורדה מוצגת כאן. מעדיפים לדלג? Edge-TTS עובד מיד.",
+    "otherLocalEngines": "מנועים מקומיים נוספים (Kitten, Qwen, Piper) אפשר להתקין אחר כך מעמוד המנועים.",
+    "installKokoroCta": "להתקין את Kokoro ולהתחיל",
+    "loading": "טוען תצורה...",
+    "installing": "מתקין...",
     "installingKokoro": "מתקין את Kokoro… (כ-335 MB, פעם אחת)",
-    "installFailed": "ההתקנה נכשלה."
+    "installFailed": "ההתקנה נכשלה.",
+    "installed": "הותקן",
+    "complete": "התחל"
   },
   "effects": {
     "title": "אפקטים קוליים",

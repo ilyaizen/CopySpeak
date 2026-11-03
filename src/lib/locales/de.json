@@ -671,7 +671,7 @@
       "cleanup": "Bereinigung fehlgeschlagen",
       "installer": "Installer konnte nicht ausgeführt werden",
       "switchEngine": "Engine konnte nicht gewechselt werden",
-      "kokoroInstallFailed": "Kokoro-Installation fehlgeschlagen — wählen Sie eine andere Engine oder wiederholen Sie die Installation.",
+      "kokoroInstallFailed": "Kokoro-Installation fehlgeschlagen. Wählen Sie eine andere Engine oder wiederholen Sie die Installation.",
       "kokoroInstallStart": "Kokoro-Installation konnte nicht gestartet werden: {error}",
       "saveFailed": "Einstellungen konnten nicht gespeichert werden: {error}",
       "cleanupFailed": "Bereinigung fehlgeschlagen: {error}",
@@ -693,23 +693,38 @@
       "title": "Willkommen bei CopySpeak",
       "subtitle": "Richten Sie Ihre Sprachausgabe-Engine ein, um loszulegen, oder überspringen Sie dies und richten Sie sie später ein."
     },
-    "engineConfig": "Engine-Konfiguration",
-    "engineDescription": "Richten Sie Ihre TTS-Engine ein. Sie können dies später im Tab Engine ändern.",
-    "recommendation": {
-      "title": "Für den Einstieg empfehlen wir Kitten TTS",
-      "description": "Kitten TTS ist eine neue, ultraleichte TTS-Engine (25–80 MB), die auf der CPU läuft und keine GPU benötigt. Klicken Sie unten, um sie automatisch zu installieren — keine manuelle Einrichtung nötig."
-    },
-    "install": "Kitten TTS installieren",
-    "installing": "Wird installiert...",
-    "complete": "Loslegen",
-    "loading": "Konfiguration wird geladen...",
-    "installed": "Installiert!",
-    "openTerminal": "PowerShell-Terminal öffnen",
-    "checkingEngine": "Engine wird geprüft...",
-    "helpText": "Sie können Ihre Engine jederzeit später im Tab Engine konfigurieren.",
     "chooseEngine": "Wählen Sie Ihre Sprach-Engine",
+    "switchAnytime": "Jederzeit in den Einstellungen wechselbar.",
+    "recommended": "Empfohlen",
+    "noKeyNeeded": "Kein API-Schlüssel nötig",
+    "apiKeyInSettings": "API-Schlüssel in den Einstellungen",
+    "engines": {
+      "kokoro": {
+        "detail": "Natürliche Stimmen, komplett offline. Einmaliger Download von ca. 335 MB."
+      },
+      "edge": {
+        "detail": "Kostenlose Microsoft-Stimmen. Keine Installation, sofort einsatzbereit."
+      },
+      "cartesia": {
+        "detail": "Schnelle Premium-Stimmen. Kostenloser Tarif verfügbar."
+      },
+      "elevenlabs": {
+        "detail": "Premium-Stimmen in vielen Sprachen. Kostenloser Tarif verfügbar."
+      },
+      "fish": {
+        "detail": "Ausdrucksstarke Stimmen, kostenloses Modell inklusive."
+      }
+    },
+    "kokoroReady": "Kokoro ist installiert und bereit.",
+    "kokoroInstallHint": "Der Download läuft hier. Lieber überspringen? Edge-TTS ist sofort einsatzbereit.",
+    "otherLocalEngines": "Weitere lokale Engines (Kitten, Qwen, Piper) lassen sich später auf der Engines-Seite installieren.",
+    "installKokoroCta": "Kokoro installieren und loslegen",
+    "loading": "Konfiguration wird geladen...",
+    "installing": "Wird installiert...",
     "installingKokoro": "Kokoro wird installiert… (~335 MB, einmalig)",
-    "installFailed": "Installation fehlgeschlagen."
+    "installFailed": "Installation fehlgeschlagen.",
+    "installed": "Installiert",
+    "complete": "Loslegen"
   },
   "effects": {
     "title": "Audioeffekte",

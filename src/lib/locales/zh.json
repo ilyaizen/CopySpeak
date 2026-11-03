@@ -671,7 +671,7 @@
       "cleanup": "清理失败",
       "installer": "无法运行安装程序",
       "switchEngine": "无法切换引擎",
-      "kokoroInstallFailed": "Kokoro 安装失败——请选择其他引擎，或重试安装。",
+      "kokoroInstallFailed": "Kokoro 安装失败。请选择其他引擎，或重试安装。",
       "kokoroInstallStart": "Kokoro 安装无法启动：{error}",
       "saveFailed": "保存设置失败：{error}",
       "cleanupFailed": "清理失败：{error}",
@@ -693,23 +693,38 @@
       "title": "欢迎使用 CopySpeak",
       "subtitle": "配置文字转语音引擎即可开始，也可以跳过，稍后再设置。"
     },
-    "engineConfig": "引擎配置",
-    "engineDescription": "设置你的 TTS 引擎。之后可在“引擎”标签页中更改。",
-    "recommendation": {
-      "title": "推荐从 Kitten TTS 开始",
-      "description": "Kitten TTS 是一款新的超轻量 TTS 引擎（25-80MB），无需 GPU 即可在 CPU 上运行。点击下方按钮即可自动安装——无需手动设置。"
-    },
-    "install": "安装 Kitten TTS",
-    "installing": "正在安装...",
-    "complete": "开始使用",
-    "loading": "正在加载配置...",
-    "installed": "已安装！",
-    "openTerminal": "打开 PowerShell 终端",
-    "checkingEngine": "正在检查引擎...",
-    "helpText": "你随时可以在“引擎”标签页中配置引擎。",
     "chooseEngine": "选择语音引擎",
+    "switchAnytime": "随时可在设置中更换引擎。",
+    "recommended": "推荐",
+    "noKeyNeeded": "无需 API 密钥",
+    "apiKeyInSettings": "在设置中填写 API 密钥",
+    "engines": {
+      "kokoro": {
+        "detail": "自然语音，完全离线。一次性下载约 335 MB。"
+      },
+      "edge": {
+        "detail": "免费的 Microsoft 语音。无需安装，立即可用。"
+      },
+      "cartesia": {
+        "detail": "快速的高级语音。提供免费额度。"
+      },
+      "elevenlabs": {
+        "detail": "高级多语言语音。提供免费额度。"
+      },
+      "fish": {
+        "detail": "富有表现力的语音，内置免费模型。"
+      }
+    },
+    "kokoroReady": "Kokoro 已安装并准备就绪。",
+    "kokoroInstallHint": "下载进度会在这里显示。想跳过？Edge-TTS 立即可用。",
+    "otherLocalEngines": "更多本地引擎（Kitten、Qwen、Piper）可稍后在引擎页面安装。",
+    "installKokoroCta": "安装 Kokoro 并开始",
+    "loading": "正在加载配置...",
+    "installing": "正在安装...",
     "installingKokoro": "正在安装 Kokoro…（约 335 MB，仅需一次）",
-    "installFailed": "安装失败。"
+    "installFailed": "安装失败。",
+    "installed": "已安装",
+    "complete": "开始使用"
   },
   "effects": {
     "title": "音频效果",

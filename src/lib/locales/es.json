@@ -697,23 +697,38 @@
       "title": "Bienvenido a CopySpeak",
       "subtitle": "Configura tu motor de texto a voz para empezar, o sáltate este paso y configúralo más tarde."
     },
-    "engineConfig": "Configuración del motor",
-    "engineDescription": "Configura tu motor TTS. Puedes cambiarlo más tarde en la pestaña Motor.",
-    "recommendation": {
-      "title": "Te recomendamos Kitten TTS para empezar",
-      "description": "Kitten TTS es un motor TTS nuevo y ultraligero (25-80 MB) que funciona en CPU sin necesidad de GPU. Pulsa el botón de abajo para instalarlo automáticamente, sin configuración manual."
-    },
-    "install": "Instalar Kitten TTS",
-    "installing": "Instalando...",
-    "complete": "Empezar",
-    "loading": "Cargando la configuración...",
-    "installed": "¡Instalado!",
-    "openTerminal": "Abrir la terminal de PowerShell",
-    "checkingEngine": "Comprobando el motor...",
-    "helpText": "Siempre puedes configurar el motor más tarde desde la pestaña Motor.",
     "chooseEngine": "Elige tu motor de voz",
+    "switchAnytime": "Cambia de motor cuando quieras en Configuración.",
+    "recommended": "Recomendado",
+    "noKeyNeeded": "Sin clave de API",
+    "apiKeyInSettings": "Clave de API en Configuración",
+    "engines": {
+      "kokoro": {
+        "detail": "Voces naturales totalmente sin conexión. Descarga única de unos 335 MB."
+      },
+      "edge": {
+        "detail": "Voces gratuitas de Microsoft. Nada que instalar, funciona al instante."
+      },
+      "cartesia": {
+        "detail": "Voces premium y rápidas. Plan gratuito disponible."
+      },
+      "elevenlabs": {
+        "detail": "Voces premium multilingües. Plan gratuito disponible."
+      },
+      "fish": {
+        "detail": "Voces expresivas con modelo gratuito incluido."
+      }
+    },
+    "kokoroReady": "Kokoro está instalado y listo.",
+    "kokoroInstallHint": "La descarga se muestra aquí. ¿Prefieres saltarla? Edge-TTS funciona al instante.",
+    "otherLocalEngines": "Puedes instalar más motores locales (Kitten, Qwen, Piper) después desde la página de motores.",
+    "installKokoroCta": "Instalar Kokoro y empezar",
+    "loading": "Cargando la configuración...",
+    "installing": "Instalando...",
     "installingKokoro": "Instalando Kokoro… (~335 MB, una sola vez)",
-    "installFailed": "La instalación falló."
+    "installFailed": "La instalación falló.",
+    "installed": "Instalado",
+    "complete": "Empezar"
   },
   "effects": {
     "title": "Efectos de audio",

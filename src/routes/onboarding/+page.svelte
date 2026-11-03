@@ -10,7 +10,6 @@
     Volume2,
     Zap,
     KeyRound,
-    Gift,
     Download,
     Loader2,
     Check,
@@ -18,6 +17,7 @@
     RotateCw
   } from "@lucide/svelte";
   import { installStore } from "#lib/stores/install-store.svelte";
+  import { ENGINE_CHOICES } from "#lib/onboarding/engine-choices.js";
 
   // Issue #43 structural fix: onboarding never calls the full `get_config`
   // (its invoke() promise hangs on fresh installs). Everything here runs
@@ -28,6 +28,7 @@
   // `install-progress` pipeline the Engines page uses (installStore is the
   // single owner of that listener), so "install from onboarding" and "install
   // from Settings" can never fight over progress state.
+  // Card data and copy keys live in #lib/onboarding/engine-choices.ts.
 
   type OnboardingStatus = {
     has_config: boolean;
@@ -35,19 +36,6 @@
     engine_name: string;
     voice: string;
     keyless: boolean;
-  };
-
-  type EngineChoice = {
-    id: string;
-    name: string;
-    tagline: string;
-    detail: string;
-    recommended: boolean;
-    keyless: boolean;
-    /** Installs inline (streamed) before completing onboarding. */
-    installable?: boolean;
-    /** Has a free tier, so the API key costs nothing to try. */
-    freeTier?: boolean;
   };
 
   // Shared-model engine: one download covers every voice. Mirrors the default
@@ -61,58 +49,6 @@
     "am_michael",
     "bf_emma",
     "bm_george"
-  ];
-
-  const engineChoices: EngineChoice[] = [
-    {
-      id: "kokoro",
-      name: "Kokoro",
-      tagline: "Recommended — natural offline voices",
-      detail:
-        "High-quality neural voices running entirely on your machine. One-time ~335 MB download below, then no API key and no internet needed.",
-      recommended: true,
-      keyless: true,
-      installable: true
-    },
-    {
-      id: "edge",
-      name: "Edge-TTS",
-      tagline: "Works instantly",
-      detail:
-        "Free Microsoft Read Aloud voices. No API key, no downloads — start listening right away.",
-      recommended: false,
-      keyless: true
-    },
-    {
-      id: "cartesia",
-      name: "Cartesia",
-      tagline: "Premium cloud voices",
-      detail:
-        "Fast, high-quality voices with a free tier to start. Requires an API key — you can add it later in Settings.",
-      recommended: false,
-      keyless: false,
-      freeTier: true
-    },
-    {
-      id: "elevenlabs",
-      name: "ElevenLabs",
-      tagline: "Premium cloud voices",
-      detail:
-        "High-quality multilingual voices with a free tier to start. Requires an API key — you can add it later in Settings.",
-      recommended: false,
-      keyless: false,
-      freeTier: true
-    },
-    {
-      id: "fish",
-      name: "Fish Audio",
-      tagline: "Premium cloud voices",
-      detail:
-        "Expressive, natural voices with a free model included. Requires an API key — you can add it later in Settings.",
-      recommended: false,
-      keyless: false,
-      freeTier: true
-    }
   ];
 
   let selectedEngine = $state("kokoro");
@@ -235,13 +171,13 @@
             <div class="space-y-1">
               <h2 class="text-lg font-semibold">{$_("onboarding.chooseEngine")}</h2>
               <p class="text-muted-foreground text-sm leading-relaxed">
-                You can switch engines, voices, and speed anytime in Settings.
+                {$_("onboarding.switchAnytime")}
               </p>
             </div>
           </div>
 
           <div class="mt-4 grid gap-3">
-            {#each engineChoices as choice (choice.id)}
+            {#each ENGINE_CHOICES as choice (choice.id)}
               <button
                 type="button"
                 onclick={() => (selectedEngine = choice.id)}
@@ -257,7 +193,7 @@
                         class="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
                       >
                         <Sparkles class="h-3 w-3" />
-                        {choice.tagline}
+                        {$_("onboarding.recommended")}
                       </span>
                     {/if}
                     {#if choice.installable && kokoroInstalled}
@@ -265,32 +201,24 @@
                         class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
                       >
                         <Check class="h-3 w-3" />
-                        Installed
-                      </span>
-                    {/if}
-                    {#if choice.freeTier}
-                      <span
-                        class="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400"
-                      >
-                        <Gift class="h-3 w-3" />
-                        Free tier
+                        {$_("onboarding.installed")}
                       </span>
                     {/if}
                   </div>
                   {#if choice.keyless}
                     <span class="text-muted-foreground inline-flex items-center gap-1 text-xs">
                       <Zap class="h-3 w-3" />
-                      No key needed
+                      {$_("onboarding.noKeyNeeded")}
                     </span>
                   {:else}
                     <span class="text-muted-foreground inline-flex items-center gap-1 text-xs">
                       <KeyRound class="h-3 w-3" />
-                      API key in Settings
+                      {$_("onboarding.apiKeyInSettings")}
                     </span>
                   {/if}
                 </div>
                 <p class="text-muted-foreground mt-1.5 text-sm leading-relaxed">
-                  {choice.detail}
+                  {$_(choice.detailKey)}
                 </p>
               </button>
             {/each}
@@ -322,7 +250,7 @@
                   </div>
                   <Button variant="outline" size="sm" onclick={startKokoroInstall}>
                     <RotateCw size={12} class="me-1" />
-                    Retry
+                    {$_("common.tryAgain")}
                   </Button>
                 </div>
               {:else if kokoroInstalled}
@@ -330,19 +258,17 @@
                   class="inline-flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400"
                 >
                   <Check size={14} />
-                  Kokoro is installed and ready — offline voices, no key needed.
+                  {$_("onboarding.kokoroReady")}
                 </p>
               {:else}
                 <p class="text-muted-foreground text-sm">
-                  Click below to install Kokoro. The download streams here — Edge-TTS is there
-                  instantly if you'd rather skip it.
+                  {$_("onboarding.kokoroInstallHint")}
                 </p>
               {/if}
             </div>
           {:else}
             <p class="text-muted-foreground mt-2 text-xs">
-              Local engines (Kitten, Kokoro, Qwen, Piper) can be installed from the Engines page
-              after setup.
+              {$_("onboarding.otherLocalEngines")}
             </p>
           {/if}
         </div>
@@ -361,23 +287,15 @@
               {$_("common.saving")}
             {:else if isInstalling}
               <Loader2 size={14} class="me-2 animate-spin" />
-              Installing…
+              {$_("onboarding.installing")}
             {:else if selectedEngine === "kokoro" && !kokoroInstalled}
               <Download size={14} class="me-2" />
-              Install Kokoro & Get Started
+              {$_("onboarding.installKokoroCta")}
             {:else}
               {$_("onboarding.complete")}
-              {#if selectedEngine !== "edge"}
-                — {engineChoices.find((c) => c.id === selectedEngine)?.name}
-              {/if}
             {/if}
           </Button>
         </div>
-
-        <!-- Help Text -->
-        <p class="text-muted-foreground text-center text-xs">
-          {$_("onboarding.helpText")}
-        </p>
       {/if}
     </div>
   </div>
