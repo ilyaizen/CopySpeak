@@ -741,8 +741,6 @@
       "download": "Herunterladen",
       "github": "GitHub",
       "version": "v{version}",
-      "listen": "Anhören",
-      "stopListening": "Stopp",
       "pauseDemo": "Demo pausieren",
       "playDemo": "Demo abspielen",
       "previewLabel": "Preview"

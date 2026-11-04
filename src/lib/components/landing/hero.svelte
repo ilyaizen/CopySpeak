@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { _ } from "svelte-i18n";
-  import { Clipboard, Download, Pause, Play, Square, Volume2 } from "@lucide/svelte";
+  import { Clipboard, Download, Pause, Play } from "@lucide/svelte";
   import Github from "#lib/components/icons/github.svelte";
   import { VERSION } from "#lib/version";
   import { INTRO_AUDIO, INTRO_LINES } from "./intro-captions";
@@ -17,9 +17,8 @@
   let count = 0;
   const LINES = INTRO_LINES.map((line) => line.map((w) => ({ ...w, index: count++ })));
   const WORDS = LINES.flat();
-  const LAST_END = WORDS[WORDS.length - 1].end;
-  // Static frame (no JS / reduced motion): "the" in the first line lit.
-  const STATIC_WORD = WORDS.findIndex((w) => w.text === "the");
+  // Static frame (no JS / reduced motion / before playback): "copy" lit.
+  const STATIC_WORD = WORDS.findIndex((w) => w.text === "copy");
 
   let stage: HTMLDivElement;
   let promise: HTMLHeadingElement;
@@ -29,12 +28,14 @@
   let live = $state(-1);
   let chip = $state("Copied ×2");
   let selected = $state(false);
-  let paused = $state(false);
-  let listening = $state(false);
-  let animated = $state(false);
+  let playing = $state(false);
+  // Set once the audio has played: browsers then allow play() from a timer, so a replay can
+  // run the copy illustration first. Before that, play() must start inside a click.
+  let unlocked = false;
 
   const caption = $derived.by(() => {
-    const i = live >= 0 ? live : STATIC_WORD;
+    // Before the first word the HUD previews it; the static frame keeps its lit word.
+    const i = live >= 0 ? live : phase === null ? STATIC_WORD : 0;
     const text = (from: number, to: number) =>
       WORDS.slice(Math.max(0, from), to)
         .map((w) => w.text)
@@ -71,169 +72,107 @@
 
   let timers: ReturnType<typeof setTimeout>[] = [];
   let frame = 0;
-  let running = false;
 
   function at(ms: number, fn: () => void) {
     timers.push(setTimeout(fn, ms));
   }
 
-  function clear() {
+  function halt() {
     timers.forEach(clearTimeout);
     timers = [];
     cancelAnimationFrame(frame);
+    audio.pause();
+    playing = false;
   }
 
-  function reset() {
+  // The illustration: select the poem, copy it twice in quick succession, then speak it.
+  function run() {
+    halt();
     live = -1;
-    select(false);
+    playing = true;
+    phase = "idle";
+    audio.currentTime = 0;
+    at(400, () => {
+      phase = "selected";
+      select(true);
+    });
+    at(1100, () => {
+      chip = "Copied";
+      phase = "copy1";
+    });
+    at(1500, () => {
+      chip = "Copied ×2";
+      phase = "copy2";
+    });
+    at(2200, speak);
   }
 
-  // Speaking clock: the audio's own position when listening, wall time for the silent loop.
-  // Both read the same caption timings, so the silent demo keeps the recording's rhythm.
-  // Each caller decides when speaking ends: the silent loop after a tail past the last word,
-  // Listen when the audio itself ends. A clip shorter than that tail never reaches it.
-  function speak(clock: () => number, done: (ms: number) => boolean, onEnd: () => void) {
+  // Plays from the audio's current position; the highlight reads audio.currentTime, so it
+  // cannot drift from the recording.
+  async function speak() {
     select(false);
     phase = "speaking";
+    playing = true;
+    try {
+      await audio.play();
+    } catch (e) {
+      playing = false;
+      // Autoplay blocked: hold the frame and start on the visitor's first click anywhere.
+      // A pause during the pending play() rejects too (AbortError) and must stay paused.
+      if (e instanceof DOMException && e.name === "NotAllowedError")
+        document.addEventListener("click", resume, { once: true });
+      return;
+    }
+    unlocked = true;
     const tick = () => {
-      const ms = clock();
-      live = indexAt(ms);
-      if (done(ms)) onEnd();
-      else frame = requestAnimationFrame(tick);
+      live = indexAt(audio.currentTime * 1000);
+      if (audio.ended) {
+        playing = false;
+        live = -1;
+        phase = "done";
+      } else if (playing) frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
   }
 
-  function finish() {
-    reset();
-    phase = "done";
-    running = true;
-    at(2600, cycle);
+  function resume() {
+    if (!playing && phase === "speaking") speak();
   }
 
-  function cycle() {
-    clear();
-    reset();
-    phase = "idle";
-    at(600, () => {
-      phase = "selected";
-      select(true);
-    });
-    at(1200, () => {
-      chip = "Copied";
-      phase = "copy1";
-    });
-    at(1950, () => {
-      chip = "Copied ×2";
-      phase = "copy2";
-    });
-    at(2500, () => {
-      const t0 = performance.now();
-      speak(
-        () => performance.now() - t0,
-        (ms) => ms >= LAST_END + 300,
-        finish
-      );
-    });
-  }
-
-  function start() {
-    if (!running && !paused && !listening) {
-      running = true;
-      cycle();
+  function toggle() {
+    if (playing) halt();
+    else if (phase === "speaking") speak();
+    else if (unlocked) run();
+    else {
+      audio.currentTime = 0;
+      speak();
     }
-  }
-
-  function stop() {
-    running = false;
-    clear();
-    reset();
-    phase = null;
-  }
-
-  function stopListening() {
-    audio.pause();
-    listening = false;
-    stop();
-    start();
-  }
-
-  // play() must start inside the click: browsers block audio started from a later timer,
-  // so Listen skips the copy phases and goes straight to speaking.
-  async function listen() {
-    if (listening) return stopListening();
-    stop();
-    listening = true;
-    audio.currentTime = 0;
-    try {
-      await audio.play();
-    } catch {
-      listening = false;
-      start();
-      return;
-    }
-    speak(
-      () => audio.currentTime * 1000,
-      () => audio.ended,
-      () => {
-        listening = false;
-        if (paused) stop();
-        else finish();
-      }
-    );
-  }
-
-  function togglePause() {
-    paused = !paused;
-    if (paused) stop();
-    else start();
   }
 
   onMount(() => {
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const cleanups: (() => void)[] = [];
     highlights = "highlights" in CSS ? CSS.highlights : null;
 
     // The landing root is the scroll container, not the window.
     const scroller = stage.closest<HTMLElement>(".landing");
-    if (scroller) cleanups.push(groundParallax(scroller, scroller));
+    const cleanup = scroller ? groundParallax(scroller, scroller) : null;
 
-    if (!reduced) {
-      animated = true;
-      const io = new IntersectionObserver(
-        (entries) => {
-          if (listening) return;
-          if (entries[0].isIntersecting && !document.hidden) start();
-          else stop();
-        },
-        { threshold: 0.35 }
-      );
-      io.observe(stage);
-      const onVisibility = () => {
-        if (document.hidden && !listening) stop();
-      };
-      document.addEventListener("visibilitychange", onVisibility);
-      cleanups.push(() => {
-        io.disconnect();
-        document.removeEventListener("visibilitychange", onVisibility);
-      });
-    }
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) run();
 
     return () => {
-      cleanups.forEach((fn) => fn());
-      clear();
-      audio.pause();
+      cleanup?.();
+      halt();
+      document.removeEventListener("click", resume);
       highlights?.delete("copied");
     };
   });
 </script>
 
-<!-- Copy-twice-then-speak illustration. The silent loop runs on the real recording's caption
-     timings; Listen plays that recording with the same word highlighting. The intro
-     lines and the chip states are art, not UI copy, so they stay English in every locale. -->
+<!-- Copy-twice-then-speak illustration: the poem is copied twice, then the recording plays
+     with its caption timings driving the highlight. The intro lines and the chip states are
+     art, not UI copy, so they stay English in every locale. -->
 <div class="wrap">
   <section class="hero">
-    <div class="stage" class:paused data-phase={phase ?? undefined} bind:this={stage}>
+    <div class="stage" class:paused={!playing} data-phase={phase ?? undefined} bind:this={stage}>
       <div class="win">
         <h1 class="promise" class:sel={selected} bind:this={promise}>
           {#each LINES as line, li (li)}
@@ -245,10 +184,12 @@
           {/each}
         </h1>
         <div class="copied" aria-hidden="true">
-          <span class="chip">
-            <Clipboard class="icon" />
-            {chip}
-          </span>
+          {#key chip}
+            <span class="chip">
+              <Clipboard class="icon" />
+              {chip}
+            </span>
+          {/key}
           <span class="window-bar"><i></i></span>
         </div>
       </div>
@@ -261,28 +202,17 @@
       </div>
       <p class="label stage-label">{$_("landing.hero.previewLabel")}</p>
       <div class="demo-controls">
-        <button class="demo-toggle" type="button" aria-pressed={listening} onclick={listen}>
-          {#if listening}
-            <Square class="icon" />
-            {$_("landing.hero.stopListening")}
+        <button class="demo-toggle" type="button" onclick={toggle}>
+          {#if playing}
+            <Pause class="icon" />
+            {$_("landing.hero.pauseDemo")}
           {:else}
-            <Volume2 class="icon" />
-            {$_("landing.hero.listen")}
+            <Play class="icon" />
+            {$_("landing.hero.playDemo")}
           {/if}
         </button>
-        {#if animated && !listening}
-          <button class="demo-toggle" type="button" onclick={togglePause}>
-            {#if paused}
-              <Play class="icon" />
-              {$_("landing.hero.playDemo")}
-            {:else}
-              <Pause class="icon" />
-              {$_("landing.hero.pauseDemo")}
-            {/if}
-          </button>
-        {/if}
       </div>
-      <audio bind:this={audio} src={INTRO_AUDIO} preload="none"></audio>
+      <audio bind:this={audio} src={INTRO_AUDIO} preload="auto"></audio>
     </div>
 
     <p class="lede">{$_("app.tagline")}</p>

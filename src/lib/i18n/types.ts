@@ -616,8 +616,6 @@ export type TranslationKeys =
   | "landing.hero.download"
   | "landing.hero.github"
   | "landing.hero.version"
-  | "landing.hero.listen"
-  | "landing.hero.stopListening"
   | "landing.hero.pauseDemo"
   | "landing.hero.playDemo"
   | "landing.hero.previewLabel"

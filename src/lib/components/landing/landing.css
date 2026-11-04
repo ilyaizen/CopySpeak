@@ -309,25 +309,25 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 22px;
+  min-height: 36px;
   margin-top: 24px;
 }
 .landing .chip {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 2px 8px;
+  gap: 10px;
+  padding: 6px 12px;
   border: 1px solid var(--border);
-  border-radius: 2px;
-  font: 500 11px/16px var(--mono);
+  border-radius: 4px;
+  font: 600 13px/20px var(--mono);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
   color: var(--muted-foreground);
 }
 .landing .chip .icon {
-  width: 12px;
-  height: 12px;
+  width: 22px;
+  height: 22px;
 }
 .landing .window-bar {
   flex: 1;
@@ -444,8 +444,7 @@
   width: 12px;
   height: 12px;
 }
-.landing .demo-toggle:hover,
-.landing .demo-toggle[aria-pressed="true"] {
+.landing .demo-toggle:hover {
   background: var(--muted);
   color: var(--foreground);
 }
@@ -489,6 +488,15 @@
   .landing .stage[data-phase] .copied {
     transition: opacity 0.2s ease-out;
   }
+  /* each copy re-mounts the chip (keyed on its text), so it pops once per copy */
+  .landing .stage[data-phase="copy1"] .chip,
+  .landing .stage[data-phase="copy2"] .chip {
+    animation: landing-pop 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .landing .stage[data-phase="copy2"] .chip {
+    border-color: var(--accent);
+    color: var(--foreground);
+  }
   .landing .stage[data-phase="idle"] .copied,
   .landing .stage[data-phase="selected"] .copied,
   .landing .stage[data-phase="done"] .copied {
@@ -523,6 +531,14 @@
   }
   to {
     transform: scaleY(1);
+  }
+}
+@keyframes landing-pop {
+  from {
+    transform: scale(1.35);
+  }
+  to {
+    transform: scale(1);
   }
 }
 @keyframes landing-drain {

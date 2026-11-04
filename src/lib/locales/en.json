@@ -745,8 +745,6 @@
       "download": "Download",
       "github": "GitHub",
       "version": "v{version}",
-      "listen": "Listen",
-      "stopListening": "Stop",
       "pauseDemo": "Pause demo",
       "playDemo": "Play demo",
       "previewLabel": "Preview"

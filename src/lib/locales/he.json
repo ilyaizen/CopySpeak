@@ -745,8 +745,6 @@
       "download": "הורדה",
       "github": "GitHub",
       "version": "v{version}",
-      "listen": "האזנה",
-      "stopListening": "עצירה",
       "pauseDemo": "השהיית ההדגמה",
       "playDemo": "הפעלת ההדגמה",
       "previewLabel": "Preview"

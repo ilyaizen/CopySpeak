@@ -741,8 +741,6 @@
       "download": "Скачать",
       "github": "GitHub",
       "version": "v{version}",
-      "listen": "Слушать",
-      "stopListening": "Стоп",
       "pauseDemo": "Пауза демо",
       "playDemo": "Запустить демо",
       "previewLabel": "Preview"
