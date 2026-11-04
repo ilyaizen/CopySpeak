@@ -788,6 +788,7 @@ pub async fn play_history_batch(
         );
 
         // Emit audio fragment ready
+        crate::speak_requests::claim_unscoped_playback();
         let _ = app.emit(
             "audio-fragment-ready",
             crate::commands::AudioFragmentEvent {

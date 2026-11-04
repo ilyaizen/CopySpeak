@@ -24,6 +24,7 @@ mod playback_signal;
 mod post_process;
 mod sanitize;
 mod secrets;
+mod speak_requests;
 mod telemetry;
 mod text_map;
 mod tray;
@@ -41,18 +42,37 @@ pub static ACTIVE_CLI_PID: AtomicU32 = AtomicU32::new(0);
 /// began under, so an abort reaches only the readings already running.
 pub static ABORT_GENERATION: AtomicU64 = AtomicU64::new(0);
 
-/// The abort generation a synthesis began under.
+/// The abort generation a synthesis began under, plus the control-server
+/// request it serves (`speak_requests::NO_REQUEST` for every other reading).
 #[derive(Clone, Copy)]
-pub struct AbortScope(u64);
+pub struct AbortScope {
+    generation: u64,
+    request: u64,
+}
 
 impl AbortScope {
     pub fn begin() -> Self {
-        Self(ABORT_GENERATION.load(Ordering::Relaxed))
+        Self::begin_for_request(speak_requests::NO_REQUEST)
     }
 
-    /// True once an abort has been requested after this scope began.
+    /// A scope that also ends when its control-server request is cancelled
+    /// (`POST /stop {"request_id"}`), without touching any other reading.
+    pub fn begin_for_request(request: u64) -> Self {
+        Self {
+            generation: ABORT_GENERATION.load(Ordering::Relaxed),
+            request,
+        }
+    }
+
+    pub fn request(self) -> u64 {
+        self.request
+    }
+
+    /// True once an abort has been requested after this scope began, or once
+    /// this scope's own request has been cancelled.
     pub fn aborted(self) -> bool {
-        ABORT_GENERATION.load(Ordering::Relaxed) != self.0
+        ABORT_GENERATION.load(Ordering::Relaxed) != self.generation
+            || speak_requests::is_cancelled(self.request)
     }
 }
 

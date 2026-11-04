@@ -43,6 +43,7 @@ pub fn replay_cached(
 
     use base64::{engine::general_purpose, Engine as _};
     let encoded = general_purpose::STANDARD.encode(&wav_bytes);
+    crate::speak_requests::claim_unscoped_playback();
     if let Err(e) = app.emit(
         "audio-fragment-ready",
         super::AudioFragmentEvent {
@@ -242,6 +243,7 @@ pub fn play_history_entry(
     use base64::{engine::general_purpose, Engine as _};
     let encoded = general_purpose::STANDARD.encode(&wav_bytes);
     let captions = crate::tts::captions::read_sidecar(&output_path);
+    crate::speak_requests::claim_unscoped_playback();
     if let Err(e) = app.emit(
         "audio-fragment-ready",
         super::AudioFragmentEvent {

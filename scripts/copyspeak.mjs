@@ -58,10 +58,12 @@ const [cmd, subcmd, ...rest] = process.argv.slice(2);
 
 if (!cmd || has([cmd], ["-h", "--help"])) {
   console.log(`copyspeak health
-copyspeak stop
+copyspeak stop [--request-id <id>]
 copyspeak speak --profile pi "hello"
-copyspeak speak -p pi --stdin [--post-process] [--wait] [--ack <path>]
+copyspeak speak -p pi --stdin [--post-process] [--wait] [--ack <path>] [--request-id <id>]
   --condense is a backward-compatible alias for --post-process.
+  --request-id names the speak so "stop --request-id <id>" cancels exactly it,
+  even when the stop arrives first; without it, stop stops whatever plays.
 copyspeak profiles list|use <id>|show <id>
 copyspeak engines list
 copyspeak voices list --engine elevenlabs`);
@@ -71,7 +73,15 @@ copyspeak voices list --engine elevenlabs`);
 if (cmd === "health") {
   console.log(JSON.stringify(await request("/health"), null, 2));
 } else if (cmd === "stop") {
-  console.log(JSON.stringify(await request("/stop", { method: "POST" })));
+  const requestId = argValue([subcmd, ...rest].filter(Boolean), ["--request-id"]);
+  console.log(
+    JSON.stringify(
+      await request("/stop", {
+        method: "POST",
+        body: requestId ? JSON.stringify({ request_id: requestId }) : undefined
+      })
+    )
+  );
 } else if (cmd === "speak") {
   const args = [subcmd, ...rest].filter(Boolean);
   const profile = argValue(args, ["--profile", "-p"]);
@@ -80,27 +90,29 @@ if (cmd === "health") {
   const postProcess = has(args, ["--post-process", "--condense"]);
   const wait = has(args, ["--wait"]);
   const ack = argValue(args, ["--ack"]);
+  const requestId = argValue(args, ["--request-id"]);
   const text = stdin
     ? await readStdin()
     : args
         .filter((arg, index) => {
           const previous = args[index - 1];
           return (
-            !["--profile", "-p", "--ack"].includes(previous) &&
+            !["--profile", "-p", "--ack", "--request-id"].includes(previous) &&
             !arg.startsWith("--") &&
             arg !== profile
           );
         })
         .join(" ");
   if (!text.trim()) die("text is required");
-  await request("/speak", {
+  const result = await request("/speak", {
     method: "POST",
     body: JSON.stringify({
       text,
       profile,
       persist_selection: persist || undefined,
       post_process: postProcess || undefined,
-      wait: wait || undefined
+      wait: wait || undefined,
+      request_id: requestId || undefined
     })
   });
   if (ack) {
@@ -123,7 +135,9 @@ if (cmd === "health") {
     header.writeUInt32LE(silence.length, 40);
     await writeFile(ack, Buffer.concat([header, silence]));
   }
-  console.log("ok");
+  // A request stopped by "stop --request-id" settles as cancelled (nothing
+  // more will play for it); the ack is still written for Hermes' contract.
+  console.log(result?.cancelled ? "cancelled" : "ok");
 } else if (cmd === "profiles") {
   if (subcmd === "list") {
     printProfiles(await request("/profiles"));

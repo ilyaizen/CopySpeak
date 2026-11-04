@@ -16,14 +16,28 @@ pub(crate) struct SynthesisGuard {
 
 impl SynthesisGuard {
     pub(crate) fn new(app: &AppHandle) -> Self {
+        Self::new_for_request(app, crate::speak_requests::NO_REQUEST)
+    }
+
+    /// Start a reading on behalf of `request` (a control-server request id's
+    /// sequence, or `NO_REQUEST`). The start takes speaker ownership: the
+    /// webview's `synthesis-state-change` re-arms stream playback, so a scoped
+    /// stop for an older request must not reach it after this point.
+    pub(crate) fn new_for_request(app: &AppHandle, request: u64) -> Self {
         {
             let status = app.state::<JobStatus>();
             status.is_synthesizing.store(true, Ordering::Relaxed);
         }
         crate::update_tray_icon(app);
-        if let Err(e) = app.emit("synthesis-state-change", true) {
-            log::warn!("Failed to emit synthesis-state-change: {}", e);
-        }
+        crate::speak_requests::claim_playback(
+            request,
+            || false,
+            || {
+                if let Err(e) = app.emit("synthesis-state-change", true) {
+                    log::warn!("Failed to emit synthesis-state-change: {}", e);
+                }
+            },
+        );
         Self {
             app_handle: app.clone(),
         }
