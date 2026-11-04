@@ -112,6 +112,7 @@
       "showTrayIconTooltip": "Afficher CopySpeak dans la zone de notification. Sans cette icône, l’application s’ouvre normalement et fermer la fenêtre quitte l’application.",
       "language": "Langue",
       "languageDescription": "Choisissez votre langue préférée",
+      "systemLanguage": "Système",
       "launchOnLogin": "Lancer à l'ouverture de session",
       "startMinimized": "Démarrer réduit dans la zone de notification",
       "showNotifications": "Afficher les notifications",
@@ -288,7 +289,7 @@
       "sourceCodeDescription": "Voir CopySpeak sur GitHub",
       "github": "GitHub",
       "acknowledgments": "Remerciements",
-      "madeWith": "Fait avec {heart}, Rust et des bots.",
+      "madeWith": "Fait avec {heart}, Rust + des robots",
       "buyMeCoffee": "Offrez-moi un café",
       "checkUpdates": "Rechercher les mises à jour",
       "checkUpdatesTooltip": "Rechercher automatiquement de nouvelles versions au démarrage",
@@ -846,8 +847,8 @@
     "clearAria": "Effacer le raccourci"
   },
   "quick": {
-    "doubleCopy": "Double copie",
-    "doubleCopyTooltip": "Surveiller le presse-papiers pour la double copie",
+    "doubleCopy": "Écouter",
+    "doubleCopyTooltip": "Écouter la double copie",
     "effectsTooltip": "Appliquer un effet audio à la lecture TTS",
     "postProcess": "Post-traitement",
     "postProcessTooltip": "Applique le modèle de post-traitement actif au texte avant la lecture. Si le LLM échoue, le texte original est lu.",

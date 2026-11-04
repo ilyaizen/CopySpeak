@@ -112,6 +112,7 @@
       "showTrayIconTooltip": "Показывать CopySpeak в системном трее. Без значка приложение открывается обычным образом, а закрытие окна завершает его работу.",
       "language": "Язык",
       "languageDescription": "Выберите язык интерфейса",
+      "systemLanguage": "Система",
       "launchOnLogin": "Запускать при входе в систему",
       "startMinimized": "Запускать свёрнутым в трей",
       "showNotifications": "Показывать уведомления",
@@ -288,7 +289,7 @@
       "sourceCodeDescription": "CopySpeak на GitHub",
       "github": "GitHub",
       "acknowledgments": "Благодарности",
-      "madeWith": "Сделано с {heart}, Rust и ботами.",
+      "madeWith": "Сделано с {heart}, Rust + роботами",
       "buyMeCoffee": "Угостить меня кофе",
       "checkUpdates": "Проверить обновления",
       "checkUpdatesTooltip": "Автоматически проверять наличие новых версий при запуске",
@@ -846,8 +847,8 @@
     "clearAria": "Очистить горячую клавишу"
   },
   "quick": {
-    "doubleCopy": "Двойное копирование",
-    "doubleCopyTooltip": "Отслеживать буфер обмена на двойное копирование",
+    "doubleCopy": "Слушать",
+    "doubleCopyTooltip": "Реагировать на двойное копирование",
     "effectsTooltip": "Применять аудиоэффект к воспроизведению TTS",
     "postProcess": "Постобработка",
     "postProcessTooltip": "Применяет активный шаблон постобработки к тексту перед озвучиванием. Если LLM даёт сбой, читается исходный текст.",

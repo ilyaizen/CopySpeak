@@ -112,6 +112,7 @@
       "showTrayIconTooltip": "CopySpeak im Infobereich anzeigen. Ohne Symbol öffnet sich die Anwendung normal und wird beim Schließen des Fensters beendet.",
       "language": "Sprache",
       "languageDescription": "Bevorzugte Sprache auswählen",
+      "systemLanguage": "System",
       "launchOnLogin": "Bei Anmeldung starten",
       "startMinimized": "Minimiert im Infobereich starten",
       "showNotifications": "Benachrichtigungen anzeigen",
@@ -288,7 +289,7 @@
       "sourceCodeDescription": "CopySpeak auf GitHub ansehen",
       "github": "GitHub",
       "acknowledgments": "Danksagungen",
-      "madeWith": "Mit {heart}, Rust und Bots gemacht.",
+      "madeWith": "Mit {heart}, Rust + Robotern gemacht",
       "buyMeCoffee": "Spendiere mir einen Kaffee",
       "checkUpdates": "Nach Updates suchen",
       "checkUpdatesTooltip": "Beim Start automatisch nach neuen Versionen suchen",
@@ -846,8 +847,8 @@
     "clearAria": "Tastenkürzel löschen"
   },
   "quick": {
-    "doubleCopy": "Doppelt kopieren",
-    "doubleCopyTooltip": "Zwischenablage auf doppeltes Kopieren überwachen",
+    "doubleCopy": "Überwachen",
+    "doubleCopyTooltip": "Auf Doppelkopieren reagieren",
     "effectsTooltip": "Audioeffekt auf die TTS-Wiedergabe anwenden",
     "postProcess": "Post-Processing",
     "postProcessTooltip": "Wendet die aktive Post-Processing-Vorlage vor dem Sprechen an. Schlägt das LLM fehl, wird der Originaltext gesprochen.",

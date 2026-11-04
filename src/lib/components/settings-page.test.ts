@@ -71,6 +71,37 @@ async function mountSettings() {
   return view;
 }
 
+it("shows System first and saves it separately from an explicit language", async () => {
+  config.general.locale = "";
+  vi.spyOn(navigator, "language", "get").mockReturnValue("he-IL");
+  const view = await mountSettings();
+  const select = view.container.querySelector("#language");
+  if (!(select instanceof HTMLSelectElement)) throw new Error("Language selector missing");
+  expect(select.options[0].textContent).toBe("System");
+  expect(select.options[0].value).toBe("");
+  expect(select.value).toBe("");
+
+  await fireEvent.change(select, { target: { value: "en" } });
+  expect(select.value).toBe("en");
+  await fireEvent.change(select, { target: { value: "" } });
+  expect(select.value).toBe("");
+  await fireEvent.change(select, { target: { value: "en" } });
+  await saveBar.onSave?.();
+  expect(saved.at(-1)?.general.locale).toBe("en");
+  await fireEvent.change(select, { target: { value: "" } });
+  await saveBar.onSave?.();
+  expect(saved.at(-1)?.general.locale).toBe("");
+});
+
+it("shows an explicitly saved language even when the system language differs", async () => {
+  config.general.locale = "en";
+  vi.spyOn(navigator, "language", "get").mockReturnValue("he-IL");
+  const view = await mountSettings();
+  const select = view.container.querySelector("#language");
+  if (!(select instanceof HTMLSelectElement)) throw new Error("Language selector missing");
+  expect(select.value).toBe("en");
+});
+
 it("places appearance first and import/export after debug before acknowledgments", async () => {
   const view = await mountSettings();
   const general = view.container.querySelector("#general");
@@ -134,11 +165,11 @@ it("shows the creator credit and support link in About", async () => {
     "https://www.buymeacoffee.com/ilyaizen"
   );
   expect(within(about).getByText(`🄯 ${new Date().getFullYear()} Ilya Aizenberg`)).toBeTruthy();
-  const credit = within(about).getByLabelText("Made with ♥ Rust & Bots.");
+  const credit = within(about).getByLabelText("Made with ♥ Rust + Robots");
   const heart = credit.querySelector("svg");
   expect(heart?.getAttribute("aria-hidden")).toBe("true");
   expect(credit.textContent).not.toContain("❤️");
-  expect(credit.textContent?.trim()).toBe("Made with  Rust & Bots.");
+  expect(credit.textContent?.trim()).toBe("Made with  Rust + Robots");
 });
 
 it("keeps hidden-start and close-to-tray preferences but disables them without a tray", async () => {

@@ -95,6 +95,36 @@ test("stop --request-id sends a scoped stop body", async () => {
   expect(JSON.parse(requests[0].body)).toEqual({ request_id: "hermes-abc123" });
 });
 
+test("a missing stop request id fails instead of issuing a global stop", async () => {
+  await expect(runCli(["stop", "--request-id"])).rejects.toThrow("--request-id requires a value");
+});
+
+test("a missing speak request id fails instead of issuing an unscoped speak", async () => {
+  await expect(runCli(["speak", "hello", "--request-id"])).rejects.toThrow(
+    "--request-id requires a value"
+  );
+  await expect(runCli(["speak", "hello", "--request-id", "--wait"])).rejects.toThrow(
+    "--request-id requires a value"
+  );
+  await expect(runCli(["speak", "hello", "--request-id", "", "--wait"])).rejects.toThrow(
+    "--request-id requires a value"
+  );
+});
+
+test("request ids beginning with a dash remain valid", async () => {
+  expect(await speakRequest("--request-id", "-reader")).toEqual({
+    text: "hello",
+    request_id: "-reader"
+  });
+  expect(await speakRequest("--request-id", "--reader")).toEqual({
+    text: "hello",
+    request_id: "--reader"
+  });
+  await expect(runCli(["speak", "hello", "--request-id", "-p", "voice"])).rejects.toThrow(
+    "--request-id requires a value"
+  );
+});
+
 test("stop without --request-id stays the bodyless global stop", async () => {
   const { requests } = await runCli(["stop"]);
   expect(requests).toHaveLength(1);

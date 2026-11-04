@@ -690,6 +690,11 @@ fn final_marker(chunk_is_final: bool, fragment_is_last: bool) -> bool {
 /// Synthesize via the backend's streaming path, forwarding each PCM chunk to
 /// the frontend as an `audio-stream-chunk` event while accumulating the full
 /// payload into a WAV container for history/cache/envelope handling.
+/// `rearm` is the reading's once-only stream-gate re-arm: the first chunk
+/// this reading emits re-arms the webview's `_streamStopped` gate under the
+/// speaker-ownership lock, healing a scoped stop of the previous owner that
+/// landed after this reading's start signal (see
+/// [`crate::speak_requests::StreamRearm`]).
 async fn synthesize_streaming_and_emit(
     app: &AppHandle,
     backend: Arc<Box<dyn TtsBackend>>,
@@ -699,9 +704,11 @@ async fn synthesize_streaming_and_emit(
     emit_final: bool,
     session_id: Option<String>,
     scope: AbortScope,
+    rearm: &std::sync::Arc<crate::speak_requests::StreamRearm>,
 ) -> Result<SpeechAudio, String> {
     let worker_app = app.clone();
     let failed_session = session_id.clone();
+    let rearm = std::sync::Arc::clone(rearm);
     let result = tokio::task::spawn_blocking(move || {
         let opened_at = Instant::now();
         log::info!(
@@ -745,11 +752,19 @@ async fn synthesize_streaming_and_emit(
             } else {
                 None
             };
-            // Same ownership rule as emit_audio_fragment.
+            // Same ownership rule as emit_audio_fragment. The rearm runs
+            // inside the claim: under the speaker-ownership lock, and ordered
+            // on the wire before this chunk, so a scoped stop for the
+            // previous owner can never orphan this reading's stream gate.
             crate::speak_requests::claim_playback(
                 scope.request(),
                 || scope.aborted(),
                 || {
+                    rearm.rearm(|| {
+                        if let Err(e) = worker_app.emit("synthesis-state-change", true) {
+                            log::warn!("Failed to emit synthesis-state-change: {}", e);
+                        }
+                    });
                     emit_audio_stream_chunk(
                         &worker_app,
                         &meta,
@@ -1168,7 +1183,7 @@ async fn speak_now_internal(
     }
 
     // Enter critical section for TTS synthesis
-    let _synthesis_guard = SynthesisGuard::new_for_request(&app, request);
+    let _synthesis_guard = SynthesisGuard::new(&app);
 
     let (
         tts_config,
@@ -1285,6 +1300,10 @@ async fn speak_now_internal(
     // Wrap backend in Arc for sharing across pagination calls
     let backend_arc = Arc::new(backend);
 
+    // The reading's once-only stream-gate re-arm, shared by every streamed
+    // fragment so exactly the reading's first audible chunk re-arms.
+    let stream_rearm = std::sync::Arc::new(crate::speak_requests::StreamRearm::new());
+
     // Streaming backends forward PCM chunks during synthesis in playback mode;
     // batch backends (and cache hits / file output / pagination) take the
     // untouched existing branches.
@@ -1320,6 +1339,7 @@ async fn speak_now_internal(
             session_id.clone(),
             scope,
             &pagination_config,
+            &stream_rearm,
         )
         .await?;
         (wav, streaming_playback || emitted_fragments)
@@ -1333,6 +1353,7 @@ async fn speak_now_internal(
             true,
             session_id.clone(),
             scope,
+            &stream_rearm,
         )
         .await?;
         (wav, true)
@@ -1425,6 +1446,7 @@ async fn synthesize_paginated(
     session_id: Option<String>,
     scope: AbortScope,
     pagination_config: &crate::config::PaginationConfig,
+    rearm: &std::sync::Arc<crate::speak_requests::StreamRearm>,
 ) -> Result<(SpeechAudio, bool), String> {
     let fragments = pagination::paginate_text(text, pagination_config);
 
@@ -1440,6 +1462,7 @@ async fn synthesize_paginated(
                 true,
                 session_id,
                 scope,
+                rearm,
             )
             .await
             .map_err(|e| report_section_failure(app, 0, 1, scope, e))
@@ -1511,6 +1534,7 @@ async fn synthesize_paginated(
                 i + 1 == fragments.len(),
                 session_id.clone(),
                 scope,
+                rearm,
             )
             .await
         } else {
@@ -1916,6 +1940,9 @@ async fn speak_queued_internal(
     }
 
     // Synthesize and play each fragment
+    // The reading's once-only stream-gate re-arm, shared by every streamed
+    // fragment so exactly the reading's first audible chunk re-arms.
+    let stream_rearm = std::sync::Arc::new(crate::speak_requests::StreamRearm::new());
     for (index, fragment) in fragments.iter().enumerate() {
         // Check if we should stop
         {
@@ -1999,6 +2026,7 @@ async fn speak_queued_internal(
                 is_last_fragment(index, total),
                 session_id.clone(),
                 scope,
+                &stream_rearm,
             )
             .await
             .map_err(|e| report_section_failure(&app, index, total, scope, e))?

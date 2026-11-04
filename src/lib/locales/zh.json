@@ -112,6 +112,7 @@
       "showTrayIconTooltip": "在系统托盘中显示 CopySpeak。隐藏图标后，应用会正常打开，关闭窗口将退出应用。",
       "language": "语言",
       "languageDescription": "选择界面语言",
+      "systemLanguage": "系统",
       "launchOnLogin": "登录时启动",
       "startMinimized": "启动时最小化到托盘",
       "showNotifications": "显示通知",
@@ -288,7 +289,7 @@
       "sourceCodeDescription": "在 GitHub 上查看 CopySpeak",
       "github": "GitHub",
       "acknowledgments": "致谢",
-      "madeWith": "用 {heart}、Rust 和机器人制作。",
+      "madeWith": "用 {heart}、Rust + 机器人制作",
       "buyMeCoffee": "请我喝杯咖啡",
       "checkUpdates": "检查更新",
       "checkUpdatesTooltip": "启动时自动检查新版本",
@@ -846,8 +847,8 @@
     "clearAria": "清除快捷键"
   },
   "quick": {
-    "doubleCopy": "双击复制",
-    "doubleCopyTooltip": "监控剪贴板的双击复制",
+    "doubleCopy": "监听",
+    "doubleCopyTooltip": "监听双击复制",
     "effectsTooltip": "对 TTS 播放应用音频效果",
     "postProcess": "后处理",
     "postProcessTooltip": "朗读前对文本应用当前的后处理模板。若 LLM 失败，则朗读原文。",

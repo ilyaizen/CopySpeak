@@ -3,8 +3,16 @@ import { cleanup, fireEvent, render } from "@testing-library/svelte";
 import { waitForI18nReady } from "#lib/i18n";
 import { testConfig } from "#lib/test-fixtures/app-config";
 import QuickSettings from "./quick-settings.svelte";
+import en from "#lib/locales/en.json";
 
 afterEach(() => cleanup());
+
+it("labels the clipboard listener Listen with a double-copy tooltip", async () => {
+  await waitForI18nReady();
+  const view = render(QuickSettings, { config: testConfig() });
+  expect(view.getByRole("switch", { name: "Listen" }).id).toBe("listen-double-copy");
+  expect(en.quick.doubleCopyTooltip).toBe("Listen for Double-Copy");
+});
 
 it("shows the quick hotkey only when Experimental and the hotkey are enabled", async () => {
   await waitForI18nReady();

@@ -112,6 +112,7 @@
       "showTrayIconTooltip": "Show CopySpeak in the system tray. When hidden, the app opens normally and closing the window quits.",
       "language": "Language",
       "languageDescription": "Select your preferred language",
+      "systemLanguage": "System",
       "launchOnLogin": "Launch at Login",
       "startMinimized": "Start minimized to tray",
       "showNotifications": "Show notifications",
@@ -288,7 +289,7 @@
       "sourceCodeDescription": "View CopySpeak on GitHub",
       "github": "GitHub",
       "acknowledgments": "Acknowledgments",
-      "madeWith": "Made with {heart} Rust & Bots.",
+      "madeWith": "Made with {heart} Rust + Robots",
       "buyMeCoffee": "Buy Me a Coffee",
       "checkUpdates": "Check for Updates",
       "checkUpdatesTooltip": "Automatically check for new versions on startup",
@@ -850,8 +851,8 @@
     "clearAria": "Clear hotkey"
   },
   "quick": {
-    "doubleCopy": "Double-copy",
-    "doubleCopyTooltip": "Monitor clipboard for double-copy",
+    "doubleCopy": "Listen",
+    "doubleCopyTooltip": "Listen for Double-Copy",
     "effectsTooltip": "Apply audio effect to TTS playback",
     "postProcess": "Post-process",
     "postProcessTooltip": "Runs the active post-process template on the text before it is spoken. Speaks the original text if the LLM fails.",

@@ -28,6 +28,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Tune offline effect onset and glitch levers on real TTS output (`engines/*/output/test.wav` under `%LOCALAPPDATA%\CopySpeak`), not synthetic bursts: the old silence gate found about 0 onsets per clip on speech, and synthetic clean gaps hid it.
 - Glitch mid-speech onsets in place, never by inserting copies of the grain: a 40–70 ms grain replayed before its word sounds like slap-back echo, and each inserted copy pushes captions later.
 - Measure a provider WAV's duration from its parsed header clamped to the real byte count, never by iterating the container: Fish writes 0xFFFFFF00 into the data-chunk size and rodio's decode spins past EOF forever (busy tray, no audio, no error).
+- Keep speaker ownership at the audible emit sites only: a reading that has merely started synthesizing owns nothing, so a guard-time claim makes cancelling it cut the previous reading and stopping the previous reading do nothing; and repeat the `synthesis-state-change` re-arm at the reading's first streamed chunk (`StreamRearm`), or a scoped stop of the previous owner re-sets `_streamStopped` after the start signal and silently drops every chunk of the innocent next reading.
 
 ## Captions
 
@@ -137,6 +138,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## i18n
 
+- Bind the language selector to the saved preference, not the resolved locale: an empty value means System and must remain selectable even when it currently resolves to English.
 - Read the saved locale through the scalar `get_saved_locale` IPC before the first render; onboarding can hang on the full `get_config` payload even when a config file exists.
 - Keep tray labels in sync with the webview's effective locale, not just the saved value: an unset locale currently makes the Rust tray fall back to English while the webview follows the system language.
 - Grep components for `>Text<` and `label="Text"` after an i18n pass; literal UI text bypasses `$_` and passes locale parity.

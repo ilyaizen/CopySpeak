@@ -39,6 +39,14 @@ function has(args, names) {
   return args.some((arg) => names.includes(arg));
 }
 
+function requestIdArg(args, options) {
+  const index = args.indexOf("--request-id");
+  if (index === -1) return undefined;
+  const value = args[index + 1];
+  if (!value || options.includes(value)) die("--request-id requires a value");
+  return value;
+}
+
 async function readStdin() {
   const chunks = [];
   for await (const chunk of process.stdin) chunks.push(chunk);
@@ -73,7 +81,10 @@ copyspeak voices list --engine elevenlabs`);
 if (cmd === "health") {
   console.log(JSON.stringify(await request("/health"), null, 2));
 } else if (cmd === "stop") {
-  const requestId = argValue([subcmd, ...rest].filter(Boolean), ["--request-id"]);
+  const requestId = requestIdArg(
+    [subcmd, ...rest].filter((arg) => arg !== undefined),
+    ["--request-id"]
+  );
   console.log(
     JSON.stringify(
       await request("/stop", {
@@ -83,14 +94,25 @@ if (cmd === "health") {
     )
   );
 } else if (cmd === "speak") {
-  const args = [subcmd, ...rest].filter(Boolean);
+  const args = [subcmd, ...rest].filter((arg) => arg !== undefined);
   const profile = argValue(args, ["--profile", "-p"]);
   const stdin = has(args, ["--stdin"]);
   const persist = has(args, ["--persist", "--set-active"]);
   const postProcess = has(args, ["--post-process", "--condense"]);
   const wait = has(args, ["--wait"]);
   const ack = argValue(args, ["--ack"]);
-  const requestId = argValue(args, ["--request-id"]);
+  const requestId = requestIdArg(args, [
+    "--request-id",
+    "--profile",
+    "-p",
+    "--stdin",
+    "--persist",
+    "--set-active",
+    "--post-process",
+    "--condense",
+    "--wait",
+    "--ack"
+  ]);
   const text = stdin
     ? await readStdin()
     : args

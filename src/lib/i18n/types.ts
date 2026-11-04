@@ -111,6 +111,7 @@ export type TranslationKeys =
   | "settings.general.showTrayIconTooltip"
   | "settings.general.language"
   | "settings.general.languageDescription"
+  | "settings.general.systemLanguage"
   | "settings.general.launchOnLogin"
   | "settings.general.startMinimized"
   | "settings.general.showNotifications"

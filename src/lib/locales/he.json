@@ -112,6 +112,7 @@
       "showTrayIconTooltip": "הצגת CopySpeak באזור ההודעות. כשהסמל מוסתר, האפליקציה נפתחת כרגיל וסגירת החלון יוצאת ממנה.",
       "language": "שפה",
       "languageDescription": "בחר את השפה המועדפת עליך",
+      "systemLanguage": "מערכת",
       "launchOnLogin": "הפעל בעת כניסה למערכת",
       "startMinimized": "הפעל ממוזער לאזור ההודעות",
       "showNotifications": "הצג התראות",
@@ -288,7 +289,7 @@
       "sourceCodeDescription": "צפה ב-CopySpeak ב-GitHub",
       "github": "GitHub",
       "acknowledgments": "קרדיטים",
-      "madeWith": "נוצר עם {heart}, Rust ובוטים.",
+      "madeWith": "נוצר עם {heart}, Rust + רובוטים",
       "buyMeCoffee": "קנו לי קפה",
       "checkUpdates": "בדוק עדכונים",
       "checkUpdatesTooltip": "בדוק אוטומטית גרסאות חדשות בהפעלה",
@@ -850,8 +851,8 @@
     "clearAria": "נקה מקש קיצור"
   },
   "quick": {
-    "doubleCopy": "העתקה כפולה",
-    "doubleCopyTooltip": "עקוב אחר הלוח לזיהוי העתקה כפולה",
+    "doubleCopy": "האזנה",
+    "doubleCopyTooltip": "האזנה להעתקה כפולה",
     "effectsTooltip": "החל אפקט שמע על ההשמעה של TTS",
     "postProcess": "עיבוד שלאחר מכן",
     "postProcessTooltip": "מפעיל את תבנית העיבוד הפעילה על הטקסט לפני ההקראה. אם ה-LLM נכשל — מקריא את הטקסט המקורי.",

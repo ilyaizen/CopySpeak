@@ -112,6 +112,7 @@
       "showTrayIconTooltip": "إظهار CopySpeak في علبة النظام. عند إخفائها، يفتح التطبيق بشكل عادي ويؤدي إغلاق النافذة إلى الخروج.",
       "language": "اللغة",
       "languageDescription": "اختر لغتك المفضلة",
+      "systemLanguage": "النظام",
       "launchOnLogin": "التشغيل عند تسجيل الدخول",
       "startMinimized": "البدء مصغّرًا في علبة النظام",
       "showNotifications": "إظهار الإشعارات",
@@ -288,7 +289,7 @@
       "sourceCodeDescription": "عرض CopySpeak على GitHub",
       "github": "GitHub",
       "acknowledgments": "شكر وتقدير",
-      "madeWith": "صُنع بـ {heart} وRust والروبوتات.",
+      "madeWith": "صُنع بـ {heart} وRust + الروبوتات",
       "buyMeCoffee": "اشترِ لي قهوة",
       "checkUpdates": "التحقق من التحديثات",
       "checkUpdatesTooltip": "التحقق تلقائياً من الإصدارات الجديدة عند بدء التشغيل",
@@ -846,8 +847,8 @@
     "clearAria": "مسح الاختصار"
   },
   "quick": {
-    "doubleCopy": "النسخ المزدوج",
-    "doubleCopyTooltip": "مراقبة الحافظة لاكتشاف النسخ المزدوج",
+    "doubleCopy": "الاستماع",
+    "doubleCopyTooltip": "الاستماع للنسخ المزدوج",
     "effectsTooltip": "تطبيق تأثير صوتي على تشغيل TTS",
     "postProcess": "معالجة لاحقة",
     "postProcessTooltip": "يطبّق قالب المعالجة اللاحق النشط على النص قبل النطق. إذا فشل نموذج اللغة، يُنطق النص الأصلي.",

@@ -15,29 +15,30 @@ pub(crate) struct SynthesisGuard {
 }
 
 impl SynthesisGuard {
+    /// Begin a synthesis: marks the app synthesizing and emits the webview's
+    /// `synthesis-state-change(true)` (which also re-arms stream playback).
+    ///
+    /// This does NOT take speaker ownership, whatever request the reading
+    /// serves: the previous reading's audio is still playing while this one
+    /// synthesizes, so ownership must transfer only when this reading's audio
+    /// becomes audible — the emit sites in `synthesis.rs`, under the
+    /// speaker-ownership lock. A scoped stop for this reading during
+    /// synthesis therefore leaves the previous reading alone, and a scoped
+    /// stop for the previous reading still reaches it.
+    ///
+    /// A scoped stop for the previous owner can land after this re-arm and
+    /// re-set the webview's stream gate; the reading's first audible chunk
+    /// re-arms the gate again (`speak_requests::StreamRearm`), so this
+    /// reading is not silenced by a stop that was never aimed at it.
     pub(crate) fn new(app: &AppHandle) -> Self {
-        Self::new_for_request(app, crate::speak_requests::NO_REQUEST)
-    }
-
-    /// Start a reading on behalf of `request` (a control-server request id's
-    /// sequence, or `NO_REQUEST`). The start takes speaker ownership: the
-    /// webview's `synthesis-state-change` re-arms stream playback, so a scoped
-    /// stop for an older request must not reach it after this point.
-    pub(crate) fn new_for_request(app: &AppHandle, request: u64) -> Self {
         {
             let status = app.state::<JobStatus>();
             status.is_synthesizing.store(true, Ordering::Relaxed);
         }
         crate::update_tray_icon(app);
-        crate::speak_requests::claim_playback(
-            request,
-            || false,
-            || {
-                if let Err(e) = app.emit("synthesis-state-change", true) {
-                    log::warn!("Failed to emit synthesis-state-change: {}", e);
-                }
-            },
-        );
+        if let Err(e) = app.emit("synthesis-state-change", true) {
+            log::warn!("Failed to emit synthesis-state-change: {}", e);
+        }
         Self {
             app_handle: app.clone(),
         }
@@ -707,6 +708,26 @@ pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
 mod tests {
     use super::*;
     use crate::config::{ProfileEngineOptions, VoiceProfile};
+
+    /// The guard is AppHandle-bound (Tauri events have no unit-test seam), so
+    /// the ownership wiring is pinned structurally: `SynthesisGuard` must not
+    /// touch the speaker owner at all. Ownership transfers only when a
+    /// reading's audio becomes audible — the emit sites in `synthesis.rs` —
+    /// because the previous reading's audio is still playing when the next
+    /// reading starts synthesizing. A guard-time claim hands the speakers to a
+    /// request nothing of which is audible: cancelling it then cuts the
+    /// previous reading, and stopping the previous reading does nothing.
+    #[test]
+    fn synthesis_start_does_not_claim_speaker_ownership() {
+        let source = include_str!("helpers.rs");
+        // Assembled from parts so this assert's own literal does not match.
+        let claim = ["speak_requests", "claim_playback"].join("::");
+        assert!(
+            !source.contains(&claim),
+            "SynthesisGuard claims speaker ownership again; ownership must \
+             transfer only at the audible emit sites in synthesis.rs"
+        );
+    }
 
     #[test]
     fn resolve_effective_resolves_profile_engine_when_active_backend_differs() {

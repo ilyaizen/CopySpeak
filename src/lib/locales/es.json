@@ -112,6 +112,7 @@
       "showTrayIconTooltip": "Mostrar CopySpeak en la bandeja del sistema. Sin el icono, la aplicación se abre normalmente y se cierra al cerrar la ventana.",
       "language": "Idioma",
       "languageDescription": "Selecciona tu idioma preferido",
+      "systemLanguage": "Sistema",
       "launchOnLogin": "Iniciar con la sesión",
       "startMinimized": "Iniciar minimizado en la bandeja",
       "showNotifications": "Mostrar notificaciones",
@@ -288,7 +289,7 @@
       "sourceCodeDescription": "Consulta CopySpeak en GitHub",
       "github": "GitHub",
       "acknowledgments": "Reconocimientos",
-      "madeWith": "Hecho con {heart}, Rust y bots.",
+      "madeWith": "Hecho con {heart}, Rust + robots",
       "buyMeCoffee": "Invítame a un café",
       "checkUpdates": "Buscar actualizaciones",
       "checkUpdatesTooltip": "Buscar automáticamente nuevas versiones al iniciar",
@@ -850,8 +851,8 @@
     "clearAria": "Borrar atajo"
   },
   "quick": {
-    "doubleCopy": "Doble copia",
-    "doubleCopyTooltip": "Vigilar el portapapeles para detectar la doble copia",
+    "doubleCopy": "Escuchar",
+    "doubleCopyTooltip": "Escuchar la doble copia",
     "effectsTooltip": "Aplicar un efecto de audio a la reproducción TTS",
     "postProcess": "Posprocesamiento",
     "postProcessTooltip": "Aplica la plantilla de posprocesamiento activa al texto antes de leerlo. Si el LLM falla, lee el texto original.",
