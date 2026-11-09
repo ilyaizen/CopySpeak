@@ -285,10 +285,12 @@
     "about": {
       "version": "Version",
       "versionDescription": "Current CopySpeak version",
-      "sourceCode": "Source Code",
+      "sourceCode": "Contribute",
+      "donate": "Appriciate",
       "sourceCodeDescription": "View CopySpeak on GitHub",
       "github": "GitHub",
       "acknowledgments": "Acknowledgments",
+      "acknowledgmentsTagline": "Thanks to the teams behind these speech engines.",
       "madeWith": "Made with {heart} Rust + Robots",
       "buyMeCoffee": "Buy Me a Coffee",
       "checkUpdates": "Check for Updates",
