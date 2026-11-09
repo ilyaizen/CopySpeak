@@ -1,7 +1,9 @@
 <script lang="ts">
   import { effectiveEffect } from "#lib/effects-gate";
-  import { onMount, onDestroy } from "svelte";
-  import { goto } from "$app/navigation";
+  import { onMount, onDestroy, setContext } from "svelte";
+  import { afterNavigate, goto } from "$app/navigation";
+  import Lenis from "lenis";
+  import "lenis/dist/lenis.css";
   import { page } from "$app/state";
   import { ModeWatcher, setMode, toggleMode } from "mode-watcher";
   import { Moon, Sun } from "@lucide/svelte";
@@ -58,6 +60,37 @@
   const isWeb = import.meta.env.VITE_IS_VERCEL;
   let appGround = $state<HTMLDivElement>();
   let appMain = $state<HTMLElement>();
+  let appScrollContent = $state<HTMLDivElement>();
+  let lenis: Lenis | undefined;
+
+  setContext("app-lenis", () => lenis);
+
+  afterNavigate(() => {
+    if (!lenis) return;
+    lenis.stop();
+    lenis.start();
+    lenis.resize();
+  });
+
+  $effect(() => {
+    if (!appMain || !appScrollContent) return;
+    const wrapper = appMain;
+    const content = appScrollContent;
+    const motion = matchMedia("(prefers-reduced-motion: reduce)");
+    const syncMotion = () => {
+      lenis?.destroy();
+      lenis = motion.matches
+        ? undefined
+        : new Lenis({ wrapper, content, autoRaf: true, allowNestedScroll: true });
+    };
+    syncMotion();
+    motion.addEventListener("change", syncMotion);
+    return () => {
+      motion.removeEventListener("change", syncMotion);
+      lenis?.destroy();
+      lenis = undefined;
+    };
+  });
 
   $effect(() => {
     if (appMain && appGround) {
@@ -268,13 +301,15 @@
             ? "h-full min-w-0 overflow-auto"
             : "h-full min-w-0 overflow-auto px-4 py-4 sm:px-6"}
         >
-          <MotionWrapper
-            class={isOnboarding
-              ? "flex min-h-full min-w-0 flex-col"
-              : "mx-auto flex min-h-full w-full max-w-6xl min-w-0 flex-col"}
-          >
-            {@render children()}
-          </MotionWrapper>
+          <div bind:this={appScrollContent} class="h-full min-w-0">
+            <MotionWrapper
+              class={isOnboarding
+                ? "flex min-h-full min-w-0 flex-col"
+                : "mx-auto flex h-full w-full max-w-6xl min-w-0 flex-col"}
+            >
+              {@render children()}
+            </MotionWrapper>
+          </div>
         </main>
       </div>
 
