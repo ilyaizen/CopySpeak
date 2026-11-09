@@ -4,6 +4,9 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Playback
 
+- Double-copy and browser readings run `speak_queued`; Play page, hotkey and control server run `speak_now` — change both paths together.
+- Wire playback controls through `playbackStore` (webview audio); Rust `toggle_pause`/`skip_forward`/`skip_backward` commands drive only the Rodio safety-net player, which is never what you hear.
+- Treat `speak_now`'s return as playback-START, not completion: only the webview store's `finishPlayback`/`handleStop` → `playback-finished` → `playback_signal` chain means completion, and every terminal path must emit it or blocking `/speak --wait` callers hang until the 600 s cap.
 - Route playback speed and pitch through `TimeStretcher` (SoundTouch `pitch` setter, then `stretch.tempo = speed / pitch`); keep `playbackRate` at 1 on PCM sources.
 - On a rate change, re-stretch only the native chunks of unstarted PCM sources; rendered audio keeps the rate it was rendered at.
 - Give `TimeStretcher`'s first output after every reset a ~5 ms fade-in and hold the last ~5 ms of input out of the WSOLA flush; cold-start or hard speech-to-silence steps click at fragment seams.
@@ -42,6 +45,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Engines
 
+- The app loads secrets from `<exe-dir>/.env` (`src-tauri/target/debug/.env` in dev), not the repo-root `.env`.
 - A "called from X" comment is not the call site — `local_daemon.rs` claimed prewarm ran "from the set_config path" while `set_config` never called it; grep the named call site before trusting the comment.
 - Local engine wrappers speak daemon protocol v2 (`READY 2`) and emit 16-bit signed LE PCM; `pcm-stream.ts` drops any other `bits_per_sample`.
 - Gate every streaming branch on `supports_streaming()` AND `runtime_ready()`; the static claim alone sends a cold CLI daemon's one-shot command down the stream branch.
@@ -83,6 +87,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## History & cache
 
+- Branch every synthesis save site on `history.enabled`: on logs and saves to the history folder, off calls `save_speech_cache` and logs nothing; `find_cached_speech` must read the same store.
 - Present history batches as one reading in `recent-history.svelte`; preserve fragment order for full text, playback, and whole-reading deletion.
 - Show pagination as a part count on history rows; keep Play/Stop/Replay on the reading's button instead of adding a lower playback bar.
 - Keep Recent History as three vertical, text-first readings with View all history; let mouse-wheel input scroll normally on both pages.
@@ -147,12 +152,18 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Frontend checks
 
+- Import test APIs from `vite-plus/test`, not `vitest`; `vp check`'s `prefer-vite-plus-imports` rejects the bare import.
+- Hold a mocked async API on a promise the test opens when proving a race; `vi.waitFor` polls, so an ungated mock finishes the whole setup before the test's next step and the race never happens.
+- Type test catalog maps with `satisfies Record<string, Catalog>`, not a `: Record<…>` annotation; `vp check`'s anti-slop `no-known-value-widening` rejects the annotation.
+- Let one dynamic `import()` of a `vi.mock`ed module settle before code under test starts another: concurrent ones can resolve the real module, so the mock never sees the race.
+- Unlisten a Tauri `listen` that resolves after its component's `onDestroy`: HMR can destroy a component mid-`onMount`, and the orphaned listener double-fires (one double-copy spoke twice).
 - A committed bun.lock applies on fresh install even when a stale local node_modules hides the break: svelte-check 4.7.7 rejects `$props<T>()` type arguments, so type props with an `interface Props` and `let x: Props = $props()` instead.
 - `vp check`'s anti-slop `no-runtime-typeof` rejects a `typeof` branch on a value union: coerce at the call (`String(value ?? "")`) or parse the value at its I/O boundary.
 - Stub `Element.prototype.scrollIntoView`, `HTMLMediaElement.prototype.play` and `pause` in component tests: jsdom does not implement scrolling or media playback.
 
 ## Settings
 
+- Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
 - Pass the current locale direction to Bits UI tooltip content: its floating wrapper defaults to `dir="ltr"` even when the document is RTL, scrambling mixed Hebrew or Arabic and Latin text.
 - Gate hidden startup and close-to-tray on an actually available tray; create the main window hidden, show first-run setup explicitly, and use one unminimize/show/focus helper for tray and second-instance reopening. Propagate OS autostart registration failures before persisting the new preference.
 - Force the last visible settings section active at the bottom of the scroll container: a short last section never reaches the scroll-spy reading band, and the layout `<main>` scrolls, not the window, so capture scroll events on the document.
