@@ -84,7 +84,7 @@
 
 <!-- Compact settings panel for quick access to the most-used playback and listening controls -->
 <div
-  class="bg-card border-border divide-border flex min-w-0 flex-col divide-y rounded-lg border p-3 shadow-sm"
+  class="bg-card border-border divide-border flex min-w-0 flex-col divide-y rounded-lg border px-3 py-1 shadow-sm"
 >
   <!-- Show clipboard listener errors (e.g. permission denied, backend failure) -->
   {#if error}
