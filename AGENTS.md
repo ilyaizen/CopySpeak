@@ -13,7 +13,7 @@ CopySpeak: A lightweight and modern cross-platform AI text-to-speech orchestrato
 - Use ASD-STE100 style: write active sentences under 20 words. State one action per sentence. Put conditions before commands.
 - Use common verbs: use, fix, show, change, must, can. Avoid utilize, leverage, delve, robust, seamless, crucial, paradigm, should, would, and may.
 - Lead with facts or results. Skip preambles and recaps. After code edits, list changed paths only, one per line, unless asked otherwise.
-- Use spaced en dashes (` – `) for parenthetical dashes. Never use em dashes in copy text.
+- Use spaced en dashes (' – ') for parenthetical dashes. Never use em dashes in copy text.
 
 ## Current priorities
 
@@ -35,6 +35,21 @@ CopySpeak: A lightweight and modern cross-platform AI text-to-speech orchestrato
 - Commits: [Conventional Commits](https://www.conventionalcommits.org/). Branches: squash-merge into `main`, then delete the branch (local and origin) in the same pass.
 
 Internal docs (untracked): start at `docs_internal/README.md`.
+
+## Design and review (EGM)
+
+EGM is installed as the `egm@egm` Claude Code plugin (user scope). Source: https://github.com/google/elephant-goldfish-model.
+
+EGM artifact directory: docs_internal/egm
+
+- Use `/egm:egm-brainstorm` to test an idea and write `concepts_brief.md`.
+- Use `/egm:egm-draft` to turn a brief into a design doc, section by section.
+- Use `/egm:egm-review <draft path>` to run the Goldfish review on a draft.
+- Use `/egm:egm-resolve` to work through review findings.
+- Use `/egm:egm-drift-report` to compare design docs with the current code.
+- Write drafts and reports to `docs_internal/egm`. Ilya approves before any spec moves to `docs/designs/`.
+- Goldfish reviews need fresh subagents. If the harness cannot spawn them, stop the review and say so.
+- Skip EGM for one-line fixes. Use it for features and architecture changes only.
 
 ## Next step
 
