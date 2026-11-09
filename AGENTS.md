@@ -8,6 +8,13 @@ CopySpeak: A lightweight and modern cross-platform AI text-to-speech orchestrato
 - Never stub, loosen, or comment out check to get green. Broken and loud beats silent and wrong.
 - Unsure or blocked: ask. State assumptions, surface tradeoffs, push back on over-engineering.
 
+## Plain English
+
+- Use ASD-STE100 style: write active sentences under 20 words. State one action per sentence. Put conditions before commands.
+- Use common verbs: use, fix, show, change, must, can. Avoid utilize, leverage, delve, robust, seamless, crucial, paradigm, should, would, and may.
+- Lead with facts or results. Skip preambles and recaps. After code edits, list changed paths only, one per line, unless asked otherwise.
+- Use spaced en dashes (' – ') for parenthetical dashes. Never use em dashes in copy text.
+
 ## Current priorities
 
 - Next release: low time-to-first-audio (TTFA) and a small VRAM footprint, so local engines run on low-VRAM GPUs and CPU-only machines.
@@ -17,17 +24,36 @@ CopySpeak: A lightweight and modern cross-platform AI text-to-speech orchestrato
 ## Workflow
 
 - Use `i-have-adhd` skill: next action first, numbered steps, no preamble.
-- Verify with `bun run check && bun run test` (vitest; bare `bun test` fails ~39 document-dependent tests). `bun run tauri dev` is already running.
+- During edits, run focused tests relevant to the change; batch related frontend test files in one invocation. Reserve full gates for the final changes before merging.
+- Before merging, run `bun run check && bun run test` (vitest; bare `bun test` fails ~39 document-dependent tests) and relevant backend gates. `bun run tauri dev` is already running.
 - Run checks (`git diff --check` included) and commits only after explicit confirmation. Ask before concluding task.
 - Run the checks yourself before merging: all three workflows are `workflow_dispatch`, so PRs and `main` pushes trigger no CI.
 - Run `rustfmt` on touched Rust files only; `cargo fmt --all` marks unrelated CRLF-tracked files modified.
 - Check credential presence without printing `.env` values; keep secret files out of command output.
-- End with one concrete next step; user approves. Use shape: `If you want, I can do X next. React with ✅ to run it.` Several viable: list up to 3, one line each, best first.
 - Hand-off prompts carry only what next session can't access: decisions made, dead ends, ongoing states, next steps.
 - Leave visual verification to the user; skip image previews.
 - Commits: [Conventional Commits](https://www.conventionalcommits.org/). Branches: squash-merge into `main`, then delete the branch (local and origin) in the same pass.
 
 Internal docs (untracked): start at `docs_internal/README.md`.
+
+## Design and review (EGM)
+
+EGM is installed as the `egm@egm` Claude Code plugin (user scope). Source: https://github.com/google/elephant-goldfish-model.
+
+EGM artifact directory: docs_internal/egm
+
+- Use `/egm:egm-brainstorm` to test an idea and write `concepts_brief.md`.
+- Use `/egm:egm-draft` to turn a brief into a design doc, section by section.
+- Use `/egm:egm-review <draft path>` to run the Goldfish review on a draft.
+- Use `/egm:egm-resolve` to work through review findings.
+- Use `/egm:egm-drift-report` to compare design docs with the current code.
+- Write drafts and reports to `docs_internal/egm`. Ilya approves before any spec moves to `docs/designs/`.
+- Goldfish reviews need fresh subagents. If the harness cannot spawn them, stop the review and say so.
+- Skip EGM for one-line fixes. Use it for features and architecture changes only.
+
+## Next step
+
+- End with one concrete next step; user approves. Use shape: `If you want, I can do X next. React with ✅ to run it.` Several viable: list up to 3, one line each, best first.
 
 ## Agent skills
 
@@ -45,23 +71,12 @@ Single-context: root `GLOSSARY.md` + `docs/adr/`, created lazily. See `docs/agen
 
 ## Failure log
 
-Every line exists because it went wrong at least once. On mistake, correction, or undocumented discovery about the codebase, add one imperative line describing correct behaviour: here if every session needs it, else under its area in [`docs/agents/failure-log.md`](docs/agents/failure-log.md). A workflow fix goes in a skill under `.agents/skills/` instead. Include it in the same commit and mention it in the summary.
+Every line exists because it went wrong at least once. On mistake, correction, or undocumented discovery about the codebase, add one imperative line describing correct behaviour: here if every session needs it, else under its area in [`docs/agents/failure-log.md`](docs/agents/failure-log.md). A workflow fix goes in a skill under `.agents/skills/` instead. Include it in the same commit and mention it in the summary. Periodically shorten this section to save tokens.
 
-- Double-copy and browser readings run `speak_queued`; Play page, hotkey and control server run `speak_now` — change both paths together.
-- Wire playback controls through `playbackStore` (webview audio); Rust `toggle_pause`/`skip_forward`/`skip_backward` commands drive only the Rodio safety-net player, which is never what you hear.
-- Treat `speak_now`'s return as playback-START, not completion: only the webview store's `finishPlayback`/`handleStop` → `playback-finished` → `playback_signal` chain means completion, and every terminal path must emit it or blocking `/speak --wait` callers hang until the 600 s cap.
-- Branch every synthesis save site on `history.enabled`: on logs and saves to the history folder, off calls `save_speech_cache` and logs nothing; `find_cached_speech` must read the same store.
-- Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
-- The app loads secrets from `<exe-dir>/.env` (`src-tauri/target/debug/.env` in dev), not the repo-root `.env`.
 - In a fresh worktree, run `bun install` in `browser-extension/` as well as the root; without its `@types/chrome`, `vp check` fails with `Cannot find type definition file for 'chrome'`.
 - Use three-way `cfg(target_os = ...)` (windows/macos/linux) for platform seams; `cfg(not(windows))` makes macOS compile Linux-only code (wl-clipboard, gtk-layer-shell) that cannot build or run on darwin.
 - Treat a Windows-green `cargo check` as silent about `cfg(not(windows))` code; grep cfg-gated blocks for a trait's methods before deleting an "unused" import.
 - Verify a subsystem is actually wired before extending it — grep `mod` declarations and component mounts; the parity checklist once described a post-processing enum system that was never compiled or mounted.
-- Import test APIs from `vite-plus/test`, not `vitest`; `vp check`'s `prefer-vite-plus-imports` rejects the bare import.
-- Hold a mocked async API on a promise the test opens when proving a race; `vi.waitFor` polls, so an ungated mock finishes the whole setup before the test's next step and the race never happens.
-- Type test catalog maps with `satisfies Record<string, Catalog>`, not a `: Record<…>` annotation; `vp check`'s anti-slop `no-known-value-widening` rejects the annotation.
-- Let one dynamic `import()` of a `vi.mock`ed module settle before code under test starts another: concurrent ones can resolve the real module, so the mock never sees the race.
-- Unlisten a Tauri `listen` that resolves after its component's `onDestroy`: HMR can destroy a component mid-`onMount`, and the orphaned listener double-fires (one double-copy spoke twice).
 
 ### Area gotchas
 
@@ -78,3 +93,6 @@ Before editing an area, read its section in [`docs/agents/failure-log.md`](docs/
 - **Linux**: HUD window, Wayland
 - **Release**: version bump, GitHub release workflow
 - **i18n**: locale strings, `$_`
+- **Frontend checks**: component tests, mocks, `vp check`
+- **Icons**: tray artwork and build assets
+- **Experimental gating**: feature gates and saved settings

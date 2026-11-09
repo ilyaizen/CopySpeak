@@ -326,14 +326,18 @@
     showPicker && !manualOverride && activeVoiceCatalog.some((v) => v.id === (active?.voice ?? ""))
   );
 
-  // Engine options other than the model start collapsed, so the editor leads
-  // with engine, voice and model and hides the long tail until asked.
-  const MODEL_OPTION_KEYS = new Set(["model", "model_id"]);
-  let expandedOptions = $state(new Set<string>());
+  // Keep model and GPU controls visible. Group the remaining options in one
+  // disclosure so providers with long option lists do not stack collapsibles.
+  const IMPORTANT_OPTION_KEYS = new Set(["model", "model_id", "cuda"]);
+  let advancedOptionsOpen = $state(false);
+  let lastOptionsContext = "";
 
   $effect(() => {
-    // A different profile or engine shows a different option set; start collapsed.
-    if (activeId && active) expandedOptions = new Set();
+    const context = `${activeId}:${active?.engine ?? ""}`;
+    if (context !== lastOptionsContext) {
+      lastOptionsContext = context;
+      advancedOptionsOpen = false;
+    }
   });
 
   // Passive hint: checks backend (config.json + .env) for credential presence.
@@ -1046,37 +1050,34 @@
 
           {#if activeCatalogEntry.options.length}
             {#each activeCatalogEntry.options as option (option.key)}
-              {#if MODEL_OPTION_KEYS.has(option.key)}
+              {#if IMPORTANT_OPTION_KEYS.has(option.key)}
                 <SettingRow label={option.label} tooltip={option.help}>
                   {@render engineOptionControl(option)}
                 </SettingRow>
-              {:else}
-                <CollapsibleRoot
-                  open={expandedOptions.has(option.key)}
-                  onOpenChange={(next) => {
-                    if (next) expandedOptions.add(option.key);
-                    else expandedOptions.delete(option.key);
-                  }}
-                >
-                  <CollapsibleTrigger
-                    class="text-muted-foreground hover:text-foreground flex min-h-9 w-full min-w-0 items-center justify-between gap-x-4 py-2 text-start text-sm font-medium"
-                  >
-                    {option.label}
-                    <ChevronRight
-                      size={16}
-                      class="shrink-0 transition-transform {expandedOptions.has(option.key)
-                        ? 'rotate-90'
-                        : ''}"
-                    />
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SettingRow label={option.label} tooltip={option.help}>
-                      {@render engineOptionControl(option)}
-                    </SettingRow>
-                  </CollapsibleContent>
-                </CollapsibleRoot>
               {/if}
             {/each}
+            {#if activeCatalogEntry.options.some((option) => !IMPORTANT_OPTION_KEYS.has(option.key))}
+              <CollapsibleRoot bind:open={advancedOptionsOpen}>
+                <CollapsibleTrigger
+                  class="text-muted-foreground hover:text-foreground flex min-h-9 w-full min-w-0 items-center justify-between gap-x-4 py-2 text-start text-sm font-medium"
+                >
+                  {$_("settings.tabs.advanced")}
+                  <ChevronRight
+                    size={16}
+                    class="shrink-0 transition-transform {advancedOptionsOpen ? 'rotate-90' : ''}"
+                  />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  {#each activeCatalogEntry.options as option (option.key)}
+                    {#if !IMPORTANT_OPTION_KEYS.has(option.key)}
+                      <SettingRow label={option.label} tooltip={option.help}>
+                        {@render engineOptionControl(option)}
+                      </SettingRow>
+                    {/if}
+                  {/each}
+                </CollapsibleContent>
+              </CollapsibleRoot>
+            {/if}
           {/if}
         </section>
       {/if}

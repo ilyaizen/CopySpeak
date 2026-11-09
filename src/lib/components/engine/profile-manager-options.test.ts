@@ -4,8 +4,8 @@ import { waitForI18nReady } from "#lib/i18n";
 import ProfileManager from "./profile-manager.svelte";
 import { testConfig } from "#lib/test-fixtures/app-config";
 
-// A catalog entry exercising every option kind beside the model, so the test
-// can watch the non-model options stay collapsed until their row is opened.
+// A catalog entry with important and advanced options, so the test can verify
+// the model and GPU stay visible while one disclosure groups the rest.
 const { CATALOG } = vi.hoisted(() => ({
   CATALOG: [
     {
@@ -25,6 +25,13 @@ const { CATALOG } = vi.hoisted(() => ({
           help: "Speech model.",
           default_value: "tts-1",
           choices: ["tts-1", "gpt-4o-mini-tts"]
+        },
+        {
+          key: "cuda",
+          label: "GPU acceleration",
+          kind: "boolean",
+          help: "Run on GPU.",
+          default_value: false
         },
         {
           key: "response_format",
@@ -80,7 +87,7 @@ async function renderOpenAIProfile() {
   ];
   const view = render(ProfileManager, { localConfig: config });
   // The catalog arrives through an async invoke; wait for the option rows.
-  await waitFor(() => expect(view.getByRole("button", { name: "Speed" })).toBeTruthy());
+  await waitFor(() => expect(view.getByRole("button", { name: "Advanced" })).toBeTruthy());
   return view;
 }
 
@@ -94,49 +101,50 @@ function visibleSelects(
   );
 }
 
-describe("profile-manager engine option collapse", () => {
+describe("profile-manager advanced engine options", () => {
   beforeEach(async () => {
     await waitForI18nReady();
   });
 
-  it("keeps the model expanded and every other engine option collapsed", async () => {
+  it("keeps model and GPU visible and groups other options in one disclosure", async () => {
     const view = await renderOpenAIProfile();
 
-    // The profile selector, the engine selector and the model are the only
-    // visible selects; the collapsed Response Format select is hidden.
+    // Profile, engine, model and GPU selectors stay visible. The advanced
+    // Response Format selector remains hidden until its one disclosure opens.
     const visible = visibleSelects(view);
-    expect(visible).toHaveLength(3);
+    expect(visible).toHaveLength(4);
     const modelSelect = visible.find((s) =>
       [...s.options].some((o) => o.value === "gpt-4o-mini-tts")
     );
     if (!modelSelect) throw new Error("Model select is not visible");
     expect(modelSelect.value).toBe("tts-1");
 
-    // Collapsed options show only their disclosure row; their controls sit
-    // behind a hidden wrapper.
+    expect(visible.some((s) => [...s.options].some((o) => o.value === "false"))).toBe(true);
     const speedInput = view.container.querySelector('input[type="number"]');
     if (!(speedInput instanceof HTMLInputElement)) throw new Error("Speed input missing");
     expect(speedInput.closest("[hidden]")).not.toBeNull();
-    const speed = view.getByRole("button", { name: "Speed" });
-    expect(speed.getAttribute("aria-expanded")).toBe("false");
-    expect(view.getByRole("button", { name: "Response Format" })).toBeTruthy();
-    expect(view.getByRole("button", { name: "Instructions" })).toBeTruthy();
+    const advanced = view.getByRole("button", { name: "Advanced" });
+    expect(advanced.getAttribute("aria-expanded")).toBe("false");
+    expect(view.queryAllByRole("button", { name: "Speed" })).toHaveLength(0);
+    expect(view.queryAllByRole("button", { name: "Response Format" })).toHaveLength(0);
+    expect(view.queryAllByRole("button", { name: "Instructions" })).toHaveLength(0);
 
     view.unmount();
   });
 
-  it("expands a collapsed option in place without touching the others", async () => {
+  it("expands the advanced options together", async () => {
     const view = await renderOpenAIProfile();
 
-    await fireEvent.click(view.getByRole("button", { name: "Speed" }));
+    await fireEvent.click(view.getByRole("button", { name: "Advanced" }));
     const speedInput = view.container.querySelector('input[type="number"]');
     if (!(speedInput instanceof HTMLInputElement)) throw new Error("Speed input did not appear");
     expect(speedInput.value).toBe("1");
     expect(speedInput.closest("[hidden]")).toBeNull();
-    expect(view.getByRole("button", { name: "Speed" }).getAttribute("aria-expanded")).toBe("true");
+    expect(view.getByRole("button", { name: "Advanced" }).getAttribute("aria-expanded")).toBe(
+      "true"
+    );
 
-    // The other collapsed options stayed collapsed.
-    expect(visibleSelects(view)).toHaveLength(3);
+    expect(visibleSelects(view)).toHaveLength(5);
 
     view.unmount();
   });

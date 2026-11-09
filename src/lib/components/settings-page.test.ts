@@ -10,6 +10,7 @@ import { AUTO_SAVE_DEBOUNCE_MS } from "#lib/stores/auto-save.svelte";
 import type { AppConfig } from "#lib/types";
 import SettingsPage from "./settings-page.svelte";
 import { tauriService } from "#lib/services/tauri";
+import * as externalLink from "#lib/utils/external-link";
 
 let config: AppConfig;
 let saved: AppConfig[];
@@ -18,6 +19,9 @@ const scrollIntoView = vi.fn();
 
 beforeEach(async () => {
   await waitForI18nReady();
+  const motion = new EventTarget();
+  Object.defineProperty(motion, "matches", { value: false });
+  vi.stubGlobal("matchMedia", () => motion);
   config = testConfig();
   saved = [];
   mockIPC(
@@ -71,6 +75,37 @@ async function mountSettings() {
   return view;
 }
 
+it("shows System first and saves it separately from an explicit language", async () => {
+  config.general.locale = "";
+  vi.spyOn(navigator, "language", "get").mockReturnValue("he-IL");
+  const view = await mountSettings();
+  const select = view.container.querySelector("#language");
+  if (!(select instanceof HTMLSelectElement)) throw new Error("Language selector missing");
+  expect(select.options[0].textContent).toBe("System");
+  expect(select.options[0].value).toBe("");
+  expect(select.value).toBe("");
+
+  await fireEvent.change(select, { target: { value: "en" } });
+  expect(select.value).toBe("en");
+  await fireEvent.change(select, { target: { value: "" } });
+  expect(select.value).toBe("");
+  await fireEvent.change(select, { target: { value: "en" } });
+  await saveBar.onSave?.();
+  expect(saved.at(-1)?.general.locale).toBe("en");
+  await fireEvent.change(select, { target: { value: "" } });
+  await saveBar.onSave?.();
+  expect(saved.at(-1)?.general.locale).toBe("");
+});
+
+it("shows an explicitly saved language even when the system language differs", async () => {
+  config.general.locale = "en";
+  vi.spyOn(navigator, "language", "get").mockReturnValue("he-IL");
+  const view = await mountSettings();
+  const select = view.container.querySelector("#language");
+  if (!(select instanceof HTMLSelectElement)) throw new Error("Language selector missing");
+  expect(select.value).toBe("en");
+});
+
 it("places appearance first and import/export after debug before acknowledgments", async () => {
   const view = await mountSettings();
   const general = view.container.querySelector("#general");
@@ -80,7 +115,7 @@ it("places appearance first and import/export after debug before acknowledgments
   const debug = about.querySelector("#debug-mode");
   if (!debug) throw new Error("Debug switch missing");
   const importHeading = within(about).getByRole("heading", { name: "Import / Export" });
-  const acknowledgments = within(about).getByRole("heading", { name: "Acknowledgments" });
+  const acknowledgments = view.getByRole("heading", { name: "Acknowledgments" });
   expect(
     debug.compareDocumentPosition(importHeading) & Node.DOCUMENT_POSITION_FOLLOWING
   ).toBeTruthy();
@@ -89,32 +124,27 @@ it("places appearance first and import/export after debug before acknowledgments
   ).toBeTruthy();
 });
 
-it("renders linked provider names without acknowledgment tooltips", async () => {
+it("renders a full-width acknowledgment marquee with accessible provider links", async () => {
   const view = await mountSettings();
-  const section = view.container.querySelector('[aria-labelledby="acknowledgments-title"]');
+  const section = view.container.querySelector('section[aria-labelledby="acknowledgments-title"]');
   if (!(section instanceof HTMLElement)) throw new Error("Acknowledgments section missing");
-  // The section centers like the About footer below it.
-  const heading = section.querySelector("h3");
-  if (!heading) throw new Error("Acknowledgments heading missing");
-  expect(heading.className).toContain("text-center");
-  const grid = section.querySelector("ul");
-  if (!grid) throw new Error("Acknowledgments grid missing");
-  expect(grid.className).toContain("justify-center");
-  // Mark and name are ONE link per provider, so they highlight together.
-  const openaiLinks = within(section).getAllByRole("link", { name: "OpenAI" });
-  expect(openaiLinks).toHaveLength(1);
-  const openai = openaiLinks[0];
+  expect(
+    within(section).getByText("Thanks to the teams behind these speech engines.")
+  ).toBeTruthy();
+  const grid = view.getByRole("navigation").closest("aside")?.parentElement;
+  expect(grid?.nextElementSibling).toBe(section);
+  expect(section.nextElementSibling?.tagName).toBe("FOOTER");
+  const openai = within(section).getByRole("link", { name: "OpenAI" });
   expect(openai.getAttribute("href")).toBe(
     "https://platform.openai.com/docs/guides/text-to-speech"
   );
-  expect(openai.className).toContain("group");
   expect(openai.querySelector(".provider-mark")).toBeTruthy();
-  const nameSpan = [...openai.querySelectorAll("span")].find(
-    (s) => s.textContent?.trim() === "OpenAI"
-  );
-  if (!nameSpan) throw new Error("Provider name span missing");
-  expect(nameSpan.className).toContain("group-hover:underline");
-  expect(section.querySelectorAll(".provider-mark")).toHaveLength(12);
+  expect(openai.textContent?.trim()).toBe("");
+  const rows = section.querySelectorAll("ul");
+  expect(rows).toHaveLength(2);
+  expect(rows[1].getAttribute("aria-hidden")).toBe("true");
+  expect(rows[1].querySelectorAll('a[tabindex="-1"]')).toHaveLength(14);
+  expect(rows[0].querySelectorAll(".provider-mark")).toHaveLength(12);
   expect(section.querySelectorAll("button")).toHaveLength(0);
   for (const name of ["Kokoro", "Edge-TTS"]) {
     const link = within(section).getByRole("link", { name });
@@ -126,19 +156,70 @@ it("renders linked provider names without acknowledgment tooltips", async () => 
   );
 });
 
-it("shows the creator credit and support link in About", async () => {
+it("uses the shared app scroller for sidebar navigation", async () => {
+  const scrollTo = vi.fn();
+  const view = render(SettingsPage, { context: new Map([["app-lenis", () => ({ scrollTo })]]) });
+  const nav = await view.findByRole("navigation");
+  await fireEvent.click(within(nav).getByRole("button", { name: "About" }));
+  expect(scrollTo).toHaveBeenCalledWith(view.container.querySelector("#about"));
+  expect(scrollIntoView).not.toHaveBeenCalled();
+});
+
+it("scrolls instantly from the sidebar when reduced motion is enabled", async () => {
+  const motion = new EventTarget();
+  Object.defineProperty(motion, "matches", { value: true });
+  vi.stubGlobal("matchMedia", () => motion);
+  const view = await mountSettings();
+  await fireEvent.click(
+    within(view.getByRole("navigation")).getByRole("button", { name: "About" })
+  );
+  expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "instant", block: "start" });
+});
+
+it("places Donate after Source Code and the credit outside the sidebar grid", async () => {
   const view = await mountSettings();
   const about = view.container.querySelector("#about");
   if (!(about instanceof HTMLElement)) throw new Error("About section missing");
-  expect(within(about).getByRole("link", { name: "Buy Me a Coffee" }).getAttribute("href")).toBe(
-    "https://www.buymeacoffee.com/ilyaizen"
+  const donate = within(about).getByRole("link", { name: "Buy Me a Coffee" });
+  expect(donate.getAttribute("href")).toBe("https://www.buymeacoffee.com/ilyaizen");
+  const source = within(about).getByRole("button", { name: "GitHub" });
+  const sourceRow = source.parentElement?.parentElement;
+  const donateRow = donate.parentElement?.parentElement;
+  expect(sourceRow?.nextElementSibling).toBe(donateRow);
+  const footer = view.container.querySelector("footer");
+  if (!(footer instanceof HTMLElement)) throw new Error("Settings footer missing");
+  expect(footer.previousElementSibling?.getAttribute("aria-labelledby")).toBe(
+    "acknowledgments-title"
   );
-  expect(within(about).getByText(`🄯 ${new Date().getFullYear()} Ilya Aizenberg`)).toBeTruthy();
-  const credit = within(about).getByLabelText("Made with ♥ Rust & Bots.");
+  expect(footer.contains(donate)).toBe(false);
+  expect(footer.classList.contains("flex-nowrap")).toBe(true);
+  expect(footer.classList.contains("font-mono")).toBe(true);
+  expect(footer.classList.contains("text-[11px]")).toBe(true);
+  expect(footer.classList.contains("tracking-[0.1em]")).toBe(true);
+  expect(footer.classList.contains("uppercase")).toBe(false);
+  expect(footer.classList.contains("opacity-60")).toBe(true);
+  const profile = within(footer).getByRole("link", { name: "@ilyaizen" });
+  const attribution = profile.parentElement;
+  if (!attribution) throw new Error("Settings attribution missing");
+  expect(attribution.textContent?.trim()).toBe("by @ilyaizen");
+  expect(attribution.classList.contains("whitespace-nowrap")).toBe(true);
+  expect(profile.getAttribute("href")).toBe("https://x.com/ilyaizen");
+  expect(profile.textContent).toBe("@ilyaizen");
+  expect(profile.querySelector("span")?.classList.contains("tracking-[0.2em]")).toBe(true);
+  const openExternal = vi.spyOn(externalLink, "openExternal").mockResolvedValue();
+  await fireEvent.click(profile);
+  expect(openExternal).toHaveBeenCalledWith("https://x.com/ilyaizen");
+  await fireEvent.click(profile, { ctrlKey: true });
+  expect(openExternal).toHaveBeenCalledTimes(1);
+  const credit = within(footer).getByLabelText("made with ♥ rust + robots");
+  expect(credit.classList.contains("whitespace-nowrap")).toBe(true);
+  expect(footer.firstElementChild).toBe(credit);
   const heart = credit.querySelector("svg");
   expect(heart?.getAttribute("aria-hidden")).toBe("true");
+  expect(heart?.querySelector("path")?.getAttribute("fill")).toBe("#e5484d");
+  expect(heart?.classList.contains("mx-[0.1em]")).toBe(true);
   expect(credit.textContent).not.toContain("❤️");
-  expect(credit.textContent?.trim()).toBe("Made with  Rust & Bots.");
+  expect(credit.textContent?.trim()).toBe("made with  rust + robots");
 });
 
 it("keeps hidden-start and close-to-tray preferences but disables them without a tray", async () => {

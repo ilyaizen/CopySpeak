@@ -10,13 +10,16 @@
   import HistorySettings from "#lib/components/settings/history-settings.svelte";
   import ImportExportSettings from "#lib/components/settings/import-export-settings.svelte";
   import AboutSettings from "#lib/components/settings/about-settings.svelte";
+  import Acknowledgments from "#lib/components/settings/acknowledgments.svelte";
+  import SettingsFooter from "#lib/components/settings/settings-footer.svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import { invoke } from "#lib/services/tauri";
   import { toast } from "svelte-sonner";
-  import { onMount, onDestroy, tick } from "svelte";
+  import type Lenis from "lenis";
+  import { getContext, onMount, onDestroy, tick } from "svelte";
   import { _ } from "svelte-i18n";
   import { History, Info, Settings, Sparkles, Volume2, Wrench } from "@lucide/svelte";
   import { hideSaveBar } from "#lib/stores/save-bar.svelte";
@@ -28,6 +31,7 @@
   let localConfig = $state<AppConfig | null>(null);
   let originalConfig = $state<AppConfig | null>(null);
   let isLoading = $state(true);
+  const getLenis = getContext<(() => Lenis | undefined) | undefined>("app-lenis");
   type SettingsSection = "general" | "playback" | "history" | "advanced" | "postProcess" | "about";
 
   // Sidebar highlight: set by the scroll-spy, or directly by a sidebar click.
@@ -127,7 +131,14 @@
   function scrollToSection(id: SettingsSection) {
     activeSection = id;
     isScrollingToSection = true;
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const section = document.getElementById(id);
+    const lenis = getLenis?.();
+    if (section && lenis) lenis.scrollTo(section);
+    else
+      section?.scrollIntoView({
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
+        block: "start"
+      });
     scheduleScrollRelease();
   }
 
@@ -412,6 +423,8 @@
         </section>
       </main>
     </div>
+    <Acknowledgments />
+    <SettingsFooter />
   {:else}
     <div class="flex min-h-[60vh] items-center justify-center px-6">
       <div class="mx-auto w-full max-w-sm text-center">

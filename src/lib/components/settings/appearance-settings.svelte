@@ -2,8 +2,8 @@
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Select } from "#lib/components/ui/select/index.js";
   import { _ } from "svelte-i18n";
-  import { getSupportedLocales, resolveLocale } from "#lib/i18n/utils";
-  import type { AppConfig, SupportedLocale } from "#lib/types";
+  import { getSupportedLocales } from "#lib/i18n/utils";
+  import type { AppConfig, GeneralConfig } from "#lib/types";
 
   let {
     localConfig = $bindable()
@@ -17,7 +17,10 @@
     { value: "dark", label: "Dark" }
   ];
 
-  const localeOptions = getSupportedLocales();
+  const localeOptions = $derived([
+    { value: "", label: $_("settings.general.systemLanguage") },
+    ...getSupportedLocales()
+  ]);
 
   function handleThemeChange(e: Event) {
     // SAFETY: this handler is only bound to the theme <select>; its target is that element
@@ -29,8 +32,8 @@
   }
 
   function handleLocaleChange(e: Event) {
-    // SAFETY: localeOptions enumerates SupportedLocale, so the select's value is one of them.
-    localConfig.general.locale = (e.target as HTMLSelectElement).value as SupportedLocale;
+    // SAFETY: the select enumerates the empty system value and supported locale codes.
+    localConfig.general.locale = (e.target as HTMLSelectElement).value as GeneralConfig["locale"];
   }
 </script>
 
@@ -42,7 +45,7 @@
     <Select
       id="language"
       options={localeOptions}
-      value={resolveLocale(localConfig.general.locale, navigator.language)}
+      value={localConfig.general.locale}
       onchange={handleLocaleChange}
       class="w-32"
     />

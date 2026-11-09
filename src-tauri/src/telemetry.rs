@@ -9,7 +9,7 @@ use std::sync::Mutex;
 
 /// Character count buckets for timing estimates.
 /// Smaller buckets for short texts (higher variance), larger for long texts.
-const CHAR_BUCKETS: &[u32] = &[0, 500, 2000, 5000, 10000, std::u32::MAX];
+const CHAR_BUCKETS: &[u32] = &[0, 500, 2000, 5000, 10000, u32::MAX];
 
 /// Get the bucket index for a given character count.
 fn get_bucket_index(char_count: usize) -> usize {
@@ -27,8 +27,8 @@ fn get_bucket_index(char_count: usize) -> usize {
 fn get_bucket_label(char_count: usize) -> String {
     let idx = get_bucket_index(char_count);
     let start = CHAR_BUCKETS[idx];
-    let end = CHAR_BUCKETS.get(idx + 1).copied().unwrap_or(std::u32::MAX);
-    if end == std::u32::MAX {
+    let end = CHAR_BUCKETS.get(idx + 1).copied().unwrap_or(u32::MAX);
+    if end == u32::MAX {
         format!("{}+", start)
     } else {
         format!("{}-{}", start, end)
