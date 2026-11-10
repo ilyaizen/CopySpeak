@@ -77,6 +77,7 @@ Every line exists because it went wrong at least once. On mistake, correction, o
 - Use three-way `cfg(target_os = ...)` (windows/macos/linux) for platform seams; `cfg(not(windows))` makes macOS compile Linux-only code (wl-clipboard, gtk-layer-shell) that cannot build or run on darwin.
 - Treat a Windows-green `cargo check` as silent about `cfg(not(windows))` code; grep cfg-gated blocks for a trait's methods before deleting an "unused" import.
 - Verify a subsystem is actually wired before extending it — grep `mod` declarations and component mounts; the parity checklist once described a post-processing enum system that was never compiled or mounted.
+- Feature-detect an optional browser or DOM API with a `!== undefined` guard or `try/catch`; `vp check`'s anti-slop `no-runtime-typeof` rejects `typeof` checks.
 
 ### Area gotchas
 

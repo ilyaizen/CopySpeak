@@ -163,26 +163,47 @@ pub fn concat_speech(fragments: Vec<(SpeechAudio, String)>) -> Result<SpeechAudi
         }
         let duration_ms = (pcm.len() - pcm_start) as f64 * 1000.0
             / (meta.sample_rate as f64 * meta.channels as f64 * 2.0);
-        let captions = speech.captions.filter(|captions| {
-            if let Err(error) = captions.validate() {
-                log::warn!("Ignoring invalid fragment captions during concatenation: {error}");
-                return false;
+        let captions = match speech.captions {
+            Some(mut captions) => {
+                if let Err(error) = captions.validate() {
+                    log::warn!("Ignoring invalid fragment captions during concatenation: {error}");
+                    None
+                } else if captions.words.is_empty() {
+                    // Empty snapshots carry no usable timing. Keep the
+                    // fragment's source text so later captions retain their
+                    // joined text offsets.
+                    None
+                } else {
+                    // Streamed alignment (ElevenLabs) overshoots the decoded
+                    // WAV: its last word ends past the audio. Drop the words
+                    // the audio never reaches and clamp the rest to its
+                    // duration — dropping the whole fragment used to cost
+                    // every caption of a paginated reading.
+                    let word_count = captions.words.len();
+                    captions.words.retain(|word| word.start_ms < duration_ms);
+                    if captions.words.is_empty() {
+                        None
+                    } else {
+                        let kept = captions.words.len();
+                        let dropped = word_count - kept;
+                        let mut clamped = 0usize;
+                        for word in &mut captions.words {
+                            if word.end_ms > duration_ms {
+                                word.end_ms = duration_ms;
+                                clamped += 1;
+                            }
+                        }
+                        if clamped > 0 || dropped > 0 {
+                            log::debug!(
+                                "Clamped {clamped} of {kept} fragment caption words to the decoded audio ({duration_ms:.0} ms) and dropped {dropped} starting past it"
+                            );
+                        }
+                        Some(captions)
+                    }
+                }
             }
-            // Empty snapshots carry no usable timing. Keep the fragment's
-            // source text so later captions retain their joined text offsets.
-            if captions.words.is_empty() {
-                return false;
-            }
-            if captions
-                .words
-                .last()
-                .is_some_and(|word| word.end_ms > duration_ms)
-            {
-                log::warn!("Ignoring fragment captions extending beyond their audio");
-                return false;
-            }
-            true
-        });
+            None => None,
+        };
         if !combined.text.is_empty() {
             combined.text.push(' ');
         }
@@ -350,36 +371,135 @@ mod tests {
                 }],
             }),
         };
-        // Both invalid offsets and locally ordered timings beyond the audio
-        // must degrade only this fragment, not invalidate the joined reading.
-        for overrun in [false, true] {
-            let mut middle = make("wrong");
-            let word = &mut middle.captions.as_mut().unwrap().words[0];
-            if overrun {
-                word.end_ms = 2000.0;
-            } else {
-                word.text_end = 99;
-            }
-            let speech = concat_speech(vec![
-                (make("A"), "A".into()),
-                (middle, "😀 B".into()),
-                (make("C"), "C".into()),
-            ])
-            .unwrap();
-            let captions = speech.captions.unwrap();
-            assert_eq!(captions.text, "A 😀 B C");
-            assert_eq!(captions.words.len(), 2);
-            assert_eq!(captions.words[0].start_ms, 100.0);
-            assert_eq!(captions.words[0].end_ms, 300.0);
-            assert_eq!(captions.words[1].text_start, 7);
-            assert_eq!(captions.words[1].start_ms, 2100.0);
-            assert_eq!(captions.words[1].end_ms, 2300.0);
-            assert_eq!(
-                speech.bytes,
-                super::super::stream::pcm_to_wav(&vec![0; 48000], &meta)
-            );
-            assert!(captions.validate().is_ok());
-        }
+        // Invalid offsets must degrade only this fragment, not invalidate the
+        // joined reading.
+        let mut middle = make("wrong");
+        middle.captions.as_mut().unwrap().words[0].text_end = 99;
+        let speech = concat_speech(vec![
+            (make("A"), "A".into()),
+            (middle, "😀 B".into()),
+            (make("C"), "C".into()),
+        ])
+        .unwrap();
+        let captions = speech.captions.unwrap();
+        assert_eq!(captions.text, "A 😀 B C");
+        assert_eq!(captions.words.len(), 2);
+        assert_eq!(captions.words[0].start_ms, 100.0);
+        assert_eq!(captions.words[0].end_ms, 300.0);
+        assert_eq!(captions.words[1].text_start, 7);
+        assert_eq!(captions.words[1].start_ms, 2100.0);
+        assert_eq!(captions.words[1].end_ms, 2300.0);
+        assert_eq!(
+            speech.bytes,
+            super::super::stream::pcm_to_wav(&vec![0; 48000], &meta)
+        );
+        assert!(captions.validate().is_ok());
+    }
+
+    #[test]
+    fn overrunning_fragment_captions_are_clamped_not_dropped() {
+        let meta = super::super::stream::AudioFormatMeta {
+            sample_rate: 8000,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        // 16000 bytes at 8000 Hz mono 16-bit decode to exactly 1000 ms.
+        let audio = || super::super::stream::pcm_to_wav(&vec![0; 16000], &meta);
+        let neighbor = |text: &str| SpeechAudio {
+            bytes: audio(),
+            captions: Some(CaptionAlignment {
+                text: text.into(),
+                words: vec![WordTiming {
+                    text_start: 0,
+                    text_end: text.encode_utf16().count(),
+                    start_ms: 100.0,
+                    end_ms: 300.0,
+                }],
+            }),
+        };
+        // Streamed ElevenLabs alignment overshoots the decoded WAV: one word
+        // ends past the audio, and one starts past it entirely.
+        let overrunning = SpeechAudio {
+            bytes: audio(),
+            captions: Some(CaptionAlignment {
+                text: "one two three".into(),
+                words: vec![
+                    WordTiming {
+                        text_start: 0,
+                        text_end: 3,
+                        start_ms: 100.0,
+                        end_ms: 300.0,
+                    },
+                    WordTiming {
+                        text_start: 4,
+                        text_end: 7,
+                        start_ms: 900.0,
+                        end_ms: 1400.0,
+                    },
+                    WordTiming {
+                        text_start: 8,
+                        text_end: 13,
+                        start_ms: 1400.0,
+                        end_ms: 1600.0,
+                    },
+                ],
+            }),
+        };
+        let speech = concat_speech(vec![
+            (neighbor("A"), "A".into()),
+            (overrunning, "one two three".into()),
+            (neighbor("C"), "C".into()),
+        ])
+        .unwrap();
+        let captions = speech.captions.unwrap();
+        assert_eq!(captions.text, "A one two three C");
+        // The fragment keeps its two words inside the audio; only the word
+        // starting past the audio is gone.
+        assert_eq!(captions.words.len(), 4);
+        assert_eq!(captions.words[1].text_start, 2);
+        assert_eq!(captions.words[1].text_end, 5);
+        assert_eq!(captions.words[1].start_ms, 1100.0);
+        assert_eq!(captions.words[1].end_ms, 1300.0);
+        // The kept overrun is clamped to the fragment's own 1000 ms of audio;
+        // its text offsets are untouched.
+        assert_eq!(captions.words[2].text_start, 6);
+        assert_eq!(captions.words[2].text_end, 9);
+        assert_eq!(captions.words[2].start_ms, 1900.0);
+        assert_eq!(captions.words[2].end_ms, 2000.0);
+        // The neighbor keeps its own text offsets and timings.
+        assert_eq!(captions.words[3].text_start, 16);
+        assert_eq!(captions.words[3].text_end, 17);
+        assert_eq!(captions.words[3].start_ms, 2100.0);
+        assert_eq!(captions.words[3].end_ms, 2300.0);
+        assert_eq!(
+            speech.bytes,
+            super::super::stream::pcm_to_wav(&vec![0; 48000], &meta)
+        );
+        assert!(captions.validate().is_ok());
+
+        // Every word starting past the audio falls back to the source text,
+        // like empty captions do.
+        let all_past = SpeechAudio {
+            bytes: audio(),
+            captions: Some(CaptionAlignment {
+                text: "gone".into(),
+                words: vec![WordTiming {
+                    text_start: 0,
+                    text_end: 4,
+                    start_ms: 1200.0,
+                    end_ms: 1600.0,
+                }],
+            }),
+        };
+        let speech =
+            concat_speech(vec![(all_past, "gone".into()), (neighbor("C"), "C".into())]).unwrap();
+        let captions = speech.captions.unwrap();
+        assert_eq!(captions.text, "gone C");
+        assert_eq!(captions.words.len(), 1);
+        assert_eq!(captions.words[0].text_start, 5);
+        assert_eq!(captions.words[0].start_ms, 1100.0);
+        assert_eq!(captions.words[0].end_ms, 1300.0);
+        assert!(captions.validate().is_ok());
     }
 
     #[test]

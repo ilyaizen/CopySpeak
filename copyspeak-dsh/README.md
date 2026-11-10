@@ -15,7 +15,7 @@ A DSH plugin that reads assistant replies aloud through the CopySpeak desktop ap
 - While the message plays, the action shows the filled speaker in the theme's brand color. Its tooltip reads **Stop reading**.
 - Clicking the action while it plays stops the reading.
 - When playback ends, the action returns to the outlined speaker.
-- A floating playback bar in the lower right corner while a reply plays. Every control is an icon with a tooltip and an accessible label:
+- A floating playback bar in the upper right corner, below the session header's bottom border, while a reply plays. It starts with the colored CopySpeak app logo. Every control is an icon with a tooltip and an accessible label:
   - **Pause** stops the audio at the current word. The control then shows **Resume**.
   - **-5 s** rewinds 5 seconds. **+5 s** skips forward 5 seconds. Both controls work while paused.
   - **Stop** cancels the reading from any page.
@@ -67,7 +67,8 @@ The bar shows the app's pause state. A click flips the glyph at once, and the ne
 The highlight paints inside the message, not in a separate strip:
 
 - The Chat view marks each settled message body with `data-text-interaction-source` and each row with `data-chat-node-key`, so the plugin finds the exact reply the action or the watcher asked for.
-- Caption word offsets index the sanitized text CopySpeak spoke, not the rendered Markdown. For each fragment the plugin aligns the fragment's words onto the rendered text nodes, then paints the active word with the CSS Custom Highlight API (`window.CSS.highlights`, `::highlight(copyspeak-read-word)`).
+- Caption word offsets index the sanitized text CopySpeak spoke, not the rendered Markdown. For each fragment the plugin aligns the fragment's words onto the rendered text nodes, then paints the active word with the CSS Custom Highlight API (`window.CSS.highlights`, `::highlight(copyspeak-read-word)`). The API cannot round a background, so a positioned layer inside the message paints a rounded brand mark behind the word and recolors the word's text through the highlight.
+- Provider word windows can have gaps between words, and ElevenLabs reports one timing per character. The plugin holds the last painted word across a gap until the next word paints. Only an inactive snapshot, a same-fragment rewind, a reset, or the end of the reading clears the mark.
 - Follow playback uses a wide band. When the spoken word leaves it, its line moves to the upper third of the scrollport, at most once per 400 ms.
 - A manual wheel, touch, or key scroll pauses following for 5 s, so the view does not fight the reading.
 - The bar's **Show in chat** control scrolls to the spoken word at once and resumes following.
@@ -86,7 +87,7 @@ The switches live in the page's `localStorage` under `dsh.copyspeak-voice.auto-r
 
 ## Icon
 
-The sidebar panel icon is the outlined read mark that the message action shows while idle: a speaker with two waves in `currentColor`, so it follows light and dark themes. The action shows the filled speaker in the brand color while the message plays. `icon.svg` is the colored app-logo mark for the Plugin Manager, which renders it as an `<img>`. It shows a tilted rounded box with a transparent face, a speaker, and sound waves in a mint and teal palette.
+The sidebar panel icon is the outlined read mark that the message action shows while idle: a speaker with two waves in `currentColor`, so it follows light and dark themes. The action shows the filled speaker in the brand color while the message plays. `icon.svg` is the colored app-logo mark for the Plugin Manager, which renders it as an `<img>`. It shows a tilted rounded box with a transparent face, a speaker, and sound waves in a mint and teal palette. The playback bar embeds that same colored logo at its head as a data URI, so it needs no asset build step.
 
 ## Limits
 

@@ -74,6 +74,11 @@ window.__ModuleLoader__.load({
     const FOLLOW_ANCHOR = 0.34;
     /* A manual scroll pauses following for a few seconds. */
     const FOLLOW_PAUSE_MS = 5000;
+    /* The rounded word mark sits behind the spoken word. The CSS Custom
+     * Highlight API cannot round its background, so a positioned mark paints
+     * the brand pill behind the text while the highlight recolors the word. */
+    const MARK_PADDING_X = 2;
+    const MARK_PADDING_Y = 1;
     /* Host Tooltip: the bubble sits this far from its anchor. */
     const TOOLTIP_GAP = 8;
     /* Keep the centered bubble this far from the viewport edge. */
@@ -100,6 +105,11 @@ window.__ModuleLoader__.load({
     const GLYPH_STROKE = 3.3;
     const GLYPH_ARC_OUTER = "M48.17 21.93A19.44 19.44 0 0 1 48.17 56.13";
     const GLYPH_ARC_INNER = "M45.06 31.13A9.43 9.43 0 0 1 45.06 46.87";
+    /* The colored app logo (copyspeak-dsh/icon.svg) as a data URI, because a
+       linked plugin cannot fetch its own package files at runtime. The bar
+       shows this mark at its head; the message action keeps the theme glyphs. */
+    const APP_LOGO_URL =
+      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjIuODQ5IDEuOTc0IDczLjg3MiA3My44NzIiIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJDb3B5U3BlYWsgYXBwIGxvZ28iPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJwYWludDFfbGluZWFyXzIzMTJfNTQ4MiIgeDE9IjQwIiB4Mj0iNjkuNzIiIHkxPSIzLjQyIiB5Mj0iNzIuMzIiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzYwQjNBMSIgb2Zmc2V0PSIwIi8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM2MEFFQTciIG9mZnNldD0iLjE0NTgiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzQxODc4QSIgb2Zmc2V0PSIuMjg2NSIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjM0M4MDgzIiBvZmZzZXQ9Ii44NTQyIi8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMzMjZENzEiIG9mZnNldD0iMSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQyX2xpbmVhcl8yMzEyXzU0ODIiIHgxPSIxOS4yNCIgeDI9IjQ5LjMzIiB5MT0iNi44NjQiIHkyPSI3My4wNyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjODVEMEE1IiBvZmZzZXQ9IjAiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzY2QkM5NSIgb2Zmc2V0PSIuNDY4OCIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNTVBQzk1IiBvZmZzZXQ9IjEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50M19saW5lYXJfMjMxMl81NDgyIiB4MT0iMzcuNjUiIHgyPSIzNy42NSIgeTE9IjEwLjI2IiB5Mj0iNjcuMTQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzNEODM4MCIgb2Zmc2V0PSIwIi8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM0QTk3OTEiIG9mZnNldD0iLjIyOTIiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzNEODI4NSIgb2Zmc2V0PSIuNzI0Ii8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM1QkFFQTYiIG9mZnNldD0iMSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQ1X2xpbmVhcl8yMzEyXzU0ODIiIHgxPSIyOC40MyIgeDI9IjQ0LjA1IiB5MT0iMjAuNzQiIHkyPSI1NC42NSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNzVDMjlDIiBvZmZzZXQ9IjAiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzYwQjY5OCIgb2Zmc2V0PSIuNDc0Ii8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM1MEE3OTciIG9mZnNldD0iMSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQ2X2xpbmVhcl8yMzEyXzU0ODIiIHgxPSIyOC40NSIgeDI9IjQyLjAyIiB5MT0iMjAuNzQiIHkyPSI1NS45IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM1MEEyOTYiIG9mZnNldD0iMCIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNDI4Qjg4IiBvZmZzZXQ9Ii4zNDkiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzNEODI4NSIgb2Zmc2V0PSIuNjgyMyIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjMzU3Mjc1IiBvZmZzZXQ9IjEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50N19saW5lYXJfMjMxMl81NDgyIiB4MT0iMjkuMjMiIHgyPSIyOS4yMyIgeTE9IjIxLjI3IiB5Mj0iNTMuMzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzg4RDBBNyIgb2Zmc2V0PSIwIi8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM4Q0QxQTciIG9mZnNldD0iLjIyNCIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNzNDMjk4IiBvZmZzZXQ9Ii40NDI3Ii8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM2Q0MwOTYiIG9mZnNldD0iLjY3MTkiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzRDOUU5NyIgb2Zmc2V0PSIuODI4MSIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNEM5RDkzIiBvZmZzZXQ9IjEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50OF9saW5lYXJfMjMxMl81NDgyIiB4MT0iNTMuOCIgeDI9IjYzLjc2IiB5MT0iMTkuMDYiIHkyPSI1Ni4xMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNUFBQ0EzIiBvZmZzZXQ9IjAiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzQyOEI4RiIgb2Zmc2V0PSIuMzM4NSIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjM0I3RjgyIiBvZmZzZXQ9Ii42OTI3Ii8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMzNTcyNzYiIG9mZnNldD0iMSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQ5X2xpbmVhcl8yMzEyXzU0ODIiIHgxPSI1Mi41NiIgeDI9IjUyLjU2IiB5MT0iMTkuMjQiIHkyPSI1OC43OSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjN0FDODlEIiBvZmZzZXQ9IjAiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzVEQjM5NSIgb2Zmc2V0PSIuNDU4MyIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNTRBQTk3IiBvZmZzZXQ9IjEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50MTBfbGluZWFyXzIzMTJfNTQ4MiIgeDE9IjQ3LjYyIiB4Mj0iNTIuNjIiIHkxPSIyOC4zOCIgeTI9IjQ4LjU4IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM0QzlDOTMiIG9mZnNldD0iMCIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjM0Y4NTg4IiBvZmZzZXQ9Ii40MzIzIi8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMzQjdGODIiIG9mZnNldD0iLjczNDQiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzM0NzE3NSIgb2Zmc2V0PSIxIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJwYWludDExX2xpbmVhcl8yMzEyXzU0ODIiIHgxPSI0Ni44MiIgeDI9IjQ2LjgyIiB5MT0iMjguNjIiIHkyPSI0OC41NCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNkZDMTlDIiBvZmZzZXQ9IjAiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzVEQjI5NSIgb2Zmc2V0PSIuNTE1NiIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNTZBRDk2IiBvZmZzZXQ9IjEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxnIGlkPSJhcnQiPgogICAgPHBhdGggZD0ibTU3LjgzIDMuNDItNDAuNjIgMy40NmMtNi44MyAwLjU5LTExLjkyIDYuMDMtMTEuOTIgMTMuNTh2MzYuODVjMCA4LjMgNS44IDE0IDEyLjk2IDE0LjQ0bDM4LjY1IDIuNjJjMTEuMDEgMC43MiAxNy4zOC01LjY2IDE3LjM4LTEzLjk4di00MC44OGMwLTEwLjAzLTcuNzktMTYuNTgtMTYuNDUtMTYuMDl6bTcuODYgNTUuNDVjMCA1LjA5LTMuNzIgOC40OC04LjE4IDguMjJsLTM3Ljk2LTIuMzdjLTQtMC4yNS02LjgzLTMuMzQtNi44My03LjU3di0zNS44OWMwLTQuNyAzLTcuNzUgNy4xOC04LjA3bDM4LjI2LTIuOTFjNC4yOS0wLjMzIDcuNTMgMy44IDcuNTMgOS4yM3YzOS4zNnoiIGZpbGw9InVybCgjcGFpbnQxX2xpbmVhcl8yMzEyXzU0ODIpIi8+CiAgICA8cGF0aCBkPSJtNTYuNzEgMy42OS0zOS41IDMuMzdjLTYuNjcgMC41NS0xMS42OSA1Ljk5LTExLjY5IDEzLjMydjM2LjcxYzAgNy45IDUuNCAxMy4xOSAxMi43MyAxMy41NWwzOC42NSAyLjM1YzguNTcgMC42MiAxNC4wOC01LjI3IDE0LjA4LTEyLjk0di00MS4yM2MwLTkuMzQtNi43Ny0xNS41My0xNC4yNy0xNS4xM3ptOC45OCA1NS4xOGMwIDUuMDktMy43MiA4LjQ4LTguMTggOC4yMmwtMzcuOTYtMi4zN2MtNC0wLjI1LTYuODMtMy4zNC02LjgzLTcuNTd2LTM1Ljg5YzAtNC43IDMtNy43NSA3LjE4LTguMDdsMzguMjYtMi45MWM0LjI5LTAuMzMgNy41MyAzLjggNy41MyA5LjIzdjM5LjM2eiIgZmlsbD0idXJsKCNwYWludDJfbGluZWFyXzIzMTJfNTQ4MikiLz4KICAgIDxwYXRoIGQ9Im01Ni4wMyA4LjctMzguNDIgMi43NWMtNC43MiAwLjMzLTguMTYgNC4xNC04LjE2IDkuNjd2MzUuMjVjMCA1LjUgMy42NCA5LjI4IDguNjEgOS41NGwzOC45MiAyLjM4YzUuNDUgMC4zOCA5LjU0LTMuNTUgOS41NC05LjM0di0zOS4yYzAtNi42OS00LjczLTExLjQtMTAuNDktMTEuMDV6bTkuNjYgNTAuMTdjMCA1LjA5LTMuNzIgOC40OC04LjE4IDguMjJsLTM3Ljk2LTIuMzdjLTQtMC4yNS02LjgzLTMuMzQtNi44My03LjU3di0zNS44OWMwLTQuNyAzLTcuNzUgNy4xOC04LjA3bDM4LjI2LTIuOTFjNC4yOS0wLjMzIDcuNTMgMy44IDcuNTMgOS4yM3YzOS4zNnoiIGZpbGw9InVybCgjcGFpbnQzX2xpbmVhcl8yMzEyXzU0ODIpIi8+CiAgICA8cGF0aCBkPSJtNTYuNzEgNC4yN2M3LjYyLTAuMzEgMTMuNTMgNS41MiAxMy42NyAxMy44IDAtOC41Ni02LjQxLTE0LjQ2LTEzLjY3LTE0LjE3bC0zOS41IDMuMmMtMi45MyAwLjI0LTUuNDQgMS40MS03LjM1IDMuMTggMS44NC0xLjUgNC4yMy0yLjUgNy4wOC0yLjcxbDM5Ljc3LTMuM3oiIGZpbGw9IiNBMUQ3QkIiIG9wYWNpdHk9Ii41Ii8+CiAgICA8cGF0aCBkPSJtNTcuMDcgNjcuNTItMzguODYtMi40M2MtNS4wMy0wLjItOC4zMi0zLjg1LTguNDYtOC45MSAwIDUuNDMgMy40IDkuNDEgOC41IDkuNjVsMzguNzMgMi40M2M1LjQxIDAuMzUgOS4zNS0zLjQ1IDkuNTItOC44OS0wLjY1IDUuMS00LjYyIDguMzItOS40MyA4LjE1eiIgZmlsbD0iIzkzRDZBQiIgb3BhY2l0eT0iLjUiLz4KICAgIDxwYXRoIGQ9Im0zNy4zNSAyMC43NGMtMC43NC0wLjA0LTEuNDYgMC4yMS0yLjAyIDAuNzFsLTcuNjggNy4xM2MtMC4yNCAwLjIzLTAuNTYgMC4zNy0wLjkgMC4zOWwtNS41OCAwLjIxYy0yLjU1IDAuMS00LjUxIDIuMjMtNC41MSA1djcuOTljMCAyLjgxIDIuMSA0Ljk1IDQuNzQgNS4wOWw1LjMgMC4yOGMwLjI4IDAuMDIgMC41NCAwLjE1IDAuNzQgMC4zNWw3Ljk0IDguMTJjMC43MSAwLjcxIDEuNjcgMS4wNCAyLjU1IDEuMDIgMS41Mi0wLjA0IDIuNjUtMS4yIDIuNjUtMi43NnYtMzAuMThjMC0xLjg0LTEuNjUtMy4yNy0zLjIzLTMuMzV6IiBmaWxsPSJ1cmwoI3BhaW50NV9saW5lYXJfMjMxMl81NDgyKSIvPgogICAgPHBhdGggZD0ibTM4LjIxIDIwLjkxYzAuMTggMC40MSAwLjI2IDAuODQgMC4yNiAxLjM0djMxLjY5YzAgMS4zNy0wLjk2IDIuMzctMi4zIDIuNDUgMC41NCAwLjQxIDEuMjIgMC42MyAxLjg1IDAuNiAxLjQ5LTAuMDYgMi41Ni0xLjIyIDIuNTYtMi43MnYtMzAuMThjMC0xLjU4LTEuMDgtMi44LTIuMzctMy4xOHoiIGZpbGw9InVybCgjcGFpbnQ2X2xpbmVhcl8yMzEyXzU0ODIpIi8+CiAgICA8cGF0aCBkPSJtMzcuNTggMjEuMThjLTAuNjctMC4yMi0xLjUxLTAuMDMtMi4xMSAwLjUxbC03LjU5IDcuMjJjLTAuMjggMC4yNS0wLjY1IDAuMzctMS4wMiAwLjM4bC01LjY3IDAuMmMtMi40NSAwLjA5LTQuNCAyLjA5LTQuNCA0Ljc0djcuODljMCAxLjU4IDAuNzIgMyAxLjggMy44OS0wLjU3LTAuODEtMC45LTEuODItMC45LTIuOTd2LTguODNjMC0xLjE2IDAuNjktMS43NyAxLjUzLTEuNjYgMC42NiAwLjExIDEuMTctMC4yMyAxLjc5LTAuMTZsNy4zMy0wLjA4YzAuNTQgMC4wMSAxLjAyLTAuMTcgMS4zOC0wLjUzbDcuOS04LjU5YzAuODItMC44MSAwLjgtMS43Mi0wLjA0LTIuMDF6IiBmaWxsPSJ1cmwoI3BhaW50N19saW5lYXJfMjMxMl81NDgyKSIgb3BhY2l0eT0iLjUiLz4KICAgIDxwYXRoIGQ9Im0yOC4wNiA0My41MS03LjA1LTAuNGMtMC44OS0wLjA1LTEuNTItMC43NC0xLjUyLTEuNzV2MC42OWMwIDIuMDcgMC42IDMuOTYgMS44NyA0LjZsNS41NiAwLjMyYzAuNDYgMC4wNiAwLjgzIDAuMjggMS4xNSAwLjU2bDcuNjkgNy45OGMwLjg5LTAuNTIgMS4yMi0xLjgyIDAuNjMtMi42MWwtNi45LTguNzVjLTAuMzctMC4zOC0wLjg3LTAuNjItMS40My0wLjY0eiIgZmlsbD0iIzREQTA5NyIgb3BhY2l0eT0iLjUiLz4KICAgIDxwYXRoIGQ9Im00OS42MSAxOS40M2MtMS41LTAuNzQtMy4zMi0wLjM3LTQuMTEgMS4wNC0wLjggMS40NS0wLjIxIDMuMTMgMS4yNyAzLjk3IDUuMjUgMi44MSA4LjM5IDguMDQgOC4zOSAxNC40NCAwIDYuNDctMy40NSAxMi4wNS04LjU3IDE0LjYxLTEuNDcgMC44MS0yIDIuNDctMS4zMyAzLjg1IDAuNzIgMS40IDIuNzggMi4wMyA0LjQ0IDEuNDEgNy4xMy0zLjE0IDExLjk3LTEwLjc5IDExLjk3LTE5LjU3IDAtOC42Ny01LjAyLTE2LjQ4LTEyLjA2LTE5Ljc1eiIgZmlsbD0idXJsKCNwYWludDhfbGluZWFyXzIzMTJfNTQ4MikiLz4KICAgIDxwYXRoIGQ9Im00OS4yOCAxOS41OWMtMS4zNy0wLjY5LTMtMC4zMy0zLjczIDAuOTQtMC43MSAxLjI3LTAuMjEgMi43NSAxLjE2IDMuNDYgNS41IDIuODkgOC44NyA4LjQyIDguODcgMTQuODkgMCA2LjUzLTMuNDUgMTIuMzctOC45MSAxNC44Mi0xLjQxIDAuNzctMS45IDIuMjktMS4yNCAzLjQ5IDAuNjkgMS4yNCAyLjQxIDEuNTggMy44MiAwLjkgNi40Ny0zLjUxIDEwLjQtMTAuOTIgMTAuNC0xOS4zNSAwLTguNDItNC4zOC0xNS43My0xMC4zNy0xOS4xNXoiIGZpbGw9InVybCgjcGFpbnQ5X2xpbmVhcl8yMzEyXzU0ODIpIi8+CiAgICA8cGF0aCBkPSJtNDkuMTUgMTkuNzhjLTEuMTItMC41OS0yLjU1LTAuMjUtMy4xOCAwLjc1LTAuNTkgMC45OS0wLjMgMi4yNCAwLjY3IDIuODUtMC45Ny0wLjcxLTEuMDUtMi0wLjMyLTIuODYgMC42Ni0wLjgyIDEuODktMS4wMyAyLjk5LTAuNTYgNS41NCAyLjkyIDkuMTggOC42OCAxMC4wNyAxNC45MS0wLjY2LTYuOTEtNC42OS0xMi40LTEwLjIzLTE1LjA5eiIgZmlsbD0iIzk3RDZCNyIgb3BhY2l0eT0iLjUiLz4KICAgIDxwYXRoIGQ9Im01NS41MSAzOC40NmMwLTYuNDgtMy4zMi0xMi4xOS04Ljg0LTE0Ljk0IDUuMTIgMi44MSA4LjQ1IDguNDkgOC40NSAxNS4xMyAwIDYuNS0zLjQyIDEyLjQ0LTguNTIgMTUuMDIgNS4zNy0yLjQ1IDkuMDgtOC4yNiA4LjkxLTE1LjIxeiIgZmlsbD0iIzk3RDZCNyIgb3BhY2l0eT0iLjUiLz4KICAgIDxwYXRoIGQ9Im00Ni43NiA1My43OGMtMS4xNiAwLjYxLTEuNiAxLjkyLTEuMDcgMy4wMS0wLjMyLTEuMDUgMC4xLTIuMTggMS4yMy0yLjg0LTAuMDYtMC4wNy0wLjEyLTAuMTMtMC4xNi0wLjE3eiIgZmlsbD0iIzk3RDZCNyIgb3BhY2l0eT0iLjUiLz4KICAgIDxwYXRoIGQ9Im00Ni4zOCAyOC43N2MtMS4yNy0wLjc1LTIuOTYtMC40Mi0zLjY3IDAuODktMC43NSAxLjI4LTAuMyAyLjg2IDAuODYgMy43OCAxLjczIDEuMzMgMi43NyAzLjI2IDIuNzcgNS40OCAwIDIuMjctMS4xNCA0LjI4LTIuODMgNS40NS0xLjIgMC45LTEuNDggMi41My0wLjcgMy43OCAwLjg0IDEuMjMgMi41NSAxLjc0IDMuOTUgMS4xNiAzLjQ5LTEuNzggNS41NC01LjU2IDUuNTQtOS44OSAwLTQuNjItMi40OS04Ljc5LTUuOTItMTAuNjV6IiBmaWxsPSJ1cmwoI3BhaW50MTBfbGluZWFyXzIzMTJfNTQ4MikiLz4KICAgIDxwYXRoIGQ9Im00Ni4wNCAyOC44OWMtMS4xOC0wLjctMi42NS0wLjM1LTMuMzQgMC44My0wLjY3IDEuMTUtMC4yNyAyLjU5IDAuODEgMy40MyAxLjgxIDEuMzYgMi44NSAzLjM5IDIuODUgNS43MyAwIDIuMzYtMS4xNyA0LjQ4LTIuODcgNS42Ni0xLjExIDAuODEtMS4zNiAyLjI2LTAuNjQgMy4yNSAwLjczIDAuOTEgMi4wNCAxLjA5IDMuMDkgMC40NiAzLjA0LTIuMDYgNC43NS01LjYzIDQuNzUtOS42NiAwLTQuMDYtMS44Ni03LjgyLTQuNjUtOS43eiIgZmlsbD0idXJsKCNwYWludDExX2xpbmVhcl8yMzEyXzU0ODIpIi8+CiAgICA8cGF0aCBkPSJtNDYuMTEgMjkuMjFjLTEuMDctMC43MS0yLjQ2LTAuNDQtMy4xMiAwLjU3LTAuNTYgMC45NS0wLjM0IDIuMTkgMC41MiAyLjg5LTAuNzMtMC43NS0wLjc2LTItMC4xLTIuODMgMC42OC0wLjgyIDEuOC0wLjk2IDIuODQtMC40NiAyLjY2IDEuODQgNC4yNyA1LjA3IDQuNDIgOC41MSAwLTMuNTMtMS43My02Ljk5LTQuNTYtOC42OHoiIGZpbGw9IiM5N0Q2QjciIG9wYWNpdHk9Ii41Ii8+CiAgICA8cGF0aCBkPSJtNDYuODUgMzguNzdjMCAyLjcxLTEuMzMgNC45My0zLjMyIDYuMTktMC45NCAwLjc1LTEuMDYgMS45NC0wLjQ0IDIuODEtMC41OC0wLjk3LTAuMTgtMi4yNiAwLjc5LTIuOTQgMS45Ni0xLjM1IDMuMTEtMy41NiAyLjk3LTYuMDZ6IiBmaWxsPSIjOTdENkI3IiBvcGFjaXR5PSIuNSIvPgogIDwvZz4KPC9zdmc+Cg==";
 
     const en = {
       "panel.label": "CopySpeak",
@@ -172,19 +182,25 @@ window.__ModuleLoader__.load({
       ".dsh-csva-switchThumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--dsw-alias-bg-base);transition:transform .15s}",
       ".dsh-csva-switch[data-on] .dsh-csva-switchThumb{transform:translateX(16px)}",
       /* The frame-wide playback bar. The shell overlay is click-through, so the
-         bar opts back into pointer events. It floats in the lower right corner,
-         away from the sidebar and the centered composer. The bar is icon-only:
-         the brand mark, then pause or resume, rewind, skip, stop, and Show in
-         chat. Every control names itself in its tooltip and aria-label. */
-      ".dsh-csva-bar{position:fixed;right:20px;bottom:20px;z-index:20;display:inline-flex;align-items:center;gap:2px;box-sizing:border-box;max-width:calc(100vw - 40px);padding:6px 6px 6px 8px;border:.5px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 6px 20px rgb(0 0 0 / 14%);pointer-events:auto}",
-      ".dsh-csva-barGlyph{flex:none;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-right:4px;color:var(--dsw-alias-brand-primary)}",
+         bar opts back into pointer events. It floats in the top right corner,
+         below the session header's bottom border: the header is 76 px tall and
+         starts under the frame top clearance. The bar is icon-only: the colored
+         app logo, then pause or resume, rewind, skip, stop, and Show in chat.
+         Every control names itself in its tooltip and aria-label. */
+      ".dsh-csva-bar{position:fixed;right:20px;top:calc(var(--dsh-frame-top-clearance,0px) + 88px);z-index:20;display:inline-flex;align-items:center;gap:2px;box-sizing:border-box;max-width:calc(100vw - 40px);padding:6px 6px 6px 8px;border:.5px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 6px 20px rgb(0 0 0 / 14%);pointer-events:auto}",
+      ".dsh-csva-barGlyph{flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-right:6px}",
+      ".dsh-csva-barLogo{display:block;width:18px;height:18px}",
       ".dsh-csva-barControl{flex:none;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:none;border-radius:var(--dsw-radius-sm,6px);background:0 0;color:var(--dsw-alias-label-secondary);cursor:pointer}",
       "@media (hover:hover){.dsh-csva-barControl:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}}",
       ".dsh-csva-barControl:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
       ".dsh-csva-barStop{color:var(--dsw-alias-label-primary)}",
-      "::highlight(" +
-        HIGHLIGHT_NAME +
-        "){background-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base)}"
+      "::highlight(" + HIGHLIGHT_NAME + "){color:var(--dsw-alias-bg-base)}",
+      /* The rounded mark: a positioned layer inside the reply's own stacking
+         context. Negative z-index keeps it behind the text, so the word wears
+         the highlight's recolored text over a rounded brand pill. */
+      "[data-dsh-csva-mark-host]{isolation:isolate}",
+      ".dsh-csva-markLayer{position:absolute;top:0;left:0;width:0;height:0;z-index:-1;pointer-events:none}",
+      ".dsh-csva-mark{position:absolute;border-radius:4px;background-color:var(--dsw-alias-brand-primary);pointer-events:none}"
     ].join("\n");
 
     /* One reading at a time; every surface observes this record. `paused` is
@@ -273,7 +289,10 @@ window.__ModuleLoader__.load({
       /* The status poll runs for the whole reading, so the bar keeps its pause
          state and Show in chat keeps its target. Disabling captions only drops
          the inline highlight. */
-      if (name === "captions" && !enabled) clearHighlight();
+      if (name === "captions" && !enabled) {
+        clearHighlight();
+        releaseMarkHost();
+      }
       emit(preferences.listeners);
     }
 
@@ -317,6 +336,12 @@ window.__ModuleLoader__.load({
       scroller: null,
       watchedScroller: null,
       activeToken: -1,
+      /* The rounded mark: the element that hosts its stacking context, the
+         layer, and one positioned mark per line of the spoken word. */
+      markHost: null,
+      markLayer: null,
+      markRects: [],
+      markContaining: null,
       lastScrollAt: 0,
       followPausedUntil: 0
     };
@@ -576,6 +601,7 @@ window.__ModuleLoader__.load({
     function ensureTarget() {
       if (reading.element !== null && reading.element.isConnected) return reading.element;
       const found = findMessageTarget();
+      releaseMarkHost();
       reading.element = found === null ? null : found.element;
       reading.tokens = found === null ? null : found.tokens;
       reading.scroller = null;
@@ -590,7 +616,8 @@ window.__ModuleLoader__.load({
     }
 
     /* A rewind invalidates the forward alignment: the next snapshot re-aligns
-       from the start of the message again, not from the last word played. */
+       from the start of the message again, not from the last word played. The
+       caller repaints in the same pass, so the mark does not flash. */
     function invalidateAlignment() {
       reading.cursor = 0;
       reading.fragmentText = null;
@@ -644,8 +671,142 @@ window.__ModuleLoader__.load({
       if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
         window.CSS.highlights.delete(HIGHLIGHT_NAME);
       }
+      clearMarks();
       /* The mapped token stays, so Show in chat still finds the spoken word
          during a gap between words. A new reading resets it in resetReading. */
+    }
+
+    /* Drop every painted mark but keep the layer and its host. */
+    function clearMarks() {
+      for (const mark of reading.markRects) mark.remove();
+      reading.markRects.length = 0;
+    }
+
+    /* Drop the layer and its host attribute: the stack context must not
+       outlive the reading or outlive the target element. */
+    function releaseMarkHost() {
+      clearMarks();
+      if (reading.markLayer !== null) reading.markLayer.remove();
+      if (reading.markHost !== null) reading.markHost.removeAttribute("data-dsh-csva-mark-host");
+      reading.markHost = null;
+      reading.markLayer = null;
+      reading.markContaining = null;
+    }
+
+    /* The rounded pill paints inside the mark host's own stacking context. A
+       React re-render can drop the layer, so this re-creates it on demand. */
+    function ensureMarkLayer() {
+      const host = reading.element;
+      if (host === null) return null;
+      if (
+        reading.markHost === host &&
+        reading.markLayer !== null &&
+        reading.markLayer.isConnected
+      ) {
+        return reading.markLayer;
+      }
+      if (reading.markHost !== null) releaseMarkHost();
+      host.setAttribute("data-dsh-csva-mark-host", "");
+      const layer = document.createElement("div");
+      layer.className = "dsh-csva-markLayer";
+      layer.setAttribute("aria-hidden", "true");
+      host.appendChild(layer);
+      reading.markHost = host;
+      reading.markLayer = layer;
+      return layer;
+    }
+
+    /* The positioned ancestor the marks sit in. It travels with the reply when
+       the chat scrolls, so the mark needs no scroll listener. */
+    function markContainingBlock(host) {
+      const cached = reading.markContaining;
+      if (cached !== null && cached.isConnected && cached.contains(host)) return cached;
+      let node = host.parentElement;
+      while (node !== null) {
+        const position = window.getComputedStyle(node).position;
+        if (position !== undefined && position !== "static") {
+          reading.markContaining = node;
+          return node;
+        }
+        node = node.parentElement;
+      }
+      reading.markContaining = null;
+      return null;
+    }
+
+    /* Range.getClientRects is missing in jsdom and can throw on a stale node,
+       so a thrown call reads as "no layout rect". */
+    function wordRects(range) {
+      let rects = [];
+      try {
+        rects = Array.from(range.getClientRects());
+      } catch {
+        rects = [];
+      }
+      return rects.filter(function (rect) {
+        return rect.width > 0 && rect.height > 0;
+      });
+    }
+
+    /* Paint one rounded mark per line of the spoken word. */
+    function placeMarks(rects) {
+      const layer = ensureMarkLayer();
+      if (layer === null) return;
+      const block = markContainingBlock(reading.markHost);
+      const blockRect = block === null ? null : block.getBoundingClientRect();
+      /* Absolute offsets count from the containing block's padding box, or
+         from the document when no ancestor is positioned. */
+      const baseX = blockRect === null ? window.scrollX : -blockRect.left - block.clientLeft;
+      const baseY = blockRect === null ? window.scrollY : -blockRect.top - block.clientTop;
+      while (reading.markRects.length < rects.length) {
+        const mark = document.createElement("div");
+        mark.className = "dsh-csva-mark";
+        mark.setAttribute("aria-hidden", "true");
+        layer.appendChild(mark);
+        reading.markRects.push(mark);
+      }
+      while (reading.markRects.length > rects.length) {
+        const mark = reading.markRects.pop();
+        mark.remove();
+      }
+      for (let index = 0; index < rects.length; index += 1) {
+        const rect = rects[index];
+        const mark = reading.markRects[index];
+        mark.style.left = Math.round(rect.left + baseX - MARK_PADDING_X) + "px";
+        mark.style.top = Math.round(rect.top + baseY - MARK_PADDING_Y) + "px";
+        mark.style.width = Math.round(rect.width + MARK_PADDING_X * 2) + "px";
+        mark.style.height = Math.round(rect.height + MARK_PADDING_Y * 2) + "px";
+      }
+    }
+
+    /* Recolor the word and place its rounded mark, then follow it. A browser
+       without the CSS Custom Highlight API keeps the old behavior: no mark,
+       because the mark only reads as a highlight under the recolored text. */
+    function paintWord(token) {
+      const range = tokenRange(token);
+      if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
+        window.CSS.highlights.set(HIGHLIGHT_NAME, new window.Highlight(range));
+        placeMarks(wordRects(range));
+      }
+      followRange(token, range);
+    }
+
+    /* A React re-render can drop the mark layer while the same word plays.
+       Re-assert the painted word when that happened. */
+    function keepWordPainted() {
+      if (!preferences.captions || reading.activeToken < 0 || reading.tokens === null) return;
+      if (window.CSS === undefined || window.CSS.highlights === undefined) return;
+      const token = reading.tokens[reading.activeToken];
+      if (!token.node.isConnected) return;
+      const placed =
+        reading.markHost === reading.element &&
+        reading.markLayer !== null &&
+        reading.markLayer.isConnected &&
+        reading.markRects.length > 0 &&
+        reading.markRects.every(function (mark) {
+          return mark.isConnected;
+        });
+      if (!placed) paintWord(token);
     }
 
     /* Resolve the scrollport of the painted word, and keep it while the word
@@ -762,7 +923,12 @@ window.__ModuleLoader__.load({
 
     /* One status snapshot drives the inline highlight, the follow scroll, and
      * the Show in chat target. Alignment runs with captions off too, so Show in
-     * chat still finds the spoken word. */
+     * chat still finds the spoken word.
+     *
+     * Only an inactive snapshot clears the paint. Provider word windows have
+     * gaps between words (ElevenLabs reports one timing per character), so a
+     * position inside a gap holds the last painted word until the next one
+     * paints. The mark then follows the audio instead of flashing off. */
     function updateCaption(snapshot) {
       if (snapshot === null) {
         clearHighlight();
@@ -775,24 +941,30 @@ window.__ModuleLoader__.load({
       }
       const map = ensureFragmentMap(snapshot);
       if (map === null) {
-        clearHighlight();
+        /* A fragment that cannot align yet keeps the last painted word. */
         return;
       }
       const words = reading.fragmentWords === null ? [] : reading.fragmentWords;
       const wordIndex = activeWordIndex(words, snapshot.position);
-      if (wordIndex < 0) {
-        if (preferences.captions) clearHighlight();
+      if (wordIndex < 0) return;
+      const tokenIndex = nearestMapped(map, wordIndex);
+      if (tokenIndex < 0) return;
+      const token = reading.tokens[tokenIndex];
+      if (!token.node.isConnected) {
+        reading.activeToken = -1;
+        clearHighlight();
         return;
       }
-      const tokenIndex = nearestMapped(map, wordIndex);
-      if (tokenIndex < 0 || tokenIndex === reading.activeToken) return;
-      const token = reading.tokens[tokenIndex];
-      reading.activeToken = tokenIndex;
-      const range = tokenRange(token);
-      if (preferences.captions && window.CSS !== undefined && window.CSS.highlights !== undefined) {
-        window.CSS.highlights.set(HIGHLIGHT_NAME, new window.Highlight(range));
+      if (tokenIndex === reading.activeToken) {
+        keepWordPainted();
+        return;
       }
-      followRange(token, range);
+      reading.activeToken = tokenIndex;
+      if (preferences.captions) {
+        paintWord(token);
+        return;
+      }
+      followRange(token, tokenRange(token));
     }
 
     function resetReading(messageId, nodeKey, speech) {
@@ -815,6 +987,7 @@ window.__ModuleLoader__.load({
       reading.followPausedUntil = 0;
       unwatchScroller();
       clearHighlight();
+      releaseMarkHost();
     }
 
     /* The status poll. It runs for the whole reading, with captions off too: the
@@ -887,7 +1060,13 @@ window.__ModuleLoader__.load({
       const previous = statusPoll.position;
       statusPoll.position = snapshot.position;
       if (previous === null || snapshot.position >= previous - REWIND_SLOP_MS) return false;
-      if (reading.fragmentText === snapshot.text) invalidateAlignment();
+      if (reading.fragmentText === snapshot.text) {
+        /* A same-fragment rewind is certain: drop the paint now, then repaint
+           the rewound word in this same poll pass. A cross-fragment drop stays
+           ambiguous and keeps the last painted word until an alignment lands. */
+        invalidateAlignment();
+        clearHighlight();
+      }
       return true;
     }
 
@@ -1592,7 +1771,19 @@ window.__ModuleLoader__.load({
           role: "region",
           "aria-label": t("bar.label")
         },
-        h("span", { className: "dsh-csva-barGlyph" }, h(CsGlyph, { size: 16 })),
+        h(
+          "span",
+          { className: "dsh-csva-barGlyph" },
+          h("img", {
+            className: "dsh-csva-barLogo",
+            src: APP_LOGO_URL,
+            width: 18,
+            height: 18,
+            alt: "",
+            "aria-hidden": "true",
+            draggable: "false"
+          })
+        ),
         h(
           BarControl,
           {
