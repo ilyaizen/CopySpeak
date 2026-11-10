@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "CopySpeak read aloud",
+    "description": "Reads DSH replies aloud through the running CopySpeak app, on demand or as each reply settles."
+  }
+}
