@@ -43,8 +43,13 @@ window.__ModuleLoader__.load({
     const PANEL_ID = "copyspeak";
     const CONTROL_URL = "http://127.0.0.1:43117";
     const STYLE_KEY = PACKAGE + "/client.css";
-    /* Custom-highlight name. Namespace it: other plugins may paint highlights. */
+    /* Custom-highlight names. Namespace them: other plugins may paint
+       highlights. A normal word uses the first name plus the rounded mark
+       behind it. A word inside a code chip or code block uses the second name:
+       that highlight paints its own background, because the chip background
+       covers the mark. */
     const HIGHLIGHT_NAME = "copyspeak-read-word";
+    const HIGHLIGHT_NAME_CODE = "copyspeak-read-word-code";
     const STORAGE = {
       autoRead: "dsh.copyspeak-voice.auto-read",
       captions: "dsh.copyspeak-voice.captions",
@@ -195,6 +200,11 @@ window.__ModuleLoader__.load({
       ".dsh-csva-barControl:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
       ".dsh-csva-barStop{color:var(--dsw-alias-label-primary)}",
       "::highlight(" + HIGHLIGHT_NAME + "){color:var(--dsw-alias-bg-base)}",
+      /* A code chip paints its own background over the reply, so a spoken word
+         inside one takes a highlight that paints the brand pill itself. */
+      "::highlight(" +
+        HIGHLIGHT_NAME_CODE +
+        "){background-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base)}",
       /* The rounded mark: a positioned layer inside the reply's own stacking
          context. Negative z-index keeps it behind the text, so the word wears
          the highlight's recolored text over a rounded brand pill. */
@@ -376,6 +386,11 @@ window.__ModuleLoader__.load({
       let node = walker.nextNode();
       while (node !== null) {
         const text = node.nodeValue ?? "";
+        /* A code chip paints its own background over the reply, and the mark
+           layer sits behind the reply. Flag the word, so paintWord can use the
+           code highlight instead of the mark. */
+        const inCode =
+          node.parentElement !== null && node.parentElement.closest("code, pre") !== null;
         for (const match of text.matchAll(WORD_SPAN)) {
           const norm = normalizeWord(match[0]);
           if (norm === "") continue;
@@ -384,7 +399,8 @@ window.__ModuleLoader__.load({
             node: node,
             start: match.index + span.start,
             end: match.index + span.end,
-            norm: norm
+            norm: norm,
+            code: inCode
           });
         }
         node = walker.nextNode();
@@ -670,6 +686,7 @@ window.__ModuleLoader__.load({
     function clearHighlight() {
       if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
         window.CSS.highlights.delete(HIGHLIGHT_NAME);
+        window.CSS.highlights.delete(HIGHLIGHT_NAME_CODE);
       }
       clearMarks();
       /* The mapped token stays, so Show in chat still finds the spoken word
@@ -779,14 +796,29 @@ window.__ModuleLoader__.load({
       }
     }
 
-    /* Recolor the word and place its rounded mark, then follow it. A browser
-       without the CSS Custom Highlight API keeps the old behavior: no mark,
-       because the mark only reads as a highlight under the recolored text. */
+    /* Recolor the word, place its rounded mark, then follow it. A word inside a
+       code chip or code block takes the code highlight: that highlight paints
+       its own background, and no mark paints, because the chip background
+       covers the mark layer. A browser without the CSS Custom Highlight API
+       keeps the old behavior: no mark, because the mark only reads as a
+       highlight under the recolored text. */
     function paintWord(token) {
       const range = tokenRange(token);
       if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
-        window.CSS.highlights.set(HIGHLIGHT_NAME, new window.Highlight(range));
-        placeMarks(wordRects(range));
+        const code = token.code === true;
+        /* One word paints at a time: drop both names before the set. */
+        window.CSS.highlights.delete(HIGHLIGHT_NAME);
+        window.CSS.highlights.delete(HIGHLIGHT_NAME_CODE);
+        window.CSS.highlights.set(
+          code ? HIGHLIGHT_NAME_CODE : HIGHLIGHT_NAME,
+          new window.Highlight(range)
+        );
+        if (code) {
+          /* Clear the previous word's mark, so no pill lingers by the code word. */
+          clearMarks();
+        } else {
+          placeMarks(wordRects(range));
+        }
       }
       followRange(token, range);
     }
@@ -798,6 +830,14 @@ window.__ModuleLoader__.load({
       if (window.CSS === undefined || window.CSS.highlights === undefined) return;
       const token = reading.tokens[reading.activeToken];
       if (!token.node.isConnected) return;
+      if (token.code === true) {
+        /* The code highlight paints the pill, so a code word needs no mark.
+           Repaint when a cleared highlight or a stale mark needs fixing. */
+        const painted =
+          window.CSS.highlights.has(HIGHLIGHT_NAME_CODE) && reading.markRects.length === 0;
+        if (!painted) paintWord(token);
+        return;
+      }
       const placed =
         reading.markHost === reading.element &&
         reading.markLayer !== null &&

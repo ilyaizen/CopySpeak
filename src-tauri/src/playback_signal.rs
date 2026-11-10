@@ -98,6 +98,57 @@ pub fn current_caption() -> Option<String> {
     recent.as_ref()?.fresh().map(str::to_string)
 }
 
+/// Live playback progress the webview reported for the fragment now audible.
+/// The JIT pagination gate decides from this when to submit the next fragment.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PlaybackProgress {
+    /// Pagination fragment the playhead sits in, when the webview reports it.
+    pub fragment_index: Option<usize>,
+    /// Audible position inside that fragment, in milliseconds.
+    pub position_ms: u64,
+    /// Full duration of that fragment, in milliseconds; 0 while unknown.
+    pub duration_ms: u64,
+    /// Playback is paused: the position is frozen and not advancing.
+    pub paused: bool,
+    /// The player reports live playback rather than an idle webview.
+    pub active: bool,
+}
+
+/// Parse a caption snapshot into playback progress. A missing, null or
+/// non-finite field becomes absent or zero, so an older webview build that
+/// sends no `fragment_index` still parses.
+fn parse_progress(json: &str) -> Option<PlaybackProgress> {
+    let value: serde_json::Value = serde_json::from_str(json).ok()?;
+    if !value.is_object() {
+        return None;
+    }
+    let number = |key: &str| -> Option<f64> {
+        value
+            .get(key)
+            .and_then(serde_json::Value::as_f64)
+            .filter(|value| value.is_finite())
+    };
+    let boolean = |key: &str| -> bool {
+        value
+            .get(key)
+            .and_then(serde_json::Value::as_bool)
+            .unwrap_or(false)
+    };
+    Some(PlaybackProgress {
+        fragment_index: number("fragment_index").map(|value| value.max(0.0) as usize),
+        position_ms: number("position_ms").unwrap_or(0.0).max(0.0) as u64,
+        duration_ms: number("duration_ms").unwrap_or(0.0).max(0.0) as u64,
+        paused: boolean("paused"),
+        active: boolean("active"),
+    })
+}
+
+/// The last reported playback progress while the caption is fresh; `None`
+/// after the webview stopped reporting.
+pub fn current_progress() -> Option<PlaybackProgress> {
+    parse_progress(current_caption().as_deref()?)
+}
+
 /// Tauri command: the webview reports its HUD caption snapshot for `GET
 /// /status`. The snapshot is stored as sent; the status route serves it
 /// verbatim.
@@ -154,5 +205,48 @@ mod tests {
             json: r#"{"active":true}"#.to_string(),
         };
         assert_eq!(stale.fresh(), None);
+    }
+
+    /// The JIT gate reads a progress snapshot out of the caption JSON: the
+    /// webview sends fractional positions and (on the batch path) can send a
+    /// null duration before the audio decodes.
+    #[test]
+    fn progress_parses_fractional_positions_and_optional_fields() {
+        let progress = parse_progress(
+            r#"{"active":true,"fragment_index":2,"position_ms":1234.7,"duration_ms":41000.2,"paused":false}"#,
+        )
+        .expect("captions with a position parse");
+        assert_eq!(
+            progress,
+            PlaybackProgress {
+                fragment_index: Some(2),
+                position_ms: 1234,
+                duration_ms: 41000,
+                paused: false,
+                active: true,
+            }
+        );
+
+        let legacy = parse_progress(r#"{"active":true,"position_ms":20,"duration_ms":6000}"#)
+            .expect("a webview build without a fragment index still parses");
+        assert_eq!(legacy.fragment_index, None);
+        assert_eq!(legacy.position_ms, 20);
+
+        let undecoded = parse_progress(
+            r#"{"active":true,"fragment_index":0,"position_ms":null,"duration_ms":null,"paused":true}"#,
+        )
+        .expect("null fields parse as zero");
+        assert_eq!(undecoded.position_ms, 0);
+        assert_eq!(undecoded.duration_ms, 0);
+        assert!(undecoded.paused);
+    }
+
+    /// A malformed or non-object snapshot yields no progress, which the JIT
+    /// gate treats as a dead caption clock rather than as a position.
+    #[test]
+    fn progress_rejects_malformed_snapshots() {
+        assert_eq!(parse_progress("not json"), None);
+        assert_eq!(parse_progress("[]"), None);
+        assert_eq!(parse_progress("null"), None);
     }
 }

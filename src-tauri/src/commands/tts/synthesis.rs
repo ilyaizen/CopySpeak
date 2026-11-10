@@ -709,6 +709,8 @@ fn final_marker(chunk_is_final: bool, fragment_is_last: bool) -> bool {
 /// Synthesize via the backend's streaming path, forwarding each PCM chunk to
 /// the frontend as an `audio-stream-chunk` event while accumulating the full
 /// payload into a WAV container for history/cache/envelope handling.
+/// Returns the audio and its time-to-first-audio: the JIT pagination gate uses
+/// the first-chunk latency as the next fragment's lead.
 /// `rearm` is the reading's once-only stream-gate re-arm: the first chunk
 /// this reading emits re-arms the webview's `_streamStopped` gate under the
 /// speaker-ownership lock, healing a scoped stop of the previous owner that
@@ -724,7 +726,7 @@ async fn synthesize_streaming_and_emit(
     session_id: Option<String>,
     scope: AbortScope,
     rearm: &std::sync::Arc<crate::speak_requests::StreamRearm>,
-) -> Result<SpeechAudio, String> {
+) -> Result<(SpeechAudio, u64), String> {
     let worker_app = app.clone();
     let failed_session = session_id.clone();
     let rearm = std::sync::Arc::clone(rearm);
@@ -801,8 +803,7 @@ async fn synthesize_streaming_and_emit(
     })
     .await
     .map_err(|e| format!("Task join error: {e}"))
-    .and_then(|worker_result| worker_result)
-    .map(|(wav, _ttfa_ms)| wav);
+    .and_then(|worker_result| worker_result);
     // An abort already stopped this reading's playback. Its late failure must
     // not emit, even when a newer reading has started since.
     if result.is_err() && !scope.aborted() {
@@ -864,9 +865,12 @@ fn cache_audio(app: &AppHandle, speech: &SpeechAudio, text: &str) {
     cache.captions = speech.captions.clone();
 }
 
-/// Same-text cache used while history is off: audio files in their own folder,
-/// never logged. The newest `CACHE_LIMIT` files survive.
-const CACHE_LIMIT: usize = 15;
+/// Content-addressed speech cache: audio saved under a hash of the sanitized
+/// text, engine and voice, so a repeated message replays without a provider
+/// request. It is independent of the history log: history auto-delete can evict
+/// its entry, and this copy still answers the repeat click. Its own byte budget
+/// bounds disk use; the oldest files go first.
+const SPEECH_CACHE_BUDGET_BYTES: u64 = 256 * 1024 * 1024;
 
 fn speech_cache_dir() -> std::path::PathBuf {
     dirs::cache_dir()
@@ -912,11 +916,22 @@ fn save_speech_cache(
         }
         None => crate::tts::captions::remove_sidecar(&path_str),
     }
-    evict_speech_cache(dir);
+    evict_speech_cache(dir, SPEECH_CACHE_BUDGET_BYTES);
 }
 
-/// Drop the oldest cached audio, and its captions, past `CACHE_LIMIT`.
-fn evict_speech_cache(dir: &std::path::Path) {
+/// Bytes one cached entry occupies: its audio plus the caption sidecar.
+fn cached_entry_bytes(path: &std::path::Path) -> u64 {
+    let audio = std::fs::metadata(path).map(|meta| meta.len()).unwrap_or(0);
+    let sidecar = std::fs::metadata(format!("{}.captions.json", path.to_string_lossy()))
+        .map(|meta| meta.len())
+        .unwrap_or(0);
+    audio + sidecar
+}
+
+/// Drop the oldest cached audio, with its caption sidecars, until the cache
+/// fits `budget` bytes. The newest entry always stays: it belongs to the reading
+/// that was just saved, and evicting it would free nothing useful.
+fn evict_speech_cache(dir: &std::path::Path, budget: u64) {
     let Ok(entries) = std::fs::read_dir(dir) else {
         return;
     };
@@ -927,12 +942,20 @@ fn evict_speech_cache(dir: &std::path::Path) {
         .filter_map(|path| Some((std::fs::metadata(&path).ok()?.modified().ok()?, path)))
         .collect();
     files.sort();
-    let excess = files.len().saturating_sub(CACHE_LIMIT);
-    for (_, path) in files.into_iter().take(excess) {
+    let mut total: u64 = files.iter().map(|(_, path)| cached_entry_bytes(path)).sum();
+    // Never evict the newest entry, even when it alone exceeds the budget.
+    files.pop();
+    for (_, path) in files {
+        if total <= budget {
+            break;
+        }
+        let freed = cached_entry_bytes(&path);
         if let Err(e) = std::fs::remove_file(&path) {
             log::warn!("[TTS] Cannot evict cached audio: {e}");
+            continue;
         }
         crate::tts::captions::remove_sidecar(&path.to_string_lossy());
+        total = total.saturating_sub(freed);
     }
 }
 
@@ -950,20 +973,21 @@ fn read_speech_cache(
     })
 }
 
-/// Saved audio (and caption sidecar) for this exact text, engine and voice.
-/// With history on, that is the newest successful history entry; with history
-/// off, the same-text cache. `None` when nothing matches or the file is gone
-/// or unreadable — the caller then synthesizes as usual.
-fn find_cached_speech(
+/// Where a replayed reading came from, for the replay log line.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum CachedSource {
+    History,
+    SpeechCache,
+}
+
+/// Newest successful history entry with this text, engine and voice whose audio
+/// file still exists.
+fn find_in_history(
     history: &Mutex<HistoryLog>,
-    history_on: bool,
     text: &str,
     engine: &str,
     voice: &str,
 ) -> Option<SpeechAudio> {
-    if !history_on {
-        return read_speech_cache(&speech_cache_dir(), engine, voice, text);
-    }
     let path = history
         .lock()
         .unwrap()
@@ -992,8 +1016,48 @@ fn find_cached_speech(
     }
 }
 
+/// Saved audio for this exact text, engine and voice. With history on the
+/// newest history entry wins; the content-addressed cache is the fallback, so a
+/// repeat still replays after history auto-delete evicted the entry. With
+/// history off the cache is the only source. `None` when nothing matches or the
+/// file is unreadable — the caller then synthesizes as usual.
+fn find_cached_speech(
+    history: &Mutex<HistoryLog>,
+    history_on: bool,
+    text: &str,
+    engine: &str,
+    voice: &str,
+) -> Option<(SpeechAudio, CachedSource)> {
+    find_cached_speech_in(
+        &speech_cache_dir(),
+        history,
+        history_on,
+        text,
+        engine,
+        voice,
+    )
+}
+
+fn find_cached_speech_in(
+    cache_dir: &std::path::Path,
+    history: &Mutex<HistoryLog>,
+    history_on: bool,
+    text: &str,
+    engine: &str,
+    voice: &str,
+) -> Option<(SpeechAudio, CachedSource)> {
+    if history_on {
+        if let Some(speech) = find_in_history(history, text, engine, voice) {
+            return Some((speech, CachedSource::History));
+        }
+    }
+    read_speech_cache(cache_dir, engine, voice, text)
+        .map(|speech| (speech, CachedSource::SpeechCache))
+}
+
 /// Saved audio for a whole reading: one entry with this text, or else every
-/// fragment `speak_queued` would split it into, joined in order.
+/// fragment `speak_queued` would split it into, joined in order. Reports the
+/// source of the first fragment that came from the content-addressed cache.
 fn find_cached_reading(
     history: &Mutex<HistoryLog>,
     history_on: bool,
@@ -1001,22 +1065,32 @@ fn find_cached_reading(
     pagination_config: &crate::config::PaginationConfig,
     engine: &str,
     voice: &str,
-) -> Option<SpeechAudio> {
-    if let Some(speech) = find_cached_speech(history, history_on, text, engine, voice) {
-        return Some(speech);
+) -> Option<(SpeechAudio, CachedSource)> {
+    if let Some(found) = find_cached_speech(history, history_on, text, engine, voice) {
+        return Some(found);
     }
     let fragments = pagination::paginate_text(text, pagination_config);
     if fragments.len() < 2 {
         return None;
     }
+    let mut from_cache = false;
     let parts = fragments
         .into_iter()
         .map(|f| {
-            let speech = find_cached_speech(history, history_on, &f.text, engine, voice)?;
+            let (speech, source) = find_cached_speech(history, history_on, &f.text, engine, voice)?;
+            if source == CachedSource::SpeechCache {
+                from_cache = true;
+            }
             Some((speech, f.text))
         })
         .collect::<Option<Vec<_>>>()?;
+    let source = if from_cache {
+        CachedSource::SpeechCache
+    } else {
+        CachedSource::History
+    };
     crate::tts::captions::concat_speech(parts)
+        .map(|speech| (speech, source))
         .map_err(|e| log::warn!("[TTS] Cannot join saved fragments: {e}. Re-synthesizing."))
         .ok()
 }
@@ -1190,8 +1264,17 @@ async fn speak_now_internal(
         return Err("Nothing to speak".into());
     }
 
+    let queue_lock_started = Instant::now();
     let lock_state = app.state::<tokio::sync::Mutex<()>>();
     let _queue_lock = lock_state.lock().await;
+    let queue_lock_ms = queue_lock_started.elapsed().as_millis();
+    if queue_lock_ms >= 20 {
+        log::info!(
+            "[TTS] Reading waited {} ms for the queue lock (request {})",
+            queue_lock_ms,
+            request
+        );
+    }
 
     // Aborts issued before this reading starts do not reach it; a scoped stop
     // for this reading's own request does, whenever it was issued.
@@ -1279,6 +1362,7 @@ async fn speak_now_internal(
     let engine_str_for_cache = engine_str(&eff.engine);
 
     let history_on = config.lock().unwrap().is_history_effective();
+    let cache_lookup_started = Instant::now();
     let cached = if reuse_saved_audio {
         find_cached_reading(
             &history,
@@ -1291,7 +1375,15 @@ async fn speak_now_internal(
     } else {
         None
     };
+    let cache_lookup_ms = cache_lookup_started.elapsed().as_millis();
     let cache_hit = cached.is_some();
+    if reuse_saved_audio {
+        log::info!(
+            "[TTS] Saved-audio lookup {} after {} ms",
+            if cache_hit { "hit" } else { "miss" },
+            cache_lookup_ms
+        );
+    }
 
     let synthesis_start = Instant::now();
 
@@ -1331,17 +1423,25 @@ async fn speak_now_internal(
         experimental_enabled && config.lock().unwrap().general.effects_enabled,
         eff.effects.enabled,
     );
+    let playback_speed = active_playback_speed(&tts_config);
     let streaming_playback = allows_streaming_playback(
         streaming_enabled,
         backend_arc.supports_streaming(),
         backend_arc.runtime_ready(),
         effects_on,
         &eff.effects.active_effect,
-        active_playback_speed(&tts_config),
+        playback_speed,
     ) && !cache_hit
         && !output_config.enabled;
-    let (wav_bytes, already_streamed) = if let Some(speech) = cached {
-        log::info!("[TTS] Replaying saved audio from history instead of synthesizing");
+    let (wav_bytes, already_streamed) = if let Some((speech, source)) = cached {
+        match source {
+            CachedSource::History => {
+                log::info!("[TTS] Replaying saved audio from history instead of synthesizing")
+            }
+            CachedSource::SpeechCache => log::info!(
+                "[TTS] Replaying saved audio from the speech cache instead of synthesizing"
+            ),
+        }
         (speech, false)
     } else if pagination::should_paginate(&text, &pagination_config) && !output_config.enabled {
         // Pagination comes first even for streaming engines: bounded fragments
@@ -1359,6 +1459,7 @@ async fn speak_now_internal(
             estimated_ms,
             confidence,
             streaming_playback,
+            playback_speed,
             session_id.clone(),
             scope,
             &pagination_config,
@@ -1367,7 +1468,7 @@ async fn speak_now_internal(
         .await?;
         (wav, streaming_playback || emitted_fragments)
     } else if streaming_playback {
-        let wav = synthesize_streaming_and_emit(
+        let (wav, _ttfa_ms) = synthesize_streaming_and_emit(
             &app,
             backend_arc.clone(),
             text.clone(),
@@ -1431,7 +1532,13 @@ async fn speak_now_internal(
     }
 
     if cache_hit {
+        let replay_started = Instant::now();
         replay_saved_audio(&app, &wav_bytes, &text, session_id.as_deref(), scope);
+        log::info!(
+            "[TTS] Cached replay emitted after {} ms (lookup {} ms)",
+            replay_started.elapsed().as_millis(),
+            cache_lookup_ms
+        );
         return Ok(());
     }
 
@@ -1454,7 +1561,87 @@ async fn speak_now_internal(
     )
 }
 
-/// Synthesize paginated text with progress updates
+/// How often the JIT wait re-reads the webview's playback progress. The
+/// webview reports its caption every ~100 ms, so a faster poll only re-reads
+/// the same snapshot.
+const JIT_POLL_INTERVAL: Duration = Duration::from_millis(120);
+
+/// Duration of a WAV payload from its header, without decoding its samples.
+/// The JIT gate needs the Rust-side fragment duration as the fallback for a
+/// caption that carries none.
+fn wav_duration_ms(bytes: &[u8]) -> Option<u64> {
+    let info = crate::audio::wav::parse_wav_header(bytes).ok()?;
+    let bytes_per_second = u64::from(info.sample_rate)
+        * u64::from(info.channels)
+        * u64::from(info.bits_per_sample / 8);
+    if bytes_per_second == 0 {
+        return None;
+    }
+    Some(info.data_size as u64 * 1000 / bytes_per_second)
+}
+
+/// Hold the next fragment's submission until the live playback of `target` is
+/// within `lead` of its end, polling the webview's caption. Returns `false`
+/// when the request was aborted while waiting: then nothing more is submitted.
+async fn wait_for_jit_window(
+    scope: AbortScope,
+    target: super::jit::JitTarget,
+    lead: Duration,
+    playback_speed: f32,
+) -> bool {
+    let started = Instant::now();
+    let mut waiter = super::jit::JitWaiter::new(target, lead, playback_speed, started);
+    log::info!(
+        "[TTS] JIT: holding fragment {} until fragment {} playback enters its last {} ms",
+        target.fragment_index + 2,
+        target.fragment_index + 1,
+        lead.as_millis()
+    );
+    loop {
+        if scope.aborted() {
+            log::info!(
+                "[TTS] JIT: stopped while fragment {} played; fragment {} is never submitted",
+                target.fragment_index + 1,
+                target.fragment_index + 2
+            );
+            return false;
+        }
+        let progress = crate::playback_signal::current_progress();
+        if waiter.observe(progress, Instant::now()).synthesize_now() {
+            log::info!(
+                "[TTS] JIT: fragment {} reached its lead window after {} ms; synthesizing fragment {}",
+                target.fragment_index + 1,
+                started.elapsed().as_millis(),
+                target.fragment_index + 2
+            );
+            return true;
+        }
+        // Sleep one poll interval, but wake at once on a scoped stop: the
+        // previous reading's `/speak` handler releases its wait lock only after
+        // this future returns, so a slow poll would delay the next click.
+        let poll = tokio::time::sleep(JIT_POLL_INTERVAL);
+        if crate::speak_requests::until_cancelled(scope.request(), poll)
+            .await
+            .is_none()
+        {
+            log::info!(
+                "[TTS] JIT: stopped while fragment {} played; fragment {} is never submitted",
+                target.fragment_index + 1,
+                target.fragment_index + 2
+            );
+            return false;
+        }
+    }
+}
+
+/// Synthesize paginated text with progress updates.
+///
+/// Fragments are not generated up front. After fragment i is submitted and
+/// playing, the loop waits until its playback is within a small lead of its end
+/// before submitting fragment i+1 ([`wait_for_jit_window`]). An early stop
+/// therefore pays only for the fragment already in flight, and a pause freezes
+/// the playback position, which naturally stops further generation until the
+/// reading resumes.
 async fn synthesize_paginated(
     app: &AppHandle,
     backend_arc: Arc<Box<dyn TtsBackend>>,
@@ -1466,6 +1653,7 @@ async fn synthesize_paginated(
     _total_estimate: Option<u64>,
     _avg_confidence: f32,
     streaming: bool,
+    playback_speed: f32,
     session_id: Option<String>,
     scope: AbortScope,
     pagination_config: &crate::config::PaginationConfig,
@@ -1488,6 +1676,7 @@ async fn synthesize_paginated(
                 rearm,
             )
             .await
+            .map(|(speech, _ttfa)| speech)
             .map_err(|e| report_section_failure(app, 0, 1, scope, e))
         } else {
             synthesize_async(
@@ -1516,12 +1705,37 @@ async fn synthesize_paginated(
         &char_counts,
     );
 
+    log::info!(
+        "[TTS] JIT pagination: {} fragments, first submitted now, later ones on demand",
+        fragments.len()
+    );
+
     let mut fragment_audio = Vec::new();
+    // The Rust-side duration of each fragment submitted so far: the JIT gate
+    // matches the webview's caption against it when the caption carries no
+    // fragment index.
+    let mut fragment_durations_ms: Vec<u64> = Vec::new();
+    // How long the last fragment took to start producing audio. It sets the
+    // next fragment's lead, so a slow provider never opens an audible gap.
+    let mut previous_cost = Duration::ZERO;
     for (i, fragment) in fragments.iter().enumerate() {
         // Check for abort
         if scope.aborted() {
             log::info!("[TTS] Pagination aborted by user");
             return Ok((Vec::new().into(), false));
+        }
+
+        // Just-in-time: submit fragment i only once fragment i-1 is about to
+        // finish playing. Fragment 0 is always submitted immediately.
+        if i > 0 {
+            let target = super::jit::JitTarget {
+                fragment_index: i - 1,
+                duration_ms: fragment_durations_ms[i - 1],
+            };
+            let lead = super::jit::lead_after(previous_cost);
+            if !wait_for_jit_window(scope, target, lead, playback_speed).await {
+                return Ok((Vec::new().into(), false));
+            }
         }
 
         // Emit progress update
@@ -1547,8 +1761,9 @@ async fn synthesize_paginated(
             fragment.text.len()
         );
 
+        let generation_started = Instant::now();
         let frag_wav = if streaming {
-            synthesize_streaming_and_emit(
+            let (speech, ttfa_ms) = synthesize_streaming_and_emit(
                 app,
                 backend_arc.clone(),
                 fragment.text.clone(),
@@ -1560,16 +1775,24 @@ async fn synthesize_paginated(
                 rearm,
             )
             .await
+            .map_err(|e| report_section_failure(app, i, fragments.len(), scope, e))?;
+            // The streaming path only needs its first chunk to cover the gap.
+            previous_cost = Duration::from_millis(ttfa_ms);
+            speech
         } else {
-            synthesize_async(
+            let speech = synthesize_async(
                 backend_arc.clone(),
                 fragment.text.clone(),
                 voice.to_string(),
                 scope,
             )
             .await
-        }
-        .map_err(|e| report_section_failure(app, i, fragments.len(), scope, e))?;
+            .map_err(|e| report_section_failure(app, i, fragments.len(), scope, e))?;
+            // The batch path has nothing to play until the whole fragment is
+            // synthesized, so the next lead covers that full cost.
+            previous_cost = generation_started.elapsed();
+            speech
+        };
 
         if scope.aborted() {
             return Ok((Vec::new().into(), false));
@@ -1592,6 +1815,7 @@ async fn synthesize_paginated(
                 scope,
             );
         }
+        fragment_durations_ms.push(wav_duration_ms(&frag_wav.bytes).unwrap_or(0));
         fragment_audio.push((frag_wav, fragment.text.clone()));
     }
 
@@ -1680,15 +1904,16 @@ fn handle_file_output(
             None,
         );
         let _ = app.emit("history-updated", ());
-    } else {
-        save_speech_cache(
-            &speech_cache_dir(),
-            speech,
-            &engine_str(engine),
-            voice,
-            text,
-        );
     }
+    // A submitted reading is also a repeat candidate: keep the content-addressed
+    // copy independent of what history does with its entry.
+    save_speech_cache(
+        &speech_cache_dir(),
+        speech,
+        &engine_str(engine),
+        voice,
+        text,
+    );
 
     Ok(())
 }
@@ -1733,14 +1958,6 @@ fn handle_playback_output(
             None,
         );
         let _ = app.emit("history-updated", ());
-    } else {
-        save_speech_cache(
-            &speech_cache_dir(),
-            speech,
-            &engine_str(engine),
-            voice,
-            text,
-        );
     }
 
     // Cache audio for replay
@@ -1754,6 +1971,17 @@ fn handle_playback_output(
     if !already_streamed {
         emit_audio_ready(app, speech, text, session_id, scope);
     }
+
+    // Keep the content-addressed copy independent of history: history
+    // auto-delete can evict its entry, and this copy still answers a repeat
+    // click for free. Written after the emit so it cannot delay first audio.
+    save_speech_cache(
+        &speech_cache_dir(),
+        speech,
+        &engine_str(engine),
+        voice,
+        text,
+    );
 
     Ok(())
 }
@@ -1954,7 +2182,10 @@ async fn speak_queued_internal(
     let history_on = config.lock().unwrap().is_history_effective();
     let mut saved: Option<std::vec::IntoIter<SpeechAudio>> = fragments
         .iter()
-        .map(|f| find_cached_speech(&history, history_on, &f.text, &engine_str_val, &voice))
+        .map(|f| {
+            find_cached_speech(&history, history_on, &f.text, &engine_str_val, &voice)
+                .map(|(speech, _source)| speech)
+        })
         .collect::<Option<Vec<_>>>()
         .map(Vec::into_iter);
     let replaying = saved.is_some();
@@ -2055,6 +2286,7 @@ async fn speak_queued_internal(
                 &stream_rearm,
             )
             .await
+            .map(|(speech, _ttfa_ms)| speech)
             .map_err(|e| report_section_failure(&app, index, total, scope, e))?
         } else {
             synthesize_async(
@@ -2101,9 +2333,10 @@ async fn speak_queued_internal(
             hud::show_hud(&app, envelope.clone(), Some(text.clone()));
         }
 
-        // Save to history (a replay is already there). With history off the
-        // audio goes to the same-text cache instead, and nothing is logged.
-        if !replaying && !history_on {
+        // Save to the content-addressed cache on every fresh fragment (a replay
+        // is already there), independent of history: the cache answers repeat
+        // readings after the history entry is evicted.
+        if !replaying {
             save_speech_cache(
                 &speech_cache_dir(),
                 &wav_bytes,
@@ -2305,15 +2538,16 @@ pub async fn speak_history_entry(
             None,
         );
         let _ = app.emit("history-updated", ());
-    } else {
-        save_speech_cache(
-            &speech_cache_dir(),
-            &wav_bytes,
-            &engine_str_val,
-            &voice,
-            &text,
-        );
     }
+    // Re-spoken audio is also a repeat candidate; keep the content-addressed
+    // copy independent of what history does with its entry.
+    save_speech_cache(
+        &speech_cache_dir(),
+        &wav_bytes,
+        &engine_str_val,
+        &voice,
+        &text,
+    );
 
     // Show HUD with waveform visualization
     hud::show_hud(&app, envelope, Some(text.clone()));
@@ -2642,6 +2876,18 @@ mod streaming_tests {
         assert_eq!(finals, 1);
         assert_eq!(wav.bytes.len(), 44 + 3);
     }
+
+    /// The JIT gate reads the fragment duration off the WAV header, never by
+    /// decoding the samples: this is the Rust-side fallback when the caption
+    /// carries no duration.
+    #[test]
+    fn jit_fragment_duration_comes_from_the_wav_header() {
+        let meta = meta(24_000);
+        // One second of 24 kHz mono 16-bit PCM.
+        let wav = pcm_to_wav(&vec![0u8; 48_000], &meta);
+        assert_eq!(wav_duration_ms(&wav), Some(1_000));
+        assert_eq!(wav_duration_ms(b"not a wav payload"), None);
+    }
 }
 
 #[cfg(test)]
@@ -2650,10 +2896,14 @@ mod cache_tests {
     use crate::history::HistoryEntry;
 
     fn saved(history: &Mutex<HistoryLog>, text: &str, voice: &str) -> std::path::PathBuf {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        // Unique per call: tests share one process and run in parallel, so an
+        // entries-length suffix can collide across tests.
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
         let path = std::env::temp_dir().join(format!(
             "copyspeak-cache-test-{}-{}.wav",
             std::process::id(),
-            history.lock().unwrap().entries().len()
+            NEXT.fetch_add(1, Ordering::SeqCst)
         ));
         let meta = AudioFormatMeta {
             sample_rate: 8000,
@@ -2699,7 +2949,9 @@ mod cache_tests {
         assert!(find_cached_reading(&history, true, text, &pagination, "edge", "ava").is_none());
 
         let second = saved(&history, &fragments[1].text, "ava");
-        let joined = find_cached_reading(&history, true, text, &pagination, "edge", "ava").unwrap();
+        let (joined, source) =
+            find_cached_reading(&history, true, text, &pagination, "edge", "ava").unwrap();
+        assert_eq!(source, CachedSource::History);
         assert_eq!(
             crate::audio::wav::parse_wav_header(&joined.bytes)
                 .unwrap()
@@ -2715,11 +2967,13 @@ mod cache_tests {
     }
 
     #[test]
-    fn same_text_cache_keeps_only_the_newest_entries() {
-        let dir =
-            std::env::temp_dir().join(format!("copyspeak-speech-cache-{}", std::process::id()));
+    fn speech_cache_evicts_oldest_entries_past_its_byte_budget() {
+        let dir = std::env::temp_dir().join(format!(
+            "copyspeak-speech-cache-budget-{}",
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&dir);
-        for i in 0..=CACHE_LIMIT {
+        for i in 0..3 {
             let speech = SpeechAudio {
                 bytes: vec![i as u8; 4],
                 captions: None,
@@ -2729,12 +2983,55 @@ mod cache_tests {
             std::thread::sleep(std::time::Duration::from_millis(15));
         }
         let cached = |i: usize| read_speech_cache(&dir, "edge", "ava", &format!("text {i}"));
+        // Three 4-byte entries; an 8-byte budget keeps the two newest.
+        evict_speech_cache(&dir, 8);
         assert!(cached(0).is_none(), "oldest entry is evicted");
-        assert_eq!(
-            cached(CACHE_LIMIT).unwrap().bytes,
-            vec![CACHE_LIMIT as u8; 4]
-        );
-        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), CACHE_LIMIT);
+        assert_eq!(cached(1).unwrap().bytes, vec![1u8; 4]);
+        assert_eq!(cached(2).unwrap().bytes, vec![2u8; 4]);
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 2);
+
+        // A budget below the newest entry keeps it: evicting it frees nothing.
+        evict_speech_cache(&dir, 1);
+        assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
+        assert_eq!(cached(2).unwrap().bytes, vec![2u8; 4]);
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// History auto-delete can evict a reading's entry, but a repeat click must
+    /// still replay from the content-addressed cache; while the history entry
+    /// and its file exist, history wins.
+    #[test]
+    fn history_on_falls_back_to_the_content_addressed_cache() {
+        let dir = std::env::temp_dir().join(format!(
+            "copyspeak-speech-cache-fallback-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        let history = Mutex::new(HistoryLog::new());
+        let text = "A message read twice";
+        let speech = SpeechAudio {
+            bytes: b"saved audio".to_vec(),
+            captions: None,
+        };
+        save_speech_cache(&dir, &speech, "elevenlabs", "matilda", text);
+
+        // History is on but holds no entry: the cache answers the repeat.
+        let (found, source) =
+            find_cached_speech_in(&dir, &history, true, text, "elevenlabs", "matilda")
+                .expect("cache replay when history has no entry");
+        assert_eq!(found.bytes, b"saved audio");
+        assert_eq!(source, CachedSource::SpeechCache);
+
+        // While the history entry and its file exist, history wins.
+        let history_engine = "edge";
+        let history_voice = "ava";
+        let path = saved(&history, text, history_voice);
+        let (found, source) =
+            find_cached_speech_in(&dir, &history, true, text, history_engine, history_voice)
+                .expect("history replay when its entry exists");
+        assert_eq!(source, CachedSource::History);
+        assert!(found.bytes.starts_with(b"RIFF"));
+        std::fs::remove_file(&path).unwrap();
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

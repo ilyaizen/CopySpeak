@@ -8,7 +8,7 @@ use std::future::Future;
 use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager, State};
 
 const DEFAULT_ADDR: &str = "127.0.0.1:43117";
@@ -174,10 +174,16 @@ fn handle_connection(
         })) => {
             // Scoped stop: cancels exactly this request, whatever phase it is
             // in, and stops playback only while that request owns it.
+            let cancel_started = std::time::Instant::now();
             let outcome = speak_requests::cancel(&id, || {
                 crate::commands::stop_all_audio(&app, &app.state::<Mutex<AudioPlayer>>());
             });
-            log::info!("[Control] Stop for request {}: {}", id, outcome.as_str());
+            log::info!(
+                "[Control] Stop for request {}: {} (handled in {} ms)",
+                id,
+                outcome.as_str(),
+                cancel_started.elapsed().as_millis()
+            );
             let body = serde_json::json!({
                 "ok": true,
                 "request_id": id,
@@ -245,6 +251,9 @@ async fn handle_speak(
 ) -> Result<SpeakOutcome, (u16, String)> {
     let wait = request.wait.unwrap_or(false);
     let request_id = request.request_id.clone();
+    if let Some(id) = request_id.as_deref() {
+        log::info!("[Control] Speak {} received (wait: {})", id, wait);
+    }
     run_speak(
         request_id.as_deref(),
         wait,
@@ -258,6 +267,20 @@ async fn handle_speak(
         },
     )
     .await
+}
+
+/// Log one `/speak` lifecycle stage that took long enough to matter for the
+/// cached-replay start latency. Fast stages stay silent.
+fn log_slow_stage(request_id: Option<&str>, stage: &str, started: Instant) {
+    let elapsed = started.elapsed();
+    if elapsed >= Duration::from_millis(20) {
+        log::info!(
+            "[Control] Speak {}: {} took {} ms",
+            request_id.unwrap_or("-"),
+            stage,
+            elapsed.as_millis()
+        );
+    }
 }
 
 /// The request lifecycle behind `/speak`, with synthesis (`speak`) and the
@@ -292,12 +315,23 @@ where
         },
     };
     let seq = ticket.as_ref().map_or(NO_REQUEST, Ticket::seq);
+    // Owned for the detached non-wait bookkeeping task below, which outlives
+    // this call's borrows.
+    let request_label = request_id.map(str::to_owned);
+    let started = Instant::now();
 
     // Serialize blocking speaks, but stay stoppable while queued: the lock
     // future is kept across cancellation polls, so it keeps its queue place.
     let _wait_guard = if wait {
         match speak_requests::until_cancelled(seq, wait_lock.lock()).await {
-            Some(guard) => Some(guard),
+            Some(guard) => {
+                log_slow_stage(
+                    request_label.as_deref(),
+                    "wait for the previous reading",
+                    started,
+                );
+                Some(guard)
+            }
             None => return Ok(SpeakOutcome::Cancelled),
         }
     } else {
@@ -305,13 +339,18 @@ where
     };
     let generation = crate::playback_signal::generation();
     let spoken = speak(seq).await;
+    log_slow_stage(
+        request_label.as_deref(),
+        "synthesis and cache replay emit",
+        started,
+    );
     // Created once and kept: after a cancel it still has to absorb the finish
     // of the stop (see `settle_cancelled`).
     let mut finished = Box::pin(wait_finished(generation));
     // A cancelled synthesis may surface as an error ("Reading cancelled");
     // either way the request was stopped, not failed.
     if let Some(ticket) = ticket.as_ref().filter(|t| t.is_cancelled()) {
-        return Ok(settle_cancelled(ticket, &mut finished).await);
+        return Ok(settle_cancelled(request_label.as_deref(), ticket, &mut finished).await);
     }
     spoken.map_err(|error| (500, error))?;
 
@@ -319,7 +358,7 @@ where
         match speak_requests::until_cancelled(seq, &mut finished).await {
             None => {
                 let ticket = ticket.as_ref().expect("only a request id can be cancelled");
-                Ok(settle_cancelled(ticket, &mut finished).await)
+                Ok(settle_cancelled(request_label.as_deref(), ticket, &mut finished).await)
             }
             Some(finished) => {
                 if !finished {
@@ -341,7 +380,7 @@ where
                     .await
                     .is_none()
                 {
-                    settle_cancelled(&ticket, &mut finished).await;
+                    settle_cancelled(request_label.as_deref(), &ticket, &mut finished).await;
                 }
                 drop(ticket);
             });
@@ -358,11 +397,13 @@ const STOP_SETTLE_TIMEOUT: Duration = Duration::from_secs(2);
 /// Finish a cancelled request. When its cancel stopped playback it owned, wait
 /// (bounded) for the webview's `playback-finished` for that stop: answering
 /// first would let the stale finish satisfy the next request's wait, since
-/// waits match finishes by timestamp, releasing that caller mid-playback.
+/// waits match finishes by timestamps, releasing that caller mid-playback.
 async fn settle_cancelled<F: Future<Output = bool> + Unpin>(
+    request_id: Option<&str>,
     ticket: &Ticket,
     finished: &mut F,
 ) -> SpeakOutcome {
+    let started = Instant::now();
     if ticket.stopped_playback()
         && tokio::time::timeout(STOP_SETTLE_TIMEOUT, finished)
             .await
@@ -373,6 +414,11 @@ async fn settle_cancelled<F: Future<Output = bool> + Unpin>(
             STOP_SETTLE_TIMEOUT
         );
     }
+    log_slow_stage(
+        request_id,
+        "absorbing the stop's playback-finished",
+        started,
+    );
     SpeakOutcome::Cancelled
 }
 

@@ -4,6 +4,7 @@
 //
 //   helpers.rs     — SynthesisGuard, create_backend, voice_for_backend, engine_str
 //   health.rs      — test_tts_engine
+//   jit.rs         — JIT pagination gate: when to submit the next fragment
 //   synthesis.rs   — speak_now, speak_queued, speak_history_entry
 //   credentials.rs — check_elevenlabs_credentials, check_openai_credentials
 //   voices.rs      — list_tts_voices + get_cached_voices (provider voice cache)
@@ -11,6 +12,7 @@
 mod credentials;
 mod health;
 pub(crate) mod helpers;
+mod jit;
 mod profiles;
 mod synthesis;
 mod voices;

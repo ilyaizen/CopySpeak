@@ -192,7 +192,8 @@ class PlaybackStore {
           position_ms: position.positionMs,
           duration_ms: fragment.durationMs,
           paused: this.isPaused,
-          active: true
+          active: true,
+          fragment_index: position.fragmentIndex
         };
       } else if (this._lastCaption) {
         // A suspended context reports no position while the playhead stalls
@@ -214,7 +215,8 @@ class PlaybackStore {
         position_ms: Math.max(0, el.currentTime - latency) * 1000,
         duration_ms: duration * 1000,
         paused: this.isPaused,
-        active: !this.isLoadingAudio && !el.ended && !el.seeking && el.readyState >= 2
+        active: !this.isLoadingAudio && !el.ended && !el.seeking && el.readyState >= 2,
+        fragment_index: this.currentFragmentIndex ?? undefined
       };
     }
     if (!caption) return;

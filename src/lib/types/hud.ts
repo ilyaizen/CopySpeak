@@ -59,4 +59,9 @@ export interface HudCaptionPayload {
   duration_ms: number;
   paused: boolean;
   active: boolean;
+  /**
+   * Zero-based pagination fragment the playhead sits in. The Rust JIT gate uses
+   * it to tell which fragment is audible; omitted before playback activates.
+   */
+  fragment_index?: number;
 }
