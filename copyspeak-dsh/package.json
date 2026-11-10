@@ -1,6 +1,6 @@
 {
   "name": "@local/copyspeak-voice",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Reads DSH assistant messages aloud through the running CopySpeak app.",
   "type": "module",

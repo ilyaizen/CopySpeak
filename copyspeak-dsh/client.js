@@ -1,15 +1,17 @@
 /**
  * Browser half of the CopySpeak voice bundle.
  *
- * Adds three surfaces that share one transport to the CopySpeak control server:
+ * Adds four surfaces that share one transport to the CopySpeak control server:
  *
  *   POST http://127.0.0.1:43117/speak
  *   {"text": "...", "request_id": "dsh.<stamp>.<n>", "wait": true}
  *
- * - A CopySpeak panel in the sidebar, holding the two options and the app status.
+ * - A CopySpeak panel in the sidebar, holding the three options and the app status.
  * - A speaker action in the action row of each finished assistant message.
  * - A per-session reader that speaks each settled reply when auto-read is on,
  *   and highlights the word CopySpeak plays inside the reply text itself.
+ * - A frame-wide playback bar that stops the reading and scrolls back to the
+ *   spoken word when the message action scrolled out of view.
  *
  * The request uses `mode: 'no-cors'` and a `text/plain` content type, so the
  * browser sends no CORS preflight; CopySpeak parses the JSON body without
@@ -37,25 +39,35 @@ window.__ModuleLoader__.load({
     const HIGHLIGHT_NAME = "copyspeak-read-word";
     const STORAGE = {
       autoRead: "dsh.copyspeak-voice.auto-read",
-      captions: "dsh.copyspeak-voice.captions"
+      captions: "dsh.copyspeak-voice.captions",
+      follow: "dsh.copyspeak-voice.follow"
     };
     /* The webview reports its audible clock every ~25 ms and throttles the
      * control-server report to ~100 ms, so one poll per 100 ms stays current. */
     const CAPTION_POLL_MS = 100;
     /* Stop polling when the status route never answers (older CopySpeak). */
     const CAPTION_ATTEMPTS = 3;
-    /* A smooth scroll per word would fight itself; one per quarter second. */
-    const SCROLL_INTERVAL_MS = 250;
-    /* Keep the spoken word inside the middle band of the chat scrollport. */
-    const SCROLL_MARGIN = 0.25;
+    /* The follow scroll moves at most once per 400 ms. */
+    const SCROLL_INTERVAL_MS = 400;
+    /* Follow keeps the spoken word between these two fractions of the chat
+     * scrollport. Outside the band, its line moves to the anchor. */
+    const FOLLOW_BAND_TOP = 0.15;
+    const FOLLOW_BAND_BOTTOM = 0.82;
+    const FOLLOW_ANCHOR = 0.34;
+    /* A manual scroll pauses following for a few seconds. */
+    const FOLLOW_PAUSE_MS = 5000;
+    /* Host Tooltip: the bubble sits this far below its anchor. */
+    const TOOLTIP_GAP = 8;
+    /* Keep the centered bubble this far from the viewport edge. */
+    const TOOLTIP_MARGIN = 12;
     /* Token look-ahead while aligning a caption fragment to rendered words. */
     const ALIGN_WINDOW = 24;
     const ALIGN_ATTEMPTS = 8;
 
     /*
-     * CopySpeak app-logo mark: the speaker and its two sound waves, with the
-     * gradient card and every layer color dropped. One currentColor fill, so
-     * the glyph follows the host theme in light and dark modes.
+     * CopySpeak app-logo mark: the speaker and its two sound waves. It is one
+     * currentColor silhouette, so the playing action follows the host theme.
+     * The idle action and the sidebar icon share the outlined variant below.
      */
     const GLYPH_VIEW_BOX = "14.86 14.717 48.611 48.611";
     const GLYPH_PATHS = [
@@ -63,6 +75,11 @@ window.__ModuleLoader__.load({
       "m49.61 19.43c-1.5-0.74-3.32-0.37-4.11 1.04-0.8 1.45-0.21 3.13 1.27 3.97 5.25 2.81 8.39 8.04 8.39 14.44 0 6.47-3.45 12.05-8.57 14.61-1.47 0.81-2 2.47-1.33 3.85 0.72 1.4 2.78 2.03 4.44 1.41 7.13-3.14 11.97-10.79 11.97-19.57 0-8.67-5.02-16.48-12.06-19.75z",
       "m46.38 28.77c-1.27-0.75-2.96-0.42-3.67 0.89-0.75 1.28-0.3 2.86 0.86 3.78 1.73 1.33 2.77 3.26 2.77 5.48 0 2.27-1.14 4.28-2.83 5.45-1.2 0.9-1.48 2.53-0.7 3.78 0.84 1.23 2.55 1.74 3.95 1.16 3.49-1.78 5.54-5.56 5.54-9.89 0-4.62-2.49-8.79-5.92-10.65z"
     ];
+    /* The shared idle mark: the speaker contour as line art, with the waves
+       redrawn as centerline arcs, which stay crisp at 16-17 px. */
+    const GLYPH_STROKE = 3.3;
+    const GLYPH_ARC_OUTER = "M47.4 21A19.2 19.2 0 0 1 47.4 56.6";
+    const GLYPH_ARC_INNER = "M45.8 31.6A9.06 9.06 0 0 1 45.8 48.9";
 
     const en = {
       "panel.label": "CopySpeak",
@@ -75,6 +92,12 @@ window.__ModuleLoader__.load({
       "autoRead.description": "CopySpeak reads each reply in the open session when it settles.",
       "captions.title": "Show captions while reading",
       "captions.description": "Highlights each word in the reply as CopySpeak plays it.",
+      "follow.title": "Follow playback",
+      "follow.description": "Scrolls the chat to keep the spoken word in view.",
+      "bar.label": "CopySpeak playback",
+      "bar.reading": "Reading aloud",
+      "bar.showInChat": "Show in chat",
+      "bar.stop": "Stop",
       "switch.on": "On",
       "switch.off": "Off",
       "action.read": "Read aloud with CopySpeak",
@@ -86,13 +109,24 @@ window.__ModuleLoader__.load({
 
     const PLUGIN_STYLE = [
       ".dsh-csva-glyph{display:block}",
-      ".dsh-csva-root{display:inline-flex;align-items:center;gap:8px}",
-      ".dsh-csva-button{width:28px;height:28px;border-radius:var(--dsw-radius-sm,6px);border:none;background:0 0;padding:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--dsw-alias-label-secondary);}",
-      ".dsh-csva-button svg{width:15px;height:15px}",
-      ".dsh-csva-button:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}",
+      ".dsh-csva-root{position:relative;display:inline-flex;align-items:center;gap:8px}",
+      /* The host action-row icon button (ui-chat MessageIconActions.module.css): a
+         28 px square hit area, 17 px glyph, tertiary icon color that lifts on hover.
+         The read action sits in the same row, so it copies these metrics. */
+      ".dsh-csva-button{width:calc(28px + var(--dsh-content-font-delta,0px));height:calc(28px + var(--dsh-content-font-delta,0px));border-radius:var(--dsw-radius-sm,6px);border:none;background:0 0;padding:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--dsw-alias-label-tertiary);}",
+      ".dsh-csva-button svg{width:calc(17px + var(--dsh-content-font-delta,0px));height:calc(17px + var(--dsh-content-font-delta,0px))}",
+      "@media (hover:hover){.dsh-csva-button:hover:not(:disabled){background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}}",
+      /* While the message plays, the button shows the filled mark in the brand color. */
       ".dsh-csva-button[data-active]{color:var(--dsw-alias-brand-primary)}",
-      ".dsh-csva-button:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}",
+      ".dsh-csva-button:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
       ".dsh-csva-button:disabled{opacity:.4;cursor:default}",
+      /* The host Tooltip bubble (ui-primitives Tooltip): fixed above the page, solid
+         tooltip fill, inherited font, a 150 ms fade. The plugin owns its own copy of
+         the look because a plain-JS plugin cannot import the host primitives. */
+      ".dsh-csva-tip{position:fixed;z-index:100;display:inline-flex;align-items:center;gap:8px;width:max-content;max-width:min(50vw,calc(100vw - 24px));box-sizing:border-box;padding:3px 7px;border-radius:var(--dsw-radius-sm,6px);background:var(--dsw-alias-tooltip-bg,#1f2329);color:var(--dsw-static-neutral-bluish-00,#fff);font-size:13px;line-height:20px;white-space:pre-line;overflow-wrap:break-word;pointer-events:none;transform:translateX(-50%);animation:dsh-csva-tip-in .15s var(--ds-ease-in-out,ease)}",
+      ".dsh-csva-tip[data-side=top]{transform:translate(-50%,-100%)}",
+      "@keyframes dsh-csva-tip-in{0%{opacity:0}to{opacity:1}}",
+      "@media (prefers-reduced-motion:reduce){.dsh-csva-tip{animation:none}}",
       ".dsh-csva-note{font-size:12px;line-height:16px;color:var(--dsw-alias-state-error-primary);white-space:nowrap}",
       ".dsh-csva-panel{box-sizing:border-box;width:100%;height:100%;padding:calc(var(--dsh-frame-top-clearance,0px) + 28px) clamp(24px,4vw,48px) 48px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);display:flex;flex-direction:column;align-items:center;gap:20px;overflow:hidden auto}",
       ".dsh-csva-panel>*{flex:none;width:100%;max-width:720px}",
@@ -113,6 +147,16 @@ window.__ModuleLoader__.load({
       ".dsh-csva-switch:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}",
       ".dsh-csva-switchThumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--dsw-alias-bg-base);transition:transform .15s}",
       ".dsh-csva-switch[data-on] .dsh-csva-switchThumb{transform:translateX(16px)}",
+      /* The frame-wide playback bar. The shell overlay is click-through, so the
+         bar opts back into pointer events. It floats in the lower right corner,
+         away from the sidebar and the centered composer. */
+      ".dsh-csva-bar{position:fixed;right:20px;bottom:20px;z-index:20;display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;max-width:calc(100vw - 40px);padding:6px 6px 6px 10px;border:.5px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 6px 20px rgb(0 0 0 / 14%);pointer-events:auto}",
+      ".dsh-csva-barGlyph{flex:none;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;color:var(--dsw-alias-brand-primary)}",
+      ".dsh-csva-barWord{flex:0 1 auto;min-width:0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:20px;color:var(--dsw-alias-label-secondary)}",
+      ".dsh-csva-barButton{flex:none;height:26px;padding:0 8px;border:none;border-radius:var(--dsw-radius-sm,6px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;line-height:20px;cursor:pointer}",
+      "@media (hover:hover){.dsh-csva-barButton:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}}",
+      ".dsh-csva-barButton:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
+      ".dsh-csva-barStop{color:var(--dsw-alias-label-primary)}",
       "::highlight(" +
         HIGHLIGHT_NAME +
         "){background-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base)}"
@@ -125,6 +169,9 @@ window.__ModuleLoader__.load({
       listeners: new Set(),
       sequence: 1
     };
+
+    /* The locale binder from apply(), for slots that pass no `t` prop. */
+    let boundT = null;
 
     function emit(listeners) {
       for (const listener of Array.from(listeners)) listener();
@@ -159,10 +206,11 @@ window.__ModuleLoader__.load({
     }
 
     /* User preferences: page-local, so a switch keeps its state across
-       reloads without a Host round trip. Captions start off. */
+       reloads without a Host round trip. Captions start off; follow starts on. */
     const preferences = {
       autoRead: readStoredFlag(STORAGE.autoRead, false),
       captions: readStoredFlag(STORAGE.captions, false),
+      follow: readStoredFlag(STORAGE.follow, true),
       listeners: new Set()
     };
 
@@ -177,24 +225,15 @@ window.__ModuleLoader__.load({
     }
 
     function setPreference(name, enabled) {
-      if (name === "autoRead") {
-        preferences.autoRead = enabled;
-      } else {
-        preferences.captions = enabled;
-      }
+      preferences[name] = enabled;
       try {
         window.localStorage.setItem(STORAGE[name], enabled ? "1" : "0");
       } catch {
         /* Private mode: the switch still works for this page. */
       }
-      if (name === "captions") {
-        if (!enabled) {
-          stopCaptionPolling();
-          clearHighlight();
-        } else if (playback.requestId !== null) {
-          startCaptionPolling(playback.requestId);
-        }
-      }
+      /* The caption poll runs for the whole reading, so the bar keeps its word
+         indicator. Disabling captions only drops the inline highlight. */
+      if (name === "captions" && !enabled) clearHighlight();
       emit(preferences.listeners);
     }
 
@@ -231,9 +270,24 @@ window.__ModuleLoader__.load({
       fragmentMap: null,
       fragmentPosition: 0,
       scroller: null,
+      watchedScroller: null,
       activeToken: -1,
-      lastScrollAt: 0
+      lastScrollAt: 0,
+      followPausedUntil: 0
     };
+
+    /* Live word for the floating bar. It changes about once per spoken word, so
+       the bar re-renders only when a new word starts. */
+    const captionState = {
+      word: "",
+      listeners: new Set()
+    };
+
+    function setCaptionWord(word) {
+      if (captionState.word === word) return;
+      captionState.word = word;
+      emit(captionState.listeners);
+    }
 
     /* Lowercased letters and digits only, so punctuation and wrapping do not
      * split a match between the spoken text and the rendered text. */
@@ -407,7 +461,7 @@ window.__ModuleLoader__.load({
           if (entry.end_ms > endMs) endMs = entry.end_ms;
         }
         if (startMs === Infinity || endMs <= startMs) continue;
-        words.push({ norm: norm, start_ms: startMs, end_ms: endMs });
+        words.push({ norm: norm, text: match[0], start_ms: startMs, end_ms: endMs });
       }
       return words;
     }
@@ -530,7 +584,8 @@ window.__ModuleLoader__.load({
       if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
         window.CSS.highlights.delete(HIGHLIGHT_NAME);
       }
-      reading.activeToken = -1;
+      /* The mapped token stays, so Show in chat still finds the spoken word
+         during a gap between words. A new reading resets it in resetReading. */
     }
 
     /* Resolve the scrollport of the painted word, and keep it while the word
@@ -540,63 +595,148 @@ window.__ModuleLoader__.load({
       if (current !== null && current.isConnected && current.contains(token.node)) return current;
       const element = token.node.parentElement;
       reading.scroller = element === null ? null : findScroller(element);
+      if (reading.scroller !== null) watchScroller(reading.scroller);
       return reading.scroller;
     }
 
-    /* Bring the spoken word to the middle of the chat scrollport, but only
-     * when it left the comfortable band, so reading does not nudge the view. */
-    function scrollToRange(token, range) {
+    /* A manual scroll pauses following, so playback does not fight the view. */
+    function pauseFollow() {
+      reading.followPausedUntil = Date.now() + FOLLOW_PAUSE_MS;
+    }
+
+    /* Scroll keys only, so typing elsewhere in the frame never pauses follow. */
+    const FOLLOW_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"]);
+
+    function pauseFollowKey(event) {
+      if (FOLLOW_KEYS.has(event.key)) pauseFollow();
+    }
+
+    function watchScroller(scroller) {
+      if (reading.watchedScroller === scroller) return;
+      unwatchScroller();
+      reading.watchedScroller = scroller;
+      scroller.addEventListener("wheel", pauseFollow, { passive: true });
+      scroller.addEventListener("touchstart", pauseFollow, { passive: true });
+      scroller.addEventListener("keydown", pauseFollowKey, true);
+    }
+
+    function unwatchScroller() {
+      const scroller = reading.watchedScroller;
+      if (scroller === null) return;
+      scroller.removeEventListener("wheel", pauseFollow);
+      scroller.removeEventListener("touchstart", pauseFollow);
+      scroller.removeEventListener("keydown", pauseFollowKey, true);
+      reading.watchedScroller = null;
+    }
+
+    function motionBehavior() {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    }
+
+    function tokenRange(token) {
+      const range = document.createRange();
+      range.setStart(token.node, token.start);
+      range.setEnd(token.node, token.end);
+      return range;
+    }
+
+    /* Move the spoken line to an anchor inside the chat scrollport. */
+    function scrollRangeToLine(range, token, ratio) {
       const scroller = ensureScroller(token);
       if (scroller === null) return;
+      const rect = range.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) return;
+      const box = scroller.getBoundingClientRect();
+      const offset = rect.top - box.top - box.height * ratio;
+      scroller.scrollTo({ top: scroller.scrollTop + offset, behavior: motionBehavior() });
+    }
+
+    /* Follow the spoken word: scroll only when its line leaves the wide band,
+     * so most lines play without moving the view. */
+    function followRange(token, range) {
+      if (!preferences.follow) return;
       const now = Date.now();
+      if (now < reading.followPausedUntil) return;
       if (now - reading.lastScrollAt < SCROLL_INTERVAL_MS) return;
+      const scroller = ensureScroller(token);
+      if (scroller === null) return;
       const rect = range.getBoundingClientRect();
       if (rect.width === 0 && rect.height === 0) return;
       const box = scroller.getBoundingClientRect();
       const top = rect.top - box.top;
       const bottom = rect.bottom - box.top;
-      const margin = box.height * SCROLL_MARGIN;
-      if (top >= margin && bottom <= box.height - margin) return;
+      if (top >= box.height * FOLLOW_BAND_TOP && bottom <= box.height * FOLLOW_BAND_BOTTOM) {
+        return;
+      }
       reading.lastScrollAt = now;
-      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth";
-      const offset = top + rect.height / 2 - box.height / 2;
-      scroller.scrollTo({ top: scroller.scrollTop + offset, behavior: behavior });
+      const offset = top - box.height * FOLLOW_ANCHOR;
+      scroller.scrollTo({ top: scroller.scrollTop + offset, behavior: motionBehavior() });
     }
 
-    function applyCaption(snapshot) {
-      if (!preferences.captions || snapshot === null) {
+    /* The bar's scroll control: go to the spoken word now, and resume follow. */
+    function showPlaybackInChat() {
+      reading.followPausedUntil = 0;
+      reading.lastScrollAt = 0;
+      const element = ensureTarget();
+      if (element === null) return;
+      if (reading.activeToken >= 0 && reading.tokens !== null) {
+        const token = reading.tokens[reading.activeToken];
+        if (token.node.isConnected) {
+          scrollRangeToLine(tokenRange(token), token, FOLLOW_ANCHOR);
+          return;
+        }
+      }
+      /* No mapped word yet: fall back to the top of the reply. */
+      const scroller = findScroller(element);
+      if (scroller === null) {
+        element.scrollIntoView({ block: "center", behavior: motionBehavior() });
+        return;
+      }
+      const rect = element.getBoundingClientRect();
+      const box = scroller.getBoundingClientRect();
+      scroller.scrollTo({
+        top: scroller.scrollTop + rect.top - box.top - box.height * 0.2,
+        behavior: motionBehavior()
+      });
+    }
+
+    /* One caption snapshot drives the inline highlight, the follow scroll, and
+     * the floating bar's word. Alignment runs with captions off too, so the
+     * bar's scroll control still finds the spoken word. */
+    function updateCaption(snapshot) {
+      if (snapshot === null) {
         clearHighlight();
+        setCaptionWord("");
         return;
       }
       const element = ensureTarget();
       if (element === null || reading.tokens === null) {
         clearHighlight();
+        setCaptionWord("");
         return;
       }
       const map = ensureFragmentMap(snapshot);
       if (map === null) {
         clearHighlight();
+        setCaptionWord("");
         return;
       }
       const words = reading.fragmentWords === null ? [] : reading.fragmentWords;
       const wordIndex = activeWordIndex(words, snapshot.position);
       if (wordIndex < 0) {
-        clearHighlight();
+        if (preferences.captions) clearHighlight();
         return;
       }
+      setCaptionWord(words[wordIndex].text);
       const tokenIndex = nearestMapped(map, wordIndex);
       if (tokenIndex < 0 || tokenIndex === reading.activeToken) return;
       const token = reading.tokens[tokenIndex];
       reading.activeToken = tokenIndex;
-      const range = document.createRange();
-      range.setStart(token.node, token.start);
-      range.setEnd(token.node, token.end);
-      if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
+      const range = tokenRange(token);
+      if (preferences.captions && window.CSS !== undefined && window.CSS.highlights !== undefined) {
         window.CSS.highlights.set(HIGHLIGHT_NAME, new window.Highlight(range));
       }
-      scrollToRange(token, range);
+      followRange(token, range);
     }
 
     function resetReading(messageId, nodeKey, speech) {
@@ -614,7 +754,10 @@ window.__ModuleLoader__.load({
       reading.scroller = null;
       reading.activeToken = -1;
       reading.lastScrollAt = 0;
+      reading.followPausedUntil = 0;
+      unwatchScroller();
       clearHighlight();
+      setCaptionWord("");
     }
 
     const captionPoll = { timer: null, attempts: 0, sequence: 0 };
@@ -628,7 +771,6 @@ window.__ModuleLoader__.load({
 
     function startCaptionPolling(requestId) {
       stopCaptionPolling();
-      if (!preferences.captions) return;
       function poll() {
         if (playback.requestId !== requestId) {
           stopCaptionPolling();
@@ -641,12 +783,13 @@ window.__ModuleLoader__.load({
           if (playback.requestId !== requestId || sequence !== captionPoll.sequence) return;
           if (!result.reached) {
             clearHighlight();
+            setCaptionWord("");
             captionPoll.attempts += 1;
             if (captionPoll.attempts >= CAPTION_ATTEMPTS) stopCaptionPolling();
             return;
           }
           captionPoll.attempts = 0;
-          applyCaption(result.caption);
+          updateCaption(result.caption);
         });
       }
       poll();
@@ -797,6 +940,8 @@ window.__ModuleLoader__.load({
       return null;
     }
 
+    /* The filled app-logo speaker silhouette. The playing action and the
+       floating playback bar use it in currentColor, so it follows the theme. */
     function CsGlyph(props) {
       const size = props.size ?? 18;
       return h(
@@ -815,16 +960,36 @@ window.__ModuleLoader__.load({
       );
     }
 
-    function CopySpeakPanelIcon(props) {
-      return h(CsGlyph, { size: props.size });
-    }
-
-    function StopIcon() {
+    /* The outlined read mark: the idle message action and the sidebar panel
+       icon share it. The speaker contour is stroked and the waves become
+       centerline arcs, which stay crisp at 16-17 px. */
+    function ReadGlyph(props) {
+      const size = props.size ?? 17;
+      /* Keep the rendered stroke the same weight at every size. */
+      const stroke = GLYPH_STROKE * (17 / size);
       return h(
         "svg",
-        { viewBox: "0 0 24 24", "aria-hidden": true, focusable: "false" },
-        h("rect", { x: 6, y: 6, width: 12, height: 12, rx: 2, fill: "currentColor" })
+        {
+          viewBox: GLYPH_VIEW_BOX,
+          width: size,
+          height: size,
+          fill: "none",
+          stroke: "currentColor",
+          strokeLinecap: "round",
+          strokeLinejoin: "round",
+          className: "dsh-csva-glyph",
+          "aria-hidden": true,
+          focusable: "false"
+        },
+        h("path", { d: GLYPH_PATHS[0], strokeWidth: stroke }),
+        h("path", { d: GLYPH_ARC_OUTER, strokeWidth: stroke }),
+        h("path", { d: GLYPH_ARC_INNER, strokeWidth: stroke })
       );
+    }
+
+    /* Sidebar panel icon: the idle read mark, shared with the message action. */
+    function CopySpeakPanelIcon(props) {
+      return h(ReadGlyph, { size: props.size ?? 16 });
     }
 
     function CopySpeakAction(props) {
@@ -835,6 +1000,14 @@ window.__ModuleLoader__.load({
          reader highlights; the node itself is kept out of the selector result
          so a streamed token does not allocate one. */
       const nodeRef = React.useRef(null);
+
+      /* The host action-row buttons carry a Tooltip primitive; a plain-JS plugin
+         cannot require host packages, so the plugin owns a copy of that bubble:
+         fixed below the 28 px button, shown on hover and on keyboard focus. */
+      const buttonRef = React.useRef(null);
+      const tipRef = React.useRef(null);
+      const tipId = React.useId();
+      const [tip, setTip] = React.useState(null);
 
       const text = useChat
         ? useChat(function (snapshot) {
@@ -861,6 +1034,81 @@ window.__ModuleLoader__.load({
         };
       }, []);
 
+      /* Escape, any scroll, and a viewport resize close the bubble, so a moved
+         anchor cannot leave a stale one behind. Listeners attach only while open. */
+      React.useEffect(
+        function () {
+          if (tip === null) return;
+          function close() {
+            setTip(null);
+          }
+          function onKeyDown(event) {
+            if (event.key === "Escape") close();
+          }
+          document.addEventListener("keydown", onKeyDown, true);
+          window.addEventListener("scroll", close, true);
+          window.addEventListener("resize", close);
+          return function () {
+            document.removeEventListener("keydown", onKeyDown, true);
+            window.removeEventListener("scroll", close, true);
+            window.removeEventListener("resize", close);
+          };
+        },
+        [tip]
+      );
+
+      /* Fit the bubble after it renders: clamp its center inside the viewport,
+         and flip it above the button when the space below runs out. */
+      React.useLayoutEffect(
+        function () {
+          if (tip === null) return;
+          const bubble = tipRef.current;
+          if (bubble === null) return;
+          const half = bubble.offsetWidth / 2;
+          const min = TOOLTIP_MARGIN + half;
+          const max = window.innerWidth - TOOLTIP_MARGIN - half;
+          const left = Math.min(Math.max(tip.left, min), max);
+          const side =
+            tip.side === "bottom" &&
+            tip.bottom + bubble.offsetHeight > window.innerHeight - TOOLTIP_MARGIN
+              ? "top"
+              : tip.side;
+          if (Math.abs(left - tip.left) > 0.5 || side !== tip.side) {
+            setTip({ left: left, top: tip.top, bottom: tip.bottom, side: side });
+          }
+        },
+        [tip]
+      );
+
+      function openTip() {
+        const button = buttonRef.current;
+        if (button === null) return;
+        const rect = button.getBoundingClientRect();
+        setTip({
+          left: rect.left + rect.width / 2,
+          top: rect.top - TOOLTIP_GAP,
+          bottom: rect.bottom + TOOLTIP_GAP,
+          side: "bottom"
+        });
+      }
+
+      function closeTip() {
+        setTip(null);
+      }
+
+      function onPointerEnter(event) {
+        /* Touch taps fire the click; a bubble on a touch screen is noise. */
+        if (event.pointerType === "touch") return;
+        openTip();
+      }
+
+      function onFocusTip(event) {
+        /* A mouse click focuses the button before it clicks. The host shows a
+           focus tooltip for keyboard focus only, so a click never flashes one. */
+        if (!event.currentTarget.matches(":focus-visible")) return;
+        openTip();
+      }
+
       function fail(key) {
         setFailure(key);
         if (failureTimer.current !== null) clearTimeout(failureTimer.current);
@@ -877,6 +1125,7 @@ window.__ModuleLoader__.load({
       const disabled = !active && (busy || !hasText);
 
       function onClick() {
+        closeTip();
         if (active) {
           setBusy(true);
           void stopReadingNow().then(function () {
@@ -906,17 +1155,39 @@ window.__ModuleLoader__.load({
         h(
           "button",
           {
+            ref: buttonRef,
             type: "button",
             className: "dsh-csva-button",
             "aria-label": label,
             "aria-pressed": active,
-            title: label,
+            "aria-describedby": tip === null ? undefined : tipId,
             "data-active": active || undefined,
             disabled: disabled,
+            onPointerEnter: onPointerEnter,
+            onPointerLeave: closeTip,
+            onFocus: onFocusTip,
+            onBlur: closeTip,
             onClick: onClick
           },
-          active ? h(StopIcon) : h(CsGlyph, { size: 15 })
+          active ? h(CsGlyph, { size: 17 }) : h(ReadGlyph)
         ),
+        tip === null
+          ? null
+          : h(
+              "span",
+              {
+                ref: tipRef,
+                id: tipId,
+                role: "tooltip",
+                className: "dsh-csva-tip",
+                "data-side": tip.side,
+                style: {
+                  left: tip.left,
+                  top: tip.side === "bottom" ? tip.bottom : tip.top
+                }
+              },
+              label
+            ),
         failure === null
           ? null
           : h("span", { className: "dsh-csva-note", role: "status" }, t(failure))
@@ -974,6 +1245,60 @@ window.__ModuleLoader__.load({
       return null;
     }
 
+    /**
+     * Frame-wide playback bar: it renders in the shell overlay while this
+     * plugin reads, so stop stays reachable when the message action scrolled
+     * away. It shows the live word and scrolls the chat back to the reading.
+     */
+    function PlaybackBar(props) {
+      const t = props.t ?? boundT;
+      const [active, setActive] = React.useState(playback.messageId !== null);
+      const [word, setWord] = React.useState(captionState.word);
+
+      React.useEffect(function () {
+        const offPlayback = subscribe(playback.listeners, function () {
+          setActive(playback.messageId !== null);
+        });
+        const offCaption = subscribe(captionState.listeners, function () {
+          setWord(captionState.word);
+        });
+        return function () {
+          offPlayback();
+          offCaption();
+        };
+      }, []);
+
+      if (!active) return null;
+
+      return h(
+        "div",
+        {
+          className: "dsh-csva-bar",
+          role: "region",
+          "aria-label": t("bar.label")
+        },
+        h("span", { className: "dsh-csva-barGlyph" }, h(CsGlyph, { size: 16 })),
+        h("span", { className: "dsh-csva-barWord" }, word === "" ? t("bar.reading") : word),
+        h(
+          "button",
+          { type: "button", className: "dsh-csva-barButton", onClick: showPlaybackInChat },
+          t("bar.showInChat")
+        ),
+        h(
+          "button",
+          {
+            type: "button",
+            className: "dsh-csva-barButton dsh-csva-barStop",
+            "aria-label": t("action.stop"),
+            onClick: function () {
+              void stopReadingNow();
+            }
+          },
+          t("bar.stop")
+        )
+      );
+    }
+
     function Switch(props) {
       const label = props.label;
       return h(
@@ -997,12 +1322,14 @@ window.__ModuleLoader__.load({
       const t = props.t;
       const [autoRead, setAutoReadState] = React.useState(preferences.autoRead);
       const [captions, setCaptionsState] = React.useState(preferences.captions);
+      const [follow, setFollowState] = React.useState(preferences.follow);
       const [online, setOnline] = React.useState(null);
 
       React.useEffect(function () {
         return subscribe(preferences.listeners, function () {
           setAutoReadState(preferences.autoRead);
           setCaptionsState(preferences.captions);
+          setFollowState(preferences.follow);
         });
       }, []);
 
@@ -1076,6 +1403,23 @@ window.__ModuleLoader__.load({
                 setPreference("captions", !preferences.captions);
               }
             })
+          ),
+          h(
+            "li",
+            { key: "follow", className: "dsh-csva-row" },
+            h(
+              "span",
+              { className: "dsh-csva-rowText" },
+              h("span", { className: "dsh-csva-rowTitle" }, t("follow.title")),
+              h("span", { className: "dsh-csva-rowDescription" }, t("follow.description"))
+            ),
+            h(Switch, {
+              checked: follow,
+              label: t("follow.title") + ": " + t(follow ? "switch.on" : "switch.off"),
+              onChange: function () {
+                setPreference("follow", !preferences.follow);
+              }
+            })
           )
         ])
       );
@@ -1111,6 +1455,7 @@ window.__ModuleLoader__.load({
         }, PACKAGE + ": captions");
 
         const t = ctx.locale.bind(NS);
+        boundT = t;
 
         /* The sidebar entry owns the panel icon and resolves its label from the
            list metadata; the same id selects the `main` key. */
@@ -1163,6 +1508,20 @@ window.__ModuleLoader__.load({
               locale: NS
             },
             AutoReader
+          );
+        });
+
+        /* The playback bar lives in the frame-wide overlay, so it stays
+           reachable while a reply plays and the message action scrolled away. */
+        ctx.slots.inject("shell.overlay", function () {
+          return ctx.slots.register(
+            {
+              name: "shell.overlay",
+              id: "copyspeak-playback",
+              order: 40,
+              locale: NS
+            },
+            PlaybackBar
           );
         });
       }
