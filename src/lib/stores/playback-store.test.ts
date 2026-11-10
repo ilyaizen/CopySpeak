@@ -282,6 +282,28 @@ it("publishes captions from the audio clock and audible fragment, then stops pub
   expect(emitTo).not.toHaveBeenCalled();
 });
 
+it("reports the caption snapshot for the control server, and inactive on stop", async () => {
+  vi.spyOn(audio, "readyState", "get").mockReturnValue(4);
+  vi.spyOn(audio, "duration", "get").mockReturnValue(1);
+  const reports = () =>
+    vi.mocked(invoke).mock.calls.filter(([name]) => name === "report_playback_caption");
+  vi.mocked(invoke).mockClear();
+  await sendAudio(0);
+  audio.currentTime = 0.6;
+  // The report interval is wall time, not a tick count: wait for it.
+  await vi.waitFor(() =>
+    expect(reports()).toContainEqual([
+      "report_playback_caption",
+      { caption: expect.objectContaining({ text: "Part 0", position_ms: 600, active: true }) }
+    ])
+  );
+  playbackStore.handleStop();
+  expect(reports().at(-1)).toEqual(["report_playback_caption", { caption: { active: false } }]);
+  vi.mocked(invoke).mockClear();
+  await new Promise((resolve) => setTimeout(resolve, 150));
+  expect(reports()).toEqual([]);
+});
+
 it("delays element captions by the AudioContext output latency in media time", async () => {
   vi.useFakeTimers();
   vi.stubGlobal(

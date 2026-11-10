@@ -948,6 +948,8 @@ fn main() {
             // Browser companion bridge (commands live in browser_bridge.rs)
             crate::browser_bridge::browser_reading_progress,
             crate::browser_bridge::browser_reading_finished,
+            // Live caption snapshot for the control server's GET /status
+            crate::playback_signal::report_playback_caption,
         ])
         .build(tauri::generate_context!())
         .expect("error while building CopySpeak")

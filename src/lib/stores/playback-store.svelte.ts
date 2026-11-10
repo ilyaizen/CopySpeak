@@ -73,6 +73,9 @@ class PlaybackStore {
   private _fragmentText = "";
   private _captionTimer: ReturnType<typeof setInterval> | null = null;
   private _lastCaption: HudCaptionPayload | null = null;
+  // Wall-clock time of the last caption report for the control server's
+  // `GET /status`; the caption clock ticks every 25 ms.
+  private _lastCaptionReport = 0;
   private _streamCaptions = new Map<
     number,
     {
@@ -160,6 +163,9 @@ class PlaybackStore {
     this._lastCaption = null;
     this.caption = null;
     this._streamCaptions.clear();
+    // One inactive report keeps the status route fresh for its one-second
+    // window after a stop, so a poll does not show the last live snapshot.
+    void invoke("report_playback_caption", { caption: { active: false } }).catch(() => {});
   }
 
   private publishCaption() {
@@ -205,6 +211,14 @@ class PlaybackStore {
       };
     }
     if (!caption) return;
+    // Report to the control server at most every ~100 ms: the caption clock
+    // ticks at 25 ms and every report crosses the Tauri boundary. Best-effort:
+    // an older build without the command ignores it.
+    const now = Date.now();
+    if (now - this._lastCaptionReport >= 100) {
+      this._lastCaptionReport = now;
+      void invoke("report_playback_caption", { caption }).catch(() => {});
+    }
     this._lastCaption = caption;
     this.caption = caption;
     hudStore.handleCaption(caption);

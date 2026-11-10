@@ -42,6 +42,11 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Round estimated caption milliseconds once, after accumulating sentence offsets; per-sentence rounding re-rounds sentence-boundary pairs apart by 0.1 ms, and a `start_ms < audio_end` verdict clears the whole reading's captions.
 - ElevenLabs with-timestamps streams carry alignment on the leading record(s) and stream later records as audio alone; hard-degrade only when no aligned record ever arrives.
 - Accept an ElevenLabs record with audio and an empty `characters` array as audio-only: `eleven_v4_turbo` leads with them, and rejecting one as blank alignment clears captions for the whole fragment, so the live highlight never starts.
+- External clients (the DSH plugin) read live captions from the control server's `GET /status`; the webview reports each `publishCaption` snapshot through `report_playback_caption` (throttled to ~100 ms) and Rust answers it while younger than 1 s, so no cross-process HUD event is needed and HUD-off machines still serve captions. Keep `/status` the only CORS-open route.
+- Highlight DSH captions inside the assistant message, not in a strip: the Chat row carries `data-chat-node-key` and the settled Markdown body carries `data-text-interaction-source`, but `/status` word offsets index the sanitized spoken fragment, not the rendered Markdown, so align the fragment words to the rendered text nodes before painting with the CSS Custom Highlight API.
+- DSH caption timings follow provider granularity: ElevenLabs `/status` entries are per character, so group entries under the whitespace-run word they overlap before aligning them to rendered words; treating each entry as a word anchors on a single letter, finds no match, and paints nothing.
+- Never name a DSH plugin variable after a browser global (`CSS`, `Highlight`, `window`): a local `const CSS` stylesheet shadowed the browser `CSS` in the client half, which made `CSS.highlights` undefined and silently skipped every highlight; use `window.CSS.highlights` and `window.Highlight` explicitly.
+- When resolving the spoken reply from a Chat row, skip `[data-text-interaction-source]` bodies inside `[data-variant="think"]`: expanded reasoning shares the row key and would otherwise put reasoning words before reply words in the alignment list.
 
 ## Engines
 

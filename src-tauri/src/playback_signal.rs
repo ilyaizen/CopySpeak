@@ -8,10 +8,17 @@
 //! the requester's own synthesis (e.g. a concurrent reader stopping early).
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::sync::Mutex;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+
+/// Freshness window for a reported caption snapshot. The webview reports at
+/// about 10 Hz while playback runs, so an older snapshot means playback
+/// stopped (the webview sends a final `active: false` report on stop).
+const CAPTION_FRESH: Duration = Duration::from_secs(1);
 
 lazy_static::lazy_static! {
     static ref LAST_FINISH_MS: AtomicU64 = AtomicU64::new(0);
+    static ref RECENT_CAPTION: Mutex<Option<CaptionSnapshot>> = Mutex::new(None);
 }
 
 /// Frontend hook: call when any playback run reaches a terminal state.
@@ -57,10 +64,51 @@ pub fn generation() -> u64 {
     now_ms()
 }
 
+/// The caption snapshot the webview last rendered, plus its report time.
+struct CaptionSnapshot {
+    at: Instant,
+    json: String,
+}
+
+impl CaptionSnapshot {
+    /// The JSON while the snapshot describes live playback; `None` once stale.
+    fn fresh(&self) -> Option<&str> {
+        if self.at.elapsed() < CAPTION_FRESH {
+            Some(&self.json)
+        } else {
+            None
+        }
+    }
+}
+
+/// Frontend hook: remember the caption JSON the webview just rendered. Called
+/// at most about every 100 ms while a reading plays.
+pub fn remember_caption(json: String) {
+    let mut recent = RECENT_CAPTION.lock().unwrap();
+    *recent = Some(CaptionSnapshot {
+        at: Instant::now(),
+        json,
+    });
+}
+
+/// The last reported caption while it is fresh; `None` after the webview
+/// stopped reporting. The control server's `GET /status` reads this.
+pub fn current_caption() -> Option<String> {
+    let recent = RECENT_CAPTION.lock().unwrap();
+    recent.as_ref()?.fresh().map(str::to_string)
+}
+
+/// Tauri command: the webview reports its HUD caption snapshot for `GET
+/// /status`. The snapshot is stored as sent; the status route serves it
+/// verbatim.
+#[tauri::command]
+pub fn report_playback_caption(caption: serde_json::Value) {
+    remember_caption(caption.to_string());
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
 
     /// The tests share the process-global LAST_FINISH_MS; run them one at a
     /// time so one test's finish cannot satisfy the other's wait.
@@ -90,5 +138,21 @@ mod tests {
         let started = std::time::Instant::now();
         assert!(!wait_until(gen, Duration::from_millis(120)).await);
         assert!(started.elapsed() >= Duration::from_millis(120));
+    }
+
+    /// A caption snapshot describes live playback only inside the freshness
+    /// window; the status route falls back to inactive after it goes stale.
+    #[test]
+    fn caption_snapshot_goes_stale_after_the_freshness_window() {
+        let fresh = CaptionSnapshot {
+            at: Instant::now(),
+            json: r#"{"active":true}"#.to_string(),
+        };
+        assert_eq!(fresh.fresh(), Some(r#"{"active":true}"#));
+        let stale = CaptionSnapshot {
+            at: Instant::now() - CAPTION_FRESH - Duration::from_millis(1),
+            json: r#"{"active":true}"#.to_string(),
+        };
+        assert_eq!(stale.fresh(), None);
     }
 }

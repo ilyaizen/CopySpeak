@@ -46,6 +46,7 @@ struct StopRequest {
 
 enum ControlRequest {
     Health,
+    Status,
     Stop(StopRequest),
     Speak(SpeakRequest),
 }
@@ -128,6 +129,7 @@ fn handle_connection(
 
     let response = match read_result.and_then(|()| parse_request(&buffer)) {
         Ok(ControlRequest::Health) => http_response(200, "OK", r#"{"ok":true,"app":"CopySpeak"}"#),
+        Ok(ControlRequest::Status) => http_response_cors(200, "OK", &status_body()),
         Ok(ControlRequest::Stop(StopRequest { request_id: None })) => {
             // Same path as the UI stop: webview stop event + Rodio net. The
             // webview's handleStop emits the terminal playback signal, which
@@ -357,11 +359,14 @@ fn parse_request(buffer: &[u8]) -> Result<ControlRequest, (u16, String)> {
     if request_line.starts_with("GET /health ") {
         return Ok(ControlRequest::Health);
     }
+    if request_line.starts_with("GET /status ") {
+        return Ok(ControlRequest::Status);
+    }
     let is_stop = request_line.starts_with("POST /stop ");
     if !is_stop && !request_line.starts_with("POST /speak ") {
         return Err((
             404,
-            "expected GET /health, POST /stop or POST /speak".to_string(),
+            "expected GET /health, GET /status, POST /stop or POST /speak".to_string(),
         ));
     }
 
@@ -502,6 +507,25 @@ fn http_response(status: u16, reason: &str, body: &str) -> String {
     )
 }
 
+/// `GET /status` body: the webview's last caption while it is fresh, else the
+/// inactive fallback the client reads as "hide captions".
+fn status_body() -> String {
+    crate::playback_signal::current_caption().unwrap_or_else(|| r#"{"active":false}"#.to_string())
+}
+
+/// Response for the read-only `GET /status` route. The DSH client fetches it
+/// from a different origin, so it needs an open CORS header. The shared
+/// `http_response` stays unchanged for the existing routes.
+fn http_response_cors(status: u16, reason: &str, body: &str) -> String {
+    format!(
+        "HTTP/1.1 {} {}\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+        status,
+        reason,
+        body.len(),
+        body
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -534,6 +558,31 @@ mod tests {
             parse_request(raw),
             Ok(ControlRequest::Stop(StopRequest { request_id: None }))
         ));
+    }
+
+    #[test]
+    fn parse_request_routes_status() {
+        assert!(matches!(
+            parse_request(b"GET /status HTTP/1.1\r\nHost: 127.0.0.1:43117\r\n\r\n"),
+            Ok(ControlRequest::Status)
+        ));
+    }
+
+    /// A reported caption is served verbatim, and the response opens CORS so
+    /// the DSH client can read it from its own origin.
+    #[test]
+    fn status_body_serves_the_reported_caption_with_cors() {
+        let caption = r#"{"text":"hi","captions":null,"position_ms":42,"duration_ms":1000,"paused":false,"active":true}"#;
+        crate::playback_signal::remember_caption(caption.to_string());
+        assert_eq!(status_body(), caption);
+        let response = http_response_cors(200, "OK", &status_body());
+        assert!(response.starts_with("HTTP/1.1 200 OK\r\n"));
+        assert!(response.contains("Content-Type: application/json\r\n"));
+        assert!(response.contains("Access-Control-Allow-Origin: *\r\n"));
+        assert!(response.ends_with(caption));
+        // The existing routes keep the shared helper and stay CORS-free.
+        let plain = http_response(200, "OK", r#"{"ok":true}"#);
+        assert!(!plain.contains("Access-Control-Allow-Origin"));
     }
 
     fn stop_request(body: &str) -> Vec<u8> {
