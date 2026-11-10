@@ -70,6 +70,38 @@ pub fn emit_playback_stop(app: &tauri::AppHandle) {
     }
 }
 
+/// Payload of the `playback-seek` event: the signed step the webview applies
+/// to its audible pipeline. Negative values rewind, positive values forward.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct PlaybackSeekEvent {
+    pub delta_ms: i64,
+}
+
+/// Tell the webview to pause the reading that owns the speakers. The control
+/// route runs this only under the speaker-ownership gate, so it always names
+/// the audible reading.
+pub fn emit_playback_pause(app: &tauri::AppHandle) {
+    if let Err(e) = app.emit("playback-pause", ()) {
+        log::warn!("Failed to emit playback-pause: {}", e);
+    }
+}
+
+/// Tell the webview to resume the reading that owns the speakers. See
+/// [`emit_playback_pause`] for the ownership gate.
+pub fn emit_playback_resume(app: &tauri::AppHandle) {
+    if let Err(e) = app.emit("playback-resume", ()) {
+        log::warn!("Failed to emit playback-resume: {}", e);
+    }
+}
+
+/// Tell the webview to seek the reading that owns the speakers by `delta_ms`.
+/// See [`emit_playback_pause`] for the ownership gate.
+pub fn emit_playback_seek(app: &tauri::AppHandle, delta_ms: i64) {
+    if let Err(e) = app.emit("playback-seek", PlaybackSeekEvent { delta_ms }) {
+        log::warn!("Failed to emit playback-seek: {}", e);
+    }
+}
+
 /// Stop all audio from a non-webview caller (control server `/stop`): the
 /// same two stops as the UI command — webview stop event, then the Rodio
 /// safety net. The webview's `handleStop` emits the terminal playback

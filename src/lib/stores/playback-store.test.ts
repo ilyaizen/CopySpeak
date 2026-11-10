@@ -43,6 +43,7 @@ vi.mock("./playback/analyser.js", () => ({
 const decode = vi.fn(async () => ({ duration: 1 }));
 let audio: HTMLAudioElement;
 let playSpy: ReturnType<typeof vi.spyOn>;
+let pauseSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(async () => {
   decode.mockReset().mockResolvedValue({ duration: 1 });
@@ -55,7 +56,7 @@ beforeEach(async () => {
     }
   );
   audio = document.createElement("audio");
-  vi.spyOn(audio, "pause").mockImplementation(() => {});
+  pauseSpy = vi.spyOn(audio, "pause").mockImplementation(() => {});
   playSpy = vi.spyOn(audio, "play").mockImplementation(async () => {
     audio.dispatchEvent(new Event("play"));
   });
@@ -73,6 +74,10 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.useRealTimers();
+  // The store is a module singleton and a fake-timer test advances Date.now, so
+  // the 100 ms caption-report throttle can sit in the future after that test.
+  // A later real-clock test would then wait for a report that cannot arrive.
+  Reflect.set(playbackStore, "_lastCaptionReport", 0);
 });
 
 async function sendAudio(index?: number, sessionId?: string, total = 2) {
@@ -708,4 +713,231 @@ it("binds a streamed clip to the session it belongs to once audible", async () =
     expect.objectContaining({ sessionId: "trigger-s", fragmentIndex: 0 })
   );
   playbackStore.handleStop();
+});
+
+it("pauses and resumes idempotently on the element path", async () => {
+  await sendAudio();
+  playbackStore.pausePlayback();
+  expect(playbackStore.isPaused).toBe(true);
+  // A second pause must not invert the first.
+  playbackStore.pausePlayback();
+  expect(playbackStore.isPaused).toBe(true);
+  expect(pauseSpy).toHaveBeenCalledTimes(1);
+  playbackStore.resumePlayback();
+  expect(playbackStore.isPaused).toBe(false);
+  playbackStore.resumePlayback();
+  expect(playbackStore.isPaused).toBe(false);
+  expect(playSpy).toHaveBeenCalledTimes(2);
+});
+
+it("leaves an idle reading alone on pause and resume", () => {
+  playbackStore.pausePlayback();
+  playbackStore.resumePlayback();
+  expect(playbackStore.isPaused).toBe(false);
+  expect(pauseSpy).not.toHaveBeenCalled();
+  expect(playSpy).not.toHaveBeenCalled();
+});
+
+it("routes pause, resume and seek from the control-server events", async () => {
+  vi.spyOn(audio, "duration", "get").mockReturnValue(10);
+  await sendAudio();
+  await listeners.get("playback-pause")!({ payload: { delta_ms: 0 } });
+  expect(playbackStore.isPaused).toBe(true);
+  await listeners.get("playback-pause")!({ payload: { delta_ms: 0 } });
+  expect(playbackStore.isPaused).toBe(true);
+  await listeners.get("playback-resume")!({ payload: { delta_ms: 0 } });
+  expect(playbackStore.isPaused).toBe(false);
+  audio.currentTime = 4;
+  await listeners.get("playback-seek")!({ payload: { delta_ms: 5000 } });
+  expect(audio.currentTime).toBe(9);
+  await listeners.get("playback-seek")!({ payload: { delta_ms: -5000 } });
+  expect(audio.currentTime).toBe(4);
+});
+
+it("routes seek deltas to the PCM scheduler while streaming", async () => {
+  await startStreamingReading();
+  const backward = vi
+    .spyOn(PcmStreamScheduler.prototype, "skipBackward")
+    .mockImplementation(() => {});
+  const forward = vi
+    .spyOn(PcmStreamScheduler.prototype, "skipForward")
+    .mockImplementation(() => {});
+  playbackStore.handleStreamChunk(streamChunk(null));
+  playbackStore.seekBy(5000);
+  expect(forward).toHaveBeenCalledWith(5);
+  playbackStore.seekBy(-5000);
+  expect(backward).toHaveBeenCalledWith(5);
+  playbackStore.handleStop();
+});
+
+it("keeps a paused PCM caption active at its frozen position", async () => {
+  vi.useFakeTimers();
+  await startStreamingReading();
+  vi.spyOn(PcmStreamScheduler.prototype, "handleChunk").mockImplementation(() => {});
+  const position = vi
+    .spyOn(PcmStreamScheduler.prototype, "getPlaybackPosition")
+    .mockReturnValue({ fragmentIndex: 0, positionMs: 700 });
+  playbackStore.handleStreamChunk({
+    ...streamChunk(null),
+    text: "streamed",
+    captions: { text: "streamed", words: [] }
+  });
+  await vi.advanceTimersByTimeAsync(25);
+  expect(emitTo).toHaveBeenLastCalledWith(
+    "hud",
+    "hud:caption",
+    expect.objectContaining({ active: true, paused: false, position_ms: 700 })
+  );
+  // A suspended context reports no position at a stall boundary: the frozen
+  // caption must stay active, or /status cannot tell "paused" from "finished".
+  position.mockReturnValue(null);
+  playbackStore.pausePlayback();
+  await vi.advanceTimersByTimeAsync(25);
+  expect(emitTo).toHaveBeenLastCalledWith(
+    "hud",
+    "hud:caption",
+    expect.objectContaining({ active: true, paused: true, position_ms: 700 })
+  );
+  playbackStore.handleStop();
+});
+
+/** An AudioParam the fake graph can connect into. */
+interface FakeParam {
+  value: number;
+}
+
+interface FakeAudioNode {
+  kind: string;
+  connections: Array<FakeAudioNode | FakeParam>;
+  connect(target: FakeAudioNode | FakeParam): void;
+  disconnect(): void;
+  gain?: { value: number };
+  type?: string;
+  frequency?: { value: number };
+  Q?: { value: number };
+  curve?: Float32Array | null;
+  oversample?: string;
+  threshold?: { value: number };
+  knee?: { value: number };
+  ratio?: { value: number };
+  attack?: { value: number };
+  release?: { value: number };
+}
+
+/**
+ * A full Web Audio graph stub: enough for the real live walkie chain, so the
+ * scheduler's output gain can be traced into the effect input.
+ */
+function stubAudioGraph() {
+  const nodes: FakeAudioNode[] = [];
+  const oscillators: Array<{ start: () => void; stop: () => void }> = [];
+  const node = (kind: string): FakeAudioNode => {
+    const created: FakeAudioNode = {
+      kind,
+      connections: [],
+      connect(target) {
+        created.connections.push(target);
+      },
+      disconnect() {
+        created.connections.length = 0;
+      }
+    };
+    nodes.push(created);
+    return created;
+  };
+  const param = () => ({ value: 0 });
+  vi.stubGlobal(
+    "AudioContext",
+    class {
+      state = "running";
+      currentTime = 0;
+      destination = node("destination");
+      createGain = () => Object.assign(node("gain"), { gain: param() });
+      createBiquadFilter = () =>
+        Object.assign(node("biquad"), {
+          type: "lowpass",
+          frequency: param(),
+          Q: param(),
+          gain: param()
+        });
+      ["createWaveShaper"] = () =>
+        Object.assign(node("waveshaper"), { curve: null, oversample: "none" });
+      createDynamicsCompressor = () =>
+        Object.assign(node("compressor"), {
+          threshold: param(),
+          knee: param(),
+          ratio: param(),
+          attack: param(),
+          release: param()
+        });
+      createOscillator = () => {
+        const start = vi.fn();
+        const stop = vi.fn();
+        oscillators.push({ start, stop });
+        return Object.assign(node("oscillator"), {
+          type: "sine",
+          frequency: param(),
+          start,
+          stop
+        });
+      };
+      createBufferSource = () =>
+        Object.assign(node("source"), {
+          buffer: null,
+          loop: false,
+          start: vi.fn(),
+          stop: vi.fn(),
+          onended: null
+        });
+      resume = vi.fn();
+      suspend = vi.fn();
+      close = vi.fn();
+    }
+  );
+  // Missing effect samples must not stop the chain from building.
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({ ok: false }))
+  );
+  return { nodes, oscillators };
+}
+
+it("plays a walkie-talkie stream through the live chain, not the raw output", async () => {
+  const { nodes, oscillators } = stubAudioGraph();
+  playbackStore.syncPlaybackConfig(100, 1, 1, "walkie_talkie");
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  playbackStore.handleStreamChunk(streamChunk(null));
+  expect(playbackStore.isPlaying).toBe(true);
+
+  const biquads = nodes.filter((node) => node.kind === "biquad");
+  expect(biquads).toHaveLength(4);
+  expect(nodes.find((node) => node.kind === "waveshaper")?.oversample).toBe("2x");
+  // The live chain's input is the only gain whose first connection is the EQ,
+  // and the scheduler's output gain is the only gain that feeds it.
+  const input = nodes.find((node) => node.kind === "gain" && node.connections[0] === biquads[0]);
+  if (input === undefined) throw new Error("the live chain input gain is missing");
+  expect(
+    nodes.filter((node) => node.kind === "gain" && node.connections.includes(input))
+  ).toHaveLength(1);
+  expect(oscillators[0].start).toHaveBeenCalledOnce();
+
+  playbackStore.handleStop();
+  expect(oscillators[0].stop).toHaveBeenCalledOnce();
+});
+
+it("lets a completed stream's live chain ring out and self-dispose", async () => {
+  vi.useFakeTimers();
+  const { oscillators } = stubAudioGraph();
+  playbackStore.syncPlaybackConfig(100, 1, 1, "walkie_talkie");
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  playbackStore.handleStreamChunk(streamChunk(null));
+  expect(oscillators[0].start).toHaveBeenCalledOnce();
+
+  // No scheduled audio is left, so the terminal marker completes the reading
+  // at once: the chain gets its tail click and disposes on its own delay.
+  await listeners.get("pagination:complete")!({ payload: null });
+  expect(playbackStore.isPlaying).toBe(false);
+  expect(oscillators[0].stop).not.toHaveBeenCalled();
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(oscillators[0].stop).toHaveBeenCalledOnce();
 });

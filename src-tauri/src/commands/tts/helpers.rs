@@ -625,6 +625,18 @@ pub(crate) fn active_engine(tts_config: &TtsConfig) -> TtsEngine {
     resolve_effective(tts_config).engine
 }
 
+/// The active profile's playback speed. The webview syncs its speed from the
+/// active profile (`syncPlaybackConfig`), so this is the rate the next reading
+/// plays at, even when a command addresses synthesis at another profile.
+pub(crate) fn active_playback_speed(tts_config: &TtsConfig) -> f32 {
+    tts_config
+        .profiles
+        .iter()
+        .find(|profile| profile.id == tts_config.active_profile_id)
+        .map(|profile| profile.speed)
+        .unwrap_or(1.0)
+}
+
 /// The active profile's model id for its engine (`""` when unset). The
 /// Dramatize gate keys emote-tag support on the (engine, model) pair.
 pub(crate) fn effective_model(eff: &EffectiveTtsRequest) -> String {
@@ -775,5 +787,23 @@ mod tests {
 
         let name_no_label = voice_display_name(&TtsEngine::OpenAI, &tts, "Alloy", None);
         assert_eq!(name_no_label, "alloy");
+    }
+
+    #[test]
+    fn active_playback_speed_follows_the_active_profile() {
+        // The streaming gate reads the speed the webview will apply, which is
+        // the active profile's, not the command's profile override.
+        let mut tts = TtsConfig::default();
+        tts.profiles.clear();
+        let mut profile = VoiceProfile::default();
+        profile.id = "fast".into();
+        profile.speed = 1.4;
+        tts.profiles.push(profile);
+        tts.active_profile_id = "fast".into();
+        assert!((active_playback_speed(&tts) - 1.4).abs() < 1e-6);
+
+        // A legacy config without a matching profile plays at the default rate.
+        tts.active_profile_id = "missing".into();
+        assert!((active_playback_speed(&tts) - 1.0).abs() < 1e-6);
     }
 }

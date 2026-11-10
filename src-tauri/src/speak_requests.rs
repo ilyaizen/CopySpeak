@@ -137,6 +137,15 @@ impl Registry {
         Registration::Proceed(seq)
     }
 
+    /// The sequence of `id` while its request is live. Unknown, finished and
+    /// cancelled ids return `None`.
+    pub fn live_seq(&self, id: &str) -> Option<u64> {
+        self.by_id
+            .get(id)
+            .filter(|entry| entry.phase == Phase::Live)
+            .map(|entry| entry.seq)
+    }
+
     /// Cancel `id`. `owns_playback(seq)` reports whether that live request
     /// still owns the speakers; the answer is recorded with the cancellation
     /// in one step, so a waiter never sees "cancelled" without it.
@@ -360,10 +369,7 @@ pub fn cancel(id: &str, stop: impl FnOnce()) -> StopOutcome {
 /// Whether `id` is registered and neither finished nor cancelled.
 #[cfg(test)]
 pub fn is_live(id: &str) -> bool {
-    registry()
-        .by_id
-        .get(id)
-        .is_some_and(|entry| entry.phase == Phase::Live)
+    registry().live_seq(id).is_some()
 }
 
 pub fn is_cancelled(seq: u64) -> bool {
@@ -380,6 +386,97 @@ pub fn claim_playback(request: u64, aborted: impl FnOnce() -> bool, emit: impl F
 /// an older request cannot cut it. Call before emitting the audio.
 pub fn claim_unscoped_playback() {
     OWNER.claim(NO_REQUEST, || false, || {});
+}
+
+/// How long a scoped playback control (`/pause`, `/resume`, `/seek`) waits for
+/// its live request to become audible. A control that arrives while the
+/// reading still synthesizes applies as soon as its first chunk is audible;
+/// past this bound it is answered as not playing.
+const CONTROL_OWNER_WAIT: Duration = Duration::from_secs(10);
+/// How often a waiting control re-checks ownership.
+const CONTROL_OWNER_POLL: Duration = Duration::from_millis(25);
+
+/// Result of one ownership attempt inside [`dispatch_to_owner_with`].
+enum OwnerCheck {
+    /// The request owns playback; `run` has executed under the owner lock.
+    Ran,
+    /// The request is live but another reading owns the speakers.
+    NotOwner,
+    /// Unknown, finished or cancelled: no wait can make this request audible.
+    NotLive,
+}
+
+/// Run `run` for `id` while its live request owns the speakers, waiting for a
+/// reading that is still starting to become audible.
+///
+/// The control path shares the scoped stop's critical section: the owner lock
+/// stays held while `run` emits, so a control for request R can never land
+/// after a newer reading claims the speakers, and a claim never interleaves
+/// with it. A request that is unknown, finished or cancelled returns `false`
+/// at once. A live request that never becomes the owner (queued behind
+/// another reading) returns `false` after [`CONTROL_OWNER_WAIT`].
+///
+/// Returns whether `run` executed. Callers map `false` to a `not_playing`
+/// answer and must not emit anything else on that path.
+pub fn dispatch_to_owner(id: &str, run: impl FnMut(u64)) -> bool {
+    dispatch_to_owner_with(
+        id,
+        &OWNER,
+        &REGISTRY,
+        CONTROL_OWNER_WAIT,
+        CONTROL_OWNER_POLL,
+        run,
+    )
+}
+
+/// [`dispatch_to_owner`] on injected state and timings, so tests use local
+/// instances instead of the process-global owner and registry.
+fn dispatch_to_owner_with(
+    id: &str,
+    owner: &PlaybackOwner,
+    registry: &Mutex<Registry>,
+    timeout: Duration,
+    poll: Duration,
+    mut run: impl FnMut(u64),
+) -> bool {
+    let deadline = Instant::now() + timeout;
+    loop {
+        match try_run_if_owner(id, owner, registry, &mut run) {
+            OwnerCheck::Ran => return true,
+            OwnerCheck::NotLive => return false,
+            OwnerCheck::NotOwner => {}
+        }
+        if Instant::now() >= deadline {
+            return false;
+        }
+        std::thread::sleep(poll);
+    }
+}
+
+/// One ownership attempt: check the request is live, compare the speaker
+/// owner, then run under the owner lock (lock order owner -> registry, the
+/// same as [`cancel`]). The registry guard drops before `run`, so the emit
+/// never holds the registry lock.
+fn try_run_if_owner(
+    id: &str,
+    owner: &PlaybackOwner,
+    registry: &Mutex<Registry>,
+    run: &mut impl FnMut(u64),
+) -> OwnerCheck {
+    owner.with_current(|current| {
+        let seq = registry
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .live_seq(id);
+        match seq {
+            None => OwnerCheck::NotLive,
+            Some(seq) if seq == current => {
+                run(seq);
+                OwnerCheck::Ran
+            }
+            Some(_) => OwnerCheck::NotOwner,
+        }
+    })
 }
 
 /// Holds a registered request live; dropping it marks the request finished.
@@ -903,5 +1000,233 @@ mod tests {
             cancel(id, || panic!("finished request must not stop")),
             StopOutcome::AlreadyFinished
         );
+    }
+
+    // ---- owner-gated dispatch (/pause, /resume, /seek) ----
+    //
+    // Local owner and registry instances keep these tests deterministic; the
+    // process-global ones serve the app and the other suites.
+
+    fn local_state() -> (PlaybackOwner, Mutex<Registry>) {
+        (PlaybackOwner::new(), Mutex::new(Registry::default()))
+    }
+
+    fn register_live(reg: &Mutex<Registry>, id: &str) -> u64 {
+        match reg.lock().unwrap().register(id, Instant::now()) {
+            Registration::Proceed(seq) => seq,
+            _ => panic!("{id} must register"),
+        }
+    }
+
+    #[test]
+    fn live_seq_reports_only_live_requests() {
+        let mut reg = Registry::default();
+        let now = Instant::now();
+        let Registration::Proceed(live) = reg.register("seq-live", now) else {
+            panic!("live must register");
+        };
+        assert_eq!(reg.live_seq("seq-live"), Some(live));
+        assert_eq!(reg.live_seq("seq-unknown"), None);
+
+        let Registration::Proceed(done) = reg.register("seq-done", now) else {
+            panic!("done must register");
+        };
+        reg.finish(done, now);
+        assert_eq!(reg.live_seq("seq-done"), None);
+
+        assert!(matches!(
+            reg.register("seq-cancelled", now),
+            Registration::Proceed(_)
+        ));
+        reg.cancel("seq-cancelled", now, |_| false);
+        assert_eq!(reg.live_seq("seq-cancelled"), None);
+    }
+
+    #[test]
+    fn dispatch_runs_for_the_live_speaker_owner_only() {
+        let (owner, reg) = local_state();
+        let seq = register_live(&reg, "control-owner");
+        owner.claim(seq, || false, || {});
+
+        let mut seen = Vec::new();
+        assert!(dispatch_to_owner_with(
+            "control-owner",
+            &owner,
+            &reg,
+            Duration::from_millis(200),
+            Duration::from_millis(5),
+            |seq| seen.push(seq),
+        ));
+        assert_eq!(seen, [seq]);
+
+        // A newer unscoped reading took the speakers: the control is refused.
+        owner.claim(NO_REQUEST, || false, || {});
+        assert!(!dispatch_to_owner_with(
+            "control-owner",
+            &owner,
+            &reg,
+            Duration::from_millis(20),
+            Duration::from_millis(5),
+            |_| panic!("an owner mismatch must not emit"),
+        ));
+    }
+
+    #[test]
+    fn dispatch_waits_for_a_starting_reading_to_become_audible() {
+        let owner = Arc::new(PlaybackOwner::new());
+        let reg = Arc::new(Mutex::new(Registry::default()));
+        let seq = register_live(&reg, "control-starting");
+        let claimer = {
+            let (owner, reg) = (Arc::clone(&owner), Arc::clone(&reg));
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(40));
+                // The reading's first audible chunk claims the speakers.
+                assert_eq!(reg.lock().unwrap().live_seq("control-starting"), Some(seq));
+                owner.claim(seq, || false, || {});
+            })
+        };
+
+        let mut seen = Vec::new();
+        assert!(dispatch_to_owner_with(
+            "control-starting",
+            &owner,
+            &reg,
+            Duration::from_secs(2),
+            Duration::from_millis(5),
+            |seq| seen.push(seq),
+        ));
+        claimer.join().unwrap();
+        assert_eq!(seen, [seq]);
+    }
+
+    #[test]
+    fn dispatch_refuses_unknown_finished_and_cancelled_requests_at_once() {
+        let (owner, reg) = local_state();
+        let timeout = Duration::from_secs(2);
+        let poll = Duration::from_millis(5);
+
+        let started = Instant::now();
+        assert!(!dispatch_to_owner_with(
+            "control-unknown",
+            &owner,
+            &reg,
+            timeout,
+            poll,
+            |_| panic!("an unknown request must not emit"),
+        ));
+        assert!(started.elapsed() < Duration::from_millis(500));
+
+        let finished = register_live(&reg, "control-finished");
+        reg.lock().unwrap().finish(finished, Instant::now());
+        let started = Instant::now();
+        assert!(!dispatch_to_owner_with(
+            "control-finished",
+            &owner,
+            &reg,
+            timeout,
+            poll,
+            |_| panic!("a finished request must not emit"),
+        ));
+        assert!(started.elapsed() < Duration::from_millis(500));
+
+        let cancelled = register_live(&reg, "control-cancelled");
+        assert_eq!(
+            reg.lock()
+                .unwrap()
+                .cancel("control-cancelled", Instant::now(), |_| false),
+            StopOutcome::Cancelled {
+                seq: cancelled,
+                stopped_playback: false
+            }
+        );
+        assert!(!dispatch_to_owner_with(
+            "control-cancelled",
+            &owner,
+            &reg,
+            timeout,
+            poll,
+            |_| panic!("a cancelled request must not emit"),
+        ));
+    }
+
+    #[test]
+    fn dispatch_times_out_when_the_reading_never_owns_the_speakers() {
+        let (owner, reg) = local_state();
+        let _queued = register_live(&reg, "control-queued");
+        let other = register_live(&reg, "control-other");
+        owner.claim(other, || false, || {});
+
+        let started = Instant::now();
+        assert!(!dispatch_to_owner_with(
+            "control-queued",
+            &owner,
+            &reg,
+            Duration::from_millis(60),
+            Duration::from_millis(5),
+            |_| panic!("a queued reading owns nothing"),
+        ));
+        let elapsed = started.elapsed();
+        assert!(
+            elapsed >= Duration::from_millis(60),
+            "gave up early: {elapsed:?}"
+        );
+        assert!(
+            elapsed < Duration::from_secs(2),
+            "waited too long: {elapsed:?}"
+        );
+    }
+
+    /// The emit runs inside the owner-lock critical section: a control for the
+    /// audible reading cannot interleave with a newer reading's claim.
+    #[test]
+    fn dispatch_emits_while_holding_the_owner_lock() {
+        use std::sync::mpsc;
+
+        let owner = Arc::new(PlaybackOwner::new());
+        let reg = Arc::new(Mutex::new(Registry::default()));
+        let seq = register_live(&reg, "control-lock");
+        owner.claim(seq, || false, || {});
+
+        let (run_started_tx, run_started_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel::<()>();
+        let (claimed_tx, claimed_rx) = mpsc::channel::<()>();
+        let dispatcher = {
+            let (owner, reg) = (Arc::clone(&owner), Arc::clone(&reg));
+            std::thread::spawn(move || {
+                dispatch_to_owner_with(
+                    "control-lock",
+                    &owner,
+                    &reg,
+                    Duration::from_secs(2),
+                    Duration::from_millis(5),
+                    |_| {
+                        run_started_tx.send(()).expect("signal run");
+                        release_rx.recv().expect("released");
+                    },
+                )
+            })
+        };
+        run_started_rx
+            .recv_timeout(Duration::from_secs(1))
+            .expect("the control started emitting");
+
+        let claimer = {
+            let owner = Arc::clone(&owner);
+            std::thread::spawn(move || {
+                // A newer reading claims the speakers.
+                owner.claim(NO_REQUEST, || false, || {});
+                let _ = claimed_tx.send(());
+            })
+        };
+        assert!(
+            claimed_rx.recv_timeout(Duration::from_millis(100)).is_err(),
+            "a claim interleaved with the control's emit"
+        );
+        release_tx.send(()).expect("release the emit");
+        claimed_rx
+            .recv_timeout(Duration::from_secs(2))
+            .expect("the claim proceeds after the emit");
+        assert!(dispatcher.join().unwrap(), "the control applied");
+        claimer.join().unwrap();
     }
 }

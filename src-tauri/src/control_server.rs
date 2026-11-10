@@ -44,11 +44,43 @@ struct StopRequest {
     request_id: Option<String>,
 }
 
+/// `POST /pause` and `POST /resume` body: the reading whose playback the
+/// control targets. Scoped only, so a control can never reach another reading.
+#[derive(Debug, Deserialize)]
+struct ScopedControl {
+    request_id: String,
+}
+
+/// `POST /seek` body: the reading to seek and the signed step in milliseconds
+/// (negative rewinds, positive fast-forwards).
+#[derive(Debug, Deserialize)]
+struct SeekControl {
+    request_id: String,
+    delta_ms: i64,
+}
+
+/// Largest accepted seek step. The playback bar moves by ±5 s; the route lets
+/// other local clients use up to a minute without a stray value jumping the
+/// whole reading.
+const MAX_SEEK_DELTA_MS: i64 = 60_000;
+
 enum ControlRequest {
     Health,
     Status,
     Stop(StopRequest),
     Speak(SpeakRequest),
+    Pause(String),
+    Resume(String),
+    Seek(SeekControl),
+}
+
+/// Which POST route the request line targets.
+enum PostRoute {
+    Stop,
+    Speak,
+    Pause,
+    Resume,
+    Seek,
 }
 
 /// How a speak request ended.
@@ -152,6 +184,31 @@ fn handle_connection(
                 "outcome": outcome.as_str(),
             });
             http_response(200, "OK", &body.to_string())
+        }
+        Ok(ControlRequest::Pause(request_id)) => {
+            // Scoped control: applies only while this request owns the
+            // speakers. A reading that is still synthesizing or queued gets a
+            // bounded wait, so a pause pressed during buffering lands on its
+            // first audible chunk.
+            let applied = speak_requests::dispatch_to_owner(&request_id, |_| {
+                crate::commands::emit_playback_pause(&app);
+            });
+            http_response(200, "OK", &control_body("paused", &request_id, applied))
+        }
+        Ok(ControlRequest::Resume(request_id)) => {
+            let applied = speak_requests::dispatch_to_owner(&request_id, |_| {
+                crate::commands::emit_playback_resume(&app);
+            });
+            http_response(200, "OK", &control_body("resumed", &request_id, applied))
+        }
+        Ok(ControlRequest::Seek(SeekControl {
+            request_id,
+            delta_ms,
+        })) => {
+            let applied = speak_requests::dispatch_to_owner(&request_id, |_| {
+                crate::commands::emit_playback_seek(&app, delta_ms);
+            });
+            http_response(200, "OK", &control_body("seeked", &request_id, applied))
         }
         Ok(ControlRequest::Speak(request)) => {
             match tauri::async_runtime::block_on(handle_speak(app, request, wait_lock)) {
@@ -343,6 +400,25 @@ fn json_error(message: &str) -> String {
     value.to_string()
 }
 
+/// Answer a scoped transport route. The outcome names the action when the
+/// ownership-gated emit ran; every refused case (unknown, finished, cancelled,
+/// queued or another reading's playback) answers `not_playing`.
+fn control_body(action: &str, request_id: &str, applied: bool) -> String {
+    let outcome = if applied { action } else { "not_playing" };
+    log::info!(
+        "[Control] {} for request {}: {}",
+        action,
+        request_id,
+        outcome
+    );
+    serde_json::json!({
+        "ok": true,
+        "request_id": request_id,
+        "outcome": outcome,
+    })
+    .to_string()
+}
+
 fn content_length(headers: &str) -> Option<usize> {
     headers
         .lines()
@@ -362,13 +438,23 @@ fn parse_request(buffer: &[u8]) -> Result<ControlRequest, (u16, String)> {
     if request_line.starts_with("GET /status ") {
         return Ok(ControlRequest::Status);
     }
-    let is_stop = request_line.starts_with("POST /stop ");
-    if !is_stop && !request_line.starts_with("POST /speak ") {
+    let route = if request_line.starts_with("POST /stop ") {
+        PostRoute::Stop
+    } else if request_line.starts_with("POST /speak ") {
+        PostRoute::Speak
+    } else if request_line.starts_with("POST /pause ") {
+        PostRoute::Pause
+    } else if request_line.starts_with("POST /resume ") {
+        PostRoute::Resume
+    } else if request_line.starts_with("POST /seek ") {
+        PostRoute::Seek
+    } else {
         return Err((
             404,
-            "expected GET /health, GET /status, POST /stop or POST /speak".to_string(),
+            "expected GET /health, GET /status, POST /stop, POST /speak, POST /pause, POST /resume or POST /seek"
+                .to_string(),
         ));
-    }
+    };
 
     let content_length = content_length(&headers).unwrap_or(0);
     let body_start = header_end + 4;
@@ -378,20 +464,29 @@ fn parse_request(buffer: &[u8]) -> Result<ControlRequest, (u16, String)> {
     }
     let body = &buffer[body_start..body_end];
 
-    if is_stop {
-        // A bodyless stop stays the legacy global stop.
-        let stop: StopRequest = if body.iter().all(u8::is_ascii_whitespace) {
-            StopRequest::default()
-        } else {
-            serde_json::from_slice(body)
-                .map_err(|error| (400, format!("invalid JSON: {}", error)))?
-        };
-        if let Some(id) = stop.request_id.as_deref() {
-            speak_requests::validate_id(id).map_err(|error| (400, error))?;
-        }
-        return Ok(ControlRequest::Stop(stop));
+    match route {
+        PostRoute::Stop => parse_stop(body),
+        PostRoute::Speak => parse_speak(body),
+        PostRoute::Pause => parse_scoped_request_id(body).map(ControlRequest::Pause),
+        PostRoute::Resume => parse_scoped_request_id(body).map(ControlRequest::Resume),
+        PostRoute::Seek => parse_seek(body),
     }
+}
 
+/// `POST /stop`: a bodyless stop stays the legacy global stop.
+fn parse_stop(body: &[u8]) -> Result<ControlRequest, (u16, String)> {
+    let stop: StopRequest = if body.iter().all(u8::is_ascii_whitespace) {
+        StopRequest::default()
+    } else {
+        serde_json::from_slice(body).map_err(|error| (400, format!("invalid JSON: {}", error)))?
+    };
+    if let Some(id) = stop.request_id.as_deref() {
+        speak_requests::validate_id(id).map_err(|error| (400, error))?;
+    }
+    Ok(ControlRequest::Stop(stop))
+}
+
+fn parse_speak(body: &[u8]) -> Result<ControlRequest, (u16, String)> {
     let request: SpeakRequest =
         serde_json::from_slice(body).map_err(|error| (400, format!("invalid JSON: {}", error)))?;
     if request.text.trim().is_empty() {
@@ -401,6 +496,31 @@ fn parse_request(buffer: &[u8]) -> Result<ControlRequest, (u16, String)> {
         speak_requests::validate_id(id).map_err(|error| (400, error))?;
     }
     Ok(ControlRequest::Speak(request))
+}
+
+/// `POST /pause` and `POST /resume`: exactly one required `request_id`.
+fn parse_scoped_request_id(body: &[u8]) -> Result<String, (u16, String)> {
+    let control: ScopedControl =
+        serde_json::from_slice(body).map_err(|error| (400, format!("invalid JSON: {}", error)))?;
+    speak_requests::validate_id(&control.request_id).map_err(|error| (400, error))?;
+    Ok(control.request_id)
+}
+
+/// `POST /seek`: a required `request_id` and a signed, non-zero step.
+fn parse_seek(body: &[u8]) -> Result<ControlRequest, (u16, String)> {
+    let seek: SeekControl =
+        serde_json::from_slice(body).map_err(|error| (400, format!("invalid JSON: {}", error)))?;
+    speak_requests::validate_id(&seek.request_id).map_err(|error| (400, error))?;
+    if seek.delta_ms == 0 {
+        return Err((400, "delta_ms must be non-zero".to_string()));
+    }
+    if seek.delta_ms.unsigned_abs() > MAX_SEEK_DELTA_MS as u64 {
+        return Err((
+            400,
+            format!("delta_ms must be within -{MAX_SEEK_DELTA_MS}..={MAX_SEEK_DELTA_MS}"),
+        ));
+    }
+    Ok(ControlRequest::Seek(seek))
 }
 
 fn find_header_end(buffer: &[u8]) -> Option<usize> {
@@ -594,6 +714,17 @@ mod tests {
         .into_bytes()
     }
 
+    /// Build a POST request for any control route, with a matching length.
+    fn post_request(path: &str, body: &str) -> Vec<u8> {
+        format!(
+            "POST {} HTTP/1.1\r\nContent-Length: {}\r\n\r\n{}",
+            path,
+            body.len(),
+            body
+        )
+        .into_bytes()
+    }
+
     #[test]
     fn parse_request_routes_scoped_stop() {
         match parse_request(&stop_request(r#"{"request_id":"hermes-abc123"}"#)) {
@@ -624,6 +755,97 @@ mod tests {
             parse_request(&speak_request(&speak)),
             Err((400, _))
         ));
+    }
+
+    #[test]
+    fn parse_request_routes_scoped_pause_and_resume() {
+        match parse_request(&post_request("/pause", r#"{"request_id":"hermes-p"}"#)) {
+            Ok(ControlRequest::Pause(id)) => assert_eq!(id, "hermes-p"),
+            _ => panic!("expected a pause control"),
+        }
+        match parse_request(&post_request("/resume", r#"{"request_id":"hermes-r"}"#)) {
+            Ok(ControlRequest::Resume(id)) => assert_eq!(id, "hermes-r"),
+            _ => panic!("expected a resume control"),
+        }
+    }
+
+    #[test]
+    fn parse_request_routes_seek_with_signed_delta() {
+        for (body, expected) in [
+            (r#"{"request_id":"hermes-s","delta_ms":5000}"#, 5000i64),
+            (r#"{"request_id":"hermes-s","delta_ms":-5000}"#, -5000),
+            (r#"{"request_id":"hermes-s","delta_ms":60000}"#, 60_000),
+            (r#"{"request_id":"hermes-s","delta_ms":-60000}"#, -60_000),
+        ] {
+            match parse_request(&post_request("/seek", body)) {
+                Ok(ControlRequest::Seek(SeekControl {
+                    request_id,
+                    delta_ms,
+                })) => {
+                    assert_eq!(request_id, "hermes-s");
+                    assert_eq!(delta_ms, expected);
+                }
+                _ => panic!("expected a seek control for {body}"),
+            }
+        }
+    }
+
+    #[test]
+    fn parse_request_rejects_incomplete_or_invalid_controls() {
+        // Missing or invalid request ids.
+        assert!(matches!(
+            parse_request(&post_request("/pause", "{}")),
+            Err((400, _))
+        ));
+        assert!(matches!(
+            parse_request(&post_request("/pause", r#"{"request_id":"bad id"}"#)),
+            Err((400, _))
+        ));
+        assert!(matches!(
+            parse_request(&post_request("/resume", "not json")),
+            Err((400, _))
+        ));
+        // Seek needs a non-zero integer step inside the accepted range.
+        for body in [
+            r#"{"request_id":"hermes-s"}"#,
+            r#"{"request_id":"hermes-s","delta_ms":0}"#,
+            r#"{"request_id":"hermes-s","delta_ms":1.5}"#,
+            r#"{"request_id":"hermes-s","delta_ms":60001}"#,
+            r#"{"request_id":"hermes-s","delta_ms":-60001}"#,
+            r#"{"request_id":"bad id","delta_ms":5000}"#,
+        ] {
+            assert!(
+                matches!(parse_request(&post_request("/seek", body)), Err((400, _))),
+                "{body} must be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn parse_request_404_names_every_control_route() {
+        match parse_request(&post_request("/play", "{}")) {
+            Err((404, message)) => {
+                for path in ["/pause", "/resume", "/seek", "/stop", "/speak"] {
+                    assert!(message.contains(path), "message misses {path}: {message}");
+                }
+            }
+            _ => panic!("an unknown route must 404"),
+        }
+    }
+
+    #[test]
+    fn control_body_reports_the_action_or_not_playing() {
+        let applied: serde_json::Value =
+            serde_json::from_str(&control_body("paused", "hermes-p", true)).expect("valid JSON");
+        assert_eq!(applied["ok"], true);
+        assert_eq!(applied["request_id"], "hermes-p");
+        assert_eq!(applied["outcome"], "paused");
+
+        let refused: serde_json::Value =
+            serde_json::from_str(&control_body("seeked", "hermes-s", false)).expect("valid JSON");
+        assert_eq!(refused["ok"], true);
+        assert_eq!(refused["request_id"], "hermes-s");
+        assert_eq!(refused["outcome"], "not_playing");
     }
 
     #[test]

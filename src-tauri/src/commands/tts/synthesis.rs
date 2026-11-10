@@ -2,7 +2,7 @@
 
 use crate::audio::{self, AudioPlayer};
 use crate::browser_bridge::{self, SpeakTrigger, TriggerSource};
-use crate::config::{self, AppConfig};
+use crate::config::{self, AppConfig, EffectId};
 use crate::fragment_queue::FragmentQueue;
 use crate::history::{self, HistoryLog};
 use crate::hud;
@@ -18,9 +18,9 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::helpers::{
-    active_engine, create_backend, create_backend_from_effective, engine_identifier, engine_str,
-    post_process_gate_for_effective, resolve_effective, resolve_effective_for_profile,
-    voice_display_name, SynthesisGuard,
+    active_engine, active_playback_speed, create_backend, create_backend_from_effective,
+    engine_identifier, engine_str, post_process_gate_for_effective, resolve_effective,
+    resolve_effective_for_profile, voice_display_name, SynthesisGuard,
 };
 use crate::commands::{
     AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent,
@@ -654,18 +654,37 @@ fn drain_chunk_stream(
     ))
 }
 
-/// Whether a fresh synthesis may play as live `audio-stream-chunk` events.
-/// The frontend PCM scheduler wires straight into `ctx.destination` with no
-/// effect chain, so an enabled profile effect must force the fragment path,
+/// Whether `effect` has a live implementation on the webview's PCM streaming
+/// path, so streaming keeps it. Only walkie-talkie streams: it mixes its
+/// clicks and static into arriving audio. The others are whole-buffer
+/// transforms that need the decoded fragment, so they keep the batch path,
 /// where `buildPlaybackUrl` runs `effect.process` before playback.
-/// A cold backend (daemon still loading) takes the batch path until it is ready.
+fn effect_streams_live(effect: &EffectId) -> bool {
+    matches!(effect, EffectId::None | EffectId::WalkieTalkie)
+}
+
+/// Whether a fresh synthesis may play as live `audio-stream-chunk` events.
+/// The frontend PCM scheduler wires straight into `ctx.destination`, so an
+/// effect that it cannot apply live must force the fragment path. A cold
+/// backend (daemon still loading) takes the batch path until it is ready.
+/// A non-default speed also takes the batch path: the PCM scheduler renders
+/// speed with the webview's SoundTouch stretcher, which sounds rougher than
+/// the `<audio>` element's pitch-preserving `playbackRate` the batch path uses.
+/// Pitch alone stays on the stream path, where it is rendered by the same
+/// stretcher the batch path uses, so streaming keeps its first-audio win.
 fn allows_streaming_playback(
     streaming_enabled: bool,
     backend_streams: bool,
     runtime_ready: bool,
     effects_enabled: bool,
+    active_effect: &EffectId,
+    playback_speed: f32,
 ) -> bool {
-    streaming_enabled && backend_streams && runtime_ready && !effects_enabled
+    streaming_enabled
+        && backend_streams
+        && runtime_ready
+        && (!effects_enabled || effect_streams_live(active_effect))
+        && (playback_speed - 1.0).abs() <= 1e-3
 }
 
 /// Profile effects count only while Experimental is on. The saved effect stays
@@ -1306,15 +1325,19 @@ async fn speak_now_internal(
 
     // Streaming backends forward PCM chunks during synthesis in playback mode;
     // batch backends (and cache hits / file output / pagination) take the
-    // untouched existing branches.
+    // untouched existing branches. An active effect streams only when the
+    // webview implements it live; the others keep the batch path.
+    let effects_on = effects_active(
+        experimental_enabled && config.lock().unwrap().general.effects_enabled,
+        eff.effects.enabled,
+    );
     let streaming_playback = allows_streaming_playback(
         streaming_enabled,
         backend_arc.supports_streaming(),
         backend_arc.runtime_ready(),
-        effects_active(
-            experimental_enabled && config.lock().unwrap().general.effects_enabled,
-            eff.effects.enabled,
-        ),
+        effects_on,
+        &eff.effects.active_effect,
+        active_playback_speed(&tts_config),
     ) && !cache_hit
         && !output_config.enabled;
     let (wav_bytes, already_streamed) = if let Some(speech) = cached {
@@ -2004,15 +2027,18 @@ async fn speak_queued_internal(
         // Synthesize fragment — streaming-capable backends forward PCM chunks
         // as they arrive; batch backends take the untouched synthesize path.
         let fragment_start = Instant::now();
+        let effects_on = effects_active(
+            experimental_enabled && config.lock().unwrap().general.effects_enabled,
+            eff.effects.enabled,
+        );
         let streamed = !replaying
             && allows_streaming_playback(
                 streaming_enabled,
                 backend_arc.supports_streaming(),
                 backend_arc.runtime_ready(),
-                effects_active(
-                    experimental_enabled && config.lock().unwrap().general.effects_enabled,
-                    eff.effects.enabled,
-                ),
+                effects_on,
+                &eff.effects.active_effect,
+                active_playback_speed(&tts_config),
             );
         let wav_bytes = if let Some(speech) = saved.as_mut().and_then(Iterator::next) {
             speech
@@ -2355,19 +2381,118 @@ mod streaming_tests {
     }
 
     #[test]
-    fn enabled_effect_forces_fragment_path_over_stream_chunks() {
-        // Streaming on, warm streaming backend, no effect: live chunks.
-        assert!(allows_streaming_playback(true, true, true, false));
-        // Any kill switch routes the reading through audio-fragment-ready,
-        // the only path where buildPlaybackUrl applies the effect.
-        assert!(!allows_streaming_playback(false, true, true, false));
-        assert!(!allows_streaming_playback(true, false, true, false));
-        assert!(!allows_streaming_playback(true, true, true, true));
+    fn streaming_gate_keeps_only_live_effects_on_the_pcm_path() {
+        // Streaming on, warm streaming backend, default speed: no effect and
+        // the live walkie-talkie stream play as chunks arrive.
+        assert!(allows_streaming_playback(
+            true,
+            true,
+            true,
+            false,
+            &EffectId::None,
+            1.0
+        ));
+        assert!(allows_streaming_playback(
+            true,
+            true,
+            true,
+            true,
+            &EffectId::WalkieTalkie,
+            1.0
+        ));
+        // Whole-buffer effects cannot run in the PCM scheduler: keep the batch
+        // path, where buildPlaybackUrl applies them to the decoded fragment.
+        assert!(!allows_streaming_playback(
+            true,
+            true,
+            true,
+            true,
+            &EffectId::GameBoy,
+            1.0
+        ));
+        assert!(!allows_streaming_playback(
+            true,
+            true,
+            true,
+            true,
+            &EffectId::Cyberpunk,
+            1.0
+        ));
+    }
+
+    #[test]
+    fn non_default_speed_keeps_the_batch_path() {
+        // The PCM scheduler renders speed with the webview's SoundTouch
+        // stretcher; the batch path keeps the audio element's pitch-preserving
+        // playbackRate, which sounds cleaner. Any non-default speed must take
+        // the batch path, fast or slow, whatever the effect.
+        assert!(!allows_streaming_playback(
+            true,
+            true,
+            true,
+            false,
+            &EffectId::None,
+            1.65
+        ));
+        assert!(!allows_streaming_playback(
+            true,
+            true,
+            true,
+            false,
+            &EffectId::None,
+            0.75
+        ));
+        assert!(!allows_streaming_playback(
+            true,
+            true,
+            true,
+            true,
+            &EffectId::WalkieTalkie,
+            1.4
+        ));
+        // Default speed keeps the stream path and its first-audio win.
+        assert!(allows_streaming_playback(
+            true,
+            true,
+            true,
+            true,
+            &EffectId::WalkieTalkie,
+            1.0
+        ));
+    }
+
+    #[test]
+    fn effect_streams_live_only_for_the_pcm_implemented_effect() {
+        assert!(effect_streams_live(&EffectId::None));
+        assert!(effect_streams_live(&EffectId::WalkieTalkie));
+        assert!(!effect_streams_live(&EffectId::GameBoy));
+        assert!(!effect_streams_live(&EffectId::Cyberpunk));
+    }
+
+    #[test]
+    fn kill_switches_force_the_batch_path() {
+        // Any kill switch routes the reading through audio-fragment-ready.
+        assert!(!allows_streaming_playback(
+            false,
+            true,
+            true,
+            false,
+            &EffectId::None,
+            1.0
+        ));
+        assert!(!allows_streaming_playback(
+            true,
+            false,
+            true,
+            false,
+            &EffectId::None,
+            1.0
+        ));
     }
 
     #[test]
     fn saved_effects_are_inert_while_experimental_is_off() {
-        // Experimental off must not let a saved profile effect disable streaming.
+        // Experimental off must let a saved effect stream again, whatever it is.
         assert!(effects_active(true, true));
         assert!(!effects_active(false, true));
         assert!(!effects_active(true, false));
@@ -2375,7 +2500,9 @@ mod streaming_tests {
             true,
             true,
             true,
-            effects_active(false, true)
+            effects_active(false, true),
+            &EffectId::GameBoy,
+            1.0
         ));
     }
 
@@ -2383,8 +2510,22 @@ mod streaming_tests {
     fn cold_backend_takes_batch_path_until_ready() {
         // A static streaming claim alone must not stream: a cold CLI daemon
         // would otherwise run a one-shot command through the stream branch.
-        assert!(!allows_streaming_playback(true, true, false, false));
-        assert!(allows_streaming_playback(true, true, true, false));
+        assert!(!allows_streaming_playback(
+            true,
+            true,
+            false,
+            false,
+            &EffectId::None,
+            1.0
+        ));
+        assert!(allows_streaming_playback(
+            true,
+            true,
+            true,
+            false,
+            &EffectId::None,
+            1.0
+        ));
     }
 
     #[test]

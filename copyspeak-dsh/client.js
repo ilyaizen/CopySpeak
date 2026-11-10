@@ -1,7 +1,7 @@
 /**
  * Browser half of the CopySpeak voice bundle.
  *
- * Adds four surfaces that share one transport to the CopySpeak control server:
+ * Adds five surfaces that share one transport to the CopySpeak control server:
  *
  *   POST http://127.0.0.1:43117/speak
  *   {"text": "...", "request_id": "dsh.<stamp>.<n>", "wait": true}
@@ -10,17 +10,25 @@
  * - A speaker action in the action row of each finished assistant message.
  * - A per-session reader that speaks the final reply of each completed turn,
  *   and highlights the word CopySpeak plays inside the reply text itself.
- * - A frame-wide playback bar that stops the reading and scrolls back to the
- *   spoken word when the message action scrolled out of view.
+ * - A frame-wide icon-only playback bar. It pauses, resumes, rewinds and
+ *   skips, stops the reading, and scrolls back to the spoken word when the
+ *   message action scrolled out of view.
  *
  * The request uses `mode: 'no-cors'` and a `text/plain` content type, so the
  * browser sends no CORS preflight; CopySpeak parses the JSON body without
  * reading the content type. The response is opaque, so a success only proves
  * the request reached the app. `wait: true` makes it resolve at playback end,
- * which restores the idle action state.
+ * which restores the idle action state. A paused reading keeps that request
+ * open until it resumes and ends, or until it stops.
  *
- * Captions poll `GET http://127.0.0.1:43117/status`, which answers the caption
- * snapshot the CopySpeak webview already emits (text, word timings, position).
+ * The control routes address one reading by the same request id:
+ *
+ *   POST /pause  {"request_id": "..."}
+ *   POST /resume {"request_id": "..."}
+ *   POST /seek   {"request_id": "...", "delta_ms": -5000}
+ *
+ * Captions and the bar poll `GET http://127.0.0.1:43117/status`, which answers
+ * the caption snapshot and the pause state the CopySpeak webview already emits.
  * That read-only route is CORS-open. Polling runs only while this plugin's own
  * reading plays, and the highlight hides when the route is absent.
  */
@@ -44,9 +52,19 @@ window.__ModuleLoader__.load({
     };
     /* The webview reports its audible clock every ~25 ms and throttles the
      * control-server report to ~100 ms, so one poll per 100 ms stays current. */
-    const CAPTION_POLL_MS = 100;
+    const STATUS_POLL_MS = 100;
     /* Stop polling when the status route never answers (older CopySpeak). */
-    const CAPTION_ATTEMPTS = 3;
+    const STATUS_ATTEMPTS = 3;
+    /* The seek controls move the reading by this many milliseconds. */
+    const SEEK_STEP_MS = 5000;
+    /* A status position that drops by more than this marks a rewind, because
+     * the app reports the position inside one fragment and playback only
+     * advances while it plays. */
+    const REWIND_SLOP_MS = 300;
+    /* An optimistic pause survives this long before a poll may override it, so
+     * a poll that started before the app applied the command cannot flicker
+     * the glyph back. */
+    const PAUSE_RECONCILE_MS = 350;
     /* The follow scroll moves at most once per 400 ms. */
     const SCROLL_INTERVAL_MS = 400;
     /* Follow keeps the spoken word between these two fractions of the chat
@@ -56,7 +74,7 @@ window.__ModuleLoader__.load({
     const FOLLOW_ANCHOR = 0.34;
     /* A manual scroll pauses following for a few seconds. */
     const FOLLOW_PAUSE_MS = 5000;
-    /* Host Tooltip: the bubble sits this far below its anchor. */
+    /* Host Tooltip: the bubble sits this far from its anchor. */
     const TOOLTIP_GAP = 8;
     /* Keep the centered bubble this far from the viewport edge. */
     const TOOLTIP_MARGIN = 12;
@@ -98,9 +116,12 @@ window.__ModuleLoader__.load({
       "follow.title": "Follow playback",
       "follow.description": "Scrolls the chat to keep the spoken word in view.",
       "bar.label": "CopySpeak playback",
-      "bar.reading": "Reading aloud",
+      "bar.pause": "Pause reading",
+      "bar.resume": "Resume reading",
+      "bar.back5": "Back 5 seconds",
+      "bar.forward5": "Forward 5 seconds",
+      "bar.stop": "Stop reading",
       "bar.showInChat": "Show in chat",
-      "bar.stop": "Stop",
       "switch.on": "On",
       "switch.off": "Off",
       "action.read": "Read aloud with CopySpeak",
@@ -152,23 +173,28 @@ window.__ModuleLoader__.load({
       ".dsh-csva-switch[data-on] .dsh-csva-switchThumb{transform:translateX(16px)}",
       /* The frame-wide playback bar. The shell overlay is click-through, so the
          bar opts back into pointer events. It floats in the lower right corner,
-         away from the sidebar and the centered composer. */
-      ".dsh-csva-bar{position:fixed;right:20px;bottom:20px;z-index:20;display:inline-flex;align-items:center;gap:6px;box-sizing:border-box;max-width:calc(100vw - 40px);padding:6px 6px 6px 10px;border:.5px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 6px 20px rgb(0 0 0 / 14%);pointer-events:auto}",
-      ".dsh-csva-barGlyph{flex:none;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;color:var(--dsw-alias-brand-primary)}",
-      ".dsh-csva-barWord{flex:0 1 auto;min-width:0;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:20px;color:var(--dsw-alias-label-secondary)}",
-      ".dsh-csva-barButton{flex:none;height:26px;padding:0 8px;border:none;border-radius:var(--dsw-radius-sm,6px);background:0 0;color:var(--dsw-alias-label-secondary);font:inherit;font-size:13px;line-height:20px;cursor:pointer}",
-      "@media (hover:hover){.dsh-csva-barButton:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}}",
-      ".dsh-csva-barButton:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
+         away from the sidebar and the centered composer. The bar is icon-only:
+         the brand mark, then pause or resume, rewind, skip, stop, and Show in
+         chat. Every control names itself in its tooltip and aria-label. */
+      ".dsh-csva-bar{position:fixed;right:20px;bottom:20px;z-index:20;display:inline-flex;align-items:center;gap:2px;box-sizing:border-box;max-width:calc(100vw - 40px);padding:6px 6px 6px 8px;border:.5px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 6px 20px rgb(0 0 0 / 14%);pointer-events:auto}",
+      ".dsh-csva-barGlyph{flex:none;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;margin-right:4px;color:var(--dsw-alias-brand-primary)}",
+      ".dsh-csva-barControl{flex:none;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:none;border-radius:var(--dsw-radius-sm,6px);background:0 0;color:var(--dsw-alias-label-secondary);cursor:pointer}",
+      "@media (hover:hover){.dsh-csva-barControl:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}}",
+      ".dsh-csva-barControl:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
       ".dsh-csva-barStop{color:var(--dsw-alias-label-primary)}",
       "::highlight(" +
         HIGHLIGHT_NAME +
         "){background-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base)}"
     ].join("\n");
 
-    /* One reading at a time; every surface observes this record. */
+    /* One reading at a time; every surface observes this record. `paused` is
+       the app's pause state, mirrored for the bar, and an optimistic flip waits
+       PAUSE_RECONCILE_MS before a poll may override it. */
     const playback = {
       messageId: null,
       requestId: null,
+      paused: false,
+      pauseChangedAt: 0,
       listeners: new Set(),
       sequence: 1
     };
@@ -190,14 +216,24 @@ window.__ModuleLoader__.load({
     function remember(messageId, requestId) {
       playback.messageId = messageId;
       playback.requestId = requestId;
+      playback.paused = false;
+      playback.pauseChangedAt = 0;
       emit(playback.listeners);
     }
 
     function forget() {
       playback.messageId = null;
       playback.requestId = null;
-      stopCaptionPolling();
+      playback.paused = false;
+      playback.pauseChangedAt = 0;
+      stopStatusPolling();
       resetReading(null, null, "");
+      emit(playback.listeners);
+    }
+
+    function setPlaybackPaused(paused) {
+      if (playback.paused === paused) return;
+      playback.paused = paused;
       emit(playback.listeners);
     }
 
@@ -234,8 +270,9 @@ window.__ModuleLoader__.load({
       } catch {
         /* Private mode: the switch still works for this page. */
       }
-      /* The caption poll runs for the whole reading, so the bar keeps its word
-         indicator. Disabling captions only drops the inline highlight. */
+      /* The status poll runs for the whole reading, so the bar keeps its pause
+         state and Show in chat keeps its target. Disabling captions only drops
+         the inline highlight. */
       if (name === "captions" && !enabled) clearHighlight();
       emit(preferences.listeners);
     }
@@ -272,25 +309,17 @@ window.__ModuleLoader__.load({
       fragmentEntries: 0,
       fragmentMap: null,
       fragmentPosition: 0,
+      /* Where the current fragment starts and ends in the rendered tokens.
+         Fresh synthesis streams one fragment as a growing prefix, so its
+         reports align from the start again, not from the previous, shorter one. */
+      fragmentStart: 0,
+      fragmentEnd: 0,
       scroller: null,
       watchedScroller: null,
       activeToken: -1,
       lastScrollAt: 0,
       followPausedUntil: 0
     };
-
-    /* Live word for the floating bar. It changes about once per spoken word, so
-       the bar re-renders only when a new word starts. */
-    const captionState = {
-      word: "",
-      listeners: new Set()
-    };
-
-    function setCaptionWord(word) {
-      if (captionState.word === word) return;
-      captionState.word = word;
-      emit(captionState.listeners);
-    }
 
     /* Lowercased letters and digits only, so punctuation and wrapping do not
      * split a match between the spoken text and the rendered text. */
@@ -554,8 +583,23 @@ window.__ModuleLoader__.load({
       reading.fragmentText = null;
       reading.fragmentWords = null;
       reading.fragmentMap = null;
+      reading.fragmentStart = 0;
+      reading.fragmentEnd = 0;
       reading.activeToken = -1;
       return reading.element;
+    }
+
+    /* A rewind invalidates the forward alignment: the next snapshot re-aligns
+       from the start of the message again, not from the last word played. */
+    function invalidateAlignment() {
+      reading.cursor = 0;
+      reading.fragmentText = null;
+      reading.fragmentWords = null;
+      reading.fragmentMap = null;
+      reading.fragmentPosition = 0;
+      reading.fragmentStart = 0;
+      reading.fragmentEnd = 0;
+      reading.activeToken = -1;
     }
 
     function ensureFragmentMap(snapshot) {
@@ -570,7 +614,20 @@ window.__ModuleLoader__.load({
         snapshot.position >= reading.fragmentPosition - 300;
       if (cached) return reading.fragmentMap;
       const fragmentWords = captionWords(snapshot);
-      const map = alignFragment(fragmentWords, reading.tokens, reading.cursor);
+      /* Fresh synthesis grows one fragment between polls: each report starts
+         its text at the fragment's first word. Align a growing report from the
+         fragment start again. Aligning forward from the previous, shorter
+         report anchors on a later repeat of the first word and fails. A text
+         that is not a longer prefix is a new fragment, so the next alignment
+         starts after the previous fragment's mapped words. */
+      const growing =
+        reading.fragmentText !== null && snapshot.text.startsWith(reading.fragmentText);
+      if (!growing) {
+        reading.cursor = Math.max(reading.cursor, reading.fragmentEnd);
+        reading.fragmentStart = reading.cursor;
+        reading.fragmentEnd = 0;
+      }
+      const map = alignFragment(fragmentWords, reading.tokens, reading.fragmentStart);
       reading.fragmentText = snapshot.text;
       reading.fragmentWords = fragmentWords;
       reading.fragmentEntries = snapshot.words.length;
@@ -579,7 +636,7 @@ window.__ModuleLoader__.load({
       if (map === null) return null;
       let last = -1;
       for (const index of map) if (index > last) last = index;
-      if (last >= 0) reading.cursor = last + 1;
+      if (last >= 0) reading.fragmentEnd = Math.max(reading.fragmentEnd, last + 1);
       return map;
     }
 
@@ -703,25 +760,22 @@ window.__ModuleLoader__.load({
       });
     }
 
-    /* One caption snapshot drives the inline highlight, the follow scroll, and
-     * the floating bar's word. Alignment runs with captions off too, so the
-     * bar's scroll control still finds the spoken word. */
+    /* One status snapshot drives the inline highlight, the follow scroll, and
+     * the Show in chat target. Alignment runs with captions off too, so Show in
+     * chat still finds the spoken word. */
     function updateCaption(snapshot) {
       if (snapshot === null) {
         clearHighlight();
-        setCaptionWord("");
         return;
       }
       const element = ensureTarget();
       if (element === null || reading.tokens === null) {
         clearHighlight();
-        setCaptionWord("");
         return;
       }
       const map = ensureFragmentMap(snapshot);
       if (map === null) {
         clearHighlight();
-        setCaptionWord("");
         return;
       }
       const words = reading.fragmentWords === null ? [] : reading.fragmentWords;
@@ -730,7 +784,6 @@ window.__ModuleLoader__.load({
         if (preferences.captions) clearHighlight();
         return;
       }
-      setCaptionWord(words[wordIndex].text);
       const tokenIndex = nearestMapped(map, wordIndex);
       if (tokenIndex < 0 || tokenIndex === reading.activeToken) return;
       const token = reading.tokens[tokenIndex];
@@ -754,63 +807,107 @@ window.__ModuleLoader__.load({
       reading.fragmentPosition = 0;
       reading.fragmentWords = null;
       reading.fragmentEntries = 0;
+      reading.fragmentStart = 0;
+      reading.fragmentEnd = 0;
       reading.scroller = null;
       reading.activeToken = -1;
       reading.lastScrollAt = 0;
       reading.followPausedUntil = 0;
       unwatchScroller();
       clearHighlight();
-      setCaptionWord("");
     }
 
-    const captionPoll = { timer: null, attempts: 0, sequence: 0 };
+    /* The status poll. It runs for the whole reading, with captions off too: the
+     * same snapshot drives the highlight, follow, Show in chat, and the bar's
+     * pause state. `position` follows the app's per-fragment clock so a rewind
+     * shows itself as a backward jump. */
+    const statusPoll = { timer: null, attempts: 0, sequence: 0, position: null };
 
-    function stopCaptionPolling() {
-      if (captionPoll.timer !== null) clearInterval(captionPoll.timer);
-      captionPoll.timer = null;
-      captionPoll.attempts = 0;
-      captionPoll.sequence = 0;
+    function stopStatusPolling() {
+      if (statusPoll.timer !== null) clearInterval(statusPoll.timer);
+      statusPoll.timer = null;
+      statusPoll.attempts = 0;
+      statusPoll.sequence = 0;
+      statusPoll.position = null;
     }
 
-    function startCaptionPolling(requestId) {
-      stopCaptionPolling();
+    function startStatusPolling(requestId) {
+      stopStatusPolling();
       function poll() {
         if (playback.requestId !== requestId) {
-          stopCaptionPolling();
+          stopStatusPolling();
           return;
         }
-        captionPoll.sequence += 1;
-        const sequence = captionPoll.sequence;
-        void readCaptionStatus().then(function (result) {
+        statusPoll.sequence += 1;
+        const sequence = statusPoll.sequence;
+        void readPlaybackStatus().then(function (result) {
           /* Ignore a slower answer from an older poll. */
-          if (playback.requestId !== requestId || sequence !== captionPoll.sequence) return;
+          if (playback.requestId !== requestId || sequence !== statusPoll.sequence) return;
           if (!result.reached) {
             clearHighlight();
-            setCaptionWord("");
-            captionPoll.attempts += 1;
-            if (captionPoll.attempts >= CAPTION_ATTEMPTS) stopCaptionPolling();
+            statusPoll.attempts += 1;
+            if (statusPoll.attempts >= STATUS_ATTEMPTS) {
+              statusPoll.attempts = 0;
+              stopStatusPolling();
+              /* An older app has no status route and no pause routes: assume
+                 the reading still plays, so the glyph does not stay on pause. */
+              setPlaybackPaused(false);
+            }
             return;
           }
-          captionPoll.attempts = 0;
-          updateCaption(result.caption);
+          statusPoll.attempts = 0;
+          /* The app owns the pause state: it can toggle from its own window,
+             and an app without the pause routes answers the poll anyway. Skip
+             the reconcile right after a local flip, so the app can apply it. */
+          if (Date.now() - playback.pauseChangedAt >= PAUSE_RECONCILE_MS) {
+            setPlaybackPaused(result.paused);
+          }
+          const snapshot = result.caption;
+          const rewound = trackRewind(snapshot);
+          updateCaption(snapshot);
+          /* A rewind that crossed a fragment boundary only shows itself when
+             the forward alignment finds nothing: retry from the message start. */
+          if (rewound && snapshot !== null && reading.fragmentMap === null) {
+            invalidateAlignment();
+            updateCaption(snapshot);
+          }
         });
       }
       poll();
-      captionPoll.timer = setInterval(poll, CAPTION_POLL_MS);
+      statusPoll.timer = setInterval(poll, STATUS_POLL_MS);
     }
 
-    /* CopySpeak reports the caption it renders in its own webview. A missing
-       route stops the polling; an inactive snapshot clears the highlight. */
-    function readCaptionStatus() {
+    /* The app reports the position inside one fragment, so a normal fragment
+       change also drops it. A drop on the same fragment is certainly a rewind:
+       reset the alignment before the next pass. A drop across fragments stays
+       ambiguous, and the caller retries from the start only if aligning forward
+       fails. */
+    function trackRewind(snapshot) {
+      if (snapshot === null) return false;
+      const previous = statusPoll.position;
+      statusPoll.position = snapshot.position;
+      if (previous === null || snapshot.position >= previous - REWIND_SLOP_MS) return false;
+      if (reading.fragmentText === snapshot.text) invalidateAlignment();
+      return true;
+    }
+
+    /* CopySpeak reports the caption it renders in its own webview, plus the
+       pause state. A missing route stops the polling; an inactive snapshot
+       clears the highlight. */
+    function readPlaybackStatus() {
       return fetch(CONTROL_URL + "/status", { mode: "cors", cache: "no-store" })
         .then(function (response) {
-          if (!response.ok) return { reached: false, caption: null };
+          if (!response.ok) return { reached: false, paused: false, caption: null };
           return response.json().then(function (body) {
-            return { reached: true, caption: captionFromStatus(body) };
+            return {
+              reached: true,
+              paused: body !== null && body !== undefined && body.paused === true,
+              caption: captionFromStatus(body)
+            };
           });
         })
         .catch(function () {
-          return { reached: false, caption: null };
+          return { reached: false, paused: false, caption: null };
         });
     }
 
@@ -861,6 +958,36 @@ window.__ModuleLoader__.load({
       return post("/stop", { request_id: requestId });
     }
 
+    /* Pause and resume address one reading by request id, like stop. The glyph
+       flips at once; the next status poll confirms it, and an older app that
+       has no pause route ignores the request. Without a live status poll there
+       is nothing to reconcile against, so the glyph stays as it is. */
+    function pauseReading() {
+      const requestId = playback.requestId;
+      if (requestId === null) return Promise.resolve();
+      if (statusPoll.timer === null) return post("/pause", { request_id: requestId });
+      setPlaybackPaused(true);
+      playback.pauseChangedAt = Date.now();
+      return post("/pause", { request_id: requestId });
+    }
+
+    function resumeReading() {
+      const requestId = playback.requestId;
+      if (requestId === null) return Promise.resolve();
+      if (statusPoll.timer === null) return post("/resume", { request_id: requestId });
+      setPlaybackPaused(false);
+      playback.pauseChangedAt = Date.now();
+      return post("/resume", { request_id: requestId });
+    }
+
+    /* Rewind or skip one reading. Seek stays available while paused: the app
+       moves the position, and a later resume plays from it. */
+    function seekReading(deltaMs) {
+      const requestId = playback.requestId;
+      if (requestId === null) return Promise.resolve();
+      return post("/seek", { request_id: requestId, delta_ms: deltaMs });
+    }
+
     /* Start one reading and resolve with its failure code, or null. */
     function beginReading(messageId, nodeKey, speech) {
       const previous = playback.requestId;
@@ -873,7 +1000,7 @@ window.__ModuleLoader__.load({
         const requestId = nextRequestId();
         resetReading(messageId, nodeKey, speech);
         remember(messageId, requestId);
-        startCaptionPolling(requestId);
+        startStatusPolling(requestId);
         return post("/speak", { text: speech, request_id: requestId, wait: true }).then(
           function (finished) {
             if (playback.requestId !== requestId) return null;
@@ -1027,6 +1154,231 @@ window.__ModuleLoader__.load({
       return h(ReadGlyph, { size: props.size ?? 16 });
     }
 
+    /*
+     * Bar control glyphs. They draw in a 16 px box in `currentColor`, so the
+     * icon-only controls follow the host theme. Fill marks (pause, play, stop)
+     * pair with stroked direction marks (rewind, skip, chat).
+     */
+    function ControlIcon(props) {
+      return h(
+        "svg",
+        {
+          viewBox: "0 0 16 16",
+          width: 16,
+          height: 16,
+          className: "dsh-csva-glyph",
+          "aria-hidden": true,
+          focusable: "false"
+        },
+        props.children
+      );
+    }
+
+    function PauseGlyph() {
+      return h(
+        ControlIcon,
+        null,
+        h("rect", { x: 4.6, y: 3, width: 2.5, height: 10, rx: 0.9, fill: "currentColor" }),
+        h("rect", { x: 8.9, y: 3, width: 2.5, height: 10, rx: 0.9, fill: "currentColor" })
+      );
+    }
+
+    function PlayGlyph() {
+      return h(
+        ControlIcon,
+        null,
+        h("path", {
+          d: "M5.8 3.5 12.2 8 5.8 12.5Z",
+          fill: "currentColor",
+          stroke: "currentColor",
+          strokeWidth: 1,
+          strokeLinejoin: "round"
+        })
+      );
+    }
+
+    function StopGlyph() {
+      return h(
+        ControlIcon,
+        null,
+        h("rect", { x: 3.8, y: 3.8, width: 8.4, height: 8.4, rx: 1.3, fill: "currentColor" })
+      );
+    }
+
+    /* The rewind and skip marks: two chevrons plus the numeral 5. The numeral
+       is SVG text, so it inherits currentColor and stays legible at 16 px. */
+    function SkipGlyph(props) {
+      const back = props.back === true;
+      const chevrons = back
+        ? ["M4.4 3.9 1.7 8l2.7 4.1", "M7.6 3.9 4.9 8l2.7 4.1"]
+        : ["M8.4 3.9 11.1 8l-2.7 4.1", "M11.6 3.9 14.3 8l-2.7 4.1"];
+      return h(
+        ControlIcon,
+        null,
+        chevrons.map(function (d, index) {
+          return h("path", {
+            key: index,
+            d: d,
+            fill: "none",
+            stroke: "currentColor",
+            strokeWidth: 1.5,
+            strokeLinecap: "round",
+            strokeLinejoin: "round"
+          });
+        }),
+        h(
+          "text",
+          {
+            x: back ? 11.2 : 4.8,
+            y: 8.1,
+            textAnchor: "middle",
+            dominantBaseline: "central",
+            fontSize: 8.2,
+            fontWeight: 700,
+            fill: "currentColor"
+          },
+          "5"
+        )
+      );
+    }
+
+    /* Show in chat: a speech bubble, the same mark chat surfaces use. */
+    function ChatGlyph() {
+      return h(
+        ControlIcon,
+        null,
+        h("path", {
+          d: "M3.6 3.1H12.4A1.9 1.9 0 0 1 14.3 5V9A1.9 1.9 0 0 1 12.4 10.9H7.6L4.9 13.3V10.9H3.6A1.9 1.9 0 0 1 1.7 9V5A1.9 1.9 0 0 1 3.6 3.1Z",
+          fill: "none",
+          stroke: "currentColor",
+          strokeWidth: 1.4,
+          strokeLinejoin: "round"
+        })
+      );
+    }
+
+    /*
+     * The host Tooltip primitive is a package a plain-JS plugin cannot require,
+     * so the plugin owns a copy of that bubble: a fixed bubble under or above
+     * the anchor button, shown on hover and on keyboard focus. The message
+     * action and every bar control share this hook.
+     */
+    function useButtonTooltip(preferredSide) {
+      const side = preferredSide ?? "bottom";
+      const buttonRef = React.useRef(null);
+      const tipRef = React.useRef(null);
+      const tipId = React.useId();
+      const [tip, setTip] = React.useState(null);
+
+      /* Escape, any scroll, and a viewport resize close the bubble, so a moved
+         anchor cannot leave a stale one behind. Listeners attach only while
+         open. */
+      React.useEffect(
+        function () {
+          if (tip === null) return;
+          function close() {
+            setTip(null);
+          }
+          function onKeyDown(event) {
+            if (event.key === "Escape") close();
+          }
+          document.addEventListener("keydown", onKeyDown, true);
+          window.addEventListener("scroll", close, true);
+          window.addEventListener("resize", close);
+          return function () {
+            document.removeEventListener("keydown", onKeyDown, true);
+            window.removeEventListener("scroll", close, true);
+            window.removeEventListener("resize", close);
+          };
+        },
+        [tip]
+      );
+
+      /* Fit the bubble after it renders: clamp its center inside the viewport,
+         and flip it when the preferred side runs out of room. */
+      React.useLayoutEffect(
+        function () {
+          if (tip === null) return;
+          const bubble = tipRef.current;
+          if (bubble === null) return;
+          const half = bubble.offsetWidth / 2;
+          const min = TOOLTIP_MARGIN + half;
+          const max = window.innerWidth - TOOLTIP_MARGIN - half;
+          const left = Math.min(Math.max(tip.left, min), max);
+          let nextSide = tip.side;
+          if (
+            nextSide === "bottom" &&
+            tip.bottom + bubble.offsetHeight > window.innerHeight - TOOLTIP_MARGIN
+          ) {
+            nextSide = "top";
+          } else if (nextSide === "top" && tip.top - bubble.offsetHeight < TOOLTIP_MARGIN) {
+            nextSide = "bottom";
+          }
+          if (Math.abs(left - tip.left) > 0.5 || nextSide !== tip.side) {
+            setTip({ left: left, top: tip.top, bottom: tip.bottom, side: nextSide });
+          }
+        },
+        [tip]
+      );
+
+      function open() {
+        const button = buttonRef.current;
+        if (button === null) return;
+        const rect = button.getBoundingClientRect();
+        setTip({
+          left: rect.left + rect.width / 2,
+          top: rect.top - TOOLTIP_GAP,
+          bottom: rect.bottom + TOOLTIP_GAP,
+          side: side
+        });
+      }
+
+      function close() {
+        setTip(null);
+      }
+
+      function onPointerEnter(event) {
+        /* Touch taps fire the click; a bubble on a touch screen is noise. */
+        if (event.pointerType === "touch") return;
+        open();
+      }
+
+      function onFocus(event) {
+        /* A mouse click focuses the button before it clicks. The host shows a
+           focus tooltip for keyboard focus only, so a click never flashes one. */
+        if (!event.currentTarget.matches(":focus-visible")) return;
+        open();
+      }
+
+      function render(label) {
+        if (tip === null) return null;
+        return h(
+          "span",
+          {
+            ref: tipRef,
+            id: tipId,
+            role: "tooltip",
+            className: "dsh-csva-tip",
+            "data-side": tip.side,
+            style: {
+              left: tip.left,
+              top: tip.side === "bottom" ? tip.bottom : tip.top
+            }
+          },
+          label
+        );
+      }
+
+      return {
+        buttonRef: buttonRef,
+        describedBy: tip === null ? undefined : tipId,
+        close: close,
+        onPointerEnter: onPointerEnter,
+        onFocus: onFocus,
+        render: render
+      };
+    }
+
     function CopySpeakAction(props) {
       const messageId = props.messageId;
       const useChat = props.useChat;
@@ -1036,13 +1388,9 @@ window.__ModuleLoader__.load({
          so a streamed token does not allocate one. */
       const nodeRef = React.useRef(null);
 
-      /* The host action-row buttons carry a Tooltip primitive; a plain-JS plugin
-         cannot require host packages, so the plugin owns a copy of that bubble:
-         fixed below the 28 px button, shown on hover and on keyboard focus. */
-      const buttonRef = React.useRef(null);
-      const tipRef = React.useRef(null);
-      const tipId = React.useId();
-      const [tip, setTip] = React.useState(null);
+      /* The host action-row buttons carry a Tooltip primitive; the plugin owns
+         the same bubble through the shared hook. */
+      const tip = useButtonTooltip("bottom");
 
       const text = useChat
         ? useChat(function (snapshot) {
@@ -1069,81 +1417,6 @@ window.__ModuleLoader__.load({
         };
       }, []);
 
-      /* Escape, any scroll, and a viewport resize close the bubble, so a moved
-         anchor cannot leave a stale one behind. Listeners attach only while open. */
-      React.useEffect(
-        function () {
-          if (tip === null) return;
-          function close() {
-            setTip(null);
-          }
-          function onKeyDown(event) {
-            if (event.key === "Escape") close();
-          }
-          document.addEventListener("keydown", onKeyDown, true);
-          window.addEventListener("scroll", close, true);
-          window.addEventListener("resize", close);
-          return function () {
-            document.removeEventListener("keydown", onKeyDown, true);
-            window.removeEventListener("scroll", close, true);
-            window.removeEventListener("resize", close);
-          };
-        },
-        [tip]
-      );
-
-      /* Fit the bubble after it renders: clamp its center inside the viewport,
-         and flip it above the button when the space below runs out. */
-      React.useLayoutEffect(
-        function () {
-          if (tip === null) return;
-          const bubble = tipRef.current;
-          if (bubble === null) return;
-          const half = bubble.offsetWidth / 2;
-          const min = TOOLTIP_MARGIN + half;
-          const max = window.innerWidth - TOOLTIP_MARGIN - half;
-          const left = Math.min(Math.max(tip.left, min), max);
-          const side =
-            tip.side === "bottom" &&
-            tip.bottom + bubble.offsetHeight > window.innerHeight - TOOLTIP_MARGIN
-              ? "top"
-              : tip.side;
-          if (Math.abs(left - tip.left) > 0.5 || side !== tip.side) {
-            setTip({ left: left, top: tip.top, bottom: tip.bottom, side: side });
-          }
-        },
-        [tip]
-      );
-
-      function openTip() {
-        const button = buttonRef.current;
-        if (button === null) return;
-        const rect = button.getBoundingClientRect();
-        setTip({
-          left: rect.left + rect.width / 2,
-          top: rect.top - TOOLTIP_GAP,
-          bottom: rect.bottom + TOOLTIP_GAP,
-          side: "bottom"
-        });
-      }
-
-      function closeTip() {
-        setTip(null);
-      }
-
-      function onPointerEnter(event) {
-        /* Touch taps fire the click; a bubble on a touch screen is noise. */
-        if (event.pointerType === "touch") return;
-        openTip();
-      }
-
-      function onFocusTip(event) {
-        /* A mouse click focuses the button before it clicks. The host shows a
-           focus tooltip for keyboard focus only, so a click never flashes one. */
-        if (!event.currentTarget.matches(":focus-visible")) return;
-        openTip();
-      }
-
       function fail(key) {
         setFailure(key);
         if (failureTimer.current !== null) clearTimeout(failureTimer.current);
@@ -1160,7 +1433,7 @@ window.__ModuleLoader__.load({
       const disabled = !active && (busy || !hasText);
 
       function onClick() {
-        closeTip();
+        tip.close();
         if (active) {
           setBusy(true);
           void stopReadingNow().then(function () {
@@ -1190,39 +1463,23 @@ window.__ModuleLoader__.load({
         h(
           "button",
           {
-            ref: buttonRef,
+            ref: tip.buttonRef,
             type: "button",
             className: "dsh-csva-button",
             "aria-label": label,
             "aria-pressed": active,
-            "aria-describedby": tip === null ? undefined : tipId,
+            "aria-describedby": tip.describedBy,
             "data-active": active || undefined,
             disabled: disabled,
-            onPointerEnter: onPointerEnter,
-            onPointerLeave: closeTip,
-            onFocus: onFocusTip,
-            onBlur: closeTip,
+            onPointerEnter: tip.onPointerEnter,
+            onPointerLeave: tip.close,
+            onFocus: tip.onFocus,
+            onBlur: tip.close,
             onClick: onClick
           },
           active ? h(CsGlyph, { size: 17 }) : h(ReadGlyph)
         ),
-        tip === null
-          ? null
-          : h(
-              "span",
-              {
-                ref: tipRef,
-                id: tipId,
-                role: "tooltip",
-                className: "dsh-csva-tip",
-                "data-side": tip.side,
-                style: {
-                  left: tip.left,
-                  top: tip.side === "bottom" ? tip.bottom : tip.top
-                }
-              },
-              label
-            ),
+        tip.render(label),
         failure === null
           ? null
           : h("span", { className: "dsh-csva-note", role: "status" }, t(failure))
@@ -1273,29 +1530,60 @@ window.__ModuleLoader__.load({
     }
 
     /**
+     * One icon control in the playback bar. The label serves the tooltip and
+     * the accessible name; the glyph is the button's only visible content.
+     */
+    function BarControl(props) {
+      const tip = useButtonTooltip("top");
+      return h(
+        React.Fragment,
+        null,
+        h(
+          "button",
+          {
+            ref: tip.buttonRef,
+            type: "button",
+            className:
+              props.className === undefined
+                ? "dsh-csva-barControl"
+                : "dsh-csva-barControl " + props.className,
+            "aria-label": props.label,
+            "aria-describedby": tip.describedBy,
+            onPointerEnter: tip.onPointerEnter,
+            onPointerLeave: tip.close,
+            onFocus: tip.onFocus,
+            onBlur: tip.close,
+            onClick: function (event) {
+              tip.close();
+              if (props.onClick !== undefined) props.onClick(event);
+            }
+          },
+          props.children
+        ),
+        tip.render(props.label)
+      );
+    }
+
+    /**
      * Frame-wide playback bar: it renders in the shell overlay while this
-     * plugin reads, so stop stays reachable when the message action scrolled
-     * away. It shows the live word and scrolls the chat back to the reading.
+     * plugin reads, so the controls stay reachable when the message action
+     * scrolled away. The bar is icon-only: pause or resume, rewind 5 seconds,
+     * skip 5 seconds, stop, and Show in chat. The theme carries the colors.
      */
     function PlaybackBar(props) {
       const t = props.t ?? boundT;
-      const [active, setActive] = React.useState(playback.messageId !== null);
-      const [word, setWord] = React.useState(captionState.word);
+      const [state, setState] = React.useState({
+        messageId: playback.messageId,
+        paused: playback.paused
+      });
 
       React.useEffect(function () {
-        const offPlayback = subscribe(playback.listeners, function () {
-          setActive(playback.messageId !== null);
+        return subscribe(playback.listeners, function () {
+          setState({ messageId: playback.messageId, paused: playback.paused });
         });
-        const offCaption = subscribe(captionState.listeners, function () {
-          setWord(captionState.word);
-        });
-        return function () {
-          offPlayback();
-          offCaption();
-        };
       }, []);
 
-      if (!active) return null;
+      if (state.messageId === null) return null;
 
       return h(
         "div",
@@ -1305,24 +1593,48 @@ window.__ModuleLoader__.load({
           "aria-label": t("bar.label")
         },
         h("span", { className: "dsh-csva-barGlyph" }, h(CsGlyph, { size: 16 })),
-        h("span", { className: "dsh-csva-barWord" }, word === "" ? t("bar.reading") : word),
         h(
-          "button",
-          { type: "button", className: "dsh-csva-barButton", onClick: showPlaybackInChat },
-          t("bar.showInChat")
+          BarControl,
+          {
+            label: t(state.paused ? "bar.resume" : "bar.pause"),
+            onClick: function () {
+              void (playback.paused ? resumeReading() : pauseReading());
+            }
+          },
+          state.paused ? h(PlayGlyph) : h(PauseGlyph)
         ),
         h(
-          "button",
+          BarControl,
           {
-            type: "button",
-            className: "dsh-csva-barButton dsh-csva-barStop",
-            "aria-label": t("action.stop"),
+            label: t("bar.back5"),
+            onClick: function () {
+              void seekReading(-SEEK_STEP_MS);
+            }
+          },
+          h(SkipGlyph, { back: true })
+        ),
+        h(
+          BarControl,
+          {
+            label: t("bar.forward5"),
+            onClick: function () {
+              void seekReading(SEEK_STEP_MS);
+            }
+          },
+          h(SkipGlyph, { back: false })
+        ),
+        h(
+          BarControl,
+          {
+            className: "dsh-csva-barStop",
+            label: t("bar.stop"),
             onClick: function () {
               void stopReadingNow();
             }
           },
-          t("bar.stop")
-        )
+          h(StopGlyph)
+        ),
+        h(BarControl, { label: t("bar.showInChat"), onClick: showPlaybackInChat }, h(ChatGlyph))
       );
     }
 
@@ -1475,11 +1787,11 @@ window.__ModuleLoader__.load({
             /* This plugin owns its reading; unloading it must stop the server
                playback, not just the timer. */
             const requestId = playback.requestId;
-            stopCaptionPolling();
+            stopStatusPolling();
             if (requestId !== null) void stopReading(requestId);
             forget();
           };
-        }, PACKAGE + ": captions");
+        }, PACKAGE + ": playback");
 
         const t = ctx.locale.bind(NS);
         boundT = t;

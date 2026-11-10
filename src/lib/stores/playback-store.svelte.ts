@@ -19,6 +19,7 @@ import { AudioAnalyser, type EmitPayload } from "./playback/analyser.js";
 import { PcmStreamScheduler, type StreamChunkPayload } from "./playback/pcm-stream.js";
 import { stretchBuffer } from "./playback/time-stretch.js";
 import { getEffect } from "./playback/effects/registry.js";
+import { createLiveEffect, type LiveEffect } from "./playback/effects/live.js";
 import { FragmentQueue, type QueuedFragment } from "./playback/fragment-queue.js";
 import { hudStore } from "./hud-store.svelte.js";
 import { validCaptionAlignment, type CaptionAlignment } from "#lib/models/captions.js";
@@ -90,6 +91,9 @@ class PlaybackStore {
   private _analyser = new AudioAnalyser();
   private _fragmentQueue: FragmentQueue;
   private _pcmScheduler: PcmStreamScheduler | null = null;
+  // Live walkie-talkie chain the streamed PCM plays through; null for a reading
+  // with no effect, or with an effect Rust keeps on the batch path.
+  private _liveEffect: LiveEffect | null = null;
 
   // Browser companion: while a page follows this audio (a browser-initiated
   // reading or a mirrored double-copy/hotkey speak), the audible-clock position
@@ -191,7 +195,10 @@ class PlaybackStore {
           active: true
         };
       } else if (this._lastCaption) {
-        caption = { ...this._lastCaption, active: false, paused: this.isPaused };
+        // A suspended context reports no position while the playhead stalls
+        // between sources, so a paused reading would look finished: keep the last
+        // frozen position and stay active, or GET /status cannot tell the two apart.
+        caption = { ...this._lastCaption, active: this.isPaused, paused: this.isPaused };
       }
     } else if (this._audioEl && this.isPlaying) {
       const el = this._audioEl;
@@ -401,6 +408,8 @@ class PlaybackStore {
   private finishPlayback(): void {
     this.stopCaptionClock();
     this._analyser.stop();
+    // Natural end: the live chain plays its tail click and disposes itself.
+    this._finishLiveEffect();
     this.isPlaying = false;
     this.isPaused = false;
     this.currentFragmentIndex = null;
@@ -412,6 +421,22 @@ class PlaybackStore {
     this.reportBrowserFinished(this._readingFailure === null ? "completed" : "error");
     void this._emit?.("hud:stop", null);
     this.emitPlaybackFinished();
+  }
+
+  /** Hand a naturally finished live chain its tail and let it self-dispose. */
+  private _finishLiveEffect(): void {
+    const effect = this._liveEffect;
+    if (!effect) return;
+    this._liveEffect = null;
+    effect.finish();
+  }
+
+  /** Cut the live chain at once (user stop, teardown); no tail click. */
+  private _disposeLiveEffect(): void {
+    const effect = this._liveEffect;
+    if (!effect) return;
+    this._liveEffect = null;
+    effect.dispose();
   }
 
   /** Tell the bridge the followed audio ended, so the page clears its highlight. */
@@ -439,9 +464,17 @@ class PlaybackStore {
     }
     if (!this._pcmScheduler) {
       console.log("[PlaybackStore] creating PCM scheduler for fragment", payload.fragment_index);
+      // The lag fix: walkie_talkie streams through a live node graph instead of
+      // rendering whole fragments. Rust keeps the other effects on the batch
+      // path, so a null chain plays straight into the output.
+      const live = createLiveEffect(ctx, this.activeEffect);
+      if (live) {
+        this._liveEffect = live;
+        live.start();
+      }
       this._pcmScheduler = new PcmStreamScheduler({
         ctx,
-        destination: ctx.destination,
+        destination: live?.input ?? ctx.destination,
         onComplete: () => {
           console.log("[PlaybackStore] stream playback complete");
           this.finishPlayback();
@@ -543,6 +576,9 @@ class PlaybackStore {
     this._fragmentQueue.clear();
     this._pcmScheduler?.stop();
     this._pcmScheduler = null;
+    // A user stop cuts the live chain immediately; only natural completion gets
+    // the tail click and delayed dispose.
+    this._disposeLiveEffect();
     this._streamSessionId = null;
     this.currentFragmentIndex = null;
     this.totalFragments = null;
@@ -624,6 +660,18 @@ class PlaybackStore {
   }
 
   /**
+   * Seek relative to the current position, as the control server sends it:
+   * positive `deltaMs` fast-forwards, negative rewinds, clamped at the timeline
+   * ends by the skip methods.
+   */
+  seekBy(deltaMs: number): void {
+    if (!Number.isFinite(deltaMs) || deltaMs === 0) return;
+    const seconds = Math.abs(deltaMs) / 1000;
+    if (deltaMs > 0) this.skipForward(seconds);
+    else this.skipBackward(seconds);
+  }
+
+  /**
    * Rewind across a fragment boundary: replay a retained earlier fragment and
    * seek into its tail by `deficit` wall seconds. The interrupted fragment
    * then auto-advances afterwards from its start (small boundary overlap,
@@ -637,28 +685,39 @@ class PlaybackStore {
     if (seek > 0) el.currentTime = seek;
   }
 
-  handleTogglePause() {
-    // Nothing audible (or loading): toggling would play() the idle element and
-    // resurrect stale audio from a previous run.
-    if (!this.isPlaying && !this.isPaused) return;
+  /**
+   * Pause the audible reading. Idempotent: a second pause is a no-op, and an
+   * idle store stays idle instead of play()ing stale audio.
+   */
+  pausePlayback(): void {
+    if (this.isPaused) return;
+    if (!this.isPlaying) return;
     if (this._pcmScheduler) {
-      if (this.isPaused) {
-        this._pcmScheduler.resume();
-        this.isPaused = false;
-      } else {
-        this._pcmScheduler.pause();
-        this.isPaused = true;
-      }
+      this._pcmScheduler.pause();
+      this.isPaused = true;
       return;
     }
     if (!this._audioEl) return;
-    if (this._audioEl.paused) {
-      this._audioEl.play().catch(() => {});
+    this._audioEl.pause();
+    this.isPaused = true;
+  }
+
+  /** Resume a paused reading. Idempotent, and a no-op when nothing is paused. */
+  resumePlayback(): void {
+    if (!this.isPaused) return;
+    if (this._pcmScheduler) {
+      this._pcmScheduler.resume();
       this.isPaused = false;
-    } else {
-      this._audioEl.pause();
-      this.isPaused = true;
+      return;
     }
+    if (!this._audioEl) return;
+    this._audioEl.play().catch(() => {});
+    this.isPaused = false;
+  }
+
+  handleTogglePause() {
+    if (this.isPaused) this.resumePlayback();
+    else this.pausePlayback();
   }
 
   // Keep volume/speed in sync with config (called by synthesize-page via $effect)
@@ -776,6 +835,18 @@ class PlaybackStore {
         this.handleTogglePause();
       });
 
+      // Control-server transport routes: pause/resume are idempotent commands,
+      // seek carries the relative step in milliseconds.
+      const unPause = await listen("playback-pause", () => {
+        this.pausePlayback();
+      });
+      const unResume = await listen("playback-resume", () => {
+        this.resumePlayback();
+      });
+      const unSeek = await listen<{ delta_ms: number }>("playback-seek", (event) => {
+        this.seekBy(event.payload.delta_ms);
+      });
+
       // Page controls (browser companion pill) relayed by the Rust bridge.
       const unSkipBackward = await listen("playback-skip-backward", () => {
         this.skipBackward();
@@ -870,6 +941,9 @@ class PlaybackStore {
         unPlaybackStop,
         unStreamFailed,
         unTogglePause,
+        unPause,
+        unResume,
+        unSeek,
         unSkipBackward,
         unSkipForward,
         unBrowserReading,
