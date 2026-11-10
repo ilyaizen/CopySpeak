@@ -8,7 +8,7 @@
  *
  * - A CopySpeak panel in the sidebar, holding the three options and the app status.
  * - A speaker action in the action row of each finished assistant message.
- * - A per-session reader that speaks each settled reply when auto-read is on,
+ * - A per-session reader that speaks the final reply of each completed turn,
  *   and highlights the word CopySpeak plays inside the reply text itself.
  * - A frame-wide playback bar that stops the reading and scrolls back to the
  *   spoken word when the message action scrolled out of view.
@@ -75,11 +75,13 @@ window.__ModuleLoader__.load({
       "m49.61 19.43c-1.5-0.74-3.32-0.37-4.11 1.04-0.8 1.45-0.21 3.13 1.27 3.97 5.25 2.81 8.39 8.04 8.39 14.44 0 6.47-3.45 12.05-8.57 14.61-1.47 0.81-2 2.47-1.33 3.85 0.72 1.4 2.78 2.03 4.44 1.41 7.13-3.14 11.97-10.79 11.97-19.57 0-8.67-5.02-16.48-12.06-19.75z",
       "m46.38 28.77c-1.27-0.75-2.96-0.42-3.67 0.89-0.75 1.28-0.3 2.86 0.86 3.78 1.73 1.33 2.77 3.26 2.77 5.48 0 2.27-1.14 4.28-2.83 5.45-1.2 0.9-1.48 2.53-0.7 3.78 0.84 1.23 2.55 1.74 3.95 1.16 3.49-1.78 5.54-5.56 5.54-9.89 0-4.62-2.49-8.79-5.92-10.65z"
     ];
-    /* The shared idle mark: the speaker contour as line art, with the waves
-       redrawn as centerline arcs, which stay crisp at 16-17 px. */
+    /* The idle action and the sidebar icon draw the same mark as line art. The
+       wave arcs are the centerlines of the two filled crescents in the app
+       logo, fitted to circles, so the pair stays evenly nested and symmetric.
+       The waves are drawn as centerline arcs, which stay crisp at 16-17 px. */
     const GLYPH_STROKE = 3.3;
-    const GLYPH_ARC_OUTER = "M47.4 21A19.2 19.2 0 0 1 47.4 56.6";
-    const GLYPH_ARC_INNER = "M45.8 31.6A9.06 9.06 0 0 1 45.8 48.9";
+    const GLYPH_ARC_OUTER = "M48.17 21.93A19.44 19.44 0 0 1 48.17 56.13";
+    const GLYPH_ARC_INNER = "M45.06 31.13A9.43 9.43 0 0 1 45.06 46.87";
 
     const en = {
       "panel.label": "CopySpeak",
@@ -89,7 +91,8 @@ window.__ModuleLoader__.load({
       "status.online": "CopySpeak is running.",
       "status.offline": "CopySpeak is not running. Start it to read replies aloud.",
       "autoRead.title": "Read new replies aloud",
-      "autoRead.description": "CopySpeak reads each reply in the open session when it settles.",
+      "autoRead.description":
+        "CopySpeak reads each reply in the open session once its turn completes.",
       "captions.title": "Show captions while reading",
       "captions.description": "Highlights each word in the reply as CopySpeak plays it.",
       "follow.title": "Follow playback",
@@ -940,6 +943,38 @@ window.__ModuleLoader__.load({
       return null;
     }
 
+    /* The host closes every turn with a `turn-tail` location. Its `closing` step
+       is the turn's final text-bearing assistant step, so auto-read fires once
+       per completed turn, never per intermediate step of a tool-calling turn. */
+    function closingReply(snapshot) {
+      if (snapshot == null || snapshot.nodes == null || snapshot.order == null) return null;
+      const timeline = snapshot.timeline;
+      if (timeline == null || timeline.turns == null) return null;
+      if (!Array.isArray(timeline.turnOrder) || timeline.turnOrder.length === 0) return null;
+      const number = timeline.turnOrder[timeline.turnOrder.length - 1];
+      const turn = timeline.turns.get(number);
+      if (turn == null || turn.end === undefined) return null;
+      const tail = turn.data == null ? null : turn.data.get("turn-tail");
+      const closing = tail == null ? null : tail.closing;
+      if (closing == null || closing.finalNode == null) return null;
+      const finalNode = closing.finalNode;
+      /* A stopped attempt has no durable message id, and no read action either. */
+      if (finalNode.messageId === undefined) return null;
+      if (!Array.isArray(closing.blocks)) return null;
+      /* The assistant-step node carries the key the caption reader addresses. */
+      let nodeKey = null;
+      for (const key of snapshot.order) {
+        const node = snapshot.nodes.get(key);
+        if (node == null || node.kind !== "assistant-step" || node.data == null) continue;
+        const settled = node.data.finalNode;
+        if (settled != null && settled.seq === finalNode.seq) {
+          nodeKey = key;
+          break;
+        }
+      }
+      return { messageId: finalNode.messageId, key: nodeKey, blocks: closing.blocks };
+    }
+
     /* The filled app-logo speaker silhouette. The playing action and the
        floating playback bar use it in currentColor, so it follows the theme. */
     function CsGlyph(props) {
@@ -1195,23 +1230,15 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * Per-session watcher under the composer: when a new reply settles and
-     * auto-read is on, speak it. It renders nothing.
+     * Per-session watcher under the composer: when a turn completes and
+     * auto-read is on, speak its final reply. It renders nothing.
      */
     function AutoReader(props) {
       const useChat = props.useChat;
       const latest = React.useRef(null);
       const latestId = useChat
         ? useChat(function (snapshot) {
-            const node = assistantNode(snapshot);
-            latest.current =
-              node === null
-                ? null
-                : {
-                    messageId: node.data.finalNode.messageId,
-                    key: node.key,
-                    text: assistantText(node.data.blocks)
-                  };
+            latest.current = closingReply(snapshot);
             return latest.current === null ? null : latest.current.messageId;
           })
         : null;
@@ -1233,7 +1260,7 @@ window.__ModuleLoader__.load({
           if (found === null) return;
           /* The watcher reads the same rendered Markdown as the action, so it
              must strip the markup exactly the same way. */
-          const speech = toSpeech(found.text);
+          const speech = toSpeech(assistantText(found.blocks));
           if (speech === "") return;
           void beginReading(found.messageId, found.key, speech).then(function (error) {
             if (error !== null) console.error("[copyspeak-voice] auto-read failed:", error);

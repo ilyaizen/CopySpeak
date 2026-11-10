@@ -5,11 +5,11 @@ A DSH plugin that reads assistant replies aloud through the CopySpeak desktop ap
 ## What you get
 
 - A **CopySpeak** panel in the sidebar, beside Plugins and Automation tasks:
-  - **Read new replies aloud** reads each reply in the open session when it settles.
+  - **Read new replies aloud** reads the final reply of each turn in the open session. Intermediate steps of a tool-calling turn are read once, at the end.
   - **Show captions while reading** highlights the word CopySpeak plays inside the reply text. It is off by default.
   - **Follow playback** scrolls the chat to keep the spoken word in view. It is on by default.
   - A status line tells you whether the CopySpeak app is running.
-- A CopySpeak action in the action row of each finished assistant message.
+- A CopySpeak action in the completed turn's action row.
 - The action shows an outlined speaker when idle. A tooltip reads **Read aloud with CopySpeak**.
 - Clicking the action speaks that message.
 - While the message plays, the action shows the filled speaker in the theme's brand color. Its tooltip reads **Stop reading**.
@@ -39,6 +39,8 @@ The request uses `mode: 'no-cors'` and a `text/plain` content type. The browser 
 
 Stop uses `POST /stop {"request_id": "<id>"}`, so the plugin cancels exactly its own reading and leaves other integrations alone.
 
+Auto-read speaks one reply per turn. The host writes one `turn-tail` node when a turn ends, and its `closing` step is the turn's final assistant reply. The watcher speaks that step, so it skips intermediate steps and never reads a reply halfway through a turn.
+
 Captions poll one read-only route while a reading runs:
 
 ```
@@ -60,8 +62,8 @@ Slots:
 
 - `sidebar.panellist` – the CopySpeak icon in the sidebar, id `copyspeak`.
 - `main` – the CopySpeak panel, key `copyspeak`.
-- `conversation.chat.assistant-actions` – the per-message speaker action.
-- `conversation.composer.dock` – a null-rendering per-session watcher that speaks each newly settled reply and runs the caption highlight.
+- `conversation.chat.assistant-actions` – the speaker action in the completed turn's action row.
+- `conversation.composer.dock` – a null-rendering per-session watcher that speaks the final reply of each completed turn and runs the caption highlight.
 - `shell.overlay` – the floating playback bar, id `copyspeak-playback`.
 
 The switches live in the page's `localStorage` under `dsh.copyspeak-voice.auto-read`, `dsh.copyspeak-voice.captions`, and `dsh.copyspeak-voice.follow`. Auto-read and captions are off when their key is absent; follow is on.
@@ -76,7 +78,7 @@ The sidebar panel icon is the outlined read mark that the message action shows w
 - CopySpeak truncates the text to its configured `max_text_length`.
 - Code blocks are removed from the spoken text.
 - The highlight paints only while the reply is on screen and only while `/status` answers. It also stays hidden for a fragment whose words cannot be found in the rendered text, such as a number the sanitizer spells out or a reply in a spaceless script where the spoken words and the rendered words tokenize differently.
-- Auto-read starts at the next settled reply. Enabling it never replays old replies.
+- Auto-read starts at the next completed turn. Enabling it never replays old turns.
 - Without `/status`, the floating bar still stops and scrolls, but it shows no live word.
 - The switches and playback state are per page tab.
 
@@ -91,8 +93,25 @@ The sidebar panel icon is the outlined read mark that the message action shows w
 
 ## Install
 
-```
-plugin_manager install_bundle D:\Projects\CopySpeak\copyspeak-dsh
-```
+The install adds the bundle `@local/copyspeak-voice` to the active DSH profile and links this directory. The profile reads the files directly, so later edits reach the running app. The plugin stays installed across DSH restarts.
 
-The profile links this directory, so a saved `client.js` reaches an open page through Client HMR. A host-half change needs a DSH restart.
+### Before you install
+
+- CopySpeak is installed and running on this machine. See [Requirements](#requirements).
+- The session uses the DSH profile that gets the plugin. An install from another profile puts the plugin there.
+
+### Install the bundle
+
+1. Call the `plugin_manager` tool with `action: install_bundle` and the absolute path of this directory:
+
+   ```
+   target: D:\Projects\CopySpeak\copyspeak-dsh
+   ```
+
+   Use the path of the checkout that holds `package.json`. On another machine, that path differs.
+2. Read the result. `application: applied` means the plugin runs now. A warning or a pending install script needs a decision before you continue.
+3. Open Plugins and find **CopySpeak read aloud** in the Installed list. The card shows the colored app logo as its icon.
+4. Look for the CopySpeak icon in the sidebar. Open the panel. The status line reads **CopySpeak is running.**
+5. Send a message, then click the speaker in its action row. CopySpeak reads the reply.
+
+The tool call needs the `danger-full-access` preset, or one approval, because the install writes outside this directory.
