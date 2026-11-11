@@ -32,6 +32,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Glitch mid-speech onsets in place, never by inserting copies of the grain: a 40–70 ms grain replayed before its word sounds like slap-back echo, and each inserted copy pushes captions later.
 - Measure a provider WAV's duration from its parsed header clamped to the real byte count, never by iterating the container: Fish writes 0xFFFFFF00 into the data-chunk size and rodio's decode spins past EOF forever (busy tray, no audio, no error).
 - Keep speaker ownership at the audible emit sites only: a reading that has merely started synthesizing owns nothing, so a guard-time claim makes cancelling it cut the previous reading and stopping the previous reading do nothing; and repeat the `synthesis-state-change` re-arm at the reading's first streamed chunk (`StreamRearm`), or a scoped stop of the previous owner re-sets `_streamStopped` after the start signal and silently drops every chunk of the innocent next reading.
+- Never let two readings play at once: streamed audio runs through `PcmStreamScheduler` and batch fragments through the `<audio>` element, and starting one must stop or defer the other. A fresh streamed reading started over a still-playing cached batch reading (double audio on 2026-11-11, speed 1.0); the overlap also suppresses the second `playback-started` via `_startedEmitted`, so ducking is not re-armed. Both start paths check the other engine first, and `_drainHeldAudio` hands the speakers over when the active reading's `finishPlayback` fires.
 
 ## Captions
 

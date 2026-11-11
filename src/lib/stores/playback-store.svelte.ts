@@ -91,6 +91,11 @@ class PlaybackStore {
   private _analyser = new AudioAnalyser();
   private _fragmentQueue: FragmentQueue;
   private _pcmScheduler: PcmStreamScheduler | null = null;
+  // Cross-engine queue: a reading's audio waits while the OTHER engine owns the
+  // speakers. Streamed chunks buffer here until the batch queue drains; batch
+  // fragments already wait in `_fragmentQueue` until the stream drains.
+  // `_drainHeldAudio` hands the speakers over, so at most one engine plays.
+  private _heldStreamChunks: StreamChunkPayload[] = [];
   // Live walkie-talkie chain the streamed PCM plays through; null for a reading
   // with no effect, or with an effect Rust keeps on the batch path.
   private _liveEffect: LiveEffect | null = null;
@@ -398,7 +403,9 @@ class PlaybackStore {
       "isProcessing:",
       this._fragmentQueue.isProcessing()
     ); // Start processing if not already
-    if (!this._fragmentQueue.isProcessing()) {
+    // Cross-engine queue: while a streamed reading owns the speakers, these
+    // fragments wait in the queue and start when the stream drains.
+    if (!this._fragmentQueue.isProcessing() && !this._streamOwnsSpeakers()) {
       await this._fragmentQueue.startProcessing();
     }
   }
@@ -423,6 +430,39 @@ class PlaybackStore {
     this.reportBrowserFinished(this._readingFailure === null ? "completed" : "error");
     void this._emit?.("hud:stop", null);
     this.emitPlaybackFinished();
+    // The speakers are free: start whatever waited for this engine to drain.
+    this._drainHeldAudio();
+  }
+
+  /** True while the batch fragment path owns (or is taking) the speakers. */
+  private _batchOwnsSpeakers(): boolean {
+    return this._fragmentQueue.isProcessing() || this.isLoadingAudio;
+  }
+
+  /** True while the streamed scheduler owns the speakers. */
+  private _streamOwnsSpeakers(): boolean {
+    return this._pcmScheduler !== null;
+  }
+
+  /**
+   * Hand the speakers to the reading that waited while the other engine played:
+   * a buffered stream starts, else the queued batch fragments. At most one
+   * engine plays at a time, so a new reading never doubles the audio.
+   */
+  private _drainHeldAudio(): void {
+    if (this._streamStopped) {
+      this._heldStreamChunks = [];
+      return;
+    }
+    if (this._heldStreamChunks.length > 0) {
+      const held = this._heldStreamChunks;
+      this._heldStreamChunks = [];
+      for (const chunk of held) this.handleStreamChunk(chunk);
+      return;
+    }
+    if (!this._fragmentQueue.isProcessing() && this._fragmentQueue.getQueueLength() > 0) {
+      void this._fragmentQueue.startProcessing();
+    }
   }
 
   /** Hand a naturally finished live chain its tail and let it self-dispose. */
@@ -456,6 +496,12 @@ class PlaybackStore {
    */
   handleStreamChunk(payload: StreamChunkPayload): void {
     if (this._streamStopped) return;
+    // Cross-engine queue: while the batch fragment path owns the speakers this
+    // streamed reading waits. `finishPlayback` starts it from `_heldStreamChunks`.
+    if (!this._pcmScheduler && this._batchOwnsSpeakers()) {
+      this._heldStreamChunks.push(payload);
+      return;
+    }
     if (!this._audioCtx) {
       this._audioCtx = new AudioContext();
     }
@@ -520,6 +566,9 @@ class PlaybackStore {
       if (this._streamSessionId === sessionId) this.handleStop();
       return;
     }
+    // A streamed reading that failed before it could start must not start when
+    // the batch queue drains.
+    this._heldStreamChunks = [];
     // Only an idle queue may be released here: an active one belongs to
     // another reading, whose failure this event does not describe.
     if (this.isPlaying || this.isLoadingAudio || this._fragmentQueue.isProcessing()) return;
@@ -573,6 +622,8 @@ class PlaybackStore {
     this.isLoadingAudio = false;
     this._analyser.stop();
     this._stopping = true;
+    // A reading waiting for the other engine is cancelled with this stop.
+    this._heldStreamChunks = [];
 
     // Clear the fragment queue and any active PCM stream
     this._fragmentQueue.clear();
@@ -784,7 +835,7 @@ class PlaybackStore {
           total: 1,
           text: ""
         });
-        if (!this._fragmentQueue.isProcessing()) {
+        if (!this._fragmentQueue.isProcessing() && !this._streamOwnsSpeakers()) {
           await this._fragmentQueue.startProcessing();
         }
       });

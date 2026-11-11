@@ -941,3 +941,78 @@ it("lets a completed stream's live chain ring out and self-dispose", async () =>
   await vi.advanceTimersByTimeAsync(1000);
   expect(oscillators[0].stop).toHaveBeenCalledOnce();
 });
+
+/** AudioContext stub for tests that use both playback engines in one reading. */
+function stubCrossEngineContext() {
+  vi.stubGlobal(
+    "AudioContext",
+    class {
+      state = "running";
+      currentTime = 0;
+      destination = {};
+      decodeAudioData = decode;
+      createGain = () => ({ gain: { value: 1 }, connect() {}, disconnect() {} });
+      resume = vi.fn();
+      suspend = vi.fn();
+      close = vi.fn();
+    }
+  );
+}
+
+it("holds a streamed reading until the batch fragment path drains", async () => {
+  stubCrossEngineContext();
+  const receive = vi
+    .spyOn(PcmStreamScheduler.prototype, "handleChunk")
+    .mockImplementation(() => {});
+  // A new reading re-arms the stream gate, as the app's synthesis signal does.
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  // One batch fragment: its end completes the reading and frees the speakers.
+  await sendAudio(0, undefined, 1);
+  expect(playbackStore.isPlaying).toBe(true);
+
+  playbackStore.handleStreamChunk(streamChunk(null));
+  // The batch reading owns the speakers, so the streamed reading must wait.
+  expect(receive).not.toHaveBeenCalled();
+  expect(playbackStore.isPlaying).toBe(true);
+
+  vi.mocked(emit).mockClear();
+  audio.dispatchEvent(new Event("ended"));
+  await vi.waitFor(() => expect(receive).toHaveBeenCalledTimes(1));
+  expect(vi.mocked(emit)).toHaveBeenCalledWith("playback-started", null);
+  playbackStore.handleStop();
+});
+
+it("holds a batch reading until the streamed scheduler drains", async () => {
+  stubCrossEngineContext();
+  vi.spyOn(PcmStreamScheduler.prototype, "handleChunk").mockImplementation(() => {});
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  playbackStore.handleStreamChunk(streamChunk(null));
+  expect(playbackStore.isPlaying).toBe(true);
+
+  // A new batch reading must not start on the element while the stream plays.
+  await sendAudio(0, undefined, 1);
+  expect(decode).not.toHaveBeenCalled();
+
+  // No scheduled audio is left, so the terminal signal completes the stream.
+  await listeners.get("pagination:complete")!({ payload: null });
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalled());
+  expect(decode).toHaveBeenCalled();
+  expect(playbackStore.isPlaying).toBe(true);
+  playbackStore.handleStop();
+});
+
+it("drops a held stream when the reading is stopped", async () => {
+  stubCrossEngineContext();
+  const receive = vi
+    .spyOn(PcmStreamScheduler.prototype, "handleChunk")
+    .mockImplementation(() => {});
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  await sendAudio(0, undefined, 1);
+  playbackStore.handleStreamChunk(streamChunk(null));
+  expect(receive).not.toHaveBeenCalled();
+
+  playbackStore.handleStop();
+  audio.dispatchEvent(new Event("ended"));
+  await Promise.resolve();
+  expect(receive).not.toHaveBeenCalled();
+});
