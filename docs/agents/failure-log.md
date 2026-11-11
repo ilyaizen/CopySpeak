@@ -99,6 +99,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 - Branch every synthesis save site on `history.enabled`: on logs and saves to the history folder, off calls `save_speech_cache` and logs nothing; `find_cached_speech` must read the same store.
 - Replay an early stop's paid fragments from the content-addressed cache with history off: `find_cached_reading` replays a whole reading only when every fragment is saved, so keep the per-fragment `find_cached_fragment` lookup in the pagination loop; a streamed fragment never replays, since it has no complete WAV.
+- A cached whole-reading replay is one `audio-ready` on the batch webview path even with streaming on, so it pays per audio second before first audio: about 4.2 s for a 72 s reading at pitch 0.9, about 1.1 s at pitch 1.0. Measure it from the `[Playback] webview playback started` line minus the cached-replay emit line.
 - Present history batches as one reading in `recent-history.svelte`; preserve fragment order for full text, playback, and whole-reading deletion.
 - Show pagination as a part count on history rows; keep Play/Stop/Replay on the reading's button instead of adding a lower playback bar.
 - Keep Recent History as three vertical, text-first readings with View all history; let mouse-wheel input scroll normally on both pages.

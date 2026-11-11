@@ -766,6 +766,10 @@ fn main() {
             // synthesis wait). Config is read at start so toggling applies live.
             let app_handle_for_duck = app.handle().clone();
             app.listen("playback-started", move |_| {
+                // Anchor for start-latency measurement: this line's timestamp is
+                // when the webview first became audible, so the gap from the
+                // audio emit line is the webview's decode and effect cost.
+                log::info!("[Playback] webview playback started");
                 let cfg: State<std::sync::Mutex<config::AppConfig>> = app_handle_for_duck.state();
                 let duck = {
                     let cfg = cfg.lock().unwrap();
