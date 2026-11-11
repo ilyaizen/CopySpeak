@@ -1,7 +1,7 @@
 /**
  * Browser half of the CopySpeak voice bundle.
  *
- * Adds five surfaces that share one transport to the CopySpeak control server:
+ * Adds six surfaces that share one transport to the CopySpeak control server:
  *
  *   POST http://127.0.0.1:43117/speak
  *   {"text": "...", "request_id": "dsh.<stamp>.<n>", "wait": true}
@@ -10,6 +10,8 @@
  * - A speaker action in the action row of each finished assistant message.
  * - A per-session reader that speaks the final reply of each completed turn,
  *   and highlights the word CopySpeak plays inside the reply text itself.
+ * - A read-selection action that sits beside the host Quote action, speaks
+ *   only the selected words, and highlights them as CopySpeak plays.
  * - A frame-wide icon-only playback bar. It pauses, resumes, rewinds and
  *   skips, stops the reading, and scrolls back to the spoken word when the
  *   message action scrolled out of view.
@@ -41,6 +43,9 @@ window.__ModuleLoader__.load({
     const NS = "copyspeak-voice";
     const PACKAGE = "@local/copyspeak-voice";
     const PANEL_ID = "copyspeak";
+    /* The read-only selection interaction. The host Quote id owns a writable
+       selection, so this id admits the read action where Quote cannot open. */
+    const SELECTION_ID = "copyspeak-read-selection";
     const CONTROL_URL = "http://127.0.0.1:43117";
     const STYLE_KEY = PACKAGE + "/client.css";
     /* Custom-highlight names. Namespace them: other plugins may paint
@@ -141,9 +146,13 @@ window.__ModuleLoader__.load({
       "switch.off": "Off",
       "action.read": "Read aloud with CopySpeak",
       "action.stop": "Stop reading",
+      "selection.quote": "Quote text",
+      "selection.read": "Read selection",
+      "selection.stop": "Stop reading",
       "error.empty": "Nothing to read aloud",
       "error.offline": "CopySpeak is not running",
-      "error.failed": "CopySpeak request failed"
+      "error.failed": "CopySpeak request failed",
+      "error.selection": "The selection is gone"
     };
 
     const PLUGIN_STYLE = [
@@ -210,7 +219,18 @@ window.__ModuleLoader__.load({
          the highlight's recolored text over a rounded brand pill. */
       "[data-dsh-csva-mark-host]{isolation:isolate}",
       ".dsh-csva-markLayer{position:absolute;top:0;left:0;width:0;height:0;z-index:-1;pointer-events:none}",
-      ".dsh-csva-mark{position:absolute;border-radius:4px;background-color:var(--dsw-alias-brand-primary);pointer-events:none}"
+      ".dsh-csva-mark{position:absolute;border-radius:4px;background-color:var(--dsw-alias-brand-primary);pointer-events:none}",
+      /* The text-selection surface holds the host Quote pill and the CopySpeak
+         read pill side by side. The action style copies the host Quote pill
+         (floating fill, elevation stroke, pill radius), because a plain-JS
+         plugin cannot import the host CSS module. */
+      ".dsh-csva-selection{display:inline-flex;align-items:center;gap:8px;max-width:100%}",
+      ".dsh-csva-selectionAction{corner-shape:round;display:inline-flex;align-items:center;gap:5px;border:none;border-radius:999px;padding:5px 10px;background:var(--dsw-alias-button-floating-fill);--dsw-elevation-stroke-color:var(--dsw-alias-border-l3);box-shadow:var(--dsw-elevation-panel);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-13);white-space:nowrap;cursor:pointer}",
+      "@media (hover:hover){.dsh-csva-selectionAction:hover:not(:disabled){background:var(--dsw-alias-button-floating-hover)}}",
+      ".dsh-csva-selectionAction:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
+      ".dsh-csva-selectionAction:disabled{opacity:.4;cursor:default}",
+      ".dsh-csva-selectionAction[data-active]{background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base)}",
+      ".dsh-csva-selectionNote{font-size:12px;line-height:16px;color:var(--dsw-alias-state-error-primary);white-space:nowrap}"
     ].join("\n");
 
     /* One reading at a time; every surface observes this record. `paused` is
@@ -219,6 +239,9 @@ window.__ModuleLoader__.load({
     const playback = {
       messageId: null,
       requestId: null,
+      /* Which surface owns the current reading: "message", "selection", or
+         null when idle. */
+      source: null,
       paused: false,
       pauseChangedAt: 0,
       listeners: new Set(),
@@ -239,9 +262,10 @@ window.__ModuleLoader__.load({
       };
     }
 
-    function remember(messageId, requestId) {
+    function remember(messageId, requestId, source) {
       playback.messageId = messageId;
       playback.requestId = requestId;
+      playback.source = source;
       playback.paused = false;
       playback.pauseChangedAt = 0;
       emit(playback.listeners);
@@ -250,6 +274,7 @@ window.__ModuleLoader__.load({
     function forget() {
       playback.messageId = null;
       playback.requestId = null;
+      playback.source = null;
       playback.paused = false;
       playback.pauseChangedAt = 0;
       stopStatusPolling();
@@ -329,6 +354,12 @@ window.__ModuleLoader__.load({
     const reading = {
       messageId: null,
       nodeKey: null,
+      /* The cloned browser range a selection reading highlights. A message
+         reading leaves it null and resolves its target from the node key. */
+      range: null,
+      /* The read-selection action exists to show its words, so it paints them
+         even when the Show captions switch is off. */
+      forceCaptions: false,
       speechTokens: [],
       element: null,
       tokens: null,
@@ -407,6 +438,48 @@ window.__ModuleLoader__.load({
             norm: norm,
             code: inCode
           });
+        }
+        node = walker.nextNode();
+      }
+      return tokens;
+    }
+
+    /* The words inside one cloned selection range, in document order. The owner
+       admits a selection only when both range ends sit in one
+       text-interaction source, so the range covers one rendered reply body. */
+    function tokensFromRange(range) {
+      const tokens = [];
+      const root = range.commonAncestorContainer;
+      if (!root.isConnected) return tokens;
+      const area = root.nodeType === Node.TEXT_NODE ? root.parentElement : root;
+      if (area === null) return tokens;
+      const walker = document.createTreeWalker(area, NodeFilter.SHOW_TEXT);
+      let node = walker.nextNode();
+      while (node !== null) {
+        if (!range.intersectsNode(node)) {
+          node = walker.nextNode();
+          continue;
+        }
+        const text = node.nodeValue ?? "";
+        const first = node === range.startContainer ? range.startOffset : 0;
+        const last = node === range.endContainer ? range.endOffset : text.length;
+        if (last > first) {
+          const inCode =
+            node.parentElement !== null && node.parentElement.closest("code, pre") !== null;
+          const slice = text.slice(first, last);
+          for (const match of slice.matchAll(WORD_SPAN)) {
+            const norm = normalizeWord(match[0]);
+            if (norm === "") continue;
+            const span = wordSpan(match[0]);
+            const base = first + match.index;
+            tokens.push({
+              node: node,
+              start: base + span.start,
+              end: base + span.end,
+              norm: norm,
+              code: inCode
+            });
+          }
         }
         node = walker.nextNode();
       }
@@ -619,6 +692,33 @@ window.__ModuleLoader__.load({
       return best;
     }
 
+    /* Resolve the rendered selection. The cloned range survives a cleared
+       native selection; it fails only when the chat replaced the nodes it
+       points at, and the highlight then stops while the audio continues. */
+    function findSelectionTarget() {
+      const range = reading.range;
+      if (range === null) return null;
+      const start = range.startContainer;
+      const end = range.endContainer;
+      if (start === null || end === null || !start.isConnected || !end.isConnected) return null;
+      const tokens = tokensFromRange(range);
+      if (tokens.length === 0) return null;
+      const element = sourceElement(start) ?? sourceElement(end);
+      if (element === null) return null;
+      return { element: element, tokens: tokens, score: tokens.length };
+    }
+
+    /* The text-interaction source element that holds one range boundary. */
+    function sourceElement(node) {
+      if (node === null) return null;
+      if (node.nodeType === Node.TEXT_NODE) {
+        const parent = node.parentElement;
+        return parent === null ? null : parent.closest(SOURCE_SELECTOR);
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return null;
+      return node.closest(SOURCE_SELECTOR);
+    }
+
     /* The logical token stream is the word order a reply renders; the physical
        span is the text node and the offsets a paint needs. A host re-render can
        replace the physical spans while the logical stream stays identical. */
@@ -651,7 +751,7 @@ window.__ModuleLoader__.load({
       if (!force && reading.element !== null && reading.element.isConnected && !spansStale()) {
         return reading.element;
       }
-      const found = findMessageTarget();
+      const found = reading.range === null ? findMessageTarget() : findSelectionTarget();
       releaseMarkHost();
       const previous = reading.tokens;
       const previousActive = reading.activeToken;
@@ -901,7 +1001,8 @@ window.__ModuleLoader__.load({
     /* A React re-render can drop the mark layer while the same word plays.
        Re-assert the painted word when that happened. */
     function keepWordPainted() {
-      if (!preferences.captions || reading.activeToken < 0 || reading.tokens === null) return;
+      const paint = preferences.captions || reading.forceCaptions;
+      if (!paint || reading.activeToken < 0 || reading.tokens === null) return;
       if (window.CSS === undefined || window.CSS.highlights === undefined) return;
       const token = reading.tokens[reading.activeToken];
       if (!token.node.isConnected) return;
@@ -1085,7 +1186,7 @@ window.__ModuleLoader__.load({
         const retryToken = reading.tokens[retryTokenIndex];
         if (!retryToken.node.isConnected) return;
         reading.activeToken = retryTokenIndex;
-        if (preferences.captions) {
+        if (preferences.captions || reading.forceCaptions) {
           paintWord(retryToken);
           return;
         }
@@ -1097,16 +1198,18 @@ window.__ModuleLoader__.load({
         return;
       }
       reading.activeToken = tokenIndex;
-      if (preferences.captions) {
+      if (preferences.captions || reading.forceCaptions) {
         paintWord(token);
         return;
       }
       followRange(token, tokenRange(token));
     }
 
-    function resetReading(messageId, nodeKey, speech) {
+    function resetReading(messageId, nodeKey, speech, range = null) {
       reading.messageId = messageId;
       reading.nodeKey = nodeKey;
+      reading.range = range;
+      reading.forceCaptions = range !== null;
       reading.speechTokens = speech === "" ? [] : tokensFromText(speech);
       reading.element = null;
       reading.tokens = null;
@@ -1330,8 +1433,9 @@ window.__ModuleLoader__.load({
       return post("/seek", { request_id: requestId, delta_ms: deltaMs });
     }
 
-    /* Start one reading and resolve with its failure code, or null. */
-    function beginReading(messageId, nodeKey, speech) {
+    /* Start one reading and resolve with its failure code, or null. A selection
+       reading passes its cloned range instead of a message id and node key. */
+    function beginReading(messageId, nodeKey, speech, range = null) {
       const previous = playback.requestId;
       const stopping = previous === null ? Promise.resolve(true) : stopReading(previous);
       return stopping.then(function (stopped) {
@@ -1340,8 +1444,8 @@ window.__ModuleLoader__.load({
           return "error.offline";
         }
         const requestId = nextRequestId();
-        resetReading(messageId, nodeKey, speech);
-        remember(messageId, requestId);
+        resetReading(messageId, nodeKey, speech, range);
+        remember(messageId, requestId, range === null ? "message" : "selection");
         startStatusPolling(requestId);
         return post("/speak", { text: speech, request_id: requestId, wait: true }).then(
           function (finished) {
@@ -1828,6 +1932,140 @@ window.__ModuleLoader__.load({
       );
     }
 
+    /* Quote needs a writable conversation; reading a selection does not. */
+    function sessionWritable(session) {
+      if (session.removed) return false;
+      if (session.subagent === null) return true;
+      return (
+        session.subagent.address.mode === "continuable" && session.subagent.parentAvailable === true
+      );
+    }
+
+    /* The selection pills: the host Quote action beside the CopySpeak read
+       action. A writable session shows both. A read-only session opens this
+       surface through the CopySpeak interaction alone, so Quote is absent: the
+       host Quote admission refuses a non-writable conversation. */
+    function SelectionAction(props) {
+      const t = props.t ?? boundT;
+      const dismiss = props.dismiss;
+      const readText = props.readText;
+      const clearSelection = props.clearSelection;
+      const inputActions = props.inputActions;
+      const useSession = props.useSession;
+      const enabled = useSession === undefined ? true : useSession(sessionWritable);
+      const [active, setActive] = React.useState(
+        playback.source === "selection" && playback.requestId !== null
+      );
+      const [busy, setBusy] = React.useState(false);
+      const [failure, setFailure] = React.useState(null);
+      const failureTimer = React.useRef(null);
+
+      React.useEffect(function () {
+        return subscribe(playback.listeners, function () {
+          setActive(playback.source === "selection" && playback.requestId !== null);
+        });
+      }, []);
+
+      React.useEffect(function () {
+        return function () {
+          if (failureTimer.current !== null) clearTimeout(failureTimer.current);
+        };
+      }, []);
+
+      function fail(key) {
+        setFailure(key);
+        if (failureTimer.current !== null) clearTimeout(failureTimer.current);
+        failureTimer.current = setTimeout(function () {
+          setFailure(null);
+        }, 4000);
+      }
+
+      function onQuote() {
+        const text = readText();
+        if (text === null) {
+          dismiss();
+          return;
+        }
+        if (!inputActions.insertQuote(text)) return;
+        clearSelection();
+        dismiss();
+      }
+
+      function onRead() {
+        if (active) {
+          setBusy(true);
+          void stopReadingNow().then(function () {
+            setBusy(false);
+          });
+          return;
+        }
+        if (busy) return;
+        const text = readText();
+        if (text === null) {
+          dismiss();
+          return;
+        }
+        const selection = window.getSelection();
+        if (selection === null || selection.rangeCount !== 1 || selection.isCollapsed) {
+          fail("error.selection");
+          return;
+        }
+        /* The owner keeps the selection mounted while this surface is open, so
+           this clone is the range to highlight. */
+        const range = selection.getRangeAt(0).cloneRange();
+        setBusy(true);
+        void beginReading(null, null, text, range).then(function (error) {
+          setBusy(false);
+          if (error !== null) fail(error);
+        });
+      }
+
+      /* A pointer-down on either pill must not collapse the selection before
+         the read action can clone its range; the host Quote pill does this. */
+      function keepSelection(event) {
+        event.preventDefault();
+      }
+
+      const readLabel = active ? t("selection.stop") : t("selection.read");
+      const disabled = busy && !active;
+
+      return h(
+        "span",
+        { className: "dsh-csva-selection" },
+        enabled
+          ? h(
+              "button",
+              {
+                type: "button",
+                className: "dsh-csva-selectionAction",
+                "aria-label": t("selection.quote"),
+                onPointerDown: keepSelection,
+                onClick: onQuote
+              },
+              t("selection.quote")
+            )
+          : null,
+        h(
+          "button",
+          {
+            type: "button",
+            className: "dsh-csva-selectionAction",
+            "aria-label": readLabel,
+            "aria-pressed": active,
+            "data-active": active || undefined,
+            disabled: disabled,
+            onPointerDown: keepSelection,
+            onClick: onRead
+          },
+          h(ReadGlyph, { size: 14 }),
+          readLabel
+        ),
+        failure === null
+          ? null
+          : h("span", { className: "dsh-csva-selectionNote", role: "status" }, t(failure))
+      );
+    }
+
     /**
      * Per-session watcher under the composer: when a turn completes and
      * auto-read is on, speak its final reply. It renders nothing.
@@ -1915,17 +2153,17 @@ window.__ModuleLoader__.load({
     function PlaybackBar(props) {
       const t = props.t ?? boundT;
       const [state, setState] = React.useState({
-        messageId: playback.messageId,
+        active: playback.requestId !== null,
         paused: playback.paused
       });
 
       React.useEffect(function () {
         return subscribe(playback.listeners, function () {
-          setState({ messageId: playback.messageId, paused: playback.paused });
+          setState({ active: playback.requestId !== null, paused: playback.paused });
         });
       }, []);
 
-      if (state.messageId === null) return null;
+      if (!state.active) return null;
 
       return h(
         "div",
@@ -2119,7 +2357,7 @@ window.__ModuleLoader__.load({
     }
 
     return {
-      inject: ["slots", "locale"],
+      inject: ["slots", "locale", "sessions", "uiConversation"],
       apply(ctx) {
         ctx.effect(function () {
           const style = document.createElement("style");
@@ -2216,6 +2454,51 @@ window.__ModuleLoader__.load({
             },
             PlaybackBar
           );
+        });
+
+        /* A writable selection opens the host Quote interaction, which renders
+           this plugin's shadowing "quote" cell: the Quote pill stays and the
+           read pill joins it. A non-writable selection gets this plugin's own
+           interaction and cell instead, because the Quote admission closes
+           before it opens a surface. */
+        ctx.effect(function () {
+          return ctx.uiConversation.interactions.register({
+            id: SELECTION_ID,
+            onInteraction(request) {
+              if (request.trigger !== "selection") return;
+              if (request.readText() === null) return;
+              const binding = ctx.sessions.binding(request.sessionId);
+              if (binding === undefined) return;
+              if (sessionWritable(binding.session.getSnapshot())) return;
+              request.open();
+            }
+          });
+        }, PACKAGE + ": selection interaction");
+
+        ctx.slots.inject("conversation.chat.text-interaction", function () {
+          const quote = ctx.slots.register(
+            {
+              name: "conversation.chat.text-interaction",
+              key: "quote",
+              /* The host Quote cell registers at the default priority 0. A
+                 lower priority shadows it; the lowest live priority renders. */
+              priority: -10,
+              locale: NS
+            },
+            SelectionAction
+          );
+          const selection = ctx.slots.register(
+            {
+              name: "conversation.chat.text-interaction",
+              key: SELECTION_ID,
+              locale: NS
+            },
+            SelectionAction
+          );
+          return function () {
+            selection();
+            quote();
+          };
         });
       }
     };

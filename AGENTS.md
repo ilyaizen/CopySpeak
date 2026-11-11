@@ -98,3 +98,4 @@ Before editing an area, read its section in [`docs/agents/failure-log.md`](docs/
 - **Frontend checks**: component tests, mocks, `vp check`
 - **Icons**: tray artwork and build assets
 - **Experimental gating**: feature gates and saved settings
+- **DSH plugin (`copyspeak-dsh`)**: selection surface, keyed-slot shadowing, interaction dispatch

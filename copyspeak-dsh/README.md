@@ -15,6 +15,10 @@ A DSH plugin that reads assistant replies aloud through the CopySpeak desktop ap
 - While the message plays, the action shows the filled speaker in the theme's brand color. Its tooltip reads **Stop reading**.
 - Clicking the action while it plays stops the reading.
 - When playback ends, the action returns to the outlined speaker.
+- A **Read selection** pill beside the host **Quote text** button when you select text in a settled reply:
+  - It reads only the selected words through the same CopySpeak transport.
+  - It highlights the spoken words inside the selection as CopySpeak plays them, even when **Show captions while reading** is off: the action exists to show its words.
+  - The Quote pill stays beside it and keeps its host behavior. In a read-only conversation, where Quote cannot insert, the read action still opens.
 - A floating playback bar in the upper right corner, below the session header's bottom border, while a reply plays. It starts with the colored CopySpeak app logo. Every control is an icon with a tooltip and an accessible label:
   - **Pause** stops the audio at the current word. The control then shows **Resume**.
   - **-5 s** rewinds 5 seconds. **+5 s** skips forward 5 seconds. Both controls work while paused.
@@ -73,6 +77,17 @@ The highlight paints inside the message, not in a separate strip:
 - A manual wheel, touch, or key scroll pauses following for 5 s, so the view does not fight the reading.
 - The bar's **Show in chat** control scrolls to the spoken word at once and resumes following.
 
+### Selection reads
+
+Selecting text in a settled reply opens the chat text-interaction surface. The plugin shadows the host Quote cell for the `quote` key at a lower priority, so the surface renders the host **Quote text** pill and the CopySpeak **Read selection** pill in one row. The Quote pill keeps the host behavior: it inserts the selection as a quote and dismisses the surface. The read pill speaks exactly the selected text.
+
+- The read pill clones the browser selection range when you click it. That clone is the highlight target: the caption aligner maps the spoken fragment onto the selected words only, so words outside the selection never paint.
+- The pointer-down handler prevents the browser default, so clicking either pill does not collapse the selection before the range clone is taken.
+- A selection reading always paints its spoken words, even with **Show captions while reading** off. The other reading surfaces still follow that switch.
+- The host admits a selection only when both ends sit in one rendered reply body. A selection that crosses two replies never opens the surface.
+- In a read-only conversation, the host Quote admission refuses to open a surface. The plugin registers its own `copyspeak-read-selection` interaction for that case, so the read action still opens; the surface then shows the read pill only, because Quote cannot insert there.
+- The reading stops at the end of the selection or at the playback bar's Stop control. It uses the same status poll, captions, follow, pause, seek, and bar as a message reading.
+
 The caption position counts inside one spoken fragment. A normal fragment change starts the count again, so the plugin aligns forward from its last matched word. A position that drops by more than 300 ms on the same fragment is a rewind: the plugin aligns again from the start of the message, so the highlight and follow find the spoken word again.
 
 Slots:
@@ -82,6 +97,7 @@ Slots:
 - `conversation.chat.assistant-actions` – the speaker action in the completed turn's action row.
 - `conversation.composer.dock` – a null-rendering per-session watcher that speaks the final reply of each completed turn and runs the caption highlight.
 - `shell.overlay` – the floating playback bar, id `copyspeak-playback`.
+- `conversation.chat.text-interaction` – the selection pill row. Key `quote` registers at priority -10, so it shadows the host Quote cell and renders both pills; key `copyspeak-read-selection` renders the read pill for a conversation where Quote cannot open. A keyed cell with a lower priority shadows the same key at a higher one, and only the lowest live priority renders.
 
 The switches live in the page's `localStorage` under `dsh.copyspeak-voice.auto-read`, `dsh.copyspeak-voice.captions`, and `dsh.copyspeak-voice.follow`. Auto-read and captions are off when their key is absent; follow is on.
 
@@ -95,6 +111,8 @@ The sidebar panel icon is the outlined read mark that the message action shows w
 - CopySpeak truncates the text to its configured `max_text_length`.
 - Code blocks are removed from the spoken text.
 - The highlight paints only while the reply is on screen and only while `/status` answers. It also stays hidden for a fragment whose words cannot be found in the rendered text, such as a number the sanitizer spells out or a reply in a spaceless script where the spoken words and the rendered words tokenize differently.
+- A selection read speaks the rendered text, including code blocks and inline code. Only a whole-message read removes Markdown code blocks.
+- The selection highlight stops when the chat replaces the reply's text nodes and the cloned range detaches. The audio continues, and the bar and Stop still work.
 - Auto-read starts at the next completed turn. Enabling it never replays old turns.
 - A paused reading keeps the `wait: true` request open. The action row keeps its Stop glyph, and auto-read waits until the reading resumes and ends. Stop ends the reading at once.
 - An app older than the pause and seek routes ignores them. The pause glyph then reverts at the next snapshot, and a seek does nothing.
@@ -107,7 +125,7 @@ The sidebar panel icon is the outlined read mark that the message action shows w
 - `package.json` – bundle manifest, `dsh.bundle` patch, `dsh.client` declaration.
 - `cordis.patch.yml` – inserts the `copyspeak-voice` Loader row.
 - `index.js` – no-op host half, keeps the bundle row loadable.
-- `client.js` – the browser half: panel and action glyphs, preferences, CopySpeak transport and pause/seek controls, caption alignment and highlight, follow scrolling, the icon-only playback bar, and five slot registrations.
+- `client.js` – the browser half: panel and action glyphs, preferences, CopySpeak transport and pause/seek controls, caption alignment and highlight, follow scrolling, the selection pill row, the icon-only playback bar, and seven slot registrations.
 - `locale/en.json` – Plugin Manager title and description.
 - `icon.svg` – the colored app-logo mark for the Plugin Manager, rendered as an `<img>`.
 
