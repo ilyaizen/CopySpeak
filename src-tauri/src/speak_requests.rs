@@ -13,14 +13,14 @@
 //! - **Stop arriving late**: a request that already finished ignores it, so a
 //!   delayed stop can never cut a later request's playback.
 //!
-//! Playback is stopped only while the cancelled request still owns the
-//! speakers ([`PlaybackOwner`]): it was the last reading to emit audio. Any
-//! newer reading takes ownership at its own first audible emit, and the stale
-//! stop leaves it alone. A reading that has only started synthesizing owns
-//! nothing, so stopping it never cuts the previous reading.
+//! Playback is stopped only while the cancelled request's reading still owns
+//! the speakers ([`PlaybackOwner`]): the webview reports which reading became
+//! audible, and Rust claims that reading then. Any newer reading takes
+//! ownership when its audio becomes audible, and the stale stop leaves it
+//! alone. A reading that has only started synthesizing owns nothing, so
+//! stopping it never cuts the previous reading.
 
 use std::collections::{HashMap, HashSet};
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
@@ -48,6 +48,12 @@ enum Phase {
 struct Entry {
     seq: u64,
     phase: Phase,
+    /// The reading this request serves: the process-wide playback identity its
+    /// events carry. `None` until the reading's [`AbortScope`] begins, so a
+    /// stop that arrives earlier owns nothing.
+    ///
+    /// [`AbortScope`]: crate::AbortScope
+    reading: Option<u64>,
     /// The cancel also stopped playback this request owned; the webview's
     /// `playback-finished` for that stop is still in flight.
     stopped_playback: bool,
@@ -130,11 +136,41 @@ impl Registry {
             Entry {
                 seq,
                 phase: Phase::Live,
+                reading: None,
                 stopped_playback: false,
                 touched: now,
             },
         );
         Registration::Proceed(seq)
+    }
+
+    /// Attach the reading `seq` serves, once its [`AbortScope`] allocated it.
+    /// A reading that emits nothing (a failed or cancelled reading) still
+    /// carries its id, so a later scoped stop can name it and drop its held
+    /// audio.
+    ///
+    /// [`AbortScope`]: crate::AbortScope
+    pub fn attach_reading(&mut self, seq: u64, reading: u64) {
+        if reading == 0 {
+            return;
+        }
+        if let Some(entry) = self.by_id.values_mut().find(|entry| entry.seq == seq) {
+            entry.reading = Some(reading);
+        }
+    }
+
+    /// The reading `seq` serves, or `None` when the request registered but has
+    /// not begun a reading yet (or never did).
+    pub fn reading_of(&self, seq: u64) -> Option<u64> {
+        self.by_id
+            .values()
+            .find(|entry| entry.seq == seq)
+            .and_then(|entry| entry.reading)
+    }
+
+    /// The reading of request `id`, whatever phase the request is in.
+    pub fn reading_for_id(&self, id: &str) -> Option<u64> {
+        self.by_id.get(id).and_then(|entry| entry.reading)
     }
 
     /// The sequence of `id` while its request is live. Unknown, finished and
@@ -146,14 +182,15 @@ impl Registry {
             .map(|entry| entry.seq)
     }
 
-    /// Cancel `id`. `owns_playback(seq)` reports whether that live request
-    /// still owns the speakers; the answer is recorded with the cancellation
-    /// in one step, so a waiter never sees "cancelled" without it.
+    /// Cancel `id`. `owns_playback(reading)` reports whether that live
+    /// request's reading still owns the speakers; the answer is recorded with
+    /// the cancellation in one step, so a waiter never sees "cancelled"
+    /// without it. A request whose reading has not begun passes `None`.
     pub fn cancel(
         &mut self,
         id: &str,
         now: Instant,
-        owns_playback: impl FnOnce(u64) -> bool,
+        owns_playback: impl FnOnce(Option<u64>) -> bool,
     ) -> StopOutcome {
         self.prune(now);
         match self.by_id.get_mut(id) {
@@ -165,6 +202,7 @@ impl Registry {
                     Entry {
                         seq,
                         phase: Phase::Cancelled,
+                        reading: None,
                         stopped_playback: false,
                         touched: now,
                     },
@@ -173,7 +211,7 @@ impl Registry {
             }
             Some(entry) => match entry.phase {
                 Phase::Live => {
-                    let stopped_playback = owns_playback(entry.seq);
+                    let stopped_playback = owns_playback(entry.reading);
                     entry.phase = Phase::Cancelled;
                     entry.stopped_playback = stopped_playback;
                     entry.touched = now;
@@ -251,10 +289,11 @@ impl Registry {
     }
 }
 
-/// Which reading currently owns the speakers: the last one to emit audio.
-/// Emits and scoped stops serialize on this lock, so a stop
-/// emitted for request R always reaches the webview before any later
-/// reading's start or audio, never after it.
+/// Which reading currently owns the speakers: the reading the webview last
+/// reported audible. The value 0 means "no reading owns the speakers".
+/// Claims and scoped stops serialize on this lock, so a stop emitted for a
+/// request always reaches the webview before any later reading's start or
+/// audio, never after it.
 pub struct PlaybackOwner {
     current: Mutex<u64>,
 }
@@ -266,16 +305,41 @@ impl PlaybackOwner {
         }
     }
 
-    /// Take ownership for `request` and run `emit` under the lock, unless
-    /// `aborted()` already reads true (then nothing is emitted).
-    pub fn claim(&self, request: u64, aborted: impl FnOnce() -> bool, emit: impl FnOnce()) -> bool {
+    /// Take ownership for `reading` and run `emit` under the lock, unless
+    /// `aborted()` already reads true (then nothing is emitted). Reading 0
+    /// clears the owner: audio that belongs to no reading takes the speakers
+    /// away from any reading.
+    pub fn claim(&self, reading: u64, aborted: impl FnOnce() -> bool, emit: impl FnOnce()) -> bool {
         let mut current = self.current.lock().unwrap_or_else(|e| e.into_inner());
         if aborted() {
             return false;
         }
-        *current = request;
+        *current = reading;
         emit();
         true
+    }
+
+    /// The webview reports `reading` audible: that reading now owns the
+    /// speakers. Reading 0 means "no reading" and changes nothing.
+    pub fn claim_audible(&self, reading: u64) {
+        if reading == NO_REQUEST {
+            return;
+        }
+        let mut current = self.current.lock().unwrap_or_else(|e| e.into_inner());
+        *current = reading;
+    }
+
+    /// The webview reports `reading` finished: clear the owner only when that
+    /// reading still holds it, so a stale finish never takes the speakers from
+    /// a newer reading.
+    pub fn release_audible(&self, reading: u64) {
+        if reading == NO_REQUEST {
+            return;
+        }
+        let mut current = self.current.lock().unwrap_or_else(|e| e.into_inner());
+        if *current == reading {
+            *current = NO_REQUEST;
+        }
     }
 
     /// Run `f` with the current owner while holding the owner lock, so no
@@ -285,48 +349,16 @@ impl PlaybackOwner {
         f(*current)
     }
 
-    /// Run `stop` only while `request` still owns the speakers. Production
+    /// Run `stop` only while `reading` still owns the speakers. Production
     /// stops go through [`cancel`], which decides and stops in one critical
     /// section; this is the owner rule on its own, for tests.
     #[cfg(test)]
-    pub fn stop_if_owner(&self, request: u64, stop: impl FnOnce()) -> bool {
+    pub fn stop_if_owner(&self, reading: u64, stop: impl FnOnce()) -> bool {
         let current = self.current.lock().unwrap_or_else(|e| e.into_inner());
-        if request == NO_REQUEST || *current != request {
+        if reading == NO_REQUEST || *current != reading {
             return false;
         }
         stop();
-        true
-    }
-}
-
-/// Re-arms the webview's streamed-playback gate exactly once per reading, at
-/// the reading's first audible chunk.
-///
-/// The webview drops every `audio-stream-chunk` while its `_streamStopped`
-/// gate is set, and only a `synthesis-state-change(true)` clears it. The
-/// reading's start signal clears the gate at synthesis start, but a scoped
-/// stop for the PREVIOUS owner can land after that and re-set it — stopping
-/// the previous reading is exactly what it should do. The innocent next
-/// reading must not be silenced by it: at its first audible chunk — claimed
-/// under the speaker-ownership lock, so it serializes with that stop — the
-/// gate is re-armed again, immediately before the chunk on the wire.
-///
-/// Once per reading keeps a stop that lands mid-stream authoritative: no
-/// later chunk resurrects stopped playback.
-pub struct StreamRearm(AtomicBool);
-
-impl StreamRearm {
-    pub const fn new() -> Self {
-        Self(AtomicBool::new(false))
-    }
-
-    /// Run `rearm` on the first call only; later calls are no-ops. Returns
-    /// whether this call rearmed.
-    pub fn rearm(&self, rearm: impl FnOnce()) -> bool {
-        if self.0.swap(true, Ordering::Relaxed) {
-            return false;
-        }
-        rearm();
         true
     }
 }
@@ -346,15 +378,41 @@ pub fn register(id: &str) -> Registration {
     registry().register(id, Instant::now())
 }
 
-/// Cancel `id`; when the request is live and still owns playback, run `stop`.
+/// Attach the reading a request serves (see [`Registry::attach_reading`]).
+pub fn attach_reading(request: u64, reading: u64) {
+    if request == NO_REQUEST {
+        return;
+    }
+    registry().attach_reading(request, reading);
+}
+
+/// The reading of request `id`, whatever phase it is in. The control server
+/// uses this to name a stopped reading in `playback-reading-dropped`.
+pub fn reading_for_id(id: &str) -> Option<u64> {
+    registry().reading_for_id(id)
+}
+
+/// The webview reports `reading` audible: claim the speakers for it.
+pub fn claim_audible(reading: u64) {
+    OWNER.claim_audible(reading);
+}
+
+/// The webview reports `reading` finished: release the speakers when it still
+/// holds them.
+pub fn release_audible(reading: u64) {
+    OWNER.release_audible(reading);
+}
+
+/// Cancel `id`; when the request is live and its reading still owns playback,
+/// run `stop`.
 ///
 /// Everything happens under the owner lock (lock order owner → registry, the
-/// same as an emit's claim): an emit for this request either ran before (its
+/// same as an emit's claim): an emit for this reading either ran before (its
 /// audio is then stopped) or runs after and sees the cancelled scope, and no
-/// newer reading can claim the speakers between the owner check and `stop`.
+/// newer reading can become audible between the owner check and `stop`.
 pub fn cancel(id: &str, stop: impl FnOnce()) -> StopOutcome {
     OWNER.with_current(|owner| {
-        let outcome = registry().cancel(id, Instant::now(), |seq| owner == seq);
+        let outcome = registry().cancel(id, Instant::now(), |reading| reading == Some(owner));
         if let StopOutcome::Cancelled {
             stopped_playback: true,
             ..
@@ -376,9 +434,11 @@ pub fn is_cancelled(seq: u64) -> bool {
     seq != NO_REQUEST && registry().is_cancelled(seq)
 }
 
-/// Claim the speakers for `request` and emit under the owner lock.
-pub fn claim_playback(request: u64, aborted: impl FnOnce() -> bool, emit: impl FnOnce()) -> bool {
-    OWNER.claim(request, aborted, emit)
+/// Claim the speakers for `reading` and emit under the owner lock. Reading 0
+/// belongs to no reading (a helper scope): claiming it takes the speakers away
+/// from any reading.
+pub fn claim_playback(reading: u64, aborted: impl FnOnce() -> bool, emit: impl FnOnce()) -> bool {
+    OWNER.claim(reading, aborted, emit)
 }
 
 /// Audio that belongs to no request (history replay, cached replay) is about
@@ -454,9 +514,10 @@ fn dispatch_to_owner_with(
 }
 
 /// One ownership attempt: check the request is live, compare the speaker
-/// owner, then run under the owner lock (lock order owner -> registry, the
-/// same as [`cancel`]). The registry guard drops before `run`, so the emit
-/// never holds the registry lock.
+/// owner with the live request's reading, then run under the owner lock (lock
+/// order owner -> registry, the same as [`cancel`]). A request whose reading
+/// did not begin yet is not the owner. The registry guard drops before `run`,
+/// so the emit never holds the registry lock.
 fn try_run_if_owner(
     id: &str,
     owner: &PlaybackOwner,
@@ -464,17 +525,19 @@ fn try_run_if_owner(
     run: &mut impl FnMut(u64),
 ) -> OwnerCheck {
     owner.with_current(|current| {
-        let seq = registry
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .live_seq(id);
-        match seq {
-            None => OwnerCheck::NotLive,
-            Some(seq) if seq == current => {
+        let (seq, reading) = {
+            let registry = registry.lock().unwrap_or_else(|e| e.into_inner());
+            match registry.live_seq(id) {
+                None => return OwnerCheck::NotLive,
+                Some(seq) => (seq, registry.reading_of(seq)),
+            }
+        };
+        match reading {
+            Some(reading) if reading == current => {
                 run(seq);
                 OwnerCheck::Ran
             }
-            Some(_) => OwnerCheck::NotOwner,
+            _ => OwnerCheck::NotOwner,
         }
     })
 }
@@ -544,7 +607,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
     use std::sync::Arc;
 
     fn t0() -> Instant {
@@ -597,17 +660,20 @@ mod tests {
         let Registration::Proceed(b) = reg.register("b", now) else {
             panic!("b must register");
         };
+        reg.attach_reading(a, 10);
+        reg.attach_reading(b, 20);
         assert_eq!(
-            reg.cancel("a", now, |seq| seq == a),
+            reg.cancel("a", now, |reading| reading == Some(10)),
             StopOutcome::Cancelled {
                 seq: a,
                 stopped_playback: true
             }
         );
         assert!(reg.stopped_playback(a));
-        // b does not own the speakers (a does): its cancel stops nothing.
+        // b's reading does not own the speakers (a's does): its cancel stops
+        // nothing.
         assert_eq!(
-            reg.cancel("b", now, |seq| seq == a),
+            reg.cancel("b", now, |reading| reading == Some(10)),
             StopOutcome::Cancelled {
                 seq: b,
                 stopped_playback: false
@@ -719,15 +785,15 @@ mod tests {
     }
 
     #[test]
-    fn owner_stop_reaches_only_the_current_owner() {
+    fn owner_stop_reaches_only_the_current_reading() {
         let owner = PlaybackOwner::new();
         let stops = AtomicUsize::new(0);
         assert!(owner.claim(7, || false, || {}));
-        // A stop for a different request does nothing.
+        // A stop for a different reading does nothing.
         assert!(!owner.stop_if_owner(8, || {
             stops.fetch_add(1, Ordering::SeqCst);
         }));
-        // Request 7 still owns playback: its stop runs.
+        // Reading 7 still owns playback: its stop runs.
         assert!(owner.stop_if_owner(7, || {
             stops.fetch_add(1, Ordering::SeqCst);
         }));
@@ -738,13 +804,13 @@ mod tests {
     fn newer_reading_takes_ownership_so_a_stale_stop_spares_it() {
         let owner = PlaybackOwner::new();
         owner.claim(7, || false, || {});
-        // A later reading (request 9, or an unscoped one) starts.
+        // A later reading (9) or an unscoped emit (0) takes the speakers.
         owner.claim(NO_REQUEST, || false, || {});
         let mut stopped = false;
         assert!(!owner.stop_if_owner(7, || stopped = true));
         assert!(!stopped, "a stale stop must not cut a newer reading");
         assert!(!owner.stop_if_owner(NO_REQUEST, || stopped = true));
-        assert!(!stopped, "request 0 is never a scoped stop target");
+        assert!(!stopped, "reading 0 is never a scoped stop target");
     }
 
     #[test]
@@ -757,6 +823,34 @@ mod tests {
         let mut stopped = false;
         assert!(owner.stop_if_owner(3, || stopped = true));
         assert!(stopped);
+    }
+
+    #[test]
+    fn audible_claim_and_release_follow_the_webview() {
+        let owner = PlaybackOwner::new();
+        assert_eq!(owner.with_current(|current| current), NO_REQUEST);
+
+        owner.claim_audible(0);
+        assert_eq!(
+            owner.with_current(|current| current),
+            NO_REQUEST,
+            "reading 0 means no reading and changes nothing"
+        );
+
+        owner.claim_audible(11);
+        assert_eq!(owner.with_current(|current| current), 11);
+
+        // A stale finish for another reading leaves the owner alone.
+        owner.release_audible(12);
+        assert_eq!(owner.with_current(|current| current), 11);
+
+        // The matching finish clears the owner.
+        owner.release_audible(11);
+        assert_eq!(owner.with_current(|current| current), NO_REQUEST);
+
+        // A second finish for the same reading changes nothing.
+        owner.release_audible(11);
+        assert_eq!(owner.with_current(|current| current), NO_REQUEST);
     }
 
     /// `cancel`'s production shape (decide and stop under the owner lock)
@@ -772,7 +866,7 @@ mod tests {
             let outcome = reg
                 .lock()
                 .unwrap()
-                .cancel(id, Instant::now(), |seq| current == seq);
+                .cancel(id, Instant::now(), |reading| reading == Some(current));
             if let StopOutcome::Cancelled {
                 stopped_playback: true,
                 ..
@@ -782,6 +876,70 @@ mod tests {
             }
             outcome
         })
+    }
+
+    #[test]
+    fn scoped_cancel_reaches_only_the_audio_of_the_requests_reading() {
+        let owner = PlaybackOwner::new();
+        let reg = Mutex::new(Registry::default());
+        let now = Instant::now();
+        let Registration::Proceed(waiting) = reg.lock().unwrap().register("cancel-waiting", now)
+        else {
+            panic!("waiting must register");
+        };
+        let Registration::Proceed(audible) = reg.lock().unwrap().register("cancel-audible", now)
+        else {
+            panic!("audible must register");
+        };
+        reg.lock().unwrap().attach_reading(waiting, 21);
+        reg.lock().unwrap().attach_reading(audible, 22);
+        owner.claim_audible(22);
+
+        // The audible reading's stop reaches playback.
+        let mut stopped = false;
+        assert_eq!(
+            cancel_on(&owner, &reg, "cancel-audible", || stopped = true),
+            StopOutcome::Cancelled {
+                seq: audible,
+                stopped_playback: true
+            }
+        );
+        assert!(stopped);
+
+        // The waiting reading stops without cutting the audible reading.
+        owner.claim_audible(22);
+        assert_eq!(
+            cancel_on(&owner, &reg, "cancel-waiting", || {
+                panic!("the waiting reading owns no audio")
+            }),
+            StopOutcome::Cancelled {
+                seq: waiting,
+                stopped_playback: false
+            }
+        );
+    }
+
+    #[test]
+    fn scoped_cancel_before_the_reading_begins_stops_nothing() {
+        let owner = PlaybackOwner::new();
+        let reg = Mutex::new(Registry::default());
+        let Registration::Proceed(seq) = reg
+            .lock()
+            .unwrap()
+            .register("cancel-no-reading", Instant::now())
+        else {
+            panic!("must register");
+        };
+        owner.claim_audible(31);
+        assert_eq!(
+            cancel_on(&owner, &reg, "cancel-no-reading", || panic!(
+                "a request with no reading owns nothing"
+            )),
+            StopOutcome::Cancelled {
+                seq,
+                stopped_playback: false
+            }
+        );
     }
 
     #[test]
@@ -802,12 +960,14 @@ mod tests {
         else {
             panic!("cur must register");
         };
-        // prev's first audible emit.
-        owner.claim(prev, || false, || {});
+        reg.lock().unwrap().attach_reading(prev, 101);
+        reg.lock().unwrap().attach_reading(cur, 102);
+        // prev becomes audible: the webview's playback-started claims it.
+        owner.claim_audible(101);
         // cur starts synthesizing: no claim happens here (see SynthesisGuard).
         assert_eq!(
             cancel_on(&owner, &reg, "start-no-owner-cur", || panic!(
-                "a request with no audible audio owns nothing"
+                "a reading with no audible audio owns nothing"
             )),
             StopOutcome::Cancelled {
                 seq: cur,
@@ -826,100 +986,17 @@ mod tests {
     }
 
     #[test]
-    fn stream_rearm_fires_once_at_first_audible_chunk() {
-        let rearm = StreamRearm::new();
-        let mut events: Vec<&'static str> = Vec::new();
-        assert!(rearm.rearm(|| events.push("rearm")));
-        assert!(!rearm.rearm(|| events.push("rearm")));
-        assert_eq!(events, ["rearm"]);
-    }
-
-    /// A scoped stop for the previous owner legitimately re-sets the webview's
-    /// stream gate (`_streamStopped`) after the next reading's start signal
-    /// already cleared it. That next reading is innocent: its first audible
-    /// chunk claims the speakers and re-arms the gate right before the chunk
-    /// on the wire, so the webview's drop-everything gate does not silence it.
-    #[test]
-    fn first_audible_chunk_rearm_heals_a_scoped_stop_of_the_previous_owner() {
+    fn a_cancelled_reading_that_never_emits_claims_nothing() {
         let owner = PlaybackOwner::new();
-        let reg = Mutex::new(Registry::default());
-        let now = Instant::now();
-        let Registration::Proceed(prev) = reg.lock().unwrap().register("rearm-heal-prev", now)
-        else {
-            panic!("prev must register");
-        };
-        let Registration::Proceed(cur) = reg.lock().unwrap().register("rearm-heal-cur", now) else {
-            panic!("cur must register");
-        };
-        let events: Arc<Mutex<Vec<&'static str>>> = Arc::new(Mutex::new(Vec::new()));
-
-        // prev streams and is audible.
-        owner.claim(
-            prev,
-            || false,
-            || {
-                events.lock().unwrap().push("prev-chunk");
-            },
-        );
-        // cur starts: the guard's start signal only (no ownership change).
-        events.lock().unwrap().push("cur-start");
-        // Barge-in: stop prev while it is audible.
-        assert_eq!(
-            cancel_on(&owner, &reg, "rearm-heal-prev", || events
-                .lock()
-                .unwrap()
-                .push("stop")),
-            StopOutcome::Cancelled {
-                seq: prev,
-                stopped_playback: true
-            }
-        );
-        // cur's first audible chunk: claim, re-arm, chunk — in wire order.
-        let rearm = StreamRearm::new();
-        owner.claim(
-            cur,
-            || false,
-            || {
-                rearm.rearm(|| events.lock().unwrap().push("cur-rearm"));
-                events.lock().unwrap().push("cur-chunk");
-            },
-        );
-
-        assert_eq!(
-            *events.lock().unwrap(),
-            ["prev-chunk", "cur-start", "stop", "cur-rearm", "cur-chunk"]
-        );
-    }
-
-    /// A cancelled reading claims nothing, so it rearms nothing: the webview's
-    /// gate stays as the stop left it, and no event resurrects stopped
-    /// playback.
-    #[test]
-    fn cancelled_reading_rearms_nothing_and_emits_nothing() {
-        let owner = PlaybackOwner::new();
-        let reg = Mutex::new(Registry::default());
-        let Registration::Proceed(seq) = reg
-            .lock()
-            .unwrap()
-            .register("rearm-cancelled-reading", Instant::now())
-        else {
-            panic!("must register");
-        };
-        cancel_on(&owner, &reg, "rearm-cancelled-reading", || {
-            panic!("nothing audible yet")
-        });
-        let rearm = StreamRearm::new();
         let mut emitted = false;
         // The scope reads cancelled: the emit sites' claim emits nothing.
-        owner.claim(
-            seq,
-            || true,
-            || {
-                rearm.rearm(|| emitted = true);
-                emitted = true;
-            },
-        );
+        owner.claim(5, || true, || emitted = true);
         assert!(!emitted);
+        assert_eq!(
+            owner.with_current(|current| current),
+            NO_REQUEST,
+            "an aborted claim must not take the speakers"
+        );
     }
 
     /// The cancel-then-check order closes the emit race: once the stop has
@@ -934,13 +1011,15 @@ mod tests {
             else {
                 panic!("r must register");
             };
+            let reading = 77;
+            reg.lock().unwrap().attach_reading(seq, reading);
             let events = Arc::new(Mutex::new(Vec::<&'static str>::new()));
 
             let emitter = {
                 let (owner, reg, events) = (owner.clone(), reg.clone(), events.clone());
                 std::thread::spawn(move || {
                     owner.claim(
-                        seq,
+                        reading,
                         || reg.lock().unwrap().is_cancelled(seq),
                         || events.lock().unwrap().push("audio"),
                     );
@@ -955,7 +1034,7 @@ mod tests {
                         let outcome = reg
                             .lock()
                             .unwrap()
-                            .cancel("r", Instant::now(), |seq| current == seq);
+                            .cancel("r", Instant::now(), |reading| reading == Some(current));
                         if let StopOutcome::Cancelled {
                             stopped_playback: true,
                             ..
@@ -1099,7 +1178,8 @@ mod tests {
     fn dispatch_runs_for_the_live_speaker_owner_only() {
         let (owner, reg) = local_state();
         let seq = register_live(&reg, "control-owner");
-        owner.claim(seq, || false, || {});
+        reg.lock().unwrap().attach_reading(seq, 41);
+        owner.claim_audible(41);
 
         let mut seen = Vec::new();
         assert!(dispatch_to_owner_with(
@@ -1129,13 +1209,14 @@ mod tests {
         let owner = Arc::new(PlaybackOwner::new());
         let reg = Arc::new(Mutex::new(Registry::default()));
         let seq = register_live(&reg, "control-starting");
+        reg.lock().unwrap().attach_reading(seq, 42);
         let claimer = {
             let (owner, reg) = (Arc::clone(&owner), Arc::clone(&reg));
             std::thread::spawn(move || {
                 std::thread::sleep(Duration::from_millis(40));
-                // The reading's first audible chunk claims the speakers.
+                // The webview reports the reading's audio audible.
                 assert_eq!(reg.lock().unwrap().live_seq("control-starting"), Some(seq));
-                owner.claim(seq, || false, || {});
+                owner.claim_audible(42);
             })
         };
 
@@ -1207,7 +1288,8 @@ mod tests {
         let (owner, reg) = local_state();
         let _queued = register_live(&reg, "control-queued");
         let other = register_live(&reg, "control-other");
-        owner.claim(other, || false, || {});
+        reg.lock().unwrap().attach_reading(other, 43);
+        owner.claim_audible(43);
 
         let started = Instant::now();
         assert!(!dispatch_to_owner_with(
@@ -1238,7 +1320,8 @@ mod tests {
         let owner = Arc::new(PlaybackOwner::new());
         let reg = Arc::new(Mutex::new(Registry::default()));
         let seq = register_live(&reg, "control-lock");
-        owner.claim(seq, || false, || {});
+        reg.lock().unwrap().attach_reading(seq, 44);
+        owner.claim_audible(44);
 
         let (run_started_tx, run_started_rx) = mpsc::channel();
         let (release_tx, release_rx) = mpsc::channel::<()>();

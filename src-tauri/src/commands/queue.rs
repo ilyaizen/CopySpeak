@@ -41,12 +41,7 @@ pub fn skip_to_fragment(
     // Emit skip event
     let _ = app.emit(
         "pagination:skipped",
-        PaginationEvent {
-            total,
-            current_index: index,
-            is_paginated,
-            reading_id: None,
-        },
+        PaginationEvent::unscoped(total, index, is_paginated),
     );
 
     Ok(())
@@ -64,12 +59,7 @@ pub fn stop_queue(app: AppHandle, queue: State<'_, Mutex<FragmentQueue>>) -> Res
     // Emit stopped event
     let _ = app.emit(
         "pagination:stopped",
-        PaginationEvent {
-            total,
-            current_index,
-            is_paginated,
-            reading_id: None,
-        },
+        PaginationEvent::unscoped(total, current_index, is_paginated),
     );
 
     Ok(())
@@ -87,12 +77,7 @@ pub fn clear_queue(app: AppHandle, queue: State<'_, Mutex<FragmentQueue>>) -> Re
     // Emit cleared event
     let _ = app.emit(
         "pagination:cleared",
-        PaginationEvent {
-            total,
-            current_index,
-            is_paginated,
-            reading_id: None,
-        },
+        PaginationEvent::unscoped(total, current_index, is_paginated),
     );
 
     Ok(())

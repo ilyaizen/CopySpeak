@@ -79,12 +79,17 @@ impl AbortScope {
 
     /// A reading's scope: the abort generation and request of
     /// [`Self::begin_for_request`], plus a new process-wide reading identity
-    /// that every playback event of this reading carries.
+    /// that every playback event of this reading carries. When the scope
+    /// serves a control-server request, the reading is attached to that
+    /// request's registry entry, so a scoped stop can compare the audible
+    /// reading with the request's own reading.
     pub fn begin_reading_for_request(request: u64) -> Self {
+        let reading = READING_SEQ.fetch_add(1, Ordering::Relaxed);
+        speak_requests::attach_reading(request, reading);
         Self {
             generation: ABORT_GENERATION.load(Ordering::Relaxed),
             request,
-            reading: READING_SEQ.fetch_add(1, Ordering::Relaxed),
+            reading,
         }
     }
 
@@ -107,6 +112,18 @@ impl AbortScope {
 
 pub fn update_tray_icon(app_handle: &tauri::AppHandle) {
     tray::refresh(app_handle);
+}
+
+/// The reading id carried by a playback lifecycle event, or `None` for the
+/// batch path. The store sends `{"reading_id": <number|null>}`: `null`, a
+/// missing field, a zero or a malformed payload leaves the speaker owner
+/// alone, so the batch path keeps its per-fragment claim.
+fn playback_event_reading(payload: &str) -> Option<u64> {
+    let value: serde_json::Value = serde_json::from_str(payload).ok()?;
+    value
+        .get("reading_id")
+        .and_then(serde_json::Value::as_u64)
+        .filter(|reading| *reading != 0)
 }
 
 /// Kill a process tree by PID (used for aborting CLI TTS synthesis).
@@ -786,15 +803,27 @@ fn main() {
             }
             let app_handle_for_monitor = app.handle().clone();
             // Unblock control-server /speak --wait callers when any playback
-            // run reaches its terminal state (natural end or user stop).
-            app.listen("playback-finished", move |_| {
+            // run reaches its terminal state (natural end or user stop). A
+            // streamed reading also releases the speakers here; a batch path
+            // payload carries no reading id and changes nothing.
+            app.listen("playback-finished", move |event| {
+                if let Some(reading) = playback_event_reading(event.payload()) {
+                    crate::speak_requests::release_audible(reading);
+                }
                 crate::playback_signal::signal_finished();
                 crate::audio_duck::restore();
             });
             // Duck other apps once audio is actually audible (not during
             // synthesis wait). Config is read at start so toggling applies live.
             let app_handle_for_duck = app.handle().clone();
-            app.listen("playback-started", move |_| {
+            app.listen("playback-started", move |event| {
+                // The store reports which reading became audible; that reading
+                // now owns the speakers for scoped /stop and /pause, /resume,
+                // /seek. The batch path sends no reading id and keeps its
+                // per-fragment claim.
+                if let Some(reading) = playback_event_reading(event.payload()) {
+                    crate::speak_requests::claim_audible(reading);
+                }
                 // Anchor for start-latency measurement: this line's timestamp is
                 // when the webview first became audible, so the gap from the
                 // audio emit line is the webview's decode and effect cost.
@@ -1019,5 +1048,28 @@ mod tests {
             AbortScope::begin_for_request(crate::speak_requests::NO_REQUEST).reading(),
             0
         );
+    }
+
+    #[test]
+    fn playback_events_carry_a_reading_only_when_one_is_present() {
+        assert_eq!(playback_event_reading(r#"{"reading_id":7}"#), Some(7));
+        assert_eq!(playback_event_reading(r#"{"reading_id":null}"#), None);
+        assert_eq!(playback_event_reading(r#"{"reading_id":0}"#), None);
+        assert_eq!(playback_event_reading("{}"), None);
+        assert_eq!(playback_event_reading("not json"), None);
+    }
+
+    #[test]
+    fn a_reading_scope_attaches_its_reading_to_the_control_request() {
+        let id = "main-attach-reading-test";
+        let crate::speak_requests::Registration::Proceed(seq) =
+            crate::speak_requests::register(id)
+        else {
+            panic!("must register");
+        };
+        let scope = AbortScope::begin_reading_for_request(seq);
+        assert_ne!(scope.reading(), 0);
+        assert_eq!(crate::speak_requests::reading_for_id(id), Some(scope.reading()));
+        drop(crate::speak_requests::Ticket::new(seq));
     }
 }

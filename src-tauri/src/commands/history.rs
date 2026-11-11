@@ -736,12 +736,7 @@ pub async fn play_history_batch(
     // Emit pagination started event
     let _ = app.emit(
         "pagination:started",
-        crate::commands::PaginationEvent {
-            total,
-            current_index: 0,
-            is_paginated: true,
-            reading_id: None,
-        },
+        crate::commands::PaginationEvent::unscoped(total, 0, true),
     );
 
     for (index, entry) in entries.iter().enumerate() {
@@ -781,12 +776,7 @@ pub async fn play_history_batch(
         // Emit fragment-started event
         let _ = app.emit(
             "pagination:fragment-started",
-            crate::commands::PaginationEvent {
-                total,
-                current_index: index,
-                is_paginated: true,
-                reading_id: None,
-            },
+            crate::commands::PaginationEvent::unscoped(total, index, true),
         );
 
         // Emit audio fragment ready
@@ -807,12 +797,7 @@ pub async fn play_history_batch(
         // Emit fragment-ready event
         let _ = app.emit(
             "pagination:fragment-ready",
-            crate::commands::PaginationEvent {
-                total,
-                current_index: index,
-                is_paginated: true,
-                reading_id: None,
-            },
+            crate::commands::PaginationEvent::unscoped(total, index, true),
         );
     }
 

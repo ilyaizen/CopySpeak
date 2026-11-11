@@ -78,6 +78,8 @@ interface HistoryEntry {
 export interface PcmStreamSchedulerOptions {
   ctx: AudioContext;
   destination: AudioNode;
+  /** Reading this scheduler plays; null (or absent) for an id-less stream. */
+  readingId?: number | null;
   /** Invoked once when the whole streamed queue has finished playing. */
   onComplete: () => void;
 }
@@ -172,6 +174,8 @@ export class PcmStreamScheduler {
   private readonly _ctx: AudioContext;
   private readonly _destination: AudioNode;
   private readonly _onComplete: () => void;
+  /** Reading this scheduler was created for; null for an id-less stream. */
+  private readonly _readingId: number | null;
 
   private _gain: GainNode;
   private _pending: PendingChunk[] = [];
@@ -225,6 +229,7 @@ export class PcmStreamScheduler {
     this._ctx = options.ctx;
     this._destination = options.destination;
     this._onComplete = options.onComplete;
+    this._readingId = options.readingId ?? null;
     this._gain = this._ctx.createGain();
     this._gain.gain.value = this._volumePercent / 100;
     this._gain.connect(this._destination);
@@ -434,6 +439,20 @@ export class PcmStreamScheduler {
 
   /** Feed one decoded chunk event from the backend. */
   handleChunk(payload: StreamChunkPayload): void {
+    // Only the reading this scheduler was created for may feed it (M5). Rust
+    // and the store normalize an absent or 0 id to "anonymous"; a foreign
+    // identified chunk would put two readings on one timeline.
+    const chunkReadingId =
+      payload.reading_id === undefined || payload.reading_id === 0 ? null : payload.reading_id;
+    if (chunkReadingId !== this._readingId) {
+      console.warn(
+        "[PcmStream] rejecting chunk for reading",
+        chunkReadingId,
+        "owned by",
+        this._readingId
+      );
+      return;
+    }
     if (payload.is_final) {
       this.handleFragmentEnd();
       // The terminal marker is authoritative (the backend emits it on the last

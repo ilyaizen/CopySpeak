@@ -31,14 +31,23 @@ export const SKIP_SECONDS = 5;
 /** Key for held chunks with no reading identity (older build, helper scopes). */
 const ANONYMOUS_STREAM_READING = 0;
 
+/** Most readings whose streamed audio may wait for the speakers at once. */
+const MAX_HELD_STREAM_RUNS = 4;
+
+/** Most base64 characters of streamed audio that may wait for the speakers. */
+const MAX_HELD_STREAM_BYTES = 32 * 1024 * 1024;
+
+/** Most dropped, refused or failed reading ids remembered to reject late chunks. */
+const MAX_IGNORED_STREAM_READINGS = 64;
+
 /** One reading's streamed chunks, held while another reading owns the speakers. */
 interface HeldStreamRun {
   /** Chunks in arrival order, including the terminal zero-byte end marker. */
   chunks: StreamChunkPayload[];
-  /** Whether this reading's terminal end-of-stream chunk arrived. */
-  isFinal: boolean;
   /** Whether this reading's `pagination:complete` arrived. */
   complete: boolean;
+  /** Sum of `audio_base64.length` over `chunks`, for `MAX_HELD_STREAM_BYTES`. */
+  bytes: number;
 }
 
 /** Payload of `pagination:complete` (matches `PaginationEvent`). */
@@ -50,6 +59,303 @@ interface PaginationCompletePayload {
 interface StreamFailedPayload {
   session_id: string | null;
   reading_id?: number;
+}
+
+/** Payload of `reading-failed` (matches the Rust failure event). */
+interface ReadingFailedPayload {
+  message: string;
+  reading_id?: number;
+}
+
+/**
+ * The one owner of the speakers' streamed audio (M5): the active scheduler with
+ * its reading and browser session, plus every other reading's held run. All
+ * ownership checks route through `accept`, `complete`, `fail` and `release`, so
+ * a new feed path cannot mix two readings without passing a check.
+ */
+class StreamOwner {
+  private _scheduler: PcmStreamScheduler | null = null;
+  private _readingId: number | null = null;
+  private _sessionId: string | null = null;
+  private readonly _holds = new Map<number, HeldStreamRun>();
+  /** Total `audio_base64.length` over every held run. */
+  private _heldBytes = 0;
+  /**
+   * Identified readings that were dropped, refused or failed. A chunk emitted
+   * just before the Rust cancel can reach the webview after the drop event; it
+   * must not start or extend that reading again. The anonymous key is never
+   * recorded: the stop gate drops id-less chunks while stopped, and the old
+   * build keeps its fallback. Bounded because reading ids are never reused.
+   */
+  private readonly _ignored = new Set<number>();
+  /** Set after the first id-less chunk that cannot feed the identified scheduler. */
+  private _anonymousWarned = false;
+
+  get scheduler(): PcmStreamScheduler | null {
+    return this._scheduler;
+  }
+
+  get readingId(): number | null {
+    return this._readingId;
+  }
+
+  get sessionId(): string | null {
+    return this._sessionId;
+  }
+
+  /** True while a streamed scheduler owns the speakers. */
+  ownsSpeakers(): boolean {
+    return this._scheduler !== null;
+  }
+
+  /** True when `readingId` names the reading audible through the scheduler. */
+  isAudible(readingId: number | null): boolean {
+    return this._scheduler !== null && readingId !== null && readingId === this._readingId;
+  }
+
+  /** True when a held run waits for the speakers for that reading. */
+  hasHeld(readingId: number | null): boolean {
+    return this._holds.has(readingId ?? ANONYMOUS_STREAM_READING);
+  }
+
+  /** True when any reading waits for the speakers. */
+  hasHeldRuns(): boolean {
+    return this._holds.size > 0;
+  }
+
+  /**
+   * Remember an identified reading so a late chunk cannot restart it or hold it
+   * again. The anonymous key is never recorded. The set keeps the newest ids and
+   * drops the oldest, which is safe because a reading id is never reused.
+   */
+  ignore(readingId: number | null): void {
+    if (readingId === null || readingId === ANONYMOUS_STREAM_READING) return;
+    this._ignored.delete(readingId);
+    this._ignored.add(readingId);
+    while (this._ignored.size > MAX_IGNORED_STREAM_READINGS) {
+      const oldest = this._ignored.values().next().value;
+      if (oldest === undefined) break;
+      this._ignored.delete(oldest);
+    }
+  }
+
+  /** Record the scheduler that just took the speakers for a reading. */
+  start(scheduler: PcmStreamScheduler, readingId: number | null, sessionId: string | null): void {
+    this._scheduler = scheduler;
+    this._readingId = readingId;
+    this._sessionId = sessionId;
+    this._anonymousWarned = false;
+  }
+
+  /** Stop the scheduler and forget which reading owned the speakers. */
+  release(): number | null {
+    const readingId = this._readingId;
+    this._scheduler?.stop();
+    this._scheduler = null;
+    this._readingId = null;
+    this._sessionId = null;
+    return readingId;
+  }
+
+  /**
+   * Route one arriving chunk. Returns true when the store may feed it to the
+   * scheduler now; false when it waits in a held run, or a cap dropped it.
+   * `batchOwnsSpeakers` is the store's cross-engine hold: streamed PCM waits
+   * while the batch fragment path plays.
+   */
+  accept(chunk: StreamChunkPayload, readingId: number | null, batchOwnsSpeakers: boolean): boolean {
+    // A late chunk of a dropped, refused or failed reading must neither start a
+    // scheduler nor wait in a held run. Anonymous chunks are exempt on purpose.
+    if (readingId !== null && this._ignored.has(readingId)) return false;
+    if (this._scheduler !== null) {
+      // Only the scheduler's own reading may feed it. An id-less chunk cannot
+      // join an identified stream (M2), so hold it under the anonymous key.
+      if (readingId === this._readingId) return true;
+      if (readingId === null) this._warnAnonymous();
+      this._hold(chunk, readingId);
+      return false;
+    }
+    if (batchOwnsSpeakers) {
+      if (readingId === null) this._warnAnonymous();
+      this._hold(chunk, readingId);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Handle `pagination:complete`. An id-less completion ends only an anonymous
+   * scheduler (M2); an identified one completes its own scheduler or marks its
+   * held run. Unknown ids are ignored.
+   */
+  complete(readingId: number | null): void {
+    if (readingId === null) {
+      if (this._scheduler !== null && this._readingId === null) {
+        this._scheduler.markQueueComplete();
+      }
+      return;
+    }
+    if (this._scheduler !== null && readingId === this._readingId) {
+      this._scheduler.markQueueComplete();
+      return;
+    }
+    const held = this._holds.get(readingId);
+    if (held) held.complete = true;
+  }
+
+  /**
+   * Handle a failed streamed reading. Returns true when the failure belongs to
+   * the audible reading, so the store stops only that reading (B3). A waiting
+   * reading's failure drops its held run; an id-less failure keeps today's
+   * behavior (session match on the owner, clear every hold when idle).
+   */
+  fail(readingId: number | null, sessionId: string | null): boolean {
+    if (this._scheduler !== null) {
+      const owns =
+        readingId !== null ? readingId === this._readingId : sessionId === this._sessionId;
+      if (owns) return true;
+      if (readingId !== null) this.drop(readingId);
+      return false;
+    }
+    if (readingId === null) this.clearHolds();
+    else this.drop(readingId);
+    return false;
+  }
+
+  /** Forget one waiting reading's held run (scoped stop, attributed failure). */
+  drop(readingId: number | null): void {
+    // A late chunk emitted before the cancel can land after this drop: remember
+    // the reading so it cannot start a scheduler or a fresh held run.
+    this.ignore(readingId);
+    const key = readingId ?? ANONYMOUS_STREAM_READING;
+    const run = this._holds.get(key);
+    if (run === undefined) return;
+    this._holds.delete(key);
+    this._heldBytes = Math.max(0, this._heldBytes - run.bytes);
+    console.log(
+      "[PlaybackStore] dropping held stream reading",
+      readingId,
+      "chunks:",
+      run.chunks.length
+    );
+  }
+
+  /** Forget every held run; every path that cuts all playback uses it. */
+  clearHolds(): void {
+    this._holds.clear();
+    this._heldBytes = 0;
+    this._ignored.clear();
+  }
+
+  /**
+   * Take the waiting run with the lowest reading id that can replay (M7).
+   * Reading ids are allocated in start order, so the lowest id is the oldest
+   * reading. The anonymous key (0) is a sentinel, so an anonymous run drains
+   * before identified ids when both wait. A run without a terminal chunk or
+   * `pagination:complete` is dropped: replaying a partial run would play and
+   * never complete, and would hold the speakers forever (M1). The run is
+   * deleted before the caller replays it.
+   */
+  takeNext(): { readingId: number; run: HeldStreamRun } | null {
+    while (this._holds.size > 0) {
+      let chosen: number | null = null;
+      for (const key of this._holds.keys()) {
+        if (chosen === null || key < chosen) chosen = key;
+      }
+      if (chosen === null) return null;
+      const run = this._holds.get(chosen);
+      if (run === undefined) return null;
+      this._holds.delete(chosen);
+      this._heldBytes = Math.max(0, this._heldBytes - run.bytes);
+      // The terminal chunk stays in the payload; do not keep a duplicate flag.
+      const terminal = run.chunks.some((chunk) => chunk.is_final);
+      if (terminal || run.complete) return { readingId: chosen, run };
+      console.warn(
+        "[PlaybackStore] dropping held stream reading",
+        chosen === ANONYMOUS_STREAM_READING ? null : chosen,
+        "with no terminal chunk or pagination:complete"
+      );
+    }
+    return null;
+  }
+
+  /** Hold one chunk under its reading, enforcing both caps (B2). */
+  private _hold(chunk: StreamChunkPayload, readingId: number | null): void {
+    // The called-from `accept` checks this too; keep it here so every hold path
+    // rejects a late chunk of a dropped, refused or failed reading.
+    if (readingId !== null && this._ignored.has(readingId)) return;
+    const key = readingId ?? ANONYMOUS_STREAM_READING;
+    const bytes = chunk.audio_base64.length;
+    let run = this._holds.get(key);
+    if (run === undefined) {
+      run = { chunks: [], complete: false, bytes: 0 };
+      this._holds.set(key, run);
+    }
+    // A reading whose own run breaks the per-reading cap can never fit.
+    if (run.bytes + bytes > MAX_HELD_STREAM_BYTES) {
+      this._refuse(key, run);
+      return;
+    }
+    // Make room by dropping the oldest waiting run, never this one. Repeat until
+    // both caps hold; refuse the arriving reading when nothing else is left.
+    while (
+      this._holds.size > MAX_HELD_STREAM_RUNS ||
+      this._heldBytes + bytes > MAX_HELD_STREAM_BYTES
+    ) {
+      const victim = this._oldestKeyExcept(key);
+      if (victim === null) {
+        this._refuse(key, run);
+        return;
+      }
+      this._dropOldest(victim);
+    }
+    run.chunks.push(chunk);
+    run.bytes += bytes;
+    this._heldBytes += bytes;
+  }
+
+  /** Refuse one reading: drop its run and ignore its later chunks. */
+  private _refuse(key: number, run: HeldStreamRun): void {
+    this._holds.delete(key);
+    this._heldBytes = Math.max(0, this._heldBytes - run.bytes);
+    this.ignore(key === ANONYMOUS_STREAM_READING ? null : key);
+    console.warn(
+      "[PlaybackStore] refusing held stream reading",
+      key === ANONYMOUS_STREAM_READING ? null : key,
+      "over the held-audio cap"
+    );
+  }
+
+  /** Drop one held run the caps demand, with a log line naming the reason. */
+  private _dropOldest(key: number): void {
+    const run = this._holds.get(key);
+    if (run === undefined) return;
+    this._holds.delete(key);
+    this._heldBytes = Math.max(0, this._heldBytes - run.bytes);
+    console.warn(
+      "[PlaybackStore] dropping oldest held stream reading",
+      key === ANONYMOUS_STREAM_READING ? null : key,
+      "to keep the held-buffer cap"
+    );
+  }
+
+  /** Lowest held reading id other than `current`, or null when none is left. */
+  private _oldestKeyExcept(current: number): number | null {
+    let oldest: number | null = null;
+    for (const key of this._holds.keys()) {
+      if (key !== current && (oldest === null || key < oldest)) oldest = key;
+    }
+    return oldest;
+  }
+
+  /** Warn once per streamed reading that an id-less chunk waits separately. */
+  private _warnAnonymous(): void {
+    if (this._anonymousWarned) return;
+    this._anonymousWarned = true;
+    console.warn(
+      "[PlaybackStore] holding an id-less stream chunk apart from the identified scheduler"
+    );
+  }
 }
 
 class PlaybackStore {
@@ -93,8 +399,8 @@ class PlaybackStore {
   private _readingFailure: string | null = null;
   private _fragmentCaptions: CaptionAlignment | null = null;
   private _streamStopped = false;
-  /** Session of the reading that created the live PCM scheduler. */
-  private _streamSessionId: string | null = null;
+  /** Reading the last stop stopped; late chunks of this id stay dropped (B1). */
+  private _stoppedReadingId: number | null = null;
   private _fragmentText = "";
   private _captionTimer: ReturnType<typeof setInterval> | null = null;
   private _lastCaption: HudCaptionPayload | null = null;
@@ -114,15 +420,12 @@ class PlaybackStore {
   // Modular components
   private _analyser = new AudioAnalyser();
   private _fragmentQueue: FragmentQueue;
-  private _pcmScheduler: PcmStreamScheduler | null = null;
-  /** Reading that owns `_pcmScheduler`; null when none, or an id-less stream. */
-  private _streamReadingId: number | null = null;
   // Cross-engine queue and stream-vs-stream queue: a reading's audio waits while
   // another reading owns the speakers. Streamed chunks buffer in that reading's
-  // own `_heldStreamRuns` entry, so two readings never share one scheduler;
+  // own held run inside the owner, so two readings never share one scheduler;
   // batch fragments already wait in `_fragmentQueue` until the stream drains.
   // `_drainHeldAudio` hands the speakers over, so at most one engine plays.
-  private _heldStreamRuns = new Map<number, HeldStreamRun>();
+  private _owner = new StreamOwner();
   // Live walkie-talkie chain the streamed PCM plays through; null for a reading
   // with no effect, or with an effect Rust keeps on the batch path.
   private _liveEffect: LiveEffect | null = null;
@@ -170,7 +473,8 @@ class PlaybackStore {
     this._audioEl = el;
     if (el) {
       el.onplay = () => {
-        this.emitPlaybackStarted();
+        // The element path is the batch path: no streamed reading owns this run.
+        this.emitPlaybackStarted(null);
         this.isPlaying = true;
         this.isPaused = false;
         this.startCaptionClock();
@@ -206,8 +510,9 @@ class PlaybackStore {
 
   private publishCaption() {
     let caption: HudCaptionPayload | null = null;
-    if (this._pcmScheduler) {
-      const position = this._pcmScheduler.getPlaybackPosition();
+    const scheduler = this._owner.scheduler;
+    if (scheduler) {
+      const position = scheduler.getPlaybackPosition();
       const fragment = position ? this._streamCaptions.get(position.fragmentIndex) : null;
       if (position && fragment) {
         if (fragment !== this._announcedStream) {
@@ -267,10 +572,8 @@ class PlaybackStore {
     // Report the audible clock to the browser bridge. Best-effort: the bridge
     // may not exist (older app build) or no reading may be active.
     if (this._browserSessionId !== null) {
-      const fragmentIndex = this._pcmScheduler
-        ? (this._pcmScheduler.getPlaybackPosition()?.fragmentIndex ??
-          this.currentFragmentIndex ??
-          0)
+      const fragmentIndex = scheduler
+        ? (scheduler.getPlaybackPosition()?.fragmentIndex ?? this.currentFragmentIndex ?? 0)
         : (this.currentFragmentIndex ?? 0);
       void invoke("browser_reading_progress", {
         sessionId: this._browserSessionId,
@@ -450,14 +753,14 @@ class PlaybackStore {
     this.isPaused = false;
     this.currentFragmentIndex = null;
     this.totalFragments = null;
-    this._pcmScheduler = null;
-    this._streamReadingId = null;
-    this._streamSessionId = null;
+    // Capture the reading that owned the stream before ownership clears: Rust
+    // releases the speaker owner for that reading on `playback-finished` (B1).
+    const readingId = this._owner.release();
     // A reading that hit reading-failed ends in "error"; a normal one in
     // "completed". The bridge keeps a delivered session up for this report.
     this.reportBrowserFinished(this._readingFailure === null ? "completed" : "error");
     void this._emit?.("hud:stop", null);
-    this.emitPlaybackFinished();
+    this.emitPlaybackFinished(readingId);
     // The speakers are free: start whatever waited for this engine to drain.
     this._drainHeldAudio();
   }
@@ -469,37 +772,37 @@ class PlaybackStore {
 
   /** True while the streamed scheduler owns the speakers. */
   private _streamOwnsSpeakers(): boolean {
-    return this._pcmScheduler !== null;
+    return this._owner.ownsSpeakers();
   }
 
   /**
    * Hand the speakers to the reading that waited while the other engine played:
    * the oldest buffered stream starts, else the queued batch fragments. At most
    * one reading plays at a time, so a new reading never doubles the audio.
+   * Streamed runs keep priority over queued batch fragments because streamed
+   * PCM cannot be regenerated, while a batch fragment can replay (M7).
    */
   private _drainHeldAudio(): void {
     if (this._streamStopped) {
-      this._heldStreamRuns.clear();
+      this._owner.clearHolds();
       return;
     }
-    const next = this._heldStreamRuns.entries().next();
-    if (next.done === false) {
-      const [readingId, run] = next.value;
-      // Delete the run before replaying: the first chunk starts the scheduler
-      // this reading now owns, and the stream's later chunks feed it live.
-      this._heldStreamRuns.delete(readingId);
+    // Delete the run before replaying: the first chunk starts the scheduler this
+    // reading now owns, and the stream's later chunks feed it live.
+    const next = this._owner.takeNext();
+    if (next !== null) {
       console.log(
         "[PlaybackStore] draining held stream reading",
-        readingId === ANONYMOUS_STREAM_READING ? null : readingId,
+        next.readingId === ANONYMOUS_STREAM_READING ? null : next.readingId,
         "chunks:",
-        run.chunks.length,
+        next.run.chunks.length,
         "final:",
-        run.isFinal
+        next.run.chunks.some((chunk) => chunk.is_final)
       );
-      for (const chunk of run.chunks) this.handleStreamChunk(chunk);
+      for (const chunk of next.run.chunks) this.handleStreamChunk(chunk);
       // The terminal chunk completes the scheduler on its own; applying the
       // explicit completion covers a reading that outran its end marker.
-      if (run.complete) this._pcmScheduler?.markQueueComplete();
+      if (next.run.complete) this._owner.scheduler?.markQueueComplete();
       return;
     }
     if (!this._fragmentQueue.isProcessing() && this._fragmentQueue.getQueueLength() > 0) {
@@ -512,36 +815,13 @@ class PlaybackStore {
     return readingId === undefined || readingId === null || readingId === 0 ? null : readingId;
   }
 
-  /** Buffer a chunk in its reading's held run until the speakers free for it. */
-  private _holdStreamChunk(payload: StreamChunkPayload, readingId: number | null): void {
-    const key = readingId ?? ANONYMOUS_STREAM_READING;
-    let run = this._heldStreamRuns.get(key);
-    if (!run) {
-      run = { chunks: [], isFinal: false, complete: false };
-      this._heldStreamRuns.set(key, run);
-    }
-    run.chunks.push(payload);
-    if (payload.is_final) run.isFinal = true;
-  }
-
   /**
-   * The backend finished synthesizing a reading. Only the reading that owns the
-   * scheduler may complete it; a later reading's completion marks its held run.
+   * The backend finished synthesizing a reading. An id-less completion ends only
+   * the anonymous stream (M2); an identified one completes its own scheduler or
+   * marks its held run (see `StreamOwner.complete`).
    */
   private handlePaginationComplete(payload: PaginationCompletePayload | null): void {
-    const readingId = this._eventReadingId(payload?.reading_id);
-    if (readingId === null) {
-      // No identity (older build): the old behavior completes the active stream.
-      this._pcmScheduler?.markQueueComplete();
-      return;
-    }
-    if (readingId === this._streamReadingId) {
-      this._pcmScheduler?.markQueueComplete();
-      return;
-    }
-    const held = this._heldStreamRuns.get(readingId);
-    if (held) held.complete = true;
-    // An unknown reading id is ignored.
+    this._owner.complete(this._eventReadingId(payload?.reading_id));
   }
 
   /** Hand a naturally finished live chain its tail and let it self-dispose. */
@@ -572,23 +852,26 @@ class PlaybackStore {
    * Handle one PCM chunk of streaming synthesis audio. Lazily creates the
    * scheduler (which prebuffers ~250ms before starting gap-free playback) and
    * feeds it the chunk. A chunk of another reading waits in that reading's own
-   * held run: only the reading that owns the scheduler may feed it.
+   * held run: only the reading that owns the scheduler may feed it (M2, M5).
    */
   handleStreamChunk(payload: StreamChunkPayload): void {
-    if (this._streamStopped) return;
     const readingId = this._eventReadingId(payload.reading_id);
-    // Stream-vs-stream: a second reading's chunks wait for the first to drain.
-    // A chunk without a reading id falls through to the old behavior.
-    if (this._pcmScheduler && readingId !== null && readingId !== this._streamReadingId) {
-      this._holdStreamChunk(payload, readingId);
-      return;
+    if (this._streamStopped) {
+      // Late chunks cannot restart a stopped reading (B1). An id-less chunk
+      // stays dropped; a chunk of the stopped reading stays dropped; a chunk of
+      // any other reading heals the gate, replacing Rust's old StreamRearm.
+      if (readingId === null || readingId === this._stoppedReadingId) return;
+      this._streamStopped = false;
+      this._stoppedReadingId = null;
     }
-    // Cross-engine queue: while the batch fragment path owns the speakers this
-    // streamed reading waits. `finishPlayback` starts it from `_heldStreamRuns`.
-    if (!this._pcmScheduler && this._batchOwnsSpeakers()) {
-      this._holdStreamChunk(payload, readingId);
-      return;
-    }
+    // Stream-vs-stream, anonymous separation and the cross-engine hold all live
+    // in the owner; only a chunk it accepts reaches the scheduler.
+    if (!this._owner.accept(payload, readingId, this._batchOwnsSpeakers())) return;
+    this._playStreamChunk(payload, readingId);
+  }
+
+  /** Start the scheduler for a chunk it accepted, and feed the chunk. */
+  private _playStreamChunk(payload: StreamChunkPayload, readingId: number | null): void {
     if (!this._audioCtx) {
       this._audioCtx = new AudioContext();
     }
@@ -597,7 +880,8 @@ class PlaybackStore {
     if (ctx.state === "suspended" && !this.isPaused) {
       void ctx.resume();
     }
-    if (!this._pcmScheduler) {
+    let scheduler = this._owner.scheduler;
+    if (scheduler === null) {
       console.log("[PlaybackStore] creating PCM scheduler for fragment", payload.fragment_index);
       // The lag fix: walkie_talkie streams through a live node graph instead of
       // rendering whole fragments. Rust keeps the other effects on the batch
@@ -607,23 +891,25 @@ class PlaybackStore {
         this._liveEffect = live;
         live.start();
       }
-      this._pcmScheduler = new PcmStreamScheduler({
+      scheduler = new PcmStreamScheduler({
         ctx,
         destination: live?.input ?? ctx.destination,
+        // The scheduler rejects a chunk of any other reading (M5).
+        readingId,
         onComplete: () => {
           console.log("[PlaybackStore] stream playback complete");
           this.finishPlayback();
         }
       });
-      this._pcmScheduler.setVolume(this.volume);
-      this._pcmScheduler.setRate(this.speed, this.pitch);
-      this._streamReadingId = readingId;
-      this._streamSessionId = payload.session_id ?? null;
+      scheduler.setVolume(this.volume);
+      scheduler.setRate(this.speed, this.pitch);
+      this._owner.start(scheduler, readingId, payload.session_id ?? null);
       this.currentFragmentIndex = payload.fragment_index;
       this.totalFragments = payload.fragment_total;
       this.isPlaying = true;
       this.isPaused = false;
-      this.emitPlaybackStarted();
+      // Only the reading that became audible claims the Rust speaker owner (B1).
+      this.emitPlaybackStarted(readingId);
     }
     if (payload.text !== undefined) {
       this._streamCaptions.set(payload.fragment_index, {
@@ -638,47 +924,58 @@ class PlaybackStore {
     if (caption && payload.fragment_duration_ms !== undefined) {
       caption.durationMs = payload.fragment_duration_ms;
     }
-    this._pcmScheduler.handleChunk(payload);
-    if (this._pcmScheduler) this.startCaptionClock();
+    scheduler.handleChunk(payload);
+    this.startCaptionClock();
   }
 
   /**
-   * A streamed reading failed on the backend. Stop only when that reading owns
-   * the stream on the speakers; another reading's failure leaves it playing,
-   * and its own end still emits playback-finished. When nothing is playing,
-   * emit playback-finished without a stop: handleStop would also gate off the
-   * chunks of a reading that is still synthesizing, and clear its queue.
+   * A streamed reading failed on the backend. Only when that reading owns the
+   * stream on the speakers does the store stop it, and then only that reading:
+   * the waiting runs and the batch queue stay (B3). Another reading's failure
+   * leaves the audible one playing, and its own end still emits
+   * playback-finished. When nothing is playing, emit playback-finished without a
+   * stop: handleStop would also gate off the chunks of a reading that is still
+   * synthesizing, and clear its queue.
    */
   handleStreamFailed(failed: StreamFailedPayload): void {
     const readingId = this._eventReadingId(failed.reading_id);
-    if (this._pcmScheduler) {
-      // The reading id names a desktop reading; a failure without one matches
-      // its browser session, as before. A failed held reading keeps the active
-      // stream playing, and only its own held run is dropped.
-      const owns =
-        readingId !== null
-          ? readingId === this._streamReadingId
-          : this._streamSessionId === (failed.session_id ?? null);
-      if (owns) {
-        this.handleStop();
-      } else if (readingId !== null) {
-        this._heldStreamRuns.delete(readingId);
-      }
+    if (this._owner.fail(readingId, failed.session_id ?? null)) {
+      this._stopFailedOwner();
       return;
     }
+    if (this._owner.ownsSpeakers()) return;
     // A streamed reading that failed before it could start must not start when
-    // the batch queue drains. A failure with an identity drops only that
-    // reading's held run; without one it keeps the old behavior and drops all.
-    if (readingId === null) {
-      this._heldStreamRuns.clear();
-    } else {
-      this._heldStreamRuns.delete(readingId);
-    }
-    // Only an idle queue may be released here: an active one belongs to
-    // another reading, whose failure this event does not describe.
+    // the batch queue drains; the owner dropped its hold (or all of them for an
+    // id-less failure) above. Only an idle queue may be released here: an active
+    // one belongs to another reading, whose failure this event does not describe.
     if (this.isPlaying || this.isLoadingAudio || this._fragmentQueue.isProcessing()) return;
     this._fragmentQueue.markTerminal();
-    this.emitPlaybackFinished();
+    this.emitPlaybackFinished(null);
+  }
+
+  /**
+   * B3: stop only the failed streamed reading. The scheduler and its audio stop,
+   * the browser finish reports "error", and the waiting runs plus the batch
+   * queue stay. Never handleStop here: it drops every held run and sets the
+   * stop gate, which would silence the readings that wait.
+   */
+  private _stopFailedOwner(): void {
+    const readingId = this._owner.release();
+    // Record the failed reading before the drain: a chunk emitted just before
+    // its cancel must not start a new scheduler for it.
+    this._owner.ignore(readingId);
+    this.stopCaptionClock();
+    this._analyser.stop();
+    this._disposeLiveEffect();
+    this.isPlaying = false;
+    this.isPaused = false;
+    this.currentFragmentIndex = null;
+    this.totalFragments = null;
+    this.reportBrowserFinished("error");
+    void this._emit?.("hud:stop", null);
+    this.emitPlaybackFinished(readingId);
+    // The speakers are free: hand them to the next waiting reading.
+    this._drainHeldAudio();
   }
 
   async playAudio() {
@@ -721,6 +1018,9 @@ class PlaybackStore {
   }
 
   handleStop() {
+    // Remember which reading this stop stopped before ownership clears (B1): its
+    // late chunks stay dropped, a different reading's chunk heals the gate.
+    this._stoppedReadingId = this._owner.readingId;
     this._streamStopped = true;
     this.stopCaptionClock();
     this._playbackGeneration += 1;
@@ -728,17 +1028,14 @@ class PlaybackStore {
     this._analyser.stop();
     this._stopping = true;
     // A reading waiting for the other engine is cancelled with this stop.
-    this._heldStreamRuns.clear();
+    this._owner.clearHolds();
 
     // Clear the fragment queue and any active PCM stream
     this._fragmentQueue.clear();
-    this._pcmScheduler?.stop();
-    this._pcmScheduler = null;
-    this._streamReadingId = null;
+    const readingId = this._owner.release();
     // A user stop cuts the live chain immediately; only natural completion gets
     // the tail click and delayed dispose.
     this._disposeLiveEffect();
-    this._streamSessionId = null;
     this.currentFragmentIndex = null;
     this.totalFragments = null;
 
@@ -750,7 +1047,7 @@ class PlaybackStore {
     this.isPaused = false;
     this.reportBrowserFinished("cancelled");
     void this._emit?.("hud:stop", null);
-    this.emitPlaybackFinished();
+    this.emitPlaybackFinished(readingId);
     setTimeout(() => {
       this._stopping = false;
     }, 0);
@@ -759,17 +1056,19 @@ class PlaybackStore {
   /**
    * Terminal-state signal for Rust waiters (control-server --wait): a
    * blocking /speak resolves when this fires, for natural ends and user
-   * stops alike.
+   * stops alike. The payload names the reading that became audible, so Rust
+   * claims the speaker owner for it; null covers the batch path (B1).
    */
-  private emitPlaybackStarted(): void {
+  private emitPlaybackStarted(readingId: number | null): void {
     if (this._startedEmitted) return;
     this._startedEmitted = true;
-    void this._emit?.("playback-started", null);
+    void this._emit?.("playback-started", { reading_id: readingId });
   }
 
-  private emitPlaybackFinished(): void {
+  /** Reply with the reading captured before state cleared, or null (B1). */
+  private emitPlaybackFinished(readingId: number | null): void {
     this._startedEmitted = false;
-    void this._emit?.("playback-finished", null);
+    void this._emit?.("playback-finished", { reading_id: readingId });
   }
 
   /**
@@ -778,8 +1077,9 @@ class PlaybackStore {
    * no Tauri round-trip, so the action is instant on both paths.
    */
   skipBackward(seconds: number = SKIP_SECONDS): void {
-    if (this._pcmScheduler) {
-      this._pcmScheduler.skipBackward(seconds);
+    const scheduler = this._owner.scheduler;
+    if (scheduler) {
+      scheduler.skipBackward(seconds);
       return;
     }
     const el = this._audioEl;
@@ -804,8 +1104,9 @@ class PlaybackStore {
    * the next queued fragment naturally via its ended handler.
    */
   skipForward(seconds: number = SKIP_SECONDS): void {
-    if (this._pcmScheduler) {
-      this._pcmScheduler.skipForward(seconds);
+    const scheduler = this._owner.scheduler;
+    if (scheduler) {
+      scheduler.skipForward(seconds);
       return;
     }
     const el = this._audioEl;
@@ -851,8 +1152,9 @@ class PlaybackStore {
   pausePlayback(): void {
     if (this.isPaused) return;
     if (!this.isPlaying) return;
-    if (this._pcmScheduler) {
-      this._pcmScheduler.pause();
+    const scheduler = this._owner.scheduler;
+    if (scheduler) {
+      scheduler.pause();
       this.isPaused = true;
       return;
     }
@@ -864,8 +1166,9 @@ class PlaybackStore {
   /** Resume a paused reading. Idempotent, and a no-op when nothing is paused. */
   resumePlayback(): void {
     if (!this.isPaused) return;
-    if (this._pcmScheduler) {
-      this._pcmScheduler.resume();
+    const scheduler = this._owner.scheduler;
+    if (scheduler) {
+      scheduler.resume();
       this.isPaused = false;
       return;
     }
@@ -897,9 +1200,10 @@ class PlaybackStore {
       this._audioEl.playbackRate = speed;
     }
     // Keep the streaming scheduler in sync while it owns playback
-    if (this._pcmScheduler?.isActive()) {
-      this._pcmScheduler.setVolume(volume);
-      this._pcmScheduler.setRate(speed, pitch);
+    const scheduler = this._owner.scheduler;
+    if (scheduler?.isActive()) {
+      scheduler.setVolume(volume);
+      scheduler.setRate(speed, pitch);
     }
     // Sync pitch and speed to HUD store for progress bar timing
     hudStore.setPitch(pitch);
@@ -1032,17 +1336,42 @@ class PlaybackStore {
         }
       );
 
+      // A scoped stop of a waiting reading: discard only its held run, so the
+      // audible reading keeps playing (B1).
+      const unReadingDropped = await listen<{ reading_id: number }>(
+        "playback-reading-dropped",
+        (event) => {
+          this._owner.drop(this._eventReadingId(event.payload.reading_id));
+        }
+      );
+
       // A section failed permanently after bounded retries; the reading stops
       // there and the already-buffered audio drains. Retained until the next
       // reading starts so the terminal report says "error", not "completed".
-      const unReadingFailed = await listen<string>("reading-failed", (event) => {
-        this._readingFailure = event.payload;
-        this.error = event.payload;
+      const unReadingFailed = await listen<ReadingFailedPayload>("reading-failed", (event) => {
+        const { message } = event.payload;
+        const readingId = this._eventReadingId(event.payload.reading_id);
+        // A waiting reading's failure is attributed (B4): drop only its held
+        // run and report the failure, without touching the audible reading's
+        // failure state, its error, or the batch queue. An id-less failure (an
+        // older build) and the audible reading keep today's behavior; a batch
+        // reading's id cannot be matched here, so it also keeps it.
+        if (
+          readingId !== null &&
+          !this._owner.isAudible(readingId) &&
+          this._owner.hasHeld(readingId)
+        ) {
+          this._owner.drop(readingId);
+          toast.error(message, { duration: 15000 });
+          return;
+        }
+        this._readingFailure = message;
+        this.error = message;
         // The reading stops at the failed section: release a queue waiting for
         // a further fragment so playback-finished fires and /speak --wait
         // returns instead of hanging to its cap.
         this._fragmentQueue.markTerminal();
-        toast.error(event.payload, { duration: 15000 });
+        toast.error(message, { duration: 15000 });
       });
 
       // Global truncation notice: the Play page keeps its inline banner, but a
@@ -1077,13 +1406,24 @@ class PlaybackStore {
         if (e.payload) {
           this.historyReadingId = null;
           this._streamStopped = false;
+          this._stoppedReadingId = null;
           // A new reading owns the failure state from here on.
           this._readingFailure = null;
           this.error = null;
-          // Drop fragments a finished earlier reading retained for Replay; a
-          // reading that never queues fragments (streamed) must not inherit
-          // them. An active queue still serves its own reading.
-          if (!this._fragmentQueue.isProcessing()) this._fragmentQueue.reset();
+          // Drop fragments a finished earlier reading retained for Replay only
+          // when no reading can still use them (M9): nothing plays or loads, the
+          // queue is idle and holds no fragment, and no streamed reading waits.
+          // `!isProcessing()` alone is unsafe: a held batch reading is not
+          // processing by design, and resetting would drop its queued fragments.
+          if (
+            !this.isPlaying &&
+            !this.isLoadingAudio &&
+            !this._fragmentQueue.isProcessing() &&
+            this._fragmentQueue.getQueueLength() === 0 &&
+            !this._owner.hasHeldRuns()
+          ) {
+            this._fragmentQueue.reset();
+          }
         }
         this.isSynthesizing = e.payload;
       });
@@ -1108,6 +1448,7 @@ class PlaybackStore {
         unSkipBackward,
         unSkipForward,
         unBrowserReading,
+        unReadingDropped,
         unReadingFailed,
         unTruncated,
         unConfigChanged,
@@ -1124,8 +1465,7 @@ class PlaybackStore {
     this.handleStop();
     this._analyser.stop();
     this._analyser.destroy();
-    this._pcmScheduler?.stop();
-    this._pcmScheduler = null;
+    this._owner.release();
     const pending = this._listeners;
     this._listeners = null;
     void pending?.then((fns) => {

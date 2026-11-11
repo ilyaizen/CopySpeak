@@ -149,10 +149,12 @@ it("does not restart a stopped reading when its pending decode finishes", async 
 it("emits playback-finished when a reading ends and when it is stopped", async () => {
   await sendAudio();
   audio.dispatchEvent(new Event("ended"));
-  await vi.waitFor(() => expect(emit).toHaveBeenCalledWith("playback-finished", null));
+  await vi.waitFor(() =>
+    expect(emit).toHaveBeenCalledWith("playback-finished", { reading_id: null })
+  );
   vi.mocked(emit).mockClear();
   playbackStore.handleStop();
-  expect(emit).toHaveBeenCalledWith("playback-finished", null);
+  expect(emit).toHaveBeenCalledWith("playback-finished", { reading_id: null });
 });
 
 it("reports an incomplete reading and clears it when the next reading starts", async () => {
@@ -161,7 +163,7 @@ it("reports an incomplete reading and clears it when the next reading starts", a
   await sendAudio(1);
   const message =
     "Reading stopped: section 3 of 5 failed, so the rest of the passage was not read. HTTP 503";
-  await listeners.get("reading-failed")!({ payload: message });
+  await listeners.get("reading-failed")!({ payload: { message } });
   expect(playbackStore.error).toBe(message);
   expect(toast.error).toHaveBeenCalledWith(message, { duration: 15000 });
   // A new reading owns the failure state from here on.
@@ -183,7 +185,9 @@ it("does not label a failed browser reading completed when its audio drains", as
   await sendAudio(0, "b1");
   await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(1));
   await listeners.get("reading-failed")!({
-    payload: "Reading stopped: section 2 of 5 failed, so the rest of the passage was not read."
+    payload: {
+      message: "Reading stopped: section 2 of 5 failed, so the rest of the passage was not read."
+    }
   });
   audio.dispatchEvent(new Event("ended"));
   await vi.waitFor(() =>
@@ -200,11 +204,15 @@ it("releases a reading waiting for its next fragment when the section failure la
   await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(1));
   audio.dispatchEvent(new Event("ended"));
   // The next fragment is still synthesizing: the gap must not complete anything.
-  expect(emit).not.toHaveBeenCalledWith("playback-finished", null);
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", { reading_id: null });
   await listeners.get("reading-failed")!({
-    payload: "Reading stopped: section 2 of 5 failed, so the rest of the passage was not read."
+    payload: {
+      message: "Reading stopped: section 2 of 5 failed, so the rest of the passage was not read."
+    }
   });
-  await vi.waitFor(() => expect(emit).toHaveBeenCalledWith("playback-finished", null));
+  await vi.waitFor(() =>
+    expect(emit).toHaveBeenCalledWith("playback-finished", { reading_id: null })
+  );
 });
 
 it("replays the rendered audio, not a previous reading's fragments, once a new reading starts", async () => {
@@ -227,11 +235,13 @@ it("releases a queued reading when the bridge cancels its session", async () => 
   await sendAudio(0, "trigger-a");
   await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(1));
   audio.dispatchEvent(new Event("ended"));
-  expect(emit).not.toHaveBeenCalledWith("playback-finished", null);
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", { reading_id: null });
   await listeners.get("browser-reading")!({
     payload: { active: false, session_id: "trigger-a" }
   });
-  await vi.waitFor(() => expect(emit).toHaveBeenCalledWith("playback-finished", null));
+  await vi.waitFor(() =>
+    expect(emit).toHaveBeenCalledWith("playback-finished", { reading_id: null })
+  );
 });
 
 it("replays every fragment from the beginning on the Play page", async () => {
@@ -586,7 +596,7 @@ it("leaves the playing stream alone when another streamed reading fails", async 
   playbackStore.handleStreamChunk(streamChunk("trigger-a"));
   await listeners.get("playback-stream-failed")!({ payload: { session_id: "trigger-b" } });
   expect(playbackStore.isPlaying).toBe(true);
-  expect(emit).not.toHaveBeenCalledWith("playback-finished", null);
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", { reading_id: null });
   playbackStore.handleStop();
 });
 
@@ -604,13 +614,13 @@ it("stops the streamed reading that fails while it is playing", async () => {
   playbackStore.handleStreamChunk(streamChunk("trigger-a"));
   await listeners.get("playback-stream-failed")!({ payload: { session_id: "trigger-a" } });
   expect(playbackStore.isPlaying).toBe(false);
-  expect(emit).toHaveBeenCalledWith("playback-finished", null);
+  expect(emit).toHaveBeenCalledWith("playback-finished", { reading_id: null });
 });
 
 it("finishes a failed streamed reading when nothing is playing, so /speak --wait returns", async () => {
   vi.mocked(emit).mockClear();
   await listeners.get("playback-stream-failed")!({ payload: { session_id: null } });
-  expect(emit).toHaveBeenCalledWith("playback-finished", null);
+  expect(emit).toHaveBeenCalledWith("playback-finished", { reading_id: null });
 });
 
 it("reports a followed page session by id, and only the current one", async () => {
@@ -970,7 +980,9 @@ it("holds a streamed reading until the batch fragment path drains", async () => 
   await sendAudio(0, undefined, 1);
   expect(playbackStore.isPlaying).toBe(true);
 
-  playbackStore.handleStreamChunk(streamChunk(null));
+  // The batch reading owns the speakers, so the streamed reading's terminal
+  // chunk waits in its held run and replays when the batch reading drains (M1).
+  playbackStore.handleStreamChunk({ ...streamChunk(null), is_final: true });
   // The batch reading owns the speakers, so the streamed reading must wait.
   expect(receive).not.toHaveBeenCalled();
   expect(playbackStore.isPlaying).toBe(true);
@@ -978,7 +990,7 @@ it("holds a streamed reading until the batch fragment path drains", async () => 
   vi.mocked(emit).mockClear();
   audio.dispatchEvent(new Event("ended"));
   await vi.waitFor(() => expect(receive).toHaveBeenCalledTimes(1));
-  expect(vi.mocked(emit)).toHaveBeenCalledWith("playback-started", null);
+  expect(vi.mocked(emit)).toHaveBeenCalledWith("playback-started", { reading_id: null });
   playbackStore.handleStop();
 });
 
@@ -1084,7 +1096,7 @@ it("does not complete the reading that still plays on another reading's completi
   // B's end-of-synthesis lands while A is audible: A must keep the speakers.
   await listeners.get("pagination:complete")!({ payload: { reading_id: 2 } });
   expect(playbackStore.isPlaying).toBe(true);
-  expect(emit).not.toHaveBeenCalledWith("playback-finished", null);
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", { reading_id: null });
 
   // A's own completion ends A and starts B; B's completion was held with it.
   await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
@@ -1106,7 +1118,7 @@ it("keeps the active stream playing when a later reading fails, and drops its ho
     payload: { session_id: null, reading_id: 2 }
   });
   expect(playbackStore.isPlaying).toBe(true);
-  expect(emit).not.toHaveBeenCalledWith("playback-finished", null);
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", { reading_id: null });
 
   // A later reading can still start; B's held chunks never play.
   playbackStore.handleStreamChunk(readingChunk(3, 0, 1));
@@ -1139,17 +1151,390 @@ it("drops a held streamed reading when the owner is stopped", async () => {
   expect(playbackStore.isPlaying).toBe(false);
 });
 
-it("keeps the old single-stream behavior for chunks without a reading id", async () => {
+it("keeps the single anonymous stream when no identified scheduler is active", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+
+  playbackStore.handleStreamChunk(streamChunk(null));
+  playbackStore.handleStreamChunk({ ...streamChunk(null), fragment_index: 1, fragment_total: 2 });
+  // With no identified scheduler the id-less stream is the owner: all chunks feed it.
+  expect(receive).toHaveBeenCalledTimes(2);
+  expect(playbackStore.isPlaying).toBe(true);
+  // An id-less completion ends the anonymous stream it describes (M2).
+  await listeners.get("pagination:complete")!({ payload: null });
+  expect(playbackStore.isPlaying).toBe(false);
+});
+
+it("names the audible reading on playback-started and playback-finished", async () => {
+  await startStreamingReading();
+  captureSchedulerChunks();
+  vi.mocked(emit).mockClear();
+
+  playbackStore.handleStreamChunk(readingChunk(7, 0, 1));
+  expect(emit).toHaveBeenCalledWith("playback-started", { reading_id: 7 });
+
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 7 } });
+  expect(emit).toHaveBeenCalledWith("playback-finished", { reading_id: 7 });
+  expect(playbackStore.isPlaying).toBe(false);
+});
+
+it("drops late chunks of the stopped reading and heals for a different reading", async () => {
   await startStreamingReading();
   const receive = captureSchedulerChunks();
   vi.mocked(emit).mockClear();
 
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  expect(receive).toHaveBeenCalledTimes(1);
+  playbackStore.handleStop();
+  expect(emit).toHaveBeenCalledWith("playback-finished", { reading_id: 1 });
+
+  // A late chunk of the stopped reading stays dropped (B1).
+  playbackStore.handleStreamChunk(readingChunk(1, 1, 2));
+  expect(receive).toHaveBeenCalledTimes(1);
+  // An id-less chunk cannot restart anything.
   playbackStore.handleStreamChunk(streamChunk(null));
-  playbackStore.handleStreamChunk({ ...streamChunk(null), fragment_index: 1, fragment_total: 2 });
-  // No identity means the old fallback: every chunk feeds the active stream.
+  expect(receive).toHaveBeenCalledTimes(1);
+
+  // A chunk of another reading heals the gate and plays, replacing StreamRearm.
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 1));
   expect(receive).toHaveBeenCalledTimes(2);
+  expect(emit).toHaveBeenCalledWith("playback-started", { reading_id: 2 });
+  playbackStore.handleStop();
+});
+
+it("heals the stop gate with the first identified chunk after a stop with no streamed owner", async () => {
+  stubCrossEngineContext();
+  const receive = captureSchedulerChunks();
+  // An idle stop remembers no reading, so the next identified chunk heals it.
+  playbackStore.handleStop();
+  playbackStore.handleStreamChunk(readingChunk(9, 0, 1));
+  expect(receive).toHaveBeenCalledTimes(1);
   expect(playbackStore.isPlaying).toBe(true);
-  // A completion without an id still ends the stream it describes, as before.
+  playbackStore.handleStop();
+});
+
+it("drops one held run on a playback-reading-dropped event", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 1));
+  expect(receive).toHaveBeenCalledTimes(1);
+
+  await listeners.get("playback-reading-dropped")!({ payload: { reading_id: 2 } });
+  // Reading 1 ends; the dropped reading's held run never plays.
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual(["Reading 1 part 0"]);
+  playbackStore.handleStop();
+});
+
+it("bounds the held buffer to four runs by dropping the oldest reading", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  for (const readingId of [2, 3, 4, 5]) {
+    playbackStore.handleStreamChunk(readingChunk(readingId, 0, 1));
+  }
+  // A fifth waiting run overflows the cap: the oldest waiting run goes.
+  playbackStore.handleStreamChunk(readingChunk(6, 0, 1));
+  expect(warn).toHaveBeenCalledWith(
+    "[PlaybackStore] dropping oldest held stream reading",
+    2,
+    "to keep the held-buffer cap"
+  );
+
+  // Reading 1 ends: the oldest surviving waiting run (3) starts, never 2.
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual([
+    "Reading 1 part 0",
+    "Reading 3 part 0"
+  ]);
+  playbackStore.handleStop();
+});
+
+it("bounds the held buffer by total bytes and drops the oldest reading", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const elevenMiB = 11 * 1024 * 1024;
+  const big = (readingId: number) => ({
+    ...readingChunk(readingId, 0, 1),
+    audio_base64: "A".repeat(elevenMiB)
+  });
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  playbackStore.handleStreamChunk(big(2));
+  playbackStore.handleStreamChunk(big(3));
+  // 3 x 11 MiB passes MAX_HELD_STREAM_BYTES (32 MiB): drop the oldest run.
+  playbackStore.handleStreamChunk(big(4));
+  expect(warn).toHaveBeenCalledWith(
+    "[PlaybackStore] dropping oldest held stream reading",
+    2,
+    "to keep the held-buffer cap"
+  );
+
+  // Reading 1 ends: the oldest surviving waiting run (3) starts, never 2.
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual([
+    "Reading 1 part 0",
+    "Reading 3 part 0"
+  ]);
+  playbackStore.handleStop();
+});
+
+it("refuses a reading whose own held run breaks the per-reading cap", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  const oversized = {
+    ...readingChunk(2, 0, 2),
+    audio_base64: "A".repeat(32 * 1024 * 1024 + 1)
+  };
+  playbackStore.handleStreamChunk(oversized);
+  expect(warn).toHaveBeenCalledWith(
+    "[PlaybackStore] refusing held stream reading",
+    2,
+    "over the held-audio cap"
+  );
+  // Later chunks of a refused reading are ignored.
+  playbackStore.handleStreamChunk(readingChunk(2, 1, 2));
+
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual(["Reading 1 part 0"]);
+  expect(playbackStore.isPlaying).toBe(false);
+  playbackStore.handleStop();
+});
+
+it("stops only the failed audible reading and drains the reading that waits", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 2));
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 1));
+  vi.mocked(emit).mockClear();
+
+  // B3: the failed owner stops, its waiting reading keeps its hold.
+  await listeners.get("playback-stream-failed")!({
+    payload: { session_id: null, reading_id: 1 }
+  });
+  expect(emit).toHaveBeenCalledWith("hud:stop", null);
+  expect(emit).toHaveBeenCalledWith("playback-finished", { reading_id: 1 });
+  expect(emit).toHaveBeenCalledWith("playback-started", { reading_id: 2 });
+  expect(playbackStore.isPlaying).toBe(true);
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual([
+    "Reading 1 part 0",
+    "Reading 2 part 0"
+  ]);
+
+  // The waiting reading plays to its end, so the drain handed it the speakers.
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 2 } });
+  expect(playbackStore.isPlaying).toBe(false);
+  playbackStore.handleStop();
+});
+
+it("attributes a held reading's failure without touching the audible reading", async () => {
+  stubCrossEngineContext();
+  const receive = captureSchedulerChunks();
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  const message =
+    "Reading stopped: section 2 of 5 failed, so the rest of the passage was not read.";
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 1));
+  // A batch fragment waits in the queue behind the streamed reading.
+  await sendAudio(0, undefined, 1);
+
+  // B4: the waiting reading's failure drops its hold and shows the toast, but
+  // leaves the audible reading's error state and the batch queue alone.
+  await listeners.get("reading-failed")!({ payload: { message, reading_id: 2 } });
+  expect(playbackStore.error).toBeNull();
+  expect(toast.error).toHaveBeenCalledWith(message, { duration: 15000 });
+  expect(playbackStore.isPlaying).toBe(true);
+
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual(["Reading 1 part 0"]);
+  // The queued batch fragment survived: it plays now that the stream drained.
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(1));
+  playbackStore.handleStop();
+});
+
+it("drops a held run with no terminal chunk or completion and keeps draining", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  // Reading 2 never ends: no terminal chunk and no pagination:complete (M1).
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 2));
+  playbackStore.handleStreamChunk(readingChunk(3, 0, 1));
+
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(warn).toHaveBeenCalledWith(
+    "[PlaybackStore] dropping held stream reading",
+    2,
+    "with no terminal chunk or pagination:complete"
+  );
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual([
+    "Reading 1 part 0",
+    "Reading 3 part 0"
+  ]);
+  playbackStore.handleStop();
+});
+
+it("holds an id-less chunk apart from an identified scheduler and warns once", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 2));
+  // M2: id-less chunks never join the identified scheduler's timeline.
+  playbackStore.handleStreamChunk({ ...streamChunk(null), is_final: true });
+  playbackStore.handleStreamChunk({
+    ...streamChunk(null),
+    fragment_index: 1,
+    fragment_total: 2,
+    is_final: true
+  });
+  expect(receive).toHaveBeenCalledTimes(1);
+  const anonymousWarnings = warn.mock.calls.filter(([line]) => String(line).includes("id-less"));
+  expect(anonymousWarnings).toHaveLength(1);
+
+  // An id-less completion must not complete the identified stream.
+  await listeners.get("pagination:complete")!({ payload: null });
+  expect(playbackStore.isPlaying).toBe(true);
+
+  // The identified reading ends; the anonymous run replays on its own scheduler.
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual([
+    "Reading 1 part 0",
+    "streamed",
+    "streamed"
+  ]);
+  expect(playbackStore.isPlaying).toBe(true);
   await listeners.get("pagination:complete")!({ payload: null });
   expect(playbackStore.isPlaying).toBe(false);
+  playbackStore.handleStop();
+});
+
+it("drains waiting readings from the lowest reading id, not arrival order", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  // M7: reading 3 arrives before reading 2, but starts later than 2.
+  playbackStore.handleStreamChunk(readingChunk(3, 0, 1));
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 1));
+
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual([
+    "Reading 1 part 0",
+    "Reading 2 part 0"
+  ]);
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 2 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual([
+    "Reading 1 part 0",
+    "Reading 2 part 0",
+    "Reading 3 part 0"
+  ]);
+  expect(playbackStore.isPlaying).toBe(true);
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 3 } });
+  expect(playbackStore.isPlaying).toBe(false);
+});
+
+it("keeps a waiting batch reading's fragments when a new synthesis starts", async () => {
+  stubCrossEngineContext();
+  captureSchedulerChunks();
+  await listeners.get("synthesis-state-change")!({ payload: true });
+
+  // A streamed reading owns the speakers, so the batch reading waits unprocessed.
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  await sendAudio(0, undefined, 1);
+  expect(playbackStore.isPlaying).toBe(true);
+
+  // M9: a new synthesis must not reset a queue that a waiting reading holds.
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(1));
+  playbackStore.handleStop();
+});
+
+it("ignores a late chunk of a reading dropped by a scoped stop", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 1));
+  expect(receive).toHaveBeenCalledTimes(1);
+
+  await listeners.get("playback-reading-dropped")!({ payload: { reading_id: 2 } });
+  // Rust cancels the scope before it emits the drop: a chunk emitted just before
+  // the cancel can reach the webview after it and must not revive reading 2.
+  playbackStore.handleStreamChunk(readingChunk(2, 1, 2));
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 1));
+  expect(receive).toHaveBeenCalledTimes(1);
+
+  // Reading 1 ends: the late chunks left no held run and no scheduler behind.
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual(["Reading 1 part 0"]);
+  expect(playbackStore.isPlaying).toBe(false);
+  playbackStore.handleStop();
+});
+
+it("ignores a late chunk of a failed owner and still drains the waiting reading", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 2));
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 1));
+  vi.mocked(emit).mockClear();
+
+  await listeners.get("playback-stream-failed")!({
+    payload: { session_id: null, reading_id: 1 }
+  });
+  // B3 handed the speakers to reading 2; a late chunk of reading 1 must not
+  // start a new scheduler for the failed reading.
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual([
+    "Reading 1 part 0",
+    "Reading 2 part 0"
+  ]);
+  playbackStore.handleStreamChunk(readingChunk(1, 1, 2));
+  expect(receive).toHaveBeenCalledTimes(2);
+  expect(emit).not.toHaveBeenCalledWith("playback-started", { reading_id: 1 });
+
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 2 } });
+  expect(playbackStore.isPlaying).toBe(false);
+  // With no scheduler alive, a late chunk still cannot start one.
+  playbackStore.handleStreamChunk(readingChunk(1, 1, 2));
+  expect(receive).toHaveBeenCalledTimes(2);
+  expect(playbackStore.isPlaying).toBe(false);
+  playbackStore.handleStop();
+});
+
+it("ignores a late chunk of a held reading that failed", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 2));
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 1));
+  playbackStore.handleStreamChunk(readingChunk(3, 0, 1));
+  // A held reading's stream failure drops its run and ignores its late chunks.
+  await listeners.get("playback-stream-failed")!({
+    payload: { session_id: null, reading_id: 2 }
+  });
+  // An attributed section failure naming a held reading does the same (B4).
+  const message = "Reading stopped: section 2 of 5 failed, so the rest was not read.";
+  await listeners.get("reading-failed")!({ payload: { message, reading_id: 3 } });
+  expect(playbackStore.error).toBeNull();
+
+  playbackStore.handleStreamChunk(readingChunk(2, 1, 2));
+  playbackStore.handleStreamChunk(readingChunk(3, 1, 2));
+  expect(receive).toHaveBeenCalledTimes(1);
+
+  // Reading 1 ends: neither failed held reading becomes audible.
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual(["Reading 1 part 0"]);
+  expect(playbackStore.isPlaying).toBe(false);
+  playbackStore.handleStop();
 });

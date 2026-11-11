@@ -45,6 +45,54 @@ pub struct PaginationEvent {
     pub reading_id: Option<u64>,
 }
 
+impl PaginationEvent {
+    /// An event that belongs to one reading. A reading id of 0 means the
+    /// caller has no reading identity, so the event carries none.
+    pub fn for_reading(
+        total: usize,
+        current_index: usize,
+        is_paginated: bool,
+        reading: u64,
+    ) -> Self {
+        Self {
+            total,
+            current_index,
+            is_paginated,
+            reading_id: (reading != 0).then_some(reading),
+        }
+    }
+
+    /// An event that describes no single reading: queue commands, skipped and
+    /// cleared state, history batch playback.
+    pub fn unscoped(total: usize, current_index: usize, is_paginated: bool) -> Self {
+        Self {
+            total,
+            current_index,
+            is_paginated,
+            reading_id: None,
+        }
+    }
+}
+
+/// Event emitted when a reading section fails permanently. `reading_id` names
+/// the reading (`null` for a helper scope), so the store can drop only that
+/// reading's held audio instead of touching the shared failure state.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct ReadingFailedEvent {
+    pub message: String,
+    pub reading_id: Option<u64>,
+}
+
+impl ReadingFailedEvent {
+    /// `reading` is 0 for a helper scope: such an event carries `null`.
+    pub fn new(message: String, reading: u64) -> Self {
+        Self {
+            message,
+            reading_id: (reading != 0).then_some(reading),
+        }
+    }
+}
+
 /// Event emitted when a fragment's audio is ready for streaming playback.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct AudioFragmentEvent {

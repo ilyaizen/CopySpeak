@@ -9,7 +9,7 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 const DEFAULT_ADDR: &str = "127.0.0.1:43117";
 const MAX_BODY_BYTES: usize = 200_000;
@@ -173,7 +173,10 @@ fn handle_connection(
             request_id: Some(id),
         })) => {
             // Scoped stop: cancels exactly this request, whatever phase it is
-            // in, and stops playback only while that request owns it.
+            // in, and stops playback only while that request's reading is
+            // audible. When the request has a reading, the webview drops that
+            // reading's held run after the cancel: a waiting reading's buffered
+            // audio must never play, while the audible reading keeps playing.
             let cancel_started = std::time::Instant::now();
             let outcome = speak_requests::cancel(&id, || {
                 crate::commands::stop_all_audio(&app, &app.state::<Mutex<AudioPlayer>>());
@@ -184,6 +187,16 @@ fn handle_connection(
                 outcome.as_str(),
                 cancel_started.elapsed().as_millis()
             );
+            if let Some(reading) = speak_requests::reading_for_id(&id) {
+                // After the cancel, so the store never re-plays a chunk whose
+                // reading is already stopped.
+                if let Err(e) = app.emit(
+                    "playback-reading-dropped",
+                    serde_json::json!({ "reading_id": reading }),
+                ) {
+                    log::warn!("Failed to emit playback-reading-dropped: {}", e);
+                }
+            }
             let body = serde_json::json!({
                 "ok": true,
                 "request_id": id,
@@ -1074,8 +1087,11 @@ mod tests {
             true,
             &lock,
             |seq| async move {
-                // The reading started: it owns the speakers.
-                speak_requests::claim_playback(seq, || false, || {});
+                // The reading started and the webview reported it audible: it
+                // owns the speakers, and a scoped stop compares its reading.
+                let reading = 9001;
+                speak_requests::attach_reading(seq, reading);
+                speak_requests::claim_audible(reading);
                 Ok(())
             },
             move |_| async move {

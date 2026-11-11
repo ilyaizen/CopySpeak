@@ -24,7 +24,7 @@ use super::helpers::{
 };
 use crate::commands::{
     AudioFragmentEvent, AudioStreamChunkEvent, CachedAudio, PaginationEvent,
-    PlaybackStreamFailedEvent,
+    PlaybackStreamFailedEvent, ReadingFailedEvent,
 };
 
 // ── Helper Functions ──────────────────────────────────────────────────────────
@@ -146,7 +146,8 @@ fn section_failure_message(index: usize, total: usize, error: &str) -> String {
 /// Report a permanently failed reading section once, globally.
 ///
 /// Emits `reading-failed` naming the failed section and returns the message
-/// for the caller to propagate. Gated on the abort scope so an aborted
+/// for the caller to propagate. The payload carries the reading id so the
+/// store changes only that reading. Gated on the abort scope so an aborted
 /// reading is never reported as a failure.
 fn report_section_failure(
     app: &AppHandle,
@@ -158,7 +159,10 @@ fn report_section_failure(
     let message = section_failure_message(index, total, &error);
     if !scope.aborted() {
         log::error!("[TTS] {message}");
-        let _ = app.emit("reading-failed", &message);
+        let event = ReadingFailedEvent::new(message.clone(), scope.reading());
+        if let Err(e) = app.emit("reading-failed", event) {
+            log::warn!("Failed to emit reading-failed: {}", e);
+        }
     }
     message
 }
@@ -510,9 +514,11 @@ fn emit_audio_fragment(
     let is_final = index == total - 1;
     // Emit under speaker ownership: a scoped stop for this reading either
     // lands after this audio (and stops it) or before it (and this emit sees
-    // the cancelled scope and sends nothing).
+    // the cancelled scope and sends nothing). The owner is keyed by reading;
+    // a helper scope (reading 0) claims "no reading", so a late scoped stop
+    // cannot cut it.
     crate::speak_requests::claim_playback(
-        scope.request(),
+        scope.reading(),
         || scope.aborted(),
         || {
             if let Err(e) = app.emit(
@@ -714,11 +720,10 @@ fn final_marker(chunk_is_final: bool, fragment_is_last: bool) -> bool {
 /// payload into a WAV container for history/cache/envelope handling.
 /// Returns the audio and its time-to-first-audio: the JIT pagination gate uses
 /// the first-chunk latency as the next fragment's lead.
-/// `rearm` is the reading's once-only stream-gate re-arm: the first chunk
-/// this reading emits re-arms the webview's `_streamStopped` gate under the
-/// speaker-ownership lock, healing a scoped stop of the previous owner that
-/// landed after this reading's start signal (see
-/// [`crate::speak_requests::StreamRearm`]).
+///
+/// The streamed path claims no speaker ownership: the webview reports the
+/// reading audible through `playback-started`, and Rust claims then. A waiting
+/// reading therefore emits without taking the speakers from the audible one.
 async fn synthesize_streaming_and_emit(
     app: &AppHandle,
     backend: Arc<Box<dyn TtsBackend>>,
@@ -728,11 +733,9 @@ async fn synthesize_streaming_and_emit(
     emit_final: bool,
     session_id: Option<String>,
     scope: AbortScope,
-    rearm: &std::sync::Arc<crate::speak_requests::StreamRearm>,
 ) -> Result<(SpeechAudio, u64), String> {
     let worker_app = app.clone();
     let failed_session = session_id.clone();
-    let rearm = std::sync::Arc::clone(rearm);
     let result = tokio::task::spawn_blocking(move || {
         let opened_at = Instant::now();
         log::info!(
@@ -779,32 +782,17 @@ async fn synthesize_streaming_and_emit(
             } else {
                 None
             };
-            // Same ownership rule as emit_audio_fragment. The rearm runs
-            // inside the claim: under the speaker-ownership lock, and ordered
-            // on the wire before this chunk, so a scoped stop for the
-            // previous owner can never orphan this reading's stream gate.
-            crate::speak_requests::claim_playback(
-                scope.request(),
-                || scope.aborted(),
-                || {
-                    rearm.rearm(|| {
-                        if let Err(e) = worker_app.emit("synthesis-state-change", true) {
-                            log::warn!("Failed to emit synthesis-state-change: {}", e);
-                        }
-                    });
-                    emit_audio_stream_chunk(
-                        &worker_app,
-                        &meta,
-                        pcm,
-                        fragment_index,
-                        final_marker(is_final, emit_final),
-                        (chunk_idx == 0).then_some(text.as_str()),
-                        duration_ms,
-                        captions,
-                        session_id.as_deref(),
-                        scope.reading(),
-                    );
-                },
+            emit_audio_stream_chunk(
+                &worker_app,
+                &meta,
+                pcm,
+                fragment_index,
+                final_marker(is_final, emit_final),
+                (chunk_idx == 0).then_some(text.as_str()),
+                duration_ms,
+                captions,
+                session_id.as_deref(),
+                scope.reading(),
             );
         })
     })
@@ -1545,10 +1533,6 @@ async fn speak_now_internal(
     // Wrap backend in Arc for sharing across pagination calls
     let backend_arc = Arc::new(backend);
 
-    // The reading's once-only stream-gate re-arm, shared by every streamed
-    // fragment so exactly the reading's first audible chunk re-arms.
-    let stream_rearm = std::sync::Arc::new(crate::speak_requests::StreamRearm::new());
-
     // Streaming backends forward PCM chunks during synthesis in playback mode;
     // batch backends (and cache hits / file output / pagination) take the
     // untouched existing branches. An active effect streams only when the
@@ -1600,7 +1584,6 @@ async fn speak_now_internal(
             session_id.clone(),
             scope,
             &pagination_config,
-            &stream_rearm,
         )
         .await?;
         (wav, streaming_playback || emitted_fragments)
@@ -1614,7 +1597,6 @@ async fn speak_now_internal(
             true,
             session_id.clone(),
             scope,
-            &stream_rearm,
         )
         .await?;
         (wav, true)
@@ -1807,7 +1789,6 @@ async fn synthesize_paginated(
     session_id: Option<String>,
     scope: AbortScope,
     pagination_config: &crate::config::PaginationConfig,
-    rearm: &std::sync::Arc<crate::speak_requests::StreamRearm>,
 ) -> Result<(SpeechAudio, bool), String> {
     let fragments = pagination::paginate_text(text, pagination_config);
 
@@ -1823,7 +1804,6 @@ async fn synthesize_paginated(
                 true,
                 session_id,
                 scope,
-                rearm,
             )
             .await
             .map(|(speech, _ttfa)| speech)
@@ -1951,7 +1931,6 @@ async fn synthesize_paginated(
                 i + 1 == fragments.len(),
                 session_id.clone(),
                 scope,
-                rearm,
             )
             .await
             .map_err(|e| report_section_failure(app, i, fragments.len(), scope, e))?;
@@ -2355,12 +2334,7 @@ async fn speak_queued_internal(
     // Emit pagination started event
     let _ = app.emit(
         "pagination:started",
-        PaginationEvent {
-            total: fragments.len(),
-            current_index: 0,
-            is_paginated: fragments.len() > 1,
-            reading_id: Some(scope.reading()),
-        },
+        PaginationEvent::for_reading(fragments.len(), 0, fragments.len() > 1, scope.reading()),
     );
 
     // Enter synthesis state
@@ -2400,9 +2374,6 @@ async fn speak_queued_internal(
     }
 
     // Synthesize and play each fragment
-    // The reading's once-only stream-gate re-arm, shared by every streamed
-    // fragment so exactly the reading's first audible chunk re-arms.
-    let stream_rearm = std::sync::Arc::new(crate::speak_requests::StreamRearm::new());
     let playback_speed = active_playback_speed(&tts_config);
     // Rust-side duration of each submitted fragment: the JIT gate matches the
     // webview's caption against it when the caption carries no fragment index.
@@ -2419,12 +2390,7 @@ async fn speak_queued_internal(
                 q.clear();
                 let _ = app.emit(
                     "pagination:stopped",
-                    PaginationEvent {
-                        total,
-                        current_index: index,
-                        is_paginated: total > 1,
-                        reading_id: Some(scope.reading()),
-                    },
+                    PaginationEvent::for_reading(total, index, total > 1, scope.reading()),
                 );
                 return Ok(());
             }
@@ -2460,12 +2426,7 @@ async fn speak_queued_internal(
         // Emit fragment started event
         let _ = app.emit(
             "pagination:fragment-started",
-            PaginationEvent {
-                total,
-                current_index: index,
-                is_paginated: total > 1,
-                reading_id: Some(scope.reading()),
-            },
+            PaginationEvent::for_reading(total, index, total > 1, scope.reading()),
         );
 
         // Emit progress update
@@ -2525,7 +2486,6 @@ async fn speak_queued_internal(
                 is_last_fragment(index, total),
                 session_id.clone(),
                 scope,
-                &stream_rearm,
             )
             .await
             .map_err(|e| report_section_failure(&app, index, total, scope, e))?;
@@ -2644,21 +2604,11 @@ async fn speak_queued_internal(
         // Emit fragment events
         let _ = app.emit(
             "pagination:fragment-ready",
-            PaginationEvent {
-                total,
-                current_index: index,
-                is_paginated: total > 1,
-                reading_id: Some(scope.reading()),
-            },
+            PaginationEvent::for_reading(total, index, total > 1, scope.reading()),
         );
         let _ = app.emit(
             "pagination:fragment-complete",
-            PaginationEvent {
-                total,
-                current_index: index,
-                is_paginated: total > 1,
-                reading_id: Some(scope.reading()),
-            },
+            PaginationEvent::for_reading(total, index, total > 1, scope.reading()),
         );
     }
 
@@ -2673,12 +2623,7 @@ async fn speak_queued_internal(
     // Emit pagination complete event
     let _ = app.emit(
         "pagination:complete",
-        PaginationEvent {
-            total,
-            current_index: total - 1,
-            is_paginated: total > 1,
-            reading_id: Some(scope.reading()),
-        },
+        PaginationEvent::for_reading(total, total - 1, total > 1, scope.reading()),
     );
 
     Ok(())
@@ -2696,7 +2641,10 @@ pub async fn speak_history_entry(
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     entry_id: String,
 ) -> Result<(), String> {
-    let scope = AbortScope::begin_reading();
+    // A history replay is not a reading: it emits only `audio-ready` (a batch
+    // event with no reading identity), so its helper scope carries none. Its
+    // audio claims "no reading" through `claim_unscoped_playback` semantics.
+    let scope = AbortScope::begin();
     let _synthesis_guard = SynthesisGuard::new(&app);
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] speak_history_entry called (id: {})", entry_id);
@@ -3490,5 +3438,61 @@ mod jit_gate_tests {
             started.elapsed() < Duration::from_millis(500),
             "the wait must end at once, not at the lead window"
         );
+    }
+}
+
+#[cfg(test)]
+mod reading_event_tests {
+    use super::*;
+
+    #[test]
+    fn reading_failed_payload_names_the_failed_reading() {
+        let scope = AbortScope::begin_reading();
+        let event = ReadingFailedEvent::new("Reading failed: boom".to_string(), scope.reading());
+        let value = serde_json::to_value(event).expect("reading-failed must serialize");
+        assert_eq!(value["message"], "Reading failed: boom");
+        assert_eq!(
+            value["reading_id"],
+            serde_json::json!(scope.reading()),
+            "the event must carry the failed reading's id"
+        );
+    }
+
+    #[test]
+    fn reading_failed_payload_of_a_helper_scope_carries_no_reading() {
+        let scope = AbortScope::begin();
+        let event = ReadingFailedEvent::new("Reading failed: boom".to_string(), scope.reading());
+        let value = serde_json::to_value(event).expect("reading-failed must serialize");
+        assert_eq!(value["message"], "Reading failed: boom");
+        assert!(
+            value["reading_id"].is_null(),
+            "a helper scope has no reading id"
+        );
+    }
+
+    #[test]
+    fn pagination_event_constructors_force_the_reading_choice() {
+        let scoped = PaginationEvent::for_reading(3, 1, true, 42);
+        assert_eq!(scoped.reading_id, Some(42));
+        assert_eq!(
+            serde_json::to_value(&scoped).expect("must serialize")["reading_id"],
+            serde_json::json!(42)
+        );
+
+        // A helper scope passes 0: the event carries no reading id, and the
+        // wire omits the field.
+        let helper = PaginationEvent::for_reading(3, 1, true, AbortScope::begin().reading());
+        assert_eq!(helper.reading_id, None);
+        assert!(serde_json::to_value(&helper)
+            .expect("must serialize")
+            .get("reading_id")
+            .is_none());
+
+        let unscoped = PaginationEvent::unscoped(3, 1, true);
+        assert_eq!(unscoped.reading_id, None);
+        assert!(serde_json::to_value(&unscoped)
+            .expect("must serialize")
+            .get("reading_id")
+            .is_none());
     }
 }

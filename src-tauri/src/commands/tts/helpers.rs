@@ -16,20 +16,15 @@ pub(crate) struct SynthesisGuard {
 
 impl SynthesisGuard {
     /// Begin a synthesis: marks the app synthesizing and emits the webview's
-    /// `synthesis-state-change(true)` (which also re-arms stream playback).
+    /// `synthesis-state-change(true)`.
     ///
     /// This does NOT take speaker ownership, whatever request the reading
     /// serves: the previous reading's audio is still playing while this one
     /// synthesizes, so ownership must transfer only when this reading's audio
-    /// becomes audible — the emit sites in `synthesis.rs`, under the
-    /// speaker-ownership lock. A scoped stop for this reading during
-    /// synthesis therefore leaves the previous reading alone, and a scoped
-    /// stop for the previous reading still reaches it.
-    ///
-    /// A scoped stop for the previous owner can land after this re-arm and
-    /// re-set the webview's stream gate; the reading's first audible chunk
-    /// re-arms the gate again (`speak_requests::StreamRearm`), so this
-    /// reading is not silenced by a stop that was never aimed at it.
+    /// becomes audible, through the webview's `playback-started` event. A
+    /// scoped stop for this reading during synthesis therefore leaves the
+    /// previous reading alone, and a scoped stop for the previous reading
+    /// still reaches it.
     pub(crate) fn new(app: &AppHandle) -> Self {
         {
             let status = app.state::<JobStatus>();
