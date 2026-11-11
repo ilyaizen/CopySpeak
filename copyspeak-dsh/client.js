@@ -614,13 +614,56 @@ window.__ModuleLoader__.load({
       return best;
     }
 
-    function ensureTarget() {
-      if (reading.element !== null && reading.element.isConnected) return reading.element;
+    /* The logical token stream is the word order a reply renders; the physical
+       span is the text node and the offsets a paint needs. A host re-render can
+       replace the physical spans while the logical stream stays identical. */
+    function sameTokenStream(left, right) {
+      if (left.length !== right.length) return false;
+      for (let index = 0; index < left.length; index += 1) {
+        if (left[index].norm !== right[index].norm) return false;
+        if ((left[index].code === true) !== (right[index].code === true)) return false;
+      }
+      return true;
+    }
+
+    /* Whether the cached spans lost the text node the next paint would use. The
+       reply body was re-rendered in place, so its element is still connected but
+       the cached tokens point at detached text nodes. */
+    function spansStale() {
+      if (reading.tokens === null || reading.tokens.length === 0) return false;
+      const index =
+        reading.activeToken >= 0 && reading.activeToken < reading.tokens.length
+          ? reading.activeToken
+          : 0;
+      return !reading.tokens[index].node.isConnected;
+    }
+
+    /* Resolve the rendered reply. A node key is exact; without one, the DOM is
+       the only address and the closest assistant row wins. Re-resolving keeps
+       the alignment when the physical spans changed but the word order did not:
+       the map and the cursor index the word order, not the nodes. */
+    function ensureTarget(force = false) {
+      if (!force && reading.element !== null && reading.element.isConnected && !spansStale()) {
+        return reading.element;
+      }
       const found = findMessageTarget();
       releaseMarkHost();
+      const previous = reading.tokens;
+      const previousActive = reading.activeToken;
       reading.element = found === null ? null : found.element;
       reading.tokens = found === null ? null : found.tokens;
       reading.scroller = null;
+      if (
+        previous !== null &&
+        reading.tokens !== null &&
+        sameTokenStream(previous, reading.tokens)
+      ) {
+        /* The reply text survived the DOM change. Its spans are new, but the
+           word order is unchanged, so the fragment map, cursor, and painted
+           token index stay valid. */
+        if (previousActive >= reading.tokens.length) reading.activeToken = -1;
+        return reading.element;
+      }
       reading.cursor = 0;
       reading.fragmentText = null;
       reading.fragmentWords = null;
@@ -631,17 +674,21 @@ window.__ModuleLoader__.load({
       return reading.element;
     }
 
-    /* A rewind invalidates the forward alignment: the next snapshot re-aligns
-       from the start of the message again, not from the last word played. The
-       caller repaints in the same pass, so the mark does not flash. */
-    function invalidateAlignment() {
-      reading.cursor = 0;
-      reading.fragmentText = null;
-      reading.fragmentWords = null;
-      reading.fragmentMap = null;
-      reading.fragmentPosition = 0;
-      reading.fragmentStart = 0;
-      reading.fragmentEnd = 0;
+    /* A rewind moves the playhead inside the words, not the words themselves.
+       Keep the aligned fragment unless the rewind crossed a fragment boundary:
+       re-aligning from the message start can snap onto an earlier repeat of the
+       same sentence. The caller repaints in the same pass, so the mark does not
+       flash. */
+    function invalidateAlignment(keepFragment = false) {
+      if (!keepFragment) {
+        reading.fragmentText = null;
+        reading.fragmentWords = null;
+        reading.fragmentMap = null;
+        reading.fragmentPosition = 0;
+        reading.fragmentStart = 0;
+        reading.fragmentEnd = 0;
+        reading.cursor = 0;
+      }
       reading.activeToken = -1;
     }
 
@@ -991,8 +1038,30 @@ window.__ModuleLoader__.load({
       if (tokenIndex < 0) return;
       const token = reading.tokens[tokenIndex];
       if (!token.node.isConnected) {
+        /* The reply body re-rendered in place: its word order is unchanged, so
+           refresh the spans and retry the paint once instead of dropping it. */
         reading.activeToken = -1;
         clearHighlight();
+        ensureTarget(true);
+        if (
+          reading.tokens === null ||
+          reading.fragmentMap === null ||
+          reading.fragmentWords === null
+        ) {
+          return;
+        }
+        const retryWordIndex = activeWordIndex(reading.fragmentWords, snapshot.position);
+        if (retryWordIndex < 0) return;
+        const retryTokenIndex = nearestMapped(reading.fragmentMap, retryWordIndex);
+        if (retryTokenIndex < 0) return;
+        const retryToken = reading.tokens[retryTokenIndex];
+        if (!retryToken.node.isConnected) return;
+        reading.activeToken = retryTokenIndex;
+        if (preferences.captions) {
+          paintWord(retryToken);
+          return;
+        }
+        followRange(retryToken, tokenRange(retryToken));
         return;
       }
       if (tokenIndex === reading.activeToken) {
@@ -1092,8 +1161,9 @@ window.__ModuleLoader__.load({
 
     /* The app reports the position inside one fragment, so a normal fragment
        change also drops it. A drop on the same fragment is certainly a rewind:
-       reset the alignment before the next pass. A drop across fragments stays
-       ambiguous, and the caller retries from the start only if aligning forward
+       keep the fragment map and repaint, so the alignment cannot snap onto an
+       earlier repeat of the same words. A drop across fragments stays ambiguous,
+       and the caller retries from the message start only if aligning forward
        fails. */
     function trackRewind(snapshot) {
       if (snapshot === null) return false;
@@ -1101,10 +1171,11 @@ window.__ModuleLoader__.load({
       statusPoll.position = snapshot.position;
       if (previous === null || snapshot.position >= previous - REWIND_SLOP_MS) return false;
       if (reading.fragmentText === snapshot.text) {
-        /* A same-fragment rewind is certain: drop the paint now, then repaint
-           the rewound word in this same poll pass. A cross-fragment drop stays
-           ambiguous and keeps the last painted word until an alignment lands. */
-        invalidateAlignment();
+        /* A same-fragment rewind is certain: keep the aligned fragment, drop
+           the paint now, then repaint the rewound word in this same poll pass.
+           A cross-fragment drop stays ambiguous and keeps the last painted word
+           until an alignment lands. */
+        invalidateAlignment(true);
         clearHighlight();
       }
       return true;
