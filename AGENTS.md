@@ -78,6 +78,7 @@ Every line exists because it went wrong at least once. On mistake, correction, o
 - Treat a Windows-green `cargo check` as silent about `cfg(not(windows))` code; grep cfg-gated blocks for a trait's methods before deleting an "unused" import.
 - Verify a subsystem is actually wired before extending it — grep `mod` declarations and component mounts; the parity checklist once described a post-processing enum system that was never compiled or mounted.
 - Feature-detect an optional browser or DOM API with a `!== undefined` guard or `try/catch`; `vp check`'s anti-slop `no-runtime-typeof` rejects `typeof` checks.
+- Treat a `cargo test` link failure `LNK1104` on the test exe as another session's test binary still running: wait for that process, do not add a second target dir.
 
 ### Area gotchas
 
