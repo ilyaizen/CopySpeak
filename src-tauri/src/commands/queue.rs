@@ -45,6 +45,7 @@ pub fn skip_to_fragment(
             total,
             current_index: index,
             is_paginated,
+            reading_id: None,
         },
     );
 
@@ -67,6 +68,7 @@ pub fn stop_queue(app: AppHandle, queue: State<'_, Mutex<FragmentQueue>>) -> Res
             total,
             current_index,
             is_paginated,
+            reading_id: None,
         },
     );
 
@@ -89,6 +91,7 @@ pub fn clear_queue(app: AppHandle, queue: State<'_, Mutex<FragmentQueue>>) -> Re
             total,
             current_index,
             is_paginated,
+            reading_id: None,
         },
     );
 

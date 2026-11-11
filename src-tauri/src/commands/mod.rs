@@ -39,6 +39,10 @@ pub struct PaginationEvent {
     pub total: usize,
     pub current_index: usize,
     pub is_paginated: bool,
+    /// The reading this event belongs to. Omitted for events that describe no
+    /// single reading: queue commands, skipped/updated state, history batches.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reading_id: Option<u64>,
 }
 
 /// Event emitted when a fragment's audio is ready for streaming playback.
@@ -79,14 +83,22 @@ pub struct AudioStreamChunkEvent {
     pub captions: Option<crate::tts::captions::CaptionAlignment>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_id: Option<String>,
+    /// The reading this chunk belongs to. Every chunk of one reading carries
+    /// the same id, so the webview can keep readings apart.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reading_id: Option<u64>,
 }
 
 /// Event emitted when a streamed reading fails, so the webview stops only the
-/// stream that reading owns. `session_id` is null for desktop readings, so it is
-/// serialized as null rather than skipped; the store compares it with `===`.
+/// stream that reading owns. `reading_id` names a desktop reading; `session_id`
+/// stays for browser sessions and is null for desktop readings, so it is
+/// serialized as null rather than skipped. The store matches the reading id
+/// first and falls back to `session_id` when no id is present.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct PlaybackStreamFailedEvent {
     pub session_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reading_id: Option<u64>,
 }
 
 /// Event emitted during synthesis to show progress with ETA.

@@ -535,6 +535,7 @@ fn emit_audio_fragment(
 
 /// Emit one PCM chunk of streaming synthesis audio to the frontend.
 /// A terminal zero-byte chunk with `is_final: true` marks end-of-stream.
+/// `reading_id` is 0 for a helper scope, which emits no identity.
 fn emit_audio_stream_chunk(
     app: &AppHandle,
     meta: &AudioFormatMeta,
@@ -545,6 +546,7 @@ fn emit_audio_stream_chunk(
     fragment_duration_ms: Option<u64>,
     captions: Option<&CaptionAlignment>,
     session_id: Option<&str>,
+    reading_id: u64,
 ) {
     use base64::{engine::general_purpose, Engine as _};
     let encoded = general_purpose::STANDARD.encode(pcm);
@@ -559,6 +561,7 @@ fn emit_audio_stream_chunk(
         fragment_duration_ms,
         captions: captions.cloned(),
         session_id: session_id.map(str::to_owned),
+        reading_id: (reading_id != 0).then_some(reading_id),
     };
     if let Err(e) = app.emit("audio-stream-chunk", event) {
         log::warn!("Failed to emit audio-stream-chunk: {}", e);
@@ -799,6 +802,7 @@ async fn synthesize_streaming_and_emit(
                         duration_ms,
                         captions,
                         session_id.as_deref(),
+                        scope.reading(),
                     );
                 },
             );
@@ -813,9 +817,11 @@ async fn synthesize_streaming_and_emit(
         // The webview scheduler finishes only on a final marker, which a failed
         // stream never sends. The store stops playback only when this session
         // owns it, and finishes when nothing plays, so playback-finished fires
-        // either way and restores ducked audio.
+        // either way and restores ducked audio. The reading id names the
+        // desktop reading; `session_id` stays for browser sessions.
         let event = PlaybackStreamFailedEvent {
             session_id: failed_session,
+            reading_id: (scope.reading() != 0).then_some(scope.reading()),
         };
         if let Err(e) = app.emit("playback-stream-failed", event) {
             log::warn!("Failed to emit playback-stream-failed: {}", e);
@@ -1391,7 +1397,7 @@ async fn speak_now_internal(
     // another must drop when it is stopped while queued, not start once the
     // other reading ends. Unscoped reads (hotkey, tray, Play) carry no request
     // id, so the abort generation is their only stop signal.
-    let scope = AbortScope::begin_for_request(request);
+    let scope = AbortScope::begin_reading_for_request(request);
     let Some(_queue_lock) = wait_for_queue(&lock_state, scope).await else {
         log::info!("[TTS] Reading stopped while queued; nothing to speak");
         return Ok(());
@@ -2252,8 +2258,9 @@ async fn speak_queued_internal(
 
     // Aborts issued before this run starts do not reach it. speak_queued takes
     // no queue lock, so a shared flag cleared here could also un-abort a run
-    // still draining from before.
-    let scope = AbortScope::begin();
+    // still draining from before. The reading identity rides on every playback
+    // event this reading emits.
+    let scope = AbortScope::begin_reading();
 
     // One queued reading emits into the webview's FIFO fragment queue at a
     // time. Taking the turn here keeps readings in call order, and asks an
@@ -2352,6 +2359,7 @@ async fn speak_queued_internal(
             total: fragments.len(),
             current_index: 0,
             is_paginated: fragments.len() > 1,
+            reading_id: Some(scope.reading()),
         },
     );
 
@@ -2415,6 +2423,7 @@ async fn speak_queued_internal(
                         total,
                         current_index: index,
                         is_paginated: total > 1,
+                        reading_id: Some(scope.reading()),
                     },
                 );
                 return Ok(());
@@ -2455,6 +2464,7 @@ async fn speak_queued_internal(
                 total,
                 current_index: index,
                 is_paginated: total > 1,
+                reading_id: Some(scope.reading()),
             },
         );
 
@@ -2638,6 +2648,7 @@ async fn speak_queued_internal(
                 total,
                 current_index: index,
                 is_paginated: total > 1,
+                reading_id: Some(scope.reading()),
             },
         );
         let _ = app.emit(
@@ -2646,6 +2657,7 @@ async fn speak_queued_internal(
                 total,
                 current_index: index,
                 is_paginated: total > 1,
+                reading_id: Some(scope.reading()),
             },
         );
     }
@@ -2665,6 +2677,7 @@ async fn speak_queued_internal(
             total,
             current_index: total - 1,
             is_paginated: total > 1,
+            reading_id: Some(scope.reading()),
         },
     );
 
@@ -2683,7 +2696,7 @@ pub async fn speak_history_entry(
     telemetry_state: State<'_, Mutex<telemetry::TelemetryLog>>,
     entry_id: String,
 ) -> Result<(), String> {
-    let scope = AbortScope::begin();
+    let scope = AbortScope::begin_reading();
     let _synthesis_guard = SynthesisGuard::new(&app);
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] speak_history_entry called (id: {})", entry_id);

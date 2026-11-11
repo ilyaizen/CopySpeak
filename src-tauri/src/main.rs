@@ -42,17 +42,29 @@ pub static ACTIVE_CLI_PID: AtomicU32 = AtomicU32::new(0);
 /// began under, so an abort reaches only the readings already running.
 pub static ABORT_GENERATION: AtomicU64 = AtomicU64::new(0);
 
-/// The abort generation a synthesis began under, plus the control-server
-/// request it serves (`speak_requests::NO_REQUEST` for every other reading).
+/// Allocates one identity per reading (a speak call with all its fragments).
+/// Starts at 1: 0 means "not a reading", the value of a helper scope.
+pub static READING_SEQ: AtomicU64 = AtomicU64::new(1);
+
+/// The abort generation a synthesis began under, the control-server request it
+/// serves (`speak_requests::NO_REQUEST` for every other reading), and the
+/// reading identity carried on its playback events (0 for a helper scope).
 #[derive(Clone, Copy)]
 pub struct AbortScope {
     generation: u64,
     request: u64,
+    reading: u64,
 }
 
 impl AbortScope {
     pub fn begin() -> Self {
         Self::begin_for_request(speak_requests::NO_REQUEST)
+    }
+
+    /// A helper scope: it ends on abort but names no reading, so events it
+    /// emits carry no reading id.
+    pub fn begin_reading() -> Self {
+        Self::begin_reading_for_request(speak_requests::NO_REQUEST)
     }
 
     /// A scope that also ends when its control-server request is cancelled
@@ -61,11 +73,28 @@ impl AbortScope {
         Self {
             generation: ABORT_GENERATION.load(Ordering::Relaxed),
             request,
+            reading: 0,
+        }
+    }
+
+    /// A reading's scope: the abort generation and request of
+    /// [`Self::begin_for_request`], plus a new process-wide reading identity
+    /// that every playback event of this reading carries.
+    pub fn begin_reading_for_request(request: u64) -> Self {
+        Self {
+            generation: ABORT_GENERATION.load(Ordering::Relaxed),
+            request,
+            reading: READING_SEQ.fetch_add(1, Ordering::Relaxed),
         }
     }
 
     pub fn request(self) -> u64 {
         self.request
+    }
+
+    /// The reading identity, or 0 for a helper scope.
+    pub fn reading(self) -> u64 {
+        self.reading
     }
 
     /// True once an abort has been requested after this scope began, or once
@@ -971,4 +1000,24 @@ fn main() {
                 let _ = app;
             }
         });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reading_scopes_allocate_distinct_identities_and_helpers_keep_zero() {
+        let first = AbortScope::begin_reading().reading();
+        let second =
+            AbortScope::begin_reading_for_request(crate::speak_requests::NO_REQUEST).reading();
+        assert_ne!(first, 0, "a reading scope must carry a reading identity");
+        assert_ne!(second, 0, "a reading scope must carry a reading identity");
+        assert_ne!(first, second, "each reading must get a fresh identity");
+        assert_eq!(AbortScope::begin().reading(), 0);
+        assert_eq!(
+            AbortScope::begin_for_request(crate::speak_requests::NO_REQUEST).reading(),
+            0
+        );
+    }
 }

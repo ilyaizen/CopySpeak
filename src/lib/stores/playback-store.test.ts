@@ -3,7 +3,7 @@ import { playbackStore } from "./playback-store.svelte";
 import { emit, emitTo, listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { toast } from "svelte-sonner";
-import { PcmStreamScheduler } from "./playback/pcm-stream";
+import { PcmStreamScheduler, type StreamChunkPayload } from "./playback/pcm-stream";
 
 const { listeners, live, ipc } = vi.hoisted(() => ({
   listeners: new Map<string, (event: { payload: unknown }) => Promise<void>>(),
@@ -1015,4 +1015,141 @@ it("drops a held stream when the reading is stopped", async () => {
   audio.dispatchEvent(new Event("ended"));
   await Promise.resolve();
   expect(receive).not.toHaveBeenCalled();
+});
+
+/** A streamed chunk that carries its reading identity, as Rust now emits it. */
+function readingChunk(
+  readingId: number | undefined,
+  fragmentIndex = 0,
+  total = 1
+): StreamChunkPayload {
+  const chunk: StreamChunkPayload = {
+    audio_base64: "",
+    sample_rate: 24000,
+    channels: 1,
+    bits_per_sample: 16,
+    fragment_index: fragmentIndex,
+    fragment_total: total,
+    is_final: fragmentIndex === total - 1,
+    text: `Reading ${readingId ?? "none"} part ${fragmentIndex}`
+  };
+  if (readingId !== undefined) chunk.reading_id = readingId;
+  return chunk;
+}
+
+/** Capture what each scheduler instance is fed, without decoding real PCM. */
+function captureSchedulerChunks() {
+  return vi.spyOn(PcmStreamScheduler.prototype, "handleChunk").mockImplementation(() => {});
+}
+
+it("holds a second streamed reading and replays it in order on its own scheduler", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+  vi.mocked(emit).mockClear();
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 2));
+  playbackStore.handleStreamChunk(readingChunk(1, 1, 2));
+  expect(receive).toHaveBeenCalledTimes(2);
+  expect(playbackStore.isPlaying).toBe(true);
+
+  // Reading B starts while A plays. Its chunks must not join A's timeline.
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 2));
+  playbackStore.handleStreamChunk(readingChunk(2, 1, 2));
+  expect(receive).toHaveBeenCalledTimes(2);
+  expect(playbackStore.isPlaying).toBe(true);
+
+  // A drains: B replays into a fresh scheduler, in its own arrival order.
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual([
+    "Reading 1 part 0",
+    "Reading 1 part 1",
+    "Reading 2 part 0",
+    "Reading 2 part 1"
+  ]);
+  expect(vi.mocked(emit).mock.calls.filter(([name]) => name === "playback-started")).toHaveLength(
+    2
+  );
+  playbackStore.handleStop();
+});
+
+it("does not complete the reading that still plays on another reading's completion", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+  vi.mocked(emit).mockClear();
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 1));
+  expect(receive).toHaveBeenCalledTimes(1);
+
+  // B's end-of-synthesis lands while A is audible: A must keep the speakers.
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 2 } });
+  expect(playbackStore.isPlaying).toBe(true);
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", null);
+
+  // A's own completion ends A and starts B; B's completion was held with it.
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual([
+    "Reading 1 part 0",
+    "Reading 2 part 0"
+  ]);
+  expect(playbackStore.isPlaying).toBe(false);
+});
+
+it("keeps the active stream playing when a later reading fails, and drops its hold", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+  vi.mocked(emit).mockClear();
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 2));
+  await listeners.get("playback-stream-failed")!({
+    payload: { session_id: null, reading_id: 2 }
+  });
+  expect(playbackStore.isPlaying).toBe(true);
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", null);
+
+  // A later reading can still start; B's held chunks never play.
+  playbackStore.handleStreamChunk(readingChunk(3, 0, 1));
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 1 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual([
+    "Reading 1 part 0",
+    "Reading 3 part 0"
+  ]);
+  playbackStore.handleStop();
+});
+
+it("drops a held streamed reading when the owner is stopped", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+
+  playbackStore.handleStreamChunk(readingChunk(1, 0, 1));
+  playbackStore.handleStreamChunk(readingChunk(2, 0, 1));
+  expect(receive).toHaveBeenCalledTimes(1);
+
+  playbackStore.handleStop();
+  expect(playbackStore.isPlaying).toBe(false);
+  // The next reading starts fresh: the stopped reading's held run is gone.
+  await listeners.get("synthesis-state-change")!({ payload: true });
+  playbackStore.handleStreamChunk(readingChunk(3, 0, 1));
+  await listeners.get("pagination:complete")!({ payload: { reading_id: 3 } });
+  expect(receive.mock.calls.map(([chunk]) => chunk.text)).toEqual([
+    "Reading 1 part 0",
+    "Reading 3 part 0"
+  ]);
+  expect(playbackStore.isPlaying).toBe(false);
+});
+
+it("keeps the old single-stream behavior for chunks without a reading id", async () => {
+  await startStreamingReading();
+  const receive = captureSchedulerChunks();
+  vi.mocked(emit).mockClear();
+
+  playbackStore.handleStreamChunk(streamChunk(null));
+  playbackStore.handleStreamChunk({ ...streamChunk(null), fragment_index: 1, fragment_total: 2 });
+  // No identity means the old fallback: every chunk feeds the active stream.
+  expect(receive).toHaveBeenCalledTimes(2);
+  expect(playbackStore.isPlaying).toBe(true);
+  // A completion without an id still ends the stream it describes, as before.
+  await listeners.get("pagination:complete")!({ payload: null });
+  expect(playbackStore.isPlaying).toBe(false);
 });

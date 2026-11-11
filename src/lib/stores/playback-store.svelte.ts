@@ -28,6 +28,30 @@ import type { HudCaptionPayload } from "#lib/types/hud.js";
 /** Wall seconds the skip buttons and arrow keys move by. */
 export const SKIP_SECONDS = 5;
 
+/** Key for held chunks with no reading identity (older build, helper scopes). */
+const ANONYMOUS_STREAM_READING = 0;
+
+/** One reading's streamed chunks, held while another reading owns the speakers. */
+interface HeldStreamRun {
+  /** Chunks in arrival order, including the terminal zero-byte end marker. */
+  chunks: StreamChunkPayload[];
+  /** Whether this reading's terminal end-of-stream chunk arrived. */
+  isFinal: boolean;
+  /** Whether this reading's `pagination:complete` arrived. */
+  complete: boolean;
+}
+
+/** Payload of `pagination:complete` (matches `PaginationEvent`). */
+interface PaginationCompletePayload {
+  reading_id?: number;
+}
+
+/** Payload of `playback-stream-failed` (matches `PlaybackStreamFailedEvent`). */
+interface StreamFailedPayload {
+  session_id: string | null;
+  reading_id?: number;
+}
+
 class PlaybackStore {
   isPlaying = $state(false);
   isPaused = $state(false);
@@ -91,11 +115,14 @@ class PlaybackStore {
   private _analyser = new AudioAnalyser();
   private _fragmentQueue: FragmentQueue;
   private _pcmScheduler: PcmStreamScheduler | null = null;
-  // Cross-engine queue: a reading's audio waits while the OTHER engine owns the
-  // speakers. Streamed chunks buffer here until the batch queue drains; batch
-  // fragments already wait in `_fragmentQueue` until the stream drains.
+  /** Reading that owns `_pcmScheduler`; null when none, or an id-less stream. */
+  private _streamReadingId: number | null = null;
+  // Cross-engine queue and stream-vs-stream queue: a reading's audio waits while
+  // another reading owns the speakers. Streamed chunks buffer in that reading's
+  // own `_heldStreamRuns` entry, so two readings never share one scheduler;
+  // batch fragments already wait in `_fragmentQueue` until the stream drains.
   // `_drainHeldAudio` hands the speakers over, so at most one engine plays.
-  private _heldStreamChunks: StreamChunkPayload[] = [];
+  private _heldStreamRuns = new Map<number, HeldStreamRun>();
   // Live walkie-talkie chain the streamed PCM plays through; null for a reading
   // with no effect, or with an effect Rust keeps on the batch path.
   private _liveEffect: LiveEffect | null = null;
@@ -424,6 +451,7 @@ class PlaybackStore {
     this.currentFragmentIndex = null;
     this.totalFragments = null;
     this._pcmScheduler = null;
+    this._streamReadingId = null;
     this._streamSessionId = null;
     // A reading that hit reading-failed ends in "error"; a normal one in
     // "completed". The bridge keeps a delivered session up for this report.
@@ -446,23 +474,74 @@ class PlaybackStore {
 
   /**
    * Hand the speakers to the reading that waited while the other engine played:
-   * a buffered stream starts, else the queued batch fragments. At most one
-   * engine plays at a time, so a new reading never doubles the audio.
+   * the oldest buffered stream starts, else the queued batch fragments. At most
+   * one reading plays at a time, so a new reading never doubles the audio.
    */
   private _drainHeldAudio(): void {
     if (this._streamStopped) {
-      this._heldStreamChunks = [];
+      this._heldStreamRuns.clear();
       return;
     }
-    if (this._heldStreamChunks.length > 0) {
-      const held = this._heldStreamChunks;
-      this._heldStreamChunks = [];
-      for (const chunk of held) this.handleStreamChunk(chunk);
+    const next = this._heldStreamRuns.entries().next();
+    if (next.done === false) {
+      const [readingId, run] = next.value;
+      // Delete the run before replaying: the first chunk starts the scheduler
+      // this reading now owns, and the stream's later chunks feed it live.
+      this._heldStreamRuns.delete(readingId);
+      console.log(
+        "[PlaybackStore] draining held stream reading",
+        readingId === ANONYMOUS_STREAM_READING ? null : readingId,
+        "chunks:",
+        run.chunks.length,
+        "final:",
+        run.isFinal
+      );
+      for (const chunk of run.chunks) this.handleStreamChunk(chunk);
+      // The terminal chunk completes the scheduler on its own; applying the
+      // explicit completion covers a reading that outran its end marker.
+      if (run.complete) this._pcmScheduler?.markQueueComplete();
       return;
     }
     if (!this._fragmentQueue.isProcessing() && this._fragmentQueue.getQueueLength() > 0) {
       void this._fragmentQueue.startProcessing();
     }
+  }
+
+  /** The reading id on a playback event; null when absent (helper scope, old build). */
+  private _eventReadingId(readingId: number | null | undefined): number | null {
+    return readingId === undefined || readingId === null || readingId === 0 ? null : readingId;
+  }
+
+  /** Buffer a chunk in its reading's held run until the speakers free for it. */
+  private _holdStreamChunk(payload: StreamChunkPayload, readingId: number | null): void {
+    const key = readingId ?? ANONYMOUS_STREAM_READING;
+    let run = this._heldStreamRuns.get(key);
+    if (!run) {
+      run = { chunks: [], isFinal: false, complete: false };
+      this._heldStreamRuns.set(key, run);
+    }
+    run.chunks.push(payload);
+    if (payload.is_final) run.isFinal = true;
+  }
+
+  /**
+   * The backend finished synthesizing a reading. Only the reading that owns the
+   * scheduler may complete it; a later reading's completion marks its held run.
+   */
+  private handlePaginationComplete(payload: PaginationCompletePayload | null): void {
+    const readingId = this._eventReadingId(payload?.reading_id);
+    if (readingId === null) {
+      // No identity (older build): the old behavior completes the active stream.
+      this._pcmScheduler?.markQueueComplete();
+      return;
+    }
+    if (readingId === this._streamReadingId) {
+      this._pcmScheduler?.markQueueComplete();
+      return;
+    }
+    const held = this._heldStreamRuns.get(readingId);
+    if (held) held.complete = true;
+    // An unknown reading id is ignored.
   }
 
   /** Hand a naturally finished live chain its tail and let it self-dispose. */
@@ -492,14 +571,22 @@ class PlaybackStore {
   /**
    * Handle one PCM chunk of streaming synthesis audio. Lazily creates the
    * scheduler (which prebuffers ~250ms before starting gap-free playback) and
-   * feeds it the chunk.
+   * feeds it the chunk. A chunk of another reading waits in that reading's own
+   * held run: only the reading that owns the scheduler may feed it.
    */
   handleStreamChunk(payload: StreamChunkPayload): void {
     if (this._streamStopped) return;
+    const readingId = this._eventReadingId(payload.reading_id);
+    // Stream-vs-stream: a second reading's chunks wait for the first to drain.
+    // A chunk without a reading id falls through to the old behavior.
+    if (this._pcmScheduler && readingId !== null && readingId !== this._streamReadingId) {
+      this._holdStreamChunk(payload, readingId);
+      return;
+    }
     // Cross-engine queue: while the batch fragment path owns the speakers this
-    // streamed reading waits. `finishPlayback` starts it from `_heldStreamChunks`.
+    // streamed reading waits. `finishPlayback` starts it from `_heldStreamRuns`.
     if (!this._pcmScheduler && this._batchOwnsSpeakers()) {
-      this._heldStreamChunks.push(payload);
+      this._holdStreamChunk(payload, readingId);
       return;
     }
     if (!this._audioCtx) {
@@ -530,6 +617,7 @@ class PlaybackStore {
       });
       this._pcmScheduler.setVolume(this.volume);
       this._pcmScheduler.setRate(this.speed, this.pitch);
+      this._streamReadingId = readingId;
       this._streamSessionId = payload.session_id ?? null;
       this.currentFragmentIndex = payload.fragment_index;
       this.totalFragments = payload.fragment_total;
@@ -561,14 +649,31 @@ class PlaybackStore {
    * emit playback-finished without a stop: handleStop would also gate off the
    * chunks of a reading that is still synthesizing, and clear its queue.
    */
-  handleStreamFailed(sessionId: string | null): void {
+  handleStreamFailed(failed: StreamFailedPayload): void {
+    const readingId = this._eventReadingId(failed.reading_id);
     if (this._pcmScheduler) {
-      if (this._streamSessionId === sessionId) this.handleStop();
+      // The reading id names a desktop reading; a failure without one matches
+      // its browser session, as before. A failed held reading keeps the active
+      // stream playing, and only its own held run is dropped.
+      const owns =
+        readingId !== null
+          ? readingId === this._streamReadingId
+          : this._streamSessionId === (failed.session_id ?? null);
+      if (owns) {
+        this.handleStop();
+      } else if (readingId !== null) {
+        this._heldStreamRuns.delete(readingId);
+      }
       return;
     }
     // A streamed reading that failed before it could start must not start when
-    // the batch queue drains.
-    this._heldStreamChunks = [];
+    // the batch queue drains. A failure with an identity drops only that
+    // reading's held run; without one it keeps the old behavior and drops all.
+    if (readingId === null) {
+      this._heldStreamRuns.clear();
+    } else {
+      this._heldStreamRuns.delete(readingId);
+    }
     // Only an idle queue may be released here: an active one belongs to
     // another reading, whose failure this event does not describe.
     if (this.isPlaying || this.isLoadingAudio || this._fragmentQueue.isProcessing()) return;
@@ -623,12 +728,13 @@ class PlaybackStore {
     this._analyser.stop();
     this._stopping = true;
     // A reading waiting for the other engine is cancelled with this stop.
-    this._heldStreamChunks = [];
+    this._heldStreamRuns.clear();
 
     // Clear the fragment queue and any active PCM stream
     this._fragmentQueue.clear();
     this._pcmScheduler?.stop();
     this._pcmScheduler = null;
+    this._streamReadingId = null;
     // A user stop cuts the live chain immediately; only natural completion gets
     // the tail click and delayed dispose.
     this._disposeLiveEffect();
@@ -865,10 +971,15 @@ class PlaybackStore {
       });
 
       // Authoritative end-of-synthesis signal for the streamed queue; the
-      // scheduler completes once all scheduled sources have drained.
-      const unPaginationComplete = await listen("pagination:complete", () => {
-        this._pcmScheduler?.markQueueComplete();
-      });
+      // scheduler completes once all scheduled sources have drained. The
+      // payload names the reading, so a later reading's completion cannot end
+      // the reading that still plays.
+      const unPaginationComplete = await listen<PaginationCompletePayload | null>(
+        "pagination:complete",
+        (e) => {
+          this.handlePaginationComplete(e.payload);
+        }
+      );
 
       console.log("[PlaybackStore] All listeners registered");
 
@@ -877,12 +988,9 @@ class PlaybackStore {
       });
 
       // A streamed reading failed on the backend; see handleStreamFailed.
-      const unStreamFailed = await listen<{ session_id: string | null }>(
-        "playback-stream-failed",
-        (e) => {
-          this.handleStreamFailed(e.payload.session_id);
-        }
-      );
+      const unStreamFailed = await listen<StreamFailedPayload>("playback-stream-failed", (e) => {
+        this.handleStreamFailed(e.payload);
+      });
 
       const unTogglePause = await listen("playback-toggle-pause", () => {
         this.handleTogglePause();

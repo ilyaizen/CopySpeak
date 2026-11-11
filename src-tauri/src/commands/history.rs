@@ -740,6 +740,7 @@ pub async fn play_history_batch(
             total,
             current_index: 0,
             is_paginated: true,
+            reading_id: None,
         },
     );
 
@@ -784,6 +785,7 @@ pub async fn play_history_batch(
                 total,
                 current_index: index,
                 is_paginated: true,
+                reading_id: None,
             },
         );
 
@@ -809,6 +811,7 @@ pub async fn play_history_batch(
                 total,
                 current_index: index,
                 is_paginated: true,
+                reading_id: None,
             },
         );
     }
