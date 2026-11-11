@@ -1095,6 +1095,47 @@ fn find_cached_reading(
         .ok()
 }
 
+/// Saved audio for one paginated fragment, or `None` when the fragment must be
+/// synthesized. A fresh read never replays, and a streamed fragment has no
+/// complete WAV to replay. A repeat click during an unfinished reading reaches
+/// this for the fragments its early stop already paid for.
+fn find_cached_fragment(
+    history: &Mutex<HistoryLog>,
+    history_on: bool,
+    reuse_saved_audio: bool,
+    streaming: bool,
+    text: &str,
+    engine: &str,
+    voice: &str,
+) -> Option<(SpeechAudio, CachedSource)> {
+    find_cached_fragment_in(
+        &speech_cache_dir(),
+        history,
+        history_on,
+        reuse_saved_audio,
+        streaming,
+        text,
+        engine,
+        voice,
+    )
+}
+
+fn find_cached_fragment_in(
+    cache_dir: &std::path::Path,
+    history: &Mutex<HistoryLog>,
+    history_on: bool,
+    reuse_saved_audio: bool,
+    streaming: bool,
+    text: &str,
+    engine: &str,
+    voice: &str,
+) -> Option<(SpeechAudio, CachedSource)> {
+    if !reuse_saved_audio || streaming {
+        return None;
+    }
+    find_cached_speech_in(cache_dir, history, history_on, text, engine, voice)
+}
+
 /// Play audio that history already holds: no new entry, file or telemetry
 /// sample, since nothing was synthesized.
 fn replay_saved_audio(
@@ -1539,6 +1580,9 @@ async fn speak_now_internal(
             &voice,
             &eff.engine,
             &telemetry_state,
+            &history,
+            history_on,
+            reuse_saved_audio,
             &synthesis_start,
             estimated_ms,
             confidence,
@@ -1733,6 +1777,9 @@ async fn synthesize_paginated(
     voice: &str,
     engine: &crate::config::TtsEngine,
     telemetry_state: &State<'_, Mutex<telemetry::TelemetryLog>>,
+    history: &State<'_, Mutex<HistoryLog>>,
+    history_on: bool,
+    reuse_saved_audio: bool,
     synthesis_start: &Instant,
     _total_estimate: Option<u64>,
     _avg_confidence: f32,
@@ -1782,12 +1829,9 @@ async fn synthesize_paginated(
     );
 
     let char_counts: Vec<usize> = fragments.iter().map(|f| f.text.len()).collect();
-    let (total_estimate, avg_confidence, _) = telemetry::get_estimate_paginated(
-        telemetry_state,
-        &engine_str(engine),
-        voice,
-        &char_counts,
-    );
+    let engine_str_val = engine_str(engine);
+    let (total_estimate, avg_confidence, _) =
+        telemetry::get_estimate_paginated(telemetry_state, &engine_str_val, voice, &char_counts);
 
     log::info!(
         "[TTS] JIT pagination: {} fragments, first submitted now, later ones on demand",
@@ -1838,15 +1882,46 @@ async fn synthesize_paginated(
             processed_chars,
         );
 
-        log::info!(
-            "[TTS] Synthesizing fragment {}/{} ({} chars)",
-            i + 1,
-            fragments.len(),
-            fragment.text.len()
+        // Reuse a fragment this reading, or an earlier stopped one, already paid
+        // for. The whole-reading lookup in `speak_now_internal` needs every
+        // fragment, so a repeat click after an early stop lands here instead.
+        let cached_fragment = find_cached_fragment(
+            history,
+            history_on,
+            reuse_saved_audio,
+            streaming,
+            &fragment.text,
+            &engine_str_val,
+            voice,
         );
+        let fragment_from_cache = cached_fragment.is_some();
+        if !fragment_from_cache {
+            log::info!(
+                "[TTS] Synthesizing fragment {}/{} ({} chars)",
+                i + 1,
+                fragments.len(),
+                fragment.text.len()
+            );
+        }
 
         let generation_started = Instant::now();
-        let frag_wav = if streaming {
+        let frag_wav = if let Some((speech, source)) = cached_fragment {
+            match source {
+                CachedSource::History => log::info!(
+                    "[TTS] Fragment {}/{} replayed from history; no provider request",
+                    i + 1,
+                    fragments.len()
+                ),
+                CachedSource::SpeechCache => log::info!(
+                    "[TTS] Fragment {}/{} replayed from the speech cache; no provider request",
+                    i + 1,
+                    fragments.len()
+                ),
+            }
+            // A replay has no generation cost, so the next lead uses the minimum.
+            previous_cost = Duration::ZERO;
+            speech
+        } else if streaming {
             let (speech, ttfa_ms) = synthesize_streaming_and_emit(
                 app,
                 backend_arc.clone(),
@@ -1877,6 +1952,18 @@ async fn synthesize_paginated(
             previous_cost = generation_started.elapsed();
             speech
         };
+
+        // Cache a fresh fragment as soon as it exists: an early stop must keep
+        // the audio it already paid for, so the next repeat replays it.
+        if !fragment_from_cache {
+            save_speech_cache(
+                &speech_cache_dir(),
+                &frag_wav,
+                &engine_str_val,
+                voice,
+                &fragment.text,
+            );
+        }
 
         if scope.aborted() {
             return Ok((Vec::new().into(), false));
@@ -3227,6 +3314,66 @@ mod cache_tests {
         save_speech_cache(&dir, &speech, "piper", "en_US-lessac", "Hello world");
         assert!(read_speech_cache(&dir, "piper", "en_US-lessac", "Hello world").is_some());
         assert!(read_speech_cache(&dir, "kokoro", "en_US-lessac", "Hello world").is_none());
+
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// A repeat reading must replay a fragment an earlier early stop saved. A
+    /// fresh read (`regenerate_now`) must synthesize instead, and a streamed
+    /// fragment has no complete WAV to replay.
+    #[test]
+    fn a_paginated_fragment_replays_only_for_a_saved_audio_repeat() {
+        let dir =
+            std::env::temp_dir().join(format!("copyspeak-fragment-replay-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let history = Mutex::new(HistoryLog::new());
+        let speech = SpeechAudio {
+            bytes: b"saved fragment".to_vec(),
+            captions: None,
+        };
+        save_speech_cache(&dir, &speech, "edge", "ava", "first fragment");
+        let read = |reuse_saved_audio: bool, streaming: bool| {
+            find_cached_fragment_in(
+                &dir,
+                &history,
+                false,
+                reuse_saved_audio,
+                streaming,
+                "first fragment",
+                "edge",
+                "ava",
+            )
+        };
+
+        assert_eq!(
+            read(true, false)
+                .expect("a repeat replays the saved fragment")
+                .0
+                .bytes,
+            b"saved fragment".to_vec()
+        );
+        assert!(
+            read(false, false).is_none(),
+            "a fresh read must synthesize the fragment"
+        );
+        assert!(
+            read(true, true).is_none(),
+            "a streamed fragment has no complete WAV to replay"
+        );
+        assert!(
+            find_cached_fragment_in(
+                &dir,
+                &history,
+                false,
+                true,
+                false,
+                "first fragment",
+                "edge",
+                "other voice",
+            )
+            .is_none(),
+            "a voice change must not replay the fragment"
+        );
 
         std::fs::remove_dir_all(&dir).unwrap();
     }
