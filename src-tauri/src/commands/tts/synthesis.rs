@@ -1711,11 +1711,14 @@ fn wav_duration_ms(bytes: &[u8]) -> Option<u64> {
 /// Hold the next fragment's submission until the live playback of `target` is
 /// within `lead` of its end, polling the webview's caption. Returns `false`
 /// when the request was aborted while waiting: then nothing more is submitted.
+/// `flush_requested` ends the wait early with `true`: a newer queued reading
+/// needs this one to submit the rest, so the queue order stays FIFO.
 async fn wait_for_jit_window(
     scope: AbortScope,
     target: super::jit::JitTarget,
     lead: Duration,
     playback_speed: f32,
+    flush_requested: impl Fn() -> bool,
 ) -> bool {
     let started = Instant::now();
     let mut waiter = super::jit::JitWaiter::new(target, lead, playback_speed, started);
@@ -1733,6 +1736,13 @@ async fn wait_for_jit_window(
                 target.fragment_index + 2
             );
             return false;
+        }
+        if flush_requested() {
+            log::info!(
+                "[TTS] JIT: a newer reading is queued; submitting fragment {} now",
+                target.fragment_index + 2
+            );
+            return true;
         }
         let progress = crate::playback_signal::current_progress();
         if waiter.observe(progress, Instant::now()).synthesize_now() {
@@ -1861,7 +1871,8 @@ async fn synthesize_paginated(
                 duration_ms: fragment_durations_ms[i - 1],
             };
             let lead = super::jit::lead_after(previous_cost);
-            if !wait_for_jit_window(scope, target, lead, playback_speed).await {
+            // A `speak_now` reading has no successor to flush it.
+            if !wait_for_jit_window(scope, target, lead, playback_speed, || false).await {
                 return Ok((Vec::new().into(), false));
             }
         }
@@ -2160,7 +2171,9 @@ fn handle_playback_output(
 // ── speak_queued ────────────────────────────────────────────────────────────
 
 /// Speak text with fragment queue support for long texts.
-/// Automatically paginates long texts and plays fragments sequentially.
+/// Automatically paginates long texts and plays fragments sequentially, and
+/// holds each later fragment until the previous one's playback enters its lead
+/// window, so an early stop pays for as few fragments as possible.
 /// `trigger` marks a double-copy speak the browser companion may follow; it
 /// carries the text as copied because `text` arrives already sanitized.
 #[tauri::command]
@@ -2238,6 +2251,17 @@ async fn speak_queued_internal(
     // no queue lock, so a shared flag cleared here could also un-abort a run
     // still draining from before.
     let scope = AbortScope::begin();
+
+    // One queued reading emits into the webview's FIFO fragment queue at a
+    // time. Taking the turn here keeps readings in call order, and asks an
+    // active reading to flush its remaining fragments, so this reading's first
+    // fragment cannot enqueue ahead of that reading's last. An abort issued
+    // while this reading waited still cancels it.
+    let _queued_turn = super::queued_gate::acquire().await;
+    if scope.aborted() {
+        log::info!("[Queue] Stopped while queued behind another reading; nothing to synthesize");
+        return Ok(());
+    }
 
     // Optional LLM post-processing — best-effort; falls back on failure.
     // Double-copy processes in automatic mode (request flag false) when the
@@ -2368,6 +2392,13 @@ async fn speak_queued_internal(
     // The reading's once-only stream-gate re-arm, shared by every streamed
     // fragment so exactly the reading's first audible chunk re-arms.
     let stream_rearm = std::sync::Arc::new(crate::speak_requests::StreamRearm::new());
+    let playback_speed = active_playback_speed(&tts_config);
+    // Rust-side duration of each submitted fragment: the JIT gate matches the
+    // webview's caption against it when the caption carries no fragment index.
+    let mut fragment_durations_ms: Vec<u64> = Vec::new();
+    // How long the last fragment took to start producing audio. It sets the
+    // next fragment's lead, so a slow provider never opens an audible gap.
+    let mut previous_cost = Duration::ZERO;
     for (index, fragment) in fragments.iter().enumerate() {
         // Check if we should stop
         {
@@ -2382,6 +2413,31 @@ async fn speak_queued_internal(
                         current_index: index,
                         is_paginated: total > 1,
                     },
+                );
+                return Ok(());
+            }
+        }
+
+        // Just-in-time: submit fragment i only once fragment i-1 is about to
+        // finish playing, so an early stop pays for as few fragments as
+        // possible. A fully cached reading skips the gate (nothing to save),
+        // and a newer queued reading flushes this one instead of waiting for
+        // its playback to end.
+        if index > 0 && !replaying && !super::queued_gate::flush_requested() {
+            let target = super::jit::JitTarget {
+                fragment_index: index - 1,
+                duration_ms: fragment_durations_ms[index - 1],
+            };
+            let lead = super::jit::lead_after(previous_cost);
+            if !wait_for_jit_window(scope, target, lead, playback_speed, || {
+                super::queued_gate::flush_requested()
+            })
+            .await
+            {
+                log::info!(
+                    "[Queue] JIT: stopped while fragment {} played; fragment {} is never submitted",
+                    index,
+                    index + 1
                 );
                 return Ok(());
             }
@@ -2440,12 +2496,14 @@ async fn speak_queued_internal(
                 backend_arc.runtime_ready(),
                 effects_on,
                 &eff.effects.active_effect,
-                active_playback_speed(&tts_config),
+                playback_speed,
             );
         let wav_bytes = if let Some(speech) = saved.as_mut().and_then(Iterator::next) {
+            // A replay has no generation cost, so the next lead uses the minimum.
+            previous_cost = Duration::ZERO;
             speech
         } else if streamed {
-            synthesize_streaming_and_emit(
+            let (speech, ttfa_ms) = synthesize_streaming_and_emit(
                 &app,
                 backend_arc.clone(),
                 fragment.text.clone(),
@@ -2457,22 +2515,29 @@ async fn speak_queued_internal(
                 &stream_rearm,
             )
             .await
-            .map(|(speech, _ttfa_ms)| speech)
-            .map_err(|e| report_section_failure(&app, index, total, scope, e))?
+            .map_err(|e| report_section_failure(&app, index, total, scope, e))?;
+            // The streaming path only needs its first chunk to cover the gap.
+            previous_cost = Duration::from_millis(ttfa_ms);
+            speech
         } else {
-            synthesize_async(
+            let speech = synthesize_async(
                 backend_arc.clone(),
                 fragment.text.clone(),
                 voice.clone(),
                 scope,
             )
             .await
-            .map_err(|e| report_section_failure(&app, index, total, scope, e))?
+            .map_err(|e| report_section_failure(&app, index, total, scope, e))?;
+            // The batch path has nothing to play until the whole fragment
+            // exists, so the next lead covers that full cost.
+            previous_cost = fragment_start.elapsed();
+            speech
         };
         let fragment_duration = fragment_start.elapsed();
         if scope.aborted() {
             return Ok(());
         }
+        fragment_durations_ms.push(wav_duration_ms(&wav_bytes.bytes).unwrap_or(0));
 
         if !replaying {
             record_telemetry(
@@ -3376,5 +3441,38 @@ mod cache_tests {
         );
 
         std::fs::remove_dir_all(&dir).unwrap();
+    }
+}
+
+#[cfg(test)]
+mod jit_gate_tests {
+    use super::*;
+    use std::time::{Duration, Instant};
+
+    /// A newer queued reading asks the active one to flush: the wait submits at
+    /// once instead of running into the whole lead window.
+    ///
+    /// No caption is reported on purpose: the flush check runs before the
+    /// playback progress is read, so this wait returns without the webview's
+    /// global caption state (which other tests also write).
+    #[tokio::test]
+    async fn a_flush_request_ends_the_jit_wait_at_once() {
+        let started = Instant::now();
+        let submitted = wait_for_jit_window(
+            crate::AbortScope::begin(),
+            super::super::jit::JitTarget {
+                fragment_index: 0,
+                duration_ms: 60_000,
+            },
+            Duration::from_secs(3),
+            1.0,
+            || true,
+        )
+        .await;
+        assert!(submitted, "a flush request must submit the next fragment");
+        assert!(
+            started.elapsed() < Duration::from_millis(500),
+            "the wait must end at once, not at the lead window"
+        );
     }
 }
