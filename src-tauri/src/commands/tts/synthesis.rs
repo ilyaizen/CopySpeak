@@ -757,7 +757,10 @@ async fn synthesize_streaming_and_emit(
                 return;
             }
             pcm_bytes += pcm.len() as u64;
-            if !is_final && chunk_idx == 0 {
+            // A captions item arrives at chunk_index 0 before the first PCM
+            // chunk (ElevenLabs leads with alignment), so an empty payload is
+            // not the first chunk heard.
+            if !is_final && chunk_idx == 0 && !pcm.is_empty() {
                 log::info!(
                     "[TTS][stream] first chunk playing after {}ms",
                     opened_at.elapsed().as_millis()
