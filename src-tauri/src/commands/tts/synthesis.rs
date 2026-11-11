@@ -1234,6 +1234,83 @@ pub async fn speak_now_with_profile(
     .await
 }
 
+/// Wait for the global synthesis queue (one reading at a time), giving up when
+/// the reading is stopped first. The lock future is kept across polls, so the
+/// wait keeps its place in line.
+async fn wait_for_queue(
+    lock: &tokio::sync::Mutex<()>,
+    scope: AbortScope,
+) -> Option<tokio::sync::MutexGuard<'_, ()>> {
+    crate::speak_requests::until_cancelled_or_aborted(
+        scope.request(),
+        move || scope.aborted(),
+        lock.lock(),
+    )
+    .await
+}
+
+#[cfg(test)]
+mod queue_wait_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn a_queued_reading_gives_up_when_its_request_is_stopped() {
+        let lock = Arc::new(tokio::sync::Mutex::new(()));
+        let holder = lock.clone();
+        let (acquired_tx, acquired_rx) = tokio::sync::oneshot::channel();
+        let held = tokio::spawn(async move {
+            let _guard = holder.lock().await;
+            let _ = acquired_tx.send(());
+            tokio::time::sleep(Duration::from_millis(300)).await;
+        });
+        acquired_rx.await.unwrap();
+
+        let id = "queue-wait-scoped-stop";
+        let crate::speak_requests::Registration::Proceed(seq) = crate::speak_requests::register(id)
+        else {
+            panic!("id must register");
+        };
+        let ticket = crate::speak_requests::Ticket::new(seq);
+        let scope = AbortScope::begin_for_request(seq);
+        let canceller = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(40)).await;
+            crate::speak_requests::cancel(id, || {});
+        });
+
+        let started = Instant::now();
+        assert!(
+            wait_for_queue(&lock, scope).await.is_none(),
+            "a stopped queued reading must not wait for the lock"
+        );
+        assert!(started.elapsed() < Duration::from_secs(2));
+        canceller.await.unwrap();
+        drop(ticket);
+        held.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn a_queued_reading_takes_the_lock_after_the_holder_releases() {
+        let lock = Arc::new(tokio::sync::Mutex::new(()));
+        let holder = lock.clone();
+        let (acquired_tx, acquired_rx) = tokio::sync::oneshot::channel();
+        let held = tokio::spawn(async move {
+            let _guard = holder.lock().await;
+            let _ = acquired_tx.send(());
+            tokio::time::sleep(Duration::from_millis(60)).await;
+        });
+        acquired_rx.await.unwrap();
+
+        let scope = AbortScope::begin_for_request(crate::speak_requests::NO_REQUEST);
+        let guard = wait_for_queue(&lock, scope).await;
+        assert!(
+            guard.is_some(),
+            "an unscoped reading must not abort by itself"
+        );
+        drop(guard);
+        held.await.unwrap();
+    }
+}
+
 async fn speak_now_internal(
     app: AppHandle,
     config: State<'_, Mutex<AppConfig>>,
@@ -1266,7 +1343,15 @@ async fn speak_now_internal(
 
     let queue_lock_started = Instant::now();
     let lock_state = app.state::<tokio::sync::Mutex<()>>();
-    let _queue_lock = lock_state.lock().await;
+    // The abort scope begins before the wait: a reading that queues behind
+    // another must drop when it is stopped while queued, not start once the
+    // other reading ends. Unscoped reads (hotkey, tray, Play) carry no request
+    // id, so the abort generation is their only stop signal.
+    let scope = AbortScope::begin_for_request(request);
+    let Some(_queue_lock) = wait_for_queue(&lock_state, scope).await else {
+        log::info!("[TTS] Reading stopped while queued; nothing to speak");
+        return Ok(());
+    };
     let queue_lock_ms = queue_lock_started.elapsed().as_millis();
     if queue_lock_ms >= 20 {
         log::info!(
@@ -1276,9 +1361,8 @@ async fn speak_now_internal(
         );
     }
 
-    // Aborts issued before this reading starts do not reach it; a scoped stop
-    // for this reading's own request does, whenever it was issued.
-    let scope = AbortScope::begin_for_request(request);
+    // A stop that lands after this reading arrived, but before it reaches the
+    // queue, still ends it. Stops from before its arrival do not.
     if scope.aborted() {
         log::info!("[TTS] Request cancelled before synthesis; nothing to speak");
         return Ok(());

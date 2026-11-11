@@ -517,9 +517,22 @@ const CANCEL_POLL: Duration = Duration::from_millis(25);
 /// means cancelled. The future is kept (not recreated) across polls, so a lock
 /// future keeps its place in the queue.
 pub async fn until_cancelled<F: std::future::Future>(seq: u64, fut: F) -> Option<F::Output> {
+    until_cancelled_or_aborted(seq, || false, fut).await
+}
+
+/// Drive `fut` to completion unless request `seq` is cancelled or `aborted`
+/// reports true; `None` means stopped. An unscoped reading (hotkey, tray, Play)
+/// carries no request id, so `aborted` is how a global abort reaches it while it
+/// waits. The future is kept (not recreated) across polls, so a lock future
+/// keeps its place in the queue.
+pub async fn until_cancelled_or_aborted<F, P>(seq: u64, aborted: P, fut: F) -> Option<F::Output>
+where
+    F: std::future::Future,
+    P: Fn() -> bool,
+{
     let mut fut = Box::pin(fut);
     loop {
-        if is_cancelled(seq) {
+        if is_cancelled(seq) || aborted() {
             return None;
         }
         if let Ok(output) = tokio::time::timeout(CANCEL_POLL, &mut fut).await {
@@ -987,6 +1000,46 @@ mod tests {
             panic!("must register");
         };
         assert_eq!(until_cancelled(seq, async { 5 }).await, Some(5));
+    }
+
+    #[tokio::test]
+    async fn until_cancelled_or_aborted_returns_none_before_polling_when_aborted() {
+        let started = Instant::now();
+        assert_eq!(
+            until_cancelled_or_aborted(NO_REQUEST, || true, std::future::pending::<()>()).await,
+            None
+        );
+        assert!(started.elapsed() < Duration::from_millis(20));
+    }
+
+    #[tokio::test]
+    async fn until_cancelled_or_aborted_stops_when_abort_lands_while_waiting() {
+        let aborted = Arc::new(AtomicBool::new(false));
+        let flip = aborted.clone();
+        let flipper = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(60)).await;
+            flip.store(true, Ordering::Relaxed);
+        });
+        let started = Instant::now();
+        assert_eq!(
+            until_cancelled_or_aborted(
+                NO_REQUEST,
+                || aborted.load(Ordering::Relaxed),
+                std::future::pending::<()>(),
+            )
+            .await,
+            None
+        );
+        assert!(started.elapsed() < Duration::from_secs(2));
+        flipper.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn until_cancelled_or_aborted_passes_through_completion() {
+        assert_eq!(
+            until_cancelled_or_aborted(NO_REQUEST, || false, async { 7 }).await,
+            Some(7)
+        );
     }
 
     #[test]
