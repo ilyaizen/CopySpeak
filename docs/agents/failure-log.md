@@ -89,6 +89,10 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Treat the double-copy announce as arriving LATE: a clipboard copy fires no extension event, so ping the worker from the page's `copy` event and let `begin_trigger` wait bounded for the port + `hello` — gating on a live companion at copy time silently dropped every follow started from a sleeping worker, leaving only the stale `!` badge.
 - Declare `file:///*` host access and include it in content-script registration and trigger tab queries only when the browser's file-access switch permits it; toolbar `activeTab` success does not prove automatic double-copy can reach local Markdown tabs.
 - Rebuild and include tracked `browser-extension/dist/` after companion source edits; the loaded unpacked extension executes these bundles, so source-only fixes and passing source tests leave the browser on old code.
+- Set the Firefox build's `strict_min_version` to 153.0 or later: `sendMessage` `documentId`, `executeScript` `documentIds`, and `sender.documentId` ship only in Firefox 153. Derive `dist-firefox/manifest.json` in `build.mjs` (`bun run build:firefox`), never by hand.
+- Firefox native host manifests use `allowed_extensions` with the gecko ID, and live at `HKCU\Software\Mozilla\NativeMessagingHosts\com.copyspeak.browser` on Windows and `~/.mozilla/native-messaging-hosts/` on Linux, not the Chrome `NativeMessagingHosts` directories.
+- The companion's icons come from `src-tauri/icons` at build time. A stale `dist/icons` keeps the old colour until the build reruns.
+- Smoke-test Firefox with `npx web-ext@latest run ... --profile-create-if-missing --arg=-headless --no-input`; web-ext has no `--headless` flag, and `--firefox-profile` needs a `user.js` with `devtools.debugger.remote-enabled=true` or the devtools port never binds (web-ext then loops on ECONNREFUSED and exits).
 
 ## History & cache
 

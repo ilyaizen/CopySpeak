@@ -22,6 +22,7 @@ const agentToolingIgnores = [
   "tools/oxlint/anti-slop/**",
   // Minified build output of the browser extension (built via its own bun build).
   "browser-extension/dist/",
+  "browser-extension/dist-firefox/",
   // shadcn-style barrels re-export type-only members from .svelte modules; the
   // lint type-check pass cannot resolve .svelte exports (TS2614 false positives).
   // svelte-check validates these properly via `bun run check`.

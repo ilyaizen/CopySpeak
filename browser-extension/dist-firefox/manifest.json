@@ -1,0 +1,71 @@
+{
+  "manifest_version": 3,
+  "name": "CopySpeak Companion",
+  "version": "0.2.15",
+  "description": "Read selected page text aloud with CopySpeak and follow along with live word highlighting.",
+  "permissions": [
+    "activeTab",
+    "contextMenus",
+    "nativeMessaging",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "file:///*"
+  ],
+  "optional_host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/64.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "icons": {
+    "32": "icons/32.png",
+    "64": "icons/64.png",
+    "128": "icons/128.png"
+  },
+  "action": {
+    "default_title": "Read selection with CopySpeak",
+    "default_icon": {
+      "32": "icons/32.png",
+      "64": "icons/64.png",
+      "128": "icons/128.png"
+    }
+  },
+  "commands": {
+    "read-selection": {
+      "suggested_key": {
+        "default": "Alt+Shift+T"
+      },
+      "description": "Read the selected text with CopySpeak"
+    }
+  },
+  "background": {
+    "scripts": [
+      "worker.js"
+    ]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "copyspeak-companion@ilyaizen.github.io",
+      "strict_min_version": "153.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  }
+}

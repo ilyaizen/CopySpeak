@@ -1,6 +1,6 @@
 # Browser Extension
 
-CopySpeak Companion is a Chromium extension for reading a text selection aloud
+CopySpeak Companion is a Chromium and Firefox extension for reading a text selection aloud
 without leaving the current page. It works with the running Windows desktop app
 through Chrome native messaging and a local named pipe.
 
@@ -62,6 +62,28 @@ This is currently a developer preview, not a packaged extension.
 3. Run `bun run build` in `browser-extension/`, then load
    `browser-extension/dist/` as an unpacked extension in Chrome or Edge.
 4. Start CopySpeak, select ordinary page text, then use the action or shortcut.
+
+### Firefox
+
+The Firefox build needs Firefox 153 or later. Earlier versions lack the
+document-targeted messaging and injection the companion uses.
+
+1. Run `bun run build:firefox` in `browser-extension/`. This writes
+   `browser-extension/dist-firefox/` with a Firefox manifest derived from
+   `manifest.json`.
+2. Open `about:debugging#/runtime/this-firefox`, choose **Load Temporary Add-on**,
+   and select `dist-firefox/manifest.json`. Temporary add-ons unload on restart.
+3. On the add-on's details page, turn on **Allow access to file URLs** if you
+   want double-copy highlighting in local files.
+4. Register the native host for Firefox. The host manifest uses
+   `allowed_extensions` with the gecko ID `copyspeak-companion@ilyaizen.github.io`.
+   - Linux: `browser-native-host/install-linux.sh` writes both manifests and
+     registers Firefox in `~/.mozilla/native-messaging-hosts/`.
+   - Windows: point the registry default value at the Firefox manifest:
+     `reg add "HKCU\Software\Mozilla\NativeMessagingHosts\com.copyspeak.browser" /ve /t REG_SZ /d "D:\Projects\CopySpeak\browser-native-host\com.copyspeak.browser.firefox.json" /f`
+
+The gecko ID is a release identity. Changing it breaks the native host's
+`allowed_extensions` and any signed build, so keep it stable.
 
 The manifest currently embeds a development executable path and a single
 extension origin. A release needs an installer that writes the browser registry

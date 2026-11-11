@@ -1,10 +1,11 @@
 {
   "name": "copyspeak-browser-companion",
   "private": true,
-  "version": "0.2.12",
+  "version": "0.2.15",
   "type": "module",
   "scripts": {
-    "build": "bun build.mjs",
+    "build": "bun build.mjs chrome",
+    "build:firefox": "bun build.mjs firefox",
     "check": "tsc --noEmit",
     "test": "bun test tests/anchor.test.ts tests/protocol.test.ts tests/worker.test.ts",
     "test:browser": "playwright test --config playwright.config.ts"
