@@ -338,6 +338,11 @@ window.__ModuleLoader__.load({
       fragmentEntries: 0,
       fragmentMap: null,
       fragmentPosition: 0,
+      /* The token start of every fragment already aligned in this reading,
+         keyed by the app's fragment index (its text when an older app reports
+         none). A cross-fragment rewind re-aligns from the recorded start. */
+      fragmentStarts: new Map(),
+      fragmentIndex: null,
       /* Where the current fragment starts and ends in the rendered tokens.
          Fresh synthesis streams one fragment as a growing prefix, so its
          reports align from the start again, not from the previous, shorter one. */
@@ -670,6 +675,8 @@ window.__ModuleLoader__.load({
       reading.fragmentMap = null;
       reading.fragmentStart = 0;
       reading.fragmentEnd = 0;
+      reading.fragmentStarts.clear();
+      reading.fragmentIndex = null;
       reading.activeToken = -1;
       return reading.element;
     }
@@ -677,26 +684,41 @@ window.__ModuleLoader__.load({
     /* A rewind moves the playhead inside the words, not the words themselves.
        Keep the aligned fragment unless the rewind crossed a fragment boundary:
        re-aligning from the message start can snap onto an earlier repeat of the
-       same sentence. The caller repaints in the same pass, so the mark does not
-       flash. */
-    function invalidateAlignment(keepFragment = false) {
+       same sentence. A crossing rewind starts at the target fragment's recorded
+       token start instead. The caller repaints in the same pass, so the mark
+       does not flash. */
+    function invalidateAlignment(keepFragment = false, restartAt = 0) {
       if (!keepFragment) {
         reading.fragmentText = null;
         reading.fragmentWords = null;
         reading.fragmentMap = null;
         reading.fragmentPosition = 0;
-        reading.fragmentStart = 0;
+        reading.fragmentStart = restartAt;
         reading.fragmentEnd = 0;
-        reading.cursor = 0;
+        reading.cursor = restartAt;
       }
       reading.activeToken = -1;
     }
 
+    /* The key of one fragment in this reading: the app's fragment index while
+       it plays, or the fragment text for an older app that reports none. Two
+       fragments can carry identical text, so the index is the primary key. */
+    function fragmentKey(snapshot) {
+      const index = snapshot.fragmentIndex;
+      return index === null || index === undefined ? "text:" + snapshot.text : index;
+    }
+
     function ensureFragmentMap(snapshot) {
       if (reading.tokens === null) return null;
+      /* The app's fragment index names the fragment when both sides report one;
+         two fragments can carry identical text, so the text alone cannot tell
+         them apart. */
+      const indexed = reading.fragmentIndex !== null && snapshot.fragmentIndex !== null;
+      const sameFragment = indexed ? reading.fragmentIndex === snapshot.fragmentIndex : true;
       /* Cache one alignment per fragment. An identical next fragment restarts
          the clock, so a position that jumps back re-anchors it. */
       const cached =
+        sameFragment &&
         reading.fragmentText === snapshot.text &&
         reading.fragmentEntries === snapshot.words.length &&
         reading.fragmentWords !== null &&
@@ -711,7 +733,9 @@ window.__ModuleLoader__.load({
          that is not a longer prefix is a new fragment, so the next alignment
          starts after the previous fragment's mapped words. */
       const growing =
-        reading.fragmentText !== null && snapshot.text.startsWith(reading.fragmentText);
+        sameFragment &&
+        reading.fragmentText !== null &&
+        snapshot.text.startsWith(reading.fragmentText);
       if (!growing) {
         reading.cursor = Math.max(reading.cursor, reading.fragmentEnd);
         reading.fragmentStart = reading.cursor;
@@ -724,6 +748,10 @@ window.__ModuleLoader__.load({
       reading.fragmentMap = map;
       reading.fragmentPosition = snapshot.position;
       if (map === null) return null;
+      /* Remember where this fragment sits in the message, so a later rewind to
+         it can align from the same region instead of the message start. */
+      reading.fragmentStarts.set(fragmentKey(snapshot), reading.fragmentStart);
+      reading.fragmentIndex = snapshot.fragmentIndex;
       let last = -1;
       for (const index of map) if (index > last) last = index;
       if (last >= 0) reading.fragmentEnd = Math.max(reading.fragmentEnd, last + 1);
@@ -1090,6 +1118,8 @@ window.__ModuleLoader__.load({
       reading.fragmentEntries = 0;
       reading.fragmentStart = 0;
       reading.fragmentEnd = 0;
+      reading.fragmentStarts.clear();
+      reading.fragmentIndex = null;
       reading.scroller = null;
       reading.activeToken = -1;
       reading.lastScrollAt = 0;
@@ -1148,9 +1178,12 @@ window.__ModuleLoader__.load({
           const rewound = trackRewind(snapshot);
           updateCaption(snapshot);
           /* A rewind that crossed a fragment boundary only shows itself when
-             the forward alignment finds nothing: retry from the message start. */
+             the forward alignment finds nothing: retry from the target
+             fragment's recorded token start, or from the message start when
+             this reading never aligned it. */
           if (rewound && snapshot !== null && reading.fragmentMap === null) {
-            invalidateAlignment();
+            const start = reading.fragmentStarts.get(fragmentKey(snapshot));
+            invalidateAlignment(false, start === undefined ? 0 : start);
             updateCaption(snapshot);
           }
         });
@@ -1162,21 +1195,33 @@ window.__ModuleLoader__.load({
     /* The app reports the position inside one fragment, so a normal fragment
        change also drops it. A drop on the same fragment is certainly a rewind:
        keep the fragment map and repaint, so the alignment cannot snap onto an
-       earlier repeat of the same words. A drop across fragments stays ambiguous,
-       and the caller retries from the message start only if aligning forward
-       fails. */
+       earlier repeat of the same words. A crossing rewind re-aligns from the
+       target fragment's recorded token start; a forward fragment change is left
+       to the normal forward alignment. The app's fragment index decides the
+       direction when both sides report one, otherwise the fragment text does. */
     function trackRewind(snapshot) {
       if (snapshot === null) return false;
       const previous = statusPoll.position;
       statusPoll.position = snapshot.position;
       if (previous === null || snapshot.position >= previous - REWIND_SLOP_MS) return false;
-      if (reading.fragmentText === snapshot.text) {
+      const indexed = reading.fragmentIndex !== null && snapshot.fragmentIndex !== null;
+      const sameFragment = indexed
+        ? reading.fragmentIndex === snapshot.fragmentIndex
+        : reading.fragmentText === snapshot.text;
+      if (sameFragment) {
         /* A same-fragment rewind is certain: keep the aligned fragment, drop
            the paint now, then repaint the rewound word in this same poll pass.
-           A cross-fragment drop stays ambiguous and keeps the last painted word
-           until an alignment lands. */
+           A cross-fragment drop keeps the last painted word until an alignment
+           lands. */
         invalidateAlignment(true);
         clearHighlight();
+        return true;
+      }
+      if (indexed && snapshot.fragmentIndex < reading.fragmentIndex) {
+        /* A crossing rewind to a fragment this reading already aligned: start
+           the alignment at its recorded region, not at the message start. */
+        const start = reading.fragmentStarts.get(fragmentKey(snapshot));
+        if (start !== undefined) invalidateAlignment(false, start);
       }
       return true;
     }
@@ -1208,10 +1253,17 @@ window.__ModuleLoader__.load({
       if (!Array.isArray(source.words) || source.words.length === 0) return null;
       if (source.text === null || source.text === undefined || source.text === "") return null;
       if (body.position_ms === null || body.position_ms === undefined) return null;
+      /* The app names the fragment it plays. An older app sends no index, so the
+         fragment text stays the fallback key. */
+      const fragmentIndex =
+        Number.isInteger(body.fragment_index) && body.fragment_index >= 0
+          ? body.fragment_index
+          : null;
       return {
         text: source.text,
         words: source.words,
-        position: body.position_ms
+        position: body.position_ms,
+        fragmentIndex: fragmentIndex
       };
     }
 
