@@ -29,7 +29,7 @@ CopySpeak: A lightweight and modern cross-platform AI text-to-speech orchestrato
 - Run checks (`git diff --check` included) and commits only after explicit confirmation. Ask before concluding task.
 - Run the checks yourself before merging: all three workflows are `workflow_dispatch`, so PRs and `main` pushes trigger no CI.
 - Run `rustfmt` on touched Rust files only; `cargo fmt --all` marks unrelated CRLF-tracked files modified.
-- Check credential presence without printing `.env` values; keep secret files out of command output.
+- Check credential presence without printing `.env` values or `%APPDATA%\CopySpeak\config.json` fields; both hold plaintext provider keys, so keep secret files out of command output and read only named non-secret fields.
 - Hand-off prompts carry only what next session can't access: decisions made, dead ends, ongoing states, next steps.
 - Leave visual verification to the user; skip image previews.
 - Commits: [Conventional Commits](https://www.conventionalcommits.org/). Branches: squash-merge into `main`, then delete the branch (local and origin) in the same pass.

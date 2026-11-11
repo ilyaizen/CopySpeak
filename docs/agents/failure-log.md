@@ -97,6 +97,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 ## History & cache
 
 - Branch every synthesis save site on `history.enabled`: on logs and saves to the history folder, off calls `save_speech_cache` and logs nothing; `find_cached_speech` must read the same store.
+- Replay an early stop's paid fragments from the content-addressed cache with history off: `find_cached_reading` replays a whole reading only when every fragment is saved, so keep the per-fragment `find_cached_fragment` lookup in the pagination loop; a streamed fragment never replays, since it has no complete WAV.
 - Present history batches as one reading in `recent-history.svelte`; preserve fragment order for full text, playback, and whole-reading deletion.
 - Show pagination as a part count on history rows; keep Play/Stop/Replay on the reading's button instead of adding a lower playback bar.
 - Keep Recent History as three vertical, text-first readings with View all history; let mouse-wheel input scroll normally on both pages.
@@ -115,6 +116,8 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Keep U+200C (ZWNJ) out of both invisible-character regexes in `tts_normalize.rs`; Persian and Indic words are spelled with it.
 - Add a script's sentence terminator to both `is_sentence_end` in `pagination.rs` and the phrase regex in `captions.ts`; text with no terminator falls to whitespace-snapped force-splits — no mid-word cuts since #88, but sentence-level breaks degrade to clause/word boundaries.
 - The post-process output re-sanitize deletes single-word bracket tags (`remove_citations` matches `[sighs]` while `[clears throat]` survives by accident); route LLM output through `sanitize_text_tag_safe`, never the plain pipeline.
+- JIT-paginate only the `speak_now` path (Play page, hotkey, control server and DSH): `synthesize_paginated` submits fragment 0 at once, then each later fragment inside the previous fragment's lead window; `speak_queued` (double-copy, browser companion) has no playback gate and submits fragments back to back, so an early stop pays for every fragment it already started.
+- Check the abort scope on every JIT gate poll and wake its 120 ms sleep on a scoped stop (`until_cancelled`): the previous `/speak` releases its wait lock only after this future returns, so a slow poll delays the next click, and a stopped reading must never submit the next fragment.
 - Flipping a `MarkdownSanitizationConfig` default fails every test that builds the config via `..Default::default()` and asserts the old behavior; grep those tests in the same change and pin the flipped field explicitly where the test means to exercise the toggle.
 
 ## Linux
