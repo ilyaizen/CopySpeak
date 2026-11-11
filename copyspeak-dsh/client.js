@@ -147,8 +147,7 @@ window.__ModuleLoader__.load({
       "action.read": "Read aloud with CopySpeak",
       "action.stop": "Stop reading",
       "selection.quote": "Quote text",
-      "selection.read": "Read selection",
-      "selection.stop": "Stop reading",
+      "selection.read": "Read aloud",
       "error.empty": "Nothing to read aloud",
       "error.offline": "CopySpeak is not running",
       "error.failed": "CopySpeak request failed",
@@ -229,7 +228,6 @@ window.__ModuleLoader__.load({
       "@media (hover:hover){.dsh-csva-selectionAction:hover:not(:disabled){background:var(--dsw-alias-button-floating-hover)}}",
       ".dsh-csva-selectionAction:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
       ".dsh-csva-selectionAction:disabled{opacity:.4;cursor:default}",
-      ".dsh-csva-selectionAction[data-active]{background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base)}",
       ".dsh-csva-selectionNote{font-size:12px;line-height:16px;color:var(--dsw-alias-state-error-primary);white-space:nowrap}"
     ].join("\n");
 
@@ -1942,9 +1940,11 @@ window.__ModuleLoader__.load({
     }
 
     /* The selection pills: the host Quote action beside the CopySpeak read
-       action. A writable session shows both. A read-only session opens this
-       surface through the CopySpeak interaction alone, so Quote is absent: the
-       host Quote admission refuses a non-writable conversation. */
+       action. The read pill only starts a reading; stop, pause, and seek stay
+       on the floating playback bar. A writable session shows both pills. A
+       read-only session opens this surface through the CopySpeak interaction
+       alone, so Quote is absent: the host Quote admission refuses a
+       non-writable conversation. */
     function SelectionAction(props) {
       const t = props.t ?? boundT;
       const dismiss = props.dismiss;
@@ -1953,18 +1953,8 @@ window.__ModuleLoader__.load({
       const inputActions = props.inputActions;
       const useSession = props.useSession;
       const enabled = useSession === undefined ? true : useSession(sessionWritable);
-      const [active, setActive] = React.useState(
-        playback.source === "selection" && playback.requestId !== null
-      );
-      const [busy, setBusy] = React.useState(false);
       const [failure, setFailure] = React.useState(null);
       const failureTimer = React.useRef(null);
-
-      React.useEffect(function () {
-        return subscribe(playback.listeners, function () {
-          setActive(playback.source === "selection" && playback.requestId !== null);
-        });
-      }, []);
 
       React.useEffect(function () {
         return function () {
@@ -1992,14 +1982,6 @@ window.__ModuleLoader__.load({
       }
 
       function onRead() {
-        if (active) {
-          setBusy(true);
-          void stopReadingNow().then(function () {
-            setBusy(false);
-          });
-          return;
-        }
-        if (busy) return;
         const text = readText();
         if (text === null) {
           dismiss();
@@ -2013,11 +1995,17 @@ window.__ModuleLoader__.load({
         /* The owner keeps the selection mounted while this surface is open, so
            this clone is the range to highlight. */
         const range = selection.getRangeAt(0).cloneRange();
-        setBusy(true);
         void beginReading(null, null, text, range).then(function (error) {
-          setBusy(false);
           if (error !== null) fail(error);
         });
+        /* The reading owns the words now, so clear the native selection and
+           leave only the word highlight. The cloned range survives a cleared
+           selection, and resetReading sets the reading's range and
+           forceCaptions, so the caption paint continues inside the former
+           selection. The host also dismisses on selectionchange; dismissing
+           here does not wait for that event. */
+        clearSelection();
+        dismiss();
       }
 
       /* A pointer-down on either pill must not collapse the selection before
@@ -2025,9 +2013,6 @@ window.__ModuleLoader__.load({
       function keepSelection(event) {
         event.preventDefault();
       }
-
-      const readLabel = active ? t("selection.stop") : t("selection.read");
-      const disabled = busy && !active;
 
       return h(
         "span",
@@ -2050,15 +2035,11 @@ window.__ModuleLoader__.load({
           {
             type: "button",
             className: "dsh-csva-selectionAction",
-            "aria-label": readLabel,
-            "aria-pressed": active,
-            "data-active": active || undefined,
-            disabled: disabled,
+            "aria-label": t("selection.read"),
             onPointerDown: keepSelection,
             onClick: onRead
           },
-          h(ReadGlyph, { size: 14 }),
-          readLabel
+          t("selection.read")
         ),
         failure === null
           ? null
