@@ -17,6 +17,7 @@ package-lock.json
 /.agent
 .vercel
 __pycache__/
+scripts/bench/.venv/
 *.pyc
 /.tauri
 /docs_internal
