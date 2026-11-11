@@ -253,15 +253,39 @@ fn start(key: String, command: &str, serve_args: &[String]) -> Result<Daemon, St
         });
     }
 
-    // ponytail: no read timeout — a pre-daemon wrapper rejects `--serve` and
-    // exits, which surfaces as EOF. A wedged interpreter would leak this thread
-    // and permanently disable the daemon; synthesis still works one-shot.
-    let handshake = read_handshake(&mut stdout);
+    // A wedged interpreter never prints READY, so bound the handshake by the
+    // model-load budget: the start must fail (and free the slot) instead of
+    // leaking this thread and hanging every same-config waiter forever. The
+    // reader thread owns the pipe meanwhile; killing the child unblocks its
+    // read, and it exits when the receiver is dropped on the timeout arm.
+    let budget = model_load_budget();
+    let (handshake_tx, handshake_rx) = mpsc::channel();
+    std::thread::spawn(move || {
+        let handshake = read_handshake(&mut stdout);
+        let _ = handshake_tx.send((stdout, handshake));
+    });
+    let (handshake_stdout, handshake) = match handshake_rx.recv_timeout(budget) {
+        Ok(loaded) => loaded,
+        Err(mpsc::RecvTimeoutError::Timeout) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err(format!(
+                "model load exceeded its {} s budget without READY 2",
+                budget.as_secs()
+            ));
+        }
+        Err(mpsc::RecvTimeoutError::Disconnected) => {
+            let _ = child.kill();
+            let _ = child.wait();
+            return Err("handshake reader stopped before READY".to_string());
+        }
+    };
     if let Err(e) = handshake {
         let _ = child.kill();
         let _ = child.wait();
         return Err(e);
     }
+    let stdout = handshake_stdout;
 
     Ok(Daemon {
         key,
@@ -302,11 +326,9 @@ fn idle_expired(idle_since: Option<Instant>, now: Instant, timeout_secs: u64) ->
 fn ensure_reaper() {
     static SPAWNED: OnceLock<()> = OnceLock::new();
     SPAWNED.get_or_init(|| {
-        std::thread::spawn(|| {
-            loop {
-                std::thread::sleep(REAP_INTERVAL);
-                reap_expired();
-            }
+        std::thread::spawn(|| loop {
+            std::thread::sleep(REAP_INTERVAL);
+            reap_expired();
         });
     });
 }
@@ -351,25 +373,67 @@ pub fn set_idle_timeout(secs: u64) {
     IDLE_TIMEOUT_SECS.store(secs, Ordering::Relaxed);
 }
 
+/// Budget for one wrapper model load, in seconds. `READY 2` only prints after
+/// the load, so the handshake read and the same-config pending wait share it:
+/// a wedged interpreter must fail the start instead of leaking a busy slot
+/// and hanging every waiter forever. The slowest measured load is ~103 s
+/// (qwen 0.6B, CPU, bench 2026-11-11). Atomic so tests can shorten it.
+static MODEL_LOAD_BUDGET_SECS: AtomicU64 = AtomicU64::new(DEFAULT_MODEL_LOAD_BUDGET_SECS);
+
+const DEFAULT_MODEL_LOAD_BUDGET_SECS: u64 = 180;
+
+fn model_load_budget() -> Duration {
+    Duration::from_secs(MODEL_LOAD_BUDGET_SECS.load(Ordering::Relaxed))
+}
+
 /// Start the daemon in the background unless one is already running (or starting,
 /// or streaming) for this configuration. Safe to call repeatedly.
+///
+/// A replacement load (the key changed) retires the old-config daemon first,
+/// and takes every OTHER engine's idle daemon with it: a profile switch must
+/// not run two model copies at once, and must not keep the previous engine's
+/// model resident until the idle reaper fires. Busy slots (mid-stream or
+/// mid-load) are left alone — killing their pipe would yank live audio.
 pub fn prewarm(engine: &str, command: String, serve_args: Vec<String>) {
     ensure_reaper();
     let key = key_of(&command, &serve_args);
     let engine = engine.to_string();
 
+    // Daemons to kill. Dropped AFTER the lock: `Daemon::drop` waits on the
+    // child, and holding the mutex across that would stall every synthesis
+    // path (same discipline as `reap_expired`).
+    let mut stale: Vec<Daemon> = Vec::new();
     {
         let mut guard = slots();
-        let slot = guard.entry(engine.clone()).or_default();
-        if slot.unsupported.as_deref() == Some(key.as_str()) {
-            return;
+        {
+            let slot = guard.entry(engine.clone()).or_default();
+            if slot.unsupported.as_deref() == Some(key.as_str()) {
+                return;
+            }
+            if slot.busy || slot.daemon.as_ref().is_some_and(|d| d.key == key) {
+                return;
+            }
+            // Replacement load: retire the old-config daemon BEFORE the new
+            // wrapper spawns. Keeping it until the replacement succeeded ran
+            // two model copies at once — a CUDA OOM on a 4 GB GPU once a
+            // one-shot for a third config joined during the load.
+            if let Some(old) = slot.daemon.take() {
+                slot.idle_since = None;
+                stale.push(old);
+            }
+            slot.pending = Some(key.clone());
+            slot.busy = true;
         }
-        if slot.busy || slot.daemon.as_ref().is_some_and(|d| d.key == key) {
-            return;
+        for (other, slot) in guard.iter_mut() {
+            if other != &engine && !slot.busy && slot.daemon.is_some() {
+                if let Some(old) = slot.daemon.take() {
+                    slot.idle_since = None;
+                    stale.push(old);
+                }
+            }
         }
-        slot.pending = Some(key.clone());
-        slot.busy = true;
     }
+    drop(stale);
 
     std::thread::spawn(move || {
         let started = start(key.clone(), &command, &serve_args);
@@ -379,7 +443,8 @@ pub fn prewarm(engine: &str, command: String, serve_args: Vec<String>) {
         slot.pending = None;
         match started {
             Ok(daemon) => {
-                // Assigning drops (and kills) any daemon left from a prior config.
+                // The old-config daemon was retired at prewarm entry, so this
+                // assignment never overwrites a live daemon.
                 slot.daemon = Some(daemon);
                 // Idle clock starts when the model enters the pool.
                 slot.idle_since = Some(Instant::now());
@@ -403,11 +468,14 @@ pub fn is_ready(engine: &str) -> bool {
 }
 
 /// Block until any in-flight start for this engine settles (daemon ready,
-/// start failed, or a different config took over). Unbounded by design: the
-/// start thread owns the whole outcome, the caller just re-reads the slot.
+/// start failed, or a different config took over), bounded by the model-load
+/// budget: the start thread owns the whole outcome, but a wedged interpreter
+/// must degrade this caller to its one-shot instead of hanging it forever.
 /// Config changes during the wait flip `pending` to the new key, which no
 /// longer matches and falls through to the normal take-or-one-shot path.
 fn wait_for_start(engine: &str, key: &str) {
+    let budget = model_load_budget();
+    let deadline = Instant::now() + budget;
     loop {
         {
             let guard = slots();
@@ -422,6 +490,13 @@ fn wait_for_start(engine: &str, key: &str) {
             if settled {
                 return;
             }
+        }
+        if Instant::now() >= deadline {
+            log::warn!(
+                "[LocalDaemon] {engine} start still pending after {} s; using one-shot",
+                budget.as_secs()
+            );
+            return;
         }
         std::thread::sleep(Duration::from_millis(200));
     }
@@ -681,15 +756,16 @@ mod tests {
         // A v1 wrapper answers with the temp-file protocol, which would hang.
         assert!(check_handshake("READY").unwrap_err().contains("v1"));
         assert!(check_handshake("").unwrap_err().contains("without READY"));
-        assert!(
-            check_handshake("Traceback...")
-                .unwrap_err()
-                .contains("unexpected")
-        );
+        assert!(check_handshake("Traceback...")
+            .unwrap_err()
+            .contains("unexpected"));
     }
 
     #[test]
     fn unknown_engine_is_not_ready_and_shutdown_is_a_noop() {
+        // Hold the slots lock: cargo test runs suites as threads of one
+        // process, and `shutdown()` clears every engine's slot.
+        let _lock = SLOTS_TEST_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         assert!(!is_ready("nosuch"));
         shutdown();
         assert!(!is_ready("nosuch"));
@@ -726,5 +802,195 @@ mod tests {
         // (daemon: Some, busy: true, idle_since: None) — busy alone would also
         // shield it, but the None makes the invariant explicit.
         assert!(!idle_expired(None, placed + Duration::from_secs(1), 600));
+    }
+
+    // --- daemon lifecycle (real child processes, fake wrappers) ---
+    //
+    // These tests drive `prewarm`/`try_stream`/`start` against a fake wrapper:
+    // powershell prints `READY 2` after a set delay, then sleeps. The sleep
+    // models a wrapper whose model load or resident phase takes time. They
+    // share the global SLOTS map with every other test in this binary, so
+    // each one holds SLOTS_TEST_LOCK.
+
+    static SLOTS_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+    /// Temporarily shortens the model-load budget. Restores the old value on
+    /// drop, so a panicking assert cannot leave later tests a 1 s budget.
+    struct BudgetGuard(u64);
+
+    impl BudgetGuard {
+        fn set(secs: u64) -> Self {
+            BudgetGuard(MODEL_LOAD_BUDGET_SECS.swap(secs, Ordering::Relaxed))
+        }
+    }
+
+    impl Drop for BudgetGuard {
+        fn drop(&mut self) {
+            MODEL_LOAD_BUDGET_SECS.store(self.0, Ordering::Relaxed);
+        }
+    }
+
+    /// A fake v2 wrapper on Windows: prints `READY 2` after `ready_delay_ms`,
+    /// then holds the pipes open for `hold_secs` (the resident-model phase).
+    #[cfg(windows)]
+    fn wrapper_args(ready_delay_ms: u64, hold_secs: u64) -> Vec<String> {
+        vec![
+            "-NoProfile".into(),
+            "-NonInteractive".into(),
+            "-Command".into(),
+            format!(
+                "Start-Sleep -Milliseconds {ready_delay_ms}; 'READY 2'; Start-Sleep -Seconds {hold_secs}"
+            ),
+        ]
+    }
+
+    /// Poll `pred` until it holds, or panic naming `what` we waited for.
+    #[cfg(windows)]
+    fn wait_until(pred: impl Fn() -> bool, timeout: Duration, what: &str) {
+        let deadline = Instant::now() + timeout;
+        while Instant::now() < deadline {
+            if pred() {
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        panic!("timed out waiting for {what}");
+    }
+
+    /// The two-model-copies overlap, reproduced. While a replacement load for a
+    /// new config runs, the old resident daemon must already be gone — not
+    /// parked in the slot until the replacement succeeds. Stage 1 also kills
+    /// another engine's idle daemon at that moment: a profile switch must not
+    /// keep the previous engine's model until the 600 s reaper fires.
+    #[cfg(windows)]
+    #[test]
+    fn replacement_load_must_not_keep_the_old_model_or_other_engines_resident() {
+        let _lock = SLOTS_TEST_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let engine = "tts-red-lifecycle";
+        let other = "tts-red-lifecycle-other";
+        slots().remove(engine);
+        slots().remove(other);
+        // Resident: a second engine's daemon, idle in its pool.
+        prewarm(other, "powershell".into(), wrapper_args(150, 30));
+        // Resident: this engine's daemon for config K1 (instant READY).
+        prewarm(engine, "powershell".into(), wrapper_args(150, 30));
+        wait_until(
+            || {
+                slots()
+                    .get(other)
+                    .is_some_and(|s| s.daemon.is_some() && !s.busy)
+            },
+            Duration::from_secs(15),
+            "other engine's daemon ready",
+        );
+        wait_until(
+            || {
+                slots()
+                    .get(engine)
+                    .is_some_and(|s| s.daemon.is_some() && !s.busy)
+            },
+            Duration::from_secs(15),
+            "first daemon ready",
+        );
+
+        // Replacement load for config K2: READY delayed 6 s, so the load
+        // window is wide enough to sample mid-flight.
+        let k2_args = wrapper_args(6000, 30);
+        let k2_key = key_of("powershell", &k2_args);
+        prewarm(engine, "powershell".into(), k2_args);
+        std::thread::sleep(Duration::from_millis(300));
+
+        // A third config asking during the load must degrade to the caller's
+        // one-shot WITHOUT hijacking the pending load.
+        let third = try_stream(engine, "powershell", &wrapper_args(150, 30), "x");
+        assert!(third.is_none(), "a busy load must degrade to one-shot");
+
+        // One lock scope for all three asserts: `slots()` is not reentrant,
+        // and a second acquire while `guard` is alive deadlocks the test
+        // thread against itself (the wedge the full-suite run died in).
+        let guard = slots();
+        let slot = guard.get(engine).expect("engine slot exists");
+        assert_eq!(
+            slot.pending.as_deref(),
+            Some(k2_key.as_str()),
+            "the third-config request must not hijack the pending load"
+        );
+        assert!(
+            slot.daemon.is_none(),
+            "old daemon still resident while its replacement loads — two model copies at once (the 4 GB CUDA OOM overlap)"
+        );
+        assert!(
+            guard
+                .get(other)
+                .is_some_and(|s| s.daemon.is_none() && !s.busy),
+            "another engine's idle daemon must die with the switch, not age out over 600 s"
+        );
+        drop(guard);
+
+        // The delayed replacement must still land normally after all that.
+        wait_until(
+            || {
+                slots()
+                    .get(engine)
+                    .is_some_and(|s| !s.busy && s.daemon.as_ref().is_some_and(|d| d.key == k2_key))
+            },
+            Duration::from_secs(25),
+            "replacement daemon ready",
+        );
+
+        slots().remove(engine);
+        slots().remove(other);
+    }
+
+    /// A wedged interpreter never prints READY. The start must fail within the
+    /// budget instead of leaving the slot busy and every same-config waiter
+    /// hung; the guard keeps this test near one second.
+    #[cfg(windows)]
+    #[test]
+    fn a_wedged_wrapper_fails_the_start_within_the_model_load_budget() {
+        // The budget is global: hold the lock so the delayed-READY lifecycle
+        // test cannot run under this shortened budget.
+        let _lock = SLOTS_TEST_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let _budget = BudgetGuard::set(1);
+        let started = Instant::now();
+        let result = start(
+            "tts-budget-wedged".into(),
+            "powershell",
+            &wrapper_args(30_000, 1),
+        );
+        let error = result.err().expect("a load past the budget must fail");
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "the budget must fail the start fast, took {:?}",
+            started.elapsed()
+        );
+        assert!(error.contains("budget"), "error names the budget: {error}");
+    }
+
+    /// A caller waiting on an in-flight start must not wait past the budget.
+    #[test]
+    fn a_same_config_wait_is_bounded_by_the_model_load_budget() {
+        let _lock = SLOTS_TEST_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let _budget = BudgetGuard::set(1);
+        let engine = "tts-budget-wait";
+        {
+            let mut guard = slots();
+            guard.insert(
+                engine.to_string(),
+                Slot {
+                    pending: Some("tts-budget-key".into()),
+                    busy: true,
+                    ..Slot::default()
+                },
+            );
+        }
+        let started = Instant::now();
+        wait_for_start(engine, "tts-budget-key");
+        assert!(
+            started.elapsed() < Duration::from_secs(5),
+            "a wedged pending start must not hang the caller, took {:?}",
+            started.elapsed()
+        );
+        slots().remove(engine);
     }
 }
