@@ -435,12 +435,22 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                     "Audio response format.",
                     serde_json::json!("wav"),
                 ),
-                option(
+                // Style presets, expanded to full prompts in openai.rs. Unknown
+                // saved values (legacy free text) pass through unchanged.
+                select_option(
                     "instructions",
-                    "Instructions",
-                    EngineOptionKind::Textarea,
-                    "Optional speaking style instructions for models that support them.",
-                    serde_json::json!(null),
+                    "Style",
+                    "Preset speaking style. Custom values saved before this list pass through as instructions.",
+                    serde_json::json!("none"),
+                    vec![
+                        "none",
+                        "neutral",
+                        "narrator",
+                        "news anchor",
+                        "storyteller",
+                        "podcast",
+                        "energetic",
+                    ],
                 ),
             ],
             voices: vec![

@@ -12,6 +12,23 @@ const OPENAI_TTS_URL: &str = "https://api.openai.com/v1/audio/speech";
 /// consume, so the streaming path needs no decode step at all.
 const OPENAI_PCM_SAMPLE_RATE: u32 = 24000;
 
+/// Expand the catalog's style-preset token into the instruction prompt sent
+/// to the API. `none` (and blank) means no instructions; any other value is
+/// legacy free text saved before the preset list existed and passes through
+/// unchanged.
+fn resolve_instructions(value: &str) -> Option<String> {
+    match value.trim() {
+        "" | "none" => None,
+        "neutral" => Some("Speak in a calm, even, neutral tone with steady pacing.".into()),
+        "narrator" => Some("Speak as an audiobook narrator: warm, measured, with clear articulation and gentle emphasis on key phrases.".into()),
+        "news anchor" => Some("Speak like a broadcast news anchor: crisp, confident, professional delivery.".into()),
+        "storyteller" => Some("Speak as a dramatic storyteller: vary pace and pitch with the narrative, lean into tension and pauses.".into()),
+        "podcast" => Some("Speak conversationally, like a podcast host talking to a friend: relaxed, informal, natural.".into()),
+        "energetic" => Some("Speak with high energy and enthusiasm: upbeat pace, bright tone, lively emphasis.".into()),
+        other => Some(other.to_string()),
+    }
+}
+
 pub struct OpenAiTtsBackend {
     config: OpenAIConfig,
 }
@@ -51,8 +68,8 @@ impl TtsBackend for OpenAiTtsBackend {
         if let Some(instructions) = self
             .config
             .instructions
-            .as_ref()
-            .filter(|value| !value.trim().is_empty())
+            .as_deref()
+            .and_then(resolve_instructions)
         {
             body["instructions"] = json!(instructions);
         }
@@ -121,8 +138,8 @@ impl TtsBackend for OpenAiTtsBackend {
         if let Some(instructions) = self
             .config
             .instructions
-            .as_ref()
-            .filter(|value| !value.trim().is_empty())
+            .as_deref()
+            .and_then(resolve_instructions)
         {
             body["instructions"] = json!(instructions);
         }
@@ -241,5 +258,19 @@ mod tests {
         assert!(!backend_for_model("tts-1").supports_streaming());
         assert!(!backend_for_model("tts-1-hd").supports_streaming());
         assert!(!backend_for_model("some-unknown-model").supports_streaming());
+    }
+
+    #[test]
+    fn style_tokens_expand_and_legacy_text_passes_through() {
+        // Preset tokens map to prompts; `none` and blank omit instructions;
+        // free text saved before the preset list passes through unchanged.
+        assert_eq!(resolve_instructions("none"), None);
+        assert_eq!(resolve_instructions(""), None);
+        assert_eq!(resolve_instructions("  "), None);
+        assert!(resolve_instructions("neutral").is_some_and(|s| s.contains("calm, even, neutral")));
+        assert!(resolve_instructions("news anchor").is_some_and(|s| s.contains("news anchor")));
+        // Legacy free text survives byte-for-byte.
+        let legacy = "Speak like a 1950s radio announcer.";
+        assert_eq!(resolve_instructions(legacy).as_deref(), Some(legacy));
     }
 }
