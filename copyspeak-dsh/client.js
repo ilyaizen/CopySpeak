@@ -219,12 +219,15 @@ window.__ModuleLoader__.load({
       "[data-dsh-csva-mark-host]{isolation:isolate}",
       ".dsh-csva-markLayer{position:absolute;top:0;left:0;width:0;height:0;z-index:-1;pointer-events:none}",
       ".dsh-csva-mark{position:absolute;border-radius:4px;background-color:var(--dsw-alias-brand-primary);pointer-events:none}",
-      /* The text-selection surface holds the host Quote pill and the CopySpeak
-         read pill side by side. The action style copies the host Quote pill
-         (floating fill, elevation stroke, pill radius), because a plain-JS
-         plugin cannot import the host CSS module. */
+      /* The text-selection surface holds one pill group: Quote and Read sit
+         inside one rounded floating container, separated from the error note.
+         The group copies the host Quote pill fill (floating fill, elevation
+         stroke, pill radius), because a plain-JS plugin cannot import the host
+         CSS module. Each action is a flat segment; the hover fills one
+         segment. */
       ".dsh-csva-selection{display:inline-flex;align-items:center;gap:8px;max-width:100%}",
-      ".dsh-csva-selectionAction{corner-shape:round;display:inline-flex;align-items:center;gap:5px;border:none;border-radius:999px;padding:5px 10px;background:var(--dsw-alias-button-floating-fill);--dsw-elevation-stroke-color:var(--dsw-alias-border-l3);box-shadow:var(--dsw-elevation-panel);color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-13);white-space:nowrap;cursor:pointer}",
+      ".dsh-csva-selectionGroup{display:inline-flex;align-items:center;max-width:100%;border-radius:999px;padding:2px;background:var(--dsw-alias-button-floating-fill);--dsw-elevation-stroke-color:var(--dsw-alias-border-l3);box-shadow:var(--dsw-elevation-panel)}",
+      ".dsh-csva-selectionAction{corner-shape:round;display:inline-flex;align-items:center;gap:5px;border:none;border-radius:999px;padding:3px 10px;background:0 0;color:var(--dsw-alias-label-primary);font:var(--dsw-font-xs-13);white-space:nowrap;cursor:pointer}",
       "@media (hover:hover){.dsh-csva-selectionAction:hover:not(:disabled){background:var(--dsw-alias-button-floating-hover)}}",
       ".dsh-csva-selectionAction:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
       ".dsh-csva-selectionAction:disabled{opacity:.4;cursor:default}",
@@ -347,6 +350,12 @@ window.__ModuleLoader__.load({
     const WORD_CHAR = /[\p{L}\p{N}]/u;
     const ROW_SELECTOR = '[data-chat-flow-kind="assistant-step"]';
     const SOURCE_SELECTOR = "[data-text-interaction-source]";
+    /* A double-click expands the selection to the paragraph that holds the
+       double-clicked word, so the host pill opens for the whole paragraph.
+       The paragraph is the innermost block inside the reply body; a blockless
+       body falls back to the body itself. */
+    const PARAGRAPH_SELECTOR =
+      "p, li, h1, h2, h3, h4, h5, h6, pre, blockquote, dd, dt, figcaption, td, th";
 
     /* Current reading and its resolved DOM target. */
     const reading = {
@@ -2017,29 +2026,33 @@ window.__ModuleLoader__.load({
       return h(
         "span",
         { className: "dsh-csva-selection" },
-        enabled
-          ? h(
-              "button",
-              {
-                type: "button",
-                className: "dsh-csva-selectionAction",
-                "aria-label": t("selection.quote"),
-                onPointerDown: keepSelection,
-                onClick: onQuote
-              },
-              t("selection.quote")
-            )
-          : null,
         h(
-          "button",
-          {
-            type: "button",
-            className: "dsh-csva-selectionAction",
-            "aria-label": t("selection.read"),
-            onPointerDown: keepSelection,
-            onClick: onRead
-          },
-          t("selection.read")
+          "span",
+          { className: "dsh-csva-selectionGroup" },
+          enabled
+            ? h(
+                "button",
+                {
+                  type: "button",
+                  className: "dsh-csva-selectionAction",
+                  "aria-label": t("selection.quote"),
+                  onPointerDown: keepSelection,
+                  onClick: onQuote
+                },
+                t("selection.quote")
+              )
+            : null,
+          h(
+            "button",
+            {
+              type: "button",
+              className: "dsh-csva-selectionAction",
+              "aria-label": t("selection.read"),
+              onPointerDown: keepSelection,
+              onClick: onRead
+            },
+            t("selection.read")
+          )
         ),
         failure === null
           ? null
@@ -2455,6 +2468,37 @@ window.__ModuleLoader__.load({
             }
           });
         }, PACKAGE + ": selection interaction");
+
+        /* A double-click selects the paragraph under the double-clicked word,
+           so the host opens the same pill surface a manual selection gets:
+           Quote text and Read aloud act on the whole paragraph. The host chat
+           view re-dispatches its selection trigger on every selection change
+           outside a pointer gesture, so replacing the native word selection
+           here re-opens its pill with the paragraph text. */
+        ctx.effect(function () {
+          function onDoubleClick(event) {
+            if (event.button !== 0) return;
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+            const source = target.closest(SOURCE_SELECTOR);
+            if (source === null) return;
+            /* Native chrome (buttons, links, excluded regions) keeps its own
+               double-click behavior; the pill surface never hijacks it. */
+            if (target.closest("button, a, [data-text-interaction-exclude]") !== null) return;
+            const block = target.closest(PARAGRAPH_SELECTOR);
+            const paragraph = block === null || !source.contains(block) ? source : block;
+            const selection = window.getSelection();
+            if (selection === null) return;
+            const range = document.createRange();
+            range.selectNodeContents(paragraph);
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+          document.addEventListener("dblclick", onDoubleClick);
+          return function () {
+            document.removeEventListener("dblclick", onDoubleClick);
+          };
+        }, PACKAGE + ": paragraph selection");
 
         ctx.slots.inject("conversation.chat.text-interaction", function () {
           const quote = ctx.slots.register(

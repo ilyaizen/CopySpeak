@@ -79,7 +79,7 @@ The highlight paints inside the message, not in a separate strip:
 
 ### Selection reads
 
-Selecting text in a settled reply opens the chat text-interaction surface. The plugin shadows the host Quote cell for the `quote` key at a lower priority, so the surface renders the host **Quote text** pill and the CopySpeak **Read selection** pill in one row. The Quote pill keeps the host behavior: it inserts the selection as a quote and dismisses the surface. The read pill speaks exactly the selected text.
+Selecting text in a settled reply opens the chat text-interaction surface. The plugin shadows the host Quote cell for the `quote` key at a lower priority, so the surface renders the host **Quote text** and the CopySpeak **Read selection** actions inside one segmented pill group. The Quote segment keeps the host behavior: it inserts the selection as a quote and dismisses the surface. The read pill speaks exactly the selected text.
 
 - The read pill clones the browser selection range when you click it. That clone is the highlight target: the caption aligner maps the spoken fragment onto the selected words only, so words outside the selection never paint.
 - The pointer-down handler prevents the browser default, so clicking either pill does not collapse the selection before the range clone is taken.
@@ -87,6 +87,8 @@ Selecting text in a settled reply opens the chat text-interaction surface. The p
 - The host admits a selection only when both ends sit in one rendered reply body. A selection that crosses two replies never opens the surface.
 - In a read-only conversation, the host Quote admission refuses to open a surface. The plugin registers its own `copyspeak-read-selection` interaction for that case, so the read action still opens; the surface then shows the read pill only, because Quote cannot insert there.
 - The reading stops at the end of the selection or at the playback bar's Stop control. It uses the same status poll, captions, follow, pause, seek, and bar as a message reading.
+- A double-click in a settled reply selects the paragraph that holds the double-clicked word, so the same surface opens for the whole paragraph: Quote text and Read aloud act on it like a manual selection. Buttons, links, and excluded regions keep their native double-click behavior. The host chat view re-dispatches its selection trigger on every selection change outside a pointer gesture, so replacing the word selection opens the pill with the paragraph text.
+- The Quote and Read controls render as one segmented pill group: one rounded floating container, one flat segment per action.
 
 The caption position counts inside one spoken fragment. A normal fragment change starts the count again, so the plugin aligns forward from its last matched word. A position that drops by more than 300 ms on the same fragment is a rewind: the plugin aligns again from the start of the message, so the highlight and follow find the spoken word again.
 
