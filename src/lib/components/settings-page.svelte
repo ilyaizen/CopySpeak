@@ -11,7 +11,6 @@
   import ImportExportSettings from "#lib/components/settings/import-export-settings.svelte";
   import AboutSettings from "#lib/components/settings/about-settings.svelte";
   import Acknowledgments from "#lib/components/settings/acknowledgments.svelte";
-  import SettingsFooter from "#lib/components/settings/settings-footer.svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
@@ -416,7 +415,6 @@
       </main>
     </div>
     <Acknowledgments />
-    <SettingsFooter />
   {:else}
     <div class="flex min-h-[60vh] items-center justify-center px-6">
       <div class="mx-auto w-full max-w-sm text-center">

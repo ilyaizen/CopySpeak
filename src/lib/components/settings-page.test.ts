@@ -129,7 +129,7 @@ it("renders a full-width acknowledgment marquee with accessible provider links",
   const section = view.container.querySelector('section[aria-labelledby="acknowledgments-title"]');
   if (!(section instanceof HTMLElement)) throw new Error("Acknowledgments section missing");
   expect(
-    within(section).getByText("Thanks to the teams behind these speech engines.")
+    within(section).getByText("Big thanks to the teams behind these speech engines.")
   ).toBeTruthy();
   const grid = view.getByRole("navigation").closest("aside")?.parentElement;
   expect(grid?.nextElementSibling).toBe(section);
@@ -141,10 +141,16 @@ it("renders a full-width acknowledgment marquee with accessible provider links",
   expect(openai.querySelector(".provider-mark")).toBeTruthy();
   expect(openai.textContent?.trim()).toBe("");
   const rows = section.querySelectorAll("ul");
-  expect(rows).toHaveLength(2);
+  expect(rows).toHaveLength(4);
   expect(rows[1].getAttribute("aria-hidden")).toBe("true");
-  expect(rows[1].querySelectorAll('a[tabindex="-1"]')).toHaveLength(14);
-  expect(rows[0].querySelectorAll(".provider-mark")).toHaveLength(12);
+  expect(rows[3].getAttribute("aria-hidden")).toBe("true");
+  expect(rows[1].querySelectorAll('a[tabindex="-1"]')).toHaveLength(9);
+  expect(rows[3].querySelectorAll('a[tabindex="-1"]')).toHaveLength(5);
+  expect(rows[0].querySelectorAll(".provider-mark")).toHaveLength(8);
+  expect(rows[2].querySelectorAll(".provider-mark")).toHaveLength(4);
+  expect(section.querySelectorAll(".marquee")).toHaveLength(2);
+  const tagline = within(section).getByText("Big thanks to the teams behind these speech engines.");
+  expect(rows[3].compareDocumentPosition(tagline) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(section.querySelectorAll("button")).toHaveLength(0);
   for (const name of ["Kokoro", "Edge-TTS"]) {
     const link = within(section).getByRole("link", { name });
@@ -198,12 +204,12 @@ it("places Donate after Source Code and the credit outside the sidebar grid", as
   expect(footer.classList.contains("font-mono")).toBe(true);
   expect(footer.classList.contains("text-[11px]")).toBe(true);
   expect(footer.classList.contains("tracking-[0.1em]")).toBe(true);
-  expect(footer.classList.contains("uppercase")).toBe(false);
-  expect(footer.classList.contains("opacity-60")).toBe(true);
+  expect(footer.classList.contains("uppercase")).toBe(true);
+  expect(footer.classList.contains("opacity-60")).toBe(false);
   const profile = within(footer).getByRole("link", { name: "@ilyaizen" });
   const attribution = profile.parentElement;
   if (!attribution) throw new Error("Settings attribution missing");
-  expect(attribution.textContent?.trim()).toBe("by @ilyaizen");
+  expect(attribution.textContent?.trim()).toBe(`by @ilyaizen (${new Date().getFullYear()})`);
   expect(attribution.classList.contains("whitespace-nowrap")).toBe(true);
   expect(profile.getAttribute("href")).toBe("https://x.com/ilyaizen");
   expect(profile.textContent).toBe("@ilyaizen");
@@ -218,7 +224,7 @@ it("places Donate after Source Code and the credit outside the sidebar grid", as
   expect(footer.firstElementChild).toBe(credit);
   const heart = credit.querySelector("svg");
   expect(heart?.getAttribute("aria-hidden")).toBe("true");
-  expect(heart?.querySelector("path")?.getAttribute("fill")).toBe("#e5484d");
+  expect(heart?.querySelector("path")?.getAttribute("fill")).toBe("currentColor");
   expect(heart?.classList.contains("mx-[0.1em]")).toBe(true);
   expect(credit.textContent).not.toContain("❤️");
   expect(credit.textContent?.trim()).toBe("made with  rust + robots");
