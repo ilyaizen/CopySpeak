@@ -1,5 +1,7 @@
 <script lang="ts">
   import { _ } from "svelte-i18n";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { VERSION } from "#lib/version";
   import { openExternal } from "#lib/utils/external-link";
 
   const providers = [
@@ -202,13 +204,50 @@
   {/each}
 {/snippet}
 
-<section class="acknowledgments font-mono" aria-labelledby="acknowledgments-title">
-  <h3 id="acknowledgments-title" class="text-center text-sm font-semibold uppercase">
+<section class="pt-2 pb-6 text-center" aria-labelledby="footer-version">
+  <p id="footer-version" class="text-muted-foreground mb-4 scroll-mt-4 font-mono text-sm">
+    CopySpeak v{VERSION}
+  </p>
+  <div class="flex flex-wrap justify-center gap-3">
+    <Button
+      class="cursor-pointer"
+      href="https://copyspeak.vercel.app/"
+      target="_blank"
+      rel="noopener noreferrer"
+      variant="outline"
+      size="sm"
+      onclick={(event) => openProvider(event, "https://copyspeak.vercel.app/")}
+    >
+      {$_("settings.about.website")}
+    </Button>
+    <Button
+      class="cursor-pointer"
+      variant="outline"
+      size="sm"
+      onclick={() => openExternal("https://github.com/ilyaizen/CopySpeak")}
+    >
+      {$_("settings.about.github")}
+    </Button>
+    <Button
+      class="cursor-pointer"
+      href="https://www.buymeacoffee.com/ilyaizen"
+      target="_blank"
+      rel="noopener noreferrer"
+      variant="outline"
+      size="sm"
+      onclick={(event) => openProvider(event, "https://www.buymeacoffee.com/ilyaizen")}
+    >
+      {$_("settings.about.buyMeCoffee")}
+    </Button>
+  </div>
+</section>
+<section class="acknowledgments" aria-labelledby="acknowledgments-title">
+  <h3 id="acknowledgments-title" class="text-muted-foreground text-center text-sm font-medium">
     {$_("settings.about.acknowledgments")}
   </h3>
   {#each [providers, localProviders] as items, index}
     <div
-      class="marquee"
+      class="marquee font-mono"
       role="group"
       aria-labelledby="acknowledgments-title"
       dir="ltr"
@@ -224,7 +263,9 @@
       </div>
     </div>
   {/each}
-  <p class="text-muted-foreground mt-1 text-center text-[11px] uppercase">
+  <p
+    class="text-muted-foreground mt-6 text-center font-mono text-[11px] tracking-[0.1em] uppercase"
+  >
     {$_("settings.about.acknowledgmentsTagline")}
   </p>
 </section>
@@ -250,8 +291,7 @@
       target="_blank"
       rel="noopener noreferrer"
       class="hover:underline focus-visible:outline focus-visible:outline-2"
-      onclick={(event) => openProvider(event, "https://x.com/ilyaizen")}
-      ><span class="tracking-[0.2em]">@</span>ilyaizen</a
+      onclick={(event) => openProvider(event, "https://x.com/ilyaizen")}>@ilyaizen</a
     >
     ({new Date().getFullYear()})</span
   >
@@ -262,7 +302,9 @@
     padding: 24px 0;
   }
   .marquee {
-    container-type: inline-size;
+    width: 100%;
+    max-width: 480px;
+    margin-inline: auto;
     overflow: hidden;
     user-select: none;
     touch-action: pan-y;
@@ -287,11 +329,10 @@
   .provider-list {
     display: flex;
     flex: none;
-    min-width: 100cqw;
     align-items: center;
     gap: 32px;
     margin: 0;
-    padding: 16px 32px 16px 0;
+    padding: 8px 32px 8px 0;
     list-style: none;
   }
   .provider-list a {

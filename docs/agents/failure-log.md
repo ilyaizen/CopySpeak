@@ -184,7 +184,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 ## Settings
 
 - Keep the Lenis content element stable across route changes; MotionWrapper replaces its inner node on navigation.
-- Give the footer handle's @ slightly more tracking than its letters without adding a space.
+- Keep the footer handle's @ at the same tracking as its letters.
 - Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
 - Pass the current locale direction to Bits UI tooltip content: its floating wrapper defaults to `dir="ltr"` even when the document is RTL, scrambling mixed Hebrew or Arabic and Latin text.
 - Gate hidden startup and close-to-tray on an actually available tray; create the main window hidden, show first-run setup explicitly, and use one unminimize/show/focus helper for tray and second-instance reopening. Propagate OS autostart registration failures before persisting the new preference.

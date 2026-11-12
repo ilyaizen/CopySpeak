@@ -265,6 +265,7 @@ export type TranslationKeys =
   | "settings.about.sourceCode"
   | "settings.about.donate"
   | "settings.about.sourceCodeDescription"
+  | "settings.about.website"
   | "settings.about.github"
   | "settings.about.acknowledgments"
   | "settings.about.acknowledgmentsTagline"

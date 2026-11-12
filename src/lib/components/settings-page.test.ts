@@ -7,6 +7,7 @@ import { waitForI18nReady } from "#lib/i18n";
 import { testConfig } from "#lib/test-fixtures/app-config";
 import { saveBar } from "#lib/stores/save-bar.svelte";
 import { AUTO_SAVE_DEBOUNCE_MS } from "#lib/stores/auto-save.svelte";
+import { VERSION } from "#lib/version";
 import type { AppConfig } from "#lib/types";
 import SettingsPage from "./settings-page.svelte";
 import { tauriService } from "#lib/services/tauri";
@@ -124,7 +125,7 @@ it("places appearance first and import/export after debug before acknowledgments
   ).toBeTruthy();
 });
 
-it("renders a full-width acknowledgment marquee with accessible provider links", async () => {
+it("renders centered acknowledgment marquees with accessible provider links", async () => {
   const view = await mountSettings();
   const section = view.container.querySelector('section[aria-labelledby="acknowledgments-title"]');
   if (!(section instanceof HTMLElement)) throw new Error("Acknowledgments section missing");
@@ -132,7 +133,9 @@ it("renders a full-width acknowledgment marquee with accessible provider links",
     within(section).getByText("Big thanks to the teams behind these speech engines.")
   ).toBeTruthy();
   const grid = view.getByRole("navigation").closest("aside")?.parentElement;
-  expect(grid?.nextElementSibling).toBe(section);
+  const footerAbout = grid?.nextElementSibling;
+  expect(footerAbout?.getAttribute("aria-labelledby")).toBe("footer-version");
+  expect(footerAbout?.nextElementSibling).toBe(section);
   expect(section.nextElementSibling?.tagName).toBe("FOOTER");
   const openai = within(section).getByRole("link", { name: "OpenAI" });
   expect(openai.getAttribute("href")).toBe(
@@ -146,6 +149,12 @@ it("renders a full-width acknowledgment marquee with accessible provider links",
   expect(rows[3].getAttribute("aria-hidden")).toBe("true");
   expect(rows[1].querySelectorAll('a[tabindex="-1"]')).toHaveLength(9);
   expect(rows[3].querySelectorAll('a[tabindex="-1"]')).toHaveLength(5);
+  expect(rows[0].querySelector('[aria-label="Edge-TTS"]')).not.toBeNull();
+  const clone = rows[3].querySelector("a");
+  if (!(clone instanceof HTMLAnchorElement)) throw new Error("Cloned provider link missing");
+  const openExternal = vi.spyOn(externalLink, "openExternal").mockResolvedValue();
+  await fireEvent.click(clone);
+  expect(openExternal).toHaveBeenCalledWith(clone.href);
   expect(rows[0].querySelectorAll(".provider-mark")).toHaveLength(8);
   expect(rows[2].querySelectorAll(".provider-mark")).toHaveLength(4);
   expect(section.querySelectorAll(".marquee")).toHaveLength(2);
@@ -169,7 +178,7 @@ it("uses the shared app scroller for sidebar navigation", async () => {
   const about = within(nav).getByRole("button", { name: "About" });
   await fireEvent.click(about);
   expect(about.getAttribute("aria-current")).toBe("page");
-  expect(scrollTo).toHaveBeenCalledWith(view.container.querySelector("#about"));
+  expect(scrollTo).toHaveBeenCalledWith(view.container.querySelector("#footer-version"));
   expect(scrollIntoView).not.toHaveBeenCalled();
 });
 
@@ -184,16 +193,38 @@ it("scrolls instantly from the sidebar when reduced motion is enabled", async ()
   expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "instant", block: "start" });
 });
 
-it("places Donate after Source Code and the credit outside the sidebar grid", async () => {
+it("places About actions before acknowledgments and keeps the credit outside the sidebar grid", async () => {
   const view = await mountSettings();
   const about = view.container.querySelector("#about");
-  if (!(about instanceof HTMLElement)) throw new Error("About section missing");
-  const donate = within(about).getByRole("link", { name: "Buy Me a Coffee" });
+  const footerAbout = view.container.querySelector('section[aria-labelledby="footer-version"]');
+  if (!(about instanceof HTMLElement) || !(footerAbout instanceof HTMLElement))
+    throw new Error("About section missing");
+  expect(within(footerAbout).queryByRole("heading", { name: "About" })).toBeNull();
+  expect(within(footerAbout).getByText(`CopySpeak v${VERSION}`)).toBeTruthy();
+  expect(within(about).queryByText(`v${VERSION}`)).toBeNull();
+  const donate = within(footerAbout).getByRole("link", { name: "Buy Me a Coffee" });
   expect(donate.getAttribute("href")).toBe("https://www.buymeacoffee.com/ilyaizen");
-  const source = within(about).getByRole("button", { name: "GitHub" });
-  const sourceRow = source.parentElement?.parentElement;
-  const donateRow = donate.parentElement?.parentElement;
-  expect(sourceRow?.nextElementSibling).toBe(donateRow);
+  const source = within(footerAbout).getByRole("button", { name: "GitHub" });
+  const website = within(footerAbout).getByRole("link", { name: "Website" });
+  expect(website.getAttribute("href")).toBe("https://copyspeak.vercel.app/");
+  expect(website.nextElementSibling).toBe(source);
+  expect(source.parentElement).toBe(donate.parentElement);
+  expect(source.classList.contains("cursor-pointer")).toBe(true);
+  expect(donate.classList.contains("cursor-pointer")).toBe(true);
+  expect(within(about).queryByRole("button", { name: "GitHub" })).toBeNull();
+  expect(within(about).queryByRole("link", { name: "Buy Me a Coffee" })).toBeNull();
+  const openExternal = vi.spyOn(externalLink, "openExternal").mockResolvedValue();
+  await fireEvent.click(website);
+  expect(openExternal).toHaveBeenCalledWith("https://copyspeak.vercel.app/");
+  await fireEvent.click(website, { ctrlKey: true });
+  expect(openExternal).toHaveBeenCalledTimes(1);
+  openExternal.mockClear();
+  await fireEvent.click(source);
+  expect(openExternal).toHaveBeenCalledWith("https://github.com/ilyaizen/CopySpeak");
+  await fireEvent.click(donate);
+  expect(openExternal).toHaveBeenCalledWith("https://www.buymeacoffee.com/ilyaizen");
+  await fireEvent.click(donate, { ctrlKey: true });
+  expect(openExternal).toHaveBeenCalledTimes(2);
   const footer = view.container.querySelector("footer");
   if (!(footer instanceof HTMLElement)) throw new Error("Settings footer missing");
   expect(footer.previousElementSibling?.getAttribute("aria-labelledby")).toBe(
@@ -213,8 +244,8 @@ it("places Donate after Source Code and the credit outside the sidebar grid", as
   expect(attribution.classList.contains("whitespace-nowrap")).toBe(true);
   expect(profile.getAttribute("href")).toBe("https://x.com/ilyaizen");
   expect(profile.textContent).toBe("@ilyaizen");
-  expect(profile.querySelector("span")?.classList.contains("tracking-[0.2em]")).toBe(true);
-  const openExternal = vi.spyOn(externalLink, "openExternal").mockResolvedValue();
+  expect(profile.querySelector("[class*='tracking-']")).toBeNull();
+  openExternal.mockClear();
   await fireEvent.click(profile);
   expect(openExternal).toHaveBeenCalledWith("https://x.com/ilyaizen");
   await fireEvent.click(profile, { ctrlKey: true });
@@ -282,7 +313,7 @@ it("shows Duck in Playback on Windows without Experimental", async () => {
 
 it("mounts opted-in detail sections once and returns focus to Advanced when hidden", async () => {
   const view = await mountSettings();
-  const experimental = view.getByRole("switch", { name: "Experimental Features" });
+  const experimental = view.getByRole("switch", { name: "Experimental Features (Alpha)" });
   await fireEvent.click(experimental);
   expect(view.container.querySelector("#history")).toBeNull();
   expect(view.container.querySelector("#postProcess")).toBeNull();

@@ -56,12 +56,12 @@
   </div>
   <div class="pt-4">
     <SettingRow
-      label={$_("settings.general.experimental")}
+      label={`${$_("settings.general.experimental")} (Alpha)`}
       tooltip={$_("settings.general.experimentalDescription")}
     >
       <Switch
         id="experimental-enabled"
-        aria-label={$_("settings.general.experimental")}
+        aria-label={`${$_("settings.general.experimental")} (Alpha)`}
         bind:checked={localConfig.general.experimental_enabled}
       />
     </SettingRow>

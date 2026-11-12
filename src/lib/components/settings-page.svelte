@@ -124,7 +124,7 @@
   function scrollToSection(id: SettingsSection) {
     activeSection = id;
     isScrollingToSection = true;
-    const section = document.getElementById(id);
+    const section = document.getElementById(id === "about" ? "footer-version" : id);
     const lenis = getLenis?.();
     if (section && lenis) lenis.scrollTo(section);
     else
