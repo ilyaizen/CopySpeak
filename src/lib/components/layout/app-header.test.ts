@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { render, waitFor } from "@testing-library/svelte";
 import { waitForI18nReady } from "#lib/i18n";
+import { page } from "$app/state";
 import AppHeader from "./app-header.svelte";
 
 // Declared before the hoisted mock block below; types are erased, so the hoist is safe.
@@ -67,8 +68,23 @@ describe("app-header history gating", () => {
     });
     const home = view.getByTestId("nav-generate");
     expect(home.getAttribute("aria-current")).toBe("page");
+    expect(home.hasAttribute("href")).toBe(false);
+    expect(
+      view.getByRole("heading", { name: "CopySpeak" }).closest("a")?.hasAttribute("href")
+    ).toBe(false);
+    expect(view.getByTestId("nav-voices").getAttribute("href")).toBe("/voices");
     expect(home.textContent?.trim()).not.toBe("");
     expect(view.getByRole("navigation").querySelectorAll("svg")).toHaveLength(0);
+    view.unmount();
+  });
+
+  it("links the brand to Play from another page", () => {
+    vi.spyOn(page, "url", "get").mockReturnValue(new URL("http://localhost/voices"));
+    mockInvoke.mockResolvedValueOnce(makeConfig(false, false));
+    const view = render(AppHeader);
+    expect(
+      view.getByRole("heading", { name: "CopySpeak" }).closest("a")?.getAttribute("href")
+    ).toBe("/");
     view.unmount();
   });
 

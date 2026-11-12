@@ -160,7 +160,9 @@ it("uses the shared app scroller for sidebar navigation", async () => {
   const scrollTo = vi.fn();
   const view = render(SettingsPage, { context: new Map([["app-lenis", () => ({ scrollTo })]]) });
   const nav = await view.findByRole("navigation");
-  await fireEvent.click(within(nav).getByRole("button", { name: "About" }));
+  const about = within(nav).getByRole("button", { name: "About" });
+  await fireEvent.click(about);
+  expect(about.getAttribute("aria-current")).toBe("page");
   expect(scrollTo).toHaveBeenCalledWith(view.container.querySelector("#about"));
   expect(scrollIntoView).not.toHaveBeenCalled();
 });

@@ -200,10 +200,69 @@
 }
 
 .app-nav-link {
+  position: relative;
   font-size: 11px;
   line-height: 16px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.app-nav-link::after {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 8px;
+  left: 0.5rem;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  transform: scaleX(0);
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.app-nav-link:hover::after,
+.app-nav-link:focus-visible::after,
+.app-nav-link[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-nav-link::after {
+    transition: none;
+  }
+}
+
+.side-nav-label {
+  position: relative;
+}
+
+.side-nav-label::after {
+  position: absolute;
+  right: 0;
+  bottom: -3px;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+[dir="rtl"] .side-nav-label::after {
+  transform-origin: right;
+}
+
+.side-nav-button:hover .side-nav-label::after,
+.side-nav-button:focus-visible .side-nav-label::after,
+.side-nav-button[aria-current="page"] .side-nav-label::after,
+.side-nav-button[aria-pressed="true"] .side-nav-label::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side-nav-label::after {
+    transition: none;
+  }
 }
 
 [dir="rtl"] .app-nav-link {

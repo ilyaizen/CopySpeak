@@ -85,7 +85,7 @@
 <header class="app-surface border-border z-50 border-b" data-testid="app-header">
   <div class="flex min-w-0 flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
     <div class="flex items-center gap-3">
-      <a href="/" class="flex items-center gap-3">
+      <a href={page.url.pathname === "/" ? undefined : "/"} class="flex items-center gap-3">
         <img src="/app-logo.png" alt={$_("app.logoAlt")} class="h-10 w-10" />
         <div>
           <h1 class="text-foreground app-brand text-xl font-semibold tracking-tight">CopySpeak</h1>
@@ -100,10 +100,10 @@
             page.url.pathname === item.href ||
             (item.href !== "/" && page.url.pathname.startsWith(`${item.href}/`))}
           <a
-            href={item.href}
+            href={isActive ? undefined : item.href}
             data-testid="nav-{item.id}"
             class="app-nav-link focus-visible:ring-ring inline-flex min-h-11 items-center justify-center rounded-md px-2 font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none {isActive
-              ? 'text-foreground underline underline-offset-[6px]'
+              ? 'text-foreground'
               : 'text-muted-foreground hover:text-foreground'}"
             aria-current={isActive ? "page" : undefined}
           >

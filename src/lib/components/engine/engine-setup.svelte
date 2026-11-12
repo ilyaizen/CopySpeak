@@ -141,13 +141,14 @@
       </p>
       {#each CLOUD_ENGINES as entry (entry.id)}
         <button
-          class="flex w-full items-center justify-between gap-1 rounded-md px-2 py-1.5 text-start text-sm transition-colors {selectedId ===
+          class="side-nav-button focus-visible:ring-ring flex w-full items-center justify-between gap-1 rounded-md px-2 py-1.5 text-start text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none {selectedId ===
           entry.id
-            ? 'border-primary bg-primary/10 text-primary border-s-2 font-medium'
-            : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
+            ? 'text-foreground font-medium'
+            : 'text-muted-foreground hover:text-foreground'}"
+          aria-pressed={selectedId === entry.id}
           onclick={() => (selectedId = entry.id)}
         >
-          {$_(`engine.${entry.id}.title`)}
+          <span class="side-nav-label">{$_(`engine.${entry.id}.title`)}</span>
           {#if entry.credentialTarget && envKeySources[entry.credentialTarget]}
             <span
               class="rounded bg-emerald-500/10 px-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
@@ -164,23 +165,25 @@
       </p>
       {#each LOCAL_ENGINES as entry (entry.id)}
         <button
-          class="block w-full rounded-md px-2 py-1.5 text-start text-sm transition-colors {selectedId ===
+          class="side-nav-button focus-visible:ring-ring block w-full rounded-md px-2 py-1.5 text-start text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none {selectedId ===
           entry.id
-            ? 'border-primary bg-primary/10 text-primary border-s-2 font-medium'
-            : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
+            ? 'text-foreground font-medium'
+            : 'text-muted-foreground hover:text-foreground'}"
+          aria-pressed={selectedId === entry.id}
           onclick={() => (selectedId = entry.id)}
         >
-          {$_(`engine.${entry.id}.title`)}
+          <span class="side-nav-label">{$_(`engine.${entry.id}.title`)}</span>
         </button>
       {/each}
       <button
-        class="block w-full rounded-md px-2 py-1.5 text-start text-sm transition-colors {selectedId ===
+        class="side-nav-button focus-visible:ring-ring block w-full rounded-md px-2 py-1.5 text-start text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none {selectedId ===
         UV_ENTRY.id
-          ? 'border-primary bg-primary/10 text-primary border-s-2 font-medium'
-          : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}"
+          ? 'text-foreground font-medium'
+          : 'text-muted-foreground hover:text-foreground'}"
+        aria-pressed={selectedId === UV_ENTRY.id}
         onclick={() => (selectedId = UV_ENTRY.id)}
       >
-        {$_("engine.setup.installUv")}
+        <span class="side-nav-label">{$_("engine.setup.installUv")}</span>
       </button>
     </nav>
   </aside>

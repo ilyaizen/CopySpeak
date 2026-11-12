@@ -21,7 +21,6 @@
   import type Lenis from "lenis";
   import { getContext, onMount, onDestroy, tick } from "svelte";
   import { _ } from "svelte-i18n";
-  import { History, Info, Settings, Sparkles, Volume2, Wrench } from "@lucide/svelte";
   import { hideSaveBar } from "#lib/stores/save-bar.svelte";
   import { syncSaveBarOrAutoSave, flushAutoSave } from "#lib/stores/auto-save.svelte";
 
@@ -47,18 +46,13 @@
   const sections: {
     id: SettingsSection;
     labelKey: string;
-    icon: typeof Settings;
   }[] = [
-    { id: "general", labelKey: "settings.tabs.general", icon: Settings },
-    { id: "playback", labelKey: "settings.tabs.playback", icon: Volume2 },
-    { id: "advanced", labelKey: "settings.tabs.advanced", icon: Wrench },
-    { id: "history", labelKey: "settings.tabs.history", icon: History },
-    {
-      id: "postProcess",
-      labelKey: "settings.tabs.postProcess",
-      icon: Sparkles
-    },
-    { id: "about", labelKey: "settings.tabs.about", icon: Info }
+    { id: "general", labelKey: "settings.tabs.general" },
+    { id: "playback", labelKey: "settings.tabs.playback" },
+    { id: "advanced", labelKey: "settings.tabs.advanced" },
+    { id: "history", labelKey: "settings.tabs.history" },
+    { id: "postProcess", labelKey: "settings.tabs.postProcess" },
+    { id: "about", labelKey: "settings.tabs.about" }
   ];
 
   let visibleSections = $derived(
@@ -270,18 +264,16 @@
         <nav class="sticky top-0">
           <div class="flex flex-wrap gap-1 md:flex-col">
             {#each visibleSections as section (section.id)}
-              {@const Icon = section.icon}
               <button
-                class="flex items-center gap-2 rounded-md px-2 py-1.5 text-start text-sm font-medium whitespace-nowrap transition-colors md:w-full {activeSection ===
+                class="side-nav-button focus-visible:ring-ring flex items-center rounded-md px-2 py-1.5 text-start text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none md:w-full {activeSection ===
                 section.id
-                  ? 'bg-primary/10 text-primary border-primary border-s-2'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}"
+                  ? 'text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'}"
                 aria-controls={section.id}
                 aria-current={activeSection === section.id ? "page" : undefined}
                 onclick={() => scrollToSection(section.id)}
               >
-                <Icon class="size-4 shrink-0" />
-                {$_(section.labelKey)}
+                <span class="side-nav-label">{$_(section.labelKey)}</span>
               </button>
             {/each}
           </div>
