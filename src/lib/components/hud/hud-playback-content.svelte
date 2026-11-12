@@ -81,7 +81,7 @@
     white-space: pre-wrap;
   }
   .caption span {
-    border-radius: 4px;
+    border-radius: 2px;
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
   }

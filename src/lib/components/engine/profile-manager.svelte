@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { tick, untrack } from "svelte";
+  import { getContext, tick, untrack } from "svelte";
+  import type Lenis from "lenis";
   import { _ } from "svelte-i18n";
   import { Button } from "#lib/components/ui/button/index.js";
   import {
@@ -50,6 +51,7 @@
   } from "#lib/types";
 
   let { localConfig = $bindable() }: Props = $props();
+  const getLenis = getContext<(() => Lenis | undefined) | undefined>("app-lenis");
 
   interface Props {
     localConfig: AppConfig;
@@ -330,6 +332,10 @@
   // disclosure so providers with long option lists do not stack collapsibles.
   const IMPORTANT_OPTION_KEYS = new Set(["model", "model_id", "cuda"]);
   let advancedOptionsOpen = $state(false);
+  $effect(() => {
+    advancedOptionsOpen;
+    void tick().then(() => getLenis?.()?.resize());
+  });
   let lastOptionsContext = "";
 
   $effect(() => {
@@ -971,7 +977,7 @@
 
       <!-- Advanced: engine-specific options + docs -->
       {#if activeCatalogEntry}
-        <section class="border-border space-y-3 border-b pb-5">
+        <section class="space-y-3">
           <div class="flex items-center justify-between gap-2">
             <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
               {activeCatalogEntry.label}

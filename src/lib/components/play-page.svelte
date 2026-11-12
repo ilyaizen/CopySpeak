@@ -245,8 +245,14 @@
   let readingView = $state<HTMLElement | null>(null);
 
   $effect(() => {
-    if (currentWord >= 0)
-      readingView?.querySelector("[data-current]")?.scrollIntoView({ block: "nearest" });
+    if (currentWord < 0 || !readingView) return;
+    const word = readingView.querySelector("[data-current]");
+    if (!word) return;
+    const viewRect = readingView.getBoundingClientRect();
+    const wordRect = word.getBoundingClientRect();
+    if (wordRect.top < viewRect.top) readingView.scrollTop += wordRect.top - viewRect.top;
+    else if (wordRect.bottom > viewRect.bottom)
+      readingView.scrollTop += wordRect.bottom - viewRect.bottom;
   });
 
   // ---- Config persistence -------------------------------------------------
@@ -621,12 +627,12 @@
           role="region"
           aria-label={$_("play.nowReadingAria")}
           dir="auto"
-          class="border-input bg-card dark:bg-input/30 min-h-48 flex-1 overflow-y-auto rounded-md border p-4 text-base leading-relaxed whitespace-pre-wrap shadow-xs"
+          class="border-input bg-card dark:bg-input/30 max-h-[60vh] min-h-48 flex-1 overflow-y-auto rounded-md border p-4 text-base leading-relaxed whitespace-pre-wrap shadow-xs"
         >
           {#each captionWords as word, i (word.offset)}<span
               data-current={i === currentWord || undefined}
               class={i === currentWord
-                ? "bg-primary text-primary-foreground rounded-sm"
+                ? "bg-primary text-primary-foreground rounded-xs [box-decoration-break:clone]"
                 : word.end !== null && word.end <= spokenEnd
                   ? "text-muted-foreground"
                   : ""}>{word.text}</span
@@ -636,7 +642,7 @@
         <label for="reading-text" class="sr-only">{$_("play.textLabel")}</label>
         <Textarea
           id="reading-text"
-          class="bg-card dark:bg-input/30 field-sizing-fixed min-h-48 flex-1 resize-none p-4 text-base leading-relaxed"
+          class="bg-card dark:bg-input/30 field-sizing-fixed max-h-[60vh] min-h-48 flex-1 resize-none p-4 text-base leading-relaxed md:text-base"
           placeholder={$_("play.placeholder")}
           bind:value={manualText}
         />
