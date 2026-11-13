@@ -334,7 +334,7 @@
   const IMPORTANT_OPTION_KEYS = new Set(["model", "model_id", "cuda"]);
   let advancedOptionsOpen = $state(false);
   $effect(() => {
-    advancedOptionsOpen;
+    void advancedOptionsOpen;
     void tick().then(() => getLenis?.()?.resize());
   });
   let lastOptionsContext = "";
