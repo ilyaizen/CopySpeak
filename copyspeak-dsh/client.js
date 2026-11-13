@@ -50,11 +50,9 @@ window.__ModuleLoader__.load({
     const STYLE_KEY = PACKAGE + "/client.css";
     /* Custom-highlight names. Namespace them: other plugins may paint
        highlights. A normal word uses the first name plus the rounded mark
-       behind it. A word inside a code chip or code block uses the second name:
-       that highlight paints its own background, because the chip background
-       covers the mark. */
+       behind it. A word inside a code chip or code block uses the same name:
+       the plugin makes chip backgrounds transparent, so the mark shows. */
     const HIGHLIGHT_NAME = "copyspeak-read-word";
-    const HIGHLIGHT_NAME_CODE = "copyspeak-read-word-code";
     /* Tween-only names: the outgoing and incoming word during one glide. */
     const HIGHLIGHT_NAME_OUT = "copyspeak-read-word-out";
     const HIGHLIGHT_NAME_IN = "copyspeak-read-word-in";
@@ -229,11 +227,12 @@ window.__ModuleLoader__.load({
          safe. The old knockout fallback painted dark-on-dark in that gap. */
       "::highlight(" + HIGHLIGHT_NAME_OUT + "){color:var(--dsh-csva-out-color,currentColor)}",
       "::highlight(" + HIGHLIGHT_NAME_IN + "){color:var(--dsh-csva-in-color,currentColor)}",
-      /* A code chip paints its own background over the reply, so a spoken word
-         inside one takes a highlight that paints the brand pill itself. */
-      "::highlight(" +
-        HIGHLIGHT_NAME_CODE +
-        "){background-color:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base)}",
+      /* Code chips go transparent inside the reply: their own background
+         paints over the z-index:-1 mark layer, so a spoken code word could
+         never wear the rounded pill. With the chip see-through, code words
+         run the same mark path as plain words. */
+      "[data-text-interaction-source] code, [data-text-interaction-source] pre" +
+        "{background-color:transparent}",
       /* The rounded mark: a positioned layer inside the reply's own stacking
          context. Negative z-index keeps it behind the text, so the word wears
          the highlight's recolored text over a rounded brand pill. */
@@ -684,6 +683,54 @@ window.__ModuleLoader__.load({
       return null;
     }
 
+    /* Syntax highlighters split one code word across several text nodes, so
+       the per-node tokens never match the spoken word ("keep" + "_mark" vs
+       "keepmark") and the highlight waits on the next plain word. Merge
+       adjacent code tokens while their concatenated norm exists in the spoken
+       stream: the merge can only create a spoken match, never break one. The
+       merged token spans its nodes with endNode/end for painting. */
+    function mergeCodeSplits(tokens, speechNorms) {
+      if (speechNorms === undefined || speechNorms === null || speechNorms.size === 0) {
+        return tokens;
+      }
+      const out = [];
+      let index = 0;
+      while (index < tokens.length) {
+        const first = tokens[index];
+        if (first.code !== true) {
+          out.push(first);
+          index += 1;
+          continue;
+        }
+        let merged = first;
+        let cursor = index + 1;
+        while (cursor < tokens.length) {
+          const next = tokens[cursor];
+          if (next.code !== true) break;
+          const joined = merged.norm + next.norm;
+          if (!speechNorms.has(joined)) break;
+          /* Adjacent means no whitespace between the two pieces: a bridge
+             range reads the gap text between them. */
+          const bridge = document.createRange();
+          bridge.setStart(merged.endNode ?? merged.node, merged.end);
+          bridge.setEnd(next.node, next.start);
+          if (/\s/u.test(bridge.toString())) break;
+          merged = {
+            node: first.node,
+            start: first.start,
+            end: next.end,
+            endNode: next.node,
+            norm: joined,
+            code: true
+          };
+          cursor += 1;
+        }
+        out.push(merged);
+        index = cursor;
+      }
+      return out;
+    }
+
     /* One reply can render several Markdown bodies (text before and after a
      * tool call). Read them as one ordered word list, so a fragment that spans
      * two bodies still aligns. */
@@ -691,7 +738,9 @@ window.__ModuleLoader__.load({
       if (sources.length === 0) return null;
       const tokens = [];
       for (const source of sources) {
-        for (const token of tokensFromElement(source)) tokens.push(token);
+        for (const token of mergeCodeSplits(tokensFromElement(source), reading.speechNorms)) {
+          tokens.push(token);
+        }
       }
       if (tokens.length === 0) return null;
       return {
@@ -746,7 +795,7 @@ window.__ModuleLoader__.load({
       const start = range.startContainer;
       const end = range.endContainer;
       if (start === null || end === null || !start.isConnected || !end.isConnected) return null;
-      const tokens = tokensFromRange(range);
+      const tokens = mergeCodeSplits(tokensFromRange(range), reading.speechNorms);
       if (tokens.length === 0) return null;
       const element = sourceElement(start) ?? sourceElement(end);
       if (element === null) return null;
@@ -907,7 +956,6 @@ window.__ModuleLoader__.load({
       cancelHighlightTween();
       if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
         window.CSS.highlights.delete(HIGHLIGHT_NAME);
-        window.CSS.highlights.delete(HIGHLIGHT_NAME_CODE);
         window.CSS.highlights.delete(HIGHLIGHT_NAME_OUT);
         window.CSS.highlights.delete(HIGHLIGHT_NAME_IN);
       }
@@ -1040,42 +1088,32 @@ window.__ModuleLoader__.load({
     function paintWord(token) {
       const range = tokenRange(token);
       if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
-        const code = token.code === true;
-        if (code) {
-          /* The code highlight paints its own pill, so it lands at once. */
+        const previous = reading.paintedToken;
+        const glider = reading.markRects[0] ?? null;
+        const fromLeft = glider === null ? NaN : parseFloat(glider.style.left);
+        const fromTop = glider === null ? NaN : parseFloat(glider.style.top);
+        /* Read the width before placeMarks overwrites the mark geometry with
+           the NEW word's rects: the tween needs the OLD width as its start. */
+        const fromWidth = glider === null || Number.isNaN(parseFloat(glider.style.width))
+          ? 0
+          : parseFloat(glider.style.width);
+        const settlesInstantly =
+          !markGlides() || previous === null || reading.markRects.length === 0;
+        placeMarks(wordRects(range));
+        if (settlesInstantly) {
           cancelHighlightTween();
-          applyHighlight(HIGHLIGHT_NAME_CODE, range);
+          applyHighlight(HIGHLIGHT_NAME, range);
           reading.paintedToken = token;
-          /* Clear the previous word's mark, so no pill lingers by the code word. */
-          clearMarks();
         } else {
-          const previous = reading.paintedToken;
-          const glider = reading.markRects[0] ?? null;
-          const fromLeft = glider === null ? NaN : parseFloat(glider.style.left);
-          const fromTop = glider === null ? NaN : parseFloat(glider.style.top);
-          /* Read the width before placeMarks overwrites the mark geometry with
-             the NEW word's rects: the tween needs the OLD width as its start. */
-          const fromWidth = glider === null || Number.isNaN(parseFloat(glider.style.width))
-            ? 0
-            : parseFloat(glider.style.width);
-          const settlesInstantly =
-            !markGlides() || previous === null || reading.markRects.length === 0;
-          placeMarks(wordRects(range));
-          if (settlesInstantly) {
-            cancelHighlightTween();
-            applyHighlight(HIGHLIGHT_NAME, range);
-            reading.paintedToken = token;
-          } else {
-            /* One rAF clock glides the pill and blends the two words' text
-               colors, with each blend windowed to when the pill actually
-               covers that word, so no word darkens over bare background
-               mid-glide. */
-            startHighlightTween(previous, token, range, {
-              left: fromLeft,
-              top: fromTop,
-              width: fromWidth
-            });
-          }
+          /* One rAF clock glides the pill and blends the two words' text
+             colors, with each blend windowed to when the pill actually
+             covers that word, so no word darkens over bare background
+             mid-glide. */
+          startHighlightTween(previous, token, range, {
+            left: fromLeft,
+            top: fromTop,
+            width: fromWidth
+          });
         }
       }
       followRange(token, range);
@@ -1084,7 +1122,6 @@ window.__ModuleLoader__.load({
     /* Set exactly one highlight name, replacing whatever word was painted. */
     function applyHighlight(name, range) {
       window.CSS.highlights.delete(HIGHLIGHT_NAME);
-      window.CSS.highlights.delete(HIGHLIGHT_NAME_CODE);
       window.CSS.highlights.delete(HIGHLIGHT_NAME_OUT);
       window.CSS.highlights.delete(HIGHLIGHT_NAME_IN);
       window.CSS.highlights.set(name, new window.Highlight(range));
@@ -1255,7 +1292,6 @@ window.__ModuleLoader__.load({
       scope.style.setProperty("--dsh-csva-in-color", blendColor(normalIn, knockout, 0));
       if (previousRange !== null && previousRange.startContainer.isConnected) {
         window.CSS.highlights.delete(HIGHLIGHT_NAME);
-        window.CSS.highlights.delete(HIGHLIGHT_NAME_CODE);
         window.CSS.highlights.set(HIGHLIGHT_NAME_OUT, new window.Highlight(previousRange));
         window.CSS.highlights.set(HIGHLIGHT_NAME_IN, new window.Highlight(range));
       } else {
@@ -1331,14 +1367,6 @@ window.__ModuleLoader__.load({
       if (window.CSS === undefined || window.CSS.highlights === undefined) return;
       const token = reading.tokens[reading.activeToken];
       if (!token.node.isConnected) return;
-      if (token.code === true) {
-        /* The code highlight paints the pill, so a code word needs no mark.
-           Repaint when a cleared highlight or a stale mark needs fixing. */
-        const painted =
-          window.CSS.highlights.has(HIGHLIGHT_NAME_CODE) && reading.markRects.length === 0;
-        if (!painted) paintWord(token);
-        return;
-      }
       const placed =
         reading.markHost === reading.element &&
         reading.markLayer !== null &&
@@ -1398,7 +1426,7 @@ window.__ModuleLoader__.load({
     function tokenRange(token) {
       const range = document.createRange();
       range.setStart(token.node, token.start);
-      range.setEnd(token.node, token.end);
+      range.setEnd(token.endNode ?? token.node, token.end);
       return range;
     }
 
@@ -1536,6 +1564,9 @@ window.__ModuleLoader__.load({
       reading.range = range;
       reading.forceCaptions = range !== null;
       reading.speechTokens = speech === "" ? [] : tokensFromText(speech);
+      reading.speechNorms = new Set(
+        reading.speechTokens.map(function (token) { return token.norm; })
+      );
       reading.element = null;
       reading.tokens = null;
       reading.cursor = 0;
