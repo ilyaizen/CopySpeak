@@ -331,29 +331,33 @@
     "title": "引擎",
     "selectEngine": "选择 TTS 引擎",
     "testing": "测试中...",
+    "kind": {
+      "local": "本地",
+      "cloud": "云端"
+    },
     "kitten": {
       "title": "Kitten TTS",
-      "description": "本地：四种可选 ONNX 模型（25–80MB），内置 8 种自然语音。针对 CPU 优化，可选 GPU 加速。"
+      "description": "四种可选 ONNX 模型（25–80MB），内置 8 种自然语音。针对 CPU 优化，可选 GPU 加速。"
     },
     "qwen": {
       "title": "Qwen3-TTS",
-      "description": "本地：多语言 Qwen3-TTS CustomVoice，内置 9 种语音。首次使用时下载模型。"
+      "description": "多语言 Qwen3-TTS CustomVoice，内置 9 种语音。首次使用时下载模型。"
     },
     "piper": {
       "title": "Piper TTS",
-      "description": "本地：快速、轻量的神经网络 TTS，提供 20 多种英语语音。完全离线运行——无需账号或网络。"
+      "description": "快速、轻量的神经网络 TTS，提供 20 多种英语语音。完全离线运行——无需账号或网络。"
     },
     "kokoro": {
       "title": "Kokoro TTS",
-      "description": "本地：高质量离线 TTS，语音自然，口音覆盖广。模型常驻内存；支持 GPU 加速。"
+      "description": "高质量离线 TTS，语音自然，口音覆盖广。模型常驻内存；支持 GPU 加速。"
     },
     "pocket": {
       "title": "Pocket TTS",
-      "description": "本地：Kyutai Pocket——专为 CPU 打造的 1 亿参数模型，提供六种语言的语音。支持 GPU 加速。"
+      "description": "Kyutai Pocket——专为 CPU 打造的 1 亿参数模型，提供六种语言的语音。支持 GPU 加速。"
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "云端：由 Sonic 3.5 驱动的低延迟自然 TTS。需要 API 密钥和网络连接。",
+      "description": "由 Sonic 3.5 驱动的低延迟自然 TTS。需要 API 密钥和网络连接。",
       "apiKey": "API 密钥",
       "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会被分享。",
       "check": "检查",
@@ -361,7 +365,7 @@
     },
     "fish": {
       "title": "Fish Audio",
-      "description": "云端：富有表现力的 AI 声音，支持声音克隆。需要 API 密钥和网络连接。",
+      "description": "富有表现力的 AI 声音，支持声音克隆。需要 API 密钥和网络连接。",
       "apiKey": "API 密钥",
       "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会被分享。",
       "check": "检查",
@@ -369,7 +373,7 @@
     },
     "xai": {
       "title": "xAI",
-      "description": "云端：Grok 声音，带原生逐词字幕与表现力语音标签。需要 API 密钥和网络连接。",
+      "description": "Grok 声音，带原生逐词字幕与表现力语音标签。需要 API 密钥和网络连接。",
       "apiKey": "API 密钥",
       "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会共享。",
       "check": "检查",
@@ -377,7 +381,7 @@
     },
     "mistral": {
       "title": "Mistral",
-      "description": "云端：Voxtral 声音，带情感、语速与声音标签。需要 API 密钥和网络连接。",
+      "description": "Voxtral 声音，带情感、语速与声音标签。需要 API 密钥和网络连接。",
       "apiKey": "API 密钥",
       "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会共享。",
       "check": "检查",
@@ -385,7 +389,7 @@
     },
     "elevenlabs": {
       "title": "ElevenLabs",
-      "description": "云端：高级 AI 语音合成，情感丰富，拥有 1000 多种语音并支持多语言。",
+      "description": "高级 AI 语音合成，情感丰富，拥有 1000 多种语音并支持多语言。",
       "apiKey": "API 密钥",
       "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会被分享。",
       "check": "检查",
@@ -393,7 +397,7 @@
     },
     "openai": {
       "title": "OpenAI",
-      "description": "云端：通过 OpenAI API 提供高质量自然语音。需要 API 密钥和网络连接。",
+      "description": "通过 OpenAI API 提供高质量自然语音。需要 API 密钥和网络连接。",
       "apiKey": "API 密钥",
       "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会被分享。",
       "check": "检查",
@@ -401,18 +405,22 @@
     },
     "google": {
       "title": "Google",
-      "description": "云端：Gemini API 语音生成。需要 Google AI API 密钥。",
+      "description": "Gemini API 语音生成。需要 Google AI API 密钥。",
       "apiKey": "API 密钥"
     },
     "microsoft": {
       "title": "Microsoft Foundry",
-      "description": "云端：Microsoft Foundry Speech。需要区域端点和 API 密钥。",
+      "description": "Microsoft Foundry Speech。需要区域端点和 API 密钥。",
       "apiKey": "API 密钥",
       "endpoint": "端点"
     },
+    "edge": {
+      "title": "Edge TTS",
+      "description": "Microsoft Edge 朗读语音。免费，无需 API 密钥，但需要网络连接。"
+    },
     "http": {
       "title": "HTTP",
-      "description": "云端：将合成请求发送到按配置文件设置的自定义 HTTP 端点。"
+      "description": "将合成请求发送到按配置文件设置的自定义 HTTP 端点。"
     },
     "setup": {
       "install": "安装",

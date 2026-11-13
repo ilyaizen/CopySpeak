@@ -331,29 +331,33 @@
     "title": "Moteur",
     "selectEngine": "Choisir le moteur TTS",
     "testing": "Test en cours...",
+    "kind": {
+      "local": "Local",
+      "cloud": "Cloud"
+    },
     "kitten": {
       "title": "Kitten TTS",
-      "description": "Local : quatre modèles ONNX au choix (25–80 Mo) avec 8 voix naturelles. Optimisé pour le CPU avec accélération GPU en option."
+      "description": "Quatre modèles ONNX au choix (25–80 Mo) avec 8 voix naturelles. Optimisé pour le CPU avec accélération GPU en option."
     },
     "qwen": {
       "title": "Qwen3-TTS",
-      "description": "Local : Qwen3-TTS CustomVoice multilingue avec 9 voix intégrées. Le modèle est téléchargé à la première utilisation."
+      "description": "Qwen3-TTS CustomVoice multilingue avec 9 voix intégrées. Le modèle est téléchargé à la première utilisation."
     },
     "piper": {
       "title": "Piper TTS",
-      "description": "Local : TTS neuronale rapide et légère avec plus de 20 voix anglaises. Fonctionne entièrement hors ligne — sans compte ni connexion Internet."
+      "description": "TTS neuronale rapide et légère avec plus de 20 voix anglaises. Fonctionne entièrement hors ligne — sans compte ni connexion Internet."
     },
     "kokoro": {
       "title": "Kokoro TTS",
-      "description": "Local : TTS hors ligne de haute qualité aux voix naturelles et aux nombreux accents. Garde son modèle en RAM ; prend en charge l'accélération GPU."
+      "description": "TTS hors ligne de haute qualité aux voix naturelles et aux nombreux accents. Garde son modèle en RAM ; prend en charge l'accélération GPU."
     },
     "pocket": {
       "title": "Pocket TTS",
-      "description": "Local : Kyutai Pocket — un modèle de 100 M de paramètres conçu pour le CPU, avec des voix en six langues. Prend en charge l'accélération GPU."
+      "description": "Kyutai Pocket — un modèle de 100 M de paramètres conçu pour le CPU, avec des voix en six langues. Prend en charge l'accélération GPU."
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "Cloud : TTS naturelle à faible latence reposant sur Sonic 3.5. Nécessite une clé API et une connexion Internet.",
+      "description": "TTS naturelle à faible latence reposant sur Sonic 3.5. Nécessite une clé API et une connexion Internet.",
       "apiKey": "Clé API",
       "apiKeyDescription": "Votre clé API est stockée localement et n'est jamais partagée.",
       "check": "Vérifier",
@@ -361,7 +365,7 @@
     },
     "fish": {
       "title": "Fish Audio",
-      "description": "Cloud : voix IA expressives avec clonage vocal. Nécessite une clé API et une connexion internet.",
+      "description": "Voix IA expressives avec clonage vocal. Nécessite une clé API et une connexion internet.",
       "apiKey": "Clé API",
       "apiKeyDescription": "Votre clé API est stockée localement et n'est jamais partagée.",
       "check": "Vérifier",
@@ -369,7 +373,7 @@
     },
     "xai": {
       "title": "xAI",
-      "description": "Cloud : voix Grok avec sous-titres de mots natifs et balises vocales expressives. Nécessite une clé API et une connexion internet.",
+      "description": "Voix Grok avec sous-titres de mots natifs et balises vocales expressives. Nécessite une clé API et une connexion internet.",
       "apiKey": "Clé API",
       "apiKeyDescription": "Votre clé API est stockée localement et jamais partagée.",
       "check": "Vérifier",
@@ -377,7 +381,7 @@
     },
     "mistral": {
       "title": "Mistral",
-      "description": "Cloud : voix Voxtral avec balises d'émotion, de rythme et sonores. Nécessite une clé API et une connexion internet.",
+      "description": "Voix Voxtral avec balises d'émotion, de rythme et sonores. Nécessite une clé API et une connexion internet.",
       "apiKey": "Clé API",
       "apiKeyDescription": "Votre clé API est stockée localement et jamais partagée.",
       "check": "Vérifier",
@@ -385,7 +389,7 @@
     },
     "elevenlabs": {
       "title": "ElevenLabs",
-      "description": "Cloud : synthèse vocale IA premium avec palette émotionnelle, plus de 1000 voix et prise en charge multilingue.",
+      "description": "Synthèse vocale IA premium avec palette émotionnelle, plus de 1000 voix et prise en charge multilingue.",
       "apiKey": "Clé API",
       "apiKeyDescription": "Votre clé API est stockée localement et n'est jamais partagée.",
       "check": "Vérifier",
@@ -393,7 +397,7 @@
     },
     "openai": {
       "title": "OpenAI",
-      "description": "Cloud : voix naturelles de haute qualité via l'API OpenAI. Nécessite une clé API et une connexion Internet.",
+      "description": "Voix naturelles de haute qualité via l'API OpenAI. Nécessite une clé API et une connexion Internet.",
       "apiKey": "Clé API",
       "apiKeyDescription": "Votre clé API est stockée localement et n'est jamais partagée.",
       "check": "Vérifier",
@@ -401,18 +405,22 @@
     },
     "google": {
       "title": "Google",
-      "description": "Cloud : génération vocale via l'API Gemini. Nécessite une clé API Google AI.",
+      "description": "Génération vocale via l'API Gemini. Nécessite une clé API Google AI.",
       "apiKey": "Clé API"
     },
     "microsoft": {
       "title": "Microsoft Foundry",
-      "description": "Cloud : Microsoft Foundry Speech. Nécessite un point de terminaison régional et une clé API.",
+      "description": "Microsoft Foundry Speech. Nécessite un point de terminaison régional et une clé API.",
       "apiKey": "Clé API",
       "endpoint": "Point de terminaison"
     },
+    "edge": {
+      "title": "Edge TTS",
+      "description": "Voix de lecture à voix haute de Microsoft Edge. Gratuit, sans clé API, mais nécessite une connexion Internet."
+    },
     "http": {
       "title": "HTTP",
-      "description": "Cloud : envoie les requêtes de synthèse à un point de terminaison HTTP personnalisé configuré par profil."
+      "description": "Envoie les requêtes de synthèse à un point de terminaison HTTP personnalisé configuré par profil."
     },
     "setup": {
       "install": "Installer",

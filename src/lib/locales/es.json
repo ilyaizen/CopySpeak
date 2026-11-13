@@ -331,29 +331,33 @@
     "title": "Motor",
     "selectEngine": "Seleccionar motor TTS",
     "testing": "Probando...",
+    "kind": {
+      "local": "Local",
+      "cloud": "Nube"
+    },
     "kitten": {
       "title": "Kitten TTS",
-      "description": "Local: cuatro modelos ONNX a elegir (25–80 MB) con 8 voces naturales. Optimizado para CPU con aceleración GPU opcional."
+      "description": "Cuatro modelos ONNX a elegir (25–80 MB) con 8 voces naturales. Optimizado para CPU con aceleración GPU opcional."
     },
     "qwen": {
       "title": "Qwen3-TTS",
-      "description": "Local: Qwen3-TTS CustomVoice multilingüe con 9 voces integradas. El modelo se descarga la primera vez que se usa."
+      "description": "Qwen3-TTS CustomVoice multilingüe con 9 voces integradas. El modelo se descarga la primera vez que se usa."
     },
     "piper": {
       "title": "Piper TTS",
-      "description": "Local: TTS neuronal rápido y ligero con más de 20 voces en inglés. Funciona completamente sin conexión, sin cuenta ni internet."
+      "description": "TTS neuronal rápido y ligero con más de 20 voces en inglés. Funciona completamente sin conexión, sin cuenta ni internet."
     },
     "kokoro": {
       "title": "Kokoro TTS",
-      "description": "Local: TTS sin conexión de alta calidad, con voces naturales y amplia variedad de acentos. Mantiene su modelo en RAM y admite aceleración GPU."
+      "description": "TTS sin conexión de alta calidad, con voces naturales y amplia variedad de acentos. Mantiene su modelo en RAM y admite aceleración GPU."
     },
     "pocket": {
       "title": "Pocket TTS",
-      "description": "Local: Kyutai Pocket, un modelo de 100 M de parámetros diseñado para CPU, con voces en seis idiomas. Admite aceleración GPU."
+      "description": "Kyutai Pocket, un modelo de 100 M de parámetros diseñado para CPU, con voces en seis idiomas. Admite aceleración GPU."
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "Nube: TTS natural y de baja latencia con Sonic 3.5. Requiere una clave de API y conexión a internet.",
+      "description": "TTS natural y de baja latencia con Sonic 3.5. Requiere una clave de API y conexión a internet.",
       "apiKey": "Clave de API",
       "apiKeyDescription": "Tu clave de API se guarda en local y nunca se comparte.",
       "check": "Comprobar",
@@ -361,7 +365,7 @@
     },
     "fish": {
       "title": "Fish Audio",
-      "description": "Nube: Voces de IA expresivas con clonación de voz. Requiere una clave de API y conexión a internet.",
+      "description": "Voces de IA expresivas con clonación de voz. Requiere una clave de API y conexión a internet.",
       "apiKey": "Clave de API",
       "apiKeyDescription": "Tu clave de API se almacena localmente y nunca se comparte.",
       "check": "Comprobar",
@@ -369,7 +373,7 @@
     },
     "xai": {
       "title": "xAI",
-      "description": "Nube: voces Grok con subtítulos de palabras nativos y etiquetas de voz expresivas. Requiere una clave de API y conexión a internet.",
+      "description": "Voces Grok con subtítulos de palabras nativos y etiquetas de voz expresivas. Requiere una clave de API y conexión a internet.",
       "apiKey": "Clave de API",
       "apiKeyDescription": "Tu clave de API se guarda localmente y nunca se comparte.",
       "check": "Comprobar",
@@ -377,7 +381,7 @@
     },
     "mistral": {
       "title": "Mistral",
-      "description": "Nube: voces Voxtral con etiquetas de emoción, ritmo y sonido. Requiere una clave de API y conexión a internet.",
+      "description": "Voces Voxtral con etiquetas de emoción, ritmo y sonido. Requiere una clave de API y conexión a internet.",
       "apiKey": "Clave de API",
       "apiKeyDescription": "Tu clave de API se guarda localmente y nunca se comparte.",
       "check": "Comprobar",
@@ -385,7 +389,7 @@
     },
     "elevenlabs": {
       "title": "ElevenLabs",
-      "description": "Nube: síntesis de voz con IA premium, con amplio rango emocional, más de 1000 voces y soporte multilingüe.",
+      "description": "Síntesis de voz con IA premium, con amplio rango emocional, más de 1000 voces y soporte multilingüe.",
       "apiKey": "Clave de API",
       "apiKeyDescription": "Tu clave de API se guarda en local y nunca se comparte.",
       "check": "Comprobar",
@@ -393,7 +397,7 @@
     },
     "openai": {
       "title": "OpenAI",
-      "description": "Nube: voces naturales de alta calidad mediante la API de OpenAI. Requiere una clave de API y conexión a internet.",
+      "description": "Voces naturales de alta calidad mediante la API de OpenAI. Requiere una clave de API y conexión a internet.",
       "apiKey": "Clave de API",
       "apiKeyDescription": "Tu clave de API se guarda en local y nunca se comparte.",
       "check": "Comprobar",
@@ -401,22 +405,22 @@
     },
     "google": {
       "title": "Google",
-      "description": "Nube: generación de voz con la API de Gemini. Requiere una clave de API de Google AI.",
+      "description": "Generación de voz con la API de Gemini. Requiere una clave de API de Google AI.",
       "apiKey": "Clave de API"
     },
     "microsoft": {
       "title": "Microsoft Foundry",
-      "description": "Nube: Microsoft Foundry Speech. Requiere un endpoint regional y una clave de API.",
+      "description": "Microsoft Foundry Speech. Requiere un endpoint regional y una clave de API.",
       "apiKey": "Clave de API",
       "endpoint": "Endpoint"
     },
     "edge": {
       "title": "Edge TTS",
-      "description": "Nube: voces de lectura en voz alta de Microsoft Edge. Gratis y sin clave de API, pero necesita conexión a internet."
+      "description": "Voces de lectura en voz alta de Microsoft Edge. Gratis y sin clave de API, pero necesita conexión a internet."
     },
     "http": {
       "title": "HTTP",
-      "description": "Nube: envía las peticiones de síntesis a un endpoint HTTP personalizado configurado por perfil."
+      "description": "Envía las peticiones de síntesis a un endpoint HTTP personalizado configurado por perfil."
     },
     "setup": {
       "install": "Instalar",

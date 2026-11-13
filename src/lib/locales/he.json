@@ -331,29 +331,33 @@
     "title": "מנוע",
     "selectEngine": "בחר מנוע TTS",
     "testing": "בודק...",
+    "kind": {
+      "local": "מקומי",
+      "cloud": "ענן"
+    },
     "kitten": {
       "title": "Kitten TTS",
-      "description": "מקומי: ארבעה דגמי ONNX לבחירה (25–80MB) עם 8 קולות טבעיים. מותאם למעבד, עם האצת GPU אופציונלית."
+      "description": "ארבעה דגמי ONNX לבחירה (25–80MB) עם 8 קולות טבעיים. מותאם למעבד, עם האצת GPU אופציונלית."
     },
     "qwen": {
       "title": "Qwen3-TTS",
-      "description": "מקומי: Qwen3-TTS רב-לשוני (CustomVoice) עם 9 קולות מובנים. הדגם יורד בשימוש הראשון."
+      "description": "Qwen3-TTS רב-לשוני (CustomVoice) עם 9 קולות מובנים. הדגם יורד בשימוש הראשון."
     },
     "piper": {
       "title": "Piper TTS",
-      "description": "מקומי: TTS נוירוני מהיר וקל עם מעל 20 קולות באנגלית. עובד לחלוטין במצב לא מקוון — ללא חשבון או אינטרנט."
+      "description": "TTS נוירוני מהיר וקל עם מעל 20 קולות באנגלית. עובד לחלוטין במצב לא מקוון — ללא חשבון או אינטרנט."
     },
     "kokoro": {
       "title": "Kokoro TTS",
-      "description": "מקומי: TTS איכותי ללא חיבור עם קולות טבעיים וכיסוי רחב של מבטאים. שומר את הדגם בזיכרון RAM; תומך בהאצת GPU."
+      "description": "TTS איכותי ללא חיבור עם קולות טבעיים וכיסוי רחב של מבטאים. שומר את הדגם בזיכרון RAM; תומך בהאצת GPU."
     },
     "pocket": {
       "title": "Pocket TTS",
-      "description": "מקומי: Kyutai Pocket — מודל בן 100 מיליון פרמטרים שנבנה למעבד, עם קולות בשש שפות. תומך בהאצת GPU."
+      "description": "Kyutai Pocket — מודל בן 100 מיליון פרמטרים שנבנה למעבד, עם קולות בשש שפות. תומך בהאצת GPU."
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "ענן: TTS טבעי עם השהיה נמוכה, המופעל על ידי Sonic 3.5. דורש מפתח API וחיבור לאינטרנט.",
+      "description": "TTS טבעי עם השהיה נמוכה, המופעל על ידי Sonic 3.5. דורש מפתח API וחיבור לאינטרנט.",
       "apiKey": "מפתח API",
       "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
       "check": "בדוק",
@@ -361,7 +365,7 @@
     },
     "fish": {
       "title": "Fish Audio",
-      "description": "ענן: קולות AI אקספרסיביים עם שיבוט קול. דורש מפתח API וחיבור לאינטרנט.",
+      "description": "קולות AI אקספרסיביים עם שיבוט קול. דורש מפתח API וחיבור לאינטרנט.",
       "apiKey": "מפתח API",
       "apiKeyDescription": "מפתח ה-API שלך מאוחסן מקומית ולעולם אינו משותף.",
       "check": "בדיקה",
@@ -369,7 +373,7 @@
     },
     "xai": {
       "title": "xAI",
-      "description": "ענן: קולות Grok עם כתוביות מילים מקוריות ותגי דיבור אקספרסיביים. דורש מפתח API וחיבור לאינטרנט.",
+      "description": "קולות Grok עם כתוביות מילים מקוריות ותגי דיבור אקספרסיביים. דורש מפתח API וחיבור לאינטרנט.",
       "apiKey": "מפתח API",
       "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
       "check": "בדיקה",
@@ -377,7 +381,7 @@
     },
     "mistral": {
       "title": "Mistral",
-      "description": "ענן: קולות Voxtral עם תגי רגש, קצב וצליל. דורש מפתח API וחיבור לאינטרנט.",
+      "description": "קולות Voxtral עם תגי רגש, קצב וצליל. דורש מפתח API וחיבור לאינטרנט.",
       "apiKey": "מפתח API",
       "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
       "check": "בדיקה",
@@ -385,7 +389,7 @@
     },
     "elevenlabs": {
       "title": "ElevenLabs",
-      "description": "ענן: סינתזת קול AI פרימיום עם טווח רגשי, מעל 1000 קולות ותמיכה רב-לשונית.",
+      "description": "סינתזת קול AI פרימיום עם טווח רגשי, מעל 1000 קולות ותמיכה רב-לשונית.",
       "apiKey": "מפתח API",
       "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
       "check": "בדוק",
@@ -393,7 +397,7 @@
     },
     "openai": {
       "title": "OpenAI",
-      "description": "ענן: קולות טבעיים איכותיים דרך OpenAI API. דורש מפתח API וחיבור לאינטרנט.",
+      "description": "קולות טבעיים איכותיים דרך OpenAI API. דורש מפתח API וחיבור לאינטרנט.",
       "apiKey": "מפתח API",
       "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
       "check": "בדוק",
@@ -401,22 +405,22 @@
     },
     "google": {
       "title": "Google",
-      "description": "ענן: יצירת דיבור באמצעות Gemini API. דורש מפתח Google AI API.",
+      "description": "יצירת דיבור באמצעות Gemini API. דורש מפתח Google AI API.",
       "apiKey": "מפתח API"
     },
     "microsoft": {
       "title": "Microsoft Foundry",
-      "description": "ענן: Microsoft Foundry Speech. דורש נקודת קצה אזורית ומפתח API.",
+      "description": "Microsoft Foundry Speech. דורש נקודת קצה אזורית ומפתח API.",
       "apiKey": "מפתח API",
       "endpoint": "נקודת קצה"
     },
     "edge": {
       "title": "Edge TTS",
-      "description": "ענן: קולות הקראה של Microsoft Edge. חינם, ללא מפתח API, אך דורש חיבור לאינטרנט."
+      "description": "קולות הקראה של Microsoft Edge. חינם, ללא מפתח API, אך דורש חיבור לאינטרנט."
     },
     "http": {
       "title": "HTTP",
-      "description": "ענן: שליחת בקשות סינתזה לנקודת קצה HTTP מותאמת אישית, שמוגדרת לכל פרופיל."
+      "description": "שליחת בקשות סינתזה לנקודת קצה HTTP מותאמת אישית, שמוגדרת לכל פרופיל."
     },
     "setup": {
       "install": "התקן",
