@@ -1098,9 +1098,10 @@ window.__ModuleLoader__.load({
         const fromTop = glider === null ? NaN : parseFloat(glider.style.top);
         /* Read the width before placeMarks overwrites the mark geometry with
            the NEW word's rects: the tween needs the OLD width as its start. */
-        const fromWidth = glider === null || Number.isNaN(parseFloat(glider.style.width))
-          ? 0
-          : parseFloat(glider.style.width);
+        const fromWidth =
+          glider === null || Number.isNaN(parseFloat(glider.style.width))
+            ? 0
+            : parseFloat(glider.style.width);
         const settlesInstantly =
           !markGlides() || previous === null || reading.markRects.length === 0;
         placeMarks(wordRects(range));
@@ -1161,7 +1162,10 @@ window.__ModuleLoader__.load({
       const computed = window.getComputedStyle(probe).color;
       const match = computed.match(/rgba?\(([^)]+)\)/);
       if (match === null) return null;
-      const parts = match[1].split(/[,/\s]+/).map(parseFloat).filter(Number.isFinite);
+      const parts = match[1]
+        .split(/[,/\s]+/)
+        .map(parseFloat)
+        .filter(Number.isFinite);
       if (parts.length < 3) return null;
       return { r: parts[0], g: parts[1], b: parts[2] };
     }
@@ -1276,10 +1280,9 @@ window.__ModuleLoader__.load({
         let covered = 0;
         let total = 0;
         rects.forEach(function (rect) {
-          const across = Math.min(pillRight, rect.left + rect.width) -
-            Math.max(pillLeft, rect.left);
-          const down = Math.min(pillBottom, rect.top + rect.height) -
-            Math.max(pillTop, rect.top);
+          const across =
+            Math.min(pillRight, rect.left + rect.width) - Math.max(pillLeft, rect.left);
+          const down = Math.min(pillBottom, rect.top + rect.height) - Math.max(pillTop, rect.top);
           total += rect.width * rect.height;
           if (across > 0 && down > 0) covered += across * down;
         });
@@ -1287,8 +1290,7 @@ window.__ModuleLoader__.load({
       };
       /* Paint the first frame's state before the first rAF, so the pill and
          the colors never show their settled neighbors for a frame. */
-      tween.mark.style.transform =
-        "translate(" + tween.dx + "px," + tween.dy + "px)";
+      tween.mark.style.transform = "translate(" + tween.dx + "px," + tween.dy + "px)";
       tween.mark.style.width = tween.w0 + "px";
       if (tween.hadOut) {
         scope.style.setProperty("--dsh-csva-out-color", blendColor(knockout, plain, 0));
@@ -1569,7 +1571,9 @@ window.__ModuleLoader__.load({
       reading.forceCaptions = range !== null;
       reading.speechTokens = speech === "" ? [] : tokensFromText(speech);
       reading.speechNorms = new Set(
-        reading.speechTokens.map(function (token) { return token.norm; })
+        reading.speechTokens.map(function (token) {
+          return token.norm;
+        })
       );
       reading.element = null;
       reading.tokens = null;
