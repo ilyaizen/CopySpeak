@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.16] - 2026-11-13
+
+### Added
+
+- **CopySpeak DSH plugin** — a new plugin reads assistant replies aloud through the CopySpeak desktop app. A sidebar panel turns auto-reading, captions, caption animation and follow-scroll on or off; a per-turn action reads the final reply of any turn; a Read selection pill reads just the selected words; and a floating bar pauses, seeks and stops. Spoken words paint live inside the reply, including inline code and code blocks.
+- **Firefox companion** — the browser companion now works on Firefox alongside Chrome.
+- **Animations setting** — a new Appearance toggle turns page fades, panel fades and smooth scrolling on or off. While the system asks for reduced motion, the switch reads as off, stays disabled, and animations stay off.
+
+### Changed
+
+- **The Engines page is redesigned** — one flat menu of short engine labels replaces the Cloud and Local groups, engine descriptions moved into a header info tooltip, and the .env key badge moved from the menu into the engine panel header. Onboarding now installs uv, the prerequisite for local engines.
+- **Long readings pay as they play** — paginated readings synthesize one fragment ahead of playback instead of the whole queue, so an early stop pays only for audio already heard, and pausing also pauses generation. Repeat clicks replay from a content-addressed speech cache (256 MiB, oldest-first eviction) even with history off, so re-reading a message costs nothing. Queued double-copy reads use the same just-in-time gate.
+- **About page redesign** — a new layout with smooth scrolling and thin scrollbars, acknowledgments as a single section with the footer merged in, and a creator credit line.
+- **New landing hero demo** — the hero plays an audio preview automatically with word-timed captions, and navigation links animate on hover and on the active page.
+- **Darker app icons** — the palette is rebuilt closer to the original art (a uniform 10% chroma trim) with a 20% black overlay baked in, landing 25% below the original chroma and 11 lightness points down, hue preserved. App, tray, installer and browser-extension icons all carry it.
+- **OpenAI style presets** — the free-text instructions field becomes a style preset dropdown.
+- **Settings wording and options** — the language selector gains an explicit System option, and the quick-settings double-copy toggle is labelled Listen in every language.
+
+### Fixed
+
+- **Readings no longer overlap** — when two readings race, the second holds until the first finishes, across streaming and batch engines; stopping a queued reading removes it from the queue instead of letting it start later.
+- **Playback controls hit the right reading** — stop, pause and seek are scoped by reading id, and speaker ownership transfers at a reading's first audible sound, so stopping a reading that has not played yet leaves the audible one alone. The CLI rejects a `--request-id` with no value instead of sending an unscoped request.
+- **Switching engines no longer double-loads models** — the outgoing daemon retires before the replacement spawns, closing the CUDA out-of-memory window on profile switches; a wedged model load fails after a bounded 180 s wait instead of hanging.
+- **DSH captions survive scrolling, rewinds and code blocks** — highlights keep alignment across reply re-renders and cross-fragment rewinds, the highlight pill glides without text flashing, and words stay readable inside code chips.
+- **Layout clamps** — reading-view scroll, caption corner radius and profile panel resizing stay within bounds.
+
 ## [0.2.15] - 2026-11-03
 
 ### Added
@@ -931,7 +957,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.15...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.16...HEAD
+[0.2.16]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.15...v0.2.16
 [0.2.15]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.14...v0.2.15
 [0.2.14]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.13...v0.2.14
 [0.2.13]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.12...v0.2.13

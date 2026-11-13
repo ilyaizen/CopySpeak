@@ -614,7 +614,7 @@ dependencies = [
 
 [[package]]
 name = "copyspeak"
-version = "0.2.15"
+version = "0.2.16"
 dependencies = [
  "base64 0.22.1",
  "chrono",
