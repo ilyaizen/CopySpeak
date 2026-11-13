@@ -312,7 +312,7 @@
   </p>
 </section>
 <footer
-  class="text-muted-foreground flex flex-nowrap items-center justify-between gap-2 pt-6 pb-6 font-mono text-[11px] tracking-[0.1em] uppercase"
+  class="text-muted-foreground flex flex-nowrap items-center justify-between gap-2 pt-6 pb-6 font-mono text-[11px] tracking-widest uppercase"
   dir="ltr"
 >
   <span class="whitespace-nowrap" aria-label="made with ♥ rust + robots"
@@ -332,7 +332,7 @@
       href="https://x.com/ilyaizen"
       target="_blank"
       rel="noopener noreferrer"
-      class="hover:underline focus-visible:outline focus-visible:outline-2"
+      class="hover:underline focus-visible:outline-2"
       onclick={(event) => openProvider(event, "https://x.com/ilyaizen")}>@ilyaizen</a
     >
     ({new Date().getFullYear()})</span
