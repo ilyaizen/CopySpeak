@@ -40,11 +40,7 @@ if (!scope[marker]) {
     void chrome.runtime.sendMessage({ type: "read-paragraph" }).catch(() => cleanup());
   });
   async function loadSettings() {
-    const settings = await chrome.storage.local.get([
-      "hoverRead",
-      "showPanel",
-      "captionAnimation"
-    ]);
+    const settings = await chrome.storage.local.get(["hoverRead", "showPanel", "captionAnimation"]);
     // Off unless turned on in settings.
     showPanel = settings.showPanel === true;
     if (panel) panel.hidden = !showPanel;
@@ -123,8 +119,7 @@ if (!scope[marker]) {
     }
     CSS.highlights.set("copyspeak-passage", new Highlight(passage));
     style = document.createElement("style");
-    style.textContent =
-      "::highlight(copyspeak-passage){background-color:#8cbcff55}" + GLIDE_STYLE;
+    style.textContent = "::highlight(copyspeak-passage){background-color:#8cbcff55}" + GLIDE_STYLE;
     document.documentElement.append(style);
     glide = new CaptionGlide(document, captionAnimation);
     addEventListener("resize", repositionOnResize);

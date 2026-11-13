@@ -130,7 +130,9 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
       page.evaluate(() => {
         // SAFETY: highlight ranges are Range/StaticRange set members; the cast only widens to Range which has toString.
         // The settled name is absent mid-glide, so the missing entry reads as none.
-        return [...(CSS.highlights.get("copyspeak-word") ?? [])].map((r) => (r as Range).toString());
+        return [...(CSS.highlights.get("copyspeak-word") ?? [])].map((r) =>
+          (r as Range).toString()
+        );
       })
     )
     .toEqual(["😀"]);
@@ -167,7 +169,9 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
       page.evaluate(() => {
         // SAFETY: highlight ranges are Range/StaticRange set members; the cast only widens to Range which has toString.
         // The settled name is absent mid-glide, so the missing entry reads as none.
-        return [...(CSS.highlights.get("copyspeak-word") ?? [])].map((r) => (r as Range).toString());
+        return [...(CSS.highlights.get("copyspeak-word") ?? [])].map((r) =>
+          (r as Range).toString()
+        );
       })
     )
     .toEqual(["שלום"]);

@@ -9,7 +9,10 @@ interface FakeHighlight {
   [Symbol.iterator](): Iterator<Range>;
 }
 
-function fixture(body: string, options: { matchMedia?: (query: string) => { matches: boolean } } = {}) {
+function fixture(
+  body: string,
+  options: { matchMedia?: (query: string) => { matches: boolean } } = {}
+) {
   const dom = new JSDOM(body, { pretendToBeVisual: true });
   const view = dom.window;
   const d = view.document;
@@ -73,7 +76,7 @@ function wordRange(d: Document, selector: string, start: number, end: number): R
 const tick = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /** Manual rAF: the test delivers every rendered frame at a chosen delay. */
-function manualRaf(view: Window) {
+function manualRaf(view: { performance: { now(): number } }) {
   const queue: { id: number; run: () => void }[] = [];
   const cancelled = new Set<number>();
   let nextId = 1;

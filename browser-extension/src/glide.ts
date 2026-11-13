@@ -489,7 +489,10 @@ export class CaptionGlide {
       }
       /* The incoming word darkens only as the pill slides over it. */
       const inBlend = coverage(tween.inRects, pill);
-      tween.scope.style.setProperty("--copyspeak-in-color", blendColor(tween.plain, KNOCKOUT, inBlend));
+      tween.scope.style.setProperty(
+        "--copyspeak-in-color",
+        blendColor(tween.plain, KNOCKOUT, inBlend)
+      );
       if (t < 1) {
         tween.raf = view.requestAnimationFrame(frame);
         return;
