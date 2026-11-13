@@ -154,6 +154,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Resize Windows tray artwork to the system small-icon dimensions with alpha-aware filtering before passing it to Tauri: Windows' native downscale from 512px produces jagged edges.
 - Keep `icons/icon.ico` in the Cargo build script's `rerun-if-changed` inputs: tauri-build's `.rc` references it by path, so without that input a changed asset leaves stale exe resources. Verify the embedded 32px frame against the source after rebuilding; the installed app changes only on the next release install.
 - Strip trailing whitespace when installing a designer-exported SVG verbatim: `git diff --check` fails on QuiverAI/Arrow-exported indentation lines, and whitespace-only stripping is render-safe (verify with a byte-compare of a re-render).
+- Regenerate every icon derivative in the same pass as the base set: `tray/speaking.png`, `tray/paused.png` (`scripts/render-tray-icons.py`), `app-icon-inverted.png`, and `browser-extension/dist/icons/` are separate artifacts and have drifted from `icon.png` more than once (the 1c56bc1 palette refresh missed the tray pair until 2026-11-13).
 
 ## Release
 
@@ -204,3 +205,4 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Shadow a keyed slot cell by registering the same key at a DIFFERENT priority and let the lowest live priority render; a same-key registration at the same priority throws. Keep the host interaction registered for admission and replace only its cell.
 - Capture a selection Range when the action opens: the text-interaction host passes only `readText()`/`dismiss()`, and a click collapses the native selection unless the pill's `pointerdown` calls `preventDefault()`.
 - Clear the native selection when a selection reading starts; the cloned range survives, so the caption highlight still paints the spoken words inside the former selection.
+- Tween the caption recolor inside the pill's coverage windows: compute each word's blend window from the old and new mark rects, and drive the pill transform and both color blends from ONE rAF loop. A whole-glide color fade darkens the incoming word over bare background before the pill arrives (the post-word flash), and a CSS transform transition beside a rAF color tween drifts mid-glide because the curves differ.
