@@ -158,9 +158,10 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Release
 
-- `bun run bump` derives the new version only from `src/lib/version.ts`; verify all six ✅ lines after bumping. It never touches `browser-extension/` — bump the extension's `manifest.json` + `package.json` by hand on its own cadence.
+- `bun run bump` derives the new version only from `src/lib/version.ts`; verify the five ✅ lines and expect the README ⚠️ (no `**Current Version:**` line exists — hand-bump its asset-name version strings). It never touches `browser-extension/` — bump the extension's `manifest.json` + `package.json` by hand on its own cadence.
 - Pass `draft: true` to `softprops/action-gh-release` when attaching extra assets to tauri-action's draft release, or the step publishes the release unreviewed.
 - Keep `src-tauri/Cargo.lock` tracked and update it deliberately: without it CI resolves fresh, and the 2026-10-16 mass-yank of `zip` <9 left every `tauri-plugin-updater` 2.x unresolvable mid-release (Cargo still honours a yanked version a lockfile pins).
+- In a fresh clone or worktree, run `bun run build` once before any `cargo` command in `src-tauri/`; tauri-build fails with `frontendDist "../dist" doesn't exist` until `dist/` exists.
 
 ## i18n
 
