@@ -38,3 +38,6 @@ nul
 .crowdin/
 /.zcode
 /copyspeak-dsh/debug
+
+# Local impeccable design-workflow artifacts (critique snapshots, config)
+.impeccable/
