@@ -223,6 +223,7 @@ impl Default for AppConfig {
                 on_retrigger: RetriggerMode::Queue,
                 volume: 100,
                 streaming_enabled: true,
+                caption_animation: true,
                 duck: DuckConfig::default(),
                 playback_speed: 1.0,
                 pitch: 1.0,

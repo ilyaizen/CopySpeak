@@ -44,6 +44,10 @@ pub struct PlaybackConfig {
     pub volume: u8,
     #[serde(default = "default_streaming_enabled")]
     pub streaming_enabled: bool,
+    /// Glide the caption word highlight on the Play page and HUD; false keeps
+    /// the instant per-word swap. Pure frontend rendering, default on.
+    #[serde(default = "default_caption_animation")]
+    pub caption_animation: bool,
     #[serde(default)]
     pub duck: DuckConfig,
     // Legacy fields — kept for deserialization during v2→v3 migration,
@@ -59,6 +63,10 @@ fn default_volume() -> u8 {
 }
 
 fn default_streaming_enabled() -> bool {
+    true
+}
+
+fn default_caption_animation() -> bool {
     true
 }
 

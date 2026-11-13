@@ -53,6 +53,8 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - DSH caption timings follow provider granularity: ElevenLabs `/status` entries are per character, so group entries under the whitespace-run word they overlap before aligning them to rendered words; treating each entry as a word anchors on a single letter, finds no match, and paints nothing.
 - Never name a DSH plugin variable after a browser global (`CSS`, `Highlight`, `window`): a local `const CSS` stylesheet shadowed the browser `CSS` in the client half, which made `CSS.highlights` undefined and silently skipped every highlight; use `window.CSS.highlights` and `window.Highlight` explicitly.
 - When resolving the spoken reply from a Chat row, skip `[data-text-interaction-source]` bodies inside `[data-variant="think"]`: expanded reasoning shares the row key and would otherwise put reasoning words before reply words in the alignment list.
+- Parse `oklch()` as well as `rgb()` when blending caption colors from theme tokens: Chromium serializes computed oklch tokens space-preserving as `oklch(...)` (probed on WebView2/Edge 157 — the runtime shares Edge's exact version), so an `rgba?()`-only probe regex returns null and every glide silently degrades to the instant swap. Verify serialization claims on the app's own WebView2 version, not on assumed behavior.
+- Treat `activeIndex -1` caption ticks as hold, not clear: the 25 ms clock lands between word timings on every inter-word gap, and tearing the glide state down there makes every following word settle instantly (looked like "parse bug fixed but still no glide"). Hold the last paint plus its knockout color, and clear only on a reading boundary via a reset key (the companion never sees -1 because the native side keeps sending the active word while playing or paused).
 
 ## Engines
 
@@ -102,6 +104,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Run the extension's Playwright specs from the repo root: the specs resolve `browser-extension/dist` against the process CWD, so running them inside `browser-extension/` doubles the path and every fixture asset 404s.
 - Give the content spec's chrome stub every runtime API the bundle touches at load: `hover.ts` reads `chrome.runtime.getURL` at module top, and a stub missing it kills the script before `onMessage.addListener`, which reads as `window.receive is not a function` and fails the whole spec.
 - Anchor a caption tween's clock at its first rendered frame and cap each frame's step (`MARK_FRAME_CAP_MS` in `glide.ts`): state frames run inside busy-page tasks, and a paint-time wall clock snapped the pill across late frames (14 rendered steps on an idle page, 1-2 on a real one).
+- Run the root `bun run check` after browser-extension edits too: the glide commit shipped four unformatted `browser-extension/` files, and the root formatter gate stays red until a `vp fmt` pass on them.
 
 ## History & cache
 

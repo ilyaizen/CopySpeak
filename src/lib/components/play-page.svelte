@@ -18,6 +18,7 @@
   import type { AppConfig } from "#lib/types";
   import { groupHistoryReadings, historyProfile } from "#lib/models/history";
   import { activeCaptionWord, buildCaptions, spokenUntil } from "#lib/models/captions";
+  import { captionGlide } from "#lib/utils/caption-glide";
   import { _ } from "svelte-i18n";
 
   const mockConfig: AppConfig = {
@@ -108,6 +109,7 @@
       on_retrigger: "interrupt",
       volume: 100,
       streaming_enabled: true,
+      caption_animation: true,
       duck: { enabled: true, level_percent: 10 }
     },
     hud: {
@@ -244,6 +246,8 @@
     caption?.active ? activeCaptionWord(captionWords, caption.position_ms) : -1
   );
   let spokenEnd = $derived(spokenUntil(captionWords, caption?.position_ms ?? 0));
+  // The saved glide preference; before the config lands the feature defaults on.
+  let captionAnimated = $derived(config === null || config.playback.caption_animation);
   let readingView = $state<HTMLElement | null>(null);
 
   $effect(() => {
@@ -667,12 +671,19 @@
           role="region"
           aria-label={$_("play.nowReadingAria")}
           dir="auto"
-          class="border-input bg-card dark:bg-input/30 max-h-[60vh] min-h-48 flex-1 overflow-y-auto rounded-md border p-4 text-base leading-relaxed whitespace-pre-wrap shadow-xs"
+          use:captionGlide={{
+            words: captionWords,
+            activeIndex: currentWord,
+            animated: captionAnimated,
+            resetKey: captionText
+          }}
+          class="border-input bg-card dark:bg-input/30 relative isolate max-h-[60vh] min-h-48 flex-1 overflow-y-auto rounded-md border p-4 text-base leading-relaxed whitespace-pre-wrap shadow-xs"
         >
           {#each captionWords as word, i (word.offset)}<span
+              data-word-offset={word.offset}
               data-current={i === currentWord || undefined}
               class={i === currentWord
-                ? "bg-primary text-primary-foreground rounded-xs [box-decoration-break:clone]"
+                ? "caption-word-active"
                 : word.end !== null && word.end <= spokenEnd
                   ? "text-muted-foreground"
                   : ""}>{word.text}</span
@@ -767,3 +778,16 @@
     <RecentHistory compact limit={3} onRestore={restoreReading} />
   {/if}
 </div>
+
+<style>
+  /* The active word keeps only the text color here: the caption glide's pill
+     owns the background (caption-glide.ts), and --caption-word-bg falls back
+     to the theme primary when the pill cannot paint. */
+  .caption-word-active {
+    color: var(--primary-foreground);
+    border-radius: 4px;
+    background: var(--caption-word-bg, var(--primary));
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+</style>

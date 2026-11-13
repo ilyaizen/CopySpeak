@@ -143,6 +143,8 @@
       "duckDescription": "הנמך את השמע של אפליקציות אחרות בזמן ש-CopySpeak מדבר, ואז שחזר אותו. כרגע Windows בלבד.",
       "duckLevel": "עוצמת אפליקציות אחרות בזמן הקראה",
       "duckLevelDescription": "הרמה שאליה יורדות אפליקציות אחרות, באחוזים מהרמה הנוכחית שלהן",
+      "captionAnimation": "הנפשת הדגשת המילה",
+      "captionAnimationDescription": "מחליק את הפס המודגש בין המילים הנקראות בזמן הקריאה. כבוי, ההדגשה קופצת לכל מילה.",
       "playbackSpeed": "מהירות",
       "playbackSpeedDescription": "מהירות ההשמעה (0.5x - 2x)",
       "pitch": "גובה צליל",

@@ -2,8 +2,10 @@
  * Animations Preference Store
  *
  * Gates UI fade animations (route transitions, engines panel swaps) on the
- * saved general.animations_enabled preference. Self-syncs on config-changed,
- * like listening-store.
+ * saved general.animations_enabled preference, and the caption word glide on
+ * playback.caption_animation. Self-syncs on config-changed, like
+ * listening-store. Both app windows (main, HUD) can import it; the module
+ * loads the config itself when Tauri APIs are available.
  */
 
 import { isTauri } from "#lib/services/tauri.js";
@@ -14,10 +16,16 @@ let listenFn: typeof import("@tauri-apps/api/event").listen | null = null;
 
 class AnimationsStore {
   private _enabled = $state(true);
+  private _captionAnimation = $state(true);
   private _reducedMotion = $state(false);
 
   get enabled(): boolean {
     return this._enabled;
+  }
+
+  /** Saved caption-glide preference; reduced motion is applied by the glide itself. */
+  get captionAnimation(): boolean {
+    return this._captionAnimation;
   }
 
   /** The OS or browser asks for less motion; it overrides the saved preference. */
@@ -32,6 +40,7 @@ class AnimationsStore {
 
   syncFromConfig(config: AppConfig): void {
     this._enabled = config.general.animations_enabled;
+    this._captionAnimation = config.playback.caption_animation;
   }
 
   async loadFromBackend(): Promise<void> {

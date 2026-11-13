@@ -87,4 +87,15 @@
       </SettingRow>
     {/if}
   {/if}
+
+  <SettingRow
+    label={$_("settings.playback.captionAnimation")}
+    tooltip={$_("settings.playback.captionAnimationDescription")}
+  >
+    <Switch
+      id="playback-caption-animation"
+      aria-label={$_("settings.playback.captionAnimation")}
+      bind:checked={localConfig.playback.caption_animation}
+    />
+  </SettingRow>
 </div>

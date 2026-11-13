@@ -140,6 +140,8 @@ export type TranslationKeys =
   | "settings.playback.duckDescription"
   | "settings.playback.duckLevel"
   | "settings.playback.duckLevelDescription"
+  | "settings.playback.captionAnimation"
+  | "settings.playback.captionAnimationDescription"
   | "settings.playback.playbackSpeed"
   | "settings.playback.playbackSpeedDescription"
   | "settings.playback.pitch"

@@ -697,6 +697,7 @@ mod tests {
         assert!(playback.duck.enabled);
         assert_eq!(playback.duck.level_percent, 10);
         assert!(playback.streaming_enabled);
+        assert!(playback.caption_animation);
 
         let pe: ProfileEffects = serde_json::from_str(r#"{}"#).unwrap();
         assert!(!pe.enabled);

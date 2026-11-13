@@ -260,6 +260,8 @@ export interface PlaybackConfig {
   on_retrigger: RetriggerMode;
   volume: number;
   streaming_enabled: boolean;
+  /** Glide the caption word highlight on the Play page and HUD; false keeps the instant swap. */
+  caption_animation: boolean;
   duck: DuckConfig;
 }
 

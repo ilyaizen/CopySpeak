@@ -143,6 +143,8 @@
       "duckDescription": "CopySpeak के बोलते समय अन्य ऐप्स का ऑडियो धीमा करें, फिर वापस लाएँ। फ़िलहाल केवल Windows पर।",
       "duckLevel": "बोलते समय अन्य ऐप्स का वॉल्यूम",
       "duckLevelDescription": "अन्य ऐप्स का वॉल्यूम, उनके अपने स्तर के प्रतिशत के रूप में",
+      "captionAnimation": "शब्द हाइलाइट एनिमेट करें",
+      "captionAnimationDescription": "पढ़ाई के दौरान हाइलाइट पिल को बोले गए शब्दों के बीच सरकाता है। बंद होने पर, हाइलाइट हर शब्द पर कूद जाता है।",
       "playbackSpeed": "गति",
       "playbackSpeedDescription": "प्लेबैक गति (0.5x - 2x)",
       "pitch": "पिच",

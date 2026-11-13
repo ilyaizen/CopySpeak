@@ -32,6 +32,7 @@ export function testConfig(): AppConfig {
       on_retrigger: "interrupt",
       volume: 100,
       streaming_enabled: true,
+      caption_animation: true,
       duck: { enabled: true, level_percent: 10 }
     },
     hud: { enabled: false, position: "bottom-right", width: 300, height: 100, opacity: 0.85 },

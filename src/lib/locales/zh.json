@@ -143,6 +143,8 @@
       "duckDescription": "CopySpeak 朗读时降低其他应用的音量，结束后恢复。目前仅支持 Windows。",
       "duckLevel": "朗读时其他应用的音量",
       "duckLevelDescription": "其他应用降至的音量，按其自身音量的百分比计算",
+      "captionAnimation": "动画显示词语高亮",
+      "captionAnimationDescription": "朗读时让高亮块在词语之间平滑滑动。关闭后，高亮直接跳到每个词语。",
       "playbackSpeed": "语速",
       "playbackSpeedDescription": "播放速度（0.5x - 2x）",
       "pitch": "音调",

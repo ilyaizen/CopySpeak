@@ -143,6 +143,8 @@
       "duckDescription": "Lowers other apps' audio while CopySpeak speaks and restores it afterwards; off, other apps keep their own volume. Windows only.",
       "duckLevel": "Other Apps' Volume",
       "duckLevelDescription": "Volume other apps drop to, as a percent of their own level",
+      "captionAnimation": "Animate the Word Highlight",
+      "captionAnimationDescription": "Slides the highlight pill between the spoken words while reading. Off, the highlight jumps to each word.",
       "playbackSpeed": "Speed",
       "playbackSpeedDescription": "Playback speed (0.5x - 2x)",
       "pitch": "Pitch",

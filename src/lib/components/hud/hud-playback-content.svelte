@@ -2,7 +2,9 @@
   import { onMount } from "svelte";
   import Waveform from "../waveform.svelte";
   import Progress from "#lib/components/ui/progress/progress.svelte";
+  import { animationsStore } from "#lib/stores/animations-store.svelte.js";
   import { hudStore } from "#lib/stores/hud-store.svelte.js";
+  import { captionGlide } from "#lib/utils/caption-glide.js";
   import {
     activeCaptionWord,
     buildCaptions,
@@ -40,9 +42,19 @@
   />
   <div class="content-layer">
     {#if spokenText}
-      <p class="caption" dir="auto">
+      <p
+        class="caption"
+        dir="auto"
+        use:captionGlide={{
+          words,
+          activeIndex,
+          animated: animationsStore.captionAnimation,
+          resetKey: spokenText
+        }}
+      >
         {#each phrase as word (word.offset)}
           <span
+            data-word-offset={word.offset}
             class:spoken={word.end !== null && word.end <= spokenEnd}
             class:current={word === words[activeIndex]}>{word.text}</span
           >
@@ -92,6 +104,10 @@
     text-wrap: balance;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
+    /* The caption glide's pill layer hangs inside this stacking context
+       (caption-glide.ts) at z-index -1, above the window glass, behind text. */
+    position: relative;
+    isolation: isolate;
   }
   .caption span {
     border-radius: 2px;
@@ -101,9 +117,11 @@
   .caption .spoken {
     color: var(--muted-foreground);
   }
+  /* The pill owns the active word's background; --caption-word-bg falls back
+     to the theme primary when the pill cannot paint. */
   .caption .current {
+    border-radius: 4px;
     color: var(--primary-foreground);
-    background: var(--primary);
-    box-shadow: 0 0 0 2px var(--primary);
+    background: var(--caption-word-bg, var(--primary));
   }
 </style>
