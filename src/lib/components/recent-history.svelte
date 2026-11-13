@@ -351,7 +351,8 @@
             {#if actionInProgress === reading.id || (isCurrent && playbackStore.isLoadingAudio)}<Spinner
                 aria-hidden="true"
               />
-            {:else if isActive}<StopFilled />{:else if isCurrent}<ReplayFilled />{:else}<PlayFilled />{/if}
+            {:else if isActive}<StopFilled />{:else if isCurrent}<ReplayFilled />{:else}<PlayFilled
+              />{/if}
           </Button>
           <DropdownMenu.Root>
             <DropdownMenu.Trigger
