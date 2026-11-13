@@ -154,7 +154,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Resize Windows tray artwork to the system small-icon dimensions with alpha-aware filtering before passing it to Tauri: Windows' native downscale from 512px produces jagged edges.
 - Keep `icons/icon.ico` in the Cargo build script's `rerun-if-changed` inputs: tauri-build's `.rc` references it by path, so without that input a changed asset leaves stale exe resources. Verify the embedded 32px frame against the source after rebuilding; the installed app changes only on the next release install.
 - Strip trailing whitespace when installing a designer-exported SVG verbatim: `git diff --check` fails on QuiverAI/Arrow-exported indentation lines, and whitespace-only stripping is render-safe (verify with a byte-compare of a re-render).
-- Regenerate every icon derivative in the same pass as the base set: `tray/speaking.png`, `tray/paused.png` (`scripts/render-tray-icons.py`), `app-icon-inverted.png`, and `browser-extension/dist/icons/` are separate artifacts and have drifted from `icon.png` more than once (the 1c56bc1 palette refresh missed the tray pair until 2026-11-13).
+- Regenerate every icon derivative in the same pass as the base set: `tray/speaking.png`, `tray/paused.png` (`scripts/render-tray-icons.py`), `app-icon-inverted.png`, `browser-extension/dist/icons/`, and the SECOND logo copy `static/landing/app-logo.svg` (used by the landing header — it is a separate file and sat on the old palette unnoticed) are separate artifacts and have drifted from `icon.png` more than once.
 
 ## Release
 
