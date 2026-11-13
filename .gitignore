@@ -37,3 +37,4 @@ DO_NOT_TOUCH/
 nul
 .crowdin/
 /.zcode
+/copyspeak-dsh/debug

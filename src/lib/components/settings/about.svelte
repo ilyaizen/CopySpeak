@@ -4,6 +4,7 @@
   import { VERSION } from "#lib/version";
   import { openExternal } from "#lib/utils/external-link";
 
+  const scale = 1.0;
   const providers = [
     {
       name: "OpenAI",
@@ -12,11 +13,35 @@
       w: 80.35,
       h: 17.66
     },
-    { name: "ElevenLabs", url: "https://elevenlabs.io/docs", mark: "elevenlabs", w: 123, h: 16 },
-    { name: "Fish Audio", url: "https://docs.fish.audio/", mark: "fish", w: 128, h: 16 },
-    { name: "Cartesia", url: "https://docs.cartesia.ai/", mark: "cartesia", w: 113, h: 16 },
+    {
+      name: "ElevenLabs",
+      url: "https://elevenlabs.io/docs",
+      mark: "elevenlabs",
+      w: 123,
+      h: 16
+    },
+    {
+      name: "Fish Audio",
+      url: "https://docs.fish.audio/",
+      mark: "fish",
+      w: 128,
+      h: 16
+    },
+    {
+      name: "Cartesia",
+      url: "https://docs.cartesia.ai/",
+      mark: "cartesia",
+      w: 113,
+      h: 16
+    },
     { name: "xAI", url: "https://docs.x.ai/", mark: "xai", w: 42, h: 16 },
-    { name: "Mistral", url: "https://docs.mistral.ai/", mark: "mistral", w: 98, h: 22 },
+    {
+      name: "Mistral",
+      url: "https://docs.mistral.ai/",
+      mark: "mistral",
+      w: 98,
+      h: 22
+    },
     {
       name: "Google Gemini",
       url: "https://ai.google.dev/gemini-api/docs/speech-generation",
@@ -31,7 +56,13 @@
       w: 37.1,
       h: 17.2
     },
-    { name: "Edge-TTS", url: "https://github.com/rany2/edge-tts", mark: "", w: 0, h: 0 }
+    {
+      name: "Edge-TTS",
+      url: "https://github.com/rany2/edge-tts",
+      mark: "",
+      w: 0,
+      h: 0
+    }
   ];
 
   const localProviders = [
@@ -42,7 +73,13 @@
       w: 100.5,
       h: 18
     },
-    { name: "Qwen3-TTS", url: "https://github.com/QwenLM/Qwen3-TTS", mark: "qwen", w: 98.2, h: 16 },
+    {
+      name: "Qwen3-TTS",
+      url: "https://github.com/QwenLM/Qwen3-TTS",
+      mark: "qwen",
+      w: 98.2,
+      h: 16
+    },
     {
       name: "Piper",
       url: "https://github.com/OHF-Voice/piper1-gpl",
@@ -50,7 +87,13 @@
       w: 51.27,
       h: 16
     },
-    { name: "Kokoro", url: "https://github.com/thewh1teagle/kokoro-onnx", mark: "", w: 0, h: 0 },
+    {
+      name: "Kokoro",
+      url: "https://github.com/thewh1teagle/kokoro-onnx",
+      mark: "",
+      w: 0,
+      h: 0
+    },
     {
       name: "Pocket TTS",
       url: "https://github.com/kyutai-labs/pocket-tts",
@@ -192,8 +235,8 @@
           <span
             class="provider-mark"
             aria-hidden="true"
-            style:width="{provider.w * 1.4}px"
-            style:height="{provider.h * 1.4}px"
+            style:width="{provider.w * scale}px"
+            style:height="{provider.h * scale}px"
             style:--mark={`url('/landing/providers/${provider.mark}.svg')`}
           ></span>
         {:else}
@@ -205,7 +248,7 @@
 {/snippet}
 
 <section class="pt-2 pb-6 text-center" aria-labelledby="footer-version">
-  <p id="footer-version" class="text-muted-foreground mb-4 scroll-mt-4 font-mono text-sm">
+  <p id="footer-version" class="text-muted-foreground pb-6 font-mono">
     CopySpeak v{VERSION}
   </p>
   <div class="flex flex-wrap justify-center gap-3">
@@ -241,13 +284,14 @@
     </Button>
   </div>
 </section>
+
 <section class="acknowledgments" aria-labelledby="acknowledgments-title">
-  <h3 id="acknowledgments-title" class="text-muted-foreground text-center text-sm font-medium">
+  <h3 id="acknowledgments-title" class="text-muted-foreground text-center font-mono font-medium">
     {$_("settings.about.acknowledgments")}
   </h3>
   {#each [providers, localProviders] as items, index}
     <div
-      class="marquee font-mono"
+      class="marquee mt-5 font-mono"
       role="group"
       aria-labelledby="acknowledgments-title"
       dir="ltr"
@@ -263,14 +307,12 @@
       </div>
     </div>
   {/each}
-  <p
-    class="text-muted-foreground mt-6 text-center font-mono text-[11px] tracking-[0.1em] uppercase"
-  >
+  <p class="text-muted-foreground mt-6 mb-6 text-center font-mono text-xs uppercase">
     {$_("settings.about.acknowledgmentsTagline")}
   </p>
 </section>
 <footer
-  class="text-muted-foreground flex flex-nowrap items-center justify-between gap-2 px-2 pt-1 pb-6 font-mono text-[11px] tracking-[0.1em] uppercase"
+  class="text-muted-foreground flex flex-nowrap items-center justify-between gap-2 pt-6 pb-6 font-mono text-[11px] tracking-[0.1em] uppercase"
   dir="ltr"
 >
   <span class="whitespace-nowrap" aria-label="made with ♥ rust + robots"
@@ -299,7 +341,7 @@
 
 <style>
   .acknowledgments {
-    padding: 24px 0;
+    padding-top: 16px;
   }
   .marquee {
     width: 100%;
@@ -330,15 +372,15 @@
     display: flex;
     flex: none;
     align-items: center;
-    gap: 32px;
+    gap: 48px;
     margin: 0;
-    padding: 8px 32px 8px 0;
+    padding: 0 48px 0 0;
     list-style: none;
   }
   .provider-list a {
     display: inline-flex;
     align-items: center;
-    min-height: 28px;
+    min-height: 24px;
     color: var(--muted-foreground);
     transition: color 150ms;
   }
@@ -358,9 +400,9 @@
     mask: var(--mark) center / contain no-repeat;
   }
   .provider-text-mark {
-    font-size: 20px;
+    font-size: 16px;
     font-weight: 600;
-    line-height: 20px;
+    line-height: 16px;
   }
   @media (prefers-reduced-motion: reduce) {
     .marquee {

@@ -9,8 +9,8 @@
   import PostProcessSettings from "#lib/components/settings/post-process-settings.svelte";
   import HistorySettings from "#lib/components/settings/history-settings.svelte";
   import ImportExportSettings from "#lib/components/settings/import-export-settings.svelte";
-  import AboutSettings from "#lib/components/settings/about-settings.svelte";
-  import Acknowledgments from "#lib/components/settings/acknowledgments.svelte";
+  import OtherSettings from "#lib/components/settings/other-settings.svelte";
+  import About from "#lib/components/settings/about.svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Switch } from "#lib/components/ui/switch/index.js";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
@@ -399,7 +399,7 @@
           aria-label={$_("settings.tabs.about")}
           class="scroll-mt-4 py-6 first:pt-0"
         >
-          <AboutSettings bind:localConfig showDebugMode={true}>
+          <OtherSettings bind:localConfig showDebugMode={true}>
             <div class="border-border border-t pt-4">
               <h3 class="text-muted-foreground mb-3 text-sm font-medium">
                 {$_("settings.sections.importExport")}
@@ -410,11 +410,11 @@
                 onReset={resetToDefaults}
               />
             </div>
-          </AboutSettings>
+          </OtherSettings>
         </section>
       </main>
     </div>
-    <Acknowledgments />
+    <About />
   {:else}
     <div class="flex min-h-[60vh] items-center justify-center px-6">
       <div class="mx-auto w-full max-w-sm text-center">
