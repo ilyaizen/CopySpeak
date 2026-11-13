@@ -224,8 +224,11 @@ window.__ModuleLoader__.load({
          lockstep with the gliding pill. The custom properties default to the
          settled knockout color, so an unset tween paints the same as the
          settled highlight. */
-      "::highlight(" + HIGHLIGHT_NAME_OUT + "){color:var(--dsh-csva-out-color,var(--dsw-alias-bg-base))}",
-      "::highlight(" + HIGHLIGHT_NAME_IN + "){color:var(--dsh-csva-in-color,var(--dsw-alias-bg-base))}",
+      /* The fallbacks are the plain text color: a custom property is absent
+         only in an unmanaged gap (cancel, re-render), where plain text is
+         safe. The old knockout fallback painted dark-on-dark in that gap. */
+      "::highlight(" + HIGHLIGHT_NAME_OUT + "){color:var(--dsh-csva-out-color,currentColor)}",
+      "::highlight(" + HIGHLIGHT_NAME_IN + "){color:var(--dsh-csva-in-color,currentColor)}",
       /* A code chip paints its own background over the reply, so a spoken word
          inside one takes a highlight that paints the brand pill itself. */
       "::highlight(" +
@@ -1050,6 +1053,11 @@ window.__ModuleLoader__.load({
           const glider = reading.markRects[0] ?? null;
           const fromLeft = glider === null ? NaN : parseFloat(glider.style.left);
           const fromTop = glider === null ? NaN : parseFloat(glider.style.top);
+          /* Read the width before placeMarks overwrites the mark geometry with
+             the NEW word's rects: the tween needs the OLD width as its start. */
+          const fromWidth = glider === null || Number.isNaN(parseFloat(glider.style.width))
+            ? 0
+            : parseFloat(glider.style.width);
           const settlesInstantly =
             !markGlides() || previous === null || reading.markRects.length === 0;
           placeMarks(wordRects(range));
@@ -1062,9 +1070,6 @@ window.__ModuleLoader__.load({
                colors, with each blend windowed to when the pill actually
                covers that word, so no word darkens over bare background
                mid-glide. */
-            const fromWidth = Number.isNaN(parseFloat(glider.style.width))
-              ? 0
-              : parseFloat(glider.style.width);
             startHighlightTween(previous, token, range, {
               left: fromLeft,
               top: fromTop,
@@ -1176,16 +1181,28 @@ window.__ModuleLoader__.load({
       const scope = reading.element;
       const previousRange = previous === null ? null : tokenRange(previous);
       const plain = normalOut ?? normalIn;
-      /* Coverage windows. On one line, the pill's left edge travels
-         |toLeft-fromLeft| while its width is already the new word's, so the
-         old word stays covered until `from.width` of the travel has passed,
-         and the new word stays bare until the pill is within `toWidth` of
-         it. A line change or a zero-length travel has no meaningful
-         coverage, so both words split the glide in half there. */
-      const travel = Math.abs(toLeft - from.left);
-      const sameLine = Math.abs(toTop - from.top) < 2 && travel > 4;
-      const outEnd = sameLine ? from.width / travel : 0.5;
-      const inStart = sameLine ? 1 - toWidth / travel : 0.5;
+      /* Blend each word by how much of it the pill actually covers, measured
+         per frame in the mark layer's own coordinate space. Coverage handles
+         any direction, any width change, and line changes uniformly: a word
+         darkens only in step with the pill arriving over it and recovers as
+         the pill leaves, so no word ever shows the knockout color over bare
+         background. The old closed-form windows assumed forward motion and a
+         fixed pill width, and dimmed words on backward and line-change
+         glides. */
+      const block = markContainingBlock(reading.markHost);
+      const blockRect = block === null ? null : block.getBoundingClientRect();
+      const baseX = blockRect === null ? window.scrollX : -blockRect.left - block.clientLeft;
+      const baseY = blockRect === null ? window.scrollY : -blockRect.top - block.clientTop;
+      const layerRects = function (range) {
+        return wordRects(range).map(function (rect) {
+          return {
+            left: rect.left + baseX,
+            top: rect.top + baseY,
+            width: rect.width,
+            height: rect.height
+          };
+        });
+      };
       const tween = {
         raf: 0,
         start: performance.now(),
@@ -1200,13 +1217,38 @@ window.__ModuleLoader__.load({
         mark: glider,
         dx: from.left - toLeft,
         dy: from.top - toTop,
-        outEnd: Math.min(Math.max(outEnd, 0.05), 1),
-        inStart: Math.min(Math.max(inStart, 0), 0.95)
+        /* The pill keeps the OLD word's width at the start of the glide and
+           eases to the new width on the same clock. Snapping the width first
+           leaves the outgoing word's uncovered tail painted in the knockout
+           color over bare background: the text vanishes for the first frames.
+           One rAF drives position, width, and both blends, so nothing drifts. */
+        w0: from.width,
+        w1: toWidth,
+        outRects: previousRange !== null ? layerRects(previousRange) : null,
+        inRects: layerRects(range)
+      };
+      /* Fraction of the given word rects the pill currently covers. */
+      const coverage = function (rects, pillLeft, pillTop, pillWidth, pillHeight) {
+        if (rects === null) return 0;
+        const pillRight = pillLeft + pillWidth;
+        const pillBottom = pillTop + pillHeight;
+        let covered = 0;
+        let total = 0;
+        rects.forEach(function (rect) {
+          const across = Math.min(pillRight, rect.left + rect.width) -
+            Math.max(pillLeft, rect.left);
+          const down = Math.min(pillBottom, rect.top + rect.height) -
+            Math.max(pillTop, rect.top);
+          total += rect.width * rect.height;
+          if (across > 0 && down > 0) covered += across * down;
+        });
+        return total === 0 ? 0 : Math.min(Math.max(covered / total, 0), 1);
       };
       /* Paint the first frame's state before the first rAF, so the pill and
          the colors never show their settled neighbors for a frame. */
       tween.mark.style.transform =
         "translate(" + tween.dx + "px," + tween.dy + "px)";
+      tween.mark.style.width = tween.w0 + "px";
       if (tween.hadOut) {
         scope.style.setProperty("--dsh-csva-out-color", blendColor(knockout, plain, 0));
       }
@@ -1229,19 +1271,25 @@ window.__ModuleLoader__.load({
         }
         const t = Math.min((performance.now() - tween.start) / tween.duration, 1);
         const p = easeGlide(t);
-        /* One eased progress drives the pill position and both blends, so
-           they cannot drift apart. */
+        /* One eased progress drives the pill position, width, and both
+           blends, so they cannot drift apart. */
+        const pillLeft = toLeft + tween.dx * (1 - p);
+        const pillTop = toTop + tween.dy * (1 - p);
+        const pillWidth = tween.w0 + (tween.w1 - tween.w0) * p;
         tween.mark.style.transform =
           "translate(" + tween.dx * (1 - p) + "px," + tween.dy * (1 - p) + "px)";
+        tween.mark.style.width = pillWidth + "px";
+        const pillHeight = parseFloat(tween.mark.style.height) || 0;
         if (tween.hadOut) {
-          const outBlend = Math.min(Math.max(p / tween.outEnd, 0), 1);
+          /* The outgoing word recovers its plain color as coverage drops. */
+          const outBlend = 1 - coverage(tween.outRects, pillLeft, pillTop, pillWidth, pillHeight);
           tween.scope.style.setProperty(
             "--dsh-csva-out-color",
             blendColor(tween.knockout, tween.plainOut, outBlend)
           );
         }
-        const inSpan = 1 - tween.inStart;
-        const inBlend = Math.min(Math.max((p - tween.inStart) / inSpan, 0), 1);
+        /* The incoming word darkens only as the pill slides over it. */
+        const inBlend = coverage(tween.inRects, pillLeft, pillTop, pillWidth, pillHeight);
         tween.scope.style.setProperty(
           "--dsh-csva-in-color",
           blendColor(tween.plainIn, tween.knockout, inBlend)
