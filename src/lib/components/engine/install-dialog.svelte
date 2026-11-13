@@ -280,9 +280,7 @@
         {/if}
       </span>
       <div class="flex gap-2">
-        <!-- uv is a shared prerequisite: removing it would break every other
-             local engine, so it is install-only. -->
-        {#if isInstalled && engineId !== "uv"}
+        {#if isInstalled}
           <Button
             variant="outline"
             disabled={busy}

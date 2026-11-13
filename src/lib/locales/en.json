@@ -315,7 +315,10 @@
     },
     "appearance": {
       "theme": "Theme",
-      "themeTooltip": "Choose your preferred color theme"
+      "themeTooltip": "Choose your preferred color theme",
+      "animations": "Animations",
+      "animationsTooltip": "Turn interface fade transitions on or off",
+      "animationsReducedTooltip": "Your system reduced motion setting keeps the fade transitions off."
     },
     "hotkey": {
       "enable": "Enable Global Hotkey",
@@ -415,13 +418,7 @@
       "title": "HTTP",
       "description": "Cloud: Send synthesis requests to a custom HTTP endpoint configured per profile."
     },
-    "uv": {
-      "title": "uv",
-      "description": "Prerequisite for every local engine. The installers use uv to fetch and run Python TTS packages."
-    },
     "setup": {
-      "uvMissing": "uv is not installed. Local engines need it to run.",
-      "installUv": "Install uv",
       "install": "Install",
       "installing": "Installing...",
       "tryAgain": "Try Again",
@@ -547,10 +544,6 @@
     }
   },
   "engines": {
-    "title": "Engines",
-    "subtitle": "Set up API keys, install local engines, and test that each engine works. Voice settings live on the Voices page.",
-    "cloud": "Cloud",
-    "local": "Local",
     "docs": "Docs",
     "noCredentialNeeded": "No API key required.",
     "daemonIdleTimeout": "Idle Shutdown",
@@ -732,7 +725,10 @@
     "installingKokoro": "Installing Kokoro… (~335 MB, one time)",
     "installFailed": "Install failed.",
     "installed": "Installed",
-    "complete": "Get Started"
+    "complete": "Get Started",
+    "installingUv": "Installing uv…",
+    "installUv": "Install uv",
+    "uvRequired": "Local engines install through uv, a small command-line installer (~30 MB, one time)."
   },
   "effects": {
     "title": "Audio Effects",

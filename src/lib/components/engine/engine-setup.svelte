@@ -3,17 +3,17 @@
   // Owns test/install state machines and IPC. Ensures credentials are saved
   // before a test, since test_tts_engine_config reads from persisted state.
 
-  import { onMount } from "svelte";
-  import { invoke } from "@tauri-apps/api/core";
   import { toast } from "svelte-sonner";
   import { _ } from "svelte-i18n";
-  import { Button } from "#lib/components/ui/button/index.js";
+  import { invoke } from "@tauri-apps/api/core";
   import EnginePanel from "./engine-panel.svelte";
   import InstallDialog from "./install-dialog.svelte";
+  import MotionWrapper from "#lib/components/layout/motion-wrapper.svelte";
+  import { animationsStore } from "#lib/stores/animations-store.svelte";
   import {
+    ALL_SETUP_ENTRIES,
     CLOUD_ENGINES,
     LOCAL_ENGINES,
-    UV_ENTRY,
     type EngineSetupEntry,
     type TestState
   } from "./engine-meta";
@@ -32,7 +32,7 @@
     envKeySources?: Record<string, string>;
   } = $props();
 
-  const ALL = [...CLOUD_ENGINES, ...LOCAL_ENGINES, UV_ENTRY];
+  const ALL = ALL_SETUP_ENTRIES;
 
   // Default to the active profile's cloud engine when possible, else first cloud.
   const initialId = (() => {
@@ -46,7 +46,6 @@
 
   let testStates = $state<Record<string, TestState>>({});
   let testMessages = $state<Record<string, string>>({});
-  let uvAvailable = $state<boolean | null>(null);
   // Bumped whenever an install/uninstall settles so the panel's runtime
   // status chip (installed / CPU / GPU) re-probes.
   let runtimeProbeKey = $state(0);
@@ -57,15 +56,6 @@
 
   function testState(id: string): TestState {
     return testStates[id] ?? "idle";
-  }
-
-  async function checkUv() {
-    try {
-      const r = await invoke<{ available: boolean }>("check_command_exists", { command: "uv" });
-      uvAvailable = r.available;
-    } catch {
-      uvAvailable = null;
-    }
   }
 
   async function runTest(entry: EngineSetupEntry) {
@@ -125,20 +115,11 @@
     if (!entry.installerId) return;
     installDialogEntry = entry;
   }
-
-  onMount(() => {
-    checkUv();
-  });
 </script>
 
 <div class="flex min-w-0 flex-col items-stretch gap-4 sm:flex-row sm:items-start sm:gap-5">
   <aside class="min-w-0 shrink-0 self-stretch sm:w-36">
     <nav class="grid grid-cols-2 gap-0.5 sm:block sm:space-y-0.5">
-      <p
-        class="text-muted-foreground col-span-2 px-2 pt-1 pb-1 text-[11px] font-semibold tracking-wide uppercase sm:block"
-      >
-        {$_("engines.cloud")}
-      </p>
       {#each CLOUD_ENGINES as entry (entry.id)}
         <button
           class="side-nav-button focus-visible:ring-ring flex w-full items-center justify-between gap-1 rounded-md px-2 py-1.5 text-start text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none {selectedId ===
@@ -148,21 +129,9 @@
           aria-pressed={selectedId === entry.id}
           onclick={() => (selectedId = entry.id)}
         >
-          <span class="side-nav-label">{$_(`engine.${entry.id}.title`)}</span>
-          {#if entry.credentialTarget && envKeySources[entry.credentialTarget]}
-            <span
-              class="rounded bg-emerald-500/10 px-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
-              title={$_("engine.envKeyDialog.title")}
-              aria-label={$_("engine.envKeyDialog.title")}>.env</span
-            >
-          {/if}
+          <span class="side-nav-label">{entry.menuLabel ?? $_(`engine.${entry.id}.title`)}</span>
         </button>
       {/each}
-      <p
-        class="text-muted-foreground col-span-2 px-2 pt-3 pb-1 text-[11px] font-semibold tracking-wide uppercase sm:block"
-      >
-        {$_("engines.local")}
-      </p>
       {#each LOCAL_ENGINES as entry (entry.id)}
         <button
           class="side-nav-button focus-visible:ring-ring block w-full rounded-md px-2 py-1.5 text-start text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none {selectedId ===
@@ -172,44 +141,27 @@
           aria-pressed={selectedId === entry.id}
           onclick={() => (selectedId = entry.id)}
         >
-          <span class="side-nav-label">{$_(`engine.${entry.id}.title`)}</span>
+          <span class="side-nav-label">{entry.menuLabel ?? $_(`engine.${entry.id}.title`)}</span>
         </button>
       {/each}
-      <button
-        class="side-nav-button focus-visible:ring-ring block w-full rounded-md px-2 py-1.5 text-start text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none {selectedId ===
-        UV_ENTRY.id
-          ? 'text-foreground font-medium'
-          : 'text-muted-foreground hover:text-foreground'}"
-        aria-pressed={selectedId === UV_ENTRY.id}
-        onclick={() => (selectedId = UV_ENTRY.id)}
-      >
-        <span class="side-nav-label">{$_("engine.setup.installUv")}</span>
-      </button>
     </nav>
   </aside>
 
   <main class="min-w-0 flex-1 space-y-6 pb-20">
-    {#if uvAvailable === false && selected.id !== "uv"}
-      <div
-        class="flex items-center justify-between gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 p-3"
-      >
-        <p class="text-sm text-amber-700 dark:text-amber-400">{$_("engine.setup.uvMissing")}</p>
-        <Button variant="outline" size="sm" onclick={() => (selectedId = UV_ENTRY.id)}>
-          {$_("engine.setup.installUv")}
-        </Button>
-      </div>
-    {/if}
-
-    <EnginePanel
-      bind:localConfig
-      entry={selected}
-      testState={testState(selected.id)}
-      testMessage={testMessages[selected.id] ?? ""}
-      onTest={() => runTest(selected)}
-      onInstall={() => runInstall(selected)}
-      {runtimeProbeKey}
-      {envKeySources}
-    />
+    {#key selectedId}
+      <MotionWrapper disableMotion={!animationsStore.effective}>
+        <EnginePanel
+          bind:localConfig
+          entry={selected}
+          testState={testState(selected.id)}
+          testMessage={testMessages[selected.id] ?? ""}
+          onTest={() => runTest(selected)}
+          onInstall={() => runInstall(selected)}
+          {runtimeProbeKey}
+          {envKeySources}
+        />
+      </MotionWrapper>
+    {/key}
   </main>
 
   {#if installDialogEntry}
@@ -217,9 +169,8 @@
       entry={installDialogEntry}
       onclose={() => (installDialogEntry = null)}
       onchange={() => {
-        // A uv install/uninstall flips the prerequisite banner; a stale test
-        // verdict from before the change would be misleading.
-        void checkUv();
+        // A settled install flips the runtime chip and stale test verdicts
+        // would be misleading after the change.
         testStates = {};
         runtimeProbeKey += 1;
       }}

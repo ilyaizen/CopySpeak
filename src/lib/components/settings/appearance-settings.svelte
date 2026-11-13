@@ -1,8 +1,10 @@
 <script lang="ts">
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
   import { Select } from "#lib/components/ui/select/index.js";
+  import { Switch } from "#lib/components/ui/switch/index.js";
   import { _ } from "svelte-i18n";
   import { getSupportedLocales } from "#lib/i18n/utils";
+  import { animationsStore } from "#lib/stores/animations-store.svelte";
   import type { AppConfig, GeneralConfig } from "#lib/types";
 
   let {
@@ -35,6 +37,8 @@
     // SAFETY: the select enumerates the empty system value and supported locale codes.
     localConfig.general.locale = (e.target as HTMLSelectElement).value as GeneralConfig["locale"];
   }
+
+  const reducedMotion = $derived(animationsStore.reducedMotion);
 </script>
 
 <div class="space-y-4">
@@ -61,6 +65,23 @@
       value={localConfig.general.appearance}
       onchange={handleThemeChange}
       class="w-32"
+    />
+  </SettingRow>
+
+  <SettingRow
+    label={$_("settings.appearance.animations")}
+    tooltip={reducedMotion
+      ? $_("settings.appearance.animationsReducedTooltip")
+      : $_("settings.appearance.animationsTooltip")}
+  >
+    <Switch
+      id="animations"
+      aria-label={$_("settings.appearance.animations")}
+      disabled={reducedMotion}
+      checked={localConfig.general.animations_enabled && !reducedMotion}
+      onchange={(v) => {
+        localConfig.general.animations_enabled = v;
+      }}
     />
   </SettingRow>
 </div>

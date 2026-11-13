@@ -315,7 +315,10 @@
     },
     "appearance": {
       "theme": "主题",
-      "themeTooltip": "选择你喜欢的配色主题"
+      "themeTooltip": "选择你喜欢的配色主题",
+      "animations": "动画",
+      "animationsTooltip": "开启或关闭界面淡入过渡效果",
+      "animationsReducedTooltip": "系统的减弱动态效果设置会保持淡入过渡关闭。"
     },
     "hotkey": {
       "enable": "启用全局快捷键",
@@ -411,13 +414,7 @@
       "title": "HTTP",
       "description": "云端：将合成请求发送到按配置文件设置的自定义 HTTP 端点。"
     },
-    "uv": {
-      "title": "uv",
-      "description": "所有本地引擎的前提条件。安装程序使用 uv 获取并运行 Python TTS 包。"
-    },
     "setup": {
-      "uvMissing": "未安装 uv。本地引擎需要它才能运行。",
-      "installUv": "安装 uv",
       "install": "安装",
       "installing": "正在安装...",
       "tryAgain": "重试",
@@ -543,10 +540,6 @@
     }
   },
   "engines": {
-    "title": "引擎",
-    "subtitle": "设置 API 密钥、安装本地引擎，并测试每个引擎是否正常工作。语音设置位于“语音”页面。",
-    "cloud": "云端",
-    "local": "本地",
     "docs": "文档",
     "noCredentialNeeded": "无需 API 密钥。",
     "daemonIdleTimeout": "空闲关闭",
@@ -728,7 +721,10 @@
     "installingKokoro": "正在安装 Kokoro…（约 335 MB，仅需一次）",
     "installFailed": "安装失败。",
     "installed": "已安装",
-    "complete": "开始使用"
+    "complete": "开始使用",
+    "installingUv": "正在安装 uv…",
+    "installUv": "安装 uv",
+    "uvRequired": "本地引擎通过 uv 安装：一个小型命令行安装器（约 30 MB，仅需一次）。"
   },
   "effects": {
     "title": "音频效果",

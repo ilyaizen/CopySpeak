@@ -315,7 +315,10 @@
     },
     "appearance": {
       "theme": "ערכת נושא",
-      "themeTooltip": "בחר את ערכת הצבעים המועדפת עליך"
+      "themeTooltip": "בחר את ערכת הצבעים המועדפת עליך",
+      "animations": "אנימציות",
+      "animationsTooltip": "מפעיל או מכבה את מעברי ההנפשה בממשק",
+      "animationsReducedTooltip": "הגדרת התנועה המופחתת במערכת משאירה את המעברים כבויים."
     },
     "hotkey": {
       "enable": "הפעל מקש קיצור גלובלי",
@@ -415,13 +418,7 @@
       "title": "HTTP",
       "description": "ענן: שליחת בקשות סינתזה לנקודת קצה HTTP מותאמת אישית, שמוגדרת לכל פרופיל."
     },
-    "uv": {
-      "title": "uv",
-      "description": "תנאי מוקדם לכל מנוע מקומי. המתקינים משתמשים ב-uv כדי להוריד ולהריץ חבילות Python של TTS."
-    },
     "setup": {
-      "uvMissing": "uv אינו מותקן. מנועים מקומיים זקוקים לו כדי לפעול.",
-      "installUv": "התקן uv",
       "install": "התקן",
       "installing": "מתקין...",
       "tryAgain": "נסה שוב",
@@ -547,10 +544,6 @@
     }
   },
   "engines": {
-    "title": "מנועים",
-    "subtitle": "הגדר מפתחות API, התקן מנועים מקומיים, ובדוק שכל מנוע פועל. הגדרות הקול נמצאות בעמוד הקולות.",
-    "cloud": "ענן",
-    "local": "מקומי",
     "docs": "תיעוד",
     "noCredentialNeeded": "לא נדרש מפתח API.",
     "daemonIdleTimeout": "כיבוי במצב סרק",
@@ -732,7 +725,10 @@
     "installingKokoro": "מתקין את Kokoro… (כ-335 MB, פעם אחת)",
     "installFailed": "ההתקנה נכשלה.",
     "installed": "הותקן",
-    "complete": "התחל"
+    "complete": "התחל",
+    "installingUv": "מתקין את uv…",
+    "installUv": "התקנת uv",
+    "uvRequired": "מנועים מקומיים מותקנים דרך uv, מתקין שורת פקודה קטן (~30 MB, פעם אחת)."
   },
   "effects": {
     "title": "אפקטים קוליים",

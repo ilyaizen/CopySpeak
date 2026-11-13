@@ -16,6 +16,7 @@
     AlertCircle
   } from "@lucide/svelte";
   import { Button } from "#lib/components/ui/button/index.js";
+  import InfoTooltip from "#lib/components/ui/info-tooltip.svelte";
   import { Input } from "#lib/components/ui/input/index.js";
   import { Label } from "#lib/components/ui/label/index.js";
   import { openExternal } from "#lib/utils/external-link";
@@ -61,7 +62,7 @@
   // Only local engines with an installer have a runtime status to show.
   $effect(() => {
     void runtimeProbeKey;
-    if (entry.kind !== "local" || !entry.installerId || entry.id === "uv") {
+    if (entry.kind !== "local" || !entry.installerId) {
       runtimeStatus = null;
       return;
     }
@@ -112,10 +113,17 @@
 </script>
 
 <section>
-  <header class="border-border flex items-start justify-between gap-3 border-b pb-4">
-    <div class="min-w-0">
+  <header class="border-border flex items-center justify-between gap-3 border-b pb-4">
+    <div class="flex min-w-0 items-center gap-1.5">
       <h2 class="text-lg font-semibold">{$_(`engine.${entry.id}.title`)}</h2>
-      <p class="text-muted-foreground mt-1 text-sm">{$_(`engine.${entry.id}.description`)}</p>
+      <InfoTooltip text={$_(`engine.${entry.id}.description`)} />
+      {#if envVarName}
+        <span
+          class="rounded bg-emerald-500/10 px-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
+          title={$_("engine.envKeyDialog.title")}
+          aria-label={$_("engine.envKeyDialog.title")}>.env</span
+        >
+      {/if}
     </div>
     <button
       onclick={openDocs}
@@ -126,7 +134,7 @@
     </button>
   </header>
 
-  {#if entry.kind === "local" && entry.installerId && entry.id !== "uv" && runtimeStatus}
+  {#if entry.kind === "local" && entry.installerId && runtimeStatus}
     <div class="mt-3 flex items-center gap-2">
       {#if runtimeStatus.installed}
         <span
@@ -228,33 +236,29 @@
       </div>
     {/if}
 
-    {#if entry.kind === "cloud" || (entry.kind === "local" && entry.id !== "uv")}
-      <div class="border-border flex flex-wrap items-center gap-3 border-t pt-3">
-        <Button size="sm" disabled={testState === "testing"} onclick={() => onTest?.()}>
-          {#if testState === "testing"}
-            <Loader2 size={14} class="me-2 animate-spin" />
-            {$_("engine.testing")}
-          {:else if entry.kind === "local"}
-            {$_("engine.localEngine.testEngine")}
-          {:else}
-            {$_("engine.apiSetup.testButton")}
-          {/if}
-        </Button>
-
-        {#if testState === "success"}
-          <span
-            class="inline-flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400"
-          >
-            <CheckCircle2 size={14} />
-            {$_("engine.apiSetup.testPassed")}
-          </span>
-        {:else if testState === "fail"}
-          <span class="text-destructive inline-flex items-center gap-1 text-sm">
-            <XCircle size={14} />
-            {testMessage || $_("engine.apiSetup.testFailed")}
-          </span>
+    <div class="border-border flex flex-wrap items-center gap-3 border-t pt-3">
+      <Button size="sm" disabled={testState === "testing"} onclick={() => onTest?.()}>
+        {#if testState === "testing"}
+          <Loader2 size={14} class="me-2 animate-spin" />
+          {$_("engine.testing")}
+        {:else if entry.kind === "local"}
+          {$_("engine.localEngine.testEngine")}
+        {:else}
+          {$_("engine.apiSetup.testButton")}
         {/if}
-      </div>
-    {/if}
+      </Button>
+
+      {#if testState === "success"}
+        <span class="inline-flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400">
+          <CheckCircle2 size={14} />
+          {$_("engine.apiSetup.testPassed")}
+        </span>
+      {:else if testState === "fail"}
+        <span class="text-destructive inline-flex items-center gap-1 text-sm">
+          <XCircle size={14} />
+          {testMessage || $_("engine.apiSetup.testFailed")}
+        </span>
+      {/if}
+    </div>
   </div>
 </section>

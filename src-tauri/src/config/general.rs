@@ -43,6 +43,9 @@ pub struct GeneralConfig {
     pub close_behavior: CloseBehavior,
     #[serde(default)]
     pub appearance: AppearanceMode,
+    /// UI fade animations (route transitions, engines panel swaps).
+    #[serde(default = "default_animations_enabled")]
+    pub animations_enabled: bool,
     #[serde(default = "default_update_checks_enabled")]
     pub update_checks_enabled: bool,
     #[serde(default)]
@@ -64,6 +67,10 @@ fn default_effects_enabled() -> bool {
     // The master effects gate starts off: enabling Experimental reveals the
     // switch OFF, and effects only run after it is turned on explicitly.
     false
+}
+
+fn default_animations_enabled() -> bool {
+    true
 }
 
 fn default_update_checks_enabled() -> bool {

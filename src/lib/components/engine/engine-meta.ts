@@ -24,13 +24,19 @@ export type TestState = "idle" | "testing" | "success" | "fail";
  * How the install dialog presents voices for an installable engine:
  * - `per-voice`: each voice is a separate model download (piper)
  * - `shared`: one selected model download covers every listed voice (kitten, kokoro)
- * - `none`: nothing to pick — a binary install only (uv, pocket)
+ * - `none`: nothing to pick — a binary install only (pocket)
  */
 export type VoiceMode = "per-voice" | "shared" | "none";
 
 export interface EngineSetupEntry {
   /** Unique id; also the i18n key suffix under `engine.<id>.title/description`. */
   id: string;
+  /**
+   * Short sidebar label, kept shorter than the panel title so the menu scans
+   * fast ("Microsoft", not "Microsoft Foundry"). Brand names stay untranslated
+   * (see onboarding/engine-choices.ts); falls back to `engine.<id>.title`.
+   */
+  menuLabel?: string;
   kind: "cloud" | "local";
   /** Passed to `install_engine`. Omitted for pure API-key engines. */
   installerId?: string;
@@ -49,6 +55,7 @@ export interface EngineSetupEntry {
 export const CLOUD_ENGINES: EngineSetupEntry[] = [
   {
     id: "edge",
+    menuLabel: "Edge",
     kind: "cloud",
     // Cloud endpoint, reached through the local pinned `edge-tts` client
     // (uv resolves `edge-tts==7.3.1` on demand — no app installer; a missing
@@ -114,6 +121,7 @@ export const CLOUD_ENGINES: EngineSetupEntry[] = [
   },
   {
     id: "microsoft",
+    menuLabel: "Microsoft",
     kind: "cloud",
     credential: "api_key_endpoint",
     credentialTarget: "microsoft",
@@ -127,6 +135,7 @@ export const CLOUD_ENGINES: EngineSetupEntry[] = [
 export const LOCAL_ENGINES: EngineSetupEntry[] = [
   {
     id: "kitten",
+    menuLabel: "Kitten",
     kind: "local",
     installerId: "kitten",
     voiceMode: "shared",
@@ -136,6 +145,7 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
   },
   {
     id: "qwen",
+    menuLabel: "Qwen3",
     kind: "local",
     installerId: "qwen",
     voiceMode: "shared",
@@ -145,6 +155,7 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
   },
   {
     id: "piper",
+    menuLabel: "Piper",
     kind: "local",
     installerId: "piper",
     voiceMode: "per-voice",
@@ -154,6 +165,7 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
   },
   {
     id: "kokoro",
+    menuLabel: "Kokoro",
     kind: "local",
     installerId: "kokoro",
     voiceMode: "shared",
@@ -163,6 +175,7 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
   },
   {
     id: "pocket",
+    menuLabel: "Pocket",
     kind: "local",
     installerId: "pocket",
     // 14 built-in voices, all served by the one 100M-parameter model.
@@ -173,19 +186,11 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
   }
 ];
 
-// uv is the prerequisite for every local preset. Treated as a setup entry so it
-// gets the same panel UI. `installerId: "uv"` is handled by install_engine.
-export const UV_ENTRY: EngineSetupEntry = {
-  id: "uv",
-  kind: "local",
-  installerId: "uv",
-  voiceMode: "none",
-  downloadSize: "~30 MB",
-  credential: "none",
-  docsUrl: "https://docs.astral.sh/uv/"
-};
+// uv is NOT a setup entry: it is a prerequisite for every local installer and
+// is installed from the onboarding page (`install_engine` handles id "uv" via
+// install-uv.ps1; uninstall_engine refuses it as a shared prerequisite).
 
-export const ALL_SETUP_ENTRIES: EngineSetupEntry[] = [...CLOUD_ENGINES, ...LOCAL_ENGINES, UV_ENTRY];
+export const ALL_SETUP_ENTRIES: EngineSetupEntry[] = [...CLOUD_ENGINES, ...LOCAL_ENGINES];
 
 export function findSetupEntry(id: string): EngineSetupEntry | undefined {
   return ALL_SETUP_ENTRIES.find((e) => e.id === id);

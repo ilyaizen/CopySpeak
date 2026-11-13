@@ -131,6 +131,7 @@
       debug_mode: false,
       close_behavior: "minimize-to-tray",
       appearance: "system",
+      animations_enabled: true,
       locale: "",
       experimental_enabled: false,
       effects_enabled: false

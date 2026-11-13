@@ -206,6 +206,7 @@ impl Default for AppConfig {
                 debug_mode: false,
                 close_behavior: CloseBehavior::default(),
                 appearance: AppearanceMode::default(),
+                animations_enabled: true,
                 update_checks_enabled: true,
                 auto_save_profiles: false,
                 locale: String::new(),

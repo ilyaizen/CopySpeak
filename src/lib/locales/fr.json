@@ -315,7 +315,10 @@
     },
     "appearance": {
       "theme": "Thème",
-      "themeTooltip": "Choisissez votre thème de couleurs préféré"
+      "themeTooltip": "Choisissez votre thème de couleurs préféré",
+      "animations": "Animations",
+      "animationsTooltip": "Active ou désactive les transitions de fondu de l'interface",
+      "animationsReducedTooltip": "Le réglage système de réduction des animations maintient les transitions désactivées."
     },
     "hotkey": {
       "enable": "Activer le raccourci global",
@@ -411,13 +414,7 @@
       "title": "HTTP",
       "description": "Cloud : envoie les requêtes de synthèse à un point de terminaison HTTP personnalisé configuré par profil."
     },
-    "uv": {
-      "title": "uv",
-      "description": "Prérequis pour tous les moteurs locaux. Les installateurs utilisent uv pour récupérer et exécuter les paquets TTS Python."
-    },
     "setup": {
-      "uvMissing": "uv n'est pas installé. Les moteurs locaux en ont besoin pour fonctionner.",
-      "installUv": "Installer uv",
       "install": "Installer",
       "installing": "Installation...",
       "tryAgain": "Réessayer",
@@ -543,10 +540,6 @@
     }
   },
   "engines": {
-    "title": "Moteurs",
-    "subtitle": "Configurez les clés API, installez les moteurs locaux et vérifiez que chaque moteur fonctionne. Les réglages de voix se trouvent sur la page Voix.",
-    "cloud": "Cloud",
-    "local": "Local",
     "docs": "Docs",
     "noCredentialNeeded": "Aucune clé API requise.",
     "daemonIdleTimeout": "Arrêt après inactivité",
@@ -728,7 +721,10 @@
     "installingKokoro": "Installation de Kokoro… (~335 Mo, une seule fois)",
     "installFailed": "Échec de l'installation.",
     "installed": "Installé",
-    "complete": "Commencer"
+    "complete": "Commencer",
+    "installingUv": "Installation d’uv…",
+    "installUv": "Installer uv",
+    "uvRequired": "Les moteurs locaux s’installent via uv, un petit installateur en ligne de commande (~30 Mo, une seule fois)."
   },
   "effects": {
     "title": "Effets audio",

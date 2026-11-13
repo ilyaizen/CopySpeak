@@ -42,6 +42,7 @@ export function testConfig(): AppConfig {
       debug_mode: false,
       close_behavior: "minimize-to-tray",
       appearance: "system",
+      animations_enabled: true,
       locale: "en",
       experimental_enabled: false,
       effects_enabled: false,

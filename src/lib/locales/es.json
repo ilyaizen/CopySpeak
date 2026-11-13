@@ -315,7 +315,10 @@
     },
     "appearance": {
       "theme": "Tema",
-      "themeTooltip": "Elige tu esquema de colores preferido"
+      "themeTooltip": "Elige tu esquema de colores preferido",
+      "animations": "Animaciones",
+      "animationsTooltip": "Activa o desactiva las transiciones de fundido de la interfaz",
+      "animationsReducedTooltip": "La preferencia de movimiento reducido del sistema mantiene las transiciones desactivadas."
     },
     "hotkey": {
       "enable": "Activar atajo global",
@@ -415,13 +418,7 @@
       "title": "HTTP",
       "description": "Nube: envía las peticiones de síntesis a un endpoint HTTP personalizado configurado por perfil."
     },
-    "uv": {
-      "title": "uv",
-      "description": "Requisito para todos los motores locales. Los instaladores usan uv para descargar y ejecutar los paquetes de TTS de Python."
-    },
     "setup": {
-      "uvMissing": "uv no está instalado. Los motores locales lo necesitan para funcionar.",
-      "installUv": "Instalar uv",
       "install": "Instalar",
       "installing": "Instalando...",
       "tryAgain": "Reintentar",
@@ -547,10 +544,6 @@
     }
   },
   "engines": {
-    "title": "Motores",
-    "subtitle": "Configura las claves de API, instala los motores locales y comprueba que cada uno funciona. Los ajustes de voz están en la página de Voces.",
-    "cloud": "Nube",
-    "local": "Local",
     "docs": "Documentación",
     "noCredentialNeeded": "No requiere clave de API.",
     "daemonIdleTimeout": "Apagado por inactividad",
@@ -732,7 +725,10 @@
     "installingKokoro": "Instalando Kokoro… (~335 MB, una sola vez)",
     "installFailed": "La instalación falló.",
     "installed": "Instalado",
-    "complete": "Empezar"
+    "complete": "Empezar",
+    "installingUv": "Instalando uv…",
+    "installUv": "Instalar uv",
+    "uvRequired": "Los motores locales se instalan mediante uv, un pequeño instalador de línea de comandos (~30 MB, una sola vez)."
   },
   "effects": {
     "title": "Efectos de audio",

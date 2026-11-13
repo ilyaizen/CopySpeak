@@ -11,6 +11,7 @@
   import AppHeader from "#lib/components/layout/app-header.svelte";
   import AppFooter from "#lib/components/layout/app-footer.svelte";
   import MotionWrapper from "#lib/components/layout/motion-wrapper.svelte";
+  import { animationsStore } from "#lib/stores/animations-store.svelte";
   import { startHistoryEventListeners, stopHistoryEventListeners } from "#lib/utils/history-events";
   import type { AppConfig } from "#lib/types";
   import "./+layout.css";
@@ -76,17 +77,14 @@
     if (!appMain || !appScrollContent) return;
     const wrapper = appMain;
     const content = appScrollContent;
-    const motion = matchMedia("(prefers-reduced-motion: reduce)");
-    const syncMotion = () => {
-      lenis?.destroy();
-      lenis = motion.matches
-        ? undefined
-        : new Lenis({ wrapper, content, autoRaf: true, allowNestedScroll: true });
-    };
-    syncMotion();
-    motion.addEventListener("change", syncMotion);
+    // One source of truth: the store folds the saved preference and the
+    // OS/browser reduced-motion request into `effective`. A change either way
+    // destroys Lenis and hands scrolling back to the browser, or recreates it.
+    lenis?.destroy();
+    lenis = animationsStore.effective
+      ? new Lenis({ wrapper, content, autoRaf: true, allowNestedScroll: true })
+      : undefined;
     return () => {
-      motion.removeEventListener("change", syncMotion);
       lenis?.destroy();
       lenis = undefined;
     };
@@ -154,6 +152,9 @@
       } else if (appearance === "dark") {
         setMode("dark");
       }
+
+      // Gate route fades on the saved preference before the first paint.
+      animationsStore.syncFromConfig(config);
 
       const { volume } = config.playback;
       const activeProfile = config.tts.profiles.find((p) => p.id === config.tts.active_profile_id);
@@ -306,6 +307,7 @@
               class={isOnboarding
                 ? "flex min-h-full min-w-0 flex-col"
                 : "mx-auto flex h-full w-full max-w-6xl min-w-0 flex-col"}
+              disableMotion={!animationsStore.effective}
             >
               {@render children()}
             </MotionWrapper>

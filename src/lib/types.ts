@@ -294,6 +294,8 @@ export interface GeneralConfig {
   debug_mode: boolean;
   close_behavior: CloseBehavior;
   appearance: AppearanceMode;
+  /** Gates UI fade animations (route transitions, engines panel swaps). */
+  animations_enabled: boolean;
   update_checks_enabled?: boolean;
   auto_save_profiles?: boolean;
   locale: SupportedLocale | "";

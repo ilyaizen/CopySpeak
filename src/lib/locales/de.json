@@ -315,7 +315,10 @@
     },
     "appearance": {
       "theme": "Design",
-      "themeTooltip": "Wählen Sie Ihr bevorzugtes Farbschema"
+      "themeTooltip": "Wählen Sie Ihr bevorzugtes Farbschema",
+      "animations": "Animationen",
+      "animationsTooltip": "Blendet Oberflächenanimationen ein oder aus",
+      "animationsReducedTooltip": "Die Systemeinstellung für reduzierte Bewegung deaktiviert die Übergänge."
     },
     "hotkey": {
       "enable": "Globales Tastenkürzel aktivieren",
@@ -411,13 +414,7 @@
       "title": "HTTP",
       "description": "Cloud: Syntheseanfragen an einen pro Profil konfigurierten HTTP-Endpunkt senden."
     },
-    "uv": {
-      "title": "uv",
-      "description": "Voraussetzung für jede lokale Engine. Die Installer nutzen uv, um Python-TTS-Pakete zu laden und auszuführen."
-    },
     "setup": {
-      "uvMissing": "uv ist nicht installiert. Lokale Engines benötigen es.",
-      "installUv": "uv installieren",
       "install": "Installieren",
       "installing": "Wird installiert...",
       "tryAgain": "Erneut versuchen",
@@ -543,10 +540,6 @@
     }
   },
   "engines": {
-    "title": "Engines",
-    "subtitle": "API-Schlüssel einrichten, lokale Engines installieren und prüfen, ob jede Engine funktioniert. Stimmeinstellungen finden Sie auf der Seite Stimmen.",
-    "cloud": "Cloud",
-    "local": "Lokal",
     "docs": "Doku",
     "noCredentialNeeded": "Kein API-Schlüssel erforderlich.",
     "daemonIdleTimeout": "Leerlauf-Abschaltung",
@@ -728,7 +721,10 @@
     "installingKokoro": "Kokoro wird installiert… (~335 MB, einmalig)",
     "installFailed": "Installation fehlgeschlagen.",
     "installed": "Installiert",
-    "complete": "Loslegen"
+    "complete": "Loslegen",
+    "installingUv": "uv wird installiert…",
+    "installUv": "uv installieren",
+    "uvRequired": "Lokale Engines werden über uv installiert, einem kleinen Befehlszeilen-Tool (~30 MB, einmalig)."
   },
   "effects": {
     "title": "Audioeffekte",

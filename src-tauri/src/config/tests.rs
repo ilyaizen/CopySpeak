@@ -635,6 +635,10 @@ mod tests {
             !legacy.effects_enabled,
             "effects_enabled must default to disabled in partial configs"
         );
+        assert!(
+            legacy.animations_enabled,
+            "animations must default to enabled in partial configs"
+        );
     }
 
     #[test]
