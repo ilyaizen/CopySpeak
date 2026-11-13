@@ -230,9 +230,13 @@ window.__ModuleLoader__.load({
       /* Code chips go transparent inside the reply: their own background
          paints over the z-index:-1 mark layer, so a spoken code word could
          never wear the rounded pill. With the chip see-through, code words
-         run the same mark path as plain words. */
+         run the same mark path as plain words. The declaration is marked
+         !important because the host re-asserts an opaque background on
+         shiki-highlighted code blocks (pre._shiki) with !important of its
+         own; a plain declaration loses to it and the block would hide the
+         pill under its background (dark-on-dark knockout text). */
       "[data-text-interaction-source] code, [data-text-interaction-source] pre" +
-        "{background-color:transparent}",
+        "{background-color:transparent!important}",
       /* The rounded mark: a positioned layer inside the reply's own stacking
          context. Negative z-index keeps it behind the text, so the word wears
          the highlight's recolored text over a rounded brand pill. */
