@@ -150,6 +150,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Icons
 
+- Do not fill Lucide icons with `fill="currentColor"`: their stroke-path geometry smears when filled (`rotate-ccw` is an open arc). Use the vendored Material filled glyphs in `src/lib/components/icons/*-filled.svelte` (copied from google/material-design-icons); add new filled glyphs there in the same pattern.
 - Drive tray playback status from the webview store, never `AudioPlayer`: Rodio is only a safety net, and refreshing the tray from its callbacks must not re-lock the player. Preserve the branded icon’s color and artwork; macOS template mode strips color.
 - Resize Windows tray artwork to the system small-icon dimensions with alpha-aware filtering before passing it to Tauri: Windows' native downscale from 512px produces jagged edges.
 - Keep `icons/icon.ico` in the Cargo build script's `rerun-if-changed` inputs: tauri-build's `.rc` references it by path, so without that input a changed asset leaves stale exe resources. Verify the embedded 32px frame against the source after rebuilding; the installed app changes only on the next release install.

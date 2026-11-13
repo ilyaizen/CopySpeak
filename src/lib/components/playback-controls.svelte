@@ -1,7 +1,12 @@
 <script lang="ts">
   import { Button } from "#lib/components/ui/button/index.js";
+  import SkipBackFilled from "#lib/components/icons/skip-back-filled.svelte";
+  import SkipForwardFilled from "#lib/components/icons/skip-forward-filled.svelte";
+  import PlayFilled from "#lib/components/icons/play-filled.svelte";
+  import PauseFilled from "#lib/components/icons/pause-filled.svelte";
+  import ReplayFilled from "#lib/components/icons/replay-filled.svelte";
+  import StopFilled from "#lib/components/icons/stop-filled.svelte";
   import { Spinner } from "#lib/components/ui/spinner/index.js";
-  import { FastForward, Pause, Play, RotateCcw, Rewind, Square } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
 
   type PlayMode = "play" | "replay" | "history" | "disabled";
@@ -49,7 +54,7 @@
     title={$_("play.skipBackTooltip")}
     aria-label={$_("play.skipBackTooltip")}
   >
-    <Rewind />
+    <SkipBackFilled />
   </Button>
   <Button
     variant="default"
@@ -73,10 +78,10 @@
         : $_("play.playTooltip")}
   >
     {#if canPause}
-      {#if isPaused}<Play />{:else}<Pause />{/if}
+      {#if isPaused}<PlayFilled />{:else}<PauseFilled />{/if}
     {:else if isSynthesizing}<Spinner
         aria-hidden="true"
-      />{:else if playMode === "replay"}<RotateCcw />{:else}<Play />{/if}
+      />{:else if playMode === "replay"}<ReplayFilled />{:else}<PlayFilled />{/if}
   </Button>
   <Button
     variant="ghost"
@@ -87,7 +92,7 @@
     title={$_("play.skipFwdTooltip")}
     aria-label={$_("play.skipFwdTooltip")}
   >
-    <FastForward />
+    <SkipForwardFilled />
   </Button>
   <Button
     variant="ghost"
@@ -98,6 +103,6 @@
     title={$_("play.stopTooltip")}
     aria-label={$_("play.stopTooltip")}
   >
-    <Square />
+    <StopFilled />
   </Button>
 </div>

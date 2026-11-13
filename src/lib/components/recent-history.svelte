@@ -22,9 +22,7 @@
   } from "#lib/components/ui/dialog/index.js";
   import * as DropdownMenu from "#lib/components/ui/dropdown-menu/index.js";
   import {
-    Play,
     RotateCcw,
-    Square,
     Layers,
     Trash2,
     Clock,
@@ -33,6 +31,9 @@
     Copy,
     Pencil
   } from "@lucide/svelte";
+  import PlayFilled from "#lib/components/icons/play-filled.svelte";
+  import ReplayFilled from "#lib/components/icons/replay-filled.svelte";
+  import StopFilled from "#lib/components/icons/stop-filled.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { revealItemInDir } from "@tauri-apps/plugin-opener";
   import { Spinner } from "#lib/components/ui/spinner/index.js";
@@ -350,7 +351,7 @@
             {#if actionInProgress === reading.id || (isCurrent && playbackStore.isLoadingAudio)}<Spinner
                 aria-hidden="true"
               />
-            {:else if isActive}<Square />{:else if isCurrent}<RotateCcw />{:else}<Play />{/if}
+            {:else if isActive}<StopFilled />{:else if isCurrent}<ReplayFilled />{:else}<PlayFilled />{/if}
           </Button>
           <DropdownMenu.Root>
             <DropdownMenu.Trigger
