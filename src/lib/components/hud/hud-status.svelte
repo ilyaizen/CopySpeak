@@ -62,7 +62,7 @@
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: rgba(96, 165, 250, 1);
+    background: var(--primary);
   }
 
   .status-dot.pulsing {
@@ -83,13 +83,13 @@
     flex-shrink: 0;
     font-size: 11px;
     font-weight: 600;
-    color: rgba(255, 255, 255, 0.95);
+    color: var(--foreground);
     letter-spacing: 0.02em;
   }
 
   .provider-voice {
     font-size: 10px;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--muted-foreground);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -101,10 +101,10 @@
     display: flex;
     align-items: center;
     padding: 1px 7px;
-    background: rgba(255, 255, 255, 0.15);
+    background: color-mix(in srgb, var(--foreground) 15%, transparent);
     border-radius: 10px;
     font-size: 10px;
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--foreground);
     font-weight: 500;
     white-space: nowrap;
   }
@@ -113,8 +113,8 @@
     flex-shrink: 0;
     width: 11px;
     height: 11px;
-    border: 2px solid rgba(255, 255, 255, 0.25);
-    border-top-color: rgba(96, 165, 250, 1);
+    border: 2px solid color-mix(in srgb, var(--foreground) 25%, transparent);
+    border-top-color: var(--primary);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
   }

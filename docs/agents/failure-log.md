@@ -183,6 +183,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - A committed bun.lock applies on fresh install even when a stale local node_modules hides the break: svelte-check 4.7.7 rejects `$props<T>()` type arguments, so type props with an `interface Props` and `let x: Props = $props()` instead.
 - `vp check`'s anti-slop `no-runtime-typeof` rejects a `typeof` branch on a value union: coerce at the call (`String(value ?? "")`) or parse the value at its I/O boundary.
 - Stub `Element.prototype.scrollIntoView`, `HTMLMediaElement.prototype.play` and `pause` in component tests: jsdom does not implement scrolling or media playback.
+- After `git checkout` of a watched source file, `touch` it and re-fetch the module from the dev server: the Vite watcher can miss the checkout write and keep serving the pre-revert transform, so the app paints deleted code.
 
 ## Settings
 

@@ -38,7 +38,7 @@
   .clipboard-title {
     font-size: 18px;
     font-weight: 600;
-    color: oklch(0.96 0.01 264.8);
+    color: var(--foreground);
     letter-spacing: 0.02em;
     white-space: nowrap;
   }

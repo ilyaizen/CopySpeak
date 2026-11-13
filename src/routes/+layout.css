@@ -50,7 +50,8 @@
   --secondary: oklch(0.24 0.02 190);
   --secondary-foreground: oklch(0.96 0.01 190);
   --muted: oklch(0.24 0.01 190);
-  --muted-foreground: oklch(0.6 0.01 190);
+  /* 0.63 measures 4.96:1 on --card and 5.39:1 on --background (WCAG AA body text needs 4.5:1). */
+  --muted-foreground: oklch(0.63 0.01 190);
   --accent: oklch(0.55 0.01 190);
   --accent-foreground: oklch(0.96 0.01 190);
   --destructive: oklch(0.68 0.18 22);

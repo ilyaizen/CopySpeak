@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import Waveform from "../waveform.svelte";
   import Progress from "#lib/components/ui/progress/progress.svelte";
   import { hudStore } from "#lib/stores/hud-store.svelte.js";
@@ -10,6 +11,18 @@
   } from "#lib/models/captions.js";
 
   let { barValues, spokenText }: { barValues: number[]; spokenText: string | null } = $props();
+
+  // Canvas fillStyle needs resolved colors, not var() references. The HUD window
+  // is forced dark, so read the tokens once on mount.
+  let waveformBarColor = $state("rgba(255, 255, 255, 0.3)");
+  let waveformActiveBarColor = $state("rgba(255, 255, 255, 1)");
+  onMount(() => {
+    const style = getComputedStyle(document.documentElement);
+    const foreground = style.getPropertyValue("--foreground").trim();
+    const primary = style.getPropertyValue("--primary").trim();
+    waveformBarColor = `color-mix(in srgb, ${foreground} 30%, transparent)`;
+    waveformActiveBarColor = primary;
+  });
   let words = $derived(buildCaptions(spokenText ?? "", hudStore.caption?.captions));
   let positionIndex = $derived(activeCaptionWord(words, hudStore.caption?.position_ms ?? 0));
   let activeIndex = $derived(hudStore.caption?.active ? positionIndex : -1);
@@ -40,8 +53,8 @@
     {:else}
       <Waveform
         {barValues}
-        barColor="rgba(255, 255, 255, 0.3)"
-        activeBarColor="rgba(96, 165, 250, 1)"
+        barColor={waveformBarColor}
+        activeBarColor={waveformActiveBarColor}
         barGap={3}
         barRadius={2}
         minBarHeight={0.15}
@@ -71,7 +84,7 @@
   .caption {
     margin: 0;
     width: 100%;
-    color: #e2e8f0;
+    color: var(--foreground);
     font-size: 18px;
     font-weight: 600;
     line-height: 1.45;
@@ -86,11 +99,11 @@
     -webkit-box-decoration-break: clone;
   }
   .caption .spoken {
-    color: #aebdd0;
+    color: var(--muted-foreground);
   }
   .caption .current {
-    color: #101827;
-    background: #93c5fd;
-    box-shadow: 0 0 0 2px #93c5fd;
+    color: var(--primary-foreground);
+    background: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary);
   }
 </style>

@@ -144,7 +144,7 @@
   }
 
   .hud-overlay.has-content {
-    background: oklch(0.18 0.01 264.8 / 0.85);
+    background: color-mix(in srgb, var(--card) 85%, transparent);
   }
 
   .hud-content {

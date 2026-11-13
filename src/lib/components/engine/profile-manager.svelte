@@ -27,6 +27,7 @@
     Upload,
     ExternalLink,
     AlertTriangle,
+    ChevronDown,
     ChevronRight,
     Plus
   } from "@lucide/svelte";
@@ -737,7 +738,7 @@
   }
 </script>
 
-<div>
+<section class="bg-card rounded-lg border p-5">
   <!-- Header: title + actions -->
   <div class="border-border flex flex-wrap items-center justify-between gap-3 border-b pb-4">
     <div>
@@ -746,14 +747,15 @@
         Named presets bundling engine, voice, speed, pitch and effect.
       </p>
     </div>
-    <div class="flex gap-1.5">
+    <div class="flex flex-wrap gap-1.5">
       <DropdownMenu>
         <DropdownMenuTrigger
-          class="border-input bg-background hover:bg-accent inline-flex h-8 items-center justify-center rounded-md border px-2"
+          class="border-input bg-background hover:bg-accent inline-flex h-8 items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-medium whitespace-nowrap"
           title={$_("profiles.newFromTemplate")}
-          aria-label={$_("profiles.newFromTemplate")}
         >
           <Plus size={14} />
+          {$_("profiles.new")}
+          <ChevronDown size={14} class="opacity-50" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" class="min-w-48">
           {#each BUILTIN_PROFILE_PRESETS as preset (preset.name)}
@@ -763,23 +765,27 @@
           {/each}
         </DropdownMenuContent>
       </DropdownMenu>
-      <Button variant="outline" size="sm" onclick={duplicateActive} title={$_("common.duplicate")}>
+      <Button variant="outline" size="sm" onclick={duplicateActive}>
         <Copy size={14} />
+        {$_("common.duplicate")}
       </Button>
-      <Button variant="outline" size="sm" onclick={openExportDialog} title={$_("common.export")}>
+      <Button variant="outline" size="sm" onclick={openExportDialog}>
         <Download size={14} />
+        {$_("common.export")}
       </Button>
-      <Button variant="outline" size="sm" onclick={openImportDialog} title={$_("common.import")}>
+      <Button variant="outline" size="sm" onclick={openImportDialog}>
         <Upload size={14} />
+        {$_("common.import")}
       </Button>
       <Button
         variant="outline"
         size="sm"
+        class="text-destructive hover:text-destructive"
         onclick={deleteActive}
         disabled={!active || active.id === "default"}
-        title={$_("common.delete")}
       >
         <Trash2 size={14} />
+        {$_("common.delete")}
       </Button>
     </div>
   </div>
@@ -1096,7 +1102,7 @@
       {/if}
     </div>
   {/if}
-</div>
+</section>
 
 <!-- Export / Import / Delete dialogs -->
 {#if dialogMode}

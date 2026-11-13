@@ -3,6 +3,10 @@
   import HudOverlay from "#lib/components/hud-overlay.svelte";
 
   onMount(async () => {
+    // The HUD keeps the dark glass look in every theme. Tokens resolve from the
+    // .dark palette, so put the class on this window's <html> (the HUD branch of
+    // +layout.svelte has no ModeWatcher).
+    document.documentElement.classList.add("dark");
     // Mark body so the Tailwind base layer skips bg-background for this window
     document.body.setAttribute("data-hud", "");
     document.documentElement.style.background = "transparent";

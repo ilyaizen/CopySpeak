@@ -279,9 +279,14 @@
         </nav>
       </aside>
 
-      <!-- Main content: all sections stacked, one separator between them -->
-      <main class="divide-border min-w-0 flex-1 divide-y pb-20">
-        <section id="general" class="scroll-mt-4 py-6 first:pt-0">
+      <!-- Main content: one card per section, settings grouped inside -->
+      <main class="min-w-0 flex-1 space-y-5 pb-20">
+        <section
+          id="general"
+          aria-label={$_("settings.tabs.general")}
+          class="bg-card scroll-mt-4 rounded-lg border p-5"
+        >
+          <h2 class="mb-4 text-base font-semibold">{$_("settings.tabs.general")}</h2>
           <div class="divide-border divide-y">
             <div class="pb-4">
               <h3 class="text-muted-foreground mb-3 text-sm font-medium">
@@ -339,19 +344,19 @@
         <section
           id="playback"
           aria-label={$_("settings.tabs.playback")}
-          class="scroll-mt-4 py-6 first:pt-0"
+          class="bg-card scroll-mt-4 rounded-lg border p-5"
         >
+          <h2 class="mb-4 text-base font-semibold">{$_("settings.tabs.playback")}</h2>
           <PlaybackSettings bind:localConfig {retriggerModeOptions} />
         </section>
 
         <section
           id="advanced"
+          aria-label={$_("settings.tabs.advanced")}
           tabindex="-1"
-          class="focus-visible:ring-ring scroll-mt-4 py-6 outline-none first:pt-0 focus-visible:ring-2"
+          class="focus-visible:ring-ring bg-card scroll-mt-4 rounded-lg border p-5 outline-none focus-visible:ring-2"
         >
-          <h2 class="mb-4 text-base font-semibold">
-            {$_("settings.tabs.advanced")}
-          </h2>
+          <h2 class="mb-4 text-base font-semibold">{$_("settings.tabs.advanced")}</h2>
           <div class="divide-border divide-y">
             <div class="pb-4">
               <h3 class="text-muted-foreground mb-3 text-sm font-medium">
@@ -378,8 +383,9 @@
           <section
             id="history"
             aria-label={$_("settings.tabs.history")}
-            class="scroll-mt-4 py-6 first:pt-0"
+            class="bg-card scroll-mt-4 rounded-lg border p-5"
           >
+            <h2 class="mb-4 text-base font-semibold">{$_("settings.tabs.history")}</h2>
             <HistorySettings bind:localConfig onRunCleanup={handleRunCleanup} />
           </section>
         {/if}
@@ -388,8 +394,9 @@
           <section
             id="postProcess"
             aria-label={$_("settings.tabs.postProcess")}
-            class="scroll-mt-4 py-6 first:pt-0"
+            class="bg-card scroll-mt-4 rounded-lg border p-5"
           >
+            <h2 class="mb-4 text-base font-semibold">{$_("settings.tabs.postProcess")}</h2>
             <PostProcessSettings bind:localConfig />
           </section>
         {/if}
@@ -397,8 +404,9 @@
         <section
           id="about"
           aria-label={$_("settings.tabs.about")}
-          class="scroll-mt-4 py-6 first:pt-0"
+          class="bg-card scroll-mt-4 rounded-lg border p-5"
         >
+          <h2 class="mb-4 text-base font-semibold">{$_("settings.tabs.about")}</h2>
           <OtherSettings bind:localConfig showDebugMode={true}>
             <div class="border-border border-t pt-4">
               <h3 class="text-muted-foreground mb-3 text-sm font-medium">

@@ -234,7 +234,7 @@ it("places About actions before acknowledgments and keeps the credit outside the
   expect(footer.classList.contains("flex-nowrap")).toBe(true);
   expect(footer.classList.contains("font-mono")).toBe(true);
   expect(footer.classList.contains("text-[11px]")).toBe(true);
-  expect(footer.classList.contains("tracking-[0.1em]")).toBe(true);
+  expect(footer.classList.contains("tracking-widest")).toBe(true);
   expect(footer.classList.contains("uppercase")).toBe(true);
   expect(footer.classList.contains("opacity-60")).toBe(false);
   const profile = within(footer).getByRole("link", { name: "@ilyaizen" });

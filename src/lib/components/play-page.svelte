@@ -7,6 +7,7 @@
   import QuickSettings from "#lib/components/quick-settings.svelte";
   import RecentHistory from "#lib/components/recent-history.svelte";
   import { Button } from "#lib/components/ui/button/index.js";
+  import { Kbd } from "#lib/components/ui/kbd/index.js";
   import { Textarea } from "#lib/components/ui/textarea/index.js";
   import { playbackStore } from "#lib/stores/playback-store.svelte";
   import { historyStore } from "#lib/stores/history-store.svelte";
@@ -399,6 +400,9 @@
   // Determine current content from manual text input
   let currentContent = $derived(manualText.trim() || "");
 
+  // Modifier label for the speak shortcut hint: Cmd on macOS, Ctrl elsewhere.
+  let modKey = $derived(/mac/i.test(navigator.userAgent) ? "⌘" : "Ctrl");
+
   // Smart play mode: what the Play button will do
   type PlayMode = "play" | "replay" | "disabled";
   let playMode: PlayMode = $derived(
@@ -457,6 +461,18 @@
   // Transport shortcuts. Skipped while typing in the textarea or while a
   // button has focus (Space must keep activating the button natively).
   function handleKeydown(event: KeyboardEvent) {
+    // Ctrl/Cmd+Enter speaks from anywhere, including the textarea the user
+    // just typed in — the core loop needs no mouse detour. Mirrors the primary
+    // button: play/pause toggle, never a second speak_now mid-synthesis.
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      if (playbackStore.isPlaying || playbackStore.isPaused) {
+        playbackStore.handleTogglePause();
+      } else if (!playbackStore.isSynthesizing && !generating) {
+        void handlePlay();
+      }
+      return;
+    }
     // SAFETY: keydown targets in this window are DOM elements; only tag names
     // and isContentEditable are read.
     const target = event.target as HTMLElement | null;
@@ -489,6 +505,29 @@
         void handleStop();
         break;
     }
+  }
+
+  // Speak failures arrive as raw backend strings. Classify the known classes so
+  // the error box leads with a plain message and one action; the raw string
+  // stays available behind a Details disclosure.
+  type SpeakErrorView = { message: string; raw: string | null; openEngines: boolean };
+
+  function classifyError(raw: string): SpeakErrorView {
+    const r = raw.toLowerCase();
+    if (r.includes("not installed"))
+      return { message: $_("play.errorNotInstalled"), raw, openEngines: true };
+    if (/(api key|401|403|unauthorized|forbidden)/.test(r))
+      return { message: $_("play.errorBadKey"), raw, openEngines: true };
+    if (/(timed out|timeout|deadline)/.test(r))
+      return { message: $_("play.errorTimeout"), raw: null, openEngines: false };
+    if (
+      /(error sending request|request or response body error|connection refused|connection reset|dns error)/.test(
+        r
+      )
+    )
+      return { message: $_("play.errorNetwork"), raw: null, openEngines: false };
+    // Unknown failure: the raw string is the only truth we have, so show it.
+    return { message: raw, raw: null, openEngines: false };
   }
 
   // `fresh` skips the saved audio history already holds for this text.
@@ -666,6 +705,16 @@
         <span class="text-muted-foreground ms-auto text-xs whitespace-nowrap tabular-nums">
           {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
         </span>
+        <span
+          class="text-muted-foreground inline-flex items-center gap-1 text-xs whitespace-nowrap"
+          title={$_("play.keyboardHint", { values: { keys: `${modKey}+Enter` } })}
+        >
+          <Kbd>{modKey}</Kbd>
+          <Kbd>↵</Kbd>
+          <span class="sr-only">
+            {$_("play.keyboardHint", { values: { keys: `${modKey}+Enter` } })}
+          </span>
+        </span>
       </div>
     </section>
     {#if config}
@@ -676,10 +725,27 @@
   </div>
 
   {#if error}
-    <div class="border-destructive/50 bg-destructive/10 rounded-lg border p-3">
-      <p class="text-destructive text-sm">
-        {error}
-      </p>
+    {@const view = classifyError(error)}
+    <div class="border-destructive/50 bg-destructive/10 rounded-lg border p-3" role="alert">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <p class="text-destructive text-sm wrap-anywhere">
+          {view.message}
+        </p>
+        {#if view.openEngines}
+          <Button variant="outline" size="sm" href="/engines">
+            {$_("play.errorOpenEngines")}
+          </Button>
+        {/if}
+      </div>
+      {#if view.raw}
+        <details class="mt-2">
+          <summary class="text-muted-foreground cursor-pointer text-xs">
+            {$_("play.errorDetails")}
+          </summary>
+          <pre
+            class="text-muted-foreground bg-background/50 mt-1 max-h-32 overflow-auto rounded p-2 text-xs whitespace-pre-wrap">{view.raw}</pre>
+        </details>
+      {/if}
     </div>
   {/if}
 

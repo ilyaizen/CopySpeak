@@ -331,29 +331,33 @@
     "title": "Engine",
     "selectEngine": "Select TTS Engine",
     "testing": "Testing...",
+    "kind": {
+      "local": "Local",
+      "cloud": "Cloud"
+    },
     "kitten": {
       "title": "Kitten TTS",
-      "description": "Local: Four selectable ONNX models (25–80MB) with 8 natural voices. Optimized for CPU with optional GPU acceleration."
+      "description": "Four selectable ONNX models (25–80MB) with 8 natural voices. Optimized for CPU with optional GPU acceleration."
     },
     "qwen": {
       "title": "Qwen3-TTS",
-      "description": "Local: Multilingual Qwen3-TTS CustomVoice with 9 built-in voices. The model downloads on first use."
+      "description": "Multilingual Qwen3-TTS CustomVoice with 9 built-in voices. The model downloads on first use."
     },
     "piper": {
       "title": "Piper TTS",
-      "description": "Local: Fast, lightweight neural TTS with 20+ English voices. Works fully offline — no account or internet required."
+      "description": "Fast, lightweight neural TTS with 20+ English voices. Works fully offline — no account or internet required."
     },
     "kokoro": {
       "title": "Kokoro TTS",
-      "description": "Local: High-quality offline TTS with natural-sounding voices and broad accent coverage. Keeps its model in RAM; supports GPU acceleration."
+      "description": "High-quality offline TTS with natural-sounding voices and broad accent coverage. Keeps its model in RAM; supports GPU acceleration."
     },
     "pocket": {
       "title": "Pocket TTS",
-      "description": "Local: Kyutai Pocket — a 100M-parameter model built for the CPU, with voices in six languages. Supports GPU acceleration."
+      "description": "Kyutai Pocket — a 100M-parameter model built for the CPU, with voices in six languages. Supports GPU acceleration."
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "Cloud: Low-latency, natural TTS powered by Sonic 3.5. Requires an API key and internet connection.",
+      "description": "Low-latency, natural TTS powered by Sonic 3.5. Requires an API key and internet connection.",
       "apiKey": "API Key",
       "apiKeyDescription": "Your API key is stored locally and never shared.",
       "check": "Check",
@@ -361,7 +365,7 @@
     },
     "fish": {
       "title": "Fish Audio",
-      "description": "Cloud: Expressive AI voices with voice cloning. Requires an API key and internet connection.",
+      "description": "Expressive AI voices with voice cloning. Requires an API key and internet connection.",
       "apiKey": "API Key",
       "apiKeyDescription": "Your API key is stored locally and never shared.",
       "check": "Check",
@@ -369,7 +373,7 @@
     },
     "xai": {
       "title": "xAI",
-      "description": "Cloud: Grok voices with native word captions and expressive speech tags. Requires an API key and internet connection.",
+      "description": "Grok voices with native word captions and expressive speech tags. Requires an API key and internet connection.",
       "apiKey": "API Key",
       "apiKeyDescription": "Your API key is stored locally and never shared.",
       "check": "Check",
@@ -377,7 +381,7 @@
     },
     "mistral": {
       "title": "Mistral",
-      "description": "Cloud: Voxtral voices with emotion, pace, and sound tags. Requires an API key and internet connection.",
+      "description": "Voxtral voices with emotion, pace, and sound tags. Requires an API key and internet connection.",
       "apiKey": "API Key",
       "apiKeyDescription": "Your API key is stored locally and never shared.",
       "check": "Check",
@@ -385,7 +389,7 @@
     },
     "elevenlabs": {
       "title": "ElevenLabs",
-      "description": "Cloud: Premium AI voice synthesis with emotional range, 1000+ voices, and multilingual support.",
+      "description": "Premium AI voice synthesis with emotional range, 1000+ voices, and multilingual support.",
       "apiKey": "API Key",
       "apiKeyDescription": "Your API key is stored locally and never shared.",
       "check": "Check",
@@ -393,7 +397,7 @@
     },
     "openai": {
       "title": "OpenAI",
-      "description": "Cloud: High-quality natural voices via the OpenAI API. Requires an API key and internet connection.",
+      "description": "High-quality natural voices via the OpenAI API. Requires an API key and internet connection.",
       "apiKey": "API Key",
       "apiKeyDescription": "Your API key is stored locally and never shared.",
       "check": "Check",
@@ -401,22 +405,22 @@
     },
     "google": {
       "title": "Google",
-      "description": "Cloud: Gemini API speech generation. Requires a Google AI API key.",
+      "description": "Gemini API speech generation. Requires a Google AI API key.",
       "apiKey": "API Key"
     },
     "microsoft": {
       "title": "Microsoft Foundry",
-      "description": "Cloud: Microsoft Foundry Speech. Requires a region endpoint and API key.",
+      "description": "Microsoft Foundry Speech. Requires a region endpoint and API key.",
       "apiKey": "API Key",
       "endpoint": "Endpoint"
     },
     "edge": {
       "title": "Edge TTS",
-      "description": "Cloud: Microsoft Edge read-aloud voices. Free, no API key required, but needs an internet connection."
+      "description": "Microsoft Edge read-aloud voices. Free, no API key required, but needs an internet connection."
     },
     "http": {
       "title": "HTTP",
-      "description": "Cloud: Send synthesis requests to a custom HTTP endpoint configured per profile."
+      "description": "Send synthesis requests to a custom HTTP endpoint configured per profile."
     },
     "setup": {
       "install": "Install",
@@ -551,7 +555,7 @@
     "installerSmokeTestHint": "Install, then press Test to verify the engine synthesizes audio.",
     "installCuda": "Install NVIDIA GPU runtime",
     "installCudaHint": "Enable this when the profile uses GPU acceleration. Reinstalling changes the engine runtime.",
-    "installFailed": "Install failed",
+    "installFailed": "Could not install {engine}. The install log has details.",
     "saveBeforeTestFailed": "Save your changes before testing.",
     "installDone": "Install complete",
     "retry": "Retry",
@@ -562,7 +566,7 @@
     "piperPerVoiceHint": "Select voices to download (each is a separate model).",
     "uninstall": "Uninstall",
     "uninstallDone": "Uninstalled",
-    "uninstallFailed": "Uninstall failed",
+    "uninstallFailed": "Could not uninstall {engine}.",
     "uninstallConfirm": "Remove this engine's files and binaries? Downloaded models are deleted. Profiles using it will stop working until you reinstall.",
     "binaryHint": "Installs a command-line binary. No model download.",
     "binaryInstalled": "Installed and ready."
@@ -598,7 +602,14 @@
     "nowReadingAria": "Now reading",
     "textLabel": "Text to read aloud",
     "controlsAria": "Reading controls",
-    "restored": "Text, voice and speed restored. Pitch and effects use the current profile."
+    "restored": "Text, voice and speed restored. Pitch and effects use the current profile.",
+    "errorNotInstalled": "The voice engine is not installed. Set it up on the Engines page, then try again.",
+    "errorBadKey": "The engine rejected the API key. Check the key on the Engines page, then try again.",
+    "errorTimeout": "The engine took too long to respond. Try again.",
+    "errorNetwork": "Could not reach the engine. Try again.",
+    "errorDetails": "Details",
+    "errorOpenEngines": "Open Engines",
+    "keyboardHint": "Press {keys} to speak"
   },
   "history": {
     "title": "History",
@@ -802,6 +813,7 @@
   "profiles": {
     "title": "Voice Profiles",
     "sound": "Sound",
+    "new": "New",
     "newFromTemplate": "New profile from template",
     "activeProfile": "Active Profile",
     "startFrom": "Start from",

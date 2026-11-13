@@ -87,10 +87,10 @@
       const ok = run?.exitCode === 0;
       const done =
         lastAction === "uninstall" ? $_("engines.uninstallDone") : $_("engines.installDone");
-      const failed =
-        lastAction === "uninstall" ? $_("engines.uninstallFailed") : $_("engines.installFailed");
+      const failedKey =
+        lastAction === "uninstall" ? "engines.uninstallFailed" : "engines.installFailed";
       if (ok) toast.success(`${engineId}: ${done}`);
-      else toast.error(`${failed}: ${engineId}`);
+      else toast.error($_(failedKey, { values: { engine: engineId } }));
     }
   });
 
@@ -128,7 +128,8 @@
         cuda
       });
     } catch (e) {
-      toast.error(`${$_("engines.installFailed")}: ${e}`);
+      console.error("install_engine failed:", e);
+      toast.error($_("engines.installFailed", { values: { engine: engineId } }));
     }
   }
 
@@ -140,7 +141,8 @@
     try {
       await invoke("uninstall_engine", { engine: engineId });
     } catch (e) {
-      toast.error(`${$_("engines.uninstallFailed")}: ${e}`);
+      console.error("uninstall_engine failed:", e);
+      toast.error($_("engines.uninstallFailed", { values: { engine: engineId } }));
     }
   }
 
@@ -151,7 +153,8 @@
     try {
       await invoke("install_engine", { engine: engineId, voice: [id], cuda });
     } catch (e) {
-      toast.error(`${$_("engines.installFailed")}: ${e}`);
+      console.error("install_engine retry failed:", e);
+      toast.error($_("engines.installFailed", { values: { engine: engineId } }));
     }
   }
 

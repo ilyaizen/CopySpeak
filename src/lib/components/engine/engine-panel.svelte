@@ -16,7 +16,6 @@
     AlertCircle
   } from "@lucide/svelte";
   import { Button } from "#lib/components/ui/button/index.js";
-  import InfoTooltip from "#lib/components/ui/info-tooltip.svelte";
   import { Input } from "#lib/components/ui/input/index.js";
   import { Label } from "#lib/components/ui/label/index.js";
   import { openExternal } from "#lib/utils/external-link";
@@ -112,11 +111,13 @@
   });
 </script>
 
-<section>
+<section class="bg-card scroll-mt-4 rounded-lg border p-5">
   <header class="border-border flex items-center justify-between gap-3 border-b pb-4">
     <div class="flex min-w-0 items-center gap-1.5">
       <h2 class="text-lg font-semibold">{$_(`engine.${entry.id}.title`)}</h2>
-      <InfoTooltip text={$_(`engine.${entry.id}.description`)} />
+      <span class="bg-muted text-muted-foreground rounded-sm px-1 text-[10px] font-medium">
+        {entry.kind === "local" ? $_("engine.kind.local") : $_("engine.kind.cloud")}
+      </span>
       {#if envVarName}
         <span
           class="rounded bg-emerald-500/10 px-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
@@ -134,8 +135,12 @@
     </button>
   </header>
 
+  <p class="text-muted-foreground mt-3 max-w-prose text-sm leading-relaxed">
+    {$_(`engine.${entry.id}.description`)}
+  </p>
+
   {#if entry.kind === "local" && entry.installerId && runtimeStatus}
-    <div class="mt-3 flex items-center gap-2">
+    <div class="mt-2 flex items-center gap-2">
       {#if runtimeStatus.installed}
         <span
           class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"
@@ -159,7 +164,7 @@
     </div>
   {/if}
 
-  <div class="space-y-4 py-4">
+  <div class="space-y-4 pt-4">
     {#if entry.credential === "api_key" || entry.credential === "api_key_endpoint"}
       {#if entry.credentialTarget}
         <div class="space-y-2">
