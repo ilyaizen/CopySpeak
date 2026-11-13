@@ -55,10 +55,14 @@ window.__ModuleLoader__.load({
        covers the mark. */
     const HIGHLIGHT_NAME = "copyspeak-read-word";
     const HIGHLIGHT_NAME_CODE = "copyspeak-read-word-code";
+    /* Tween-only names: the outgoing and incoming word during one glide. */
+    const HIGHLIGHT_NAME_OUT = "copyspeak-read-word-out";
+    const HIGHLIGHT_NAME_IN = "copyspeak-read-word-in";
     const STORAGE = {
       autoRead: "dsh.copyspeak-voice.auto-read",
       captions: "dsh.copyspeak-voice.captions",
-      follow: "dsh.copyspeak-voice.follow"
+      follow: "dsh.copyspeak-voice.follow",
+      animation: "dsh.copyspeak-voice.animation"
     };
     /* The webview reports its audible clock every ~25 ms and throttles the
      * control-server report to ~100 ms, so one poll per 100 ms stays current. */
@@ -89,6 +93,10 @@ window.__ModuleLoader__.load({
      * the brand pill behind the text while the highlight recolors the word. */
     const MARK_PADDING_X = 2;
     const MARK_PADDING_Y = 1;
+    /* The mark's glide duration. The word's text recolor must land when the
+     * pill arrives, not when the word becomes active, so the pending recolor
+     * waits this long plus a frame. */
+    const MARK_TRANSITION_MS = 120;
     /* Host Tooltip: the bubble sits this far from its anchor. */
     const TOOLTIP_GAP = 8;
     /* Keep the centered bubble this far from the viewport edge. */
@@ -133,6 +141,9 @@ window.__ModuleLoader__.load({
         "CopySpeak reads each reply in the open session once its turn completes.",
       "captions.title": "Show captions while reading",
       "captions.description": "Highlights each word in the reply as CopySpeak plays it.",
+      "animation.title": "Animate caption highlight",
+      "animation.description":
+        "Glides the highlight from word to word. Turn off to jump between words.",
       "follow.title": "Follow playback",
       "follow.description": "Scrolls the chat to keep the spoken word in view.",
       "bar.label": "CopySpeak playback",
@@ -208,6 +219,13 @@ window.__ModuleLoader__.load({
       ".dsh-csva-barControl:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
       ".dsh-csva-barStop{color:var(--dsw-alias-label-primary)}",
       "::highlight(" + HIGHLIGHT_NAME + "){color:var(--dsw-alias-bg-base)}",
+      /* During the animated glide the outgoing and incoming words carry their
+         own names, so their text colors can be tweened frame by frame in
+         lockstep with the gliding pill. The custom properties default to the
+         settled knockout color, so an unset tween paints the same as the
+         settled highlight. */
+      "::highlight(" + HIGHLIGHT_NAME_OUT + "){color:var(--dsh-csva-out-color,var(--dsw-alias-bg-base))}",
+      "::highlight(" + HIGHLIGHT_NAME_IN + "){color:var(--dsh-csva-in-color,var(--dsw-alias-bg-base))}",
       /* A code chip paints its own background over the reply, so a spoken word
          inside one takes a highlight that paints the brand pill itself. */
       "::highlight(" +
@@ -219,6 +237,13 @@ window.__ModuleLoader__.load({
       "[data-dsh-csva-mark-host]{isolation:isolate}",
       ".dsh-csva-markLayer{position:absolute;top:0;left:0;width:0;height:0;z-index:-1;pointer-events:none}",
       ".dsh-csva-mark{position:absolute;border-radius:4px;background-color:var(--dsw-alias-brand-primary);pointer-events:none}",
+      /* Animated glide: the mark layer carries data-animate while the
+         animation switch is on, so the reading tweens the pill position and
+         the two words' text colors in one rAF loop. The blend windows follow
+         the pill's coverage of each word: the outgoing word keeps its
+         knockout until the pill slides off it, and the incoming word keeps
+         its plain color until the pill reaches it, so neither word darkens
+         over the empty background mid-glide. Off keeps the instant jump. */
       /* The text-selection surface holds one pill group: Quote and Read sit
          inside one rounded floating container, separated from the error note.
          The group copies the host Quote pill fill (floating fill, elevation
@@ -297,11 +322,13 @@ window.__ModuleLoader__.load({
     }
 
     /* User preferences: page-local, so a switch keeps its state across
-       reloads without a Host round trip. Captions start off; follow starts on. */
+       reloads without a Host round trip. Captions start off; follow and the
+       caption animation start on. */
     const preferences = {
       autoRead: readStoredFlag(STORAGE.autoRead, false),
       captions: readStoredFlag(STORAGE.captions, false),
       follow: readStoredFlag(STORAGE.follow, true),
+      animation: readStoredFlag(STORAGE.animation, true),
       listeners: new Set()
     };
 
@@ -329,6 +356,7 @@ window.__ModuleLoader__.load({
         clearHighlight();
         releaseMarkHost();
       }
+      if (name === "animation") syncMarkAnimation();
       emit(preferences.listeners);
     }
 
@@ -395,6 +423,13 @@ window.__ModuleLoader__.load({
       markLayer: null,
       markRects: [],
       markContaining: null,
+      /* The settled highlighted word: its token is where the highlight name
+         points between glides, and where the next glide fades out from. */
+      paintedToken: null,
+      /* The running text-color tween, in lockstep with one pill glide. */
+      tween: null,
+      /* A hidden probe that resolves theme variables to concrete rgb colors. */
+      colorProbe: null,
       lastScrollAt: 0,
       followPausedUntil: 0
     };
@@ -866,10 +901,14 @@ window.__ModuleLoader__.load({
     }
 
     function clearHighlight() {
+      cancelHighlightTween();
       if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
         window.CSS.highlights.delete(HIGHLIGHT_NAME);
         window.CSS.highlights.delete(HIGHLIGHT_NAME_CODE);
+        window.CSS.highlights.delete(HIGHLIGHT_NAME_OUT);
+        window.CSS.highlights.delete(HIGHLIGHT_NAME_IN);
       }
+      reading.paintedToken = null;
       clearMarks();
       /* The mapped token stays, so Show in chat still finds the spoken word
          during a gap between words. A new reading resets it in resetReading. */
@@ -881,9 +920,18 @@ window.__ModuleLoader__.load({
       reading.markRects.length = 0;
     }
 
+    /* The animation switch decides whether the mark glides between words or
+       jumps. Keep the live layer in step when the switch flips mid-reading. */
+    function syncMarkAnimation() {
+      if (reading.markLayer === null) return;
+      if (preferences.animation) reading.markLayer.setAttribute("data-animate", "");
+      else reading.markLayer.removeAttribute("data-animate");
+    }
+
     /* Drop the layer and its host attribute: the stack context must not
        outlive the reading or outlive the target element. */
     function releaseMarkHost() {
+      cancelHighlightTween();
       clearMarks();
       if (reading.markLayer !== null) reading.markLayer.remove();
       if (reading.markHost !== null) reading.markHost.removeAttribute("data-dsh-csva-mark-host");
@@ -912,6 +960,7 @@ window.__ModuleLoader__.load({
       host.appendChild(layer);
       reading.markHost = host;
       reading.markLayer = layer;
+      syncMarkAnimation();
       return layer;
     }
 
@@ -971,6 +1020,7 @@ window.__ModuleLoader__.load({
       for (let index = 0; index < rects.length; index += 1) {
         const rect = rects[index];
         const mark = reading.markRects[index];
+        mark.style.transform = "";
         mark.style.left = Math.round(rect.left + baseX - MARK_PADDING_X) + "px";
         mark.style.top = Math.round(rect.top + baseY - MARK_PADDING_Y) + "px";
         mark.style.width = Math.round(rect.width + MARK_PADDING_X * 2) + "px";
@@ -988,21 +1038,241 @@ window.__ModuleLoader__.load({
       const range = tokenRange(token);
       if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
         const code = token.code === true;
-        /* One word paints at a time: drop both names before the set. */
-        window.CSS.highlights.delete(HIGHLIGHT_NAME);
-        window.CSS.highlights.delete(HIGHLIGHT_NAME_CODE);
-        window.CSS.highlights.set(
-          code ? HIGHLIGHT_NAME_CODE : HIGHLIGHT_NAME,
-          new window.Highlight(range)
-        );
         if (code) {
+          /* The code highlight paints its own pill, so it lands at once. */
+          cancelHighlightTween();
+          applyHighlight(HIGHLIGHT_NAME_CODE, range);
+          reading.paintedToken = token;
           /* Clear the previous word's mark, so no pill lingers by the code word. */
           clearMarks();
         } else {
+          const previous = reading.paintedToken;
+          const glider = reading.markRects[0] ?? null;
+          const fromLeft = glider === null ? NaN : parseFloat(glider.style.left);
+          const fromTop = glider === null ? NaN : parseFloat(glider.style.top);
+          const settlesInstantly =
+            !markGlides() || previous === null || reading.markRects.length === 0;
           placeMarks(wordRects(range));
+          if (settlesInstantly) {
+            cancelHighlightTween();
+            applyHighlight(HIGHLIGHT_NAME, range);
+            reading.paintedToken = token;
+          } else {
+            /* One rAF clock glides the pill and blends the two words' text
+               colors, with each blend windowed to when the pill actually
+               covers that word, so no word darkens over bare background
+               mid-glide. */
+            const fromWidth = Number.isNaN(parseFloat(glider.style.width))
+              ? 0
+              : parseFloat(glider.style.width);
+            startHighlightTween(previous, token, range, {
+              left: fromLeft,
+              top: fromTop,
+              width: fromWidth
+            });
+          }
         }
       }
       followRange(token, range);
+    }
+
+    /* Set exactly one highlight name, replacing whatever word was painted. */
+    function applyHighlight(name, range) {
+      window.CSS.highlights.delete(HIGHLIGHT_NAME);
+      window.CSS.highlights.delete(HIGHLIGHT_NAME_CODE);
+      window.CSS.highlights.delete(HIGHLIGHT_NAME_OUT);
+      window.CSS.highlights.delete(HIGHLIGHT_NAME_IN);
+      window.CSS.highlights.set(name, new window.Highlight(range));
+    }
+
+    /* Whether the pill animates toward this word: the switch is on and the
+     * layer is live; reduced motion disables the glide entirely. */
+    function markGlides() {
+      return (
+        reading.markLayer !== null &&
+        reading.markLayer.hasAttribute("data-animate") &&
+        !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+    }
+
+    /* Resolve one CSS color value to concrete rgb components through a hidden
+     * probe inside the reply, so theme variables and hex/oklch aliases all
+     * arrive as numbers a tween can blend. */
+    function resolveColor(value) {
+      if (reading.colorProbe === null) {
+        const probe = document.createElement("span");
+        probe.setAttribute("aria-hidden", "true");
+        probe.style.position = "absolute";
+        probe.style.visibility = "hidden";
+        reading.colorProbe = probe;
+      }
+      const probe = reading.colorProbe;
+      const host = reading.element;
+      if (host === null || !host.isConnected) return null;
+      probe.remove();
+      host.appendChild(probe);
+      probe.style.color = value;
+      const computed = window.getComputedStyle(probe).color;
+      const match = computed.match(/rgba?\(([^)]+)\)/);
+      if (match === null) return null;
+      const parts = match[1].split(/[,/\s]+/).map(parseFloat).filter(Number.isFinite);
+      if (parts.length < 3) return null;
+      return { r: parts[0], g: parts[1], b: parts[2] };
+    }
+
+    function blendColor(from, to, t) {
+      const channel = (a, b) => Math.round(a + (b - a) * t);
+      return (
+        "rgb(" +
+        channel(from.r, to.r) +
+        "," +
+        channel(from.g, to.g) +
+        "," +
+        channel(from.b, to.b) +
+        ")"
+      );
+    }
+
+    /* The single easing curve for the glide: one rAF loop uses it for the
+     * pill position and both color blends, so they cannot drift apart. */
+    function easeGlide(t) {
+      return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    }
+
+    /* Glide the pill and blend the two words' text colors across one rAF
+       clock, so the colors land exactly when the pill covers each word. Each
+       blend runs inside a coverage window computed from the two word boxes:
+       the outgoing word stays knocked out until the pill slides off it, and
+       the incoming word stays plain until the pill reaches it, so neither
+       word darkens over bare background mid-glide. The custom properties and
+       the mark transform live on the reply element, so a frame costs three
+       style writes and a recalc scoped to one subtree. */
+    function startHighlightTween(previous, token, range, from) {
+      cancelHighlightTween();
+      const normalOut = resolveColor("currentColor");
+      const knockout = resolveColor("var(--dsw-alias-bg-base)");
+      const normalIn = resolveColor("currentColor");
+      const glider = reading.markRects[0] ?? null;
+      const toLeft = glider === null ? NaN : parseFloat(glider.style.left);
+      const toTop = glider === null ? NaN : parseFloat(glider.style.top);
+      const toWidth = glider === null ? NaN : parseFloat(glider.style.width);
+      if (
+        knockout === null ||
+        normalIn === null ||
+        reading.element === null ||
+        from === null ||
+        glider === null ||
+        Number.isNaN(toLeft) ||
+        Number.isNaN(toTop) ||
+        Number.isNaN(toWidth) ||
+        Number.isNaN(from.left) ||
+        Number.isNaN(from.top)
+      ) {
+        /* Unresolvable colors or geometry: keep the instant, correct swap. */
+        applyHighlight(HIGHLIGHT_NAME, range);
+        reading.paintedToken = token;
+        return;
+      }
+      const scope = reading.element;
+      const previousRange = previous === null ? null : tokenRange(previous);
+      const plain = normalOut ?? normalIn;
+      /* Coverage windows. On one line, the pill's left edge travels
+         |toLeft-fromLeft| while its width is already the new word's, so the
+         old word stays covered until `from.width` of the travel has passed,
+         and the new word stays bare until the pill is within `toWidth` of
+         it. A line change or a zero-length travel has no meaningful
+         coverage, so both words split the glide in half there. */
+      const travel = Math.abs(toLeft - from.left);
+      const sameLine = Math.abs(toTop - from.top) < 2 && travel > 4;
+      const outEnd = sameLine ? from.width / travel : 0.5;
+      const inStart = sameLine ? 1 - toWidth / travel : 0.5;
+      const tween = {
+        raf: 0,
+        start: performance.now(),
+        duration: MARK_TRANSITION_MS,
+        knockout: knockout,
+        plainOut: plain,
+        plainIn: normalIn,
+        range: range,
+        token: token,
+        scope: scope,
+        hadOut: previousRange !== null,
+        mark: glider,
+        dx: from.left - toLeft,
+        dy: from.top - toTop,
+        outEnd: Math.min(Math.max(outEnd, 0.05), 1),
+        inStart: Math.min(Math.max(inStart, 0), 0.95)
+      };
+      /* Paint the first frame's state before the first rAF, so the pill and
+         the colors never show their settled neighbors for a frame. */
+      tween.mark.style.transform =
+        "translate(" + tween.dx + "px," + tween.dy + "px)";
+      if (tween.hadOut) {
+        scope.style.setProperty("--dsh-csva-out-color", blendColor(knockout, plain, 0));
+      }
+      scope.style.setProperty("--dsh-csva-in-color", blendColor(normalIn, knockout, 0));
+      if (previousRange !== null && previousRange.startContainer.isConnected) {
+        window.CSS.highlights.delete(HIGHLIGHT_NAME);
+        window.CSS.highlights.delete(HIGHLIGHT_NAME_CODE);
+        window.CSS.highlights.set(HIGHLIGHT_NAME_OUT, new window.Highlight(previousRange));
+        window.CSS.highlights.set(HIGHLIGHT_NAME_IN, new window.Highlight(range));
+      } else {
+        applyHighlight(HIGHLIGHT_NAME_IN, range);
+      }
+      const frame = function () {
+        if (reading.tween !== tween) return;
+        if (!token.node.isConnected) {
+          /* The chat re-rendered mid-glide: drop the tween and both names.
+             The next aligned paint restores the highlight. */
+          cancelHighlightTween();
+          return;
+        }
+        const t = Math.min((performance.now() - tween.start) / tween.duration, 1);
+        const p = easeGlide(t);
+        /* One eased progress drives the pill position and both blends, so
+           they cannot drift apart. */
+        tween.mark.style.transform =
+          "translate(" + tween.dx * (1 - p) + "px," + tween.dy * (1 - p) + "px)";
+        if (tween.hadOut) {
+          const outBlend = Math.min(Math.max(p / tween.outEnd, 0), 1);
+          tween.scope.style.setProperty(
+            "--dsh-csva-out-color",
+            blendColor(tween.knockout, tween.plainOut, outBlend)
+          );
+        }
+        const inSpan = 1 - tween.inStart;
+        const inBlend = Math.min(Math.max((p - tween.inStart) / inSpan, 0), 1);
+        tween.scope.style.setProperty(
+          "--dsh-csva-in-color",
+          blendColor(tween.plainIn, tween.knockout, inBlend)
+        );
+        if (t < 1) {
+          tween.raf = window.requestAnimationFrame(frame);
+          return;
+        }
+        /* Settled: swap to the single settled highlight name. */
+        cancelHighlightTween();
+        applyHighlight(HIGHLIGHT_NAME, tween.range);
+        reading.paintedToken = tween.token;
+      };
+      reading.tween = tween;
+      tween.raf = window.requestAnimationFrame(frame);
+    }
+
+    function cancelHighlightTween() {
+      const tween = reading.tween;
+      if (tween === null) return;
+      reading.tween = null;
+      window.cancelAnimationFrame(tween.raf);
+      if (tween.mark !== null && tween.mark.isConnected) {
+        tween.mark.style.transform = "";
+      }
+      tween.scope.style.removeProperty("--dsh-csva-out-color");
+      tween.scope.style.removeProperty("--dsh-csva-in-color");
+      if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
+        window.CSS.highlights.delete(HIGHLIGHT_NAME_OUT);
+        window.CSS.highlights.delete(HIGHLIGHT_NAME_IN);
+      }
     }
 
     /* A React re-render can drop the mark layer while the same word plays.
@@ -2247,6 +2517,7 @@ window.__ModuleLoader__.load({
       const t = props.t;
       const [autoRead, setAutoReadState] = React.useState(preferences.autoRead);
       const [captions, setCaptionsState] = React.useState(preferences.captions);
+      const [animation, setAnimationState] = React.useState(preferences.animation);
       const [follow, setFollowState] = React.useState(preferences.follow);
       const [online, setOnline] = React.useState(null);
 
@@ -2254,6 +2525,7 @@ window.__ModuleLoader__.load({
         return subscribe(preferences.listeners, function () {
           setAutoReadState(preferences.autoRead);
           setCaptionsState(preferences.captions);
+          setAnimationState(preferences.animation);
           setFollowState(preferences.follow);
         });
       }, []);
@@ -2326,6 +2598,23 @@ window.__ModuleLoader__.load({
               label: t("captions.title") + ": " + t(captions ? "switch.on" : "switch.off"),
               onChange: function () {
                 setPreference("captions", !preferences.captions);
+              }
+            })
+          ),
+          h(
+            "li",
+            { key: "animation", className: "dsh-csva-row" },
+            h(
+              "span",
+              { className: "dsh-csva-rowText" },
+              h("span", { className: "dsh-csva-rowTitle" }, t("animation.title")),
+              h("span", { className: "dsh-csva-rowDescription" }, t("animation.description"))
+            ),
+            h(Switch, {
+              checked: animation,
+              label: t("animation.title") + ": " + t(animation ? "switch.on" : "switch.off"),
+              onChange: function () {
+                setPreference("animation", !preferences.animation);
               }
             })
           ),

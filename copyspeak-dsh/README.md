@@ -7,6 +7,7 @@ A DSH plugin that reads assistant replies aloud through the CopySpeak desktop ap
 - A **CopySpeak** panel in the sidebar, beside Plugins and Automation tasks:
   - **Read new replies aloud** reads the final reply of each turn in the open session. Intermediate steps of a tool-calling turn are read once, at the end.
   - **Show captions while reading** highlights the word CopySpeak plays inside the reply text. It is off by default.
+  - **Animate caption highlight** glides the highlight pill from word to word while captions play. It is on by default; off, the highlight jumps between words.
   - **Follow playback** scrolls the chat to keep the spoken word in view. It is on by default.
   - A status line tells you whether the CopySpeak app is running.
 - A CopySpeak action in the completed turn's action row.
@@ -101,7 +102,7 @@ Slots:
 - `shell.overlay` – the floating playback bar, id `copyspeak-playback`.
 - `conversation.chat.text-interaction` – the selection pill row. Key `quote` registers at priority -10, so it shadows the host Quote cell and renders both pills; key `copyspeak-read-selection` renders the read pill for a conversation where Quote cannot open. A keyed cell with a lower priority shadows the same key at a higher one, and only the lowest live priority renders.
 
-The switches live in the page's `localStorage` under `dsh.copyspeak-voice.auto-read`, `dsh.copyspeak-voice.captions`, and `dsh.copyspeak-voice.follow`. Auto-read and captions are off when their key is absent; follow is on.
+The switches live in the page's `localStorage` under `dsh.copyspeak-voice.auto-read`, `dsh.copyspeak-voice.captions`, `dsh.copyspeak-voice.animation`, and `dsh.copyspeak-voice.follow`. Auto-read and captions are off when their key is absent; follow and the animation are on.
 
 ## Icon
 
