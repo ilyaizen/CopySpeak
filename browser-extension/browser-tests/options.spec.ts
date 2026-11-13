@@ -57,6 +57,7 @@ test("settings persist and website access can be granted, refused, and removed",
   await expect(page.locator("#version")).toHaveText("0.1.1");
   await expect(page.getByLabel("Show the playback box")).not.toBeChecked();
   await expect(page.getByLabel("Highlight when I double-copy")).toBeChecked();
+  await expect(page.getByLabel("Animate the word highlight")).toBeChecked();
   await page.getByLabel("Hover to read a paragraph").check();
   await page.getByLabel("Show the playback box").check();
   await expect
@@ -67,6 +68,17 @@ test("settings persist and website access can be granted, refused, and removed",
       })
     )
     .toEqual({ hoverRead: true, showPanel: true });
+  // The animated highlight defaults on, and turning it off persists.
+  await page.getByLabel("Animate the word highlight").uncheck();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        // SAFETY: settings is installed by this test's init script.
+        return (window as any).settings;
+      })
+    )
+    .toEqual({ hoverRead: true, showPanel: true, captionAnimation: false });
+  await page.getByLabel("Animate the word highlight").check();
   await page.getByLabel("Website address").fill("example.com/article");
   await page.getByRole("button", { name: "Allow website", exact: true }).click();
   await expect(page.locator("#sites")).toContainText("https://example.com/*");
@@ -76,5 +88,6 @@ test("settings persist and website access can be granted, refused, and removed",
   await page.getByRole("button", { name: "Remove access to https://example.com/*" }).click();
   await expect(page.locator("#sites")).toContainText("No websites allowed yet");
   await expect(page.getByLabel("Hover to read a paragraph")).toBeChecked();
-  await expect(page.getByLabel("Show the playback box")).not.toBeChecked();
+  // The row was checked above, and settings persist: it stays checked.
+  await expect(page.getByLabel("Show the playback box")).toBeChecked();
 });

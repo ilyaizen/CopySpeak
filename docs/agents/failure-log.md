@@ -99,6 +99,9 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Firefox native host manifests use `allowed_extensions` with the gecko ID, and live at `HKCU\Software\Mozilla\NativeMessagingHosts\com.copyspeak.browser` on Windows and `~/.mozilla/native-messaging-hosts/` on Linux, not the Chrome `NativeMessagingHosts` directories.
 - The companion's icons come from `src-tauri/icons` at build time. A stale `dist/icons` keeps the old colour until the build reruns.
 - Smoke-test Firefox with `npx web-ext@latest run ... --profile-create-if-missing --arg=-headless --no-input`; web-ext has no `--headless` flag, and `--firefox-profile` needs a `user.js` with `devtools.debugger.remote-enabled=true` or the devtools port never binds (web-ext then loops on ECONNREFUSED and exits).
+- Run the extension's Playwright specs from the repo root: the specs resolve `browser-extension/dist` against the process CWD, so running them inside `browser-extension/` doubles the path and every fixture asset 404s.
+- Give the content spec's chrome stub every runtime API the bundle touches at load: `hover.ts` reads `chrome.runtime.getURL` at module top, and a stub missing it kills the script before `onMessage.addListener`, which reads as `window.receive is not a function` and fails the whole spec.
+- Anchor a caption tween's clock at its first rendered frame and cap each frame's step (`MARK_FRAME_CAP_MS` in `glide.ts`): state frames run inside busy-page tasks, and a paint-time wall clock snapped the pill across late frames (14 rendered steps on an idle page, 1-2 on a real one).
 
 ## History & cache
 

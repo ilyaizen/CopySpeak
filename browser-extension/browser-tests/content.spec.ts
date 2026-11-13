@@ -29,6 +29,8 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
         onChanged: { addListener: (f: any) => (w.settingsChanged = f) }
       },
       runtime: {
+        // The hover button resolves its icon through runtime.getURL at load.
+        getURL: (asset: string) => `chrome-extension://copyspeak/${asset}`,
         sendMessage: async (m: any) => {
           w.sent.push(m);
           if (m.type === "site-access") return true;
@@ -102,6 +104,73 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
       return [...CSS.highlights.get("copyspeak-word")!].map((r) => (r as Range).toString());
     })
   ).toEqual(["same"]);
+  // The animated caption: a second word glides the pill, then settles on it.
+  await page.evaluate((token) => {
+    // SAFETY: receive is the chrome stub installed earlier in this test; page context is untyped.
+    (window as any).receive(
+      {
+        type: "native",
+        document_token: token,
+        event: {
+          v: 1,
+          type: "state",
+          reading_id: "r",
+          seq: 2,
+          status: "playing",
+          word: { start: 10, end: 12 },
+          word_available: true
+        }
+      },
+      {},
+      () => {}
+    );
+  }, capture.document_token);
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        // SAFETY: highlight ranges are Range/StaticRange set members; the cast only widens to Range which has toString.
+        // The settled name is absent mid-glide, so the missing entry reads as none.
+        return [...(CSS.highlights.get("copyspeak-word") ?? [])].map((r) => (r as Range).toString());
+      })
+    )
+    .toEqual(["😀"]);
+  expect(
+    await page.evaluate(() => document.querySelector("[data-copyspeak-mark-host]") !== null)
+  ).toBe(true);
+  // Turning the animation off in settings jumps the highlight instead.
+  await page.evaluate(() => {
+    // SAFETY: chrome.storage is installed by this test's browser fixture.
+    return (window as any).chrome.storage.local.set({ captionAnimation: false });
+  });
+  await page.evaluate((token) => {
+    // SAFETY: receive is the chrome stub installed earlier in this test; page context is untyped.
+    (window as any).receive(
+      {
+        type: "native",
+        document_token: token,
+        event: {
+          v: 1,
+          type: "state",
+          reading_id: "r",
+          seq: 3,
+          status: "playing",
+          word: { start: 13, end: 17 },
+          word_available: true
+        }
+      },
+      {},
+      () => {}
+    );
+  }, capture.document_token);
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        // SAFETY: highlight ranges are Range/StaticRange set members; the cast only widens to Range which has toString.
+        // The settled name is absent mid-glide, so the missing entry reads as none.
+        return [...(CSS.highlights.get("copyspeak-word") ?? [])].map((r) => (r as Range).toString());
+      })
+    )
+    .toEqual(["שלום"]);
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   expect(
     await page.evaluate(() => {

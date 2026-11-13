@@ -8,6 +8,7 @@ import {
   type Status
 } from "./protocol";
 import { paragraphHover } from "./hover";
+import { CaptionGlide, GLIDE_STYLE } from "./glide";
 
 // Repeated scripting.executeScript calls do not install duplicate listeners.
 const marker = "__copyspeak_companion_v1__";
@@ -29,17 +30,27 @@ if (!scope[marker]) {
   let style: HTMLStyleElement | null = null;
   let pauseButton: HTMLButtonElement | null = null;
   let label: HTMLElement | null = null;
+  let glide: CaptionGlide | null = null;
   let paused = false;
   let showPanel = false;
+  // The caption pill glides until turned off in settings (DSH default).
+  let captionAnimation = true;
   let siteAllowed = false;
   const hover = paragraphHover(() => {
     void chrome.runtime.sendMessage({ type: "read-paragraph" }).catch(() => cleanup());
   });
   async function loadSettings() {
-    const settings = await chrome.storage.local.get(["hoverRead", "showPanel"]);
+    const settings = await chrome.storage.local.get([
+      "hoverRead",
+      "showPanel",
+      "captionAnimation"
+    ]);
     // Off unless turned on in settings.
     showPanel = settings.showPanel === true;
     if (panel) panel.hidden = !showPanel;
+    // On unless turned off, so captions animate like the DSH plugin's.
+    captionAnimation = settings.captionAnimation !== false;
+    glide?.setAnimated(captionAnimation);
     hover.setEnabled(siteAllowed && settings.hoverRead === true);
   }
   chrome.storage.onChanged.addListener((_changes, area) => {
@@ -76,11 +87,19 @@ if (!scope[marker]) {
   const stopReading = () => {
     if (owner) sendControl("stop");
   };
+  // The pill follows page reflows it cannot own: content mutations go
+  // through the reading's observer, window resizes through this listener.
+  function repositionOnResize() {
+    glide?.reposition();
+  }
   function cleanup() {
     observer?.disconnect();
     observer = null;
+    removeEventListener("resize", repositionOnResize);
     CSS.highlights?.delete("copyspeak-passage");
     CSS.highlights?.delete("copyspeak-word");
+    glide?.release();
+    glide = null;
     panel?.remove();
     style?.remove();
     panel = null;
@@ -105,8 +124,10 @@ if (!scope[marker]) {
     CSS.highlights.set("copyspeak-passage", new Highlight(passage));
     style = document.createElement("style");
     style.textContent =
-      "::highlight(copyspeak-passage){background-color:#8cbcff55}::highlight(copyspeak-word){background-color:#1672de;color:#fff}";
+      "::highlight(copyspeak-passage){background-color:#8cbcff55}" + GLIDE_STYLE;
     document.documentElement.append(style);
+    glide = new CaptionGlide(document, captionAnimation);
+    addEventListener("resize", repositionOnResize);
     panel = document.createElement("aside");
     panel.hidden = !showPanel;
     const shadow = panel.attachShadow({ mode: "open" });
@@ -150,11 +171,14 @@ if (!scope[marker]) {
       if (anchor && !anchor.valid()) {
         stopReading();
         cleanup();
+        return;
       }
+      // The reading's text survived: keep the pill on the spoken word.
+      glide?.reposition();
     });
     observer.observe(anchor.root, { subtree: true, childList: true, characterData: true });
   }
-  /** Reflect one state frame: box label, pause button, and the word span (captured offsets). */
+  /** Reflect one state frame: box label, pause button, and the word pill (captured offsets). */
   function show(status: Status, wordAvailable: boolean, word: [number, number] | null) {
     paused = status === "paused";
     if (pauseButton) {
@@ -163,9 +187,19 @@ if (!scope[marker]) {
     }
     if (label)
       label.textContent = `CopySpeak · ${status}${wordAvailable ? "" : " · Word highlighting unavailable"}`;
-    CSS.highlights.delete("copyspeak-word");
-    const range = word && anchor?.range(word[0], word[1]);
-    if (range) CSS.highlights.set("copyspeak-word", new Highlight(range));
+    if (word === null || glide === null || anchor === null) {
+      CSS.highlights.delete("copyspeak-word");
+      glide?.clearWord();
+      return;
+    }
+    const range = anchor.range(word[0], word[1]);
+    const scope = anchor.root instanceof Element ? anchor.root : anchor.root.parentElement;
+    if (range === null || scope === null) {
+      CSS.highlights.delete("copyspeak-word");
+      glide.clearWord();
+      return;
+    }
+    glide.paint(range, scope, `${word[0]}:${word[1]}`);
   }
   chrome.runtime.onMessage.addListener((message: CopyCommand, _sender, respond) => {
     if (message.type === "refresh-site-access") {

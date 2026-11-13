@@ -11,11 +11,19 @@ async function apply() {
   if (!result?.ok) throw new Error(result?.error ?? "Could not apply settings. Try again.");
 }
 async function refresh() {
-  const settings = await chrome.storage.local.get(["hoverRead", "automatic", "showPanel"]);
-  for (const key of ["hoverRead", "automatic", "showPanel"]) {
-    // Double-copy highlighting is on until turned off; the rest are opt-in.
+  const settings = await chrome.storage.local.get([
+    "hoverRead",
+    "automatic",
+    "showPanel",
+    "captionAnimation"
+  ]);
+  for (const key of ["hoverRead", "automatic", "showPanel", "captionAnimation"]) {
+    // Double-copy highlighting and the animated highlight are on until turned
+    // off; the rest are opt-in.
     document.querySelector<HTMLInputElement>(`#${key}`)!.checked =
-      key === "automatic" ? settings[key] !== false : settings[key] === true;
+      key === "automatic" || key === "captionAnimation"
+        ? settings[key] !== false
+        : settings[key] === true;
   }
   const permissions = await chrome.permissions.getAll();
   sites.replaceChildren();
@@ -55,7 +63,7 @@ async function save(action: () => Promise<void>) {
   }
   await refresh();
 }
-for (const key of ["hoverRead", "automatic", "showPanel"]) {
+for (const key of ["hoverRead", "automatic", "showPanel", "captionAnimation"]) {
   const input = document.querySelector<HTMLInputElement>(`#${key}`)!;
   input.onchange = () => {
     const checked = input.checked;

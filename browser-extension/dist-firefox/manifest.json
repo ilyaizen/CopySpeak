@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CopySpeak Companion",
-  "version": "0.2.15",
+  "version": "0.2.16",
   "description": "Read selected page text aloud with CopySpeak and follow along with live word highlighting.",
   "permissions": [
     "activeTab",
