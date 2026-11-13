@@ -17,8 +17,8 @@
   let count = 0;
   const LINES = INTRO_LINES.map((line) => line.map((w) => ({ ...w, index: count++ })));
   const WORDS = LINES.flat();
-  // Static frame (no JS / reduced motion / before playback): "copy" lit.
-  const STATIC_WORD = WORDS.findIndex((w) => w.text === "copy");
+  // Static frame (no JS / reduced motion / before playback): "buck" lit.
+  const STATIC_WORD = WORDS.findIndex((w) => w.text === "buck");
 
   let stage: HTMLDivElement;
   let promise: HTMLHeadingElement;
