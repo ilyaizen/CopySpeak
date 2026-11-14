@@ -451,8 +451,10 @@ pub fn claim_unscoped_playback() {
 /// How long a scoped playback control (`/pause`, `/resume`, `/seek`) waits for
 /// its live request to become audible. A control that arrives while the
 /// reading still synthesizes applies as soon as its first chunk is audible;
-/// past this bound it is answered as not playing.
-const CONTROL_OWNER_WAIT: Duration = Duration::from_secs(10);
+/// past this bound it is answered as not playing. Two seconds gives a
+/// synthesizing reading time to emit its first chunk without blocking the
+/// control connection thread excessively.
+const CONTROL_OWNER_WAIT: Duration = Duration::from_millis(2000);
 /// How often a waiting control re-checks ownership.
 const CONTROL_OWNER_POLL: Duration = Duration::from_millis(25);
 

@@ -673,6 +673,12 @@ pub fn delete_history_batch(
 
 /// Play all audio fragments in a batch sequentially.
 /// Emits audio-fragment-ready events for each fragment.
+///
+/// Like `replay_cached` and `play_history_entry`, this is an intentional
+/// interjection: it claims unscoped playback (no reading id) for each fragment,
+/// bypassing the queued gate. A batch replay can therefore play between
+/// fragments of an active queued reading. This is by design — history replay is
+/// an explicit user action that should not wait in the synthesis queue.
 #[tauri::command]
 pub async fn play_history_batch(
     app: AppHandle,
@@ -791,6 +797,7 @@ pub async fn play_history_batch(
                 text: entry.text.clone(),
                 captions: crate::tts::captions::read_sidecar(&output_path),
                 session_id: None,
+                reading_id: None,
             },
         );
 

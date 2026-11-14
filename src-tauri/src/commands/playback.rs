@@ -9,6 +9,14 @@ use tauri::{Emitter, State};
 
 use super::CachedAudio;
 
+/// History replay functions (`replay_cached`, `play_history_entry`,
+/// `play_history_batch`) are intentional interjections: they claim unscoped
+/// playback (no reading id) and emit immediately, bypassing the queued gate
+/// that serializes `speak_now` and `speak_queued`. This means a history replay
+/// can play between fragments of an active queued reading. The behavior is by
+/// design — history replay is an explicit user action that should not wait in
+/// the synthesis queue.
+
 /// Abort any in-progress synthesis (kills CLI processes) and stop playback.
 #[tauri::command]
 pub fn abort_synthesis(app: tauri::AppHandle) -> Result<(), String> {
@@ -54,6 +62,7 @@ pub fn replay_cached(
             text,
             captions,
             session_id: None,
+            reading_id: None,
         },
     ) {
         log::warn!("Failed to emit audio-ready: {}", e);
@@ -286,6 +295,7 @@ pub fn play_history_entry(
             text,
             captions,
             session_id: None,
+            reading_id: None,
         },
     ) {
         log::warn!("Failed to emit audio-ready: {}", e);

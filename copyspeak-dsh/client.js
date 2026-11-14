@@ -121,11 +121,6 @@ window.__ModuleLoader__.load({
     const GLYPH_STROKE = 3.3;
     const GLYPH_ARC_OUTER = "M48.17 21.93A19.44 19.44 0 0 1 48.17 56.13";
     const GLYPH_ARC_INNER = "M45.06 31.13A9.43 9.43 0 0 1 45.06 46.87";
-    /* The colored app logo (copyspeak-dsh/icon.svg) as a data URI, because a
-       linked plugin cannot fetch its own package files at runtime. The bar
-       shows this mark at its head; the message action keeps the theme glyphs. */
-    const APP_LOGO_URL =
-      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjIuODQ5IDEuOTc0IDczLjg3MiA3My44NzIiIHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJDb3B5U3BlYWsgYXBwIGxvZ28iPgogIDxkZWZzPgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJwYWludDFfbGluZWFyXzIzMTJfNTQ4MiIgeDE9IjQwIiB4Mj0iNjkuNzIiIHkxPSIzLjQyIiB5Mj0iNzIuMzIiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzYwQjNBMSIgb2Zmc2V0PSIwIi8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM2MEFFQTciIG9mZnNldD0iLjE0NTgiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzQxODc4QSIgb2Zmc2V0PSIuMjg2NSIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjM0M4MDgzIiBvZmZzZXQ9Ii44NTQyIi8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMzMjZENzEiIG9mZnNldD0iMSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQyX2xpbmVhcl8yMzEyXzU0ODIiIHgxPSIxOS4yNCIgeDI9IjQ5LjMzIiB5MT0iNi44NjQiIHkyPSI3My4wNyIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjODVEMEE1IiBvZmZzZXQ9IjAiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzY2QkM5NSIgb2Zmc2V0PSIuNDY4OCIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNTVBQzk1IiBvZmZzZXQ9IjEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50M19saW5lYXJfMjMxMl81NDgyIiB4MT0iMzcuNjUiIHgyPSIzNy42NSIgeTE9IjEwLjI2IiB5Mj0iNjcuMTQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzNEODM4MCIgb2Zmc2V0PSIwIi8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM0QTk3OTEiIG9mZnNldD0iLjIyOTIiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzNEODI4NSIgb2Zmc2V0PSIuNzI0Ii8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM1QkFFQTYiIG9mZnNldD0iMSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQ1X2xpbmVhcl8yMzEyXzU0ODIiIHgxPSIyOC40MyIgeDI9IjQ0LjA1IiB5MT0iMjAuNzQiIHkyPSI1NC42NSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNzVDMjlDIiBvZmZzZXQ9IjAiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzYwQjY5OCIgb2Zmc2V0PSIuNDc0Ii8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM1MEE3OTciIG9mZnNldD0iMSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQ2X2xpbmVhcl8yMzEyXzU0ODIiIHgxPSIyOC40NSIgeDI9IjQyLjAyIiB5MT0iMjAuNzQiIHkyPSI1NS45IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM1MEEyOTYiIG9mZnNldD0iMCIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNDI4Qjg4IiBvZmZzZXQ9Ii4zNDkiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzNEODI4NSIgb2Zmc2V0PSIuNjgyMyIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjMzU3Mjc1IiBvZmZzZXQ9IjEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50N19saW5lYXJfMjMxMl81NDgyIiB4MT0iMjkuMjMiIHgyPSIyOS4yMyIgeTE9IjIxLjI3IiB5Mj0iNTMuMzQiIGdyYWRpZW50VW5pdHM9InVzZXJTcGFjZU9uVXNlIj4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzg4RDBBNyIgb2Zmc2V0PSIwIi8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM4Q0QxQTciIG9mZnNldD0iLjIyNCIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNzNDMjk4IiBvZmZzZXQ9Ii40NDI3Ii8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM2Q0MwOTYiIG9mZnNldD0iLjY3MTkiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzRDOUU5NyIgb2Zmc2V0PSIuODI4MSIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNEM5RDkzIiBvZmZzZXQ9IjEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50OF9saW5lYXJfMjMxMl81NDgyIiB4MT0iNTMuOCIgeDI9IjYzLjc2IiB5MT0iMTkuMDYiIHkyPSI1Ni4xMSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNUFBQ0EzIiBvZmZzZXQ9IjAiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzQyOEI4RiIgb2Zmc2V0PSIuMzM4NSIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjM0I3RjgyIiBvZmZzZXQ9Ii42OTI3Ii8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMzNTcyNzYiIG9mZnNldD0iMSIvPgogICAgPC9saW5lYXJHcmFkaWVudD4KICAgIDxsaW5lYXJHcmFkaWVudCBpZD0icGFpbnQ5X2xpbmVhcl8yMzEyXzU0ODIiIHgxPSI1Mi41NiIgeDI9IjUyLjU2IiB5MT0iMTkuMjQiIHkyPSI1OC43OSIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjN0FDODlEIiBvZmZzZXQ9IjAiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzVEQjM5NSIgb2Zmc2V0PSIuNDU4MyIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNTRBQTk3IiBvZmZzZXQ9IjEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgICA8bGluZWFyR3JhZGllbnQgaWQ9InBhaW50MTBfbGluZWFyXzIzMTJfNTQ4MiIgeDE9IjQ3LjYyIiB4Mj0iNTIuNjIiIHkxPSIyOC4zOCIgeTI9IjQ4LjU4IiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiM0QzlDOTMiIG9mZnNldD0iMCIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjM0Y4NTg4IiBvZmZzZXQ9Ii40MzIzIi8+CiAgICAgIDxzdG9wIHN0b3AtY29sb3I9IiMzQjdGODIiIG9mZnNldD0iLjczNDQiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzM0NzE3NSIgb2Zmc2V0PSIxIi8+CiAgICA8L2xpbmVhckdyYWRpZW50PgogICAgPGxpbmVhckdyYWRpZW50IGlkPSJwYWludDExX2xpbmVhcl8yMzEyXzU0ODIiIHgxPSI0Ni44MiIgeDI9IjQ2LjgyIiB5MT0iMjguNjIiIHkyPSI0OC41NCIgZ3JhZGllbnRVbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNkZDMTlDIiBvZmZzZXQ9IjAiLz4KICAgICAgPHN0b3Agc3RvcC1jb2xvcj0iIzVEQjI5NSIgb2Zmc2V0PSIuNTE1NiIvPgogICAgICA8c3RvcCBzdG9wLWNvbG9yPSIjNTZBRDk2IiBvZmZzZXQ9IjEiLz4KICAgIDwvbGluZWFyR3JhZGllbnQ+CiAgPC9kZWZzPgogIDxnIGlkPSJhcnQiPgogICAgPHBhdGggZD0ibTU3LjgzIDMuNDItNDAuNjIgMy40NmMtNi44MyAwLjU5LTExLjkyIDYuMDMtMTEuOTIgMTMuNTh2MzYuODVjMCA4LjMgNS44IDE0IDEyLjk2IDE0LjQ0bDM4LjY1IDIuNjJjMTEuMDEgMC43MiAxNy4zOC01LjY2IDE3LjM4LTEzLjk4di00MC44OGMwLTEwLjAzLTcuNzktMTYuNTgtMTYuNDUtMTYuMDl6bTcuODYgNTUuNDVjMCA1LjA5LTMuNzIgOC40OC04LjE4IDguMjJsLTM3Ljk2LTIuMzdjLTQtMC4yNS02LjgzLTMuMzQtNi44My03LjU3di0zNS44OWMwLTQuNyAzLTcuNzUgNy4xOC04LjA3bDM4LjI2LTIuOTFjNC4yOS0wLjMzIDcuNTMgMy44IDcuNTMgOS4yM3YzOS4zNnoiIGZpbGw9InVybCgjcGFpbnQxX2xpbmVhcl8yMzEyXzU0ODIpIi8+CiAgICA8cGF0aCBkPSJtNTYuNzEgMy42OS0zOS41IDMuMzdjLTYuNjcgMC41NS0xMS42OSA1Ljk5LTExLjY5IDEzLjMydjM2LjcxYzAgNy45IDUuNCAxMy4xOSAxMi43MyAxMy41NWwzOC42NSAyLjM1YzguNTcgMC42MiAxNC4wOC01LjI3IDE0LjA4LTEyLjk0di00MS4yM2MwLTkuMzQtNi43Ny0xNS41My0xNC4yNy0xNS4xM3ptOC45OCA1NS4xOGMwIDUuMDktMy43MiA4LjQ4LTguMTggOC4yMmwtMzcuOTYtMi4zN2MtNC0wLjI1LTYuODMtMy4zNC02LjgzLTcuNTd2LTM1Ljg5YzAtNC43IDMtNy43NSA3LjE4LTguMDdsMzguMjYtMi45MWM0LjI5LTAuMzMgNy41MyAzLjggNy41MyA5LjIzdjM5LjM2eiIgZmlsbD0idXJsKCNwYWludDJfbGluZWFyXzIzMTJfNTQ4MikiLz4KICAgIDxwYXRoIGQ9Im01Ni4wMyA4LjctMzguNDIgMi43NWMtNC43MiAwLjMzLTguMTYgNC4xNC04LjE2IDkuNjd2MzUuMjVjMCA1LjUgMy42NCA5LjI4IDguNjEgOS41NGwzOC45MiAyLjM4YzUuNDUgMC4zOCA5LjU0LTMuNTUgOS41NC05LjM0di0zOS4yYzAtNi42OS00LjczLTExLjQtMTAuNDktMTEuMDV6bTkuNjYgNTAuMTdjMCA1LjA5LTMuNzIgOC40OC04LjE4IDguMjJsLTM3Ljk2LTIuMzdjLTQtMC4yNS02LjgzLTMuMzQtNi44My03LjU3di0zNS44OWMwLTQuNyAzLTcuNzUgNy4xOC04LjA3bDM4LjI2LTIuOTFjNC4yOS0wLjMzIDcuNTMgMy44IDcuNTMgOS4yM3YzOS4zNnoiIGZpbGw9InVybCgjcGFpbnQzX2xpbmVhcl8yMzEyXzU0ODIpIi8+CiAgICA8cGF0aCBkPSJtNTYuNzEgNC4yN2M3LjYyLTAuMzEgMTMuNTMgNS41MiAxMy42NyAxMy44IDAtOC41Ni02LjQxLTE0LjQ2LTEzLjY3LTE0LjE3bC0zOS41IDMuMmMtMi45MyAwLjI0LTUuNDQgMS40MS03LjM1IDMuMTggMS44NC0xLjUgNC4yMy0yLjUgNy4wOC0yLjcxbDM5Ljc3LTMuM3oiIGZpbGw9IiNBMUQ3QkIiIG9wYWNpdHk9Ii41Ii8+CiAgICA8cGF0aCBkPSJtNTcuMDcgNjcuNTItMzguODYtMi40M2MtNS4wMy0wLjItOC4zMi0zLjg1LTguNDYtOC45MSAwIDUuNDMgMy40IDkuNDEgOC41IDkuNjVsMzguNzMgMi40M2M1LjQxIDAuMzUgOS4zNS0zLjQ1IDkuNTItOC44OS0wLjY1IDUuMS00LjYyIDguMzItOS40MyA4LjE1eiIgZmlsbD0iIzkzRDZBQiIgb3BhY2l0eT0iLjUiLz4KICAgIDxwYXRoIGQ9Im0zNy4zNSAyMC43NGMtMC43NC0wLjA0LTEuNDYgMC4yMS0yLjAyIDAuNzFsLTcuNjggNy4xM2MtMC4yNCAwLjIzLTAuNTYgMC4zNy0wLjkgMC4zOWwtNS41OCAwLjIxYy0yLjU1IDAuMS00LjUxIDIuMjMtNC41MSA1djcuOTljMCAyLjgxIDIuMSA0Ljk1IDQuNzQgNS4wOWw1LjMgMC4yOGMwLjI4IDAuMDIgMC41NCAwLjE1IDAuNzQgMC4zNWw3Ljk0IDguMTJjMC43MSAwLjcxIDEuNjcgMS4wNCAyLjU1IDEuMDIgMS41Mi0wLjA0IDIuNjUtMS4yIDIuNjUtMi43NnYtMzAuMThjMC0xLjg0LTEuNjUtMy4yNy0zLjIzLTMuMzV6IiBmaWxsPSJ1cmwoI3BhaW50NV9saW5lYXJfMjMxMl81NDgyKSIvPgogICAgPHBhdGggZD0ibTM4LjIxIDIwLjkxYzAuMTggMC40MSAwLjI2IDAuODQgMC4yNiAxLjM0djMxLjY5YzAgMS4zNy0wLjk2IDIuMzctMi4zIDIuNDUgMC41NCAwLjQxIDEuMjIgMC42MyAxLjg1IDAuNiAxLjQ5LTAuMDYgMi41Ni0xLjIyIDIuNTYtMi43MnYtMzAuMThjMC0xLjU4LTEuMDgtMi44LTIuMzctMy4xOHoiIGZpbGw9InVybCgjcGFpbnQ2X2xpbmVhcl8yMzEyXzU0ODIpIi8+CiAgICA8cGF0aCBkPSJtMzcuNTggMjEuMThjLTAuNjctMC4yMi0xLjUxLTAuMDMtMi4xMSAwLjUxbC03LjU5IDcuMjJjLTAuMjggMC4yNS0wLjY1IDAuMzctMS4wMiAwLjM4bC01LjY3IDAuMmMtMi40NSAwLjA5LTQuNCAyLjA5LTQuNCA0Ljc0djcuODljMCAxLjU4IDAuNzIgMyAxLjggMy44OS0wLjU3LTAuODEtMC45LTEuODItMC45LTIuOTd2LTguODNjMC0xLjE2IDAuNjktMS43NyAxLjUzLTEuNjYgMC42NiAwLjExIDEuMTctMC4yMyAxLjc5LTAuMTZsNy4zMy0wLjA4YzAuNTQgMC4wMSAxLjAyLTAuMTcgMS4zOC0wLjUzbDcuOS04LjU5YzAuODItMC44MSAwLjgtMS43Mi0wLjA0LTIuMDF6IiBmaWxsPSJ1cmwoI3BhaW50N19saW5lYXJfMjMxMl81NDgyKSIgb3BhY2l0eT0iLjUiLz4KICAgIDxwYXRoIGQ9Im0yOC4wNiA0My41MS03LjA1LTAuNGMtMC44OS0wLjA1LTEuNTItMC43NC0xLjUyLTEuNzV2MC42OWMwIDIuMDcgMC42IDMuOTYgMS44NyA0LjZsNS41NiAwLjMyYzAuNDYgMC4wNiAwLjgzIDAuMjggMS4xNSAwLjU2bDcuNjkgNy45OGMwLjg5LTAuNTIgMS4yMi0xLjgyIDAuNjMtMi42MWwtNi45LTguNzVjLTAuMzctMC4zOC0wLjg3LTAuNjItMS40My0wLjY0eiIgZmlsbD0iIzREQTA5NyIgb3BhY2l0eT0iLjUiLz4KICAgIDxwYXRoIGQ9Im00OS42MSAxOS40M2MtMS41LTAuNzQtMy4zMi0wLjM3LTQuMTEgMS4wNC0wLjggMS40NS0wLjIxIDMuMTMgMS4yNyAzLjk3IDUuMjUgMi44MSA4LjM5IDguMDQgOC4zOSAxNC40NCAwIDYuNDctMy40NSAxMi4wNS04LjU3IDE0LjYxLTEuNDcgMC44MS0yIDIuNDctMS4zMyAzLjg1IDAuNzIgMS40IDIuNzggMi4wMyA0LjQ0IDEuNDEgNy4xMy0zLjE0IDExLjk3LTEwLjc5IDExLjk3LTE5LjU3IDAtOC42Ny01LjAyLTE2LjQ4LTEyLjA2LTE5Ljc1eiIgZmlsbD0idXJsKCNwYWludDhfbGluZWFyXzIzMTJfNTQ4MikiLz4KICAgIDxwYXRoIGQ9Im00OS4yOCAxOS41OWMtMS4zNy0wLjY5LTMtMC4zMy0zLjczIDAuOTQtMC43MSAxLjI3LTAuMjEgMi43NSAxLjE2IDMuNDYgNS41IDIuODkgOC44NyA4LjQyIDguODcgMTQuODkgMCA2LjUzLTMuNDUgMTIuMzctOC45MSAxNC44Mi0xLjQxIDAuNzctMS45IDIuMjktMS4yNCAzLjQ5IDAuNjkgMS4yNCAyLjQxIDEuNTggMy44MiAwLjkgNi40Ny0zLjUxIDEwLjQtMTAuOTIgMTAuNC0xOS4zNSAwLTguNDItNC4zOC0xNS43My0xMC4zNy0xOS4xNXoiIGZpbGw9InVybCgjcGFpbnQ5X2xpbmVhcl8yMzEyXzU0ODIpIi8+CiAgICA8cGF0aCBkPSJtNDkuMTUgMTkuNzhjLTEuMTItMC41OS0yLjU1LTAuMjUtMy4xOCAwLjc1LTAuNTkgMC45OS0wLjMgMi4yNCAwLjY3IDIuODUtMC45Ny0wLjcxLTEuMDUtMi0wLjMyLTIuODYgMC42Ni0wLjgyIDEuODktMS4wMyAyLjk5LTAuNTYgNS41NCAyLjkyIDkuMTggOC42OCAxMC4wNyAxNC45MS0wLjY2LTYuOTEtNC42OS0xMi40LTEwLjIzLTE1LjA5eiIgZmlsbD0iIzk3RDZCNyIgb3BhY2l0eT0iLjUiLz4KICAgIDxwYXRoIGQ9Im01NS41MSAzOC40NmMwLTYuNDgtMy4zMi0xMi4xOS04Ljg0LTE0Ljk0IDUuMTIgMi44MSA4LjQ1IDguNDkgOC40NSAxNS4xMyAwIDYuNS0zLjQyIDEyLjQ0LTguNTIgMTUuMDIgNS4zNy0yLjQ1IDkuMDgtOC4yNiA4LjkxLTE1LjIxeiIgZmlsbD0iIzk3RDZCNyIgb3BhY2l0eT0iLjUiLz4KICAgIDxwYXRoIGQ9Im00Ni43NiA1My43OGMtMS4xNiAwLjYxLTEuNiAxLjkyLTEuMDcgMy4wMS0wLjMyLTEuMDUgMC4xLTIuMTggMS4yMy0yLjg0LTAuMDYtMC4wNy0wLjEyLTAuMTMtMC4xNi0wLjE3eiIgZmlsbD0iIzk3RDZCNyIgb3BhY2l0eT0iLjUiLz4KICAgIDxwYXRoIGQ9Im00Ni4zOCAyOC43N2MtMS4yNy0wLjc1LTIuOTYtMC40Mi0zLjY3IDAuODktMC43NSAxLjI4LTAuMyAyLjg2IDAuODYgMy43OCAxLjczIDEuMzMgMi43NyAzLjI2IDIuNzcgNS40OCAwIDIuMjctMS4xNCA0LjI4LTIuODMgNS40NS0xLjIgMC45LTEuNDggMi41My0wLjcgMy43OCAwLjg0IDEuMjMgMi41NSAxLjc0IDMuOTUgMS4xNiAzLjQ5LTEuNzggNS41NC01LjU2IDUuNTQtOS44OSAwLTQuNjItMi40OS04Ljc5LTUuOTItMTAuNjV6IiBmaWxsPSJ1cmwoI3BhaW50MTBfbGluZWFyXzIzMTJfNTQ4MikiLz4KICAgIDxwYXRoIGQ9Im00Ni4wNCAyOC44OWMtMS4xOC0wLjctMi42NS0wLjM1LTMuMzQgMC44My0wLjY3IDEuMTUtMC4yNyAyLjU5IDAuODEgMy40MyAxLjgxIDEuMzYgMi44NSAzLjM5IDIuODUgNS43MyAwIDIuMzYtMS4xNyA0LjQ4LTIuODcgNS42Ni0xLjExIDAuODEtMS4zNiAyLjI2LTAuNjQgMy4yNSAwLjczIDAuOTEgMi4wNCAxLjA5IDMuMDkgMC40NiAzLjA0LTIuMDYgNC43NS01LjYzIDQuNzUtOS42NiAwLTQuMDYtMS44Ni03LjgyLTQuNjUtOS43eiIgZmlsbD0idXJsKCNwYWludDExX2xpbmVhcl8yMzEyXzU0ODIpIi8+CiAgICA8cGF0aCBkPSJtNDYuMTEgMjkuMjFjLTEuMDctMC43MS0yLjQ2LTAuNDQtMy4xMiAwLjU3LTAuNTYgMC45NS0wLjM0IDIuMTkgMC41MiAyLjg5LTAuNzMtMC43NS0wLjc2LTItMC4xLTIuODMgMC42OC0wLjgyIDEuOC0wLjk2IDIuODQtMC40NiAyLjY2IDEuODQgNC4yNyA1LjA3IDQuNDIgOC41MSAwLTMuNTMtMS43My02Ljk5LTQuNTYtOC42OHoiIGZpbGw9IiM5N0Q2QjciIG9wYWNpdHk9Ii41Ii8+CiAgICA8cGF0aCBkPSJtNDYuODUgMzguNzdjMCAyLjcxLTEuMzMgNC45My0zLjMyIDYuMTktMC45NCAwLjc1LTEuMDYgMS45NC0wLjQ0IDIuODEtMC41OC0wLjk3LTAuMTgtMi4yNiAwLjc5LTIuOTQgMS45Ni0xLjM1IDMuMTEtMy41NiAyLjk3LTYuMDZ6IiBmaWxsPSIjOTdENkI3IiBvcGFjaXR5PSIuNSIvPgogIDwvZz4KPC9zdmc+Cg==";
 
     const en = {
       "panel.label": "CopySpeak",
@@ -206,12 +201,10 @@ window.__ModuleLoader__.load({
       /* The frame-wide playback bar. The shell overlay is click-through, so the
          bar opts back into pointer events. It floats in the top right corner,
          below the session header's bottom border: the header is 76 px tall and
-         starts under the frame top clearance. The bar is icon-only: the colored
-         app logo, then pause or resume, rewind, skip, stop, and Show in chat.
-         Every control names itself in its tooltip and aria-label. */
-      ".dsh-csva-bar{position:fixed;right:20px;top:calc(var(--dsh-frame-top-clearance,0px) + 88px);z-index:20;display:inline-flex;align-items:center;gap:2px;box-sizing:border-box;max-width:calc(100vw - 40px);padding:6px 6px 6px 8px;border:.5px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 6px 20px rgb(0 0 0 / 14%);pointer-events:auto}",
-      ".dsh-csva-barGlyph{flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-right:6px}",
-      ".dsh-csva-barLogo{display:block;width:18px;height:18px}",
+         starts under the frame top clearance. The bar is icon-only: pause or
+         resume, rewind, skip, stop, and Show in chat. Every control names
+         itself in its tooltip and aria-label. */
+      ".dsh-csva-bar{position:fixed;right:20px;top:calc(var(--dsh-frame-top-clearance,0px) + 88px);z-index:20;display:inline-flex;align-items:center;gap:2px;box-sizing:border-box;max-width:calc(100vw - 40px);padding:6px;border:.5px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);box-shadow:0 6px 20px rgb(0 0 0 / 14%);pointer-events:auto}",
       ".dsh-csva-barControl{flex:none;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:none;border-radius:var(--dsw-radius-sm,6px);background:0 0;color:var(--dsw-alias-label-secondary);cursor:pointer}",
       "@media (hover:hover){.dsh-csva-barControl:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}}",
       ".dsh-csva-barControl:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
@@ -277,7 +270,10 @@ window.__ModuleLoader__.load({
       paused: false,
       pauseChangedAt: 0,
       listeners: new Set(),
-      sequence: 1
+      sequence: 1,
+      /* Chain that serializes beginReading calls. Each call appends to it,
+         so overlapping starts queue instead of racing. */
+      beginChain: Promise.resolve()
     };
 
     /* The locale binder from apply(), for slots that pass no `t` prop. */
@@ -1798,27 +1794,35 @@ window.__ModuleLoader__.load({
     }
 
     /* Start one reading and resolve with its failure code, or null. A selection
-       reading passes its cloned range instead of a message id and node key. */
+       reading passes its cloned range instead of a message id and node key.
+       Calls are serialized through playback.beginChain so overlapping starts
+       cannot post two /speak calls for the same stop. */
     function beginReading(messageId, nodeKey, speech, range = null) {
-      const previous = playback.requestId;
-      const stopping = previous === null ? Promise.resolve(true) : stopReading(previous);
-      return stopping.then(function (stopped) {
-        if (!stopped) {
-          forget();
-          return "error.offline";
-        }
-        const requestId = nextRequestId();
-        resetReading(messageId, nodeKey, speech, range);
-        remember(messageId, requestId, range === null ? "message" : "selection");
-        startStatusPolling(requestId);
-        return post("/speak", { text: speech, request_id: requestId, wait: true }).then(
-          function (finished) {
-            if (playback.requestId !== requestId) return null;
+      const run = function () {
+        const previous = playback.requestId;
+        const stopping = previous === null ? Promise.resolve(true) : stopReading(previous);
+        return stopping.then(function (stopped) {
+          if (!stopped) {
             forget();
-            return finished ? null : "error.offline";
+            return "error.offline";
           }
-        );
-      });
+          const requestId = nextRequestId();
+          resetReading(messageId, nodeKey, speech, range);
+          remember(messageId, requestId, range === null ? "message" : "selection");
+          startStatusPolling(requestId);
+          return post("/speak", { text: speech, request_id: requestId, wait: true }).then(
+            function (finished) {
+              if (playback.requestId !== requestId) return null;
+              forget();
+              return finished ? null : "error.offline";
+            }
+          );
+        });
+      };
+      // Append to the chain so concurrent calls queue up.
+      const next = playback.beginChain.then(run, run);
+      playback.beginChain = next;
+      return next;
     }
 
     function stopReadingNow() {
@@ -1966,8 +1970,8 @@ window.__ModuleLoader__.load({
 
     /*
      * Bar control glyphs. They draw in a 16 px box in `currentColor`, so the
-     * icon-only controls follow the host theme. Fill marks (pause, play, stop)
-     * pair with stroked direction marks (rewind, skip, chat).
+     * icon-only controls follow the host theme. Every mark is filled, so the
+     * set reads as one family at bar size.
      */
     function ControlIcon(props) {
       return h(
@@ -2015,53 +2019,43 @@ window.__ModuleLoader__.load({
       );
     }
 
-    /* The rewind and skip marks: two chevrons plus the numeral 5. The numeral
-       is SVG text, so it inherits currentColor and stays legible at 16 px. */
+    /* The rewind and skip marks: the app's own filled seek icons, the exact
+       Material artwork its player buttons use (fast_rewind / fast_forward;
+       src/lib/components/icons/skip-back.svelte and skip-forward.svelte,
+       google/material-design-icons, Apache-2.0). One path per mark, drawn at
+       16 px in currentColor so the controls follow the host theme. */
     function SkipGlyph(props) {
       const back = props.back === true;
-      const chevrons = back
-        ? ["M4.4 3.9 1.7 8l2.7 4.1", "M7.6 3.9 4.9 8l2.7 4.1"]
-        : ["M8.4 3.9 11.1 8l-2.7 4.1", "M11.6 3.9 14.3 8l-2.7 4.1"];
       return h(
-        ControlIcon,
-        null,
-        chevrons.map(function (d, index) {
-          return h("path", {
-            key: index,
-            d: d,
-            fill: "none",
-            stroke: "currentColor",
-            strokeWidth: 1.5,
-            strokeLinecap: "round",
-            strokeLinejoin: "round"
-          });
-        }),
-        h(
-          "text",
-          {
-            x: back ? 11.2 : 4.8,
-            y: 8.1,
-            textAnchor: "middle",
-            dominantBaseline: "central",
-            fontSize: 8.2,
-            fontWeight: 700,
-            fill: "currentColor"
-          },
-          "5"
-        )
+        "svg",
+        {
+          viewBox: "0 0 24 24",
+          width: 16,
+          height: 16,
+          className: "dsh-csva-glyph",
+          "aria-hidden": true,
+          focusable: "false"
+        },
+        h("path", {
+          d: back
+            ? "M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"
+            : "M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z",
+          fill: "currentColor"
+        })
       );
     }
 
-    /* Show in chat: a speech bubble, the same mark chat surfaces use. */
+    /* Show in chat: a solid speech bubble, the same mark chat surfaces use.
+       The 1 px round-joined stroke rounds the corners like the other fills. */
     function ChatGlyph() {
       return h(
         ControlIcon,
         null,
         h("path", {
           d: "M3.6 3.1H12.4A1.9 1.9 0 0 1 14.3 5V9A1.9 1.9 0 0 1 12.4 10.9H7.6L4.9 13.3V10.9H3.6A1.9 1.9 0 0 1 1.7 9V5A1.9 1.9 0 0 1 3.6 3.1Z",
-          fill: "none",
+          fill: "currentColor",
           stroke: "currentColor",
-          strokeWidth: 1.4,
+          strokeWidth: 1,
           strokeLinejoin: "round"
         })
       );
@@ -2523,19 +2517,6 @@ window.__ModuleLoader__.load({
           role: "region",
           "aria-label": t("bar.label")
         },
-        h(
-          "span",
-          { className: "dsh-csva-barGlyph" },
-          h("img", {
-            className: "dsh-csva-barLogo",
-            src: APP_LOGO_URL,
-            width: 18,
-            height: 18,
-            alt: "",
-            "aria-hidden": "true",
-            draggable: "false"
-          })
-        ),
         h(
           BarControl,
           {

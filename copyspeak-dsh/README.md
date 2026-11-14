@@ -122,6 +122,7 @@ The sidebar panel icon is the outlined read mark that the message action shows w
 - Seek stays enabled while the reading is paused. A reading resumed after a seek plays from the new position.
 - Without `/status`, the floating bar still stops and scrolls. Pause and seek have no app state to show, and the highlight stays hidden.
 - The switches, the pause state, and the playback state are per page tab.
+- A `/speak` request with `wait: true` blocks until playback finishes or the user stops it. If playback runs longer than 600 seconds (10 minutes), the server answers with success anyway and logs a warning. The opaque no-cors response cannot distinguish this timeout from a normal completion.
 
 ## Files
 
