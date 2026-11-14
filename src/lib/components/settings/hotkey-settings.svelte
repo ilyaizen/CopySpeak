@@ -22,7 +22,7 @@
   }
 </script>
 
-<div class="space-y-4">
+<div class="space-y-3">
   <SettingRow label={$_("settings.hotkey.enable")} tooltip={$_("settings.hotkey.enableTooltip")}>
     <Switch id="hotkey-enabled" bind:checked={localConfig.hotkey.enabled} />
   </SettingRow>

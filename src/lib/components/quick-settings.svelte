@@ -84,7 +84,7 @@
 
 <!-- Compact settings panel for quick access to the most-used playback and listening controls -->
 <div
-  class="bg-card border-border divide-border flex min-w-0 flex-col divide-y rounded-lg border px-3 py-1 shadow-sm"
+  class="quick-settings settings-card bg-card border-border flex min-w-0 flex-col rounded-lg border shadow-sm"
 >
   <!-- Show clipboard listener errors (e.g. permission denied, backend failure) -->
   {#if error}
@@ -169,6 +169,7 @@
         </SettingRow>
       {/if}
     {/if}
+    <div class="settings-separator my-3 border-t"></div>
     <!-- Volume slider — 0–100% range with integer steps for precise control -->
     <SettingRow label={$_("common.volume")}>
       <div class="flex w-28 items-center gap-2">

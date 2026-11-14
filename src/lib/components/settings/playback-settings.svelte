@@ -16,7 +16,7 @@
   const supportsDuck = navigator.userAgent.includes("Windows");
 </script>
 
-<div class="space-y-4">
+<div class="space-y-3">
   <SettingRow
     label={$_("settings.playback.onRetrigger")}
     tooltip={$_("settings.playback.onRetriggerDescription")}

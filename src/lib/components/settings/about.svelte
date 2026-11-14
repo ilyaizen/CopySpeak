@@ -130,9 +130,9 @@
     }
     function animate(time: number) {
       const elapsed = last ? Math.min(time - last, 100) : 0;
-      const target = motion.matches || hover || focus || pointerId !== null ? 0 : direction * 0.03;
+      const target = hover || focus || pointerId !== null ? 0 : direction * 0.03;
       speed += (target - speed) * (1 - Math.exp(-elapsed / 250));
-      if (!motion.matches && elapsed) {
+      if (elapsed) {
         offset += speed * elapsed;
         updatePosition();
       }
@@ -141,9 +141,15 @@
     }
     function syncMotion() {
       if (motion.matches) {
+        cancelAnimationFrame(frame);
+        pointerId = null;
         offset = 0;
         speed = 0;
+        last = 0;
         updatePosition();
+      } else {
+        viewport.scrollLeft = 0;
+        frame = requestAnimationFrame(animate);
       }
     }
     function pointerDown(event: PointerEvent) {
@@ -194,7 +200,7 @@
     viewport.addEventListener("focusin", focusIn);
     viewport.addEventListener("focusout", focusOut);
     motion.addEventListener("change", syncMotion);
-    frame = requestAnimationFrame(animate);
+    syncMotion();
     return {
       destroy() {
         cancelAnimationFrame(frame);
@@ -408,6 +414,7 @@
     .marquee {
       overflow-x: auto;
       cursor: auto;
+      touch-action: auto;
     }
     .track {
       will-change: auto;

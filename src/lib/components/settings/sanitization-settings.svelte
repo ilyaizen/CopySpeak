@@ -61,7 +61,7 @@
   ];
 </script>
 
-<div class="space-y-4">
+<div class="space-y-3">
   <SettingRow
     label={$_("settings.sanitization.enabled")}
     tooltip={$_("settings.sanitization.enabledDescription")}
@@ -70,7 +70,8 @@
   </SettingRow>
 
   {#if localConfig.sanitization.enabled}
-    <div class="border-border mt-4 space-y-4 border-t pt-4">
+    <div class="settings-separator border-border my-5 border-t"></div>
+    <div class="space-y-3">
       <SettingRow
         label={$_("settings.sanitization.markdown")}
         tooltip={$_("settings.sanitization.markdownDescription")}

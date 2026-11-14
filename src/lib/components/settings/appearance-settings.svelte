@@ -41,7 +41,7 @@
   const reducedMotion = $derived(animationsStore.reducedMotion);
 </script>
 
-<div class="space-y-4">
+<div class="space-y-3">
   <SettingRow
     label={$_("settings.general.language")}
     tooltip={$_("settings.general.languageDescription")}

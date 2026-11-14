@@ -738,9 +738,9 @@
   }
 </script>
 
-<section class="bg-card rounded-lg border p-5">
+<section class="settings-card bg-card rounded-lg border">
   <!-- Header: title + actions -->
-  <div class="border-border flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+  <div class="settings-separator flex flex-wrap items-center justify-between gap-3 border-b pb-4">
     <div>
       <h2 class="text-lg font-semibold">{$_("profiles.title")}</h2>
       <p class="text-muted-foreground mt-1 text-sm">
@@ -790,7 +790,7 @@
     </div>
   </div>
 
-  <div class="space-y-1 border-b py-4">
+  <div class="settings-separator space-y-1 border-b py-4">
     <SettingRow label={$_("profiles.activeProfile")}>
       <Select
         options={profileOptions}
@@ -802,10 +802,10 @@
   </div>
 
   {#if active}
-    <div class="space-y-5 py-5">
+    <div class="space-y-4 py-4">
       <!-- Identity -->
-      <section class="border-border border-b pb-5">
-        <p class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">
+      <section class="settings-separator border-b pb-4">
+        <p class="settings-category mb-2">
           Identity
         </p>
         <SettingRow label={$_("common.name")}>
@@ -814,8 +814,8 @@
       </section>
 
       <!-- Engine & Voice -->
-      <section class="border-border space-y-3 border-b pb-5">
-        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+      <section class="settings-separator space-y-2 border-b pb-4">
+        <p class="settings-category">
           Engine & Voice
         </p>
         <SettingRow label={$_("common.engine")}>
@@ -896,8 +896,8 @@
       </section>
 
       <!-- Sound -->
-      <section class="border-border space-y-3 border-b pb-5">
-        <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+      <section class="settings-separator space-y-2 border-b pb-4">
+        <p class="settings-category">
           {$_("profiles.sound")}
         </p>
         <SettingRow label={$_("common.speed")}>
@@ -983,9 +983,9 @@
 
       <!-- Advanced: engine-specific options + docs -->
       {#if activeCatalogEntry}
-        <section class="space-y-3">
+        <section class="space-y-2">
           <div class="flex items-center justify-between gap-2">
-            <p class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
+            <p class="settings-category">
               {activeCatalogEntry.label}
             </p>
             <a

@@ -111,8 +111,8 @@
   });
 </script>
 
-<section class="bg-card scroll-mt-4 rounded-lg border p-5">
-  <header class="border-border flex items-center justify-between gap-3 border-b pb-4">
+<section class="settings-card bg-card scroll-mt-4 rounded-lg border">
+  <header class="settings-separator border-border flex items-center justify-between gap-3 border-b pb-4">
     <div class="flex min-w-0 items-center gap-1.5">
       <h2 class="text-lg font-semibold">{$_(`engine.${entry.id}.title`)}</h2>
       <span class="bg-muted text-muted-foreground rounded-sm px-1 text-[10px] font-medium">
@@ -135,7 +135,7 @@
     </button>
   </header>
 
-  <p class="text-muted-foreground mt-3 max-w-prose text-sm leading-relaxed">
+  <p class="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed">
     {$_(`engine.${entry.id}.description`)}
   </p>
 
@@ -241,7 +241,7 @@
       </div>
     {/if}
 
-    <div class="border-border flex flex-wrap items-center gap-3 border-t pt-3">
+    <div class="settings-separator border-border flex flex-wrap items-center gap-3 border-t pt-4">
       <Button size="sm" disabled={testState === "testing"} onclick={() => onTest?.()}>
         {#if testState === "testing"}
           <Loader2 size={14} class="me-2 animate-spin" />

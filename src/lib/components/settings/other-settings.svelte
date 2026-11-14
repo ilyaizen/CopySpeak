@@ -50,7 +50,7 @@
   });
 </script>
 
-<div class="space-y-4">
+<div class="space-y-3">
   <!-- Check for Updates -->
   <SettingRow
     label={$_("settings.about.checkUpdates")}

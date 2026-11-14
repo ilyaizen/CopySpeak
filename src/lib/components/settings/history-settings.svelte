@@ -28,9 +28,9 @@
   }
 </script>
 
-<div class="divide-border divide-y">
+<div>
   {#if localConfig.history.enabled && localConfig.history.storage_mode === "persistent"}
-    <div class="pb-4">
+    <div>
       <SettingRow
         label={$_("settings.history.generationsFolder")}
         tooltip={$_("settings.history.generationsFolderDescription")}
@@ -44,14 +44,15 @@
         />
       </SettingRow>
     </div>
+    <div class="settings-separator border-border my-5 border-t"></div>
   {/if}
 
   {#if localConfig.history.enabled}
-    <div class="py-4">
-      <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+    <div>
+      <h3 class="settings-category mb-3">
         {$_("settings.history.autoDeleteTitle")}
       </h3>
-      <div class="space-y-4">
+      <div class="space-y-3">
         <label class="flex items-center gap-2">
           <input
             type="radio"
@@ -127,8 +128,9 @@
       </div>
     </div>
 
-    <div class="pt-4">
-      <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+    <div class="settings-separator border-border my-5 border-t"></div>
+    <div>
+      <h3 class="settings-category mb-3">
         {$_("settings.history.manualCleanupTitle")}
       </h3>
       <SettingRow

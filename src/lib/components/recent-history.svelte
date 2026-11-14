@@ -31,9 +31,9 @@
     Copy,
     Pencil
   } from "@lucide/svelte";
-  import PlayFilled from "#lib/components/icons/play-filled.svelte";
-  import ReplayFilled from "#lib/components/icons/replay-filled.svelte";
-  import StopFilled from "#lib/components/icons/stop-filled.svelte";
+  import PlayFilled from "#lib/components/icons/play.svelte";
+  import ReplayFilled from "#lib/components/icons/replay.svelte";
+  import StopFilled from "#lib/components/icons/stop.svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { revealItemInDir } from "@tauri-apps/plugin-opener";
   import { Spinner } from "#lib/components/ui/spinner/index.js";

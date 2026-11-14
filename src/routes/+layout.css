@@ -126,6 +126,64 @@
   }
 }
 
+/* Shared settings-card rhythm and inset divider shadow. */
+.settings-card {
+  --settings-card-background: oklch(1 0 0 / 0.55);
+  --settings-divider: oklch(1 0 0);
+  --settings-divider-shadow: oklch(0 0 0 / 0.22);
+  padding: 1rem;
+  background-color: var(--settings-card-background);
+}
+
+.dark .settings-card {
+  --settings-card-background: color-mix(in oklch, var(--card) 55%, transparent);
+  --settings-divider: var(--border);
+  --settings-divider-shadow: color-mix(in oklch, var(--card), black 35%);
+}
+
+.settings-card .settings-row {
+  padding-block: 0.25rem;
+}
+
+.settings-category {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.settings-separator {
+  border-color: var(--settings-divider);
+}
+
+.settings-separator.border-b {
+  box-shadow: 0 1px 0 var(--settings-divider-shadow);
+}
+
+.settings-separator.border-t {
+  position: relative;
+}
+
+.settings-separator.border-t::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: var(--settings-divider-shadow);
+  content: "";
+  pointer-events: none;
+}
+
+.quick-settings > .settings-row + .settings-row {
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--settings-divider);
+  padding-top: 0.75rem;
+  box-shadow: inset 0 1px 0 var(--settings-divider-shadow);
+}
+
 /* Separate surfaces keep the bars still while the content ground moves. */
 .app-surface {
   position: relative;

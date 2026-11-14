@@ -51,7 +51,7 @@
     { id: "advanced", labelKey: "settings.tabs.advanced" },
     { id: "history", labelKey: "settings.tabs.history" },
     { id: "postProcess", labelKey: "settings.tabs.postProcess" },
-    { id: "about", labelKey: "settings.tabs.about" }
+    { id: "about", labelKey: "settings.tabs.misc" }
   ];
 
   let visibleSections = $derived(
@@ -124,7 +124,7 @@
   function scrollToSection(id: SettingsSection) {
     activeSection = id;
     isScrollingToSection = true;
-    const section = document.getElementById(id === "about" ? "footer-version" : id);
+    const section = document.getElementById(id);
     const lenis = getLenis?.();
     if (section && lenis) lenis.scrollTo(section);
     else
@@ -280,26 +280,27 @@
       </aside>
 
       <!-- Main content: one card per section, settings grouped inside -->
-      <main class="min-w-0 flex-1 space-y-5 pb-20">
+      <main class="min-w-0 flex-1 space-y-4 pb-20">
         <section
           id="general"
           aria-label={$_("settings.tabs.general")}
-          class="bg-card scroll-mt-4 rounded-lg border p-5"
+          class="settings-card bg-card scroll-mt-4 rounded-lg border"
         >
-          <h2 class="mb-4 text-base font-semibold">{$_("settings.tabs.general")}</h2>
-          <div class="divide-border divide-y">
-            <div class="pb-4">
-              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+          <h2 class="mb-3 text-base font-semibold">{$_("settings.tabs.general")}</h2>
+          <div>
+            <div>
+              <h3 class="settings-category mb-3">
                 {$_("settings.sections.appearance")}
               </h3>
               <AppearanceSettings bind:localConfig />
             </div>
 
-            <div class="py-4">
-              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+            <div class="settings-separator border-border my-5 border-t"></div>
+            <div>
+              <h3 class="settings-category mb-3">
                 {$_("settings.sections.triggers")}
               </h3>
-              <div class="space-y-4">
+              <div class="space-y-3">
                 <SettingRow
                   label={$_("settings.triggers.listen")}
                   tooltip={$_("settings.triggers.listenDescription")}
@@ -332,8 +333,9 @@
               </div>
             </div>
 
-            <div class="pt-4">
-              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+            <div class="settings-separator border-border my-5 border-t"></div>
+            <div>
+              <h3 class="settings-category mb-3">
                 {$_("settings.sections.startup")}
               </h3>
               <GeneralSettings bind:localConfig />
@@ -344,9 +346,9 @@
         <section
           id="playback"
           aria-label={$_("settings.tabs.playback")}
-          class="bg-card scroll-mt-4 rounded-lg border p-5"
+          class="settings-card bg-card scroll-mt-4 rounded-lg border"
         >
-          <h2 class="mb-4 text-base font-semibold">{$_("settings.tabs.playback")}</h2>
+          <h2 class="mb-3 text-base font-semibold">{$_("settings.tabs.playback")}</h2>
           <PlaybackSettings bind:localConfig {retriggerModeOptions} />
         </section>
 
@@ -354,26 +356,28 @@
           id="advanced"
           aria-label={$_("settings.tabs.advanced")}
           tabindex="-1"
-          class="focus-visible:ring-ring bg-card scroll-mt-4 rounded-lg border p-5 outline-none focus-visible:ring-2"
+          class="settings-card focus-visible:ring-ring bg-card scroll-mt-4 rounded-lg border outline-none focus-visible:ring-2"
         >
-          <h2 class="mb-4 text-base font-semibold">{$_("settings.tabs.advanced")}</h2>
-          <div class="divide-border divide-y">
-            <div class="pb-4">
-              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+          <h2 class="mb-3 text-base font-semibold">{$_("settings.tabs.advanced")}</h2>
+          <div>
+            <div>
+              <h3 class="settings-category mb-3">
                 {$_("settings.sections.pagination")}
               </h3>
-              <div class="space-y-4">
+              <div class="space-y-3">
                 <PaginationSettings bind:localConfig />
                 <IdleShutdownSettings bind:localConfig />
               </div>
             </div>
 
-            <div class="py-4">
-              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+            <div class="settings-separator border-border my-5 border-t"></div>
+            <div>
+              <h3 class="settings-category mb-3">
                 {$_("settings.sections.sanitization")}
               </h3>
               <SanitizationSettings bind:localConfig />
             </div>
+            <div class="settings-separator border-border my-5 border-t"></div>
 
             <AdvancedSettings bind:localConfig {errors} />
           </div>
@@ -383,9 +387,9 @@
           <section
             id="history"
             aria-label={$_("settings.tabs.history")}
-            class="bg-card scroll-mt-4 rounded-lg border p-5"
+            class="settings-card bg-card scroll-mt-4 rounded-lg border"
           >
-            <h2 class="mb-4 text-base font-semibold">{$_("settings.tabs.history")}</h2>
+            <h2 class="mb-3 text-base font-semibold">{$_("settings.tabs.history")}</h2>
             <HistorySettings bind:localConfig onRunCleanup={handleRunCleanup} />
           </section>
         {/if}
@@ -394,22 +398,23 @@
           <section
             id="postProcess"
             aria-label={$_("settings.tabs.postProcess")}
-            class="bg-card scroll-mt-4 rounded-lg border p-5"
+            class="settings-card bg-card scroll-mt-4 rounded-lg border"
           >
-            <h2 class="mb-4 text-base font-semibold">{$_("settings.tabs.postProcess")}</h2>
+            <h2 class="mb-3 text-base font-semibold">{$_("settings.tabs.postProcess")}</h2>
             <PostProcessSettings bind:localConfig />
           </section>
         {/if}
 
         <section
           id="about"
-          aria-label={$_("settings.tabs.about")}
-          class="bg-card scroll-mt-4 rounded-lg border p-5"
+          aria-label={$_("settings.tabs.misc")}
+          class="settings-card bg-card scroll-mt-4 rounded-lg border"
         >
-          <h2 class="mb-4 text-base font-semibold">{$_("settings.tabs.about")}</h2>
+          <h2 class="mb-3 text-base font-semibold">{$_("settings.tabs.misc")}</h2>
           <OtherSettings bind:localConfig showDebugMode={true}>
-            <div class="border-border border-t pt-4">
-              <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+            <div class="settings-separator border-border my-5 border-t"></div>
+            <div>
+              <h3 class="settings-category mb-3">
                 {$_("settings.sections.importExport")}
               </h3>
               <ImportExportSettings

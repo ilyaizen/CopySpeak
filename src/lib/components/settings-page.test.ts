@@ -175,10 +175,10 @@ it("uses the shared app scroller for sidebar navigation", async () => {
   const scrollTo = vi.fn();
   const view = render(SettingsPage, { context: new Map([["app-lenis", () => ({ scrollTo })]]) });
   const nav = await view.findByRole("navigation");
-  const about = within(nav).getByRole("button", { name: "About" });
-  await fireEvent.click(about);
-  expect(about.getAttribute("aria-current")).toBe("page");
-  expect(scrollTo).toHaveBeenCalledWith(view.container.querySelector("#footer-version"));
+  const misc = within(nav).getByRole("button", { name: "Misc" });
+  await fireEvent.click(misc);
+  expect(misc.getAttribute("aria-current")).toBe("page");
+  expect(scrollTo).toHaveBeenCalledWith(view.container.querySelector("#about"));
   expect(scrollIntoView).not.toHaveBeenCalled();
 });
 
@@ -188,7 +188,7 @@ it("scrolls instantly from the sidebar when reduced motion is enabled", async ()
   vi.stubGlobal("matchMedia", () => motion);
   const view = await mountSettings();
   await fireEvent.click(
-    within(view.getByRole("navigation")).getByRole("button", { name: "About" })
+    within(view.getByRole("navigation")).getByRole("button", { name: "Misc" })
   );
   expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "instant", block: "start" });
 });
@@ -290,7 +290,7 @@ it("keeps streaming in Advanced while legacy experimental flags are inert and hi
     "General",
     "Playback",
     "Advanced",
-    "About"
+    "Misc"
   ]);
   const advanced = view.container.querySelector<HTMLElement>("#advanced")!;
   expect(advanced.querySelector("#playback-streaming")).not.toBeNull();
@@ -453,8 +453,8 @@ it("activates the short final section at the bottom of the layout scroll contain
     scrollTop: { configurable: true, writable: true, value: 800 }
   });
   await fireEvent.scroll(scroller);
-  const about = within(view.getByRole("navigation")).getByRole("button", { name: "About" });
-  expect(about.getAttribute("aria-current")).toBe("page");
+  const misc = within(view.getByRole("navigation")).getByRole("button", { name: "Misc" });
+  expect(misc.getAttribute("aria-current")).toBe("page");
   // The reading band must not overwrite the bottom-of-scroll correction.
   // SAFETY: only isIntersecting and target are read by this observer callback.
   intersect(
@@ -467,5 +467,5 @@ it("activates the short final section at the bottom of the layout scroll contain
     {} as IntersectionObserver
   );
   await tick();
-  expect(about.getAttribute("aria-current")).toBe("page");
+  expect(misc.getAttribute("aria-current")).toBe("page");
 });

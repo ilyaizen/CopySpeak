@@ -712,20 +712,20 @@
         />
         {#if manualText}
           <Button variant="ghost" onclick={() => (manualText = "")}>{$_("play.clear")}</Button>
-        {/if}
-        <span class="text-muted-foreground ms-auto text-xs whitespace-nowrap tabular-nums">
-          {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
-        </span>
-        <span
-          class="text-muted-foreground inline-flex items-center gap-1 text-xs whitespace-nowrap"
-          title={$_("play.keyboardHint", { values: { keys: `${modKey}+Enter` } })}
-        >
-          <Kbd>{modKey}</Kbd>
-          <Kbd>↵</Kbd>
-          <span class="sr-only">
-            {$_("play.keyboardHint", { values: { keys: `${modKey}+Enter` } })}
+          <span class="text-muted-foreground ms-auto text-xs whitespace-nowrap tabular-nums">
+            {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
           </span>
-        </span>
+          <span
+            class="text-muted-foreground inline-flex items-center gap-1 text-xs whitespace-nowrap"
+            title={$_("play.keyboardHint", { values: { keys: `${modKey}+Enter` } })}
+          >
+            <Kbd>{modKey}</Kbd>
+            <Kbd>↵</Kbd>
+            <span class="sr-only">
+              {$_("play.keyboardHint", { values: { keys: `${modKey}+Enter` } })}
+            </span>
+          </span>
+        {/if}
       </div>
     </section>
     {#if config}

@@ -1,11 +1,11 @@
 <script lang="ts">
   import { Button } from "#lib/components/ui/button/index.js";
-  import SkipBackFilled from "#lib/components/icons/skip-back-filled.svelte";
-  import SkipForwardFilled from "#lib/components/icons/skip-forward-filled.svelte";
-  import PlayFilled from "#lib/components/icons/play-filled.svelte";
-  import PauseFilled from "#lib/components/icons/pause-filled.svelte";
-  import ReplayFilled from "#lib/components/icons/replay-filled.svelte";
-  import StopFilled from "#lib/components/icons/stop-filled.svelte";
+  import SkipBackFilled from "#lib/components/icons/skip-back.svelte";
+  import SkipForwardFilled from "#lib/components/icons/skip-forward.svelte";
+  import PlayFilled from "#lib/components/icons/play.svelte";
+  import PauseFilled from "#lib/components/icons/pause.svelte";
+  import ReplayFilled from "#lib/components/icons/replay.svelte";
+  import StopFilled from "#lib/components/icons/stop.svelte";
   import { Spinner } from "#lib/components/ui/spinner/index.js";
   import { _ } from "svelte-i18n";
 

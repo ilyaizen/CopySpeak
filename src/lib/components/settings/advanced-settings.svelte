@@ -38,9 +38,9 @@
   }
 </script>
 
-<div class="divide-border divide-y">
-  <div class="py-4">
-    <h3 class="text-muted-foreground mb-3 text-sm font-medium">
+<div>
+  <div>
+    <h3 class="settings-category mb-3">
       {$_("settings.sections.audioDelivery")}
     </h3>
     <SettingRow
@@ -54,7 +54,8 @@
       />
     </SettingRow>
   </div>
-  <div class="pt-4">
+  <div class="settings-separator border-border my-5 border-t"></div>
+  <div>
     <SettingRow
       label={`${$_("settings.general.experimental")} (Alpha)`}
       tooltip={$_("settings.general.experimentalDescription")}
@@ -66,7 +67,7 @@
       />
     </SettingRow>
     {#if localConfig.general.experimental_enabled === true}
-      <div class="border-border mt-4 space-y-4 border-s ps-4">
+      <div class="border-border mt-3 space-y-3 border-s ps-4">
         <HotkeySettings bind:localConfig {errors} />
         <SettingRow label={$_("common.effects")} tooltip={$_("settings.general.profileEffects")}>
           <Switch

@@ -159,7 +159,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Icons
 
-- Do not fill Lucide icons with `fill="currentColor"`: their stroke-path geometry smears when filled (`rotate-ccw` is an open arc). Use the vendored Material filled glyphs in `src/lib/components/icons/*-filled.svelte` (copied from google/material-design-icons); add new filled glyphs there in the same pattern.
+- Do not fill Lucide icons with `fill="currentColor"`: their stroke-path geometry smears when filled (`rotate-ccw` is an open arc). Use the vendored Material filled glyphs in `src/lib/components/icons/` (copied from google/material-design-icons); add new filled glyphs there in the same pattern.
 - Drive tray playback status from the webview store, never `AudioPlayer`: Rodio is only a safety net, and refreshing the tray from its callbacks must not re-lock the player. Preserve the branded icon’s color and artwork; macOS template mode strips color.
 - Resize Windows tray artwork to the system small-icon dimensions with alpha-aware filtering before passing it to Tauri: Windows' native downscale from 512px produces jagged edges.
 - Keep `icons/icon.ico` in the Cargo build script's `rerun-if-changed` inputs: tauri-build's `.rc` references it by path, so without that input a changed asset leaves stale exe resources. Verify the embedded 32px frame against the source after rebuilding; the installed app changes only on the next release install.
@@ -204,6 +204,8 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Force the last visible settings section active at the bottom of the scroll container: a short last section never reaches the scroll-spy reading band, and the layout `<main>` scrolls, not the window, so capture scroll events on the document.
 - Spread ground parallax across the full scroll range while keeping the texture within its overscan; clamping raw scroll distance makes it stop moving early on long Settings pages.
 - The ui `collapsible` index exports `Collapsible` as the Root component only, not a namespace: `Collapsible.Trigger`/`.Content` type-error in svelte-check — import `CollapsibleRoot`/`CollapsibleTrigger`/`CollapsibleContent` by name.
+- Draw the shadow below an empty settings divider with a positioned pseudo-element; an inset shadow on a zero-height divider is invisible.
+- Give light settings cards a tinted surface and a bright divider line above its darker shadow; two dark lines read as one thick rule.
 
 ## Experimental gating
 

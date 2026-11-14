@@ -11,7 +11,7 @@
   } = $props();
 </script>
 
-<div class="space-y-4">
+<div class="space-y-3">
   <SettingRow
     label={$_("settings.general.launchOnLogin")}
     tooltip={$_("settings.general.launchOnLoginTooltip")}

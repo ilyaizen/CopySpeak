@@ -154,9 +154,9 @@
   }
 </script>
 
-<div class="space-y-4">
+<div class="space-y-3">
   {#if localConfig.post_process.enabled}
-    <div class="space-y-4">
+    <div class="space-y-3">
       <SettingRow
         label={$_("settings.postProcess.minChars")}
         tooltip={$_("settings.postProcess.minCharsTooltip")}

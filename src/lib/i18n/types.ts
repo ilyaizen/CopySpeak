@@ -68,7 +68,7 @@ export type TranslationKeys =
   | "settings.tabs.history"
   | "settings.tabs.effects"
   | "settings.tabs.advanced"
-  | "settings.tabs.about"
+  | "settings.tabs.misc"
   | "settings.tabs.playback"
   | "settings.tabs.postProcess"
   | "settings.sections.general"
