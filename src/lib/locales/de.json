@@ -143,7 +143,7 @@
       "duckDescription": "Senkt den Ton anderer Apps, während CopySpeak spricht, und stellt ihn danach wieder her. Derzeit nur unter Windows.",
       "duckLevel": "Lautstärke anderer Apps beim Vorlesen",
       "duckLevelDescription": "Lautstärke, auf die andere Apps sinken, in Prozent ihres eigenen Pegels",
-      "captionAnimation": "Wort-Hervorhebung animieren",
+      "captionAnimation": "Untertitel animieren",
       "captionAnimationDescription": "Gleitet mit der Hervorhebung zwischen den gelesenen Wörtern. Aus, springt die Hervorhebung zum jeweiligen Wort.",
       "playbackSpeed": "Geschwindigkeit",
       "playbackSpeedDescription": "Wiedergabegeschwindigkeit (0,5x – 2x)",

@@ -311,6 +311,31 @@ it("shows Duck in Playback on Windows without Experimental", async () => {
   expect(view.container.querySelector("#advanced #playback-duck")).toBeNull();
 });
 
+it("shows Animate Captions in Appearance only while Animations is on", async () => {
+  config.playback.caption_animation = true;
+  const view = await mountSettings();
+  const captions = view.getByRole("switch", { name: "Animate Captions" });
+  const general = view.container.querySelector("#general");
+  if (!(general instanceof HTMLElement)) throw new Error("General section missing");
+  expect(general.contains(captions)).toBe(true);
+  // The row sits after the Animations switch and follows its visible state.
+  const animations = view.getByRole("switch", { name: "Animations" });
+  expect(
+    animations.compareDocumentPosition(captions) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
+  await fireEvent.click(animations);
+  expect(view.queryByRole("switch", { name: "Animate Captions" })).toBeNull();
+  await fireEvent.click(animations);
+  expect(view.getByRole("switch", { name: "Animate Captions" })).toBeTruthy();
+});
+
+it("keeps Animate Captions out of the Playback section", async () => {
+  config.playback.caption_animation = true;
+  const view = await mountSettings();
+  expect(view.container.querySelector("#playback #caption-animation")).toBeNull();
+  expect(view.container.querySelector("#general #caption-animation")).not.toBeNull();
+});
+
 it("mounts opted-in detail sections once and returns focus to Advanced when hidden", async () => {
   const view = await mountSettings();
   const experimental = view.getByRole("switch", { name: "Experimental Features (Alpha)" });

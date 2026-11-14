@@ -143,7 +143,7 @@
       "duckDescription": "يخفض صوت التطبيقات الأخرى أثناء حديث CopySpeak ثم يعيده. على Windows فقط حاليًا.",
       "duckLevel": "صوت التطبيقات الأخرى أثناء القراءة",
       "duckLevelDescription": "مستوى الصوت الذي تنخفض إليه التطبيقات الأخرى، كنسبة مئوية من مستواها",
-      "captionAnimation": "تحريك تظليل الكلمة",
+      "captionAnimation": "تحريك التسميات التوضيحية",
       "captionAnimationDescription": "يُمرِّر شريط التظليل بسلاسة بين الكلمات المنطوقة أثناء القراءة. عند الإيقاف، يقفز التظليل إلى كل كلمة.",
       "playbackSpeed": "السرعة",
       "playbackSpeedDescription": "سرعة التشغيل (0.5x - 2x)",

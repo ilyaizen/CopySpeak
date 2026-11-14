@@ -143,7 +143,7 @@
       "duckDescription": "Baisse le son des autres applications pendant que CopySpeak parle, puis le rétablit. Windows uniquement pour l'instant.",
       "duckLevel": "Volume des autres apps pendant la lecture",
       "duckLevelDescription": "Volume auquel descendent les autres applications, en pourcentage de leur propre niveau",
-      "captionAnimation": "Animer le surlignage des mots",
+      "captionAnimation": "Animer les sous-titres",
       "captionAnimationDescription": "Fait glisser la pastille de surlignage entre les mots lus pendant la lecture. Désactivé, le surlignage saute à chaque mot.",
       "playbackSpeed": "Vitesse",
       "playbackSpeedDescription": "Vitesse de lecture (0,5x - 2x)",

@@ -143,7 +143,7 @@
       "duckDescription": "Baja el audio de otras aplicaciones mientras CopySpeak habla y luego lo restaura. Por ahora, solo en Windows.",
       "duckLevel": "Volumen de otras apps al leer",
       "duckLevelDescription": "Volumen al que bajan las otras aplicaciones, como porcentaje de su nivel propio",
-      "captionAnimation": "Animar el resaltado de palabras",
+      "captionAnimation": "Animar los subtítulos",
       "captionAnimationDescription": "Desliza la pastilla de resaltado entre las palabras leídas durante la lectura. Desactivado, el resaltado salta a cada palabra.",
       "playbackSpeed": "Velocidad",
       "playbackSpeedDescription": "Velocidad de reproducción (0,5x - 2x)",
