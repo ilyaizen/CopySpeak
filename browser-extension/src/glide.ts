@@ -168,19 +168,13 @@ export class CaptionGlide {
     this.placeMarks(this.wordRects(this.paintedRange), this.markHost);
   }
 
-  /* Drop the painted word but keep the layer: the next word repaints it. */
-  clearWord() {
-    const registry = this.registry();
-    if (registry !== null) {
-      registry.delete("copyspeak-word");
-      registry.delete("copyspeak-word-out");
-      registry.delete("copyspeak-word-in");
-    }
-    this.cancelTween();
-    this.clearMarks();
-    this.paintedKey = null;
-    this.paintedRange = null;
-  }
+  /* A wordless state frame (caption gap, trailing fragment audio, a
+     degraded fragment, an unmappable word) keeps the painted word and pill
+     exactly as they are: clearing here makes the NEXT word settle instantly
+     and reads as the old abrupt word-swap. A running tween also keeps going
+     and settles on its own. A reading boundary tears down through release()
+     instead, so nothing needs clearing mid-reading. */
+  hold() {}
 
   /* Strip everything the reading added to the page, including the layer and
      the host attribute: the stacking context must not outlive the reading. */
@@ -335,16 +329,7 @@ export class CaptionGlide {
     probe.remove();
     scope.appendChild(probe);
     probe.style.color = value;
-    const match = view.getComputedStyle(probe).color.match(/rgba?\(([^)]+)\)/);
-    const rgba = match === null ? undefined : match[1];
-    if (rgba === undefined) return null;
-    const parts = rgba
-      .split(/[,/\s]+/)
-      .map(parseFloat)
-      .filter(Number.isFinite);
-    const [r, g, b] = parts;
-    if (r === undefined || g === undefined || b === undefined) return null;
-    return { r: r, g: g, b: b };
+    return parseColor(view.getComputedStyle(probe).color);
   }
 
   /* Glide the pill and blend the two words' text colors across one rAF
@@ -525,6 +510,69 @@ function markOffset(value: string | undefined): number {
   if (value === undefined) return NaN;
   const parsed = parseFloat(value);
   return Number.isNaN(parsed) ? NaN : parsed;
+}
+
+/* Chromium serializes computed colors space-preserving: oklch tokens come
+   back as oklch(...) — NOT color(srgb ...) or rgb() (probed on Edge 157 and
+   Chrome headless on this box) — so pages whose text color is oklch need
+   this parser. Ported unchanged from the app's caption-glide.ts; the legacy
+   rgb()/rgba()/color(srgb ...) forms stay for explicit colors and tests. */
+function parseColor(value: string): Rgb | null {
+  const rgb = value.match(/rgba?\(([^)]+)\)/)?.[1];
+  if (rgb !== undefined) {
+    const parts = rgb
+      .split(/[,/\s]+/)
+      .map(parseFloat)
+      .filter(Number.isFinite);
+    const [r, g, b] = parts;
+    if (r === undefined || g === undefined || b === undefined) return null;
+    return { r: r, g: g, b: b };
+  }
+  const srgb = value.match(/color\(\s*srgb\s+([^)]+)\)/)?.[1];
+  if (srgb !== undefined) {
+    const parts = srgb
+      .split(/[\s/]+/)
+      .map(parseFloat)
+      .filter(Number.isFinite);
+    const [r, g, b] = parts;
+    if (r === undefined || g === undefined || b === undefined) return null;
+    const channel = (unit: number) => Math.round(unit * 255);
+    return { r: channel(r), g: channel(g), b: channel(b) };
+  }
+  const oklch = value.match(/oklch\(([^)]+)\)/)?.[1];
+  if (oklch !== undefined) return oklchToRgb(oklch);
+  return null;
+}
+
+/* One oklch() to sRGB conversion (CSS Color 4): lightness, chroma and hue
+   accept numbers, percentages and a deg-suffixed hue; alpha is dropped like
+   the rgb() branch does. Out-of-gamut channels clamp to the sRGB cube, so
+   the tween always blends numbers. */
+function oklchToRgb(args: string): Rgb | null {
+  const color = args.split("/")[0] ?? "";
+  const numbers = color.match(/-?(?:\d+\.?\d*|\.\d+)(?:%|deg)?/g);
+  if (numbers === null) return null;
+  const channel = (token: string): number => {
+    const number = parseFloat(token);
+    return Number.isNaN(number) ? NaN : token.endsWith("%") ? number / 100 : number;
+  };
+  const [l, chroma, hue] = numbers.map(channel);
+  if (l === undefined || chroma === undefined || hue === undefined) return null;
+  const rad = (hue * Math.PI) / 180;
+  const a = chroma * Math.cos(rad);
+  const b = chroma * Math.sin(rad);
+  const encode = (linear: number): number => {
+    const c = Math.min(Math.max(linear, 0), 1);
+    return c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  };
+  const l3 = Math.pow(l + 0.3963377774 * a + 0.2158037573 * b, 3);
+  const m3 = Math.pow(l - 0.1055613458 * a - 0.0638541728 * b, 3);
+  const s3 = Math.pow(l - 0.0894841775 * a - 1.291485548 * b, 3);
+  return {
+    r: Math.round(encode(4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3) * 255),
+    g: Math.round(encode(-1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3) * 255),
+    b: Math.round(encode(-0.0041960863 * l3 - 0.7034186147 * m3 + 1.707614701 * s3) * 255)
+  };
 }
 
 function blendColor(from: Rgb, to: Rgb, t: number): string {

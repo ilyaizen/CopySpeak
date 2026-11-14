@@ -8,7 +8,11 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
   await page.route("http://localhost/fixture", (r) =>
     r.fulfill({
       contentType: "text/html; charset=utf-8",
-      body: '<main><p id="source">same <b>same</b> 😀 שלום</p><p id="other">other</p></main>'
+      // The page colors its text with oklch like modern pages do: Chromium
+      // serializes the probe's computed currentColor space-preserving as
+      // oklch(...), so this exercises the oklch parse through the real
+      // engine's computed style, not a test mock.
+      body: '<main><p id="source" style="color:oklch(0.2 0.01 190)">same <b>same</b> 😀 שלום</p><p id="other">other</p></main>'
     })
   );
   await page.goto("http://localhost/fixture");
@@ -125,6 +129,18 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
       () => {}
     );
   }, capture.document_token);
+  // The tween starts synchronously before its first rendered frame: with
+  // oklch page text, both glide names must be painted here. An rgb-only
+  // color parse would have settled instantly instead (copyspeak-word on
+  // "😀", both glide names empty).
+  expect(
+    await page.evaluate(() => {
+      // SAFETY: highlight ranges are Range/StaticRange set members; the cast only widens to Range which has toString.
+      const names = (name: string) =>
+        [...(CSS.highlights.get(name) ?? [])].map((r) => (r as Range).toString());
+      return { out: names("copyspeak-word-out"), in: names("copyspeak-word-in") };
+    })
+  ).toEqual({ out: ["same"], in: ["😀"] });
   await expect
     .poll(() =>
       page.evaluate(() => {
@@ -139,6 +155,34 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
   expect(
     await page.evaluate(() => document.querySelector("[data-copyspeak-mark-host]") !== null)
   ).toBe(true);
+  // A wordless mid-reading frame (caption gap, fragment tail) holds the
+  // paint: the word and pill stay, so the next word still glides from them.
+  await page.evaluate((token) => {
+    // SAFETY: receive is the chrome stub installed earlier in this test; page context is untyped.
+    (window as any).receive(
+      {
+        type: "native",
+        document_token: token,
+        event: {
+          v: 1,
+          type: "state",
+          reading_id: "r",
+          seq: 3,
+          status: "playing",
+          word: null,
+          word_available: true
+        }
+      },
+      {},
+      () => {}
+    );
+  }, capture.document_token);
+  expect(
+    await page.evaluate(() => {
+      // SAFETY: highlight ranges are Range/StaticRange set members; the cast only widens to Range which has toString.
+      return [...CSS.highlights.get("copyspeak-word")!].map((r) => (r as Range).toString());
+    })
+  ).toEqual(["😀"]);
   // Turning the animation off in settings jumps the highlight instead.
   await page.evaluate(() => {
     // SAFETY: chrome.storage is installed by this test's browser fixture.
@@ -154,7 +198,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
           v: 1,
           type: "state",
           reading_id: "r",
-          seq: 3,
+          seq: 4,
           status: "playing",
           word: { start: 13, end: 17 },
           word_available: true

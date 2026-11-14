@@ -198,21 +198,6 @@ describe("caption glide", () => {
     expect(painted("copyspeak-word")).toEqual(["two"]);
   });
 
-  test("clearWord drops the paint but keeps the pill layer", () => {
-    const { d, setRects, rect, painted } = fixture("<main><p>one two</p></main>");
-    const p = d.querySelector("p")!;
-    const glide = new CaptionGlide(d, true);
-    const range = wordRange(d, "p", 0, 3);
-    setRects(range, [rect(40, 20, 30, 12)]);
-    glide.paint(range, p, "0:3");
-    glide.clearWord();
-    expect(painted("copyspeak-word")).toEqual([]);
-    expect(painted("copyspeak-word-out")).toEqual([]);
-    expect(painted("copyspeak-word-in")).toEqual([]);
-    expect(p.querySelector(".copyspeak-markLayer")).not.toBeNull();
-    expect(p.getAttribute("data-copyspeak-mark-host")).toBe("");
-  });
-
   test("release strips the pill, its layer, and the scope's style", () => {
     const { d, setRects, rect } = fixture("<main><p>one two</p></main>");
     const p = d.querySelector("p")!;
@@ -281,5 +266,83 @@ describe("caption glide", () => {
     expect(painted("copyspeak-word")).toEqual(["two"]);
     expect(mark().style.transform).toBe("");
     expect(mark().style.left).toBe("78px");
+  });
+
+  test("an oklch page color still glides", async () => {
+    const { d, view, setRects, rect, painted, mark } = fixture("<main><p>one two</p></main>");
+    const p = d.querySelector("p")!;
+    /* Chromium serializes computed oklch text colors space-preserving as
+       oklch(...) (probed on this box's Edge 157 and the companion's Chrome):
+       the probe's inherited currentColor arrives as oklch, not rgb. */
+    Object.assign(view, {
+      // SAFETY: hands the glide only the color and position fields it reads.
+      // jsdom normalizes inline currentColor to lowercase.
+      getComputedStyle: (el: Element): Partial<CSSStyleDeclaration> =>
+        el instanceof view.HTMLElement && el.style.color.toLowerCase() === "currentcolor"
+          ? { color: "oklch(0.2 0.01 190)", position: "static" }
+          : { color: "", position: "static" }
+    });
+    const glide = new CaptionGlide(d, true);
+    const first = wordRange(d, "p", 0, 3);
+    setRects(first, [rect(40, 20, 30, 12)]);
+    glide.paint(first, p, "0:3");
+    const second = wordRange(d, "p", 4, 7);
+    setRects(second, [rect(80, 20, 20, 12)]);
+    glide.paint(second, p, "4:7");
+    expect(painted("copyspeak-word")).toEqual([]);
+    expect(painted("copyspeak-word-out")).toEqual(["one"]);
+    expect(painted("copyspeak-word-in")).toEqual(["two"]);
+    // oklch(0.2 0.01 190) is sRGB rgb(17, 24, 23): Chromium's own conversion
+    // read back from a canvas on the same engine family (Edge 157).
+    expect(p.style.getPropertyValue("--copyspeak-in-color")).toBe("rgb(17,24,23)");
+    expect(mark().style.transform).not.toBe("");
+    await tick(250);
+    expect(painted("copyspeak-word")).toEqual(["two"]);
+    expect(painted("copyspeak-word-out")).toEqual([]);
+  });
+
+  test("a wordless frame holds the paint so the next word still glides", () => {
+    const { d, setRects, rect, painted } = fixture("<main><p>one two three</p></main>");
+    const p = d.querySelector("p")!;
+    p.style.color = "rgb(10, 20, 30)";
+    const glide = new CaptionGlide(d, true);
+    const first = wordRange(d, "p", 0, 3);
+    setRects(first, [rect(40, 20, 30, 12)]);
+    glide.paint(first, p, "0:3");
+    /* A wordless state frame (caption gap, trailing fragment audio, a
+       degraded fragment) must keep the painted word and pill: tearing the
+       glide down makes the NEXT word settle instantly. */
+    glide.hold();
+    expect(painted("copyspeak-word")).toEqual(["one"]);
+    expect(p.querySelector(".copyspeak-markLayer")).not.toBeNull();
+    const second = wordRange(d, "p", 4, 7);
+    setRects(second, [rect(80, 20, 20, 12)]);
+    glide.paint(second, p, "4:7");
+    expect(painted("copyspeak-word-out")).toEqual(["one"]);
+    expect(painted("copyspeak-word-in")).toEqual(["two"]);
+    expect(painted("copyspeak-word")).toEqual([]);
+  });
+
+  test("a wordless frame mid-glide leaves the tween to settle, and the next word still glides", async () => {
+    const { d, setRects, rect, painted, mark } = fixture("<main><p>one two three</p></main>");
+    const p = d.querySelector("p")!;
+    p.style.color = "rgb(10, 20, 30)";
+    const glide = new CaptionGlide(d, true);
+    const first = wordRange(d, "p", 0, 3);
+    setRects(first, [rect(40, 20, 30, 12)]);
+    glide.paint(first, p, "0:3");
+    const second = wordRange(d, "p", 4, 7);
+    setRects(second, [rect(80, 20, 20, 12)]);
+    glide.paint(second, p, "4:7");
+    // The gap frame lands while the pill is still traveling to "two".
+    glide.hold();
+    await tick(250);
+    expect(painted("copyspeak-word")).toEqual(["two"]);
+    expect(mark().style.transform).toBe("");
+    const third = wordRange(d, "p", 8, 13);
+    setRects(third, [rect(110, 20, 24, 12)]);
+    glide.paint(third, p, "8:13");
+    expect(painted("copyspeak-word-out")).toEqual(["two"]);
+    expect(painted("copyspeak-word-in")).toEqual(["three"]);
   });
 });

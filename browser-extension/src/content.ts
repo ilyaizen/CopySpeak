@@ -183,15 +183,21 @@ if (!scope[marker]) {
     if (label)
       label.textContent = `CopySpeak · ${status}${wordAvailable ? "" : " · Word highlighting unavailable"}`;
     if (word === null || glide === null || anchor === null) {
-      CSS.highlights.delete("copyspeak-word");
-      glide?.clearWord();
+      // A wordless state frame (caption gap, trailing fragment audio, a
+      // degraded fragment) holds the last paint: the native side keeps the
+      // playing status through inter-word gaps and fragment tails, and a
+      // teardown here makes the NEXT word settle instantly (the reported
+      // abrupt word-swap). A reading boundary tears down through cleanup().
+      if (glide !== null && anchor !== null) glide.hold();
+      else CSS.highlights.delete("copyspeak-word");
       return;
     }
     const range = anchor.range(word[0], word[1]);
     const scope = anchor.root instanceof Element ? anchor.root : anchor.root.parentElement;
     if (range === null || scope === null) {
-      CSS.highlights.delete("copyspeak-word");
-      glide.clearWord();
+      // The word did not map onto the page: hold the previous paint instead
+      // of tearing the glide down for one unmappable frame.
+      glide.hold();
       return;
     }
     glide.paint(range, scope, `${word[0]}:${word[1]}`);
