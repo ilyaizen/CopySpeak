@@ -60,8 +60,17 @@ window.__ModuleLoader__.load({
       autoRead: "dsh.copyspeak-voice.auto-read",
       captions: "dsh.copyspeak-voice.captions",
       follow: "dsh.copyspeak-voice.follow",
-      animation: "dsh.copyspeak-voice.animation"
+      animation: "dsh.copyspeak-voice.animation",
+      excerpt: "dsh.copyspeak-voice.excerpt",
+      excerptMode: "dsh.copyspeak-voice.excerpt-mode",
+      excerptTop: "dsh.copyspeak-voice.excerpt-top",
+      excerptBottom: "dsh.copyspeak-voice.excerpt-bottom"
     };
+    /* Partial auto-read: keep the first and last paragraphs of a reply. */
+    const EXCERPT_MODES = ["top", "bottom", "both"];
+    const EXCERPT_MIN = 1;
+    const EXCERPT_MAX = 20;
+    const EXCERPT_DEFAULT = 2;
     /* The webview reports its audible clock every ~25 ms and throttles the
      * control-server report to ~100 ms, so one poll per 100 ms stays current. */
     const STATUS_POLL_MS = 100;
@@ -102,6 +111,11 @@ window.__ModuleLoader__.load({
     /* Token look-ahead while aligning a caption fragment to rendered words. */
     const ALIGN_WINDOW = 24;
     const ALIGN_ATTEMPTS = 8;
+    /* A caption fragment can skip rendered text: partial auto-read speaks the
+       first and last paragraphs, so the spoken fragment jumps over the omitted
+       middle. A skipped word may only resume on a run the reply really contains,
+       which keeps a stray common word from snapping the highlight forward. */
+    const RESYNC_LOOKAHEAD = 3;
 
     /*
      * CopySpeak app-logo mark: the speaker and its two sound waves. It is one
@@ -139,6 +153,18 @@ window.__ModuleLoader__.load({
         "Glides the highlight from word to word. Turn off to jump between words.",
       "follow.title": "Follow playback",
       "follow.description": "Scrolls the chat to keep the spoken word in view.",
+      "excerpt.title": "Read only part of the reply",
+      "excerpt.description":
+        "Reads the first or last paragraphs of each automatic reply.",
+      "excerpt.badge": "Experimental",
+      "excerpt.mode": "Part to read",
+      "excerpt.mode.top": "Top",
+      "excerpt.mode.bottom": "Bottom",
+      "excerpt.mode.both": "Top and bottom",
+      "excerpt.top": "Paragraphs from the top",
+      "excerpt.bottom": "Paragraphs from the bottom",
+      "excerpt.note":
+        "Applies to automatic reading only. Read aloud still reads the whole reply.",
       "bar.label": "CopySpeak playback",
       "bar.pause": "Pause reading",
       "bar.resume": "Resume reading",
@@ -191,13 +217,20 @@ window.__ModuleLoader__.load({
       ".dsh-csva-rows{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}",
       ".dsh-csva-row{display:flex;align-items:center;gap:16px;padding:12px 14px;border:.5px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-xl,10px);background:var(--dsw-alias-bg-layer-1)}",
       ".dsh-csva-rowText{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}",
-      ".dsh-csva-rowTitle{font-size:13px;line-height:20px;color:var(--dsw-alias-label-primary)}",
+      ".dsh-csva-rowTitle{display:inline-flex;align-items:center;gap:8px;font-size:13px;line-height:20px;color:var(--dsw-alias-label-primary)}",
       ".dsh-csva-rowDescription{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary)}",
+      ".dsh-csva-rowOptions{display:block;padding:12px 14px}",
       ".dsh-csva-switch{position:relative;flex:none;width:36px;height:20px;padding:0;border:none;border-radius:999px;background:var(--dsw-alias-state-idle-primary);cursor:pointer;transition:background .15s}",
       ".dsh-csva-switch[data-on]{background:var(--dsw-alias-brand-primary)}",
       ".dsh-csva-switch:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:2px}",
       ".dsh-csva-switchThumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--dsw-alias-bg-base);transition:transform .15s}",
       ".dsh-csva-switch[data-on] .dsh-csva-switchThumb{transform:translateX(16px)}",
+      ".dsh-csva-badge{flex:none;padding:0 6px;border:.5px solid var(--dsw-alias-border-l1);border-radius:999px;background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-secondary);font-size:11px;line-height:16px}",
+      ".dsh-csva-options{display:flex;flex-wrap:wrap;gap:12px;width:100%}",
+      ".dsh-csva-field{display:flex;flex-direction:column;gap:6px;min-width:140px}",
+      ".dsh-csva-fieldLabel{font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary)}",
+      ".dsh-csva-select,.dsh-csva-number{box-sizing:border-box;height:32px;padding:0 8px;border:.5px solid var(--dsw-alias-border-l1);border-radius:var(--dsw-radius-sm,6px);background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px}",
+      ".dsh-csva-select:focus-visible,.dsh-csva-number:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
       /* The frame-wide playback bar. The shell overlay is click-through, so the
          bar opts back into pointer events. It floats in the top right corner,
          below the session header's bottom border: the header is 76 px tall and
@@ -336,6 +369,10 @@ window.__ModuleLoader__.load({
       captions: readStoredFlag(STORAGE.captions, false),
       follow: readStoredFlag(STORAGE.follow, true),
       animation: readStoredFlag(STORAGE.animation, true),
+      excerpt: readStoredFlag(STORAGE.excerpt, false),
+      excerptMode: readStoredChoice(STORAGE.excerptMode, EXCERPT_MODES, "both"),
+      excerptTop: readStoredCount(STORAGE.excerptTop, EXCERPT_DEFAULT),
+      excerptBottom: readStoredCount(STORAGE.excerptBottom, EXCERPT_DEFAULT),
       listeners: new Set()
     };
 
@@ -349,13 +386,43 @@ window.__ModuleLoader__.load({
       }
     }
 
+    function readStoredChoice(key, choices, fallback) {
+      try {
+        const stored = window.localStorage.getItem(key);
+        if (stored === null || choices.indexOf(stored) === -1) return fallback;
+        return stored;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function readStoredCount(key, fallback) {
+      try {
+        const stored = window.localStorage.getItem(key);
+        if (stored === null) return fallback;
+        const value = Number(stored);
+        if (!Number.isFinite(value)) return fallback;
+        return clampExcerptCount(value);
+      } catch {
+        return fallback;
+      }
+    }
+
+    function clampExcerptCount(value) {
+      return Math.min(EXCERPT_MAX, Math.max(EXCERPT_MIN, Math.round(value)));
+    }
+
+    function storePreference(key, value) {
+      try {
+        window.localStorage.setItem(key, value);
+      } catch {
+        /* Private mode: the control still works for this page. */
+      }
+    }
+
     function setPreference(name, enabled) {
       preferences[name] = enabled;
-      try {
-        window.localStorage.setItem(STORAGE[name], enabled ? "1" : "0");
-      } catch {
-        /* Private mode: the switch still works for this page. */
-      }
+      storePreference(STORAGE[name], enabled ? "1" : "0");
       /* The status poll runs for the whole reading, so the bar keeps its pause
          state and Show in chat keeps its target. Disabling captions only drops
          the inline highlight. */
@@ -364,6 +431,20 @@ window.__ModuleLoader__.load({
         releaseMarkHost();
       }
       if (name === "animation") syncMarkAnimation();
+      emit(preferences.listeners);
+    }
+
+    function setExcerptMode(mode) {
+      if (EXCERPT_MODES.indexOf(mode) === -1) return;
+      preferences.excerptMode = mode;
+      storePreference(STORAGE.excerptMode, mode);
+      emit(preferences.listeners);
+    }
+
+    function setExcerptCount(name, value) {
+      const count = clampExcerptCount(value);
+      preferences[name] = count;
+      storePreference(STORAGE[name], String(count));
       emit(preferences.listeners);
     }
 
@@ -570,6 +651,53 @@ window.__ModuleLoader__.load({
       return -1;
     }
 
+    /* The first occurrence of one fragment word inside the normal look-ahead. */
+    function findForward(tokens, norm, from) {
+      const highest = Math.min(tokens.length, from + ALIGN_WINDOW);
+      for (let scan = from; scan < highest; scan += 1) {
+        if (tokens[scan].norm === norm) return scan;
+      }
+      return -1;
+    }
+
+    /* Whether the words after one fragment word follow it inside the normal
+       look-ahead. `at` is the candidate token of the first word. */
+    function runMatches(fragmentWords, tokens, index, at, needed) {
+      let cursor = at + 1;
+      let matched = 1;
+      for (let next = index + 1; next < fragmentWords.length && matched < needed; next += 1) {
+        const norm = fragmentWords[next].norm;
+        if (norm === "") continue;
+        const found = findForward(tokens, norm, cursor);
+        if (found < 0) return false;
+        cursor = found + 1;
+        matched += 1;
+      }
+      return matched >= needed;
+    }
+
+    /* Resume after a caption fragment skipped rendered text. Partial auto-read
+       speaks the top and bottom paragraphs, so its caption text jumps from the
+       top block to the bottom block with the omitted middle absent from the
+       spoken words. The reply still renders that middle, so the normal window
+       cannot reach the next spoken word. Accept a longer jump only when the
+       skipped word starts a run the reply actually contains; a missing or
+       rewritten word otherwise stays unmapped instead of snapping elsewhere. */
+    function resyncForward(fragmentWords, tokens, index, from) {
+      let remaining = 0;
+      for (let next = index; next < fragmentWords.length; next += 1) {
+        if (fragmentWords[next].norm !== "") remaining += 1;
+      }
+      /* A jump has to prove itself with a run; one or two leftover words cannot. */
+      if (remaining < RESYNC_LOOKAHEAD) return -1;
+      const norm = fragmentWords[index].norm;
+      for (let scan = from; scan < tokens.length; scan += 1) {
+        if (tokens[scan].norm !== norm) continue;
+        if (runMatches(fragmentWords, tokens, index, scan, RESYNC_LOOKAHEAD)) return scan;
+      }
+      return -1;
+    }
+
     /* Match the fragment words that surround one confirmed anchor token. */
     function matchAround(fragmentWords, tokens, anchor, anchorToken) {
       const map = fragmentWords.map(function () {
@@ -592,13 +720,11 @@ window.__ModuleLoader__.load({
       for (let index = anchor + 1; index < fragmentWords.length; index += 1) {
         const norm = fragmentWords[index].norm;
         if (norm === "") continue;
-        const highest = Math.min(tokens.length, token + ALIGN_WINDOW);
-        for (let scan = token; scan < highest; scan += 1) {
-          if (tokens[scan].norm !== norm) continue;
-          map[index] = scan;
-          token = scan + 1;
-          break;
-        }
+        let found = findForward(tokens, norm, token);
+        if (found < 0) found = resyncForward(fragmentWords, tokens, index, token);
+        if (found < 0) continue;
+        map[index] = found;
+        token = found + 1;
       }
       return { map: map, score: mappedCount(map) };
     }
@@ -1883,6 +2009,26 @@ window.__ModuleLoader__.load({
       return text.trim();
     }
 
+    /* Keep the first and last paragraphs of a reply for automatic reading.
+       Paragraphs are the blank-line-separated blocks left after toSpeech. */
+    function excerptSpeech(text, mode, topCount, bottomCount) {
+      const blocks = text
+        .split(/\n\s*\n/)
+        .map(function (block) {
+          return block.trim();
+        })
+        .filter(function (block) {
+          return block !== "";
+        });
+      if (blocks.length < 2) return text;
+      const top = clampExcerptCount(topCount);
+      const bottom = clampExcerptCount(bottomCount);
+      if (mode === "top") return blocks.slice(0, top).join("\n\n");
+      if (mode === "bottom") return blocks.slice(-bottom).join("\n\n");
+      if (top + bottom >= blocks.length) return text;
+      return blocks.slice(0, top).concat(blocks.slice(-bottom)).join("\n\n");
+    }
+
     function assistantText(blocks) {
       if (!Array.isArray(blocks)) return "";
       const parts = [];
@@ -2492,7 +2638,15 @@ window.__ModuleLoader__.load({
           if (found === null) return;
           /* The watcher reads the same rendered Markdown as the action, so it
              must strip the markup exactly the same way. */
-          const speech = toSpeech(assistantText(found.blocks));
+          const full = toSpeech(assistantText(found.blocks));
+          const speech = preferences.excerpt
+            ? excerptSpeech(
+                full,
+                preferences.excerptMode,
+                preferences.excerptTop,
+                preferences.excerptBottom
+              )
+            : full;
           if (speech === "") return;
           void beginReading(found.messageId, found.key, speech).then(function (error) {
             if (error !== null) console.error("[copyspeak-voice] auto-read failed:", error);
@@ -2630,24 +2784,31 @@ window.__ModuleLoader__.load({
       );
     }
 
-    /** CopySpeak options and app status on the CopySpeak sidebar panel. */
-    function CopySpeakScreen(props) {
-      const t = props.t;
-      const [autoRead, setAutoReadState] = React.useState(preferences.autoRead);
-      const [captions, setCaptionsState] = React.useState(preferences.captions);
-      const [animation, setAnimationState] = React.useState(preferences.animation);
-      const [follow, setFollowState] = React.useState(preferences.follow);
-      const [online, setOnline] = React.useState(null);
+    function snapshotPreferences() {
+      return {
+        autoRead: preferences.autoRead,
+        captions: preferences.captions,
+        follow: preferences.follow,
+        animation: preferences.animation,
+        excerpt: preferences.excerpt,
+        excerptMode: preferences.excerptMode,
+        excerptTop: preferences.excerptTop,
+        excerptBottom: preferences.excerptBottom
+      };
+    }
 
+    function usePreferencesState() {
+      const [snapshot, setSnapshot] = React.useState(snapshotPreferences);
       React.useEffect(function () {
         return subscribe(preferences.listeners, function () {
-          setAutoReadState(preferences.autoRead);
-          setCaptionsState(preferences.captions);
-          setAnimationState(preferences.animation);
-          setFollowState(preferences.follow);
+          setSnapshot(snapshotPreferences());
         });
       }, []);
+      return snapshot;
+    }
 
+    function useControlServerStatus() {
+      const [online, setOnline] = React.useState(null);
       React.useEffect(function () {
         let cancelled = false;
         function probe() {
@@ -2664,10 +2825,116 @@ window.__ModuleLoader__.load({
           window.removeEventListener("focus", probe);
         };
       }, []);
+      return online;
+    }
 
-      const statusKey =
-        online === null ? "status.checking" : online ? "status.online" : "status.offline";
-      const statusState = online === null ? "checking" : online ? "online" : "offline";
+    function statusCopy(online) {
+      return {
+        key: online === null ? "status.checking" : online ? "status.online" : "status.offline",
+        state: online === null ? "checking" : online ? "online" : "offline"
+      };
+    }
+
+    function SwitchRow(props) {
+      const t = props.t;
+      return h(
+        "li",
+        { className: "dsh-csva-row" },
+        h(
+          "span",
+          { className: "dsh-csva-rowText" },
+          h(
+            "span",
+            { className: "dsh-csva-rowTitle" },
+            t(props.title),
+            props.badge === true
+              ? h("span", { className: "dsh-csva-badge" }, t("excerpt.badge"))
+              : null
+          ),
+          h("span", { className: "dsh-csva-rowDescription" }, t(props.description))
+        ),
+        h(Switch, {
+          checked: props.checked,
+          label: t(props.title) + ": " + t(props.checked ? "switch.on" : "switch.off"),
+          onChange: props.onChange
+        })
+      );
+    }
+
+    function ExcerptCountField(props) {
+      const t = props.t;
+      return h(
+        "label",
+        { className: "dsh-csva-field" },
+        h("span", { className: "dsh-csva-fieldLabel" }, t(props.label)),
+        h("input", {
+          className: "dsh-csva-number",
+          type: "number",
+          min: String(EXCERPT_MIN),
+          max: String(EXCERPT_MAX),
+          step: "1",
+          value: String(props.value),
+          onChange: function (event) {
+            const next = event.target.valueAsNumber;
+            if (!Number.isFinite(next)) return;
+            props.onChange(next);
+          }
+        })
+      );
+    }
+
+    function ExcerptOptions(props) {
+      const t = props.t;
+      const mode = props.state.excerptMode;
+      return h(
+        "div",
+        { className: "dsh-csva-options" },
+        h(
+          "label",
+          { className: "dsh-csva-field" },
+          h("span", { className: "dsh-csva-fieldLabel" }, t("excerpt.mode")),
+          h(
+            "select",
+            {
+              className: "dsh-csva-select",
+              value: mode,
+              onChange: function (event) {
+                setExcerptMode(event.target.value);
+              }
+            },
+            h("option", { value: "top" }, t("excerpt.mode.top")),
+            h("option", { value: "bottom" }, t("excerpt.mode.bottom")),
+            h("option", { value: "both" }, t("excerpt.mode.both"))
+          )
+        ),
+        mode === "bottom"
+          ? null
+          : h(ExcerptCountField, {
+              t: t,
+              label: "excerpt.top",
+              value: props.state.excerptTop,
+              onChange: function (next) {
+                setExcerptCount("excerptTop", next);
+              }
+            }),
+        mode === "top"
+          ? null
+          : h(ExcerptCountField, {
+              t: t,
+              label: "excerpt.bottom",
+              value: props.state.excerptBottom,
+              onChange: function (next) {
+                setExcerptCount("excerptBottom", next);
+              }
+            })
+      );
+    }
+
+    /** CopySpeak options and app status on the CopySpeak sidebar panel. */
+    function CopySpeakScreen(props) {
+      const t = props.t;
+      const state = usePreferencesState();
+      const status = statusCopy(useControlServerStatus());
 
       return h(
         "div",
@@ -2680,79 +2947,71 @@ window.__ModuleLoader__.load({
         ),
         h(
           "p",
-          { className: "dsh-csva-status", "data-state": statusState, role: "status" },
+          { className: "dsh-csva-status", "data-state": status.state, role: "status" },
           h("span", { className: "dsh-csva-dot" }),
-          h("span", null, t(statusKey))
+          h("span", null, t(status.key))
         ),
         h("ul", { className: "dsh-csva-rows" }, [
-          h(
-            "li",
-            { key: "auto-read", className: "dsh-csva-row" },
-            h(
-              "span",
-              { className: "dsh-csva-rowText" },
-              h("span", { className: "dsh-csva-rowTitle" }, t("autoRead.title")),
-              h("span", { className: "dsh-csva-rowDescription" }, t("autoRead.description"))
-            ),
-            h(Switch, {
-              checked: autoRead,
-              label: t("autoRead.title") + ": " + t(autoRead ? "switch.on" : "switch.off"),
-              onChange: function () {
-                setPreference("autoRead", !preferences.autoRead);
-              }
-            })
-          ),
-          h(
-            "li",
-            { key: "captions", className: "dsh-csva-row" },
-            h(
-              "span",
-              { className: "dsh-csva-rowText" },
-              h("span", { className: "dsh-csva-rowTitle" }, t("captions.title")),
-              h("span", { className: "dsh-csva-rowDescription" }, t("captions.description"))
-            ),
-            h(Switch, {
-              checked: captions,
-              label: t("captions.title") + ": " + t(captions ? "switch.on" : "switch.off"),
-              onChange: function () {
-                setPreference("captions", !preferences.captions);
-              }
-            })
-          ),
-          h(
-            "li",
-            { key: "animation", className: "dsh-csva-row" },
-            h(
-              "span",
-              { className: "dsh-csva-rowText" },
-              h("span", { className: "dsh-csva-rowTitle" }, t("animation.title")),
-              h("span", { className: "dsh-csva-rowDescription" }, t("animation.description"))
-            ),
-            h(Switch, {
-              checked: animation,
-              label: t("animation.title") + ": " + t(animation ? "switch.on" : "switch.off"),
-              onChange: function () {
-                setPreference("animation", !preferences.animation);
-              }
-            })
-          ),
-          h(
-            "li",
-            { key: "follow", className: "dsh-csva-row" },
-            h(
-              "span",
-              { className: "dsh-csva-rowText" },
-              h("span", { className: "dsh-csva-rowTitle" }, t("follow.title")),
-              h("span", { className: "dsh-csva-rowDescription" }, t("follow.description"))
-            ),
-            h(Switch, {
-              checked: follow,
-              label: t("follow.title") + ": " + t(follow ? "switch.on" : "switch.off"),
-              onChange: function () {
-                setPreference("follow", !preferences.follow);
-              }
-            })
-          )
+          h(SwitchRow, {
+            key: "auto-read",
+            t: t,
+            title: "autoRead.title",
+            description: "autoRead.description",
+            checked: state.autoRead,
+            onChange: function () {
+              setPreference("autoRead", !preferences.autoRead);
+            }
+          }),
+          h(SwitchRow, {
+            key: "captions",
+            t: t,
+            title: "captions.title",
+            description: "captions.description",
+            checked: state.captions,
+            onChange: function () {
+              setPreference("captions", !preferences.captions);
+            }
+          }),
+          h(SwitchRow, {
+            key: "animation",
+            t: t,
+            title: "animation.title",
+            description: "animation.description",
+            checked: state.animation,
+            onChange: function () {
+              setPreference("animation", !preferences.animation);
+            }
+          }),
+          h(SwitchRow, {
+            key: "follow",
+            t: t,
+            title: "follow.title",
+            description: "follow.description",
+            checked: state.follow,
+            onChange: function () {
+              setPreference("follow", !preferences.follow);
+            }
+          }),
+          state.autoRead
+            ? h(SwitchRow, {
+                key: "excerpt",
+                t: t,
+                title: "excerpt.title",
+                description: "excerpt.description",
+                badge: true,
+                checked: state.excerpt,
+                onChange: function () {
+                  setPreference("excerpt", !preferences.excerpt);
+                }
+              })
+            : null,
+          state.autoRead && state.excerpt
+            ? h(
+                "li",
+                { key: "excerpt-options", className: "dsh-csva-row dsh-csva-rowOptions" },
+                h(ExcerptOptions, { t: t, state: state })
+              )
+            : null
         ])
       );
     }
