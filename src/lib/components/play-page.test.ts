@@ -6,6 +6,7 @@ import PlayPage from "./play-page.svelte";
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type Event } from "@tauri-apps/api/event";
 import { historyStore } from "#lib/stores/history-store.svelte";
+import { playbackStore } from "#lib/stores/playback-store.svelte";
 import { testConfig } from "#lib/test-fixtures/app-config";
 import type { AppConfig } from "#lib/types";
 
@@ -114,6 +115,28 @@ describe("play-page history gating", () => {
     expect(view.queryByRole("region", { name: /Recent History/i })).toBeNull();
     expect(historyStore.loadHistory).not.toHaveBeenCalled();
     view.unmount();
+  });
+});
+
+describe("play-page stop", () => {
+  it("aborts queued synthesis even when synthesis has not started", async () => {
+    await waitForI18nReady();
+    vi.clearAllMocks();
+    playbackStore.isPlaying = true;
+    playbackStore.isSynthesizing = false;
+    vi.mocked(invoke).mockImplementation(async (cmd) =>
+      cmd === "get_config" ? testConfig() : undefined
+    );
+    const view = render(PlayPage);
+    try {
+      await fireEvent.click(view.getByRole("button", { name: "Stop" }));
+      await waitFor(() => expect(invoke).toHaveBeenCalledWith("abort_synthesis"));
+      expect(playbackStore.handleStop).toHaveBeenCalled();
+    } finally {
+      view.unmount();
+      playbackStore.isPlaying = false;
+      vi.restoreAllMocks();
+    }
   });
 });
 

@@ -149,7 +149,9 @@ fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
 }
 
 #[tauri::command]
-pub fn test_tts_engine(config: State<'_, Mutex<AppConfig>>) -> Result<TtsHealthResult, String> {
+pub async fn test_tts_engine(
+    config: State<'_, Mutex<AppConfig>>,
+) -> Result<TtsHealthResult, String> {
     if crate::logging::is_debug_mode() {
         log::debug!("[IPC] test_tts_engine called");
     }
@@ -165,7 +167,9 @@ pub fn test_tts_engine(config: State<'_, Mutex<AppConfig>>) -> Result<TtsHealthR
 
     let backend_name = effective_backend_name(&effective, &tts_config);
 
-    health_result(backend, backend_name)
+    tauri::async_runtime::spawn_blocking(move || health_result(backend, backend_name))
+        .await
+        .map_err(|error| format!("Engine test task failed: {error}"))?
 }
 
 /// First non-blank candidate, or "unset".
@@ -248,7 +252,7 @@ fn effective_backend_name(eff: &EffectiveTtsRequest, tts: &TtsConfig) -> String 
 }
 
 #[tauri::command]
-pub fn test_tts_engine_config(
+pub async fn test_tts_engine_config(
     config: State<'_, Mutex<AppConfig>>,
     engine: String,
     preset: Option<String>,
@@ -287,7 +291,9 @@ pub fn test_tts_engine_config(
         TtsEngine::Pocket => "Pocket".to_string(),
         TtsEngine::Edge => format!("Edge-TTS ({})", first_set(&[&tts_config.edge.voice])),
     };
-    health_result(backend, backend_name)
+    tauri::async_runtime::spawn_blocking(move || health_result(backend, backend_name))
+        .await
+        .map_err(|error| format!("Engine test task failed: {error}"))?
 }
 
 /// Test a local (uv-installed) engine by running a real synthesis through its
@@ -298,7 +304,13 @@ pub fn test_tts_engine_config(
 ///
 /// `engine` is the preset id from the Engines page: piper | kokoro | kitten.
 #[tauri::command]
-pub fn test_local_engine(engine: String) -> Result<TtsHealthResult, String> {
+pub async fn test_local_engine(engine: String) -> Result<TtsHealthResult, String> {
+    tauri::async_runtime::spawn_blocking(move || test_local_engine_blocking(engine))
+        .await
+        .map_err(|error| format!("Engine test task failed: {error}"))?
+}
+
+fn test_local_engine_blocking(engine: String) -> Result<TtsHealthResult, String> {
     let spec = match local_engine_spec(&engine) {
         Some(s) => s,
         None => {

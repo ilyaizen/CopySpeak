@@ -596,13 +596,20 @@ pub(crate) fn resolve_effective_for_profile(
         .iter()
         .find(|p| p.id == selected_id)
         .ok_or_else(|| format!("unknown profile: {}", selected_id))?;
+    Ok(resolve_profile(profile, tts_config))
+}
+
+pub(crate) fn resolve_profile(
+    profile: &crate::config::VoiceProfile,
+    tts_config: &TtsConfig,
+) -> EffectiveTtsRequest {
     let voice = if profile.voice.trim().is_empty() {
         voice_for_backend(&profile.engine, tts_config)
     } else {
         profile.voice.clone()
     };
 
-    Ok(EffectiveTtsRequest {
+    EffectiveTtsRequest {
         profile_id: Some(profile.id.clone()),
         profile_name: Some(profile.name.clone()),
         engine: profile.engine.clone(),
@@ -613,7 +620,7 @@ pub(crate) fn resolve_effective_for_profile(
         post_process: profile.post_process.clone(),
         text_processing: profile.text_processing.clone(),
         engine_options: profile.engine_options.clone(),
-    })
+    }
 }
 
 pub(crate) fn active_engine(tts_config: &TtsConfig) -> TtsEngine {

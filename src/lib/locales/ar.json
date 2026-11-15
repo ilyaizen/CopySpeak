@@ -776,7 +776,7 @@
       },
       "history": {
         "title": "السجل",
-        "description": "سجل دائم للتوليدات مع التشغيل وتصدير الصوت — أو أوقفه فلا يُسجَّل شيء."
+        "description": "سجل دائم للتوليدات مع التشغيل، أو أوقفه فلا يُسجَّل شيء."
       },
       "sanitization": {
         "title": "تنظيف النص",
@@ -831,7 +831,6 @@
   "voicePicker": {
     "select": "اختر الصوت…",
     "search": "ابحث عن الأصوات…",
-    "customId": "معرّف مخصص / يدوي…",
     "refresh": "تحديث",
     "refreshFailed": "تعذر التحديث: {error}",
     "notInList": "غير موجود في القائمة",
@@ -842,12 +841,17 @@
     "language": "اللغة",
     "style": "الأسلوب",
     "all": "الكل",
+    "allGenders": "كل الأجناس",
+    "allLanguages": "كل اللغات",
+    "allStyles": "كل الأنماط",
     "noFilterMatch": "لا توجد أصوات تطابق هذه المرشحات.",
     "previewPlay": "معاينة",
     "previewStop": "إيقاف المعاينة",
+    "generatePreview": "إنشاء معاينة",
+    "generatingPreview": "جارٍ إنشاء المعاينة",
+    "generateCost": "قد يستهلك إنشاء المعاينات رصيد المزوّد.",
     "previewFailed": "تعذّر تشغيل هذه المعاينة.",
     "noPreview": "لا تتوفر معاينة لهذا الصوت.",
-    "shiftEnterHint": "Shift+Enter يشغّل معاينة الصوت المحدد.",
     "showMore": "عرض {count} المزيد"
   },
   "hotkey": {

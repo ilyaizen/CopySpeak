@@ -66,6 +66,7 @@
     "svelte-check": "^4.7.8",
     "tailwindcss": "^4.3.5",
     "typescript": "~6.0.3",
+    "vaul-svelte": "^1.0.0-next.7",
     "vite": "npm:@voidzero-dev/vite-plus-core@1.1.0",
     "vite-plus": "1.1.0",
     "vitest": "5.0.3"

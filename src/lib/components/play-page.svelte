@@ -441,24 +441,17 @@
     playbackStore.handleStop();
 
     if (!isTauri) return;
-    // A stop while synthesis is running must also free the engine — fragments
-    // nobody will play otherwise keep generating (and burning GPU/CPU). The
-    // flag keeps the pending speak_now promise's abort rejection out of `error`.
+    // A queued reading may not report synthesis yet, but Stop must abort it.
     if (playbackStore.isSynthesizing) {
       abortRequested = true;
     }
     try {
-      await invoke("stop_speaking");
-    } catch (error) {
-      console.error("Failed to stop speaking:", error);
-    }
-    if (abortRequested) {
-      try {
-        await invoke("abort_synthesis");
+      await invoke("abort_synthesis");
+      if (abortRequested) {
         toast.success($_("toast.success.synthesisAborted"));
-      } catch (error) {
-        console.error("Failed to abort synthesis:", error);
       }
+    } catch (error) {
+      console.error("Failed to abort synthesis:", error);
     }
   }
 

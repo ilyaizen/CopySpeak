@@ -275,13 +275,11 @@ impl EdgeTtsBackend {
             )
         })?;
 
-        // Store PID so abort_synthesis can kill this process.
-        crate::ACTIVE_CLI_PID.store(child.id(), std::sync::atomic::Ordering::Relaxed);
-
-        let result = child.wait_with_output();
-        crate::ACTIVE_CLI_PID.store(0, std::sync::atomic::Ordering::Relaxed);
-        let result = result
+        let active_process = super::cli::track_process(child.id());
+        let result = child
+            .wait_with_output()
             .map_err(|_| TtsError::Unavailable("Could not collect Edge speech output.".into()))?;
+        drop(active_process);
 
         let elapsed = exec_start.elapsed();
         log::info!(

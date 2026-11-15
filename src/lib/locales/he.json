@@ -776,7 +776,7 @@
       },
       "history": {
         "title": "היסטוריה",
-        "description": "היסטוריית יצירות קבועה עם השמעה וייצוא שמע — או כיבוי, ואז ההקראות לא נשמרות ביומן."
+        "description": "היסטוריית יצירות קבועה עם השמעה. כאשר היא כבויה, ההקראות לא נשמרות ביומן."
       },
       "sanitization": {
         "title": "ניקוי טקסט",
@@ -831,7 +831,6 @@
   "voicePicker": {
     "select": "בחר קול…",
     "search": "חפש קולות…",
-    "customId": "מזהה מותאם / ידני…",
     "refresh": "רענון",
     "refreshFailed": "הרענון נכשל: {error}",
     "notInList": "לא ברשימה",
@@ -842,12 +841,17 @@
     "language": "שפה",
     "style": "סגנון",
     "all": "הכול",
+    "allGenders": "כל המינים",
+    "allLanguages": "כל השפות",
+    "allStyles": "כל הסגנונות",
     "noFilterMatch": "אין קולות שתואמים למסננים האלה.",
     "previewPlay": "האזנה מקדימה",
     "previewStop": "עצור האזנה מקדימה",
+    "generatePreview": "יצירת האזנה מקדימה",
+    "generatingPreview": "יוצר האזנה מקדימה",
+    "generateCost": "יצירת האזנה מקדימה עשויה לצרוך קרדיטים מהספק.",
     "previewFailed": "לא ניתן היה להפעיל את ההאזנה המקדימה.",
     "noPreview": "לקול הזה אין האזנה מקדימה.",
-    "shiftEnterHint": "Shift+Enter מפעיל את ההאזנה המקדימה לקול המסומן.",
     "showMore": "הצגת {count} נוספים"
   },
   "hotkey": {

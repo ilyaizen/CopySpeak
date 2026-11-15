@@ -402,6 +402,11 @@ class PlaybackStore {
   /** Reading the last stop stopped; late chunks of this id stay dropped (B1). */
   private _stoppedReadingId: number | null = null;
   private _fragmentText = "";
+  /** Reading id of the batch fragment now audible. Rust matches a
+   * /speak --wait to the `playback-finished` that ends it, so a foreign
+   * reading's finish (the previous reply's stop, a double-copy drain)
+   * cannot release the waiter early. The streamed path carries its own id. */
+  private _batchReadingId: number | null = null;
   private _captionTimer: ReturnType<typeof setInterval> | null = null;
   private _lastCaption: HudCaptionPayload | null = null;
   // Wall-clock time of the last caption report for the control server's
@@ -450,6 +455,9 @@ class PlaybackStore {
     // Initialize fragment queue with handlers
     this._fragmentQueue = new FragmentQueue({
       onFragmentPlay: (fragment: QueuedFragment) => this._activateFragment(fragment),
+      onReadingComplete: (readingId) => {
+        void this._emit?.("playback-reading-finished", { reading_id: readingId });
+      },
       onQueueComplete: () => {
         console.log("[PlaybackStore] onQueueComplete");
         this.finishPlayback();
@@ -465,6 +473,8 @@ class PlaybackStore {
     this._fragmentText = fragment.text;
     this._fragmentCaptions = validCaptionAlignment(fragment.captions) ? fragment.captions : null;
     this._browserSessionId = fragment.sessionId ?? null;
+    // The audible reading: its playback-finished must carry this id.
+    this._batchReadingId = fragment.readingId;
     void this._emit?.("playback-fragment-audible", { index: fragment.index, text: fragment.text });
     return this.handleAudioReady(fragment.audioBase64);
   }
@@ -709,6 +719,7 @@ class PlaybackStore {
     text: string;
     captions?: CaptionAlignment | null;
     session_id?: string | null;
+    reading_id?: number | null;
   }): Promise<void> {
     console.log(
       "[PlaybackStore] handleFragmentReady: index",
@@ -725,7 +736,8 @@ class PlaybackStore {
       total: payload.fragment_total,
       text: payload.text,
       captions: payload.captions,
-      sessionId: payload.session_id ?? null
+      sessionId: payload.session_id ?? null,
+      readingId: payload.reading_id ?? null
     });
     console.log(
       "[PlaybackStore] Queue length:",
@@ -755,7 +767,10 @@ class PlaybackStore {
     this.totalFragments = null;
     // Capture the reading that owned the stream before ownership clears: Rust
     // releases the speaker owner for that reading on `playback-finished` (B1).
-    const readingId = this._owner.release();
+    // The batch path names its fragment's reading instead, so a control-server
+    // /speak --wait matches its own playback.
+    const readingId = this._owner.release() ?? this._batchReadingId;
+    this._batchReadingId = null;
     // A reading that hit reading-failed ends in "error"; a normal one in
     // "completed". The bridge keeps a delivered session up for this report.
     this.reportBrowserFinished(this._readingFailure === null ? "completed" : "error");
@@ -950,7 +965,10 @@ class PlaybackStore {
     // one belongs to another reading, whose failure this event does not describe.
     if (this.isPlaying || this.isLoadingAudio || this._fragmentQueue.isProcessing()) return;
     this._fragmentQueue.markTerminal();
-    this.emitPlaybackFinished(null);
+    // Attribute the finish to the failed reading when the payload names one:
+    // an unattributed finish must not release a /speak --wait whose audio
+    // never played.
+    this.emitPlaybackFinished(this._eventReadingId(failed.reading_id));
   }
 
   /**
@@ -1032,7 +1050,6 @@ class PlaybackStore {
 
     // Clear the fragment queue and any active PCM stream
     this._fragmentQueue.clear();
-    const readingId = this._owner.release();
     // A user stop cuts the live chain immediately; only natural completion gets
     // the tail click and delayed dispose.
     this._disposeLiveEffect();
@@ -1047,6 +1064,11 @@ class PlaybackStore {
     this.isPaused = false;
     this.reportBrowserFinished("cancelled");
     void this._emit?.("hud:stop", null);
+    // Name the stopped batch reading too, so a control-server /speak --wait
+    // for it resolves instead of hanging to its cap. The streamed id wins:
+    // `_stoppedReadingId` (B1) keeps gating stream chunks on the owner only.
+    const readingId = this._owner.release() ?? this._batchReadingId;
+    this._batchReadingId = null;
     this.emitPlaybackFinished(readingId);
     setTimeout(() => {
       this._stopping = false;
@@ -1243,7 +1265,8 @@ class PlaybackStore {
           audioBase64: e.payload,
           index: 0,
           total: 1,
-          text: ""
+          text: "",
+          readingId: null
         });
         if (!this._fragmentQueue.isProcessing() && !this._streamOwnsSpeakers()) {
           await this._fragmentQueue.startProcessing();

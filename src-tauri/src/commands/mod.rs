@@ -110,6 +110,11 @@ pub struct AudioFragmentEvent {
     /// Browser-companion session this clip belongs to, when one follows it
     #[serde(skip_serializing_if = "Option::is_none")]
     pub session_id: Option<String>,
+    /// Reading this fragment belongs to, so the webview can attribute its
+    /// `playback-finished` to the request that waits on it. `None` for a
+    /// helper scope (history replay, cached replay).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reading_id: Option<u64>,
 }
 
 /// Event carrying one PCM chunk of streaming synthesis audio.

@@ -4,12 +4,12 @@
 //! Windows playback lives in the webview: the store's queue drain
 //! (`finishPlayback`) and user stop (`handleStop`) are the only terminal
 //! signals, so the frontend emits `playback-finished` there and the Rust side
-//! waits on it here. A generation timestamp ignores finishes that raced with
-//! the requester's own synthesis (e.g. a concurrent reader stopping early).
+//! waits on it here. Each active waiter records only its own reading's finish,
+//! including finishes that arrive before synthesis returns.
 
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Mutex;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, Weak};
+use std::time::{Duration, Instant};
 
 /// Freshness window for a reported caption snapshot. The webview reports at
 /// about 10 Hz while playback runs, so an older snapshot means playback
@@ -17,51 +17,71 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 const CAPTION_FRESH: Duration = Duration::from_secs(1);
 
 lazy_static::lazy_static! {
-    static ref LAST_FINISH_MS: AtomicU64 = AtomicU64::new(0);
+    static ref WAITERS: Mutex<Vec<Weak<WaitState>>> = Mutex::new(Vec::new());
     static ref RECENT_CAPTION: Mutex<Option<CaptionSnapshot>> = Mutex::new(None);
 }
 
-/// Frontend hook: call when any playback run reaches a terminal state.
-pub fn signal_finished() {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0);
-    LAST_FINISH_MS.store(now, Ordering::Release);
+struct WaitState {
+    request_id: Option<String>,
+    finished: AtomicBool,
 }
 
-fn now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
-}
+/// A subscription registered before synthesis can emit a finish.
+pub struct PlaybackWait(Arc<WaitState>);
 
-/// Resolve when a `playback-finished` event newer than `not_before_ms` arrives
-/// (or is already pending), or when `timeout` elapses first. Returns whether a
-/// finish was observed. The control server treats a timeout as success — the
-/// user simply stopped playback — so the boolean is for logging only.
-pub async fn wait_until(not_before_ms: u64, timeout: Duration) -> bool {
-    // A finish may already have landed between speak_now resolving and this
-    // wait starting (fast cache replay, quick stop).
-    if LAST_FINISH_MS.load(Ordering::Acquire) >= not_before_ms && not_before_ms > 0 {
-        return true;
+impl PlaybackWait {
+    pub fn new(request_id: Option<&str>) -> Self {
+        let state = Arc::new(WaitState {
+            request_id: request_id.map(str::to_owned),
+            finished: AtomicBool::new(false),
+        });
+        WAITERS
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .push(Arc::downgrade(&state));
+        Self(state)
     }
-    let deadline = tokio::time::Instant::now() + timeout;
-    loop {
-        if LAST_FINISH_MS.load(Ordering::Acquire) >= not_before_ms {
-            return true;
+
+    pub async fn wait(self, timeout: Duration) -> bool {
+        let deadline = tokio::time::Instant::now() + timeout;
+        loop {
+            if self.0.finished.load(Ordering::Acquire) {
+                return true;
+            }
+            if tokio::time::Instant::now() >= deadline {
+                return false;
+            }
+            tokio::time::sleep(Duration::from_millis(25)).await;
         }
-        if tokio::time::Instant::now() >= deadline {
+    }
+}
+
+impl Drop for PlaybackWait {
+    fn drop(&mut self) {
+        let own = Arc::downgrade(&self.0);
+        WAITERS
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .retain(|waiter| !waiter.ptr_eq(&own));
+    }
+}
+
+/// Record each finish for every active subscriber whose reading it ended.
+pub fn signal_finished_for(reading: Option<u64>) {
+    let mut waiters = WAITERS.lock().unwrap_or_else(|e| e.into_inner());
+    waiters.retain(|waiter| {
+        let Some(waiter) = waiter.upgrade() else {
             return false;
+        };
+        let matches = match waiter.request_id.as_deref() {
+            None => true,
+            Some(id) => reading.is_some() && crate::speak_requests::reading_for_id(id) == reading,
+        };
+        if matches {
+            waiter.finished.store(true, Ordering::Release);
         }
-        tokio::time::sleep(Duration::from_millis(25)).await;
-    }
-}
-
-/// Timestamp to pass as `not_before_ms` — everything older is ignored.
-pub fn generation() -> u64 {
-    now_ms()
+        true
+    });
 }
 
 /// The caption snapshot the webview last rendered, plus its report time.
@@ -157,39 +177,90 @@ pub fn report_playback_caption(caption: serde_json::Value) {
     remember_caption(caption.to_string());
 }
 
+/// Playback tests share process-global subscribers and finish signals.
+#[cfg(test)]
+static TEST_LOCK: Mutex<()> = Mutex::new(());
+
+#[cfg(test)]
+pub(crate) fn playback_wait_test_lock() -> std::sync::MutexGuard<'static, ()> {
+    TEST_LOCK.lock().unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// The tests share the process-global LAST_FINISH_MS; run them one at a
-    /// time so one test's finish cannot satisfy the other's wait.
-    static TEST_LOCK: Mutex<()> = Mutex::new(());
-
-    /// A finish newer than the request's generation resolves immediately,
-    /// including one that landed before the wait even started.
     #[tokio::test]
-    async fn wait_resolves_on_pending_or_newer_finish() {
+    async fn unscoped_wait_observes_only_finishes_after_subscription() {
         let _guard = TEST_LOCK.lock().unwrap();
-        let gen = generation();
-        std::thread::sleep(Duration::from_millis(5));
-        signal_finished();
-        let started = std::time::Instant::now();
-        assert!(wait_until(gen, Duration::from_secs(1)).await);
-        assert!(started.elapsed() < Duration::from_millis(500));
+        signal_finished_for(None);
+        assert!(!PlaybackWait::new(None).wait(Duration::from_millis(50)).await);
+        let waiter = PlaybackWait::new(None);
+        signal_finished_for(Some(7));
+        assert!(waiter.wait(Duration::from_millis(50)).await);
     }
 
-    /// Finishes older than the generation never satisfy the wait; the
-    /// timeout path resolves false.
     #[tokio::test]
-    async fn wait_ignores_stale_finish_until_timeout() {
+    async fn foreign_finish_cannot_overwrite_a_subscribed_readings_finish() {
         let _guard = TEST_LOCK.lock().unwrap();
-        signal_finished();
-        std::thread::sleep(Duration::from_millis(5));
-        let gen = generation();
-        let started = std::time::Instant::now();
-        assert!(!wait_until(gen, Duration::from_millis(120)).await);
-        assert!(started.elapsed() >= Duration::from_millis(120));
+        let id = "playback-finish-not-overwritten";
+        let crate::speak_requests::Registration::Proceed(seq) =
+            crate::speak_requests::register(id)
+        else {
+            panic!("request must register");
+        };
+        let _ticket = crate::speak_requests::Ticket::new(seq);
+        crate::speak_requests::attach_reading(seq, 876543);
+        let waiter = PlaybackWait::new(Some(id));
+        signal_finished_for(Some(876543));
+        signal_finished_for(Some(876544));
+        assert!(waiter.wait(Duration::from_millis(100)).await);
     }
+
+    #[tokio::test]
+    async fn finishes_before_reading_attaches_do_not_satisfy_request() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        let id = "playback-finish-before-reading";
+        let crate::speak_requests::Registration::Proceed(seq) =
+            crate::speak_requests::register(id)
+        else {
+            panic!("request must register");
+        };
+        let _ticket = crate::speak_requests::Ticket::new(seq);
+        let waiter = PlaybackWait::new(Some(id));
+        signal_finished_for(None);
+        crate::speak_requests::attach_reading(seq, 876545);
+        assert!(!waiter.wait(Duration::from_millis(50)).await);
+    }
+
+    #[tokio::test]
+    async fn foreign_and_unattributed_finishes_do_not_release_a_reading() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        let id = "playback-finish-foreign";
+        let crate::speak_requests::Registration::Proceed(seq) =
+            crate::speak_requests::register(id)
+        else {
+            panic!("request must register");
+        };
+        let _ticket = crate::speak_requests::Ticket::new(seq);
+        crate::speak_requests::attach_reading(seq, 876546);
+        let waiter = PlaybackWait::new(Some(id));
+        signal_finished_for(Some(876547));
+        signal_finished_for(None);
+        assert!(!waiter.wait(Duration::from_millis(50)).await);
+    }
+
+    #[test]
+    fn dropping_subscribers_releases_their_registry_entries() {
+        let _guard = TEST_LOCK.lock().unwrap();
+        let waiter = PlaybackWait::new(None);
+        let weak = Arc::downgrade(&waiter.0);
+        assert!(WAITERS.lock().unwrap().iter().any(|entry| entry.ptr_eq(&weak)));
+        drop(waiter);
+        assert!(!WAITERS.lock().unwrap().iter().any(|entry| entry.ptr_eq(&weak)));
+        assert!(weak.upgrade().is_none());
+    }
+
 
     /// A caption snapshot describes live playback only inside the freshness
     /// window; the status route falls back to inactive after it goes stale.

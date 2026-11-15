@@ -1,7 +1,7 @@
 // Voice listing, with the provider voice cache.
 
 use crate::config::AppConfig;
-use crate::config::{TtsConfig, TtsEngine};
+use crate::config::{ProfileEngineOptions, TtsConfig, TtsEngine, VoiceProfile};
 use crate::tts::catalog::VoiceCatalogEntry;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
@@ -10,6 +10,92 @@ use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::State;
+
+use super::helpers::{create_backend_from_effective, resolve_profile, EffectiveTtsRequest};
+
+#[derive(Serialize)]
+pub struct VoicePreview {
+    audio_base64: String,
+    extension: String,
+}
+
+fn preview_request(profile: &VoiceProfile, voice: String, tts: &TtsConfig) -> EffectiveTtsRequest {
+    let mut effective = resolve_profile(profile, tts);
+    if effective.voice != voice {
+        effective.voice_label = None;
+    }
+    effective.voice = voice;
+    if let ProfileEngineOptions::Edge(options) = &mut effective.engine_options {
+        options.voice = Some(effective.voice.clone());
+    }
+    effective
+}
+
+fn synthesize_preview(
+    backend: &dyn crate::tts::TtsBackend,
+    effective: &EffectiveTtsRequest,
+    tts: &TtsConfig,
+) -> Result<(Vec<u8>, String), String> {
+    const TEXT: &str = "Hello, this is a preview of my voice.";
+    if matches!(effective.engine, TtsEngine::ElevenLabs | TtsEngine::Cartesia) {
+        let speech = backend
+            .synthesize_with_captions(TEXT, &effective.voice)
+            .map_err(|e| e.to_string())?;
+        return Ok((speech.bytes, "wav".into()));
+    }
+
+    let audio = backend
+        .synthesize(TEXT, &effective.voice)
+        .map_err(|e| e.to_string())?;
+    let extension = if effective.engine == TtsEngine::OpenAI {
+        effective.engine_options.openai()
+            .and_then(|options| options.response_format.as_deref())
+            .unwrap_or(&tts.openai.response_format)
+    } else {
+        backend.file_extension()
+    };
+    let pcm_rate = match (&effective.engine, extension) {
+        (TtsEngine::OpenAI, "pcm") => Some(24_000),
+        (TtsEngine::Fish, "pcm") => Some(44_100),
+        _ => None,
+    };
+    if let Some(sample_rate) = pcm_rate {
+        let meta = crate::tts::stream::AudioFormatMeta {
+            sample_rate,
+            channels: 1,
+            bits_per_sample: 16,
+        };
+        Ok((crate::tts::stream::pcm_to_wav(&audio, &meta), "wav".into()))
+    } else if extension == "pcm" || extension == "raw" {
+        Err("Voice preview does not support this raw audio format.".into())
+    } else {
+        Ok((audio, extension.to_string()))
+    }
+}
+
+#[tauri::command]
+pub async fn preview_voice(
+    profile: VoiceProfile,
+    voice: String,
+    config: State<'_, Mutex<AppConfig>>,
+) -> Result<VoicePreview, String> {
+    let tts = config.lock().map_err(|e| e.to_string())?.tts.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        use base64::{engine::general_purpose::STANDARD, Engine as _};
+
+        let effective = preview_request(&profile, voice, &tts);
+        let backend = create_backend_from_effective(&effective, &tts);
+        let (audio, extension) = crate::tts::cli::with_preview_request(|| {
+            synthesize_preview(backend.as_ref(), &effective, &tts)
+        })?;
+        Ok(VoicePreview {
+            audio_base64: STANDARD.encode(audio),
+            extension,
+        })
+    })
+    .await
+    .map_err(|e| format!("Voice preview task failed: {e}"))?
+}
 
 #[tauri::command]
 pub fn list_tts_engines() -> Vec<crate::tts::catalog::EngineCatalogEntry> {
@@ -327,6 +413,87 @@ fn with_builtin_voices(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct PreviewBackend(&'static str);
+
+    impl crate::tts::TtsBackend for PreviewBackend {
+        fn name(&self) -> &str { "preview test" }
+        fn synthesize(&self, _: &str, _: &str) -> Result<Vec<u8>, crate::tts::TtsError> {
+            Ok(vec![1, 2, 3, 4])
+        }
+        fn synthesize_with_captions(&self, _: &str, _: &str) -> Result<crate::tts::captions::SpeechAudio, crate::tts::TtsError> {
+            Ok(vec![9, 8, 7].into())
+        }
+        fn health_check(&self) -> Result<(), crate::tts::TtsError> { Ok(()) }
+        fn file_extension(&self) -> &str { self.0 }
+    }
+
+    #[test]
+    fn preview_wraps_provider_pcm_at_its_native_rate() {
+        let mut tts = TtsConfig::default();
+        tts.openai.response_format = "pcm".into();
+        for (engine, expected_rate) in [(TtsEngine::OpenAI, 24_000u32), (TtsEngine::Fish, 44_100u32)] {
+            let mut profile = VoiceProfile::default();
+            profile.engine = engine;
+            let effective = preview_request(&profile, "voice".into(), &tts);
+            let (audio, extension) = synthesize_preview(&PreviewBackend("pcm"), &effective, &tts).unwrap();
+            assert_eq!(extension, "wav");
+            assert_eq!(&audio[..4], b"RIFF");
+            assert_eq!(u32::from_le_bytes(audio[24..28].try_into().unwrap()), expected_rate);
+            assert_eq!(&audio[34..36], &16u16.to_le_bytes());
+            assert_eq!(&audio[44..], &[1, 2, 3, 4]);
+        }
+    }
+
+    #[test]
+    fn preview_uses_container_output_for_elevenlabs_and_cartesia() {
+        let tts = TtsConfig::default();
+        for engine in [TtsEngine::ElevenLabs, TtsEngine::Cartesia] {
+            let mut profile = VoiceProfile::default();
+            profile.engine = engine;
+            let effective = preview_request(&profile, "voice".into(), &tts);
+            let (audio, extension) = synthesize_preview(&PreviewBackend("raw"), &effective, &tts).unwrap();
+            assert_eq!(extension, "wav");
+            assert_eq!(audio, [9, 8, 7]);
+        }
+    }
+
+    #[test]
+    fn preview_uses_unsaved_profile_and_requested_voice_without_mutation() {
+        let tts = TtsConfig::default();
+        let mut profile = VoiceProfile::default();
+        profile.id = "unsaved".into();
+        profile.engine = TtsEngine::Edge;
+        profile.voice = "old".into();
+        profile.voice_label = Some("Old voice".into());
+        profile.engine_options = ProfileEngineOptions::Edge(crate::config::EdgeEngineOptions {
+            voice: Some("old".into()),
+        });
+
+        let effective = preview_request(&profile, "new".into(), &tts);
+        assert_eq!(effective.engine, TtsEngine::Edge);
+        assert_eq!(effective.voice, "new");
+        assert_eq!(effective.voice_label, None);
+        assert_eq!(
+            effective.engine_options.edge().unwrap().voice.as_deref(),
+            Some("new")
+        );
+        assert_eq!(profile.voice, "old");
+        assert_eq!(
+            profile.engine_options.edge().unwrap().voice.as_deref(),
+            Some("old")
+        );
+        assert!(!tts.profiles.iter().any(|p| p.id == "unsaved"));
+    }
+
+    #[test]
+    fn preview_preserves_empty_voice_id() {
+        let tts = TtsConfig::default();
+        let mut profile = VoiceProfile::default();
+        profile.engine = TtsEngine::Fish;
+        let effective = preview_request(&profile, String::new(), &tts);
+        assert_eq!(effective.voice, "");
+    }
 
     #[test]
     fn builtin_voices_lead_and_duplicates_are_dropped() {

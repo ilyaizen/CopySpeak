@@ -84,10 +84,18 @@ impl AbortScope {
     /// request's registry entry, so a scoped stop can compare the audible
     /// reading with the request's own reading.
     pub fn begin_reading_for_request(request: u64) -> Self {
+        Self::begin_reading_for_request_at_generation(
+            request,
+            ABORT_GENERATION.load(Ordering::Relaxed),
+        )
+    }
+
+    /// Begin a reading under a generation captured before entering synthesis.
+    pub fn begin_reading_for_request_at_generation(request: u64, generation: u64) -> Self {
         let reading = READING_SEQ.fetch_add(1, Ordering::Relaxed);
         speak_requests::attach_reading(request, reading);
         Self {
-            generation: ABORT_GENERATION.load(Ordering::Relaxed),
+            generation,
             request,
             reading,
         }
@@ -804,14 +812,23 @@ fn main() {
             let app_handle_for_monitor = app.handle().clone();
             // Unblock control-server /speak --wait callers when any playback
             // run reaches its terminal state (natural end or user stop). A
-            // streamed reading also releases the speakers here; a batch path
-            // payload carries no reading id and changes nothing.
+            // streamed reading also releases the speakers here; the finish
+            // carries the reading that ended, so a waiting request matches
+            // its own playback and ignores every other reading's finish. A
+            // batch path payload without a reading id stays unattributed.
             app.listen("playback-finished", move |event| {
-                if let Some(reading) = playback_event_reading(event.payload()) {
+                let reading = playback_event_reading(event.payload());
+                if let Some(reading) = reading {
                     crate::speak_requests::release_audible(reading);
                 }
-                crate::playback_signal::signal_finished();
+                crate::playback_signal::signal_finished_for(reading);
                 crate::audio_duck::restore();
+            });
+            // A queued batch reading can end while the same playback run continues.
+            app.listen("playback-reading-finished", move |event| {
+                if let Some(reading) = playback_event_reading(event.payload()) {
+                    crate::playback_signal::signal_finished_for(Some(reading));
+                }
             });
             // Duck other apps once audio is actually audible (not during
             // synthesis wait). Config is read at start so toggling applies live.
@@ -968,7 +985,6 @@ fn main() {
             commands::delete_history_entry,
             commands::list_history,
             commands::search_history,
-            commands::export_history,
             commands::get_history_with_metadata,
             commands::get_history_statistics,
             commands::get_file_tracking,
@@ -997,6 +1013,7 @@ fn main() {
             commands::list_tts_engines,
             commands::supports_emote_tags,
             commands::list_tts_voices,
+            commands::preview_voice,
             commands::get_cached_voices,
             commands::install_engine,
             commands::uninstall_engine,
@@ -1062,14 +1079,16 @@ mod tests {
     #[test]
     fn a_reading_scope_attaches_its_reading_to_the_control_request() {
         let id = "main-attach-reading-test";
-        let crate::speak_requests::Registration::Proceed(seq) =
-            crate::speak_requests::register(id)
+        let crate::speak_requests::Registration::Proceed(seq) = crate::speak_requests::register(id)
         else {
             panic!("must register");
         };
         let scope = AbortScope::begin_reading_for_request(seq);
         assert_ne!(scope.reading(), 0);
-        assert_eq!(crate::speak_requests::reading_for_id(id), Some(scope.reading()));
+        assert_eq!(
+            crate::speak_requests::reading_for_id(id),
+            Some(scope.reading())
+        );
         drop(crate::speak_requests::Ticket::new(seq));
     }
 }

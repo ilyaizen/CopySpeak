@@ -2,7 +2,26 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/svelte";
 import { waitForI18nReady } from "#lib/i18n";
 import VoiceBrowser from "./voice-browser.svelte";
-import type { VoiceCatalogEntry } from "#lib/types";
+import type { VoiceCatalogEntry, VoiceProfile } from "#lib/types";
+
+const invokeMock = vi.hoisted(() => vi.fn());
+vi.mock("@tauri-apps/api/core", () => ({ invoke: invokeMock }));
+
+const profile: VoiceProfile = {
+  id: "test-profile",
+  name: "Unsaved profile",
+  description: null,
+  engine: "kokoro",
+  voice: "af_heart",
+  voice_label: null,
+  speed: 1.2,
+  pitch: 1,
+  effects: { enabled: false, active_effect: "none" },
+  post_process: { enabled: false, active_template_id: null },
+  engine_options: {}
+};
+const wav = btoa("RIFF0000WAVE");
+const generated = { audio_base64: wav, extension: "wav" };
 
 interface Traits {
   gender?: string;
@@ -53,6 +72,7 @@ beforeEach(() => {
   HTMLMediaElement.prototype.pause = pauseMock;
   playMock.mockClear();
   pauseMock.mockClear();
+  invokeMock.mockReset();
 });
 
 afterEach(() => {
@@ -100,58 +120,57 @@ function optionFor(label: string): HTMLElement {
   return el;
 }
 
-// The preview button is a sibling of its option (never nested in it) and is
-// hidden from assistive tech, so it is found through the option.
+// Preview is separate from selection and available to keyboard users.
 function previewFor(label: string): HTMLButtonElement {
-  const el = optionFor(label).parentElement?.querySelector<HTMLButtonElement>(
-    'button[aria-hidden="true"]'
-  );
+  const el = optionFor(label).parentElement?.querySelector<HTMLButtonElement>("button[aria-label]");
   if (!el) throw new Error(`preview for ${label} missing`);
   return el;
 }
 
-function chip(name: string): HTMLButtonElement {
-  const el = [...document.querySelectorAll<HTMLButtonElement>("button[aria-pressed]")].find(
-    (b) => b.textContent?.trim() === name
-  );
-  if (!el) throw new Error(`chip ${name} missing`);
+// Facet filters are native selects labelled Gender, Language and Style.
+function facet(name: string): HTMLSelectElement {
+  const el = sheet().querySelector<HTMLSelectElement>(`select[aria-label="${name}"]`);
+  if (!el) throw new Error(`facet ${name} missing`);
   return el;
 }
 
 describe("voice browser filters", () => {
   it("narrows by gender and reports the shown count", async () => {
-    const view = render(VoiceBrowser, { voices: VOICES, value: "f1", onselect: () => {} });
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "f1", onselect: () => {} });
     await fireEvent.click(trigger(view.container));
     expect(optionNames()).toEqual(["Ada", "Bea", "Cal", "Dan"]);
     expect(sheet().textContent).toContain("4 of 4");
 
-    await fireEvent.click(chip("Female"));
+    await fireEvent.change(facet("Gender"), { target: { value: "female" } });
     expect(optionNames()).toEqual(["Ada", "Bea"]);
-    expect(chip("Female").getAttribute("aria-pressed")).toBe("true");
+    expect(facet("Gender").value).toBe("female");
     expect(sheet().textContent).toContain("2 of 4");
+
+    await fireEvent.change(facet("Gender"), { target: { value: "" } });
+    expect(optionNames()).toEqual(["Ada", "Bea", "Cal", "Dan"]);
   });
 
   it("narrows by language", async () => {
-    const view = render(VoiceBrowser, { voices: VOICES, value: "f1", onselect: () => {} });
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "f1", onselect: () => {} });
     await fireEvent.click(trigger(view.container));
-    await fireEvent.click(chip("en"));
+    await fireEvent.change(facet("Language"), { target: { value: "en" } });
     // Dan has no language, so a language filter leaves him out.
     expect(optionNames()).toEqual(["Ada", "Cal"]);
   });
 
-  it("ANDs selected style tags and toggles them off", async () => {
-    const view = render(VoiceBrowser, { voices: VOICES, value: "f1", onselect: () => {} });
+  it("narrows by a style tag and returns to all styles", async () => {
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "f1", onselect: () => {} });
     await fireEvent.click(trigger(view.container));
-    await fireEvent.click(chip("narration"));
+    await fireEvent.change(facet("Style"), { target: { value: "narration" } });
     expect(optionNames()).toEqual(["Ada", "Cal"]);
-    await fireEvent.click(chip("calm"));
+    await fireEvent.change(facet("Style"), { target: { value: "calm" } });
     expect(optionNames()).toEqual(["Ada"]);
-    await fireEvent.click(chip("calm"));
-    expect(optionNames()).toEqual(["Ada", "Cal"]);
+    await fireEvent.change(facet("Style"), { target: { value: "" } });
+    expect(optionNames()).toEqual(["Ada", "Bea", "Cal", "Dan"]);
   });
 
   it("matches search text against tags and reports no match", async () => {
-    const view = render(VoiceBrowser, { voices: VOICES, value: "f1", onselect: () => {} });
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "f1", onselect: () => {} });
     await fireEvent.click(trigger(view.container));
     await fireEvent.input(search(), { target: { value: "conversational" } });
     expect(optionNames()).toEqual(["Bea"]);
@@ -162,18 +181,25 @@ describe("voice browser filters", () => {
   });
 
   it("says so when the filters, not the search, leave nothing", async () => {
-    const view = render(VoiceBrowser, { voices: VOICES, value: "f1", onselect: () => {} });
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "f1", onselect: () => {} });
     await fireEvent.click(trigger(view.container));
-    await fireEvent.click(chip("Female"));
-    await fireEvent.click(chip("young"));
+    await fireEvent.change(facet("Gender"), { target: { value: "female" } });
+    await fireEvent.change(facet("Style"), { target: { value: "young" } });
     expect(optionNames()).toEqual([]);
     expect(sheet().textContent).toContain("No voices match these filters.");
   });
 });
 
 describe("voice browser previews", () => {
+  it("warns about provider credits before generating previews", async () => {
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "m2", onselect: () => {} });
+    await fireEvent.click(trigger(view.container));
+    expect(sheet().textContent).toContain("Generated previews may use provider credits.");
+    expect(invokeMock).not.toHaveBeenCalled();
+  });
+
   it("plays one preview at a time and toggles the playing one off", async () => {
-    const view = render(VoiceBrowser, { voices: VOICES, value: "f1", onselect: () => {} });
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "f1", onselect: () => {} });
     await fireEvent.click(trigger(view.container));
 
     await fireEvent.click(previewFor("Ada"));
@@ -191,9 +217,24 @@ describe("voice browser previews", () => {
     expect(previewFor("Cal").title).toBe("Preview");
   });
 
+  it("ignores a stale failure when the same preview restarts", async () => {
+    const first = Promise.withResolvers<void>();
+    playMock.mockReturnValueOnce(first.promise);
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "f1", onselect: () => {} });
+    await fireEvent.click(trigger(view.container));
+    await fireEvent.click(previewFor("Ada"));
+    await fireEvent.click(previewFor("Ada"));
+    await fireEvent.click(previewFor("Ada"));
+    first.reject(new Error("interrupted"));
+    await Promise.resolve();
+    expect(previewFor("Ada").getAttribute("aria-label")).toBe("Stop preview: Ada");
+    expect(sheet().textContent).not.toContain("Couldn't play this preview.");
+  });
+
   it("previews the highlighted voice on Shift+Enter without selecting it", async () => {
     const picked: string[] = [];
     const view = render(VoiceBrowser, {
+      profile,
       voices: VOICES,
       value: "f1",
       onselect: (id: string) => picked.push(id)
@@ -205,21 +246,84 @@ describe("voice browser previews", () => {
     expect(sheet().isConnected).toBe(true);
   });
 
-  it("says a voice without a preview has none, and a failed play reports it", async () => {
-    const view = render(VoiceBrowser, { voices: VOICES, value: "m2", onselect: () => {} });
+  it("generates missing previews with the unsaved profile without selecting", async () => {
+    invokeMock.mockResolvedValueOnce(generated);
+    const picked = vi.fn();
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "m2", onselect: picked });
     await fireEvent.click(trigger(view.container));
-    // Dan is highlighted (saved voice) and has no preview.
-    await fireEvent.keyDown(search(), { key: "Enter", shiftKey: true });
-    expect(sheet().textContent).toContain("This voice has no preview.");
-    expect(playMock).not.toHaveBeenCalled();
+    await fireEvent.click(previewFor("Dan"));
+    await waitFor(() => expect(playMock).toHaveBeenCalled());
+    expect(invokeMock).toHaveBeenCalledWith("preview_voice", { profile, voice: "m2" });
+    expect(view.container.querySelector("audio")?.src).toBe(`data:audio/wav;base64,${wav}`);
+    expect(picked).not.toHaveBeenCalled();
+  });
 
+  it("requires a new action to generate after a provider preview fails", async () => {
     playMock.mockRejectedValueOnce(new Error("network"));
+    invokeMock.mockResolvedValueOnce(generated);
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "f1", onselect: () => {} });
+    await fireEvent.click(trigger(view.container));
     await fireEvent.click(previewFor("Ada"));
+    await waitFor(() => expect(sheet().textContent).toContain("Couldn't play this preview."));
+    expect(invokeMock).not.toHaveBeenCalled();
+    expect(previewFor("Ada").getAttribute("aria-label")).toBe("Generate preview: Ada");
+    await fireEvent.click(previewFor("Ada"));
+    await waitFor(() =>
+      expect(invokeMock).toHaveBeenCalledWith("preview_voice", { profile, voice: "f1" })
+    );
+  });
+
+  it("ignores generated audio after another preview starts or the drawer closes", async () => {
+    const first = Promise.withResolvers<typeof generated>();
+    const second = Promise.withResolvers<typeof generated>();
+    invokeMock.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "f1", onselect: () => {} });
+    await fireEvent.click(trigger(view.container));
+    await fireEvent.click(previewFor("Bea"));
+    await fireEvent.click(previewFor("Dan"));
+    first.resolve(generated);
+    await Promise.resolve();
+    expect(playMock).not.toHaveBeenCalled();
+    await fireEvent.keyDown(sheet(), { key: "Escape" });
+    second.resolve(generated);
+    await Promise.resolve();
+    expect(playMock).not.toHaveBeenCalled();
+  });
+
+  it("does not play generated audio after a voice is selected", async () => {
+    const pending = Promise.withResolvers<typeof generated>();
+    invokeMock.mockReturnValueOnce(pending.promise);
+    const picked = vi.fn();
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "f1", onselect: picked });
+    await fireEvent.click(trigger(view.container));
+    await fireEvent.click(previewFor("Bea"));
+    await fireEvent.click(optionFor("Dan"));
+    pending.resolve(generated);
+    await Promise.resolve();
+    expect(picked).toHaveBeenCalledWith("m2");
+    expect(playMock).not.toHaveBeenCalled();
+  });
+
+  it("detects MP3 bytes even when the backend extension differs", async () => {
+    const mp3 = btoa("ID3preview");
+    invokeMock.mockResolvedValueOnce({ audio_base64: mp3, extension: "wav" });
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "m2", onselect: () => {} });
+    await fireEvent.click(trigger(view.container));
+    await fireEvent.click(previewFor("Dan"));
+    await waitFor(() => expect(playMock).toHaveBeenCalled());
+    expect(view.container.querySelector("audio")?.src).toBe(`data:audio/mpeg;base64,${mp3}`);
+  });
+
+  it("shows generated preview failures", async () => {
+    invokeMock.mockRejectedValueOnce(new Error("failed"));
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "m2", onselect: () => {} });
+    await fireEvent.click(trigger(view.container));
+    await fireEvent.click(previewFor("Dan"));
     await waitFor(() => expect(sheet().textContent).toContain("Couldn't play this preview."));
   });
 
   it("stops the preview when the sheet closes", async () => {
-    const view = render(VoiceBrowser, { voices: VOICES, value: "f1", onselect: () => {} });
+    const view = render(VoiceBrowser, { profile, voices: VOICES, value: "f1", onselect: () => {} });
     await fireEvent.click(trigger(view.container));
     await fireEvent.click(previewFor("Ada"));
     await fireEvent.keyDown(sheet(), { key: "Escape" });
@@ -235,6 +339,7 @@ describe("voice browser selection", () => {
   it("selects a clicked row and closes the sheet", async () => {
     const picked: string[] = [];
     const view = render(VoiceBrowser, {
+      profile,
       voices: VOICES,
       value: "f1",
       onselect: (id: string) => picked.push(id)
@@ -249,6 +354,7 @@ describe("voice browser selection", () => {
     const labelled = Array.from({ length: 30 }, (_, i) => voice(`v${i}`, `Voice${i}`));
     const picked: string[] = [];
     const view = render(VoiceBrowser, {
+      profile,
       voices: labelled,
       value: "v1",
       onselect: (id: string) => picked.push(id)
@@ -284,6 +390,7 @@ describe("voice browser selection", () => {
 
   it("shows a saved voice the list lacks, with a Not in list note", async () => {
     const view = render(VoiceBrowser, {
+      profile,
       voices: VOICES,
       value: "gone",
       valueLabel: "Old Name",
@@ -299,7 +406,12 @@ describe("voice browser pagination", () => {
   const many = (n: number) => Array.from({ length: n }, (_, i) => voice(`v${i}`, `Voice${i}`));
 
   it("renders one page and reveals more on demand", async () => {
-    const view = render(VoiceBrowser, { voices: many(250), value: "v0", onselect: () => {} });
+    const view = render(VoiceBrowser, {
+      profile,
+      voices: many(250),
+      value: "v0",
+      onselect: () => {}
+    });
     await fireEvent.click(trigger(view.container));
     expect(options()).toHaveLength(100);
     expect(sheet().textContent).toContain("Show 150 more");
@@ -317,7 +429,12 @@ describe("voice browser pagination", () => {
   });
 
   it("reveals the next page when arrowing past the rendered rows, and all on End", async () => {
-    const view = render(VoiceBrowser, { voices: many(250), value: "v0", onselect: () => {} });
+    const view = render(VoiceBrowser, {
+      profile,
+      voices: many(250),
+      value: "v0",
+      onselect: () => {}
+    });
     await fireEvent.click(trigger(view.container));
     const active = () => {
       const id = search().getAttribute("aria-activedescendant");
@@ -338,7 +455,12 @@ describe("voice browser pagination", () => {
   });
 
   it("restarts at one page when the search changes", async () => {
-    const view = render(VoiceBrowser, { voices: many(250), value: "v0", onselect: () => {} });
+    const view = render(VoiceBrowser, {
+      profile,
+      voices: many(250),
+      value: "v0",
+      onselect: () => {}
+    });
     await fireEvent.click(trigger(view.container));
     await fireEvent.click(sheetButton("Show 150 more"));
     expect(options()).toHaveLength(200);
@@ -353,6 +475,7 @@ describe("voice browser pagination", () => {
 describe("voice browser refresh and error line", () => {
   it("renders a failed refresh in the sheet's error line", async () => {
     const view = render(VoiceBrowser, {
+      profile,
       voices: VOICES,
       value: "f1",
       supportsRefresh: true,
@@ -367,6 +490,7 @@ describe("voice browser refresh and error line", () => {
 
   it("hides the error line while a refresh is running", async () => {
     const view = render(VoiceBrowser, {
+      profile,
       voices: VOICES,
       value: "f1",
       supportsRefresh: true,
@@ -378,22 +502,20 @@ describe("voice browser refresh and error line", () => {
     expect(sheet().textContent).not.toContain("HTTP error: 401");
   });
 
-  it("calls onrefresh from the Refresh button and onmanual from the custom id link", async () => {
+  it("calls onrefresh from the header Refresh button", async () => {
     const refreshed = vi.fn();
-    const manual = vi.fn();
     const view = render(VoiceBrowser, {
+      profile,
       voices: VOICES,
       value: "f1",
       supportsRefresh: true,
       onrefresh: refreshed,
-      onmanual: manual,
       onselect: () => {}
     });
     await fireEvent.click(trigger(view.container));
-    await fireEvent.click(sheetButton("Refresh"));
+    const refresh = sheet().querySelector<HTMLButtonElement>('button[aria-label="Refresh"]');
+    if (!refresh) throw new Error("refresh button missing");
+    await fireEvent.click(refresh);
     expect(refreshed).toHaveBeenCalledTimes(1);
-
-    await fireEvent.click(sheetButton("Custom / manual id"));
-    expect(manual).toHaveBeenCalledTimes(1);
   });
 });

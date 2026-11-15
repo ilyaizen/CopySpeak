@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Voice picker** – browse voices in a bottom drawer and generate previews when no provider sample is available. Cloud generation can use provider credits.
+
+### Removed
+
+- **History export** – removed the unused history export code and batch export controls.
+
 ## [0.2.16] - 2026-11-13
 
 ### Added

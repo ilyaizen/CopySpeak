@@ -16,6 +16,107 @@ use std::os::windows::process::CommandExt;
 #[cfg(windows)]
 const CREATE_NO_WINDOW: u32 = 0x08000000;
 
+thread_local! {
+    static PREVIEW_REQUEST: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static READING_SCOPE: std::cell::Cell<Option<crate::AbortScope>> = const { std::cell::Cell::new(None) };
+}
+
+pub(crate) fn with_preview_request<T>(f: impl FnOnce() -> T) -> T {
+    PREVIEW_REQUEST.with(|preview| {
+        let previous = preview.replace(true);
+        struct Reset<'a>(&'a std::cell::Cell<bool>, bool);
+        impl Drop for Reset<'_> {
+            fn drop(&mut self) {
+                self.0.set(self.1);
+            }
+        }
+        let _reset = Reset(preview, previous);
+        f()
+    })
+}
+
+pub(crate) fn with_reading_scope<T>(scope: crate::AbortScope, f: impl FnOnce() -> T) -> T {
+    READING_SCOPE.with(|current| {
+        let previous = current.replace(Some(scope));
+        struct Reset<'a>(
+            &'a std::cell::Cell<Option<crate::AbortScope>>,
+            Option<crate::AbortScope>,
+        );
+        impl Drop for Reset<'_> {
+            fn drop(&mut self) {
+                self.0.set(self.1);
+            }
+        }
+        let _reset = Reset(current, previous);
+        f()
+    })
+}
+
+fn local_resource() -> Result<crate::tts::local_daemon::ResourceLease, TtsError> {
+    crate::tts::local_daemon::acquire_resource(READING_SCOPE.with(|scope| scope.get()))
+        .ok_or_else(|| TtsError::Unavailable("Reading cancelled".into()))
+}
+
+pub(super) struct ActiveProcess<'a> {
+    slot: &'a std::sync::atomic::AtomicU32,
+    pid: u32,
+}
+
+impl Drop for ActiveProcess<'_> {
+    fn drop(&mut self) {
+        let _ = self.slot.compare_exchange(
+            self.pid,
+            0,
+            std::sync::atomic::Ordering::Relaxed,
+            std::sync::atomic::Ordering::Relaxed,
+        );
+    }
+}
+
+fn track_process_in(slot: &std::sync::atomic::AtomicU32, pid: u32) -> Option<ActiveProcess<'_>> {
+    if PREVIEW_REQUEST.with(|preview| preview.get()) {
+        return None;
+    }
+    slot.store(pid, std::sync::atomic::Ordering::Relaxed);
+    Some(ActiveProcess { slot, pid })
+}
+
+pub(super) fn track_process(pid: u32) -> Option<ActiveProcess<'static>> {
+    track_process_in(&crate::ACTIVE_CLI_PID, pid)
+}
+
+struct SynthesisFiles(std::path::PathBuf);
+
+impl SynthesisFiles {
+    fn new() -> Result<Self, TtsError> {
+        static NEXT_ID: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        loop {
+            let id = NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            let path =
+                std::env::temp_dir().join(format!("copyspeak-tts-{}-{id}", std::process::id()));
+            match std::fs::create_dir(&path) {
+                Ok(()) => return Ok(Self(path)),
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(error) => return Err(TtsError::Io(error)),
+            }
+        }
+    }
+
+    fn input_path(&self) -> String {
+        self.0.join("input.txt").to_string_lossy().into_owned()
+    }
+
+    fn output_path(&self) -> String {
+        self.0.join("out.wav").to_string_lossy().into_owned()
+    }
+}
+
+impl Drop for SynthesisFiles {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+    }
+}
+
 #[cfg(windows)]
 pub(crate) fn get_expanded_path() -> String {
     use std::collections::HashSet;
@@ -210,9 +311,18 @@ impl CliTtsBackend {
 
     /// Stream from this engine's resident daemon, or `None` when it cannot
     /// serve this configuration (cold, busy, or a different voice/device).
-    fn daemon_stream(&self, text: &str, voice: &str) -> Option<ChunkStream> {
-        let engine = self.daemon_engine_kind()?;
-        crate::tts::local_daemon::try_stream(engine, &self.command, &self.serve_args(voice), text)
+    fn daemon_stream(&self, text: &str, voice: &str) -> Result<Option<ChunkStream>, TtsError> {
+        let Some(engine) = self.daemon_engine_kind() else {
+            return Ok(None);
+        };
+        let resource = local_resource()?;
+        Ok(crate::tts::local_daemon::try_stream(
+            engine,
+            &self.command,
+            &self.serve_args(voice),
+            text,
+            resource,
+        ))
     }
 
     /// Check if this is kokoro-tts and model paths are missing
@@ -386,20 +496,6 @@ impl CliTtsBackend {
         args
     }
 
-    fn input_path() -> String {
-        let tmp = std::env::temp_dir();
-        tmp.join("copyspeak_tts_input.txt")
-            .to_string_lossy()
-            .into_owned()
-    }
-
-    fn output_path() -> String {
-        let tmp = std::env::temp_dir();
-        tmp.join("copyspeak_tts_out.wav")
-            .to_string_lossy()
-            .into_owned()
-    }
-
     /// Returns the Piper voices directory (e.g. C:\Users\<User>\piper-voices on Windows).
     /// Used to resolve the {data_dir} placeholder so TTS engines can locate model files
     /// stored in the user's home directory without requiring the user to enter a full path.
@@ -466,7 +562,7 @@ impl TtsBackend for CliTtsBackend {
     }
 
     fn synthesize_streaming(&self, text: &str, voice: &str) -> Result<ChunkStream, TtsError> {
-        if let Some(stream) = self.daemon_stream(text, voice) {
+        if let Some(stream) = self.daemon_stream(text, voice)? {
             return Ok(stream);
         }
         // No daemon: fall back to the one-shot command wrapped as one chunk.
@@ -485,7 +581,7 @@ impl TtsBackend for CliTtsBackend {
     ) -> Result<super::captions::SpeechAudio, TtsError> {
         // A resident daemon keeps the voice model in RAM; fall through to the
         // one-shot command only when it can't serve this request.
-        if let Some(stream) = self.daemon_stream(text, voice) {
+        if let Some(stream) = self.daemon_stream(text, voice)? {
             match super::stream::collect_speech(stream) {
                 Ok(speech) => {
                     log::info!(
@@ -498,8 +594,12 @@ impl TtsBackend for CliTtsBackend {
             }
         }
 
-        let input_path = Self::input_path();
-        let output_path = Self::output_path();
+        let _resource = local_resource()?;
+        crate::tts::local_daemon::retire_idle();
+
+        let files = SynthesisFiles::new()?;
+        let input_path = files.input_path();
+        let output_path = files.output_path();
         super::captions::remove_sidecar(&output_path);
 
         // Write input text to temp file
@@ -538,14 +638,12 @@ impl TtsBackend for CliTtsBackend {
             .map_err(|e| TtsError::Unavailable(format!("{}: {e}", self.command)))?;
 
         // Store PID so abort_synthesis can kill this process
-        crate::ACTIVE_CLI_PID.store(child.id(), std::sync::atomic::Ordering::Relaxed);
+        let active_process = track_process(child.id());
 
         let result = child
             .wait_with_output()
             .map_err(|e| TtsError::Unavailable(format!("{}: {e}", self.command)))?;
-
-        // Clear PID now that process has exited
-        crate::ACTIVE_CLI_PID.store(0, std::sync::atomic::Ordering::Relaxed);
+        drop(active_process);
 
         let exec_duration = exec_start.elapsed();
 
@@ -693,6 +791,12 @@ impl TtsBackend for CliTtsBackend {
 
         let captions = super::captions::read_sidecar(&output_path);
         super::captions::remove_sidecar(&output_path);
+        drop(_resource);
+        if !PREVIEW_REQUEST.with(|preview| preview.get())
+            && !READING_SCOPE.with(|scope| scope.get().is_some_and(|scope| scope.aborted()))
+        {
+            self.prewarm(voice);
+        }
         Ok(super::captions::SpeechAudio { bytes, captions })
     }
 
@@ -709,22 +813,26 @@ impl TtsBackend for CliTtsBackend {
             self.command == "py" || self.command == "python" || self.command.starts_with("python");
 
         if is_python {
+            let _resource = local_resource()?;
+            crate::tts::local_daemon::retire_idle();
             // For Python, we need to validate the full command with the script
             // Build args similar to synthesize, but use a test text
             let test_text = "test";
-            let test_output = Self::output_path();
-            let args = self.build_args(&Self::input_path(), &test_output, "Rosie", test_text);
+            let files = SynthesisFiles::new()?;
+            let input_path = files.input_path();
+            let test_output = files.output_path();
+            let args = self.build_args(&input_path, &test_output, "Rosie", test_text);
 
             if crate::logging::is_debug_mode() {
                 log::debug!("[CLI TTS] Health check args: {:?}", args);
             }
 
             // Clean up any existing test files
-            let _ = std::fs::remove_file(&Self::input_path());
+            let _ = std::fs::remove_file(&input_path);
             let _ = std::fs::remove_file(&test_output);
 
             // Write a minimal input file
-            let _ = std::fs::write(&Self::input_path(), test_text);
+            let _ = std::fs::write(&input_path, test_text);
 
             #[allow(unused_mut)]
             let mut cmd = Command::new(&self.command);
@@ -793,7 +901,7 @@ impl TtsBackend for CliTtsBackend {
             }
 
             // Clean up test files
-            let _ = std::fs::remove_file(&Self::input_path());
+            let _ = std::fs::remove_file(&input_path);
             let _ = std::fs::remove_file(&test_output);
         } else {
             // For non-Python commands, use simple --help check
@@ -872,6 +980,132 @@ impl TtsBackend for CliTtsBackend {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(windows)]
+    #[test]
+    fn reading_waits_for_a_local_preview_process_to_exit() {
+        let _lock = crate::tts::local_daemon::SLOTS_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|p| p.into_inner());
+        let files = SynthesisFiles::new().unwrap();
+        let preview_started = files.0.join("preview-started");
+        let reading_started = files.0.join("reading-started");
+        let release = files.0.join("release");
+        let quote = |path: &std::path::Path| path.to_string_lossy().replace('\'', "''");
+        let preview_script = format!(
+            "[IO.File]::WriteAllText('{}','started'); for ($i=0; $i -lt 200 -and !(Test-Path '{}'); $i++) {{ Start-Sleep -Milliseconds 50 }}; [IO.File]::WriteAllText('{{output}}','preview')",
+            quote(&preview_started), quote(&release)
+        );
+        let reading_script = format!(
+            "[IO.File]::WriteAllText('{}','started'); [IO.File]::WriteAllText('{{output}}','reading')",
+            quote(&reading_started)
+        );
+        let backend = |script: String| {
+            CliTtsBackend::new(
+                "powershell".into(),
+                vec![
+                    "-NoProfile".into(),
+                    "-NonInteractive".into(),
+                    "-Command".into(),
+                    script,
+                ],
+            )
+        };
+        let preview = std::thread::spawn(move || {
+            with_preview_request(|| backend(preview_script).synthesize("preview", "voice"))
+        });
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        while !preview_started.exists() && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+        }
+        assert!(preview_started.exists(), "preview process did not start");
+        let request_id = "cli-preview-resource-cancel";
+        let sequence = match crate::speak_requests::register(request_id) {
+            crate::speak_requests::Registration::Proceed(sequence) => sequence,
+            _ => panic!("request id must be available"),
+        };
+        let _ticket = crate::speak_requests::Ticket::new(sequence);
+        let scope = crate::AbortScope::begin_for_request(sequence);
+        let cancelled_script = reading_script.clone();
+        let (cancelled_tx, cancelled_rx) = std::sync::mpsc::channel();
+        let cancelled = std::thread::spawn(move || {
+            let result = with_reading_scope(scope, || {
+                backend(cancelled_script).synthesize("cancelled", "voice")
+            });
+            cancelled_tx.send(result.is_err()).unwrap();
+        });
+        crate::speak_requests::cancel(request_id, || {});
+        let cancelled_without_waiting =
+            cancelled_rx.recv_timeout(std::time::Duration::from_secs(2));
+        cancelled.join().unwrap();
+        assert_eq!(cancelled_without_waiting, Ok(true));
+        assert!(
+            !reading_started.exists(),
+            "cancelled reading must not start a process"
+        );
+        let (ready_tx, ready_rx) = std::sync::mpsc::channel();
+        let reading = std::thread::spawn(move || {
+            ready_tx.send(()).unwrap();
+            backend(reading_script).synthesize("reading", "voice")
+        });
+        ready_rx.recv().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        let overlapped = reading_started.exists();
+        std::fs::write(&release, "release").unwrap();
+        assert!(preview.join().unwrap().is_ok());
+        assert!(reading.join().unwrap().is_ok());
+        assert!(
+            !overlapped,
+            "reading started a second process during preview"
+        );
+    }
+
+    #[test]
+    fn concurrent_synthesis_files_are_isolated_and_cleaned_up() {
+        let barrier = std::sync::Arc::new(std::sync::Barrier::new(2));
+        let threads: Vec<_> = ["reading", "preview"]
+            .into_iter()
+            .map(|text| {
+                let barrier = barrier.clone();
+                std::thread::spawn(move || {
+                    let files = SynthesisFiles::new().unwrap();
+                    let dir = files.0.clone();
+                    std::fs::write(files.input_path(), text).unwrap();
+                    std::fs::write(files.output_path(), text).unwrap();
+                    barrier.wait();
+                    assert_eq!(std::fs::read_to_string(files.input_path()).unwrap(), text);
+                    assert_eq!(std::fs::read_to_string(files.output_path()).unwrap(), text);
+                    barrier.wait();
+                    drop(files);
+                    assert!(!dir.exists());
+                    dir
+                })
+            })
+            .collect();
+        let dirs: Vec<_> = threads
+            .into_iter()
+            .map(|thread| thread.join().unwrap())
+            .collect();
+        assert_ne!(dirs[0], dirs[1]);
+    }
+
+    #[test]
+    fn preview_never_claims_or_clears_reading_process() {
+        use std::sync::atomic::{AtomicU32, Ordering};
+        let slot = AtomicU32::new(0);
+        let reading = track_process_in(&slot, 101);
+        with_preview_request(|| {
+            let preview = track_process_in(&slot, 202);
+            assert_eq!(slot.load(Ordering::Relaxed), 101);
+            drop(preview);
+            assert_eq!(slot.load(Ordering::Relaxed), 101);
+        });
+        let replacement = track_process_in(&slot, 303);
+        drop(reading);
+        assert_eq!(slot.load(Ordering::Relaxed), 303);
+        drop(replacement);
+        assert_eq!(slot.load(Ordering::Relaxed), 0);
+    }
 
     #[test]
     fn test_build_args_replaces_placeholders() {

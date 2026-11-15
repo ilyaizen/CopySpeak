@@ -1,4 +1,4 @@
-// History CRUD, search, export, and file-tracking commands.
+// History CRUD, search, and file-tracking commands.
 
 use crate::audio::AudioPlayer;
 use crate::history::{self, HistoryEntry, HistoryLog};
@@ -47,23 +47,6 @@ pub struct HistorySearchOptions {
     pub end_date: Option<String>,
     pub limit: Option<usize>,
     pub offset: Option<usize>,
-}
-
-/// Export format for history data
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum HistoryExportFormat {
-    #[serde(rename = "json")]
-    Json,
-    #[serde(rename = "csv")]
-    Csv,
-}
-
-/// Result of a history export operation
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct HistoryExportResult {
-    pub file_path: String,
-    pub entry_count: usize,
-    pub format: String,
 }
 
 // ── Commands ────────────────────────────────────────────────────────────────
@@ -431,65 +414,6 @@ pub fn search_history(
     let limit = options.limit.unwrap_or(100);
     let offset = options.offset.unwrap_or(0);
     results.into_iter().skip(offset).take(limit).collect()
-}
-
-/// Export history to a file in the specified format
-#[tauri::command]
-pub fn export_history(
-    history: State<'_, Mutex<HistoryLog>>,
-    format: HistoryExportFormat,
-) -> Result<HistoryExportResult, String> {
-    if crate::logging::is_debug_mode() {
-        log::debug!("[IPC] export_history called (format: {:?})", format);
-    }
-
-    let hist = history.lock().unwrap();
-    let entries: Vec<_> = hist.entries().iter().cloned().collect();
-    let entry_count = entries.len();
-
-    let export_dir = history::history_dir();
-    std::fs::create_dir_all(&export_dir)
-        .map_err(|e| format!("Failed to create export directory: {}", e))?;
-
-    let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
-    let filename = match format {
-        HistoryExportFormat::Json => format!("history_export_{}.json", timestamp),
-        HistoryExportFormat::Csv => format!("history_export_{}.csv", timestamp),
-    };
-
-    let file_path = export_dir.join(&filename);
-
-    match format {
-        HistoryExportFormat::Json => {
-            let json = serde_json::to_string_pretty(&entries)
-                .map_err(|e| format!("Serialize error: {}", e))?;
-            std::fs::write(&file_path, json).map_err(|e| format!("Write error: {}", e))?;
-        }
-        HistoryExportFormat::Csv => {
-            let mut csv = "id,timestamp,text,tts_engine,voice,success\n".to_string();
-            for entry in &entries {
-                csv.push_str(&format!(
-                    "{},{},{},{},{},{}\n",
-                    entry.id,
-                    entry.timestamp,
-                    entry.text.replace(",", ";"),
-                    entry.tts_engine,
-                    entry.voice,
-                    entry.success
-                ));
-            }
-            std::fs::write(&file_path, csv).map_err(|e| format!("Write error: {}", e))?;
-        }
-    }
-
-    Ok(HistoryExportResult {
-        file_path: file_path.to_string_lossy().to_string(),
-        entry_count,
-        format: match format {
-            HistoryExportFormat::Json => "json".to_string(),
-            HistoryExportFormat::Csv => "csv".to_string(),
-        },
-    })
 }
 
 /// Get unique TTS engines from history for filter dropdowns

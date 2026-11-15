@@ -1461,6 +1461,44 @@ it("keeps a waiting batch reading's fragments when a new synthesis starts", asyn
   playbackStore.handleStop();
 });
 
+it("signals each batch reading at its audible boundary without ending the playback run", async () => {
+  const send = async (readingId: number, index: number, total: number) =>
+    playbackStore.handleFragmentReady({
+      audio_base64: "YQ==",
+      fragment_index: index,
+      fragment_total: total,
+      is_final: index === total - 1,
+      text: `Reading ${readingId}, part ${index}`,
+      reading_id: readingId
+    });
+
+  await send(41, 0, 2);
+  await send(41, 1, 2);
+  await send(42, 0, 1);
+  await send(43, 0, 1);
+  vi.mocked(emit).mockClear();
+
+  audio.dispatchEvent(new Event("ended"));
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(2));
+  expect(emit).not.toHaveBeenCalledWith("playback-reading-finished", expect.anything());
+
+  audio.dispatchEvent(new Event("ended"));
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(3));
+  expect(emit).toHaveBeenCalledWith("playback-reading-finished", { reading_id: 41 });
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", expect.anything());
+  expect(emit).not.toHaveBeenCalledWith("playback-started", expect.anything());
+  expect(emit).not.toHaveBeenCalledWith("hud:stop", expect.anything());
+  expect(playbackStore.isPlaying).toBe(true);
+
+  audio.dispatchEvent(new Event("ended"));
+  await vi.waitFor(() => expect(playSpy).toHaveBeenCalledTimes(4));
+  expect(emit).toHaveBeenCalledWith("playback-reading-finished", { reading_id: 42 });
+  expect(emit).not.toHaveBeenCalledWith("playback-finished", expect.anything());
+
+  audio.dispatchEvent(new Event("ended"));
+  expect(emit).toHaveBeenCalledWith("playback-finished", { reading_id: 43 });
+});
+
 it("ignores a late chunk of a reading dropped by a scoped stop", async () => {
   await startStreamingReading();
   const receive = captureSchedulerChunks();

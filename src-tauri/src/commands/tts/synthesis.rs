@@ -94,10 +94,14 @@ async fn synthesize_async(
             let text = text.clone();
             let voice = voice.clone();
             async move {
-                tokio::task::spawn_blocking(move || backend.synthesize_with_captions(&text, &voice))
-                    .await
-                    .map_err(|e| format!("Task join error: {e}"))?
-                    .map_err(|e| e.to_string())
+                tokio::task::spawn_blocking(move || {
+                    crate::tts::cli::with_reading_scope(scope, || {
+                        backend.synthesize_with_captions(&text, &voice)
+                    })
+                })
+                .await
+                .map_err(|e| format!("Task join error: {e}"))?
+                .map_err(|e| e.to_string())
             }
         },
         || scope.aborted(),
@@ -531,6 +535,9 @@ fn emit_audio_fragment(
                     text,
                     captions: speech.captions.clone(),
                     session_id: session_id.map(str::to_owned),
+                    // The webview attributes its playback-finished to this
+                    // reading, so a /speak --wait matches its own playback.
+                    reading_id: (scope.reading() != 0).then_some(scope.reading()),
                 },
             ) {
                 log::warn!("Failed to emit audio-fragment-ready: {}", e);
@@ -745,7 +752,9 @@ async fn synthesize_streaming_and_emit(
             fragment_index
         );
 
-        let stream = match backend.synthesize_streaming(&text, &voice) {
+        let stream = match crate::tts::cli::with_reading_scope(scope, || {
+            backend.synthesize_streaming(&text, &voice)
+        }) {
             Ok(s) => s,
             Err(e) => {
                 log::error!(
@@ -1181,6 +1190,7 @@ pub async fn speak_now(
         post_process.unwrap_or(false),
         trigger,
         crate::speak_requests::NO_REQUEST,
+        None,
     )
     .await;
     if let (Err(_), Some(id)) = (&result, trigger_id) {
@@ -1202,6 +1212,7 @@ pub async fn speak_now_for_request(
     text: String,
     post_process: bool,
     request: u64,
+    generation: u64,
 ) -> Result<(), String> {
     speak_now_internal(
         app,
@@ -1215,6 +1226,7 @@ pub async fn speak_now_for_request(
         post_process,
         None,
         request,
+        Some(generation),
     )
     .await
 }
@@ -1242,6 +1254,7 @@ pub async fn regenerate_now(
         false,
         None,
         crate::speak_requests::NO_REQUEST,
+        None,
     )
     .await
 }
@@ -1268,6 +1281,7 @@ pub async fn speak_now_with_profile(
         false,
         None,
         crate::speak_requests::NO_REQUEST,
+        None,
     )
     .await
 }
@@ -1290,6 +1304,22 @@ async fn wait_for_queue(
 #[cfg(test)]
 mod queue_wait_tests {
     use super::*;
+
+    #[tokio::test]
+    async fn control_reading_keeps_the_generation_from_before_scope_creation() {
+        let lock = tokio::sync::Mutex::new(());
+        let prior = crate::ABORT_GENERATION
+            .load(std::sync::atomic::Ordering::Relaxed)
+            .wrapping_sub(1);
+        let scope = AbortScope::begin_reading_for_request_at_generation(
+            crate::speak_requests::NO_REQUEST,
+            prior,
+        );
+        assert!(
+            wait_for_queue(&lock, scope).await.is_none(),
+            "a stop before reading scope creation must prevent synthesis"
+        );
+    }
 
     #[tokio::test]
     async fn a_queued_reading_gives_up_when_its_request_is_stopped() {
@@ -1361,6 +1391,7 @@ async fn speak_now_internal(
     post_process_flag: bool,
     trigger: Option<(TriggerSource, String)>,
     request: u64,
+    generation: Option<u64>,
 ) -> Result<(), String> {
     let text = get_text_or_clipboard(text)?;
     // The page matches its live selection against the text as copied.
@@ -1385,7 +1416,12 @@ async fn speak_now_internal(
     // another must drop when it is stopped while queued, not start once the
     // other reading ends. Unscoped reads (hotkey, tray, Play) carry no request
     // id, so the abort generation is their only stop signal.
-    let scope = AbortScope::begin_reading_for_request(request);
+    let scope = match generation {
+        Some(generation) => {
+            AbortScope::begin_reading_for_request_at_generation(request, generation)
+        }
+        None => AbortScope::begin_reading_for_request(request),
+    };
     let Some(_queue_lock) = wait_for_queue(&lock_state, scope).await else {
         log::info!("[TTS] Reading stopped while queued; nothing to speak");
         return Ok(());
@@ -1408,6 +1444,19 @@ async fn speak_now_internal(
 
     // Enter critical section for TTS synthesis
     let _synthesis_guard = SynthesisGuard::new(&app);
+
+    // One reading emits into the webview's FIFO fragment queue at a time, on
+    // either path: a speak_now (Play page, hotkey, tray, control server) that
+    // skips this gate splices its first fragment between a queued reading's
+    // fragments (double-copy, browser companion), because speak_queued holds
+    // no synthesis lock for this reading to wait on. Taking the turn here asks
+    // that reading to flush its remaining fragments at once, so enqueue order
+    // stays FIFO across both paths.
+    let _queued_turn = super::queued_gate::acquire().await;
+    if scope.aborted() {
+        log::info!("[TTS] Reading stopped while queued behind another reading; nothing to speak");
+        return Ok(());
+    }
 
     let (
         tts_config,
@@ -1860,8 +1909,14 @@ async fn synthesize_paginated(
                 duration_ms: fragment_durations_ms[i - 1],
             };
             let lead = super::jit::lead_after(previous_cost);
-            // A `speak_now` reading has no successor to flush it.
-            if !wait_for_jit_window(scope, target, lead, playback_speed, || false).await {
+            // A newer reading queued behind this one needs its fragments in
+            // order, so a flush request ends the JIT wait like a stopped
+            // reading would end the loop's saving.
+            if !wait_for_jit_window(scope, target, lead, playback_speed, || {
+                super::queued_gate::flush_requested()
+            })
+            .await
+            {
                 return Ok((Vec::new().into(), false));
             }
         }
@@ -2218,6 +2273,7 @@ async fn speak_queued_internal(
         sanitization,
         streaming_enabled,
         experimental_enabled,
+        on_retrigger,
     ) = {
         let cfg = config.lock().unwrap();
         (
@@ -2227,6 +2283,7 @@ async fn speak_queued_internal(
             cfg.sanitization.clone(),
             cfg.playback.streaming_enabled,
             cfg.general.experimental_enabled,
+            cfg.playback.on_retrigger.clone(),
         )
     };
     let eff = resolve_effective(&tts_config);
@@ -2234,6 +2291,16 @@ async fn speak_queued_internal(
 
     let effective_post_process_config =
         post_process_for_profile(&post_process_config, &eff.post_process);
+
+    // Interrupt mode: the newest trigger wins. The abort cuts the audible
+    // reading and any synthesis still running for it, so this reading starts
+    // at once instead of joining the queue behind it. The scope below begins
+    // AFTER the abort, so this reading carries the fresh generation. Queue
+    // mode, the default, keeps readings FIFO through the gate instead.
+    if on_retrigger == crate::config::RetriggerMode::Interrupt {
+        log::info!("[Queue] Interrupt mode: stopping current playback for the new reading");
+        crate::do_abort_synthesis(&app);
+    }
 
     // Aborts issued before this run starts do not reach it. speak_queued takes
     // no queue lock, so a shared flag cleared here could also un-abort a run

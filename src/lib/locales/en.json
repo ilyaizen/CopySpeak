@@ -783,7 +783,7 @@
       },
       "history": {
         "title": "History",
-        "description": "Every generation is kept unless you switch history off. Manage them in batches and export the audio."
+        "description": "Every generation is kept unless you switch history off. Replay and manage saved readings."
       },
       "sanitization": {
         "title": "Text sanitization",
@@ -839,7 +839,6 @@
   "voicePicker": {
     "select": "Select voice…",
     "search": "Search voices…",
-    "customId": "Custom / manual id…",
     "refresh": "Refresh",
     "refreshFailed": "Couldn't refresh: {error}",
     "notInList": "Not in list",
@@ -850,12 +849,17 @@
     "language": "Language",
     "style": "Style",
     "all": "All",
+    "allGenders": "All genders",
+    "allLanguages": "All languages",
+    "allStyles": "All styles",
     "noFilterMatch": "No voices match these filters.",
     "previewPlay": "Preview",
     "previewStop": "Stop preview",
+    "generatePreview": "Generate preview",
+    "generatingPreview": "Generating preview",
+    "generateCost": "Generated previews may use provider credits.",
     "previewFailed": "Couldn't play this preview.",
     "noPreview": "This voice has no preview.",
-    "shiftEnterHint": "Shift+Enter previews the highlighted voice.",
     "showMore": "Show {count} more"
   },
   "hotkey": {

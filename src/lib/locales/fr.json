@@ -776,7 +776,7 @@
       },
       "history": {
         "title": "Historique",
-        "description": "Historique persistant avec lecture et export audio — ou désactivez-le, et les lectures ne laissent aucune trace."
+        "description": "Historique persistant avec lecture. Si vous le désactivez, les lectures ne sont pas enregistrées."
       },
       "sanitization": {
         "title": "Nettoyage du texte",
@@ -831,7 +831,6 @@
   "voicePicker": {
     "select": "Sélectionner une voix…",
     "search": "Rechercher des voix…",
-    "customId": "ID personnalisé / manuel…",
     "refresh": "Actualiser",
     "refreshFailed": "Échec de l’actualisation : {error}",
     "notInList": "Absente de la liste",
@@ -842,12 +841,17 @@
     "language": "Langue",
     "style": "Style",
     "all": "Toutes",
+    "allGenders": "Tous les genres",
+    "allLanguages": "Toutes les langues",
+    "allStyles": "Tous les styles",
     "noFilterMatch": "Aucune voix ne correspond à ces filtres.",
     "previewPlay": "Aperçu",
     "previewStop": "Arrêter l’aperçu",
+    "generatePreview": "Générer un aperçu",
+    "generatingPreview": "Génération de l’aperçu",
+    "generateCost": "Les aperçus générés peuvent utiliser des crédits du fournisseur.",
     "previewFailed": "Impossible de lire cet aperçu.",
     "noPreview": "Cette voix n’a pas d’aperçu.",
-    "shiftEnterHint": "Maj+Entrée écoute la voix en surbrillance.",
     "showMore": "Afficher {count} de plus"
   },
   "hotkey": {

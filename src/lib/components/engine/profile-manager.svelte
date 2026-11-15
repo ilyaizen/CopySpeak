@@ -310,24 +310,8 @@
     activeVoiceCatalog.length > 0 || !!activeCatalogEntry?.supports_voice_refresh
   );
 
-  // Picker is primary: the manual input stays locked while the current voice is
-  // a catalog id. "Custom / manual id…" in the picker unlocks it for this
-  // profile/engine only — ephemeral, never persisted to config.
-  let manualOverride = $state(false);
-  let manualRef = $state<HTMLInputElement | null>(null);
-
-  $effect(() => {
-    let lastKey = "";
-    const key = `${activeId}:${active?.engine}`;
-    if (lastKey !== key) {
-      lastKey = key;
-      manualOverride = false;
-    }
-  });
-
-  const manualLocked = $derived(
-    showPicker && !manualOverride && activeVoiceCatalog.some((v) => v.id === (active?.voice ?? ""))
-  );
+  // Picker and the manual input coexist: a raw provider voice id can be typed
+  // or pasted at any time; blank means the provider default.
 
   // Keep model and GPU controls visible. Group the remaining options in one
   // disclosure so providers with long option lists do not stack collapsibles.
@@ -855,21 +839,14 @@
           <SettingRow label={$_("common.voice")} tooltip={$_("profiles.voiceTooltip")}>
             <VoiceBrowser
               voices={activeVoiceCatalog}
+              profile={active}
               value={active.voice}
               valueLabel={active.voice_label}
               loading={!!voicesRefreshing[active.engine]}
               supportsRefresh={!!activeCatalogEntry?.supports_voice_refresh}
               error={voiceErrors[active.engine] ?? null}
-              onselect={(id) => {
-                manualOverride = false;
-                setVoice(activeIndex, id);
-              }}
+              onselect={(id) => setVoice(activeIndex, id)}
               onrefresh={() => refreshVoices(active.engine)}
-              onmanual={() => {
-                manualOverride = true;
-                // The input is disabled until this update renders, so focus after it.
-                tick().then(() => manualRef?.focus());
-              }}
             />
           </SettingRow>
         {/if}
@@ -881,10 +858,8 @@
             : "Voice id for this engine. Blank = provider default."}
         >
           <Input
-            bind:ref={manualRef}
             value={localConfig.tts.profiles[activeIndex].voice}
             placeholder={$_("profiles.providerDefault")}
-            disabled={manualLocked}
             onchange={(e) => setVoice(activeIndex, (e.target as HTMLInputElement).value)}
             class="w-56"
           />

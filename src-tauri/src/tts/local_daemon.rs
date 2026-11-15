@@ -213,6 +213,56 @@ fn slots() -> MutexGuard<'static, HashMap<String, Slot>> {
         .unwrap_or_else(|p| p.into_inner())
 }
 
+static RESOURCE: std::sync::LazyLock<(Mutex<bool>, std::sync::Condvar)> =
+    std::sync::LazyLock::new(|| (Mutex::new(false), std::sync::Condvar::new()));
+
+#[cfg(test)]
+pub(crate) static SLOTS_TEST_LOCK: Mutex<()> = Mutex::new(());
+
+static PREWARM_SEQ: AtomicU64 = AtomicU64::new(0);
+
+pub(crate) struct ResourceLease;
+
+impl Drop for ResourceLease {
+    fn drop(&mut self) {
+        let (mutex, wake) = &*RESOURCE;
+        *mutex.lock().unwrap_or_else(|p| p.into_inner()) = false;
+        wake.notify_one();
+    }
+}
+
+pub(crate) fn acquire_resource(scope: Option<crate::AbortScope>) -> Option<ResourceLease> {
+    let (mutex, wake) = &*RESOURCE;
+    let mut busy = mutex.lock().unwrap_or_else(|p| p.into_inner());
+    loop {
+        if scope.is_some_and(|scope| scope.aborted()) {
+            return None;
+        }
+        if !*busy {
+            *busy = true;
+            return Some(ResourceLease);
+        }
+        busy = wake
+            .wait_timeout(busy, Duration::from_millis(100))
+            .unwrap_or_else(|p| p.into_inner())
+            .0;
+    }
+}
+
+pub(crate) fn retire_idle() {
+    let stale: Vec<Daemon> = {
+        let mut guard = slots();
+        guard
+            .values_mut()
+            .filter_map(|slot| {
+                slot.idle_since = None;
+                slot.daemon.take()
+            })
+            .collect()
+    };
+    drop(stale);
+}
+
 fn key_of(command: &str, serve_args: &[String]) -> String {
     format!("{command}\u{1}{}", serve_args.join("\u{1}"))
 }
@@ -341,6 +391,7 @@ fn reap_expired() {
     if timeout_secs == 0 {
         return;
     }
+    let _resource = acquire_resource(None);
     let now = Instant::now();
     let expired: Vec<(String, Daemon)> = {
         let mut guard = slots();
@@ -386,56 +437,33 @@ fn model_load_budget() -> Duration {
     Duration::from_secs(MODEL_LOAD_BUDGET_SECS.load(Ordering::Relaxed))
 }
 
-/// Start the daemon in the background unless one is already running (or starting,
-/// or streaming) for this configuration. Safe to call repeatedly.
-///
-/// A replacement load (the key changed) retires the old-config daemon first,
-/// and takes every OTHER engine's idle daemon with it: a profile switch must
-/// not run two model copies at once, and must not keep the previous engine's
-/// model resident until the idle reaper fires. Busy slots (mid-stream or
-/// mid-load) are left alone — killing their pipe would yank live audio.
+/// Start a model without overlapping another local-model operation.
 pub fn prewarm(engine: &str, command: String, serve_args: Vec<String>) {
     ensure_reaper();
-    let key = key_of(&command, &serve_args);
     let engine = engine.to_string();
-
-    // Daemons to kill. Dropped AFTER the lock: `Daemon::drop` waits on the
-    // child, and holding the mutex across that would stall every synthesis
-    // path (same discipline as `reap_expired`).
-    let mut stale: Vec<Daemon> = Vec::new();
-    {
-        let mut guard = slots();
+    let sequence = PREWARM_SEQ.fetch_add(1, Ordering::Relaxed).wrapping_add(1);
+    std::thread::spawn(move || {
+        let _resource = acquire_resource(None);
+        if PREWARM_SEQ.load(Ordering::Relaxed) != sequence {
+            return;
+        }
+        let key = key_of(&command, &serve_args);
         {
+            let mut guard = slots();
             let slot = guard.entry(engine.clone()).or_default();
-            if slot.unsupported.as_deref() == Some(key.as_str()) {
+            if slot.unsupported.as_deref() == Some(key.as_str())
+                || slot.daemon.as_ref().is_some_and(|d| d.key == key)
+            {
                 return;
             }
-            if slot.busy || slot.daemon.as_ref().is_some_and(|d| d.key == key) {
-                return;
-            }
-            // Replacement load: retire the old-config daemon BEFORE the new
-            // wrapper spawns. Keeping it until the replacement succeeded ran
-            // two model copies at once — a CUDA OOM on a 4 GB GPU once a
-            // one-shot for a third config joined during the load.
-            if let Some(old) = slot.daemon.take() {
-                slot.idle_since = None;
-                stale.push(old);
-            }
+        }
+        retire_idle();
+        {
+            let mut guard = slots();
+            let slot = guard.entry(engine.clone()).or_default();
             slot.pending = Some(key.clone());
             slot.busy = true;
         }
-        for (other, slot) in guard.iter_mut() {
-            if other != &engine && !slot.busy && slot.daemon.is_some() {
-                if let Some(old) = slot.daemon.take() {
-                    slot.idle_since = None;
-                    stale.push(old);
-                }
-            }
-        }
-    }
-    drop(stale);
-
-    std::thread::spawn(move || {
         let started = start(key.clone(), &command, &serve_args);
         let mut guard = slots();
         let slot = guard.entry(engine.clone()).or_default();
@@ -443,10 +471,7 @@ pub fn prewarm(engine: &str, command: String, serve_args: Vec<String>) {
         slot.pending = None;
         match started {
             Ok(daemon) => {
-                // The old-config daemon was retired at prewarm entry, so this
-                // assignment never overwrites a live daemon.
                 slot.daemon = Some(daemon);
-                // Idle clock starts when the model enters the pool.
                 slot.idle_since = Some(Instant::now());
                 log::info!("[LocalDaemon] {engine} ready — model resident in RAM");
             }
@@ -510,6 +535,7 @@ pub fn try_stream(
     command: &str,
     serve_args: &[String],
     text: &str,
+    resource: ResourceLease,
 ) -> Option<ChunkStream> {
     let key = key_of(command, serve_args);
 
@@ -542,13 +568,7 @@ pub fn try_stream(
                 slot.idle_since = None;
                 daemon
             }
-            None => {
-                drop(guard);
-                // Nothing running, or it belongs to another voice/profile/device.
-                // Serve this utterance one-shot and warm the right daemon for next.
-                prewarm(engine, command.to_string(), serve_args.to_vec());
-                return None;
-            }
+            None => return None,
         }
     };
 
@@ -565,6 +585,7 @@ pub fn try_stream(
     let (tx, rx) = mpsc::channel();
     let engine_name = engine.to_string();
     std::thread::spawn(move || {
+        let _resource = resource;
         let mut healthy = true;
         loop {
             match daemon.next_chunk() {
@@ -594,8 +615,10 @@ pub fn try_stream(
         if healthy {
             slot.daemon = Some(daemon); // back in the pool, model still resident
             slot.idle_since = Some(Instant::now()); // idle clock restarts
+        } else {
+            drop(guard);
+            drop(daemon);
         }
-        // Otherwise `daemon` drops here and is killed; the next call re-warms.
     });
 
     Some(ChunkStream::new(meta, rx))
@@ -812,8 +835,6 @@ mod tests {
     // share the global SLOTS map with every other test in this binary, so
     // each one holds SLOTS_TEST_LOCK.
 
-    static SLOTS_TEST_LOCK: Mutex<()> = Mutex::new(());
-
     /// Temporarily shortens the model-load budget. Restores the old value on
     /// drop, so a panicking assert cannot leave later tests a 1 s budget.
     struct BudgetGuard(u64);
@@ -857,6 +878,82 @@ mod tests {
         panic!("timed out waiting for {what}");
     }
 
+    #[cfg(windows)]
+    #[test]
+    fn another_engine_does_not_load_while_a_model_is_loading() {
+        let _lock = SLOTS_TEST_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let first = "tts-resource-first";
+        let second = "tts-resource-second";
+        slots().remove(first);
+        slots().remove(second);
+        prewarm(first, "powershell".into(), wrapper_args(3000, 30));
+        wait_until(
+            || slots().get(first).is_some_and(|slot| slot.busy),
+            Duration::from_secs(5),
+            "first model load",
+        );
+        prewarm(second, "powershell".into(), wrapper_args(150, 30));
+        std::thread::sleep(Duration::from_millis(300));
+        let second_loading = slots().get(second).is_some_and(|slot| slot.busy);
+        wait_until(
+            || {
+                slots()
+                    .get(second)
+                    .is_some_and(|slot| !slot.busy && slot.daemon.is_some())
+            },
+            Duration::from_secs(15),
+            "second model load",
+        );
+        wait_until(
+            || slots().get(first).is_some_and(|slot| !slot.busy),
+            Duration::from_secs(15),
+            "first model load to settle",
+        );
+        slots().remove(first);
+        slots().remove(second);
+        assert!(
+            !second_loading,
+            "a second model started during the first load"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn daemon_stream_holds_the_model_resource_until_its_reply_finishes() {
+        let _lock = SLOTS_TEST_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let engine = "tts-resource-stream";
+        slots().remove(engine);
+        let args = vec![
+            "-NoProfile".into(),
+            "-NonInteractive".into(),
+            "-Command".into(),
+            "'READY 2'; [void][Console]::In.ReadLine(); '{\"ok\":true,\"sample_rate\":22050,\"channels\":1,\"bits_per_sample\":16}'; Start-Sleep -Seconds 2; '{\"end\":true}'; Start-Sleep -Seconds 30".into(),
+        ];
+        prewarm(engine, "powershell".into(), args.clone());
+        wait_until(
+            || is_ready(engine),
+            Duration::from_secs(15),
+            "streaming daemon ready",
+        );
+        let resource = acquire_resource(None).unwrap();
+        let stream = try_stream(engine, "powershell", &args, "preview", resource).unwrap();
+        let (tx, rx) = mpsc::channel();
+        let waiting = std::thread::spawn(move || {
+            let _resource = acquire_resource(None);
+            tx.send(()).unwrap();
+        });
+        let early = rx.recv_timeout(Duration::from_millis(300));
+        while stream.recv().is_some() {}
+        let finished = rx.recv_timeout(Duration::from_secs(5));
+        waiting.join().unwrap();
+        slots().remove(engine);
+        assert!(matches!(early, Err(mpsc::RecvTimeoutError::Timeout)));
+        assert!(
+            finished.is_ok(),
+            "resource was not released after the daemon reply"
+        );
+    }
+
     /// The two-model-copies overlap, reproduced. While a replacement load for a
     /// new config runs, the old resident daemon must already be gone — not
     /// parked in the slot until the replacement succeeds. Stage 1 also kills
@@ -872,8 +969,6 @@ mod tests {
         slots().remove(other);
         // Resident: a second engine's daemon, idle in its pool.
         prewarm(other, "powershell".into(), wrapper_args(150, 30));
-        // Resident: this engine's daemon for config K1 (instant READY).
-        prewarm(engine, "powershell".into(), wrapper_args(150, 30));
         wait_until(
             || {
                 slots()
@@ -883,6 +978,7 @@ mod tests {
             Duration::from_secs(15),
             "other engine's daemon ready",
         );
+        prewarm(engine, "powershell".into(), wrapper_args(150, 30));
         wait_until(
             || {
                 slots()
@@ -900,11 +996,6 @@ mod tests {
         prewarm(engine, "powershell".into(), k2_args);
         std::thread::sleep(Duration::from_millis(300));
 
-        // A third config asking during the load must degrade to the caller's
-        // one-shot WITHOUT hijacking the pending load.
-        let third = try_stream(engine, "powershell", &wrapper_args(150, 30), "x");
-        assert!(third.is_none(), "a busy load must degrade to one-shot");
-
         // One lock scope for all three asserts: `slots()` is not reentrant,
         // and a second acquire while `guard` is alive deadlocks the test
         // thread against itself (the wedge the full-suite run died in).
@@ -913,7 +1004,7 @@ mod tests {
         assert_eq!(
             slot.pending.as_deref(),
             Some(k2_key.as_str()),
-            "the third-config request must not hijack the pending load"
+            "replacement must keep its pending key"
         );
         assert!(
             slot.daemon.is_none(),

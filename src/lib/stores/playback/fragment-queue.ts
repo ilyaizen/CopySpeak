@@ -12,10 +12,16 @@ export interface QueuedFragment {
   captions?: import("#lib/models/captions").CaptionAlignment | null;
   /** Browser-companion session this clip belongs to, if one follows it */
   sessionId?: string | null;
+  /** Reading this fragment belongs to; null for a helper-scope emit
+   * (history replay, cached replay, legacy audio-ready). The store
+   * attributes its playback-finished to it, so a control-server /speak
+   * --wait matches its own playback instead of a foreign reading's. */
+  readingId: number | null;
 }
 
 export interface FragmentQueueHandlers {
   onFragmentPlay: (fragment: QueuedFragment) => Promise<void>;
+  onReadingComplete?: (readingId: number) => void;
   onQueueComplete: () => void;
 }
 
@@ -182,8 +188,19 @@ export class FragmentQueue {
   handleFragmentEnded(): void {
     // Retain the just-completed fragment for cross-boundary rewind
     if (this._queue.length > 0) {
-      this._played.push(this._queue.shift()!);
+      const completed = this._queue.shift()!;
+      this._played.push(completed);
       if (this._played.length > MAX_REWIND_FRAGMENTS) this._played.shift();
+      const next = this._queue[0];
+      if (
+        next &&
+        completed.readingId !== null &&
+        completed.readingId !== 0 &&
+        completed.readingId !== next.readingId &&
+        completed.index === completed.total - 1
+      ) {
+        this._handlers.onReadingComplete?.(completed.readingId);
+      }
     }
 
     if (this._queue.length > 0) {

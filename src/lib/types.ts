@@ -518,23 +518,6 @@ export interface HistoryStatistics {
   average_duration_ms: number;
 }
 
-export interface HistoryExportOptions {
-  format: "json" | "csv";
-  include_metadata: boolean;
-  date_from?: number;
-  date_to?: number;
-  filters?: HistoryFilters;
-}
-
-export interface HistoryExportResult {
-  export_id: string;
-  created_at: number;
-  file_path: string;
-  format: "json" | "csv";
-  item_count: number;
-  file_size_bytes: number;
-}
-
 export interface HistoryDeletionResult {
   deleted_count: number;
   freed_space_bytes: number;

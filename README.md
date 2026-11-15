@@ -58,7 +58,7 @@ Most read-aloud tools are browser extensions chained to a cloud API, or desktop 
 
 ### System
 
-- ✅ **History** — persistent generation history with playback, batch management, and export; switch it off and readings stay out of the log (a small recent-clips cache still skips re-synthesis)
+- ✅ **History** — persistent generation history with playback and reading management; switch it off and readings stay out of the log (a small recent-clips cache still skips re-synthesis)
 - ✅ **9 interface languages** — English, Spanish, Hebrew, Arabic, German, French, Hindi, Russian, Simplified Chinese; Hebrew and Arabic mirror right-to-left, and the tray follows the app language
 - ✅ **Auto-updater** — checks GitHub Releases in the background; also **system tray**, **dark/light themes**, and **audio save mode**
 

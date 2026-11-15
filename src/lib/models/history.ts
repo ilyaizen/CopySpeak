@@ -540,20 +540,3 @@ export function mergeHistoryStates(...states: HistoryState[]): HistoryState {
     last_updated: Date.now()
   };
 }
-
-// Re-export HTML export utilities for convenience
-export {
-  generateHistoryHtmlPage,
-  generatePageHeader,
-  generateTableOfContents,
-  generateStatisticsSection,
-  generateHistoryTableSection,
-  generateHistoryRowHtml,
-  generatePageFooter,
-  generateCss,
-  generateCompactHtmlReport,
-  generateTimelineHtml,
-  generateTimelineItemHtml,
-  escapeHtml,
-  type HtmlExportOptions
-} from "./html-export";

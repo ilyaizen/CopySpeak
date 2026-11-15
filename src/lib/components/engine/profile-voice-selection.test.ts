@@ -163,14 +163,15 @@ describe("profile voice selection", () => {
     view.unmount();
   });
 
-  it("moves focus to the manual id input once the sheet hands over", async () => {
+  it("accepts a raw voice id in the manual input while the picker is shown", async () => {
     const config = configWith("elevenlabs", "premade-1", "Rachel");
     const view = render(ProfileManager, { localConfig: config });
-    await fireEvent.click(await waitFor(() => view.getByRole("button", { name: /Rachel/ })));
-    await fireEvent.click(view.getByRole("button", { name: /Custom \/ manual id/ }));
-    // The input is disabled until the override renders; focus must wait for that.
-    const manual = await waitFor(() => view.getByDisplayValue("premade-1"));
-    await waitFor(() => expect(document.activeElement).toBe(manual));
+    await waitFor(() => expect(calls).toContain("list_tts_voices"));
+    // SAFETY: the manual voice row is the page's only <input>; no select value is "premade-1".
+    const manual = view.getByDisplayValue("premade-1") as HTMLInputElement;
+    expect(manual.disabled).toBe(false);
+    await fireEvent.change(manual, { target: { value: "my-clone-id" } });
+    expect(config.tts.profiles[0].voice).toBe("my-clone-id");
     view.unmount();
   });
 });

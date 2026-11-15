@@ -776,7 +776,7 @@
       },
       "history": {
         "title": "Verlauf",
-        "description": "Dauerhafter Generierungsverlauf mit Wiedergabe und Audio-Export — oder deaktiviert, dann bleiben Vorlesungen unprotokolliert."
+        "description": "Dauerhafter Generierungsverlauf mit Wiedergabe. Bei deaktiviertem Verlauf bleiben Vorlesungen unprotokolliert."
       },
       "sanitization": {
         "title": "Textbereinigung",
@@ -831,7 +831,6 @@
   "voicePicker": {
     "select": "Stimme auswählen…",
     "search": "Stimmen suchen…",
-    "customId": "Eigene / manuelle ID…",
     "refresh": "Aktualisieren",
     "refreshFailed": "Aktualisierung fehlgeschlagen: {error}",
     "notInList": "Nicht in der Liste",
@@ -842,12 +841,17 @@
     "language": "Sprache",
     "style": "Stil",
     "all": "Alle",
+    "allGenders": "Alle Geschlechter",
+    "allLanguages": "Alle Sprachen",
+    "allStyles": "Alle Stile",
     "noFilterMatch": "Keine Stimme passt zu diesen Filtern.",
     "previewPlay": "Vorschau",
     "previewStop": "Vorschau beenden",
+    "generatePreview": "Vorschau erzeugen",
+    "generatingPreview": "Vorschau wird erzeugt",
+    "generateCost": "Erzeugte Vorschauen können Anbieterguthaben verbrauchen.",
     "previewFailed": "Diese Vorschau konnte nicht abgespielt werden.",
     "noPreview": "Für diese Stimme gibt es keine Vorschau.",
-    "shiftEnterHint": "Umschalt+Eingabe spielt die markierte Stimme ab.",
     "showMore": "Weitere {count} anzeigen"
   },
   "hotkey": {

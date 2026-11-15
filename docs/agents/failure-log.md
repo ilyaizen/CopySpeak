@@ -38,6 +38,8 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Bound the held stream audio at 4 runs and 32 MiB of base64: drop the oldest waiting reading, refuse a reading that cannot fit, and ignore every late chunk of a dropped, refused or failed reading.
 - Stop a failed audible reading alone: never call `handleStop` from the owner-failure branch, keep the waiting runs and the batch queue, then drain.
 - Drain held stream runs by lowest reading id, streamed before queued batch fragments: streamed PCM cannot be regenerated, while a batch fragment can replay.
+- Signal each batch reading at its final audible fragment, even when another reading continues the same playback run.
+- Keep completion signals per reading until its wait consumes them; a later finish must not overwrite an earlier one.
 
 ## Captions
 
@@ -49,6 +51,9 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - ElevenLabs with-timestamps streams carry alignment on the leading record(s) and stream later records as audio alone; hard-degrade only when no aligned record ever arrives.
 - Accept an ElevenLabs record with audio and an empty `characters` array as audio-only: `eleven_v4_turbo` leads with them, and rejecting one as blank alignment clears captions for the whole fragment, so the live highlight never starts.
 - External clients (the DSH plugin) read live captions from the control server's `GET /status`; the webview reports each `publishCaption` snapshot through `report_playback_caption` (throttled to ~100 ms) and Rust answers it while younger than 1 s, so no cross-process HUD event is needed and HUD-off machines still serve captions. Keep `/status` the only CORS-open route.
+- A control-server speak holds the queued gate like `speak_queued` does: a `speak_now` that skips `queued_gate` splices its first fragment between a queued reading's fragments, because `speak_queued` holds no synthesis lock for it to wait on.
+- Attribute every `playback-finished` to its reading (`audio-fragment-ready` carries `reading_id`; the store falls back to it for batch runs): an unattributed finish releases any `/speak --wait` whose audio never played, and the previous reply's late stop-finish poisons the next request's wait.
+- Wire interrupt mode (`on_retrigger`) at the audible paths — `do_abort_synthesis` in `handle_speak` and `speak_queued` — not only the Rodio `AudioPlayer`: the webview never reads that setting, so a player-only mode change cuts nothing the user hears.
 - Highlight DSH captions inside the assistant message, not in a strip: the Chat row carries `data-chat-node-key` and the settled Markdown body carries `data-text-interaction-source`, but `/status` word offsets index the sanitized spoken fragment, not the rendered Markdown, so align the fragment words to the rendered text nodes before painting with the CSS Custom Highlight API.
 - DSH caption timings follow provider granularity: ElevenLabs `/status` entries are per character, so group entries under the whitespace-run word they overlap before aligning them to rendered words; treating each entry as a word anchors on a single letter, finds no match, and paints nothing.
 - Never name a DSH plugin variable after a browser global (`CSS`, `Highlight`, `window`): a local `const CSS` stylesheet shadowed the browser `CSS` in the client half, which made `CSS.highlights` undefined and silently skipped every highlight; use `window.CSS.highlights` and `window.Highlight` explicitly.
@@ -62,7 +67,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - A "called from X" comment is not the call site — `local_daemon.rs` claimed prewarm ran "from the set_config path" while `set_config` never called it; grep the named call site before trusting the comment.
 - Local engine wrappers speak daemon protocol v2 (`READY 2`) and emit 16-bit signed LE PCM; `pcm-stream.ts` drops any other `bits_per_sample`.
 - Gate every streaming branch on `supports_streaming()` AND `runtime_ready()`; the static claim alone sends a cold CLI daemon's one-shot command down the stream branch.
-- Adding a `TtsEngine` variant: update the catalog test's engine list and entry count, the default-config profile count in `config/tests.rs` (`test_default_tts_config_uses_kokoro_profile`), plus the `Record<TtsEngine, number>` fixtures in `html-templates.test.ts` and `html-export.test.ts`.
+- Adding a `TtsEngine` variant: update the catalog test's engine list and entry count, and the default-config profile count in `config/tests.rs` (`test_default_tts_config_uses_kokoro_profile`).
 - Wrapper fixes reach an installed engine only when its installer re-runs (for wrapper-only fixes, `cp` the repo file into `engines/<e>/scripts/`), and shared wrapper functions must be backported to EVERY engine — `diff` the engine wrappers against each other when touching one.
 - Bundle each installer wrapper directory in `tauri.conf.json`; a lone `install-*.ps1` breaks app-driven installs in dev and release builds.
 - Run Engines-page health checks in one-shot mode; daemon prewarming plus the immediate fallback launches two copies of large local models.
@@ -83,6 +88,10 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Emote-tag support is per (engine, model) pair in `tts/catalog.rs::supports_emote_tags`, not per engine — `eleven_v3_conversational` and Fish `drama-3` stay excluded until someone listens to a tagged read on them.
 - Clamp provider WAV headers with `audio/wav.rs::clamp_chunk_sizes_to_file` before ANY in-app decode, not just duration math: xAI ships `data` = `i32::MAX` and a sign-bit-set RIFF size, Fish ships `0xFFFFFF00`; browsers clamp and play fine, but rodio's symphonia decoder trusts the field and every fragment concat of such a provider dies with "end of stream" (single-fragment reads never decode, which hides the bug). xAI clamps at the source; concat_speech clamps every fragment.
 - Bump `VOICE_CACHE_SCHEMA` in `commands/tts/voices.rs` whenever `VoiceCatalogEntry` gains a field: a serde default alone keeps old cached lists showing no tags until Refresh, while a version mismatch makes the next Profiles visit fetch again.
+- Provide generated voice previews when catalog entries lack preview URLs; static catalog voices do not include audio samples.
+- Isolate one-shot preview files and process tracking from normal readings; concurrent synthesis must not overwrite or cancel another request.
+- Return `Option<Guard>` explicitly when the guard implements `Drop`; `Option<Guard>` does not implement `Drop`.
+- Serialize local model loads, streams, previews, and one-shot tests; retire idle daemons before starting another process.
 
 ## Browser companion
 
@@ -111,6 +120,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## History & cache
 
+- Trace history export through its UI, backend command, templates, tests, and documentation before removing it; a batch export example is not the whole feature.
 - Branch every synthesis save site on `history.enabled`: on logs and saves to the history folder, off calls `save_speech_cache` and logs nothing; `find_cached_speech` must read the same store.
 - Replay an early stop's paid fragments from the content-addressed cache with history off: `find_cached_reading` replays a whole reading only when every fragment is saved, so keep the per-fragment `find_cached_fragment` lookup in the pagination loop; a streamed fragment never replays, since it has no complete WAV.
 - A cached whole-reading replay is one `audio-ready` on the batch webview path even with streaming on, so it pays per audio second before first audio: about 4.2 s for a 72 s reading at pitch 0.9, about 1.1 s at pitch 1.0. Measure it from the `[Playback] webview playback started` line minus the cached-replay emit line.

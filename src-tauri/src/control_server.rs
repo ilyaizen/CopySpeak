@@ -19,6 +19,9 @@ const READ_TIMEOUT: Duration = Duration::from_secs(5);
 /// playback, which also resolves the wait from the client side).
 const SPEAK_WAIT_TIMEOUT_SECS: u64 = 600;
 
+// Scoped stops and the registration/interrupt decision share this lock.
+static REGISTRATION_LOCK: Mutex<()> = Mutex::new(());
+
 #[derive(Debug, Deserialize)]
 struct SpeakRequest {
     text: String,
@@ -163,10 +166,8 @@ fn handle_connection(
         Ok(ControlRequest::Health) => http_response(200, "OK", r#"{"ok":true,"app":"CopySpeak"}"#),
         Ok(ControlRequest::Status) => http_response_cors(200, "OK", &status_body()),
         Ok(ControlRequest::Stop(StopRequest { request_id: None })) => {
-            // Same path as the UI stop: webview stop event + Rodio net. The
-            // webview's handleStop emits the terminal playback signal, which
-            // releases any blocking `/speak --wait` caller (Hermes barge-in).
-            crate::commands::stop_all_audio(&app, &app.state::<Mutex<AudioPlayer>>());
+            // Abort readings that have not reached playback as well.
+            crate::do_abort_synthesis(&app);
             http_response(200, "OK", r#"{"ok":true}"#)
         }
         Ok(ControlRequest::Stop(StopRequest {
@@ -178,9 +179,12 @@ fn handle_connection(
             // reading's held run after the cancel: a waiting reading's buffered
             // audio must never play, while the audible reading keeps playing.
             let cancel_started = std::time::Instant::now();
-            let outcome = speak_requests::cancel(&id, || {
-                crate::commands::stop_all_audio(&app, &app.state::<Mutex<AudioPlayer>>());
-            });
+            let outcome = {
+                let _guard = REGISTRATION_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+                speak_requests::cancel(&id, || {
+                    crate::commands::stop_all_audio(&app, &app.state::<Mutex<AudioPlayer>>());
+                })
+            };
             log::info!(
                 "[Control] Stop for request {}: {} (handled in {} ms)",
                 id,
@@ -262,24 +266,61 @@ async fn handle_speak(
     request: SpeakRequest,
     wait_lock: Arc<tokio::sync::Mutex<()>>,
 ) -> Result<SpeakOutcome, (u16, String)> {
+    validate_speak_options(&request).map_err(|error| (500, error))?;
     let wait = request.wait.unwrap_or(false);
     let request_id = request.request_id.clone();
     if let Some(id) = request_id.as_deref() {
         log::info!("[Control] Speak {} received (wait: {})", id, wait);
     }
-    run_speak(
+    // Interrupt mode: the newest /speak wins. Cut whatever plays (and any
+    // synthesis still running for it) so this request starts at once; queue
+    // mode, the default, keeps requests FIFO instead. File output plays
+    // nothing, so an interrupt there would cut audio for no reading.
+    let interrupt = {
+        let config_state: State<Mutex<AppConfig>> = app.state();
+        let cfg = config_state.lock();
+        let wants_interrupt = match cfg {
+            Ok(cfg) => {
+                cfg.playback.on_retrigger == crate::config::RetriggerMode::Interrupt
+                    && !(cfg.output.enabled && !cfg.output.directory.is_empty())
+            }
+            // A poisoned lock must not turn a speak into a 500; queue mode
+            // is the safe default.
+            Err(_) => false,
+        };
+        wants_interrupt
+    };
+    let interrupt_app = app.clone();
+    let wait_request_id = request_id.clone();
+    run_speak_with_interrupt(
         request_id.as_deref(),
         wait,
         &wait_lock,
-        move |seq| speak(app, request, seq),
-        |generation| {
-            crate::playback_signal::wait_until(
-                generation,
-                Duration::from_secs(SPEAK_WAIT_TIMEOUT_SECS),
-            )
+        abort_generation,
+        move || {
+            if interrupt {
+                log::info!("[Control] Interrupt mode: stopping current playback for the new speak");
+                crate::do_abort_synthesis(&interrupt_app);
+            }
+            interrupt
+        },
+        move |seq, generation| speak(app, request, seq, generation),
+        move |_| {
+            let waiter = crate::playback_signal::PlaybackWait::new(wait_request_id.as_deref());
+            async move { waiter.wait(Duration::from_secs(SPEAK_WAIT_TIMEOUT_SECS)).await }
         },
     )
     .await
+}
+
+fn validate_speak_options(request: &SpeakRequest) -> Result<(), String> {
+    if let Some(engine) = request.engine.as_deref() {
+        parse_engine(engine)?;
+    }
+    if let Some(effect) = request.effect.as_deref() {
+        parse_effect(effect)?;
+    }
+    Ok(())
 }
 
 /// Log one `/speak` lifecycle stage that took long enough to matter for the
@@ -296,11 +337,8 @@ fn log_slow_stage(request_id: Option<&str>, stage: &str, started: Instant) {
     }
 }
 
-/// The request lifecycle behind `/speak`, with synthesis (`speak`) and the
-/// playback-finished wait (`wait_finished`) injected so it can be tested
-/// without a webview. `speak` receives the request's sequence (or
-/// `NO_REQUEST`); `wait_finished` receives the playback generation taken
-/// before the speak and resolves true on a finish, false on its timeout.
+/// Test wrapper with interrupt mode disabled.
+#[cfg(test)]
 async fn run_speak<S, SF, W, WF>(
     request_id: Option<&str>,
     wait: bool,
@@ -314,29 +352,68 @@ where
     W: FnOnce(u64) -> WF + Send + 'static,
     WF: Future<Output = bool> + Send + 'static,
 {
-    let ticket = match request_id {
-        None => None,
-        Some(id) => match speak_requests::register(id) {
-            Registration::Proceed(seq) => Some(Ticket::new(seq)),
-            Registration::Cancelled => {
-                log::info!("[Control] Speak {} was stopped before it arrived", id);
-                return Ok(SpeakOutcome::Cancelled);
-            }
-            Registration::Duplicate => {
-                return Err((409, format!("request_id {} is already in use", id)));
-            }
-        },
+    run_speak_with_interrupt(
+        request_id,
+        wait,
+        wait_lock,
+        abort_generation,
+        || false,
+        move |seq, _| speak(seq),
+        wait_finished,
+    ).await
+}
+
+fn abort_generation() -> u64 {
+    crate::ABORT_GENERATION.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+async fn run_speak_with_interrupt<I, S, SF, W, WF>(
+    request_id: Option<&str>,
+    wait: bool,
+    wait_lock: &tokio::sync::Mutex<()>,
+    read_generation: fn() -> u64,
+    interrupt: I,
+    speak: S,
+    wait_finished: W,
+) -> Result<SpeakOutcome, (u16, String)>
+where
+    I: FnOnce() -> bool,
+    S: FnOnce(u64, u64) -> SF,
+    SF: Future<Output = Result<(), String>>,
+    W: FnOnce(u64) -> WF + Send + 'static,
+    WF: Future<Output = bool> + Send + 'static,
+{
+    let (ticket, generation) = {
+        let _guard = REGISTRATION_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let ticket = match request_id {
+            None => None,
+            Some(id) => match speak_requests::register(id) {
+                Registration::Proceed(seq) => Some(Ticket::new(seq)),
+                Registration::Cancelled => {
+                    log::info!("[Control] Speak {} was stopped before it arrived", id);
+                    return Ok(SpeakOutcome::Cancelled);
+                }
+                Registration::Duplicate => {
+                    return Err((409, format!("request_id {} is already in use", id)));
+                }
+            },
+        };
+        let generation = read_generation();
+        let generation = generation.wrapping_add(u64::from(interrupt()));
+        (ticket, generation)
     };
     let seq = ticket.as_ref().map_or(NO_REQUEST, Ticket::seq);
+    let globally_aborted = move || read_generation() != generation;
     // Owned for the detached non-wait bookkeeping task below, which outlives
     // this call's borrows.
     let request_label = request_id.map(str::to_owned);
     let started = Instant::now();
 
-    // Serialize blocking speaks, but stay stoppable while queued: the lock
-    // future is kept across cancellation polls, so it keeps its queue place.
+    // Keep the lock future's place while watching scoped and global stops.
     let _wait_guard = if wait {
-        match speak_requests::until_cancelled(seq, wait_lock.lock()).await {
+        match speak_requests::until_cancelled_or_aborted(seq, globally_aborted, wait_lock.lock())
+            .await
+        {
             Some(guard) => {
                 log_slow_stage(
                     request_label.as_deref(),
@@ -350,29 +427,36 @@ where
     } else {
         None
     };
-    let generation = crate::playback_signal::generation();
-    let spoken = speak(seq).await;
+    // Subscribe before synthesis: cached readings can finish during it.
+    let mut finished = Box::pin(wait_finished(generation));
+    if globally_aborted() || speak_requests::is_cancelled(seq) {
+        return Ok(SpeakOutcome::Cancelled);
+    }
+    let spoken = speak(seq, generation).await;
     log_slow_stage(
         request_label.as_deref(),
         "synthesis and cache replay emit",
         started,
     );
-    // Created once and kept: after a cancel it still has to absorb the finish
-    // of the stop (see `settle_cancelled`).
-    let mut finished = Box::pin(wait_finished(generation));
+    // A scoped cancellation that stopped playback still absorbs its finish.
     // A cancelled synthesis may surface as an error ("Reading cancelled");
     // either way the request was stopped, not failed.
     if let Some(ticket) = ticket.as_ref().filter(|t| t.is_cancelled()) {
         return Ok(settle_cancelled(request_label.as_deref(), ticket, &mut finished).await);
     }
+    if globally_aborted() {
+        return Ok(SpeakOutcome::Cancelled);
+    }
     spoken.map_err(|error| (500, error))?;
 
     if wait {
-        match speak_requests::until_cancelled(seq, &mut finished).await {
-            None => {
-                let ticket = ticket.as_ref().expect("only a request id can be cancelled");
-                Ok(settle_cancelled(request_label.as_deref(), ticket, &mut finished).await)
-            }
+        match speak_requests::until_cancelled_or_aborted(seq, globally_aborted, &mut finished).await {
+            None => match ticket.as_ref().filter(|t| t.is_cancelled()) {
+                Some(ticket) => {
+                    Ok(settle_cancelled(request_label.as_deref(), ticket, &mut finished).await)
+                }
+                None => Ok(SpeakOutcome::Cancelled),
+            },
             Some(finished) => {
                 if !finished {
                     log::warn!(
@@ -389,9 +473,14 @@ where
         // that arrives later is a no-op.
         if let Some(ticket) = ticket {
             tauri::async_runtime::spawn(async move {
-                if speak_requests::until_cancelled(ticket.seq(), &mut finished)
-                    .await
-                    .is_none()
+                if speak_requests::until_cancelled_or_aborted(
+                    ticket.seq(),
+                    globally_aborted,
+                    &mut finished,
+                )
+                .await
+                .is_none()
+                    && ticket.is_cancelled()
                 {
                     settle_cancelled(request_label.as_deref(), &ticket, &mut finished).await;
                 }
@@ -407,10 +496,8 @@ where
 /// webview that never answers.
 const STOP_SETTLE_TIMEOUT: Duration = Duration::from_secs(2);
 
-/// Finish a cancelled request. When its cancel stopped playback it owned, wait
-/// (bounded) for the webview's `playback-finished` for that stop: answering
-/// first would let the stale finish satisfy the next request's wait, since
-/// waits match finishes by timestamps, releasing that caller mid-playback.
+/// Wait briefly for the stopped playback's finish before releasing the
+/// serialized wait; a following unscoped request still accepts any finish.
 async fn settle_cancelled<F: Future<Output = bool> + Unpin>(
     request_id: Option<&str>,
     ticket: &Ticket,
@@ -586,7 +673,12 @@ fn find_header_end(buffer: &[u8]) -> Option<usize> {
     buffer.windows(4).position(|window| window == b"\r\n\r\n")
 }
 
-async fn speak(app: AppHandle, request: SpeakRequest, request_seq: u64) -> Result<(), String> {
+async fn speak(
+    app: AppHandle,
+    request: SpeakRequest,
+    request_seq: u64,
+    generation: u64,
+) -> Result<(), String> {
     if request.engine.is_some() || request.effect.is_some() {
         let config_state: State<Mutex<AppConfig>> = app.state();
         let mut cfg = config_state.lock().map_err(|e| e.to_string())?;
@@ -632,6 +724,7 @@ async fn speak(app: AppHandle, request: SpeakRequest, request_seq: u64) -> Resul
         text,
         request.post_process.unwrap_or(false),
         request_seq,
+        generation,
     )
     .await
 }
@@ -926,7 +1019,7 @@ mod tests {
     // cancellation polling are the real ones. Ids are unique per test because
     // the registry is process-global.
 
-    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
     use tokio::sync::oneshot;
 
     fn unique_id(name: &str) -> String {
@@ -972,6 +1065,135 @@ mod tests {
             0,
             "a pre-empted request spoke"
         );
+    }
+
+    #[test]
+    fn invalid_speak_options_are_rejected_before_interrupt() {
+        let mut request: SpeakRequest = serde_json::from_str(
+            r#"{"text":"hello","engine":"not-an-engine"}"#,
+        ).unwrap();
+        assert!(validate_speak_options(&request).is_err());
+        request.engine = None;
+        request.effect = Some("not-an-effect".to_string());
+        assert!(validate_speak_options(&request).is_err());
+    }
+
+    #[tokio::test]
+    async fn preempted_and_duplicate_requests_do_not_interrupt_playback() {
+        let lock = tokio::sync::Mutex::new(());
+        let interrupts = AtomicUsize::new(0);
+        let preempted = unique_id("interrupt-preempted");
+        speak_requests::cancel(&preempted, || panic!("nothing plays"));
+        let result = run_speak_with_interrupt(
+            Some(&preempted), true, &lock, abort_generation,
+            || { interrupts.fetch_add(1, Ordering::SeqCst); false },
+            |_, _| async { Ok(()) }, never_finishes,
+        ).await;
+        assert_eq!(result, Ok(SpeakOutcome::Cancelled));
+
+        let duplicate = unique_id("interrupt-duplicate");
+        let Registration::Proceed(seq) = speak_requests::register(&duplicate) else {
+            panic!("request must register");
+        };
+        let _ticket = Ticket::new(seq);
+        let result = run_speak_with_interrupt(
+            Some(&duplicate), true, &lock, abort_generation,
+            || { interrupts.fetch_add(1, Ordering::SeqCst); false },
+            |_, _| async { Ok(()) }, never_finishes,
+        ).await;
+        assert!(matches!(result, Err((409, _))));
+        assert_eq!(interrupts.load(Ordering::SeqCst), 0);
+    }
+
+    #[tokio::test]
+    async fn global_abort_during_synthesis_does_not_wait_for_playback() {
+        static GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        fn generation() -> u64 {
+            GENERATION.load(Ordering::SeqCst)
+        }
+        let lock = tokio::sync::Mutex::new(());
+        let result = bounded(run_speak_with_interrupt(
+            None, true, &lock, generation, || false,
+            |_, _| async {
+                GENERATION.fetch_add(1, Ordering::SeqCst);
+                Ok(())
+            },
+            never_finishes,
+        )).await;
+        assert_eq!(result, Ok(SpeakOutcome::Cancelled));
+    }
+
+    #[tokio::test]
+    async fn global_abort_releases_request_queued_before_synthesis() {
+        static GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        fn generation() -> u64 {
+            GENERATION.load(Ordering::SeqCst)
+        }
+        let lock = tokio::sync::Mutex::new(());
+        let _held = lock.lock().await;
+        let spoken = AtomicBool::new(false);
+        let (result, ()) = tokio::join!(
+            bounded(run_speak_with_interrupt(
+                None, true, &lock, generation, || false,
+                |_, _| {
+                    spoken.store(true, Ordering::SeqCst);
+                    async { Ok(()) }
+                },
+                never_finishes,
+            )),
+            async {
+                tokio::time::sleep(Duration::from_millis(50)).await;
+                GENERATION.fetch_add(1, Ordering::SeqCst);
+            },
+        );
+        assert_eq!(result, Ok(SpeakOutcome::Cancelled));
+        assert!(!spoken.load(Ordering::SeqCst));
+    }
+
+    #[tokio::test]
+    async fn a_requests_own_interrupt_does_not_cancel_it() {
+        static GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        fn generation() -> u64 {
+            GENERATION.load(Ordering::SeqCst)
+        }
+        let lock = tokio::sync::Mutex::new(());
+        let result = bounded(run_speak_with_interrupt(
+            None, true, &lock, generation,
+            || {
+                GENERATION.fetch_add(1, Ordering::SeqCst);
+                true
+            },
+            |_, captured| {
+                assert_eq!(captured, GENERATION.load(Ordering::SeqCst));
+                async { Ok(()) }
+            },
+            |_| async { true },
+        )).await;
+        assert_eq!(result, Ok(SpeakOutcome::Spoken));
+    }
+
+    #[tokio::test]
+    async fn global_stop_racing_with_own_interrupt_cancels_the_request() {
+        static GENERATION: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        fn generation() -> u64 {
+            GENERATION.load(Ordering::SeqCst)
+        }
+        let lock = tokio::sync::Mutex::new(());
+        let spoken = AtomicBool::new(false);
+        let result = bounded(run_speak_with_interrupt(
+            None, true, &lock, generation,
+            || {
+                GENERATION.fetch_add(2, Ordering::SeqCst);
+                true
+            },
+            |_, _| {
+                spoken.store(true, Ordering::SeqCst);
+                async { Ok(()) }
+            },
+            never_finishes,
+        )).await;
+        assert_eq!(result, Ok(SpeakOutcome::Cancelled));
+        assert!(!spoken.load(Ordering::SeqCst));
     }
 
     #[tokio::test]
@@ -1055,11 +1277,8 @@ mod tests {
         assert_eq!(outcome, Ok(SpeakOutcome::Cancelled));
     }
 
-    /// When the cancel stopped this request's own playback, the webview's
-    /// `playback-finished` for that stop is still in flight. Answering before
-    /// it lands would let it satisfy the NEXT request's wait (generations
-    /// are timestamps), releasing that caller while its audio still plays.
-    /// The cancelled request must absorb its own finish first.
+    /// A stopped playback's finish must arrive before the next unscoped
+    /// waiter, which accepts any finish, can start.
     #[tokio::test]
     async fn cancel_that_stopped_playback_absorbs_its_own_finish() {
         let id = unique_id("absorb");
@@ -1164,6 +1383,72 @@ mod tests {
             canceller.await.expect("join"),
             speak_requests::StopOutcome::Cancelled { .. }
         ));
+    }
+
+    /// The reported race: replies read back to back. A foreign
+    /// playback-finished (the previous reply's late stop, a double-copy
+    /// drain) fires while this request is still synthesizing. The wait must
+    /// match this request's own reading and ignore every foreign finish —
+    /// an early release resets the plugin's action row while its audio has
+    /// not even started.
+    #[tokio::test]
+    async fn a_foreign_finish_does_not_satisfy_the_requests_wait() {
+        let _guard = crate::playback_signal::playback_wait_test_lock();
+        let id = unique_id("foreign-finish");
+        let lock = tokio::sync::Mutex::new(());
+        // A foreign playback run ends 60 ms in, mid-synthesis of this request.
+        let foreign_fired = std::sync::Arc::new(AtomicBool::new(false));
+        {
+            let foreign_fired = foreign_fired.clone();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(60)).await;
+                foreign_fired.store(true, Ordering::SeqCst);
+                crate::playback_signal::signal_finished_for(None);
+            });
+        }
+        // This request's own playback ends 150 ms after the foreign finish.
+        {
+            let id = id.clone();
+            tokio::spawn(async move {
+                let reading = loop {
+                    if let Some(reading) = speak_requests::reading_for_id(&id) {
+                        break reading;
+                    }
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                };
+                tokio::time::sleep(Duration::from_millis(150)).await;
+                crate::playback_signal::signal_finished_for(Some(reading));
+            });
+        }
+        let started = std::time::Instant::now();
+        let wait_id = id.clone();
+        let outcome = bounded(run_speak(
+            Some(&id),
+            true,
+            &lock,
+            |seq| async move {
+                // Synthesis begins the reading (attaching it) and takes long
+                // enough that the foreign finish lands inside it.
+                crate::AbortScope::begin_reading_for_request(seq);
+                tokio::time::sleep(Duration::from_millis(200)).await;
+                Ok(())
+            },
+            move |_| {
+                let waiter = crate::playback_signal::PlaybackWait::new(Some(&wait_id));
+                async move { waiter.wait(Duration::from_secs(SPEAK_WAIT_TIMEOUT_SECS)).await }
+            },
+        ))
+        .await;
+        assert_eq!(outcome, Ok(SpeakOutcome::Spoken));
+        assert!(
+            foreign_fired.load(Ordering::SeqCst),
+            "the foreign finish must land during the run for this test to bite"
+        );
+        assert!(
+            started.elapsed() >= Duration::from_millis(120),
+            "resolved on the foreign finish after {:?}, not on this request's own playback",
+            started.elapsed()
+        );
     }
 
     /// A stop that arrives after its request finished must not cancel, delay

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Button } from "#lib/components/ui/button/index.js";
-  import { Trash2, Download, CheckSquare, Square, X } from "@lucide/svelte";
+  import { Trash2, CheckSquare, Square, X } from "@lucide/svelte";
 
   let {
     totalItems = 0,
@@ -10,7 +10,6 @@
     onSelectAll,
     onClearSelection,
     onDeleteSelected,
-    onExportSelected,
     disabled = false,
     class: className
   }: Props = $props();
@@ -23,7 +22,6 @@
     onSelectAll: () => void;
     onClearSelection: () => void;
     onDeleteSelected: () => void;
-    onExportSelected: () => void;
     disabled?: boolean;
     class?: string;
   }
@@ -90,11 +88,6 @@
 
     {#if selectedCount > 0}
       <div class="flex items-center gap-2">
-        <Button variant="outline" size="sm" {disabled} onclick={onExportSelected} class="h-7">
-          <Download class="me-1 h-3 w-3" />
-          Export ({selectedCount})
-        </Button>
-
         <Button
           variant={showDeleteConfirm ? "destructive" : "outline"}
           size="sm"

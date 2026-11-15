@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 import { FragmentQueue, type QueuedFragment } from "./fragment-queue";
 
 function fragment(index: number): QueuedFragment {
-  return { audioBase64: `audio-${index}`, index, total: 5, text: `Part ${index}` };
+  return { audioBase64: `audio-${index}`, index, total: 5, text: `Part ${index}`, readingId: null };
 }
 
 function createQueue() {
@@ -20,6 +20,28 @@ function createQueue() {
 }
 
 describe("FragmentQueue", () => {
+  it("carries a fragment's reading id through the queue", () => {
+    const { queue } = createQueue();
+    queue.enqueue({ ...fragment(0), readingId: 41 });
+    queue.enqueue({ ...fragment(1), readingId: 42 });
+    expect(queue.getQueue().map((f) => f.readingId)).toEqual([41, 42]);
+    expect(queue.getCurrentFragment()?.readingId).toBe(41);
+  });
+
+  it("does not complete a reading just because another reading is queued", async () => {
+    const completed: number[] = [];
+    const queue = new FragmentQueue({
+      onFragmentPlay: async () => {},
+      onReadingComplete: (id) => completed.push(id),
+      onQueueComplete: () => {}
+    });
+    queue.enqueue({ ...fragment(0), readingId: 41 });
+    queue.enqueue({ ...fragment(0), readingId: 42 });
+    await queue.startProcessing();
+    queue.handleFragmentEnded();
+    expect(completed).toEqual([]);
+  });
+
   it("retains played fragments for rewind and re-queues them ahead of current", async () => {
     const { queue, played } = createQueue();
     for (const index of [0, 1, 2]) queue.enqueue(fragment(index));
@@ -113,8 +135,8 @@ describe("FragmentQueue", () => {
   it("supports full replay of all received fragments", async () => {
     const { queue, played, isCompleted } = createQueue();
     const total = 2;
-    queue.enqueue({ audioBase64: "a0", index: 0, total, text: "Part 0" });
-    queue.enqueue({ audioBase64: "a1", index: 1, total, text: "Part 1" });
+    queue.enqueue({ audioBase64: "a0", index: 0, total, text: "Part 0", readingId: null });
+    queue.enqueue({ audioBase64: "a1", index: 1, total, text: "Part 1", readingId: null });
     await queue.startProcessing();
     queue.handleFragmentEnded();
     queue.handleFragmentEnded();

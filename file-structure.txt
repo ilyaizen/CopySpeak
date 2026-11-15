@@ -109,7 +109,6 @@
 │   │   │   │   ├── profile-manager.svelte
 │   │   │   │   └── voice-picker.svelte
 │   │   │   ├── history
-│   │   │   │   ├── export-dialog.svelte
 │   │   │   │   ├── history-bulk-actions.svelte
 │   │   │   │   ├── history-entry.svelte
 │   │   │   │   └── history-search.svelte
@@ -176,10 +175,6 @@
 │   │   │   ├── captions.ts
 │   │   │   ├── history.test.ts
 │   │   │   ├── history.ts
-│   │   │   ├── html-export.ts
-│   │   │   ├── html-templates.example.ts
-│   │   │   ├── html-templates.test.ts
-│   │   │   ├── html-templates.ts
 │   │   │   └── index.ts
 │   │   ├── services
 │   │   │   └── tauri.ts
@@ -213,8 +208,6 @@
 │   │   ├── utils
 │   │   │   ├── external-link.ts
 │   │   │   ├── history-events.ts
-│   │   │   ├── html-export.test.ts
-│   │   │   ├── html-export.ts
 │   │   │   ├── text.ts
 │   │   │   └── timer.ts
 │   │   ├── types.ts
