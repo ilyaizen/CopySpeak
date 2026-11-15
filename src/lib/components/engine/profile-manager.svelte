@@ -725,13 +725,8 @@
 <div class="space-y-4">
   <!-- Header: title + actions (outside the card) -->
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <h2 class="text-lg font-semibold">{$_("profiles.title")}</h2>
-      <p class="text-muted-foreground mt-1 text-sm">
-        Named presets bundling engine, voice, speed, pitch and effect.
-      </p>
-    </div>
-    <div class="ml-auto flex flex-wrap justify-end gap-1.5">
+    <h2 class="text-lg font-semibold">{$_("profiles.title")}</h2>
+    <div class="ms-auto flex flex-wrap justify-end gap-1.5 rtl:justify-start">
       <DropdownMenu>
         <DropdownMenuTrigger
           class="border-input bg-background hover:bg-accent inline-flex h-8 items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-medium whitespace-nowrap"
