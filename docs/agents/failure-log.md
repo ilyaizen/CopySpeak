@@ -203,6 +203,14 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - `vp check`'s anti-slop `no-runtime-typeof` rejects a `typeof` branch on a value union: coerce at the call (`String(value ?? "")`) or parse the value at its I/O boundary.
 - Stub `Element.prototype.scrollIntoView`, `HTMLMediaElement.prototype.play` and `pause` in component tests: jsdom does not implement scrolling or media playback.
 - After `git checkout` of a watched source file, `touch` it and re-fetch the module from the dev server: the Vite watcher can miss the checkout write and keep serving the pre-revert transform, so the app paints deleted code.
+- After moving a test into `__tests__/`, rewrite its `./` and `../` specifiers, `vi.mock` targets and dynamic `import()` paths from the old folder; `import.meta.dirname` paths that point at the source folder need one more `..`.
+- Format only the moved file with `vp fmt <file>` after editing a test; a long line that fails `vp check` is not a reason to loosen the check.
+
+## Rust tests
+
+- Split a Rust test module as `#[cfg(test)] #[path = "<name>_tests.rs"] mod tests;`; a child file beside a non-`mod.rs` parent avoids a new directory.
+- Run `rustfmt` on the split-out child file only; rustfmt on the parent reflows unrelated non-test code (seen in `control_server.rs`).
+- Wait for the dev session's `cargo run` to release the build-directory lock; never kill another session's cargo to run `cargo test`.
 
 ## Settings
 
