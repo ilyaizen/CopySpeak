@@ -273,7 +273,11 @@ window.__ModuleLoader__.load({
       sequence: 1,
       /* Chain that serializes beginReading calls. Each call appends to it,
          so overlapping starts queue instead of racing. */
-      beginChain: Promise.resolve()
+      beginChain: Promise.resolve(),
+      /* Bumped by a stop, so a reading queued behind the stop does not start. */
+      stopEpoch: 0,
+      /* Abort controller for the in-flight /speak request. */
+      speakAbort: null
     };
 
     /* The locale binder from apply(), for slots that pass no `t` prop. */
@@ -305,6 +309,7 @@ window.__ModuleLoader__.load({
       playback.source = null;
       playback.paused = false;
       playback.pauseChangedAt = 0;
+      playback.speakAbort = null;
       stopStatusPolling();
       resetReading(null, null, "");
       emit(playback.listeners);
@@ -1730,13 +1735,14 @@ window.__ModuleLoader__.load({
       };
     }
 
-    function post(path, body) {
+    function post(path, body, signal) {
       return fetch(CONTROL_URL + path, {
         method: "POST",
         mode: "no-cors",
         cache: "no-store",
         headers: { "content-type": "text/plain" },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: signal
       }).then(
         function () {
           return true;
@@ -1759,8 +1765,8 @@ window.__ModuleLoader__.load({
       );
     }
 
-    function stopReading(requestId) {
-      return post("/stop", { request_id: requestId });
+    function stopReading(requestId, signal) {
+      return post("/stop", { request_id: requestId }, signal);
     }
 
     /* Pause and resume address one reading by request id, like stop. The glyph
@@ -1798,7 +1804,10 @@ window.__ModuleLoader__.load({
        Calls are serialized through playback.beginChain so overlapping starts
        cannot post two /speak calls for the same stop. */
     function beginReading(messageId, nodeKey, speech, range = null) {
+      const epoch = playback.stopEpoch;
       const run = function () {
+        /* A stop between the call and the turn in the chain cancels this start. */
+        if (epoch !== playback.stopEpoch) return null;
         const previous = playback.requestId;
         const stopping = previous === null ? Promise.resolve(true) : stopReading(previous);
         return stopping.then(function (stopped) {
@@ -1810,13 +1819,22 @@ window.__ModuleLoader__.load({
           resetReading(messageId, nodeKey, speech, range);
           remember(messageId, requestId, range === null ? "message" : "selection");
           startStatusPolling(requestId);
-          return post("/speak", { text: speech, request_id: requestId, wait: true }).then(
-            function (finished) {
-              if (playback.requestId !== requestId) return null;
-              forget();
-              return finished ? null : "error.offline";
-            }
-          );
+          /* Create an AbortController for this /speak request so stopReadingNow
+             can abort it if the user stops playback before it finishes. */
+          const controller = new AbortController();
+          playback.speakAbort = controller;
+          return post(
+            "/speak",
+            { text: speech, request_id: requestId, wait: true },
+            controller.signal
+          ).then(function (finished) {
+            if (playback.speakAbort === controller) playback.speakAbort = null;
+            if (playback.requestId !== requestId) return null;
+            forget();
+            /* An aborted request is the stop the user asked for, not a failure. */
+            if (controller.signal.aborted) return null;
+            return finished ? null : "error.offline";
+          });
         });
       };
       // Append to the chain so concurrent calls queue up.
@@ -1827,9 +1845,17 @@ window.__ModuleLoader__.load({
 
     function stopReadingNow() {
       const requestId = playback.requestId;
+      /* Bump the epoch even when idle, so a reading still queued behind an
+         earlier start cannot begin after this stop. */
+      playback.stopEpoch += 1;
       if (requestId === null) {
         forget();
         return Promise.resolve();
+      }
+      /* Abort the in-flight /speak request so the server stops generation. */
+      if (playback.speakAbort !== null) {
+        playback.speakAbort.abort();
+        playback.speakAbort = null;
       }
       return stopReading(requestId).then(function () {
         forget();
@@ -2411,12 +2437,23 @@ window.__ModuleLoader__.load({
       );
     }
 
+    /* The Session facts the watcher needs, as one comparable value: whether the
+       Session's history finished opening, and whether a turn runs right now.
+       Chat history arrives after the dock mounts, so the reply ids it carries
+       look new; only a turn that runs while watched is a new turn. */
+    function sessionWatch(snapshot) {
+      if (snapshot == null) return "cold";
+      if (snapshot.openState !== "open") return "loading";
+      return snapshot.running ? "running" : "ready";
+    }
+
     /**
      * Per-session watcher under the composer: when a turn completes and
      * auto-read is on, speak its final reply. It renders nothing.
      */
     function AutoReader(props) {
       const useChat = props.useChat;
+      const useSession = props.useSession;
       const latest = React.useRef(null);
       const latestId = useChat
         ? useChat(function (snapshot) {
@@ -2424,19 +2461,32 @@ window.__ModuleLoader__.load({
             return latest.current === null ? null : latest.current.messageId;
           })
         : null;
+      const watch = useSession ? useSession(sessionWatch) : "ready";
 
-      const ready = React.useRef(false);
+      /* Reply id already accounted for, so one reply reads once. */
       const seen = React.useRef(null);
+      /* Set once the Session's history opened: reply ids before this point are
+         loaded history, and no turn has run for them. */
+      const primed = React.useRef(false);
+      /* Set while a turn runs, and kept while an auto-read starts. A reply after
+         history opened, without a turn seen running, is loaded history too. */
+      const armed = React.useRef(false);
 
       React.useEffect(
         function () {
-          if (!ready.current) {
-            ready.current = true;
+          if (watch === "running") armed.current = true;
+          if (!primed.current) {
+            if (watch !== "ready" && watch !== "running") return;
+            primed.current = true;
             seen.current = latestId;
             return;
           }
           if (latestId === null || latestId === seen.current) return;
           seen.current = latestId;
+          if (!armed.current) return;
+          /* A queued turn keeps the Session running, so a reply that lands while
+             another turn runs leaves the watcher ready for that turn's reply. */
+          armed.current = watch === "running";
           if (!preferences.autoRead) return;
           const found = latest.current;
           if (found === null) return;
@@ -2448,7 +2498,7 @@ window.__ModuleLoader__.load({
             if (error !== null) console.error("[copyspeak-voice] auto-read failed:", error);
           });
         },
-        [latestId]
+        [latestId, watch]
       );
 
       return null;
@@ -2730,6 +2780,10 @@ window.__ModuleLoader__.load({
             /* This plugin owns its reading; unloading it must stop the server
                playback, not just the timer. */
             const requestId = playback.requestId;
+            if (playback.speakAbort !== null) {
+              playback.speakAbort.abort();
+              playback.speakAbort = null;
+            }
             stopStatusPolling();
             if (requestId !== null) void stopReading(requestId);
             forget();

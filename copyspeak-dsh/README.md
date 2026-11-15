@@ -56,7 +56,7 @@ POST http://127.0.0.1:43117/seek   {"request_id": "<id>", "delta_ms": -5000}
 
 The bar sends `-5000` for **-5 s** and `5000` for **+5 s**. A paused reading keeps its `wait: true` request open. The request resolves when the reading resumes and ends, or when the reading stops.
 
-Auto-read speaks one reply per turn. The host writes one `turn-tail` node when a turn ends, and its `closing` step is the turn's final assistant reply. The watcher speaks that step, so it skips intermediate steps and never reads a reply halfway through a turn.
+Auto-read speaks one reply per turn. The host writes one `turn-tail` node when a turn ends, and its `closing` step is the turn's final assistant reply. The watcher speaks that step, so it skips intermediate steps and never reads a reply halfway through a turn. The Chat history loads after the panel mounts, so the last reply in a reopened session looks new; the watcher speaks a reply only after it watches the Session run a turn. That gate reads `openState` and `running` from the Session snapshot.
 
 Captions and the bar poll one read-only route while a reading runs:
 
