@@ -169,7 +169,6 @@
         </SettingRow>
       {/if}
     {/if}
-    <div class="settings-separator my-3 border-t"></div>
     <!-- Volume slider — 0–100% range with integer steps for precise control -->
     <SettingRow label={$_("common.volume")}>
       <div class="flex w-28 items-center gap-2">
