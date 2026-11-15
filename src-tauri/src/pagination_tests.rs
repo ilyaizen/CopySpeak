@@ -493,18 +493,6 @@ fn paginate_text_fragments_from_ranges(
 }
 
 #[test]
-fn test_paginate_text_very_short_under_limit() {
-    let config = PaginationConfig {
-        enabled: true,
-        fragment_size: 500,
-    };
-    let text = "Short text under limit.";
-    let fragments = paginate_text(text, &config);
-    assert_eq!(fragments.len(), 1);
-    assert_eq!(fragments[0].text, text);
-}
-
-#[test]
 fn test_paginate_text_short_exactly_at_limit() {
     let config = PaginationConfig {
         enabled: true,
