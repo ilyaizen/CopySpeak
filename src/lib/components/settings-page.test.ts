@@ -204,7 +204,7 @@ it("places About actions before acknowledgments and keeps the credit outside the
   expect(donate.getAttribute("href")).toBe("https://www.buymeacoffee.com/ilyaizen");
   const source = within(footerAbout).getByRole("button", { name: "GitHub" });
   const website = within(footerAbout).getByRole("link", { name: "Website" });
-  expect(website.getAttribute("href")).toBe("https://copyspeak.vercel.app/");
+  expect(website.getAttribute("href")).toBe("https://copyspeak.ilyaizen.link/");
   expect(website.nextElementSibling).toBe(source);
   expect(source.parentElement).toBe(donate.parentElement);
   expect(source.classList.contains("cursor-pointer")).toBe(true);
@@ -213,7 +213,7 @@ it("places About actions before acknowledgments and keeps the credit outside the
   expect(within(about).queryByRole("link", { name: "Buy Me a Coffee" })).toBeNull();
   const openExternal = vi.spyOn(externalLink, "openExternal").mockResolvedValue();
   await fireEvent.click(website);
-  expect(openExternal).toHaveBeenCalledWith("https://copyspeak.vercel.app/");
+  expect(openExternal).toHaveBeenCalledWith("https://copyspeak.ilyaizen.link/");
   await fireEvent.click(website, { ctrlKey: true });
   expect(openExternal).toHaveBeenCalledTimes(1);
   openExternal.mockClear();

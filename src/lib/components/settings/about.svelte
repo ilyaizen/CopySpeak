@@ -260,12 +260,12 @@
   <div class="flex flex-wrap justify-center gap-3">
     <Button
       class="cursor-pointer"
-      href="https://copyspeak.vercel.app/"
+      href="https://copyspeak.ilyaizen.link/"
       target="_blank"
       rel="noopener noreferrer"
       variant="outline"
       size="sm"
-      onclick={(event) => openProvider(event, "https://copyspeak.vercel.app/")}
+      onclick={(event) => openProvider(event, "https://copyspeak.ilyaizen.link/")}
     >
       {$_("settings.about.website")}
     </Button>

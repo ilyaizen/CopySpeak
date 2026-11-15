@@ -26,6 +26,7 @@
   import { Button } from "#lib/components/ui/button/index.js";
   import { _ } from "svelte-i18n";
   import { groundParallax } from "#lib/utils/ground-parallax";
+  import { COPYSPEAK_RYBBIT_SITE_ID, rybbitScriptSrc } from "#lib/utils/web-analytics";
 
   let { children } = $props();
 
@@ -241,6 +242,7 @@
       name="description"
       content="AI text-to-speech for your clipboard. Copy the same text twice and hear it read aloud."
     />
+    <script src={rybbitScriptSrc(COPYSPEAK_RYBBIT_SITE_ID)} defer></script>
   {/if}
 </svelte:head>
 
