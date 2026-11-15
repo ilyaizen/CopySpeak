@@ -40,7 +40,7 @@ issues in the surrounding shell/settings code; these are outside this UI change.
 
 The redesign adopts a brutalist approach with a muted slate color palette. This design philosophy emphasizes:
 
-- **Subtle edges** - Minimal border radius (3px) for softened brutalist feel
+- **Subtle edges** - Border radius (6px, matches the landing hero CTA) for softened brutalist feel
 - **Cool slate tones** - Muted, desaturated slate and blue-gray colors
 - **Minimalism** - Clean, grid-based layouts with strong hierarchy
 - **Accessibility** - High contrast ratios with theme-aware colors
@@ -97,14 +97,14 @@ The redesign adopts a brutalist approach with a muted slate color palette. This 
 
 ## Border Radius Strategy
 
-### Subtle Edges (3px)
+### Subtle Edges (6px)
 
 ```css
---radius: 3px;
---radius-sm: 2px;
---radius-md: 3px;
---radius-lg: 4px;
---radius-xl: 6px;
+--radius: 6px;      /* same value as the landing hero CTA (.landing .btn) */
+--radius-sm: 4px;
+--radius-md: 6px;   /* var(--radius) */
+--radius-lg: 8px;
+--radius-xl: 12px;
 ```
 
 **Design Rationale**
@@ -286,7 +286,7 @@ base: "rounded-none ..."; /* Changed from rounded-md */
 
 ### Don't Repeat Yourself
 
-- **Consistent Radius**: All components use 3px via `--radius` variable
+- **Consistent Radius**: All components use 6px via `--radius` variable
 - **Theme Variables**: No hardcoded dark mode classes
 - **Base Classes**: Common styles defined once
 - **Utility Functions**: `cn()` for class merging
@@ -380,7 +380,7 @@ base: "rounded-none ..."; /* Changed from rounded-md */
 
 The brutalist redesign successfully implements:
 
-- ✅ Subtle edges (3px radius) throughout
+- ✅ Subtle edges (6px radius) throughout
 - ✅ Muted impressionist cool slate tones
 - ✅ Manual toggle + system preference dark mode
 - ✅ Full accessibility compliance
