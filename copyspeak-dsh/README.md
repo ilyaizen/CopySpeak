@@ -1,160 +1,45 @@
 # CopySpeak read aloud
 
-A DSH plugin that reads assistant replies aloud through the CopySpeak desktop app.
+A DeepSeek Harness plugin that reads assistant replies aloud through the running CopySpeak desktop app.
 
-## What you get
+## Features
 
-- A **CopySpeak** panel in the sidebar, beside Plugins and Automation tasks:
-  - **Read new replies aloud** reads the final reply of each turn in the open session. Intermediate steps of a tool-calling turn are read once, at the end.
-  - **Show captions while reading** highlights the word CopySpeak plays inside the reply text. It is off by default.
-  - **Animate caption highlight** glides the highlight pill from word to word while captions play. It is on by default; off, the highlight jumps between words.
-  - **Follow playback** scrolls the chat to keep the spoken word in view. It is on by default.
-  - A status line tells you whether the CopySpeak app is running.
-- A CopySpeak action in the completed turn's action row.
-- The action shows an outlined speaker when idle. A tooltip reads **Read aloud with CopySpeak**.
-- Clicking the action speaks that message.
-- While the message plays, the action shows the filled speaker in the theme's brand color. Its tooltip reads **Stop reading**.
-- Clicking the action while it plays stops the reading.
-- When playback ends, the action returns to the outlined speaker.
-- A **Read selection** pill beside the host **Quote text** button when you select text in a settled reply:
-  - It reads only the selected words through the same CopySpeak transport.
-  - It highlights the spoken words inside the selection as CopySpeak plays them, even when **Show captions while reading** is off: the action exists to show its words.
-  - The Quote pill stays beside it and keeps its host behavior. In a read-only conversation, where Quote cannot insert, the read action still opens.
-- A floating playback bar in the upper right corner, below the session header's bottom border, while a reply plays. It starts with the colored CopySpeak app logo. Every control is an icon with a tooltip and an accessible label:
-  - **Pause** stops the audio at the current word. The control then shows **Resume**.
-  - **-5 s** rewinds 5 seconds. **+5 s** skips forward 5 seconds. Both controls work while paused.
-  - **Stop** cancels the reading from any page.
-  - **Show in chat** scrolls the chat back to the spoken word and resumes follow. Follow lives in the side panel only, so with captions off this control is the only way back to the spoken line.
+- **Sidebar panel**: Read new replies aloud, captions, highlight animation, follow playback, and CopySpeak status.
+- **Message action**: reads one reply aloud. Click again to stop.
+- **Selection read**: a Read aloud pill beside Quote in a settled reply.
+- **Playback bar**: pause or resume, rewind 5 seconds, skip 5 seconds, stop, and show the spoken line.
+- **Captions**: highlights the spoken word inside the reply when CopySpeak reports timings.
+- **Partial auto-read** (experimental, 0.1.1): reads only the first paragraphs, the last paragraphs, or both ends of each automatic reply. The default is 2 paragraphs from the top and 2 from the bottom.
+
+## Settings
+
+Settings live on the **CopySpeak sidebar panel** only. There is no CopySpeak page in DSH Settings.
+
+Open the panel from the sidebar. When **Read new replies aloud** is on, **Read only part of the reply** appears. Turn it on, choose **Top**, **Bottom**, or **Top and bottom**, and set 1–20 paragraphs for each end. This limit applies to automatic reading only. The message action still reads the whole reply.
 
 ## Requirements
 
-- CopySpeak runs on this machine with its control server on `127.0.0.1:43117` (the default).
-- The reading uses the app's active voice profile.
-- Captions need a CopySpeak build with `GET /status` and an engine that reports caption timings. Timings may be word-level or character-level (ElevenLabs sends one per character); the plugin groups them under the rendered words. Older builds, or an engine without timings, read aloud as usual and show no highlight.
-- The pause and seek controls need a CopySpeak build with `POST /pause`, `POST /resume`, and `POST /seek`. An older build ignores these routes.
-
-## How it works
-
-Every surface shares one transport to the CopySpeak control server:
-
-```
-POST http://127.0.0.1:43117/speak
-{"text": "...", "request_id": "dsh.<stamp>.<n>", "wait": true}
-```
-
-The request uses `mode: 'no-cors'` and a `text/plain` content type. The browser then sends no CORS preflight, and CopySpeak parses the JSON body without inspecting the content type. The response is opaque, so the plugin can tell that the request reached CopySpeak but cannot read a CopySpeak error message. `wait: true` makes the response arrive when playback ends, which restores the idle action state.
-
-Stop uses `POST /stop {"request_id": "<id>"}`, so the plugin cancels exactly its own reading and leaves other integrations alone.
-
-Pause, resume, and seek use the same no-cors `text/plain` path and the same `request_id`, so they also change only this plugin's reading:
-
-```
-POST http://127.0.0.1:43117/pause  {"request_id": "<id>"}
-POST http://127.0.0.1:43117/resume {"request_id": "<id>"}
-POST http://127.0.0.1:43117/seek   {"request_id": "<id>", "delta_ms": -5000}
-```
-
-The bar sends `-5000` for **-5 s** and `5000` for **+5 s**. A paused reading keeps its `wait: true` request open. The request resolves when the reading resumes and ends, or when the reading stops.
-
-Auto-read speaks one reply per turn. The host writes one `turn-tail` node when a turn ends, and its `closing` step is the turn's final assistant reply. The watcher speaks that step, so it skips intermediate steps and never reads a reply halfway through a turn. The Chat history loads after the panel mounts, so the last reply in a reopened session looks new; the watcher speaks a reply only after it watches the Session run a turn. That gate reads `openState` and `running` from the Session snapshot.
-
-Captions and the bar poll one read-only route while a reading runs:
-
-```
-GET http://127.0.0.1:43117/status
-{"active": true, "captions": {"text": "...", "words": [{"text_start": 0, "text_end": 4, "start_ms": 0, "end_ms": 320}]}, "position_ms": 120, "duration_ms": 3200, "paused": false}
-```
-
-CopySpeak reports the caption, the word position, and the pause state it already computes for its own UI, at most once per 100 ms. The route is CORS-open and read-only. The plugin polls it for the whole reading, also with captions off: one snapshot drives the inline highlight, follow, Show in chat, and the bar's pause state. While paused the app keeps `active: true` and a frozen position. The poll stops when the route never answers, and an inactive snapshot removes the highlight. Provider timings are not always words: ElevenLabs reports one entry per character, so the plugin groups entries under the whitespace-delimited words of `captions.text` before aligning them to the rendered message.
-
-The bar shows the app's pause state. A click flips the glyph at once, and the next snapshot confirms it. The app stays the source of truth, because it can also toggle pause from its own window.
-
-The highlight paints inside the message, not in a separate strip:
-
-- The Chat view marks each settled message body with `data-text-interaction-source` and each row with `data-chat-node-key`, so the plugin finds the exact reply the action or the watcher asked for.
-- Caption word offsets index the sanitized text CopySpeak spoke, not the rendered Markdown. For each fragment the plugin aligns the fragment's words onto the rendered text nodes, then paints the active word with the CSS Custom Highlight API (`window.CSS.highlights`, `::highlight(copyspeak-read-word)`). The API cannot round a background, so a positioned layer inside the message paints a rounded brand mark behind the word and recolors the word's text through the highlight.
-- Provider word windows can have gaps between words, and ElevenLabs reports one timing per character. The plugin holds the last painted word across a gap until the next word paints. Only an inactive snapshot, a same-fragment rewind, a reset, or the end of the reading clears the mark.
-- Follow playback uses a wide band. When the spoken word leaves it, its line moves to the upper third of the scrollport, at most once per 400 ms.
-- A manual wheel, touch, or key scroll pauses following for 5 s, so the view does not fight the reading.
-- The bar's **Show in chat** control scrolls to the spoken word at once and resumes following.
-
-### Selection reads
-
-Selecting text in a settled reply opens the chat text-interaction surface. The plugin shadows the host Quote cell for the `quote` key at a lower priority, so the surface renders the host **Quote text** and the CopySpeak **Read selection** actions inside one segmented pill group. The Quote segment keeps the host behavior: it inserts the selection as a quote and dismisses the surface. The read pill speaks exactly the selected text.
-
-- The read pill clones the browser selection range when you click it. That clone is the highlight target: the caption aligner maps the spoken fragment onto the selected words only, so words outside the selection never paint.
-- The pointer-down handler prevents the browser default, so clicking either pill does not collapse the selection before the range clone is taken.
-- A selection reading always paints its spoken words, even with **Show captions while reading** off. The other reading surfaces still follow that switch.
-- The host admits a selection only when both ends sit in one rendered reply body. A selection that crosses two replies never opens the surface.
-- In a read-only conversation, the host Quote admission refuses to open a surface. The plugin registers its own `copyspeak-read-selection` interaction for that case, so the read action still opens; the surface then shows the read pill only, because Quote cannot insert there.
-- The reading stops at the end of the selection or at the playback bar's Stop control. It uses the same status poll, captions, follow, pause, seek, and bar as a message reading.
-- A double-click in a settled reply selects the paragraph that holds the double-clicked word, so the same surface opens for the whole paragraph: Quote text and Read aloud act on it like a manual selection. Buttons, links, and excluded regions keep their native double-click behavior. The host chat view re-dispatches its selection trigger on every selection change outside a pointer gesture, so replacing the word selection opens the pill with the paragraph text.
-- The Quote and Read controls render as one segmented pill group: one rounded floating container, one flat segment per action.
-
-The caption position counts inside one spoken fragment. A normal fragment change starts the count again, so the plugin aligns forward from its last matched word. A position that drops by more than 300 ms on the same fragment is a rewind: the plugin aligns again from the start of the message, so the highlight and follow find the spoken word again.
-
-Slots:
-
-- `sidebar.panellist` – the CopySpeak icon in the sidebar, id `copyspeak`.
-- `main` – the CopySpeak panel, key `copyspeak`.
-- `conversation.chat.assistant-actions` – the speaker action in the completed turn's action row.
-- `conversation.composer.dock` – a null-rendering per-session watcher that speaks the final reply of each completed turn and runs the caption highlight.
-- `shell.overlay` – the floating playback bar, id `copyspeak-playback`.
-- `conversation.chat.text-interaction` – the selection pill row. Key `quote` registers at priority -10, so it shadows the host Quote cell and renders both pills; key `copyspeak-read-selection` renders the read pill for a conversation where Quote cannot open. A keyed cell with a lower priority shadows the same key at a higher one, and only the lowest live priority renders.
-
-The switches live in the page's `localStorage` under `dsh.copyspeak-voice.auto-read`, `dsh.copyspeak-voice.captions`, `dsh.copyspeak-voice.animation`, and `dsh.copyspeak-voice.follow`. Auto-read and captions are off when their key is absent; follow and the animation are on.
-
-## Icon
-
-The sidebar panel icon is the outlined read mark that the message action shows while idle: a speaker with two waves in `currentColor`, so it follows light and dark themes. The action shows the filled speaker in the brand color while the message plays. `icon.svg` is the colored app-logo mark for the Plugin Manager, which renders it as an `<img>`. It shows a tilted rounded box with a transparent face, a speaker, and sound waves in a mint and teal palette. The playback bar embeds that same colored logo at its head as a data URI, so it needs no asset build step.
-
-## Limits
-
-- The control server answers no CORS preflight, so the plugin never learns why CopySpeak rejected a request. A silent reading usually means a CopySpeak configuration problem (voice profile, engine credential).
-- CopySpeak truncates the text to its configured `max_text_length`.
-- Code blocks are removed from the spoken text.
-- The highlight paints only while the reply is on screen and only while `/status` answers. It also stays hidden for a fragment whose words cannot be found in the rendered text, such as a number the sanitizer spells out or a reply in a spaceless script where the spoken words and the rendered words tokenize differently.
-- A selection read speaks the rendered text, including code blocks and inline code. Only a whole-message read removes Markdown code blocks.
-- The selection highlight stops when the chat replaces the reply's text nodes and the cloned range detaches. The audio continues, and the bar and Stop still work.
-- Auto-read starts at the next completed turn. Enabling it never replays old turns.
-- A paused reading keeps the `wait: true` request open. The action row keeps its Stop glyph, and auto-read waits until the reading resumes and ends. Stop ends the reading at once.
-- An app older than the pause and seek routes ignores them. The pause glyph then reverts at the next snapshot, and a seek does nothing.
-- Seek stays enabled while the reading is paused. A reading resumed after a seek plays from the new position.
-- Without `/status`, the floating bar still stops and scrolls. Pause and seek have no app state to show, and the highlight stays hidden.
-- The switches, the pause state, and the playback state are per page tab.
-- A `/speak` request with `wait: true` blocks until playback finishes or the user stops it. If playback runs longer than 600 seconds (10 minutes), the server answers with success anyway and logs a warning. The opaque no-cors response cannot distinguish this timeout from a normal completion.
-
-## Files
-
-- `package.json` – bundle manifest, `dsh.bundle` patch, `dsh.client` declaration.
-- `cordis.patch.yml` – inserts the `copyspeak-voice` Loader row.
-- `index.js` – no-op host half, keeps the bundle row loadable.
-- `client.js` – the browser half: panel and action glyphs, preferences, CopySpeak transport and pause/seek controls, caption alignment and highlight, follow scrolling, the selection pill row, the icon-only playback bar, and seven slot registrations.
-- `locale/en.json` – Plugin Manager title and description.
-- `icon.svg` – the colored app-logo mark for the Plugin Manager, rendered as an `<img>`.
+- CopySpeak runs on this machine with its control server on `127.0.0.1:43117`.
+- Captions need a CopySpeak build with `GET /status` and an engine that reports timings.
+- Pause and seek need `POST /pause`, `POST /resume`, and `POST /seek`.
 
 ## Install
 
-The install adds the bundle `@local/copyspeak-voice` to the active DSH profile and links this directory. The profile reads the files directly, so later edits reach the running app. The plugin stays installed across DSH restarts.
-
-### Before you install
-
-- CopySpeak is installed and running on this machine. See [Requirements](#requirements).
-- The session uses the DSH profile that gets the plugin. An install from another profile puts the plugin there.
-
-### Install the bundle
-
-1. Call the `plugin_manager` tool with `action: install_bundle` and the absolute path of this directory:
+1. Call `plugin_manager` with `action: install_bundle` and this directory's absolute path:
 
    ```
    target: D:\Projects\CopySpeak\copyspeak-dsh
    ```
 
-   Use the path of the checkout that holds `package.json`. On another machine, that path differs.
+2. Open **Plugins** and check that **CopySpeak read aloud** is installed.
+3. Open the CopySpeak panel from the sidebar. The status line reads **CopySpeak is running.**
+4. Send a message and click the speaker in the reply's action row.
 
-2. Read the result. `application: applied` means the plugin runs now. A warning or a pending install script needs a decision before you continue.
-3. Open Plugins and find **CopySpeak read aloud** in the Installed list. The card shows the colored app logo as its icon.
-4. Look for the CopySpeak icon in the sidebar. Open the panel. The status line reads **CopySpeak is running.**
-5. Send a message, then click the speaker in its action row. CopySpeak reads the reply.
+The install writes to the active profile, so it needs `danger-full-access` or one approval.
 
-The tool call needs the `danger-full-access` preset, or one approval, because the install writes outside this directory.
+## Limits
+
+- Auto-read starts at the next completed turn. It never replays old turns.
+- Code blocks are removed from the spoken text. A selection read speaks the rendered text, including code.
+- Most control routes send no CORS headers, so the plugin cannot read CopySpeak error messages. A silent read usually means a CopySpeak voice or engine problem.
+- The switches are per page tab.

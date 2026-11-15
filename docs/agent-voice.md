@@ -57,10 +57,14 @@ The DSH plugin is a separate package in `copyspeak-dsh/` (not part of the app bu
 
 Install it into a DSH profile with the Plugin Manager's `install_bundle` action pointed at the `copyspeak-dsh` directory. The profile links that directory, so browser-half edits reach an open page through Client HMR; a host-half edit needs a DSH restart.
 
-The panel carries two switches, stored in the page's `localStorage`:
+The panel is the only settings place. It carries four switches, stored in the page's `localStorage`:
 
 - **Read new replies aloud** reads each reply in the open session when it settles. It starts at the next reply and never replays old ones.
 - **Show captions while reading** highlights the word CopySpeak plays inside the reply text. It is off by default.
+- **Animate caption highlight** glides the highlight between words.
+- **Follow playback** scrolls the chat to keep the spoken word in view.
+
+With automatic reading on, an experimental **Read only part of the reply** switch adds the top, bottom, or both-ends limit: 1–20 paragraphs per end, default 2 and 2. The limit applies only to automatic reads; the speaker action always reads the whole reply.
 
 Speech goes to `POST /speak` with `wait: true`, so the speaker action returns to idle when playback ends. One reading runs at a time: a new reading stops the previous one by request id. The watcher and the speaker action strip Markdown with the same `toSpeech()` pass before posting; code fences are removed, inline code is kept.
 
