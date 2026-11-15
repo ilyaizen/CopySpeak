@@ -264,7 +264,7 @@
           <div class="flex flex-wrap gap-1 md:flex-col">
             {#each visibleSections as section (section.id)}
               <button
-                class="side-nav-button focus-visible:ring-ring flex items-center rounded-md px-2 py-1.5 text-start text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none md:w-full {activeSection ===
+                class="side-nav-button settings-nav-button focus-visible:ring-ring flex items-center rounded-md px-2 py-1.5 text-start font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none md:w-full {activeSection ===
                 section.id
                   ? 'text-foreground'
                   : 'text-muted-foreground hover:text-foreground'}"

@@ -267,7 +267,7 @@
 
 .app-nav-link {
   position: relative;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 16px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -329,6 +329,22 @@
   .side-nav-label::after {
     transition: none;
   }
+}
+
+/* Settings sidebar: same type as .app-nav-link. Hebrew has no case and
+   tracking splits its letters, so RTL drops those and uses the app font. */
+.settings-nav-button {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+[dir="rtl"] .settings-nav-button {
+  font-family: inherit;
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 [dir="rtl"] .app-nav-link {
