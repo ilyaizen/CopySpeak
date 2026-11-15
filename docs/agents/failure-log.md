@@ -63,6 +63,9 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Engines
 
+- Keep the engine-test lock separate from displayed results; invalidate results after credential replacement or installer changes.
+- Stop cloud engine tests when the environment-key warning defers saving; a resolved save callback does not prove persistence.
+
 - The app loads secrets from `<exe-dir>/.env` (`src-tauri/target/debug/.env` in dev), not the repo-root `.env`.
 - A "called from X" comment is not the call site — `local_daemon.rs` claimed prewarm ran "from the set_config path" while `set_config` never called it; grep the named call site before trusting the comment.
 - Local engine wrappers speak daemon protocol v2 (`READY 2`) and emit 16-bit signed LE PCM; `pcm-stream.ts` drops any other `bits_per_sample`.

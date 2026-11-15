@@ -1,26 +1,23 @@
 <script lang="ts">
-  // Presentational card for one engine's setup: credentials, install, test, docs.
-  // Owns no IPC state — driven by callbacks from the parent. Per SRP this
-  // component renders; the page/engine-setup orchestrates.
+  // One engine row. Voice and model settings stay in Profiles.
 
   import { _ } from "svelte-i18n";
   import {
-    Key,
     Download,
     Loader2,
     ExternalLink,
     CheckCircle2,
     XCircle,
     Eye,
-    EyeOff,
-    AlertCircle
+    EyeOff
   } from "@lucide/svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Input } from "#lib/components/ui/input/index.js";
   import { Label } from "#lib/components/ui/label/index.js";
+  import { installStore } from "#lib/stores/install-store.svelte";
   import { openExternal } from "#lib/utils/external-link";
   import type { AppConfig } from "#lib/types";
-  import type { CredentialTarget, EngineSetupEntry, TestState } from "./engine-meta";
+  import type { EngineSetupEntry, TestState } from "./engine-meta";
   import { invoke } from "@tauri-apps/api/core";
 
   // Runtime verdict for local engines: installed + (ONNX engines) whether the
@@ -31,8 +28,8 @@
     provider: string | null;
   }
 
-  // Track which fields are revealed (per credential target, keyed by field name)
-  let revealedFields = $state<Record<string, boolean>>({});
+  // Keep each key masked until its own reveal button is used.
+  let keyRevealed = $state(false);
 
   let runtimeStatus = $state<RuntimeStatus | null>(null);
 
@@ -43,6 +40,8 @@
     testMessage = "",
     onTest,
     onInstall,
+    onCredentialChange,
+    testDisabled = false,
     runtimeProbeKey = 0,
     envKeySources = {}
   }: {
@@ -52,48 +51,46 @@
     testMessage?: string;
     onTest?: () => void;
     onInstall?: () => void;
+    onCredentialChange?: () => void;
+    testDisabled?: boolean;
     /** Bump to re-probe runtime status (e.g. after an install settles). */
     runtimeProbeKey?: number;
     /** engine → winning env var for keys currently provided by .env. */
     envKeySources?: Record<string, string>;
   } = $props();
 
-  // Only local engines with an installer have a runtime status to show.
+  const installRunning = $derived(installStore.isRunning(entry.installerId ?? entry.id));
+  let runtimeError = $state(false);
+
+  // Re-probe after a run ends, even if its dialog was dismissed.
   $effect(() => {
     void runtimeProbeKey;
+    void installRunning;
+    let cancelled = false;
+    runtimeStatus = null;
+    runtimeError = false;
     if (entry.kind !== "local" || !entry.installerId) {
       runtimeStatus = null;
       return;
     }
     void invoke<RuntimeStatus>("engine_runtime_status", { engine: entry.id })
-      .then((s) => (runtimeStatus = s))
-      .catch(() => (runtimeStatus = null));
+      .then((status) => {
+        if (!cancelled) runtimeStatus = status;
+      })
+      .catch(() => {
+        if (!cancelled) runtimeError = true;
+      });
+    return () => {
+      cancelled = true;
+    };
   });
 
-  // ponytail: tts config carries per-engine structs indexed by provider name.
-  // Index through a record; the typed structs are mirrored here just enough to
-  // bind credentials without widening the public TtsConfig type.
   interface CredentialFields {
     api_key?: string;
     endpoint?: string;
   }
-  interface TtsFields extends Record<CredentialTarget, CredentialFields> {}
-  function tts(): TtsFields {
-    const c = localConfig.tts;
-    return {
-      openai: c.openai,
-      elevenlabs: c.elevenlabs,
-      cartesia: c.cartesia,
-      fish: c.fish,
-      xai: c.xai,
-      mistral: c.mistral,
-      google: c.google,
-      microsoft: c.microsoft
-    };
-  }
 
-  function openDocs(e: Event) {
-    e.preventDefault();
+  function openDocs() {
     openExternal(entry.docsUrl);
   }
 
@@ -107,165 +104,179 @@
   );
   const showingEnvSentinel = $derived.by(() => {
     if (!envVarName || !entry.credentialTarget) return false;
-    return (tts()[entry.credentialTarget]?.api_key ?? "") === "";
+    return (localConfig.tts[entry.credentialTarget].api_key ?? "") === "";
   });
+  const credentialFields: CredentialFields | undefined = $derived(
+    entry.credentialTarget ? localConfig.tts[entry.credentialTarget] : undefined
+  );
+  const configured = $derived(
+    entry.credential === "none" ||
+      Boolean(
+        (envVarName || credentialFields?.api_key?.trim()) &&
+        (entry.credential !== "api_key_endpoint" || credentialFields?.endpoint?.trim())
+      )
+  );
+  const canTest = $derived(entry.kind === "local" ? runtimeStatus?.installed === true : configured);
 </script>
 
-<section class="settings-card bg-card scroll-mt-4 rounded-lg border">
-  <header
-    class="settings-separator border-border flex items-center justify-between gap-3 border-b pb-4"
-  >
-    <div class="flex min-w-0 items-center gap-1.5">
-      <h2 class="text-lg font-semibold">{$_(`engine.${entry.id}.title`)}</h2>
-      <span class="bg-muted text-muted-foreground rounded-sm px-1 text-[10px] font-medium">
-        {entry.kind === "local" ? $_("engine.kind.local") : $_("engine.kind.cloud")}
-      </span>
-      {#if envVarName}
-        <span
-          class="rounded bg-emerald-500/10 px-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
-          title={$_("engine.envKeyDialog.title")}
-          aria-label={$_("engine.envKeyDialog.title")}>.env</span
-        >
-      {/if}
+<tr class="border-border border-t">
+  <th role="rowheader" scope="row" class="px-4 py-4 text-start align-top font-normal break-words">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="font-medium">{entry.menuLabel ?? $_(`engine.${entry.id}.title`)}</span>
+      <span class="text-muted-foreground text-xs">{$_(`engine.kind.${entry.kind}`)}</span>
     </div>
-    <button
-      onclick={openDocs}
-      class="text-muted-foreground hover:text-foreground inline-flex shrink-0 cursor-pointer items-center gap-1 text-xs transition-colors"
-    >
-      <ExternalLink size={12} />
-      {$_("engines.docs")}
-    </button>
-  </header>
+    <p class="text-muted-foreground mt-1.5 max-w-xs text-xs leading-relaxed">
+      {$_(`engine.${entry.id}.description`)}
+    </p>
+  </th>
 
-  <p class="text-muted-foreground mt-4 max-w-prose text-sm leading-relaxed">
-    {$_(`engine.${entry.id}.description`)}
-  </p>
-
-  {#if entry.kind === "local" && entry.installerId && runtimeStatus}
-    <div class="mt-2 flex items-center gap-2">
-      {#if runtimeStatus.installed}
-        <span
-          class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400"
-        >
-          <CheckCircle2 size={12} />
-          Installed
-          {#if runtimeStatus.provider === "cuda"}
-            · GPU (CUDA)
-          {:else if runtimeStatus.provider === "cpu"}
-            · CPU
-          {/if}
-        </span>
-      {:else}
-        <span
-          class="text-muted-foreground bg-muted inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium"
-        >
-          <AlertCircle size={12} />
-          Not installed
-        </span>
-      {/if}
-    </div>
-  {/if}
-
-  <div class="space-y-4 pt-4">
-    {#if entry.credential === "api_key" || entry.credential === "api_key_endpoint"}
-      {#if entry.credentialTarget}
-        <div class="space-y-2">
-          <Label for="api-key">{$_("engine.apiSetup.apiKey")}</Label>
-          <div class="flex items-center gap-2">
-            <Key size={14} class="text-muted-foreground shrink-0" />
-            <Input
-              id="api-key"
-              type={revealedFields[entry.credentialTarget! + "-api_key"] ? "text" : "password"}
-              placeholder={showingEnvSentinel
-                ? $_("engine.apiSetup.envSentinel")
-                : entry.placeholderKey
-                  ? $_(`engine.apiSetup.${entry.placeholderKey}`)
-                  : ""}
-              value={tts()[entry.credentialTarget]?.api_key ?? ""}
-              oninput={(e) => {
-                const t = tts();
-                if (t[entry.credentialTarget!]) {
-                  t[entry.credentialTarget!].api_key = e.currentTarget.value;
-                }
-              }}
-            />
-            {#if !showingEnvSentinel}
-              <button
-                type="button"
-                class="text-muted-foreground hover:text-foreground shrink-0 cursor-pointer transition-colors"
-                onclick={() => {
-                  const key = entry.credentialTarget! + "-api_key";
-                  revealedFields = { ...revealedFields, [key]: !revealedFields[key] };
-                }}
-                aria-label={revealedFields[entry.credentialTarget! + "-api_key"]
-                  ? "Hide API key"
-                  : "Show API key"}
-              >
-                {#if revealedFields[entry.credentialTarget! + "-api_key"]}
-                  <EyeOff size={14} />
-                {:else}
-                  <Eye size={14} />
-                {/if}
-              </button>
-            {/if}
-          </div>
-        </div>
-      {/if}
-
-      {#if entry.credential === "api_key_endpoint" && entry.credentialTarget}
-        <div class="space-y-2">
-          <Label for="endpoint">{$_("engine.apiSetup.endpointLabel")}</Label>
+  <td role="cell" class="px-4 py-4 align-top">
+    {#if entry.credentialTarget && credentialFields}
+      <div class="space-y-2">
+        <Label for={`api-key-${entry.id}`} class="text-xs">{$_("engine.apiSetup.apiKey")}</Label>
+        <div class="relative">
           <Input
-            id="endpoint"
-            type="text"
-            placeholder={$_("engine.apiSetup.endpointPlaceholder")}
-            value={tts()[entry.credentialTarget]?.endpoint ?? ""}
+            id={`api-key-${entry.id}`}
+            aria-label={`${$_(`engine.${entry.id}.title`)} ${$_("engine.apiSetup.apiKey")}`}
+            type={keyRevealed ? "text" : "password"}
+            autocomplete="off"
+            spellcheck={false}
+            disabled={testDisabled}
+            class="min-w-0 pe-10 text-sm"
+            placeholder={showingEnvSentinel
+              ? $_("engine.apiSetup.envSentinel")
+              : entry.placeholderKey
+                ? $_(`engine.apiSetup.${entry.placeholderKey}`)
+                : ""}
+            value={credentialFields.api_key ?? ""}
             oninput={(e) => {
-              const t = tts();
-              if (t[entry.credentialTarget!]) {
-                t[entry.credentialTarget!].endpoint = e.currentTarget.value;
-              }
+              if (credentialFields) credentialFields.api_key = e.currentTarget.value;
+              onCredentialChange?.();
             }}
           />
+          {#if !showingEnvSentinel}
+            <button
+              type="button"
+              class="text-muted-foreground hover:text-foreground focus-visible:ring-ring absolute inset-y-0 end-0 flex w-10 cursor-pointer items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
+              onclick={() => (keyRevealed = !keyRevealed)}
+              aria-label={`${$_(`engine.${entry.id}.title`)}: ${keyRevealed ? $_("engines.dashboard.hideKey") : $_("engines.dashboard.showKey")}`}
+              aria-pressed={keyRevealed}
+            >
+              {#if keyRevealed}<EyeOff size={14} />{:else}<Eye size={14} />{/if}
+            </button>
+          {/if}
         </div>
-      {/if}
-    {:else if entry.kind === "cloud"}
-      <p class="text-muted-foreground text-sm">{$_("engines.noCredentialNeeded")}</p>
-    {/if}
-
-    {#if entry.installerId}
-      <div class="flex flex-wrap items-center gap-3">
-        <Button variant="outline" size="sm" onclick={() => onInstall?.()}>
-          <Download size={14} class="me-2" />
-          {$_("engine.setup.installManage")}
-        </Button>
-        <span class="text-muted-foreground text-xs">{$_("engines.installerSmokeTestHint")}</span>
-      </div>
-    {/if}
-
-    <div class="settings-separator border-border flex flex-wrap items-center gap-3 border-t pt-4">
-      <Button size="sm" disabled={testState === "testing"} onclick={() => onTest?.()}>
-        {#if testState === "testing"}
-          <Loader2 size={14} class="me-2 animate-spin" />
-          {$_("engine.testing")}
-        {:else if entry.kind === "local"}
-          {$_("engine.localEngine.testEngine")}
-        {:else}
-          {$_("engine.apiSetup.testButton")}
+        {#if envVarName}
+          <p class="text-muted-foreground text-xs break-all">
+            {envVarName} <span class="font-mono">(.env)</span>
+          </p>
         {/if}
-      </Button>
+        {#if entry.credential === "api_key_endpoint"}
+          <Label for={`endpoint-${entry.id}`} class="text-xs"
+            >{$_("engine.apiSetup.endpointLabel")}</Label
+          >
+          <Input
+            id={`endpoint-${entry.id}`}
+            type="url"
+            disabled={testDisabled}
+            aria-label={`${$_(`engine.${entry.id}.title`)} ${$_("engine.apiSetup.endpointLabel")}`}
+            placeholder={$_("engine.apiSetup.endpointPlaceholder")}
+            value={credentialFields.endpoint ?? ""}
+            oninput={(e) => {
+              if (credentialFields) credentialFields.endpoint = e.currentTarget.value;
+              onCredentialChange?.();
+            }}
+          />
+        {/if}
+      </div>
+    {:else if entry.installerId}
+      <div class="space-y-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={testDisabled && !installRunning}
+          onclick={() => onInstall?.()}
+        >
+          {#if installRunning}<Loader2 size={14} class="me-2 animate-spin" />{:else}<Download
+              size={14}
+              class="me-2"
+            />{/if}
+          {runtimeStatus?.installed === false && !installRunning
+            ? $_("engine.setup.install")
+            : $_("engine.setup.installManage")}
+        </Button>
+        <p class="text-muted-foreground text-xs">{entry.downloadSize}</p>
+      </div>
+    {:else}
+      <p class="text-muted-foreground text-xs">{$_("engines.noCredentialNeeded")}</p>
+    {/if}
+  </td>
 
-      {#if testState === "success"}
-        <span class="inline-flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400">
-          <CheckCircle2 size={14} />
-          {$_("engine.apiSetup.testPassed")}
-        </span>
+  <td role="cell" class="px-4 py-4 align-top break-words">
+    <div class="space-y-1.5 text-xs" role="status">
+      {#if installRunning || testState === "testing"}
+        <span class="text-muted-foreground inline-flex items-center gap-1.5"
+          ><Loader2 size={12} class="animate-spin" />{installRunning
+            ? $_("engines.dashboard.installing")
+            : $_("engine.testing")}</span
+        >
+      {:else if testState === "success"}
+        <span class="text-foreground inline-flex items-center gap-1.5"
+          ><CheckCircle2 size={12} />{$_("engine.apiSetup.testPassed")}</span
+        >
       {:else if testState === "fail"}
-        <span class="text-destructive inline-flex items-center gap-1 text-sm">
-          <XCircle size={14} />
-          {testMessage || $_("engine.apiSetup.testFailed")}
-        </span>
+        <span class="text-destructive inline-flex items-center gap-1.5"
+          ><XCircle size={12} />{$_("engine.apiSetup.testFailed")}</span
+        >
+      {:else if entry.kind === "local"}
+        <span class="text-muted-foreground"
+          >{runtimeError
+            ? $_("engines.dashboard.statusUnknown")
+            : !runtimeStatus
+              ? $_("common.loading")
+              : runtimeStatus.installed
+                ? $_("engines.voiceInstalled")
+                : $_("engines.dashboard.notInstalled")}</span
+        >
+      {:else}
+        <span class={configured ? "text-foreground" : "text-muted-foreground"}
+          >{entry.credential === "none"
+            ? $_("engines.dashboard.noKey")
+            : configured
+              ? $_("engines.dashboard.keySet")
+              : $_("engines.dashboard.keyRequired")}</span
+        >
+      {/if}
+      {#if testState === "fail" && testMessage}
+        <p class="text-destructive [overflow-wrap:anywhere] whitespace-pre-wrap">{testMessage}</p>
+      {/if}
+      {#if runtimeStatus?.installed && runtimeStatus.provider}
+        <p class="text-muted-foreground uppercase">
+          {runtimeStatus.provider === "cuda" ? "GPU (CUDA)" : runtimeStatus.provider}
+        </p>
       {/if}
     </div>
-  </div>
-</section>
+  </td>
+
+  <td role="cell" class="px-4 py-4 text-end align-top">
+    <div class="engine-actions flex flex-wrap items-center justify-end gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={testDisabled || !canTest}
+        onclick={() => onTest?.()}
+        aria-label={`${$_("common.test")} ${$_(`engine.${entry.id}.title`)}`}
+      >
+        {$_("common.test")}
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onclick={openDocs}
+        aria-label={`${$_(`engine.${entry.id}.title`)}: ${$_("engines.docs")}`}
+      >
+        <ExternalLink size={14} />
+      </Button>
+    </div>
+  </td>
+</tr>

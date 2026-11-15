@@ -143,7 +143,15 @@
     </div>
   {:else if localConfig}
     <main class="w-full min-w-0 pb-4">
-      <EngineSetup bind:localConfig isDirty={hasChanges} onSave={saveConfig} {envKeySources} />
+      <EngineSetup
+        bind:localConfig
+        isDirty={hasChanges}
+        onSave={async () => {
+          await saveConfig();
+          if (hasChanges) throw new Error($_("engines.saveBeforeTestFailed"));
+        }}
+        {envKeySources}
+      />
     </main>
   {:else}
     <div class="flex min-h-[60vh] items-center justify-center px-6">

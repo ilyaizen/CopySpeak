@@ -32,7 +32,7 @@ export interface EngineSetupEntry {
   /** Unique id; also the i18n key suffix under `engine.<id>.title/description`. */
   id: string;
   /**
-   * Short sidebar label, kept shorter than the panel title so the menu scans
+   * Short engine label, kept shorter than the full title so the table scans
    * fast ("Microsoft", not "Microsoft Foundry"). Brand names stay untranslated
    * (see onboarding/engine-choices.ts); falls back to `engine.<id>.title`.
    */
@@ -130,8 +130,7 @@ export const CLOUD_ENGINES: EngineSetupEntry[] = [
   }
 ];
 
-// Local engines: installed via a PowerShell installer (uv-based). The installer's
-// own smoke test is the verification path — there is no runtime per-engine test.
+// Local engines use the install dialog and one-shot synthesis tests.
 export const LOCAL_ENGINES: EngineSetupEntry[] = [
   {
     id: "kitten",

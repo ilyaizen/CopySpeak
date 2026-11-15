@@ -1,18 +1,16 @@
 <script lang="ts">
-  // Engine setup orchestrator: sidebar (cloud + local groups) + panel.
-  // Owns test/install state machines and IPC. Ensures credentials are saved
-  // before a test, since test_tts_engine_config reads from persisted state.
+  // Save credentials before cloud tests, which read persisted configuration.
 
+  import { onDestroy, untrack } from "svelte";
   import { toast } from "svelte-sonner";
   import { _ } from "svelte-i18n";
   import { invoke } from "@tauri-apps/api/core";
   import EnginePanel from "./engine-panel.svelte";
   import InstallDialog from "./install-dialog.svelte";
-  import MotionWrapper from "#lib/components/layout/motion-wrapper.svelte";
-  import { animationsStore } from "#lib/stores/animations-store.svelte";
+  import { Button } from "#lib/components/ui/button/index.js";
+  import { installStore } from "#lib/stores/install-store.svelte";
   import {
     ALL_SETUP_ENTRIES,
-    CLOUD_ENGINES,
     LOCAL_ENGINES,
     type EngineSetupEntry,
     type TestState
@@ -32,79 +30,89 @@
     envKeySources?: Record<string, string>;
   } = $props();
 
-  const ALL = ALL_SETUP_ENTRIES;
-
-  // Default to the active profile's cloud engine when possible, else first cloud.
-  const initialId = (() => {
-    const active = localConfig.tts.profiles.find((p) => p.id === localConfig.tts.active_profile_id);
-    if (active && CLOUD_ENGINES.some((e) => e.id === active.engine)) {
-      return active.engine;
-    }
-    return CLOUD_ENGINES[0].id;
-  })();
-  let selectedId = $state<string>(initialId);
+  let filter = $state<"all" | "cloud" | "local">("all");
+  const filters = ["all", "cloud", "local"] as const;
+  const visibleEntries = $derived(
+    ALL_SETUP_ENTRIES.filter((entry) => filter === "all" || entry.kind === filter)
+  );
+  let activeTest = $state<string | null>(null);
+  const testing = $derived(activeTest !== null);
+  const installing = $derived(Object.values(installStore.runs).some((run) => run.running));
 
   let testStates = $state<Record<string, TestState>>({});
   let testMessages = $state<Record<string, string>>({});
+  const testRevisions: Record<string, number> = {};
+  let destroyed = false;
+  onDestroy(() => {
+    destroyed = true;
+  });
+
+  function clearTest(id: string) {
+    testRevisions[id] = (testRevisions[id] ?? 0) + 1;
+    testStates = { ...testStates, [id]: "idle" };
+    testMessages = { ...testMessages, [id]: "" };
+  }
+
+  // Observe replacements too, including Cancel from the shared save bar.
+  for (const entry of ALL_SETUP_ENTRIES) {
+    const target = entry.credentialTarget;
+    if (!target) continue;
+    $effect(() => {
+      void localConfig.tts[target].api_key;
+      if (target === "microsoft") void localConfig.tts.microsoft.endpoint;
+      void envKeySources[target];
+      untrack(() => clearTest(entry.id));
+    });
+  }
   // Bumped whenever an install/uninstall settles so the panel's runtime
   // status chip (installed / CPU / GPU) re-probes.
   let runtimeProbeKey = $state(0);
   // Non-null opens the streamed install/uninstall dialog for that engine.
   let installDialogEntry = $state<EngineSetupEntry | null>(null);
 
-  const selected = $derived(ALL.find((e) => e.id === selectedId) ?? CLOUD_ENGINES[0]);
+  for (const entry of LOCAL_ENGINES) {
+    $effect(() => {
+      void installStore.isRunning(entry.installerId ?? entry.id);
+      untrack(() => clearTest(entry.id));
+    });
+  }
 
   function testState(id: string): TestState {
-    return testStates[id] ?? "idle";
+    return activeTest === id ? "testing" : (testStates[id] ?? "idle");
   }
 
   async function runTest(entry: EngineSetupEntry) {
-    // Local engines are tested by real synthesis (test_local_engine); they
-    // have no credentials, so skip the save-before-test flush. Cloud tests
-    // read from persisted state, so unsaved creds must be flushed first.
-    if (entry.kind === "local") {
-      await runLocalTest(entry);
-      return;
-    }
-    if (isDirty) {
-      try {
-        await onSave();
-      } catch {
-        toast.error($_("engines.saveBeforeTestFailed"));
-        return;
+    if (testing || installing || installDialogEntry) return;
+    activeTest = entry.id;
+    clearTest(entry.id);
+    const revision = testRevisions[entry.id];
+    const isCurrent = () => !destroyed && testRevisions[entry.id] === revision;
+    try {
+      if (entry.kind === "cloud" && isDirty) {
+        try {
+          await onSave();
+        } catch {
+          if (isCurrent()) {
+            clearTest(entry.id);
+            toast.error($_("engines.saveBeforeTestFailed"));
+          }
+          return;
+        }
       }
-    }
-    testStates = { ...testStates, [entry.id]: "testing" };
-    try {
-      const result = await invoke<{ success: boolean; message: string }>("test_tts_engine_config", {
-        engine: entry.id
-      });
+      if (!isCurrent()) return;
+      const result = await invoke<{ success: boolean; message: string }>(
+        entry.kind === "local" ? "test_local_engine" : "test_tts_engine_config",
+        { engine: entry.installerId ?? entry.id }
+      );
+      if (!isCurrent()) return;
       testStates = { ...testStates, [entry.id]: result.success ? "success" : "fail" };
       testMessages = { ...testMessages, [entry.id]: result.message };
-      if (result.success) toast.success($_("engine.apiSetup.testPassed"));
     } catch (e) {
+      if (!isCurrent()) return;
       testStates = { ...testStates, [entry.id]: "fail" };
       testMessages = { ...testMessages, [entry.id]: String(e) };
-      toast.error(`${$_("engine.apiSetup.testFailed")}: ${e}`);
-    }
-  }
-
-  // Real-synthesis test for a uv-installed local engine. The engine id (piper,
-  // kokoro, kitten) maps to a stable CLI spec in Rust.
-  async function runLocalTest(entry: EngineSetupEntry) {
-    testStates = { ...testStates, [entry.id]: "testing" };
-    try {
-      const result = await invoke<{ success: boolean; message: string }>("test_local_engine", {
-        engine: entry.installerId ?? entry.id
-      });
-      testStates = { ...testStates, [entry.id]: result.success ? "success" : "fail" };
-      testMessages = { ...testMessages, [entry.id]: result.message };
-      if (result.success) toast.success($_("engine.localEngine.engineWorking"));
-      else toast.error($_("engine.localEngine.engineFailed"));
-    } catch (e) {
-      testStates = { ...testStates, [entry.id]: "fail" };
-      testMessages = { ...testMessages, [entry.id]: String(e) };
-      toast.error(`${$_("engine.localEngine.engineFailed")}: ${e}`);
+    } finally {
+      activeTest = null;
     }
   }
 
@@ -112,57 +120,80 @@
   // log, the voice picker, and uninstall. Nothing installs fire-and-forget,
   // so a failure can no longer look like a success.
   function runInstall(entry: EngineSetupEntry) {
-    if (!entry.installerId) return;
+    if (!entry.installerId || testing || (installing && !installStore.isRunning(entry.installerId)))
+      return;
     installDialogEntry = entry;
   }
 </script>
 
-<div class="flex min-w-0 flex-col items-stretch gap-4 sm:flex-row sm:items-start sm:gap-5">
-  <aside class="min-w-0 shrink-0 self-stretch sm:w-36">
-    <nav class="grid grid-cols-2 gap-0.5 sm:block sm:space-y-0.5">
-      {#each CLOUD_ENGINES as entry (entry.id)}
-        <button
-          class="side-nav-button focus-visible:ring-ring flex w-full items-center justify-between gap-1 rounded-md px-2 py-1.5 text-start text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none {selectedId ===
-          entry.id
-            ? 'text-foreground font-medium'
-            : 'text-muted-foreground hover:text-foreground'}"
-          aria-pressed={selectedId === entry.id}
-          onclick={() => (selectedId = entry.id)}
-        >
-          <span class="side-nav-label">{entry.menuLabel ?? $_(`engine.${entry.id}.title`)}</span>
-        </button>
-      {/each}
-      {#each LOCAL_ENGINES as entry (entry.id)}
-        <button
-          class="side-nav-button focus-visible:ring-ring block w-full rounded-md px-2 py-1.5 text-start text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none {selectedId ===
-          entry.id
-            ? 'text-foreground font-medium'
-            : 'text-muted-foreground hover:text-foreground'}"
-          aria-pressed={selectedId === entry.id}
-          onclick={() => (selectedId = entry.id)}
-        >
-          <span class="side-nav-label">{entry.menuLabel ?? $_(`engine.${entry.id}.title`)}</span>
-        </button>
-      {/each}
-    </nav>
-  </aside>
+<section class="min-w-0 space-y-5 pb-20" aria-label={$_("engines.dashboard.title")}>
+  <header>
+    <div class="space-y-1.5">
+      <h1 class="text-2xl font-semibold tracking-tight">{$_("engines.dashboard.title")}</h1>
+      <p class="text-muted-foreground max-w-2xl text-sm">{$_("engines.dashboard.description")}</p>
+    </div>
+  </header>
 
-  <main class="min-w-0 flex-1 space-y-6 pb-20">
-    {#key selectedId}
-      <MotionWrapper disableMotion={!animationsStore.effective}>
-        <EnginePanel
-          bind:localConfig
-          entry={selected}
-          testState={testState(selected.id)}
-          testMessage={testMessages[selected.id] ?? ""}
-          onTest={() => runTest(selected)}
-          onInstall={() => runInstall(selected)}
-          {runtimeProbeKey}
-          {envKeySources}
-        />
-      </MotionWrapper>
-    {/key}
-  </main>
+  <div class="engine-table-wrapper">
+    <div class="flex flex-wrap items-center justify-between gap-3 pb-3">
+      <div
+        class="inline-flex flex-wrap gap-1"
+        role="group"
+        aria-label={$_("engines.dashboard.filter")}
+      >
+        {#each filters as kind (kind)}
+          <Button
+            variant={filter === kind ? "secondary" : "ghost"}
+            size="sm"
+            aria-pressed={filter === kind}
+            onclick={() => (filter = kind)}
+          >
+            {kind === "all" ? $_("engines.dashboard.all") : $_(`engine.kind.${kind}`)}
+          </Button>
+        {/each}
+      </div>
+      <p class="text-muted-foreground text-xs">{$_("engines.dashboard.profileHint")}</p>
+    </div>
+    <div class="border-border rounded-md border">
+      <table
+        aria-label={$_("engines.dashboard.title")}
+        class="engine-table w-full table-fixed border-collapse text-start text-sm"
+      >
+        <thead class="bg-muted/40 text-muted-foreground text-xs">
+          <tr>
+            <th scope="col" class="w-[23%] px-4 py-3 text-start font-medium"
+              >{$_("engines.dashboard.engine")}</th
+            >
+            <th scope="col" class="w-[35%] px-4 py-3 text-start font-medium"
+              >{$_("engines.dashboard.configuration")}</th
+            >
+            <th scope="col" class="px-4 py-3 text-start font-medium"
+              >{$_("engines.dashboard.status")}</th
+            >
+            <th scope="col" class="px-4 py-3 text-end font-medium"
+              >{$_("engines.dashboard.actions")}</th
+            >
+          </tr>
+        </thead>
+        <tbody>
+          {#each visibleEntries as entry (entry.id)}
+            <EnginePanel
+              bind:localConfig
+              {entry}
+              testState={testState(entry.id)}
+              testMessage={testMessages[entry.id] ?? ""}
+              testDisabled={testing || installing || installDialogEntry !== null}
+              onTest={() => runTest(entry)}
+              onInstall={() => runInstall(entry)}
+              onCredentialChange={() => clearTest(entry.id)}
+              {runtimeProbeKey}
+              {envKeySources}
+            />
+          {/each}
+        </tbody>
+      </table>
+    </div>
+  </div>
 
   {#if installDialogEntry}
     <InstallDialog
@@ -171,9 +202,52 @@
       onchange={() => {
         // A settled install flips the runtime chip and stale test verdicts
         // would be misleading after the change.
-        testStates = {};
+        for (const entry of LOCAL_ENGINES) clearTest(entry.id);
         runtimeProbeKey += 1;
       }}
     />
   {/if}
-</div>
+</section>
+
+<style>
+  .engine-table-wrapper {
+    container-type: inline-size;
+  }
+
+  @container (max-width: 41.999rem) {
+    .engine-table,
+    .engine-table :global(tbody) {
+      display: block;
+    }
+
+    .engine-table thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+
+    .engine-table :global(tbody tr) {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 0.75rem;
+      padding: 1rem;
+    }
+
+    .engine-table :global(tbody tr:first-child) {
+      border-top: 0;
+    }
+
+    .engine-table :global(tbody th),
+    .engine-table :global(tbody td) {
+      min-width: 0;
+      padding: 0;
+      text-align: start;
+    }
+
+    .engine-table :global(.engine-actions) {
+      justify-content: flex-start;
+    }
+  }
+</style>
