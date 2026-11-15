@@ -187,9 +187,7 @@ it("scrolls instantly from the sidebar when reduced motion is enabled", async ()
   Object.defineProperty(motion, "matches", { value: true });
   vi.stubGlobal("matchMedia", () => motion);
   const view = await mountSettings();
-  await fireEvent.click(
-    within(view.getByRole("navigation")).getByRole("button", { name: "Misc" })
-  );
+  await fireEvent.click(within(view.getByRole("navigation")).getByRole("button", { name: "Misc" }));
   expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "instant", block: "start" });
 });
 

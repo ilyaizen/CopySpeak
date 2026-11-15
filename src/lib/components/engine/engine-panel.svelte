@@ -112,7 +112,9 @@
 </script>
 
 <section class="settings-card bg-card scroll-mt-4 rounded-lg border">
-  <header class="settings-separator border-border flex items-center justify-between gap-3 border-b pb-4">
+  <header
+    class="settings-separator border-border flex items-center justify-between gap-3 border-b pb-4"
+  >
     <div class="flex min-w-0 items-center gap-1.5">
       <h2 class="text-lg font-semibold">{$_(`engine.${entry.id}.title`)}</h2>
       <span class="bg-muted text-muted-foreground rounded-sm px-1 text-[10px] font-medium">

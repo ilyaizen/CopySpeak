@@ -805,9 +805,7 @@
     <div class="space-y-4 py-4">
       <!-- Identity -->
       <section class="settings-separator border-b pb-4">
-        <p class="settings-category mb-2">
-          Identity
-        </p>
+        <p class="settings-category mb-2">Identity</p>
         <SettingRow label={$_("common.name")}>
           <Input bind:value={localConfig.tts.profiles[activeIndex].name} class="w-56" />
         </SettingRow>
@@ -815,9 +813,7 @@
 
       <!-- Engine & Voice -->
       <section class="settings-separator space-y-2 border-b pb-4">
-        <p class="settings-category">
-          Engine & Voice
-        </p>
+        <p class="settings-category">Engine & Voice</p>
         <SettingRow label={$_("common.engine")}>
           <div class="w-56 space-y-1">
             <Select
