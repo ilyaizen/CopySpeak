@@ -675,11 +675,8 @@
           {#each captionWords as word, i (word.offset)}<span
               data-word-offset={word.offset}
               data-current={i === currentWord || undefined}
-              class={i === currentWord
-                ? "caption-word-active"
-                : word.end !== null && word.end <= spokenEnd
-                  ? "text-muted-foreground"
-                  : ""}>{word.text}</span
+              class={word.end !== null && word.end <= spokenEnd ? "text-muted-foreground" : ""}
+              >{word.text}</span
             >{:else}{captionText}{/each}
         </div>
       {:else}
@@ -771,16 +768,3 @@
     <RecentHistory compact limit={3} onRestore={restoreReading} />
   {/if}
 </div>
-
-<style>
-  /* The active word keeps only the text color here: the caption glide's pill
-     owns the background (caption-glide.ts), and --caption-word-bg falls back
-     to the theme primary when the pill cannot paint. */
-  .caption-word-active {
-    color: var(--primary-foreground);
-    border-radius: 4px;
-    background: var(--caption-word-bg, var(--primary));
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
-  }
-</style>

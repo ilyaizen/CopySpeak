@@ -8,7 +8,7 @@ import {
   type Status
 } from "./protocol";
 import { paragraphHover } from "./hover";
-import { CaptionGlide, GLIDE_STYLE } from "./glide";
+import { CaptionGlide } from "./glide";
 
 // Repeated scripting.executeScript calls do not install duplicate listeners.
 const marker = "__copyspeak_companion_v1__";
@@ -27,7 +27,6 @@ if (!scope[marker]) {
   } | null = null;
   let observer: MutationObserver | null = null;
   let panel: HTMLElement | null = null;
-  let style: HTMLStyleElement | null = null;
   let pauseButton: HTMLButtonElement | null = null;
   let label: HTMLElement | null = null;
   let glide: CaptionGlide | null = null;
@@ -84,44 +83,108 @@ if (!scope[marker]) {
     if (owner) sendControl("stop");
   };
   // The pill follows page reflows it cannot own: content mutations go
-  // through the reading's observer, window resizes through this listener.
+  // through the reading's observer, resizes and box scrolls through this listener.
   function repositionOnResize() {
     glide?.reposition();
+  }
+  // Follow scroll: the spoken line stays inside this band of its scroll port.
+  // A word outside the band scrolls the port so the word sits on the anchor line.
+  const FOLLOW_BAND_TOP = 0.15;
+  const FOLLOW_BAND_BOTTOM = 0.82;
+  const FOLLOW_ANCHOR = 0.34;
+  // A user scroll gesture owns the view for a moment, so following waits.
+  const FOLLOW_PAUSE_MS = 5000;
+  const FOLLOW_INTERVAL_MS = 400;
+  const FOLLOW_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"]);
+  let followPort: Element | null = null;
+  let followPausedUntil = 0;
+  let lastFollowAt = 0;
+  let paintedWord: string | null = null;
+  /** The nearest scrollable ancestor, or null when the page itself scrolls. */
+  function scrollPort(node: Node): Element | null {
+    let element = node instanceof Element ? node : node.parentElement;
+    while (element !== null && element !== document.documentElement) {
+      const overflow = getComputedStyle(element).overflowY;
+      if (
+        (overflow === "auto" || overflow === "scroll") &&
+        element.scrollHeight > element.clientHeight
+      )
+        return element;
+      element = element.parentElement;
+    }
+    return null;
+  }
+  const pauseFollow = () => {
+    followPausedUntil = Date.now() + FOLLOW_PAUSE_MS;
+  };
+  const pauseFollowKey = (event: KeyboardEvent) => {
+    if (FOLLOW_KEYS.has(event.key)) pauseFollow();
+  };
+  function startFollowing(root: Node) {
+    followPort = scrollPort(root);
+    const target: EventTarget = followPort ?? window;
+    target.addEventListener("wheel", pauseFollow, { passive: true });
+    target.addEventListener("touchstart", pauseFollow, { passive: true });
+    addEventListener("keydown", pauseFollowKey, true);
+    // A box scroll moves the word without moving the document: re-place the pill.
+    followPort?.addEventListener("scroll", repositionOnResize, { passive: true });
+  }
+  function stopFollowing() {
+    const target: EventTarget = followPort ?? window;
+    target.removeEventListener("wheel", pauseFollow);
+    target.removeEventListener("touchstart", pauseFollow);
+    removeEventListener("keydown", pauseFollowKey, true);
+    followPort?.removeEventListener("scroll", repositionOnResize);
+    followPort = null;
+    followPausedUntil = 0;
+    lastFollowAt = 0;
+  }
+  /** Scroll the spoken word back into the band, unless it is already there. */
+  function followWord(range: Range) {
+    const view = document.defaultView;
+    if (view === null) return;
+    const now = Date.now();
+    if (now < followPausedUntil || now - lastFollowAt < FOLLOW_INTERVAL_MS) return;
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) return;
+    const boxTop = followPort === null ? 0 : followPort.getBoundingClientRect().top;
+    const height = followPort === null ? view.innerHeight : followPort.clientHeight;
+    if (height === 0) return;
+    const top = rect.top - boxTop;
+    const bottom = rect.bottom - boxTop;
+    if (top >= height * FOLLOW_BAND_TOP && bottom <= height * FOLLOW_BAND_BOTTOM) return;
+    const reduced =
+      view.matchMedia !== undefined && view.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    lastFollowAt = now;
+    (followPort ?? view).scrollBy({
+      top: top - height * FOLLOW_ANCHOR,
+      behavior: reduced ? "auto" : "smooth"
+    });
   }
   function cleanup() {
     observer?.disconnect();
     observer = null;
     removeEventListener("resize", repositionOnResize);
-    CSS.highlights?.delete("copyspeak-passage");
-    CSS.highlights?.delete("copyspeak-word");
+    stopFollowing();
     glide?.release();
     glide = null;
     panel?.remove();
-    style?.remove();
     panel = null;
-    style = null;
+    paintedWord = null;
     anchor = null;
     owner = null;
     trigger = null;
   }
-  /** Passage highlight plus the playback box, over the current anchor. */
+  /** The playback box, controls and follow scroll, over the current anchor. */
   function present(skip: boolean) {
     if (!anchor?.valid()) {
       stopReading();
       cleanup();
       return;
     }
-    const passage = anchor.range(0, anchor.text.length);
-    if (!passage) {
-      stopReading();
-      cleanup();
-      return;
-    }
-    CSS.highlights.set("copyspeak-passage", new Highlight(passage));
-    style = document.createElement("style");
-    style.textContent = "::highlight(copyspeak-passage){background-color:#8cbcff55}" + GLIDE_STYLE;
-    document.documentElement.append(style);
     glide = new CaptionGlide(document, captionAnimation);
+    paintedWord = null;
+    startFollowing(anchor.root);
     addEventListener("resize", repositionOnResize);
     panel = document.createElement("aside");
     panel.hidden = !showPanel;
@@ -188,19 +251,22 @@ if (!scope[marker]) {
       // playing status through inter-word gaps and fragment tails, and a
       // teardown here makes the NEXT word settle instantly (the reported
       // abrupt word-swap). A reading boundary tears down through cleanup().
-      if (glide !== null && anchor !== null) glide.hold();
-      else CSS.highlights.delete("copyspeak-word");
+      glide?.hold();
       return;
     }
     const range = anchor.range(word[0], word[1]);
-    const scope = anchor.root instanceof Element ? anchor.root : anchor.root.parentElement;
-    if (range === null || scope === null) {
+    if (range === null) {
       // The word did not map onto the page: hold the previous paint instead
       // of tearing the glide down for one unmappable frame.
       glide.hold();
       return;
     }
-    glide.paint(range, scope, `${word[0]}:${word[1]}`);
+    const key = `${word[0]}:${word[1]}`;
+    if (key !== paintedWord) {
+      paintedWord = key;
+      followWord(range);
+    }
+    glide.paint(range, key);
   }
   chrome.runtime.onMessage.addListener((message: CopyCommand, _sender, respond) => {
     if (message.type === "refresh-site-access") {

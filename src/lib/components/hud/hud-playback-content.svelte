@@ -104,24 +104,10 @@
     text-wrap: balance;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
-    /* The caption glide's pill layer hangs inside this stacking context
-       (caption-glide.ts) at z-index -1, above the window glass, behind text. */
+    /* The absolute pill layer (caption-glide.ts) positions against the caption. */
     position: relative;
-    isolation: isolate;
-  }
-  .caption span {
-    border-radius: 2px;
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
   }
   .caption .spoken {
     color: var(--muted-foreground);
-  }
-  /* The pill owns the active word's background; --caption-word-bg falls back
-     to the theme primary when the pill cannot paint. */
-  .caption .current {
-    border-radius: 4px;
-    color: var(--primary-foreground);
-    background: var(--caption-word-bg, var(--primary));
   }
 </style>

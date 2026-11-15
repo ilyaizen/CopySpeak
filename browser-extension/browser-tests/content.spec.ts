@@ -80,8 +80,16 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
       () => {}
     );
   }, capture.document_token);
+  // The capture clears the native selection: no faded highlight stays on the page.
   expect(await page.evaluate(() => getSelection()!.rangeCount)).toBe(0);
-  expect(await page.evaluate(() => CSS.highlights.has("copyspeak-passage"))).toBe(true);
+  // Reading paints only the pill; the page keeps its own background and styles.
+  expect(await page.evaluate(() => [...CSS.highlights.keys()])).toEqual([]);
+  expect(await page.evaluate(() => document.querySelectorAll(".copyspeak-mark").length)).toBe(0);
+  expect(
+    await page.evaluate(() =>
+      document.querySelector<HTMLElement>("#source")?.style.getPropertyValue("isolation")
+    )
+  ).toBe("");
   await page.evaluate((token) => {
     // SAFETY: receive is the chrome stub installed earlier in this test; page context is untyped.
     (window as any).receive(
@@ -102,14 +110,25 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
       () => {}
     );
   }, capture.document_token);
-  expect(
-    await page.evaluate(() => {
-      // SAFETY: highlight ranges are Range/StaticRange set members; the cast only widens to Range which has toString.
-      return [...CSS.highlights.get("copyspeak-word")!].map((r) => (r as Range).toString());
-    })
-  ).toEqual(["same"]);
+  const firstPill = await page.evaluate(() => {
+    const mark = document.querySelector<HTMLElement>(".copyspeak-mark");
+    if (mark === null) throw new Error("the pill is not painted");
+    return {
+      left: mark.style.left,
+      transform: mark.style.transform,
+      blend: mark.style.mixBlendMode,
+      fill: getComputedStyle(mark).backgroundColor
+    };
+  });
+  expect(firstPill.blend).toBe("difference");
+  // The white fill under difference is the bubble: it inverts the word.
+  expect(firstPill.fill).toBe("rgb(255, 255, 255)");
+  // The first word settles instantly: there is no previous position to glide from.
+  expect(firstPill.transform).toBe("");
   // The animated caption: a second word glides the pill, then settles on it.
-  await page.evaluate((token) => {
+  // The tween starts synchronously before its first rendered frame: the pill
+  // carries the offset from the previous word in `transform`.
+  const glideStart = await page.evaluate((token) => {
     // SAFETY: receive is the chrome stub installed earlier in this test; page context is untyped.
     (window as any).receive(
       {
@@ -128,33 +147,22 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
       {},
       () => {}
     );
+    const mark = document.querySelector<HTMLElement>(".copyspeak-mark");
+    return mark === null ? null : { left: mark.style.left, transform: mark.style.transform };
   }, capture.document_token);
-  // The tween starts synchronously before its first rendered frame: with
-  // oklch page text, both glide names must be painted here. An rgb-only
-  // color parse would have settled instantly instead (copyspeak-word on
-  // "😀", both glide names empty).
-  expect(
-    await page.evaluate(() => {
-      // SAFETY: highlight ranges are Range/StaticRange set members; the cast only widens to Range which has toString.
-      const names = (name: string) =>
-        [...(CSS.highlights.get(name) ?? [])].map((r) => (r as Range).toString());
-      return { out: names("copyspeak-word-out"), in: names("copyspeak-word-in") };
-    })
-  ).toEqual({ out: ["same"], in: ["😀"] });
+  expect(glideStart).not.toBeNull();
+  expect(glideStart!.transform).not.toBe("");
+  expect(glideStart!.left).not.toBe(firstPill.left);
+  // The pill settles over the second word once the glide ends.
   await expect
     .poll(() =>
       page.evaluate(() => {
-        // SAFETY: highlight ranges are Range/StaticRange set members; the cast only widens to Range which has toString.
-        // The settled name is absent mid-glide, so the missing entry reads as none.
-        return [...(CSS.highlights.get("copyspeak-word") ?? [])].map((r) =>
-          (r as Range).toString()
-        );
+        const mark = document.querySelector<HTMLElement>(".copyspeak-mark");
+        // The missing pill reads as a distinct value, never as a settled pill.
+        return mark === null ? null : { left: mark.style.left, transform: mark.style.transform };
       })
     )
-    .toEqual(["😀"]);
-  expect(
-    await page.evaluate(() => document.querySelector("[data-copyspeak-mark-host]") !== null)
-  ).toBe(true);
+    .toEqual({ left: glideStart!.left, transform: "" });
   // A wordless mid-reading frame (caption gap, fragment tail) holds the
   // paint: the word and pill stay, so the next word still glides from them.
   await page.evaluate((token) => {
@@ -179,16 +187,16 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
   }, capture.document_token);
   expect(
     await page.evaluate(() => {
-      // SAFETY: highlight ranges are Range/StaticRange set members; the cast only widens to Range which has toString.
-      return [...CSS.highlights.get("copyspeak-word")!].map((r) => (r as Range).toString());
+      const mark = document.querySelector<HTMLElement>(".copyspeak-mark");
+      return mark === null ? null : { left: mark.style.left, transform: mark.style.transform };
     })
-  ).toEqual(["😀"]);
-  // Turning the animation off in settings jumps the highlight instead.
+  ).toEqual({ left: glideStart!.left, transform: "" });
+  // Turning the animation off in settings jumps the pill instead.
   await page.evaluate(() => {
     // SAFETY: chrome.storage is installed by this test's browser fixture.
     return (window as any).chrome.storage.local.set({ captionAnimation: false });
   });
-  await page.evaluate((token) => {
+  const jumped = await page.evaluate((token) => {
     // SAFETY: receive is the chrome stub installed earlier in this test; page context is untyped.
     (window as any).receive(
       {
@@ -207,18 +215,12 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
       {},
       () => {}
     );
+    const mark = document.querySelector<HTMLElement>(".copyspeak-mark");
+    return mark === null ? null : { left: mark.style.left, transform: mark.style.transform };
   }, capture.document_token);
-  await expect
-    .poll(() =>
-      page.evaluate(() => {
-        // SAFETY: highlight ranges are Range/StaticRange set members; the cast only widens to Range which has toString.
-        // The settled name is absent mid-glide, so the missing entry reads as none.
-        return [...(CSS.highlights.get("copyspeak-word") ?? [])].map((r) =>
-          (r as Range).toString()
-        );
-      })
-    )
-    .toEqual(["שלום"]);
+  expect(jumped).not.toBeNull();
+  expect(jumped!.transform).toBe("");
+  expect(jumped!.left).not.toBe(glideStart!.left);
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   expect(
     await page.evaluate(() => {
@@ -228,7 +230,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
   ).toBe("pause");
   await page.getByRole("button", { name: "Hide playback box", exact: true }).click();
   await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeHidden();
-  expect(await page.evaluate(() => CSS.highlights.has("copyspeak-word"))).toBe(true);
+  expect(await page.evaluate(() => document.querySelectorAll(".copyspeak-mark").length)).toBe(1);
   expect(
     await page.evaluate(() => {
       // SAFETY: sent is installed by this test's browser fixture.
@@ -241,7 +243,9 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
   });
   await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   await page.locator("#source b").evaluate((el) => (el.textContent = "changed"));
-  await expect.poll(() => page.evaluate(() => CSS.highlights.has("copyspeak-passage"))).toBe(false);
+  await expect
+    .poll(() => page.evaluate(() => document.querySelectorAll(".copyspeak-mark").length))
+    .toBe(0);
   expect(
     await page.evaluate(() => {
       // SAFETY: sent is the chrome stub installed earlier in this test; page context is untyped.
@@ -302,4 +306,100 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
   });
   await expect(page.getByRole("button", { name: "Read paragraph with CopySpeak" })).toHaveCount(0);
   expect(await page.evaluate(() => CSS.highlights.has("copyspeak-hover"))).toBe(false);
+});
+
+test("follows the spoken word into view", async ({ page }) => {
+  const lines = (prefix: string) =>
+    Array.from({ length: 40 }, (_, i) => `<p>${prefix} ${i} pad pad pad pad pad</p>`).join("");
+  await page.route("http://localhost/follow", (r) =>
+    r.fulfill({
+      contentType: "text/html; charset=utf-8",
+      // The target word sits below the fold with plenty of page after it, so
+      // the follow scroll can place it on the anchor line.
+      body: `<main>${lines("line")}<p id="last">targetword</p>${lines("after")}</main>`
+    })
+  );
+  await page.goto("http://localhost/follow");
+  await page.evaluate(() => {
+    // SAFETY: test fixture pokes an untyped chrome stub onto the page; window typing cannot know it.
+    const w = window as any;
+    w.sent = [];
+    w.chrome = {
+      storage: {
+        local: { get: async () => ({}), set: async () => {} },
+        onChanged: { addListener: () => {} }
+      },
+      runtime: {
+        getURL: (asset: string) => `chrome-extension://copyspeak/${asset}`,
+        sendMessage: async (m: any) => {
+          w.sent.push(m);
+          if (m.type === "site-access") return true;
+        },
+        onMessage: { addListener: (f: any) => (w.receive = f) }
+      }
+    };
+    const range = document.createRange();
+    range.selectNodeContents(document.querySelector("main")!);
+    getSelection()!.addRange(range);
+  });
+  await page.addScriptTag({ path: path.resolve("browser-extension/dist/content.js") });
+  const capture = await page.evaluate(() => {
+    let result: any;
+    // SAFETY: receive is the chrome stub installed above; page context is untyped by design.
+    (window as any).receive(
+      { type: "capture", request_id: "follow" },
+      {},
+      (x: any) => (result = x)
+    );
+    return result;
+  });
+  await page.evaluate((token) => {
+    // SAFETY: receive is the chrome stub installed above; page context is untyped by design.
+    (window as any).receive(
+      {
+        type: "native",
+        document_token: token,
+        event: { v: 1, type: "accepted", request_id: "follow", reading_id: "f" }
+      },
+      {},
+      () => {}
+    );
+  }, capture.document_token);
+  const start = capture.text.indexOf("targetword");
+  expect(start).toBeGreaterThan(-1);
+  await page.evaluate(
+    ({ token, start }) => {
+      // SAFETY: receive is the chrome stub installed above; page context is untyped by design.
+      (window as any).receive(
+        {
+          type: "native",
+          document_token: token,
+          event: {
+            v: 1,
+            type: "state",
+            reading_id: "f",
+            seq: 1,
+            status: "playing",
+            word: { start, end: start + "targetword".length },
+            word_available: true
+          }
+        },
+        {},
+        () => {}
+      );
+    },
+    { token: capture.document_token, start }
+  );
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+  // The smooth scroll ends with the pill on the anchor line, inside the viewport.
+  const pillTop = () =>
+    page.evaluate(() => {
+      const mark = document.querySelector<HTMLElement>(".copyspeak-mark");
+      // A missing pill reads as infinity, so the poll keeps waiting for it.
+      return mark === null
+        ? Number.POSITIVE_INFINITY
+        : Math.round(mark.getBoundingClientRect().top);
+    });
+  await expect.poll(pillTop).toBeLessThan(500);
+  expect(await pillTop()).toBeGreaterThan(0);
 });
