@@ -163,8 +163,6 @@ window.__ModuleLoader__.load({
       "excerpt.mode.both": "Top and bottom",
       "excerpt.top": "Paragraphs from the top",
       "excerpt.bottom": "Paragraphs from the bottom",
-      "excerpt.note":
-        "Applies to automatic reading only. Read aloud still reads the whole reply.",
       "bar.label": "CopySpeak playback",
       "bar.pause": "Pause reading",
       "bar.resume": "Resume reading",
