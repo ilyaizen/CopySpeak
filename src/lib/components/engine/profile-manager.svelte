@@ -722,16 +722,16 @@
   }
 </script>
 
-<section class="settings-card bg-card rounded-lg border">
-  <!-- Header: title + actions -->
-  <div class="settings-separator flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+<div class="space-y-4">
+  <!-- Header: title + actions (outside the card) -->
+  <div class="flex flex-wrap items-center justify-between gap-3">
     <div>
       <h2 class="text-lg font-semibold">{$_("profiles.title")}</h2>
       <p class="text-muted-foreground mt-1 text-sm">
         Named presets bundling engine, voice, speed, pitch and effect.
       </p>
     </div>
-    <div class="flex flex-wrap gap-1.5">
+    <div class="ml-auto flex flex-wrap justify-end gap-1.5">
       <DropdownMenu>
         <DropdownMenuTrigger
           class="border-input bg-background hover:bg-accent inline-flex h-8 items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-medium whitespace-nowrap"
@@ -774,306 +774,306 @@
     </div>
   </div>
 
-  <div class="settings-separator space-y-1 border-b py-4">
-    <SettingRow label={$_("profiles.activeProfile")}>
-      <Select
-        options={profileOptions}
-        value={activeId}
-        onchange={(e) => selectProfile((e.target as HTMLSelectElement).value)}
-        class="w-56"
-      />
-    </SettingRow>
-  </div>
+  <SettingRow label={$_("profiles.activeProfile")}>
+    <Select
+      options={profileOptions}
+      value={activeId}
+      onchange={(e) => selectProfile((e.target as HTMLSelectElement).value)}
+      class="w-56"
+    />
+  </SettingRow>
 
   {#if active}
-    <div class="space-y-4 py-4">
-      <!-- Identity -->
-      <section class="settings-separator border-b pb-4">
-        <p class="settings-category mb-2">Identity</p>
-        <SettingRow label={$_("common.name")}>
-          <Input bind:value={localConfig.tts.profiles[activeIndex].name} class="w-56" />
-        </SettingRow>
-      </section>
-
-      <!-- Engine & Voice -->
-      <section class="settings-separator space-y-2 border-b pb-4">
-        <p class="settings-category">Engine & Voice</p>
-        <SettingRow label={$_("common.engine")}>
-          <div class="w-56 space-y-1">
-            <Select
-              options={engineOptions}
-              value={active.engine}
-              onchange={(e) => onEngineChange((e.target as HTMLSelectElement).value as TtsEngine)}
-              class="w-56"
-            />
-            {#if credentialMissing()}
-              <a
-                href="/engines"
-                class="inline-flex items-center gap-1 text-xs text-amber-600 hover:underline dark:text-amber-400"
-              >
-                <AlertTriangle size={12} />
-                Set up engine credentials →
-              </a>
-            {/if}
-            {#if activeEngineCatalogEntry && !activeEngineCatalogEntry.supports_captions}
-              <p class="text-muted-foreground inline-flex items-center gap-1 text-xs">
-                <AlertTriangle size={12} />
-                Live word captions are unavailable for this engine.
-              </p>
-            {/if}
-          </div>
-        </SettingRow>
-
-        {#if active.engine === "local"}
-          <SettingRow label={$_("profiles.startFrom")} tooltip={$_("profiles.templateTooltip")}>
-            <Select
-              options={LOCAL_TEMPLATES.map((t) => ({ value: t.id, label: t.label }))}
-              value="blank"
-              onchange={(e) => applyLocalTemplate((e.target as HTMLSelectElement).value)}
-              class="w-56"
-            />
+    <section class="settings-card bg-card rounded-lg border">
+      <div class="space-y-4">
+        <!-- Identity -->
+        <section class="settings-separator border-b pb-4">
+          <p class="settings-category mb-2">Identity</p>
+          <SettingRow label={$_("common.name")}>
+            <Input bind:value={localConfig.tts.profiles[activeIndex].name} class="w-56" />
           </SettingRow>
-        {/if}
+        </section>
 
-        {#if showPicker}
-          <SettingRow label={$_("common.voice")} tooltip={$_("profiles.voiceTooltip")}>
-            <VoiceBrowser
-              voices={activeVoiceCatalog}
-              profile={active}
-              value={active.voice}
-              valueLabel={active.voice_label}
-              loading={!!voicesRefreshing[active.engine]}
-              supportsRefresh={!!activeCatalogEntry?.supports_voice_refresh}
-              error={voiceErrors[active.engine] ?? null}
-              onselect={(id) => setVoice(activeIndex, id)}
-              onrefresh={() => refreshVoices(active.engine)}
-            />
-          </SettingRow>
-        {/if}
-
-        <SettingRow
-          label={showPicker ? "Manual Voice" : "Voice"}
-          tooltip={showPicker
-            ? "Override the catalog voice id. Blank = provider default."
-            : "Voice id for this engine. Blank = provider default."}
-        >
-          <Input
-            value={localConfig.tts.profiles[activeIndex].voice}
-            placeholder={$_("profiles.providerDefault")}
-            onchange={(e) => setVoice(activeIndex, (e.target as HTMLInputElement).value)}
-            class="w-56"
-          />
-        </SettingRow>
-      </section>
-
-      <!-- Sound -->
-      <section class="settings-separator space-y-2 border-b pb-4">
-        <p class="settings-category">
-          {$_("profiles.sound")}
-        </p>
-        <SettingRow label={$_("common.speed")}>
-          <div class="flex w-56 items-center gap-2">
-            <span class="text-muted-foreground w-12 shrink-0 text-end text-xs tabular-nums">
-              {(speedLive ?? active.speed).toFixed(2)}x
-            </span>
-            <Slider
-              value={active.speed}
-              min={0.5}
-              max={2}
-              step={0.05}
-              oninput={(v) => (speedLive = v)}
-              onchange={(v) => {
-                localConfig.tts.profiles[activeIndex].speed = v;
-                speedLive = null;
-              }}
-            />
-          </div>
-        </SettingRow>
-        <SettingRow label={$_("common.pitch")}>
-          <div class="flex w-56 items-center gap-2">
-            <span class="text-muted-foreground w-12 shrink-0 text-end text-xs tabular-nums">
-              {(pitchLive ?? active.pitch).toFixed(2)}x
-            </span>
-            <Slider
-              value={active.pitch}
-              min={0.75}
-              max={1.25}
-              step={0.01}
-              oninput={(v) => (pitchLive = v)}
-              onchange={(v) => {
-                localConfig.tts.profiles[activeIndex].pitch = v;
-                pitchLive = null;
-              }}
-            />
-          </div>
-        </SettingRow>
-        {#if localConfig.general.experimental_enabled === true && localConfig.general.effects_enabled}
-          <SettingRow label={$_("common.effect")}>
-            <Select
-              aria-label={$_("common.effect")}
-              options={effectOptions}
-              value={active.effects?.enabled ? active.effects.active_effect : "none"}
-              onchange={(e) => {
-                // SAFETY: the Select options enumerate EFFECTS, so the value is an EffectId and e.target is the Select.
-                const v = (e.target as HTMLSelectElement).value as EffectId;
-                localConfig.tts.profiles[activeIndex].effects.active_effect = v;
-                localConfig.tts.profiles[activeIndex].effects.enabled = v !== "none";
-              }}
-              class="w-56"
-            />
-          </SettingRow>
-        {/if}
-        {#if localConfig.general.experimental_enabled === true && localConfig.post_process.enabled}
-          <SettingRow label={$_("quick.postProcess")} tooltip={$_("quick.postProcessTooltip")}>
-            <Switch
-              aria-label={$_("quick.postProcess")}
-              bind:checked={localConfig.tts.profiles[activeIndex].post_process.enabled}
-            />
-          </SettingRow>
-          <SettingRow
-            label={$_("settings.postProcess.template")}
-            tooltip={$_("settings.postProcess.templateTooltip")}
-          >
-            <Select
-              options={templateOptions(localConfig.post_process.templates)}
-              value={resolveProfileTemplate(
-                localConfig.post_process,
-                active.post_process.active_template_id
-              )?.id ?? ""}
-              onchange={(e) => {
-                if (e.target instanceof HTMLSelectElement) {
-                  localConfig.tts.profiles[activeIndex].post_process.active_template_id =
-                    e.target.value;
-                }
-              }}
-              class="w-56"
-            />
-          </SettingRow>
-        {/if}
-      </section>
-
-      <!-- Advanced: engine-specific options + docs -->
-      {#if activeCatalogEntry}
-        <section class="space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <p class="settings-category">
-              {activeCatalogEntry.label}
-            </p>
-            <a
-              href={activeCatalogEntry.docs_url}
-              target="_blank"
-              rel="noreferrer"
-              class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
-            >
-              Docs <ExternalLink size={12} />
-            </a>
-          </div>
-
-          {#snippet engineOptionControl(option: EngineOptionDescriptor)}
-            {#if option.kind === "number"}
-              <Input
-                type="number"
-                value={String(optionValue(active, option) ?? "")}
-                onchange={(e) => {
-                  const raw = (e.target as HTMLInputElement).value;
-                  setOptionValue(activeIndex, option.key, raw === "" ? null : Number(raw));
-                }}
-                class="w-56"
-              />
-            {:else if option.kind === "boolean"}
+        <!-- Engine & Voice -->
+        <section class="settings-separator space-y-2 border-b pb-4">
+          <p class="settings-category">Engine & Voice</p>
+          <SettingRow label={$_("common.engine")}>
+            <div class="w-56 space-y-1">
               <Select
-                options={[
-                  { value: "true", label: "Enabled" },
-                  { value: "false", label: "Disabled" }
-                ]}
-                value={String(Boolean(optionValue(active, option)))}
-                onchange={(e) =>
-                  setOptionValue(
-                    activeIndex,
-                    option.key,
-                    (e.target as HTMLSelectElement).value === "true"
-                  )}
+                options={engineOptions}
+                value={active.engine}
+                onchange={(e) => onEngineChange((e.target as HTMLSelectElement).value as TtsEngine)}
                 class="w-56"
               />
-            {:else if option.kind === "select"}
-              <Select
-                options={selectOptions(active, option)}
-                value={String(optionValue(active, option) ?? "")}
-                onchange={(e) => {
-                  const val = (e.target as HTMLSelectElement).value;
-                  setOptionValue(activeIndex, option.key, val);
-                }}
-                class="w-56"
-              />
-            {:else if option.kind === "textarea"}
-              <textarea
-                value={optionInputValue(active, option)}
-                onchange={(e) => {
-                  const raw = (e.target as HTMLTextAreaElement).value;
-                  const value =
-                    option.key === "args_template"
-                      ? raw
-                          .split("\n")
-                          .map((line) => line.trim())
-                          .filter(Boolean)
-                      : raw;
-                  setOptionValue(activeIndex, option.key, value);
-                }}
-                class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-20 w-56 rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-              ></textarea>
-            {:else}
-              <Input
-                value={optionInputValue(active, option)}
-                onchange={(e) =>
-                  setOptionValue(activeIndex, option.key, (e.target as HTMLInputElement).value)}
-                class="w-56"
-              />
-            {/if}
-          {/snippet}
-
-          {#if activeCatalogEntry.options.length}
-            {#each activeCatalogEntry.options as option (option.key)}
-              {#if IMPORTANT_OPTION_KEYS.has(option.key)}
-                <SettingRow label={option.label} tooltip={option.help}>
-                  {@render engineOptionControl(option)}
-                </SettingRow>
-              {/if}
-            {/each}
-            {#if activeCatalogEntry.options.some((option) => !IMPORTANT_OPTION_KEYS.has(option.key))}
-              <CollapsibleRoot bind:open={advancedOptionsOpen}>
-                <CollapsibleTrigger
-                  class="text-muted-foreground hover:text-foreground flex min-h-9 w-full min-w-0 items-center justify-between gap-x-4 py-2 text-start text-sm font-medium"
+              {#if credentialMissing()}
+                <a
+                  href="/engines"
+                  class="inline-flex items-center gap-1 text-xs text-amber-600 hover:underline dark:text-amber-400"
                 >
-                  {$_("settings.tabs.advanced")}
-                  <ChevronRight
-                    size={16}
-                    class="shrink-0 transition-transform {advancedOptionsOpen ? 'rotate-90' : ''}"
-                  />
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  {#each activeCatalogEntry.options as option (option.key)}
-                    {#if !IMPORTANT_OPTION_KEYS.has(option.key)}
-                      <SettingRow label={option.label} tooltip={option.help}>
-                        {@render engineOptionControl(option)}
-                      </SettingRow>
-                    {/if}
-                  {/each}
-                </CollapsibleContent>
-              </CollapsibleRoot>
-            {/if}
+                  <AlertTriangle size={12} />
+                  Set up engine credentials →
+                </a>
+              {/if}
+              {#if activeEngineCatalogEntry && !activeEngineCatalogEntry.supports_captions}
+                <p class="text-muted-foreground inline-flex items-center gap-1 text-xs">
+                  <AlertTriangle size={12} />
+                  Live word captions are unavailable for this engine.
+                </p>
+              {/if}
+            </div>
+          </SettingRow>
+
+          {#if active.engine === "local"}
+            <SettingRow label={$_("profiles.startFrom")} tooltip={$_("profiles.templateTooltip")}>
+              <Select
+                options={LOCAL_TEMPLATES.map((t) => ({ value: t.id, label: t.label }))}
+                value="blank"
+                onchange={(e) => applyLocalTemplate((e.target as HTMLSelectElement).value)}
+                class="w-56"
+              />
+            </SettingRow>
+          {/if}
+
+          {#if showPicker}
+            <SettingRow label={$_("common.voice")} tooltip={$_("profiles.voiceTooltip")}>
+              <VoiceBrowser
+                voices={activeVoiceCatalog}
+                profile={active}
+                value={active.voice}
+                valueLabel={active.voice_label}
+                loading={!!voicesRefreshing[active.engine]}
+                supportsRefresh={!!activeCatalogEntry?.supports_voice_refresh}
+                error={voiceErrors[active.engine] ?? null}
+                onselect={(id) => setVoice(activeIndex, id)}
+                onrefresh={() => refreshVoices(active.engine)}
+              />
+            </SettingRow>
+          {/if}
+
+          <SettingRow
+            label={showPicker ? "Manual Voice" : "Voice"}
+            tooltip={showPicker
+              ? "Override the catalog voice id. Blank = provider default."
+              : "Voice id for this engine. Blank = provider default."}
+          >
+            <Input
+              value={localConfig.tts.profiles[activeIndex].voice}
+              placeholder={$_("profiles.providerDefault")}
+              onchange={(e) => setVoice(activeIndex, (e.target as HTMLInputElement).value)}
+              class="w-56"
+            />
+          </SettingRow>
+        </section>
+
+        <!-- Sound -->
+        <section class="settings-separator space-y-2 border-b pb-4">
+          <p class="settings-category">
+            {$_("profiles.sound")}
+          </p>
+          <SettingRow label={$_("common.speed")}>
+            <div class="flex w-56 items-center gap-2">
+              <span class="text-muted-foreground w-12 shrink-0 text-end text-xs tabular-nums">
+                {(speedLive ?? active.speed).toFixed(2)}x
+              </span>
+              <Slider
+                value={active.speed}
+                min={0.5}
+                max={2}
+                step={0.05}
+                oninput={(v) => (speedLive = v)}
+                onchange={(v) => {
+                  localConfig.tts.profiles[activeIndex].speed = v;
+                  speedLive = null;
+                }}
+              />
+            </div>
+          </SettingRow>
+          <SettingRow label={$_("common.pitch")}>
+            <div class="flex w-56 items-center gap-2">
+              <span class="text-muted-foreground w-12 shrink-0 text-end text-xs tabular-nums">
+                {(pitchLive ?? active.pitch).toFixed(2)}x
+              </span>
+              <Slider
+                value={active.pitch}
+                min={0.75}
+                max={1.25}
+                step={0.01}
+                oninput={(v) => (pitchLive = v)}
+                onchange={(v) => {
+                  localConfig.tts.profiles[activeIndex].pitch = v;
+                  pitchLive = null;
+                }}
+              />
+            </div>
+          </SettingRow>
+          {#if localConfig.general.experimental_enabled === true && localConfig.general.effects_enabled}
+            <SettingRow label={$_("common.effect")}>
+              <Select
+                aria-label={$_("common.effect")}
+                options={effectOptions}
+                value={active.effects?.enabled ? active.effects.active_effect : "none"}
+                onchange={(e) => {
+                  // SAFETY: the Select options enumerate EFFECTS, so the value is an EffectId and e.target is the Select.
+                  const v = (e.target as HTMLSelectElement).value as EffectId;
+                  localConfig.tts.profiles[activeIndex].effects.active_effect = v;
+                  localConfig.tts.profiles[activeIndex].effects.enabled = v !== "none";
+                }}
+                class="w-56"
+              />
+            </SettingRow>
+          {/if}
+          {#if localConfig.general.experimental_enabled === true && localConfig.post_process.enabled}
+            <SettingRow label={$_("quick.postProcess")} tooltip={$_("quick.postProcessTooltip")}>
+              <Switch
+                aria-label={$_("quick.postProcess")}
+                bind:checked={localConfig.tts.profiles[activeIndex].post_process.enabled}
+              />
+            </SettingRow>
+            <SettingRow
+              label={$_("settings.postProcess.template")}
+              tooltip={$_("settings.postProcess.templateTooltip")}
+            >
+              <Select
+                options={templateOptions(localConfig.post_process.templates)}
+                value={resolveProfileTemplate(
+                  localConfig.post_process,
+                  active.post_process.active_template_id
+                )?.id ?? ""}
+                onchange={(e) => {
+                  if (e.target instanceof HTMLSelectElement) {
+                    localConfig.tts.profiles[activeIndex].post_process.active_template_id =
+                      e.target.value;
+                  }
+                }}
+                class="w-56"
+              />
+            </SettingRow>
           {/if}
         </section>
-      {/if}
 
-      {#if active.id === "default"}
-        <p class="text-muted-foreground text-xs">
-          The Default profile is now a real profile. Duplicate it to create a named profile with
-          independent engine, catalog voice, engine settings, speed, pitch and effect.
-        </p>
-      {/if}
-    </div>
+        <!-- Advanced: engine-specific options + docs -->
+        {#if activeCatalogEntry}
+          <section class="space-y-2">
+            <div class="flex items-center justify-between gap-2">
+              <p class="settings-category">
+                {activeCatalogEntry.label}
+              </p>
+              <a
+                href={activeCatalogEntry.docs_url}
+                target="_blank"
+                rel="noreferrer"
+                class="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
+              >
+                Docs <ExternalLink size={12} />
+              </a>
+            </div>
+
+            {#snippet engineOptionControl(option: EngineOptionDescriptor)}
+              {#if option.kind === "number"}
+                <Input
+                  type="number"
+                  value={String(optionValue(active, option) ?? "")}
+                  onchange={(e) => {
+                    const raw = (e.target as HTMLInputElement).value;
+                    setOptionValue(activeIndex, option.key, raw === "" ? null : Number(raw));
+                  }}
+                  class="w-56"
+                />
+              {:else if option.kind === "boolean"}
+                <Select
+                  options={[
+                    { value: "true", label: "Enabled" },
+                    { value: "false", label: "Disabled" }
+                  ]}
+                  value={String(Boolean(optionValue(active, option)))}
+                  onchange={(e) =>
+                    setOptionValue(
+                      activeIndex,
+                      option.key,
+                      (e.target as HTMLSelectElement).value === "true"
+                    )}
+                  class="w-56"
+                />
+              {:else if option.kind === "select"}
+                <Select
+                  options={selectOptions(active, option)}
+                  value={String(optionValue(active, option) ?? "")}
+                  onchange={(e) => {
+                    const val = (e.target as HTMLSelectElement).value;
+                    setOptionValue(activeIndex, option.key, val);
+                  }}
+                  class="w-56"
+                />
+              {:else if option.kind === "textarea"}
+                <textarea
+                  value={optionInputValue(active, option)}
+                  onchange={(e) => {
+                    const raw = (e.target as HTMLTextAreaElement).value;
+                    const value =
+                      option.key === "args_template"
+                        ? raw
+                            .split("\n")
+                            .map((line) => line.trim())
+                            .filter(Boolean)
+                        : raw;
+                    setOptionValue(activeIndex, option.key, value);
+                  }}
+                  class="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-20 w-56 rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                ></textarea>
+              {:else}
+                <Input
+                  value={optionInputValue(active, option)}
+                  onchange={(e) =>
+                    setOptionValue(activeIndex, option.key, (e.target as HTMLInputElement).value)}
+                  class="w-56"
+                />
+              {/if}
+            {/snippet}
+
+            {#if activeCatalogEntry.options.length}
+              {#each activeCatalogEntry.options as option (option.key)}
+                {#if IMPORTANT_OPTION_KEYS.has(option.key)}
+                  <SettingRow label={option.label} tooltip={option.help}>
+                    {@render engineOptionControl(option)}
+                  </SettingRow>
+                {/if}
+              {/each}
+              {#if activeCatalogEntry.options.some((option) => !IMPORTANT_OPTION_KEYS.has(option.key))}
+                <CollapsibleRoot bind:open={advancedOptionsOpen}>
+                  <CollapsibleTrigger
+                    class="text-muted-foreground hover:text-foreground flex min-h-9 w-full min-w-0 items-center justify-between gap-x-4 py-2 text-start text-sm font-medium"
+                  >
+                    {$_("settings.tabs.advanced")}
+                    <ChevronRight
+                      size={16}
+                      class="shrink-0 transition-transform {advancedOptionsOpen ? 'rotate-90' : ''}"
+                    />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    {#each activeCatalogEntry.options as option (option.key)}
+                      {#if !IMPORTANT_OPTION_KEYS.has(option.key)}
+                        <SettingRow label={option.label} tooltip={option.help}>
+                          {@render engineOptionControl(option)}
+                        </SettingRow>
+                      {/if}
+                    {/each}
+                  </CollapsibleContent>
+                </CollapsibleRoot>
+              {/if}
+            {/if}
+          </section>
+        {/if}
+
+        {#if active.id === "default"}
+          <p class="text-muted-foreground text-xs">
+            The Default profile is now a real profile. Duplicate it to create a named profile with
+            independent engine, catalog voice, engine settings, speed, pitch and effect.
+          </p>
+        {/if}
+      </div>
+    </section>
   {/if}
-</section>
+</div>
 
 <!-- Export / Import / Delete dialogs -->
 {#if dialogMode}
