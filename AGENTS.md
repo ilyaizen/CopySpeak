@@ -5,6 +5,7 @@ CopySpeak: A lightweight and modern cross-platform AI text-to-speech orchestrato
 ## Rules
 
 - Fix causes, not symptoms. Report adjacent problems, don't fix them.
+- Delete obvious dead code in the files you touch: unused locale keys, exports, variables, imports, and CSS rules. Report larger adjacent problems.
 - Never stub, loosen, or comment out check to get green. Broken and loud beats silent and wrong.
 - Unsure or blocked: ask. State assumptions, surface tradeoffs, push back on over-engineering.
 
