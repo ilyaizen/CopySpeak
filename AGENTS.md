@@ -36,6 +36,15 @@ CopySpeak: A lightweight and modern cross-platform AI text-to-speech orchestrato
 
 Internal docs (untracked): start at `docs_internal/README.md`.
 
+## Test placement
+
+- Frontend tests live in `__tests__/` beside the folder they test.
+- Keep `src/test-setup.ts` and `src/lib/test-fixtures/` where they are.
+- Run `bun run test` after you move or rename a source file.
+- Keep Rust unit tests inside their module.
+- Move a long Rust test module to a sibling `<name>_tests.rs`. Wire it with `#[cfg(test)] #[path = "<name>_tests.rs"] mod tests;`.
+- Run `rustfmt` on the child file only. `rustfmt` follows child modules, so a parent check fails on unrelated files.
+
 ## Design and review (EGM)
 
 EGM is installed as the `egm@egm` Claude Code plugin (user scope). Source: https://github.com/google/elephant-goldfish-model.
