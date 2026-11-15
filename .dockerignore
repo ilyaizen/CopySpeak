@@ -1,0 +1,13 @@
+.git
+node_modules
+.svelte-kit
+dist
+build
+src-tauri
+docs
+docs_internal
+plans
+archive
+browser-extension/node_modules
+browser-extension/dist
+browser-extension/dist-firefox
