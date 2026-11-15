@@ -7,7 +7,7 @@
   import Footer from "#lib/components/landing/footer.svelte";
 </script>
 
-{#if import.meta.env.VITE_IS_VERCEL}
+{#if import.meta.env.VITE_IS_WEB}
   <Hero />
   <Providers />
   <Features />

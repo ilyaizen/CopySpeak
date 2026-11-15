@@ -59,7 +59,7 @@
   // isHudByPath is a synchronous const checked before SvelteKit hydration — include it
   // so the HUD renders correctly even if page.url.pathname hasn't updated yet.
   const isHud = $derived(page.url.pathname === "/hud" || isHudByPath);
-  const isWeb = import.meta.env.VITE_IS_VERCEL;
+  const isWeb = import.meta.env.VITE_IS_WEB;
   let appGround = $state<HTMLDivElement>();
   let appMain = $state<HTMLElement>();
   let appScrollContent = $state<HTMLDivElement>();

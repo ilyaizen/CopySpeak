@@ -1,12 +1,12 @@
 # Web landing build for Coolify (copyspeak.ilyaizen.link).
-# VERCEL=1 sets VITE_IS_VERCEL=true (vite.config.js define), which selects the landing page.
+# COPYSPEAK_WEB=1 sets VITE_IS_WEB=true (vite.config.js define), which selects the landing page.
 # Without it, the image ships the Play UI.
 FROM oven/bun:1.4.4 AS build
 WORKDIR /app
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 COPY . .
-ENV VERCEL=1
+ENV COPYSPEAK_WEB=1
 RUN bun run build
 
 FROM nginx:1.29-alpine

@@ -99,7 +99,8 @@ export default defineConfig({
     })
   ]),
   define: {
-    "import.meta.env.VITE_IS_VERCEL": process.env.VERCEL === "1" || process.env.VERCEL === "true"
+    "import.meta.env.VITE_IS_WEB":
+      process.env.COPYSPEAK_WEB === "1" || process.env.COPYSPEAK_WEB === "true"
   },
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
