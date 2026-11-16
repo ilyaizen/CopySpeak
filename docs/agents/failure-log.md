@@ -251,3 +251,18 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - A partial auto-read excerpt drops the reply's middle, so one caption fragment can jump from the top block to the bottom block. Align across that gap only on a proven run of the next spoken words (`resyncForward`); the normal 24-token window otherwise leaves the fragment below its 50% match floor, and no highlight paints at all.
 - Grep every call of a helper a caption port deletes: a bare `wordRects` or `releaseMarkHost` throws inside the status-poll promise, so the pill silently never paints while every other test stays green. Run `bun scripts/test-dsh-plugin-captions.mjs` after touching the pill; `CAPTION_CLIENT=<path>` proves the checks fail on the old code.
 - Repaint the fixed pill on every scroll: a `position: fixed` pill does not travel with the chat scrollport, so it detaches from the word until the next paint. Re-read the active word's rect on the scroller and the window, and once more at glide end, because the follow scroll can move the target mid-glide.
+
+## Hermes plugin (copyspeak-hermes)
+
+- Gate auto-read on a `message.start` seen for the same session_id, because the gate needs the turn's start.
+- Drop events with `replayed === true`, because replayed events repeat old replies.
+- Require `payload.status === 'complete'` and the focused session_id before speaking, because child sessions finish on their own id.
+- Dedupe across windows with a claim keyed `claim.<session_id>.<seq>` in `ctx.storage`, because the SDK gives no window id.
+- Skip the plugin read when `localStorage['hermes.desktop.autoSpeakReplies'] === 'true'`, because Hermes's built-in reader speaks the same reply.
+- Match `GET /status` captions to the reply text, not to a request id, because `/status` carries no request_id.
+- Require half of the caption words to map to the reply, because a lower share means a foreign reading.
+- Resync across the excerpt gap only on a run of 3 words, because one common word matches far ahead.
+- Hook replies with `[data-slot="aui_assistant-message-root"][data-role="assistant"]` and read text from `.aui-md`, skipping reasoning slots, because the DOM marks replies that way.
+- Link a `message.complete` to the last assistant root in the focused chat, because no other link was found in the desktop source.
+- Install the plugin through a junction made with PowerShell `New-Item -ItemType Junction`, because the watcher hot-reloads edits made in the repo.
+- Keep helpers in `plugin.js`, because the loader rejects relative imports; `plugin.test.mjs` strips the SDK import lines into a temp copy.
