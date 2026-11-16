@@ -104,6 +104,10 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
+      - name: Build browser companion host
+        # Bundled by src-tauri/tauri.windows.conf.json; the app registers it with Chrome on launch.
+        run: cargo build --release --manifest-path browser-native-host/Cargo.toml
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
