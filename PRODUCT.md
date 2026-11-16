@@ -47,7 +47,7 @@ The double-copy trigger. Copy any text twice within 1.5 s and it speaks — no h
 ## Evidence on Hand
 
 - README feature checklist and platform table (repo root).
-- App screenshot: `static/screen-0.2.13.png`.
+- App screenshot: `static/screen-0.3.0.png`.
 - Incumbent visual spec: `DESIGN.md` (muted-slate brutalist; `src/routes/+layout.css` is the token source of truth).
 - Absence: no testimonials, press, pricing, or user studies. Future work must not fabricate them.
 

@@ -4,111 +4,136 @@
 
 # CopySpeech
 
-**Your clipboard, read aloud.** Double-copy any text and an AI voice reads it back — with a floating HUD, live word-synced captions, and 12 TTS engines that run offline by default.
+**Copy twice. Hear it.**
 
-[Download](https://github.com/ilyaizen/CopySpeech/releases) · [Changelog](CHANGELOG.md) · [Issues](https://github.com/ilyaizen/CopySpeech/issues) · [Contributing](docs/CONTRIBUTING.md)
+CopySpeech reads your clipboard aloud. Copy the same text twice within 1.5 s, and an AI voice speaks it, with a HUD and word-level captions.
 
-**Windows · macOS (Intel) · Linux (x86_64)**
+[![Release](https://img.shields.io/github/v/release/ilyaizen/CopySpeech)](https://github.com/ilyaizen/CopySpeech/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+Windows · macOS (Intel) · Linux (x86_64)
+
+[Download](https://github.com/ilyaizen/CopySpeech/releases) · [Changelog](CHANGELOG.md) · [Contributing](docs/CONTRIBUTING.md) · [Issues](https://github.com/ilyaizen/CopySpeech/issues)
 
 </div>
 
----
+![CopySpeech screenshot](static/screen-0.3.0.png)
 
-![CopySpeech screenshot](static/screen-0.2.13.png)
+## Why
 
-## Why CopySpeech
-
-Most read-aloud tools are browser extensions chained to a cloud API, or desktop apps that need a hotkey and a settings detour before anything speaks. CopySpeech watches your clipboard instead: copy any text twice, and it speaks — no window focus, no selection dance. Voices run locally by default (Kokoro installs in one click from onboarding, no API key), cloud engines are there when you want them, and the whole surface — triggers, voices, effects, captions, export — is configurable.
+Most read-aloud tools need a browser tab, a cloud account, or a hotkey and a settings detour. CopySpeech watches the clipboard. Copy twice, and it speaks. Local engines run offline with no API key. Cloud engines stay available when you want them.
 
 ## Features
 
-### Triggers & playback
+- **Double-copy trigger.** No hotkey needed. The tray and the Play page work too.
+- **16 engine backends.**
+  - Local: Kokoro (default), Piper, Kitten, Qwen3-TTS, Pocket, and any CLI TTS tool.
+  - Cloud: OpenAI, ElevenLabs, Cartesia, Fish Audio, xAI, Mistral, Google, Microsoft Azure, Edge (keyless), and any HTTP endpoint.
+- **One-click local installs.** Kokoro installs from onboarding. Installs stream progress and support optional CUDA.
+- **Live captions.** Words highlight in sync with the audio on the Play page, the HUD, and the browser companion. Captions need an engine that reports timings.
+- **Streaming playback.** Local engines start speaking after the first audio window.
+- **Speed 0.25×–4×, pitch, and volume.** Voice profiles store each combination per engine.
+- **Duck other apps (Windows).** Other apps get quieter while CopySpeech speaks.
+- **Text cleanup.** Strips markdown, expands URLs, and normalizes Unicode. It handles non-Latin scripts without damage.
+- **Browser companion.** Reads your selection through the app. Chrome, Edge, and Firefox are supported. The page highlights the passage as it plays.
+- **Control server.** A local HTTP API for scripts and tools. See [Control server](#control-server).
+- **Interface.** 9 languages, right-to-left layouts, tray, dark and light themes, and an auto-updater.
 
-- ✅ **Double-copy trigger** — copy the same text twice within 1.5 s to start a reading; no hotkey needed
-- ✅ **Global hotkey & tray** — configurable shortcut, plus Speak Clipboard from the tray (localized to your language)
-- ✅ **Play page** — paste text and speak, with full transport controls: rewind/forward ±5 s, play/pause (Space), stop (Escape — aborts in-flight synthesis immediately)
-- ✅ **Streaming playback** — first audio starts after ~150 ms of buffering; local engines stream once warm, OpenAI streams on `gpt-4o-mini-tts`
-- ✅ **Speed 0.25×–4×, pitch 0.5×–2×, volume** — with output device selection and MP3/OGG/FLAC export
-- ✅ **Duck other apps** (Windows) — lowers or mutes other apps' audio while CopySpeech speaks, restores them after, per app
+## Experimental features
 
-### Engines & voices
+Experimental features are alpha. They can change or break between releases.
 
-- ✅ **12 TTS engines** — offline: **Kokoro** (default), Piper, Kitten, Qwen3-TTS, Pocket, and any CLI TTS tool; cloud: OpenAI, ElevenLabs, Cartesia, Google, Microsoft Azure, and generic HTTP endpoints
-- ✅ **One-click local engine installs** — streamed progress, optional CUDA GPU support, and live install/runtime status (Installed badge, CPU vs GPU per run)
-- ✅ **Idle shutdown** — local engine daemons exit after inactivity (default 10 min) and free their RAM/VRAM
-- ✅ **Model picker** — model fields for OpenAI, ElevenLabs, Cartesia, and Google are lists built from each vendor's documented models
-- ✅ **Voice profiles** — named profiles bundling engine, voice, speed, pitch, and effects
+The **Experimental Features (Alpha)** switch lives in **Settings → Advanced**. It gates these features:
 
-### Captions & effects
+| Feature            | What it does                                            |
+| ------------------ | ------------------------------------------------------- |
+| Global hotkey      | Starts a reading from any app                           |
+| Audio effects      | Walkie-talkie, 8-bit, and Cyberpunk effects per profile |
+| Auto-save profiles | Writes profile edits without a Save step                |
+| History            | Keeps a log of past readings                            |
+| Post-processing    | Rewrites text with an LLM before speaking               |
+| HUD overlay        | Floating window with a live waveform and captions       |
 
-- ✅ **HUD overlay** — floating heads-up display with a real-time waveform
-- ✅ **Live captions** — word-level highlighting synced to the audio clock, on the Play page, the HUD, and the browser companion
-- ✅ **Audio effects** — walkie-talkie, 8-bit, and Cyberpunk (56k modem handshake intro, glitch-stuttered words, ring-modulated tone), built on `OfflineAudioContext` post-processing
+When the switch is off, these features pause. Their settings and saved readings stay on disk.
 
-### Text pipeline
+Plugin-level experiments:
 
-- ✅ **Sanitization** — markdown stripping, URL expansion, and unicode normalization, careful with non-English scripts (no Cyrillic lookalike swaps, zero-width joiners preserved, sentence-aware splitting for Hindi/Arabic/Urdu/Armenian/Amharic/Burmese/Khmer)
-- ✅ **LLM post-processing** — optional AI rewrite pass with a provider registry (Groq, OpenAI, Z.AI, OpenRouter, Ollama, Cerebras, or any OpenAI-compatible endpoint), live model lists, minimum-length and on-request gating
+- **DSH partial auto-read** (0.1.1). Reads only the first or last paragraphs of each automatic reply.
 
-### Integrations
+Not yet verified live, per the plugin notes:
 
-- ✅ **Browser companion** (Chrome/Edge) — read your selection or hovered paragraphs through the app; the extension highlights the passage on the page while it's read, with ±5 s skip on its pill
-- ✅ **Control server** — local HTTP API (`/health`, `/speak` with optional blocking wait) for scripts and external tools; see [profile & engine settings](docs/profile-engine-settings.md)
-- ✅ **Pi & Claude Code extensions** — speak AI assistant responses through CopySpeech
-
-### System
-
-- ✅ **History** — persistent generation history with playback and reading management; switch it off and readings stay out of the log (a small recent-clips cache still skips re-synthesis)
-- ✅ **9 interface languages** — English, Spanish, Hebrew, Arabic, German, French, Hindi, Russian, Simplified Chinese; Hebrew and Arabic mirror right-to-left, and the tray follows the app language
-- ✅ **Auto-updater** — checks GitHub Releases in the background; also **system tray**, **dark/light themes**, and **audio save mode**
+- Hermes follow-scroll playback.
+- The explicit-Save settings page in the Hermes plugin.
 
 ## Install
 
-Grab a build from [Releases](https://github.com/ilyaizen/CopySpeech/releases). Asset names per platform (v0.2.16 shown):
+Get a build from [Releases](https://github.com/ilyaizen/CopySpeech/releases). Replace `<version>` with the release number. The latest is 0.3.0.
 
-| Platform          | Asset                                                                                               |
-| ----------------- | --------------------------------------------------------------------------------------------------- |
-| Windows           | `CopySpeech_0.2.16_x64-setup.exe` (`.msi` also available)                                           |
-| macOS (Intel)     | `CopySpeech_0.2.16_x64.dmg`                                                                         |
-| Linux             | `CopySpeech_0.2.16_amd64.AppImage`, `CopySpeech_0.2.16_amd64.deb`, `CopySpeech-0.2.16-1.x86_64.rpm` |
-| Browser companion | `CopySpeech-Companion-0.2.16.zip`                                                                   |
+| Platform          | Asset                                                                    |
+| ----------------- | ------------------------------------------------------------------------ |
+| Windows           | `CopySpeech_<version>_x64-setup.exe` (`.msi` also available)             |
+| macOS (Intel)     | `CopySpeech_<version>_x64.dmg` (Apple Silicon runs it through Rosetta 2) |
+| Linux             | `.AppImage`, `.deb`, or `.rpm`                                           |
+| Browser companion | `CopySpeech-Companion-<version>.zip`                                     |
 
-### Windows
+Onboarding asks you to pick an engine and a voice on first launch. Kokoro is the default.
 
-1. Run the installer.
-2. On first launch, onboarding walks you through picking an engine and voice — Kokoro is the recommended default and installs right there.
-3. Updates: the app checks GitHub Releases automatically (or via **Check for updates** in the footer).
+**Linux note.** Wayland blocks global hotkeys. Use double-copy, the tray, or a compositor keybind that calls the [control server](#control-server).
 
-### macOS (Intel)
+**Browser companion (Chrome).**
 
-1. Open the `.dmg` and drag CopySpeech to Applications. (Apple Silicon Macs run the x86_64 build through Rosetta 2.)
-2. On first launch, onboarding walks you through picking an engine and voice.
-3. Updates: the built-in auto-updater handles new releases.
+1. Start the desktop app first.
+2. Extract the companion zip.
+3. Open `chrome://extensions`, turn on **Developer mode**, and choose **Load unpacked** on the extracted folder.
+4. Grant per-site access in the extension settings.
 
-### Linux (x86_64)
+On Windows, installed builds register the Chrome host at launch. Edge, Firefox, Linux, and macOS need manual setup.
 
-Tested on Omarchy (Arch, Wayland):
+## Plugins
 
-```bash
-# AppImage
-chmod +x CopySpeech_0.2.16_amd64.AppImage
-./CopySpeech_0.2.16_amd64.AppImage
+### Hermes Desktop plugin (`copyspeech-hermes`)
 
-# Debian / Ubuntu
-sudo apt install ./CopySpeech_0.2.16_amd64.deb
+Reads each new completed Hermes reply aloud through the running app. It can highlight spoken words and follow playback.
 
-# Fedora / openSUSE
-sudo dnf install ./CopySpeech-0.2.16-1.x86_64.rpm
-```
+1. Create a junction so Hermes loads the repo file in place:
 
-On Wayland compositors the HUD runs through XWayland and global hotkeys are protocol-impossible — trigger readings by double-copy, the tray, or a compositor keybind that POSTs to the local [control server](docs/profile-engine-settings.md).
+   ```powershell
+   New-Item -ItemType Junction -Path "$env:LOCALAPPDATA\hermes\desktop-plugins\copyspeech-hermes" -Target "<repo>\copyspeech-hermes"
+   ```
 
-### Browser companion (Chrome / Edge)
+2. Open **Settings → Plugins → CopySpeech** and turn on **Read new replies aloud**.
+3. Turn off Hermes's built-in **Read replies aloud**. If both run, each reply plays twice.
 
-1. Install and start the desktop app first — the extension drives it.
-2. Download `CopySpeech-Companion-0.2.16.zip` from the same release and extract it.
-3. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the extracted `dist` folder.
-4. Open the extension's settings to grant per-site access, then select text and double-copy (or use the extension's toolbar button) to read it through the app — the extension highlights the passage as it's spoken.
+Changes apply when you press **Save**. Edits to `plugin.js` reload in the app.
+
+### DSH plugin (`copyspeech-dsh`)
+
+DSH is the DeepSeek Harness. This plugin adds a sidebar panel, a speaker action on each reply, a selection pill, and a playback bar with pause, ±5 s seek, and stop.
+
+1. Ask the DSH plugin manager to run `install_bundle` with the absolute path to `copyspeech-dsh/`.
+2. Open the CopySpeech panel. The status line reads **CopySpeech is running.**
+3. Send a message and click the speaker in the reply's action row.
+
+The plugin needs the control server on `127.0.0.1:43117`. Full details are in [copyspeech-dsh/README.md](copyspeech-dsh/README.md).
+
+### Agent voice
+
+The Pi extension and the Claude Code hook speak final assistant replies. See [docs/agent-voice.md](docs/agent-voice.md).
+
+### Control server
+
+A local HTTP API on `127.0.0.1:43117`:
+
+| Route                         | Purpose                                     |
+| ----------------------------- | ------------------------------------------- |
+| `GET /health`                 | Check that the app runs                     |
+| `GET /status`                 | Read the current caption                    |
+| `POST /speak`                 | Speak text. Pass `wait` to block until done |
+| `POST /pause`, `POST /resume` | Pause or resume one reading                 |
+| `POST /seek`                  | Move one reading by a signed step           |
+| `POST /stop`                  | Stop playback                               |
+
+Details are in [docs/profile-engine-settings.md](docs/profile-engine-settings.md).
 
 ## Development
 
@@ -117,67 +142,33 @@ bun install
 bun run tauri dev
 ```
 
-The frontend is SvelteKit (Svelte 5); the backend is Rust under `src-tauri`. See [Understanding the Codebase](docs/CONTRIBUTING.md#understanding-the-codebase) in the contributing guide, and [docs/engines.md](docs/engines.md) for how local TTS engines are wired.
+| Command                      | Purpose                                                       |
+| ---------------------------- | ------------------------------------------------------------- |
+| `bun run dev`                | Frontend only, on port 5173                                   |
+| `bun run check`              | Svelte and TypeScript checks, then lint                       |
+| `bun run test`               | Frontend tests (Vitest)                                       |
+| `bun run format`             | Format the repo                                               |
+| `bun run tauri build`        | Production build                                              |
+| `cd src-tauri && cargo test` | Rust tests                                                    |
+| `bun run bump`               | Patch version bump (`bump:minor` and `bump:major` also exist) |
 
-## Commands
+| Layer    | Stack                                           |
+| -------- | ----------------------------------------------- |
+| Backend  | Rust, Tauri 2                                   |
+| Frontend | Svelte 5, SvelteKit, TypeScript, Tailwind CSS 4 |
+| Audio    | rodio, Web Audio (`OfflineAudioContext`)        |
+| Tooling  | Bun, Vite+ (`vp`), shadcn-svelte                |
+| i18n     | svelte-i18n, Crowdin                            |
 
-```bash
-# Development
-bun run tauri dev           # Full app with hot-reload
-bun run dev                 # Frontend only (port 5173)
-
-# Build
-bun run tauri build         # Production build
-
-bun run check               # TypeScript/Svelte type checking
-bun run check:watch         # Watch mode for type checking
-
-# Testing (Frontend)
-bun run test                # Run all frontend tests (vitest)
-bun run test <name>         # Run single frontend test
-bun run test:watch          # Watch mode
-
-# Testing (Rust)
-cd src-tauri && cargo test             # Run all Rust tests
-cd src-tauri && cargo test <name>      # Run single Rust test
-cd src-tauri && cargo check            # Type check Rust
-cd src-tauri && cargo clippy           # Lint Rust
-
-# Formatting
-bun format                   # Biome + Prettier hybrid format
-
-# Version Bumping
-bun run bump                # Patch version bump (0.0.x)
-bun run bump:minor          # Minor version bump (0.x.0)
-bun run bump:major          # Major version bump (x.0.0)
-```
-
-## Tech Stack
-
-| Component       | Technology                               |
-| --------------- | ---------------------------------------- |
-| Platforms       | Windows, macOS (Intel), Linux (x86_64)   |
-| Backend         | Rust (Tauri v2)                          |
-| Frontend        | Svelte 5, SvelteKit, TypeScript, Vite    |
-| Package Manager | Bun                                      |
-| Audio           | rodio, Web Audio (`OfflineAudioContext`) |
-| UI              | shadcn-svelte, Tailwind CSS v4           |
-| i18n            | svelte-i18n, 9 locales, Crowdin          |
+Read [Understanding the Codebase](docs/CONTRIBUTING.md#understanding-the-codebase) before you change code. [docs/engines.md](docs/engines.md) explains how local engines connect.
 
 ## Roadmap
 
-**Next release** targets low-latency, interactive TTS on low-VRAM GPUs and CPU-only machines:
-
-- Low time-to-first-audio (TTFA) for responsive playback
-- Small VRAM and RAM footprint for local engines
-
-## Changelog
-
-See [CHANGELOG.md](./CHANGELOG.md) for recent changes.
+The next release targets low time-to-first-audio and a small VRAM and RAM footprint. The goal is local engines that run well on low-VRAM GPUs and CPU-only machines.
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](./docs/CONTRIBUTING.md) for details on how to get started, code style guidelines, and how to submit pull requests.
+Read the [Contributing Guide](docs/CONTRIBUTING.md) for setup, style, and pull request steps.
 
 ## License
 
