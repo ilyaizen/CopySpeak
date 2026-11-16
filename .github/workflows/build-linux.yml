@@ -242,9 +242,17 @@ jobs:
           rm -f latest.json
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" \
             --pattern "latest.json" --output latest.json
-          jq --arg sig "$(cat "$APPIMAGE.sig")" \
-            '.platforms["linux-x86_64"].signature = $sig' \
+          # Set BOTH signature and url. Tauri's updater needs a url on every
+          # platform entry; a signature-only entry breaks the manifest.
+          APPIMAGE_NAME=$(basename "$APPIMAGE")
+          APPIMAGE_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$APPIMAGE_NAME"
+          jq --arg sig "$(cat "$APPIMAGE.sig")" --arg url "$APPIMAGE_URL" \
+            '.platforms["linux-x86_64"].signature = $sig
+             | .platforms["linux-x86_64"].url = $url' \
             latest.json > latest.json.tmp && mv latest.json.tmp latest.json
+          # Fail loud if any platform entry lacks a signature or url.
+          jq -e '[.platforms[] | (has("url") and has("signature"))] | all' latest.json
+          jq -e '.platforms["linux-x86_64"].url | endswith("/" + "'"$APPIMAGE_NAME"'")' latest.json
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
             "$APPIMAGE" "$APPIMAGE.sig" latest.json
 
