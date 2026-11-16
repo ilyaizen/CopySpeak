@@ -80,7 +80,7 @@ document-targeted messaging and injection the companion uses.
    - Linux: `browser-native-host/install-linux.sh` writes both manifests and
      registers Firefox in `~/.mozilla/native-messaging-hosts/`.
    - Windows: point the registry default value at the Firefox manifest:
-     `reg add "HKCU\Software\Mozilla\NativeMessagingHosts\com.copyspeak.browser" /ve /t REG_SZ /d "D:\Projects\CopySpeak\browser-native-host\com.copyspeak.browser.firefox.json" /f`
+     `reg add "HKCU\Software\Mozilla\NativeMessagingHosts\com.copyspeak.browser" /ve /t REG_SZ /d "D:\Projects\CopySpeech\browser-native-host\com.copyspeak.browser.firefox.json" /f`
 
 The gecko ID is a release identity. Changing it breaks the native host's
 `allowed_extensions` and any signed build, so keep it stable.

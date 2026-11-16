@@ -28,7 +28,7 @@ Open the panel from the sidebar. When **Read new replies aloud** is on, **Read o
 1. Call `plugin_manager` with `action: install_bundle` and this directory's absolute path:
 
    ```
-   target: D:\Projects\CopySpeak\copyspeak-dsh
+   target: D:\Projects\CopySpeech\copyspeak-dsh
    ```
 
 2. Open **Plugins** and check that **CopySpeech read aloud** is installed.

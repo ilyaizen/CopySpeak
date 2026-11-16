@@ -46,7 +46,7 @@ Palette command `CopySpeech: Toggle auto-read` saves at once and changes only th
 Create a junction so the app loads the repo file in place:
 
 ```
-New-Item -ItemType Junction -Path "$env:LOCALAPPDATA\hermes\desktop-plugins\copyspeak-hermes" -Target "D:\Projects\CopySpeak\copyspeak-hermes"
+New-Item -ItemType Junction -Path "$env:LOCALAPPDATA\hermes\desktop-plugins\copyspeak-hermes" -Target "D:\Projects\CopySpeech\copyspeak-hermes"
 ```
 
 Edits to `plugin.js` reload in the app. Load errors appear in `desktop.log` as `runtime load failed (copyspeak-hermes)`.
