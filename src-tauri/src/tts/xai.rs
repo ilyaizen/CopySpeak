@@ -517,7 +517,7 @@ mod tests {
             ..Default::default()
         });
         let speech = backend
-            .synthesize_with_captions("Hello from the CopySpeak live test.", "eve")
+            .synthesize_with_captions("Hello from the CopySpeech live test.", "eve")
             .expect("live synthesis must succeed");
         assert!(
             speech.bytes.len() > 5_000,

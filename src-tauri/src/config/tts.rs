@@ -308,7 +308,7 @@ impl MistralConfig {
 /// handles both.
 pub(crate) const GEMINI_TTS_MODEL: &str = "gemini-3.8-flash-tts";
 
-/// The Gemini TTS model every CopySpeak release shipped before the 3.8 switch.
+/// The Gemini TTS model every CopySpeech release shipped before the 3.8 switch.
 /// Google scheduled it for shutdown on 2026-11-17, and it rejects an unframed
 /// transcript with HTTP 400 ("Model tried to generate text, but it should only
 /// be used for TTS"), so profiles pinned to it are migrated in v7.
@@ -607,7 +607,7 @@ pub struct FishEngineOptions {
 pub struct XaiEngineOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Native synthesis speed rendered by the API (0.7–1.5; unset = 1.0).
-    /// Multiplies with the profile's playback speed, which CopySpeak applies
+    /// Multiplies with the profile's playback speed, which CopySpeech applies
     /// separately with TimeStretcher.
     pub speed: Option<f32>,
 }
@@ -656,7 +656,7 @@ pub struct KittenEngineOptions {
     /// Native synthesis speed threaded to the wrapper's `--speed` flag via the
     /// `{speed}` placeholder; when unset the flag is dropped and the model
     /// renders at its own 1.0. Multiplies with the profile's playback speed,
-    /// which CopySpeak applies separately with TimeStretcher.
+    /// which CopySpeech applies separately with TimeStretcher.
     pub speed: Option<f32>,
     /// Run inference on an NVIDIA GPU (`--device cuda`). Requires the engine's
     /// uv project to have the GPU runtime installed (`install-*.ps1 -Cuda`).
@@ -677,7 +677,7 @@ pub struct QwenEngineOptions {
 #[serde(default)]
 pub struct PiperEngineOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
-    // ponytail: speed knob exposed per spec; wrapper (copyspeak-piper.py) has no
+    // ponytail: speed knob exposed per spec; wrapper (copyspeech-piper.py) has no
     // length_scale flag yet, so not threaded. Wire when the wrapper grows it.
     pub length_scale: Option<f32>,
     /// Run inference on an NVIDIA GPU (`--device cuda`). See KittenEngineOptions.
@@ -689,7 +689,7 @@ pub struct PiperEngineOptions {
 #[serde(default)]
 pub struct KokoroEngineOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
-    // ponytail: speed knob exposed per spec; the wrapper (copyspeak-kokoro.py)
+    // ponytail: speed knob exposed per spec; the wrapper (copyspeech-kokoro.py)
     // has no --speed flag yet, so not threaded. Wire when it grows one.
     pub speed: Option<f32>,
     /// Run inference on an NVIDIA GPU (`--device cuda`). See KittenEngineOptions.
@@ -1419,8 +1419,8 @@ pub(crate) fn migrate_tts_profiles_v7(tts: &mut TtsConfig) {
                     .is_some_and(|c| c == "uv");
                 let wrapper_is_piper = o.args_template.as_ref().is_some_and(|args| {
                     [
-                        "scripts/copyspeak-piper.py",
-                        "{engine_dir}/piper/scripts/copyspeak-piper.py",
+                        "scripts/copyspeech-piper.py",
+                        "{engine_dir}/piper/scripts/copyspeech-piper.py",
                     ]
                     .into_iter()
                     .any(|wrapper| {
@@ -1539,7 +1539,7 @@ impl Default for TtsConfig {
                 "--project".into(),
                 "{engine_dir}/kitten".into(),
                 "python".into(),
-                "{engine_dir}/kitten/scripts/copyspeak-kitten.py".into(),
+                "{engine_dir}/kitten/scripts/copyspeech-kitten.py".into(),
                 "--text-file".into(),
                 "{input}".into(),
                 "--voice".into(),
@@ -1631,7 +1631,7 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
         profile.engine_options = opts.normalized_for(&engine);
     }
     // One-time fix-up: pre-v0.1.8 local profiles stored the engine wrapper as a
-    // CWD-relative path (e.g. `scripts/copyspeak-kitten.py`), which broke once
+    // CWD-relative path (e.g. `scripts/copyspeech-kitten.py`), which broke once
     // the Tauri process CWD stopped being the engine install dir. Rewrite any
     // bare legacy wrapper path to its absolute `{engine_dir}/<engine>/...` form.
     // Idempotent: only matches args lacking `{engine_dir}` already.
@@ -1673,16 +1673,16 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
     tts
 }
 
-/// Rewrite a bare `scripts/copyspeak-<engine>.py` path to its absolute
+/// Rewrite a bare `scripts/copyspeech-<engine>.py` path to its absolute
 /// `{engine_dir}/<engine>/scripts/...` form. Returns `None` for anything else.
 fn absolutize_wrapper_path(arg: &str) -> Option<String> {
     // ponytail: lookup-driven; add a (wrapper_name, subdir) pair per engine.
     const WRAPPERS: &[(&str, &str)] = &[
-        ("copyspeak-kitten.py", "kitten"),
-        ("copyspeak-qwen.py", "qwen"),
-        ("copyspeak-piper.py", "piper"),
-        ("copyspeak-kokoro.py", "kokoro"),
-        ("copyspeak-pocket.py", "pocket"),
+        ("copyspeech-kitten.py", "kitten"),
+        ("copyspeech-qwen.py", "qwen"),
+        ("copyspeech-piper.py", "piper"),
+        ("copyspeech-kokoro.py", "kokoro"),
+        ("copyspeech-pocket.py", "pocket"),
     ];
     for (name, subdir) in WRAPPERS {
         if arg == &format!("scripts/{name}") {

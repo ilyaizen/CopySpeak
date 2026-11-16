@@ -965,7 +965,7 @@ pub fn save_audio_to_storage(
 
     let dir: std::path::PathBuf = match config.storage_mode {
         crate::config::StorageMode::Temp => {
-            std::env::temp_dir().join("CopySpeak_Generations").into()
+            std::env::temp_dir().join("CopySpeech_Generations").into()
         }
         crate::config::StorageMode::Persistent => {
             config.persistent_dir.clone().unwrap_or_else(|| {

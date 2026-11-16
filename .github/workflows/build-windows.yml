@@ -53,7 +53,9 @@ jobs:
         id: changelog
         run: |
           $version = "${{ steps.version.outputs.version }}"
-          $changelog = Get-Content CHANGELOG.md -Raw
+          # Read as UTF-8. Without -Encoding, Windows PowerShell decodes UTF-8
+          # dashes as Windows-1252 (mojibake in the release notes).
+          $changelog = Get-Content CHANGELOG.md -Raw -Encoding utf8
 
           # Extract the section for this version (between ## [version] and the next ## [version])
           $pattern = "(?s)## \[$version\].*?(?=\n## \[|\z)"
@@ -68,10 +70,10 @@ jobs:
 
           # Write to GITHUB_OUTPUT with multiline delimiter
           $delimiter = "EOF_$((Get-Random))"
-          echo "notes<<$delimiter" >> $env:GITHUB_OUTPUT
-          echo "$notes" >> $env:GITHUB_OUTPUT
-          echo "$delimiter" >> $env:GITHUB_OUTPUT
-          echo "Extracted release notes for version $version"
+          # Write UTF-8 without BOM, the encoding GITHUB_OUTPUT expects.
+          $utf8 = New-Object System.Text.UTF8Encoding($false)
+          [System.IO.File]::AppendAllText($env:GITHUB_OUTPUT, "notes<<$delimiter`n$notes`n$delimiter`n", $utf8)
+          Write-Output "Extracted release notes for version $version"
         shell: pwsh
 
       - name: Setup Bun

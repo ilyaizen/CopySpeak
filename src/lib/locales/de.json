@@ -191,7 +191,7 @@
       "temporary": "Temporär",
       "generationsFolder": "Ordner für Generierungen",
       "generationsFolderDescription": "Verzeichnis zum Speichern der TTS-Generierungen. Leer lassen für Standard.",
-      "generationsFolderPlaceholder": "Standard: Documents/CopySpeak",
+      "generationsFolderPlaceholder": "Standard: Documents/CopySpeech",
       "autoDeleteTitle": "Generierungen automatisch löschen",
       "autoDeleteKeepLatest": "Neueste behalten",
       "autoDeleteNever": "Nie",

@@ -1,0 +1,3 @@
+- insert:
+    - id: copyspeech-voice
+      name: "@local/copyspeech-voice"

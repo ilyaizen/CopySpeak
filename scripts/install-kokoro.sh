@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Installs Kokoro TTS for CopySpeak via uv (Linux port).
+# Installs Kokoro TTS for CopySpeech via uv (Linux port).
 #
 # Creates a uv-managed project under $XDG_DATA_HOME/CopySpeak/engines/kokoro,
 # installs kokoro-onnx and Misaki English, drops the CLI wrapper, and exports
@@ -18,8 +18,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib/copyspeak-engine-install.sh
-source "$SCRIPT_DIR/lib/copyspeak-engine-install.sh"
+# shellcheck source=lib/copyspeech-engine-install.sh
+source "$SCRIPT_DIR/lib/copyspeech-engine-install.sh"
 
 FORCE=0
 CUDA=0
@@ -85,7 +85,7 @@ else
     fi
 fi
 
-ENGINE_DIR="$(copyspeak_engine_root)/kokoro"
+ENGINE_DIR="$(copyspeech_engine_root)/kokoro"
 # models/ sits inside the engine dir, so --force would re-download 335 MB.
 # Stash the model files across the reset and put them back.
 MODELS_DIR="$ENGINE_DIR/models"
@@ -114,8 +114,8 @@ SCRIPTS_DIR="$ENGINE_DIR/scripts"
 OUTPUT_DIR="$ENGINE_DIR/output"
 mkdir -p "$SCRIPTS_DIR" "$OUTPUT_DIR" "$MODELS_DIR"
 
-SRC_WRAPPER="$SCRIPT_DIR/kokoro/copyspeak-kokoro.py"
-DST_WRAPPER="$SCRIPTS_DIR/copyspeak-kokoro.py"
+SRC_WRAPPER="$SCRIPT_DIR/kokoro/copyspeech-kokoro.py"
+DST_WRAPPER="$SCRIPTS_DIR/copyspeech-kokoro.py"
 cp -f "$SRC_WRAPPER" "$DST_WRAPPER"
 log C_GRAY "  Wrapper installed: $DST_WRAPPER"
 if (( ENGINE_OK )); then

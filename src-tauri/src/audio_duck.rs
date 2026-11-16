@@ -1,7 +1,7 @@
-//! Per-app ducking of other programs' audio while CopySpeak speaks.
+//! Per-app ducking of other programs' audio while CopySpeech speaks.
 //!
 //! Handy mutes the system master output while recording; here that would
-//! silence CopySpeak itself, so only OTHER apps' WASAPI sessions are lowered.
+//! silence CopySpeech itself, so only OTHER apps' WASAPI sessions are lowered.
 //! Playback lives in the webview, whose audio session belongs to a
 //! `msedgewebview2` child process, so the skip set is our whole process tree,
 //! not just our PID.

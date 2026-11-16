@@ -13,17 +13,17 @@ type State = {
   speakAssistant: boolean;
   speakActivity: boolean;
   speakThinking: boolean;
-  launchCopySpeak: boolean;
+  launchCopySpeech: boolean;
 };
 
 const state: State = {
-  enabled: envBool("COPYSPEAK_PI_ENABLED", true),
-  engine: isEngine(process.env.COPYSPEAK_PI_ENGINE) ? process.env.COPYSPEAK_PI_ENGINE : undefined,
-  effect: process.env.COPYSPEAK_PI_EFFECT || undefined,
-  speakAssistant: envBool("COPYSPEAK_PI_ASSISTANT", true),
-  speakActivity: envBool("COPYSPEAK_PI_ACTIVITY", false),
-  speakThinking: envBool("COPYSPEAK_PI_THINKING", false),
-  launchCopySpeak: envBool("COPYSPEAK_PI_LAUNCH", false)
+  enabled: envBool("COPYSPEECH_PI_ENABLED", true),
+  engine: isEngine((process.env.COPYSPEECH_PI_ENGINE ?? process.env.COPYSPEAK_PI_ENGINE)) ? (process.env.COPYSPEECH_PI_ENGINE ?? process.env.COPYSPEAK_PI_ENGINE) : undefined,
+  effect: (process.env.COPYSPEECH_PI_EFFECT ?? process.env.COPYSPEAK_PI_EFFECT) || undefined,
+  speakAssistant: envBool("COPYSPEECH_PI_ASSISTANT", true),
+  speakActivity: envBool("COPYSPEECH_PI_ACTIVITY", false),
+  speakThinking: envBool("COPYSPEECH_PI_THINKING", false),
+  launchCopySpeech: envBool("COPYSPEECH_PI_LAUNCH", false)
 };
 
 let lastSpoken = "";
@@ -36,11 +36,11 @@ let spokenThinkingBlocks = new Set<string>();
 export default function (pi: ExtensionAPI) {
   pi.on("session_start", async (_event, ctx) => {
     try {
-      if (state.launchCopySpeak) launchCopySpeak();
-      ctx.ui.setStatus("copyspeak", statusText());
+      if (state.launchCopySpeech) launchCopySpeech();
+      ctx.ui.setStatus("copyspeech", statusText());
       ctx.ui.notify(statusText(), "info");
     } catch (error) {
-      ctx.ui.setStatus("copyspeak", "voice config failed");
+      ctx.ui.setStatus("copyspeech", "voice config failed");
       ctx.ui.notify(`CopySpeech voice setup failed: ${String(error)}`, "error");
     }
   });
@@ -81,7 +81,7 @@ export default function (pi: ExtensionAPI) {
     if (text) await speakSafe(text, ctx, false, false);
   });
 
-  pi.registerCommand("copyspeak", {
+  pi.registerCommand("copyspeech", {
     description:
       "Control CopySpeech voice notifications: on/off/status/test/engine <cartesia|openai|elevenlabs|local>",
     handler: async (args, ctx) => {
@@ -109,9 +109,9 @@ export default function (pi: ExtensionAPI) {
         else if (cmd === "thinking") state.speakThinking = value !== "off";
         else
           throw new Error(
-            "usage: /copyspeak on|off|status|test [text]|engine <engine>|activity on|off|assistant on|off|thinking on|off"
+            "usage: /copyspeech on|off|status|test [text]|engine <engine>|activity on|off|assistant on|off|thinking on|off"
           );
-        ctx.ui.setStatus("copyspeak", statusText());
+        ctx.ui.setStatus("copyspeech", statusText());
         ctx.ui.notify(statusText(), "info");
       } catch (error) {
         ctx.ui.notify(`CopySpeech voice: ${String(error)}`, "error");
@@ -141,7 +141,7 @@ async function speakSafe(text: string, ctx?: any, force = false, clean = true) {
     .then(() => speak(speakText))
     .catch((error) => {
       clipboardFailureCount++;
-      ctx?.ui?.setStatus?.("copyspeak", "voice failed");
+      ctx?.ui?.setStatus?.("copyspeech", "voice failed");
       if (!clipboardFailureNotified) {
         clipboardFailureNotified = true;
         ctx?.ui?.notify?.(`CopySpeech voice failed; voice disabled: ${String(error)}`, "error");
@@ -168,7 +168,7 @@ function shouldSkipDuplicate(text: string) {
 
 async function postSpeak(text: string): Promise<unknown> {
   const body = JSON.stringify({ text, engine: state.engine, effect: state.effect });
-  const url = new URL(process.env.COPYSPEAK_CONTROL_URL || "http://127.0.0.1:43117/speak");
+  const url = new URL((process.env.COPYSPEECH_CONTROL_URL ?? process.env.COPYSPEAK_CONTROL_URL) || "http://127.0.0.1:43117/speak");
 
   return await new Promise<unknown>((resolve, reject) => {
     const req = request(
@@ -200,14 +200,14 @@ async function postSpeak(text: string): Promise<unknown> {
   });
 }
 
-function launchCopySpeak() {
-  if (isCopySpeakRunning()) return;
-  const exe = process.env.COPYSPEAK_EXE || findBuiltCopySpeak();
+function launchCopySpeech() {
+  if (isCopySpeechRunning()) return;
+  const exe = (process.env.COPYSPEECH_EXE ?? process.env.COPYSPEAK_EXE) || findBuiltCopySpeech();
   if (!exe || !existsSync(exe)) return;
   spawn(exe, [], { detached: true, stdio: "ignore", windowsHide: true }).unref();
 }
 
-function isCopySpeakRunning() {
+function isCopySpeechRunning() {
   if (process.platform !== "win32") return false;
   try {
     const output = execFileSync("tasklist.exe", ["/FI", "IMAGENAME eq copyspeech.exe", "/NH"], {
@@ -220,7 +220,7 @@ function isCopySpeakRunning() {
   }
 }
 
-function findBuiltCopySpeak() {
+function findBuiltCopySpeech() {
   const cwd = process.cwd();
   const binary = process.platform === "win32" ? "copyspeech.exe" : "copyspeech";
   const candidates = [
@@ -276,7 +276,7 @@ function isEngine(value: string | undefined): value is Engine {
 }
 
 function envBool(name: string, fallback: boolean) {
-  const value = process.env[name];
+  const value = process.env[name] ?? process.env[name.replace("COPYSPEECH_", "COPYSPEAK_")];
   if (value == null || value === "") return fallback;
   return !/^(0|false|no|off)$/i.test(value);
 }

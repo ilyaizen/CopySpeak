@@ -24,7 +24,7 @@
 │   └── rules
 ├── .pi
 │   └── extensions
-│       └── copyspeak
+│       └── copyspeech
 │           ├── README.md
 │           └── index.ts
 ├── .vscode
@@ -72,10 +72,10 @@
 │   │   └── harness_deadlock.py
 │   ├── Cargo.lock
 │   ├── Cargo.toml
-│   ├── com.copyspeak.browser.firefox.json
-│   ├── com.copyspeak.browser.json
+│   ├── com.copyspeech.browser.firefox.json
+│   ├── com.copyspeech.browser.json
 │   └── install-linux.sh
-├── copyspeak-dsh
+├── copyspeech-dsh
 │   ├── debug
 │   │   ├── analyze-events.py
 │   │   ├── analyze-frames.py
@@ -114,25 +114,25 @@
 │   │   ├── pyproject.toml
 │   │   └── uv.lock
 │   ├── edge
-│   │   └── copyspeak-edge.py
+│   │   └── copyspeech-edge.py
 │   ├── kitten
-│   │   └── copyspeak-kitten.py
+│   │   └── copyspeech-kitten.py
 │   ├── kokoro
-│   │   └── copyspeak-kokoro.py
+│   │   └── copyspeech-kokoro.py
 │   ├── lib
-│   │   ├── copyspeak-engine-install.ps1
-│   │   └── copyspeak-engine-install.sh
+│   │   ├── copyspeech-engine-install.ps1
+│   │   └── copyspeech-engine-install.sh
 │   ├── piper
-│   │   └── copyspeak-piper.py
+│   │   └── copyspeech-piper.py
 │   ├── pocket
-│   │   └── copyspeak-pocket.py
+│   │   └── copyspeech-pocket.py
 │   ├── qwen
-│   │   └── copyspeak-qwen.py
+│   │   └── copyspeech-qwen.py
 │   ├── tmp-beep-debug
 │   ├── capture-screenshot.mjs
-│   ├── claude-copyspeak-hook.mjs
-│   ├── claude-copyspeak-status.mjs
-│   ├── copyspeak.mjs
+│   ├── claude-copyspeech-hook.mjs
+│   ├── claude-copyspeech-status.mjs
+│   ├── copyspeech.mjs
 │   ├── debug-beep-fuzz.ts
 │   ├── fix-ports.ps1
 │   ├── generate-i18n-types.js
@@ -161,7 +161,7 @@
 │   └── version-bumper.mjs
 ├── src
 │   ├── __tests__
-│   │   └── copyspeak-cli.test.ts
+│   │   └── copyspeech-cli.test.ts
 │   ├── lib
 │   │   ├── __tests__
 │   │   │   ├── effects-gate.test.ts

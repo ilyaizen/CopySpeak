@@ -1,6 +1,6 @@
 [project]
-name = "copyspeak-bench"
+name = "copyspeech-bench"
 version = "0.1.0"
-description = "TTFA / RAM / VRAM measurement harness for CopySpeak's local TTS engines"
+description = "TTFA / RAM / VRAM measurement harness for CopySpeech's local TTS engines"
 requires-python = ">=3.10"
 dependencies = ["psutil>=6.0", "nvidia-ml-py>=13.530"]

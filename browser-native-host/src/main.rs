@@ -1,5 +1,5 @@
 // Native messaging host binary: stdin/stdout framing to Windows named pipe bridge.
-// Chrome/Edge launches this process; it forwards protocol messages to the running CopySpeak app.
+// Chrome/Edge launches this process; it forwards protocol messages to the running CopySpeech app.
 //
 // Both legs run concurrently: the desktop replies to `start` only (hello/state are
 // log-only or unsolicited), so lockstep request/response forwarding deadlocks —
@@ -10,7 +10,7 @@
 // outstanding I/O per kernel file object, so a parked read made every concurrent
 // write block forever (2026-09-09 deadlock, found with tests/harness_deadlock.py).
 
-use copyspeak_browser_host::{read_frame, write_frame, ClientMessage, MAX_FRAME};
+use copyspeech_browser_host::{read_frame, write_frame, ClientMessage, MAX_FRAME};
 use serde_json::{json, Value};
 use std::io::{self, Write};
 use std::sync::mpsc;
@@ -30,11 +30,11 @@ use windows::Win32::System::Threading::INFINITE;
 #[cfg(windows)]
 use windows::Win32::System::IO::{GetOverlappedResult, OVERLAPPED};
 
-/// Default desktop endpoint, per platform. Matches CopySpeak's bridge server.
+/// Default desktop endpoint, per platform. Matches CopySpeech's bridge server.
 #[cfg(windows)]
-const DEFAULT_ENDPOINT: &str = r"\\.\pipe\copyspeak-browser";
+const DEFAULT_ENDPOINT: &str = r"\\.\pipe\copyspeech-browser";
 #[cfg(not(windows))]
-const DEFAULT_ENDPOINT: &str = "copyspeak-browser.sock";
+const DEFAULT_ENDPOINT: &str = "copyspeech-browser.sock";
 
 enum HostEvent {
     /// A complete message arrived from the desktop pipe.
@@ -292,7 +292,7 @@ fn resolve_endpoint(endpoint: &str) -> std::path::PathBuf {
 
 /// Linux: connect to the desktop bridge's Unix stream socket. One client at a
 /// time is served, so a busy server surfaces here as a connect error and the
-/// worker shows CopySpeak as unavailable — no wait-and-retry policy to keep
+/// worker shows CopySpeech as unavailable — no wait-and-retry policy to keep
 /// in sync with the desktop.
 #[cfg(not(windows))]
 fn open_channel(endpoint: &str) -> std::io::Result<PipeChannel> {
@@ -310,10 +310,11 @@ fn run() {
     let stdout = io::stdout();
     let mut writer = stdout.lock();
 
-    // Desktop endpoint is configurable; the default matches CopySpeak's
+    // Desktop endpoint is configurable; the default matches CopySpeech's
     // bridge server per platform (named pipe / Unix socket path).
-    let pipe_name =
-        std::env::var("COPYSPEAK_BROWSER_PIPE").unwrap_or_else(|_| DEFAULT_ENDPOINT.to_string());
+    let pipe_name = std::env::var("COPYSPEECH_BROWSER_PIPE")
+        .or_else(|_| std::env::var("COPYSPEAK_BROWSER_PIPE"))
+        .unwrap_or_else(|_| DEFAULT_ENDPOINT.to_string());
 
     // Connect to desktop app. If unavailable, report via stdout and exit.
     // (Only moved into the relay threads; the mut binding lives in the stdin

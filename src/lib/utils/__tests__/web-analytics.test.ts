@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vite-plus/test";
-import { COPYSPEAK_RYBBIT_SITE_ID, RYBBIT_HOST, rybbitScriptSrc } from "../web-analytics";
+import { COPYSPEECH_RYBBIT_SITE_ID, RYBBIT_HOST, rybbitScriptSrc } from "../web-analytics";
 
 describe("rybbit script src", () => {
   it("loads the canonical /api/script.js from the analytics host", () => {
-    const url = new URL(rybbitScriptSrc(COPYSPEAK_RYBBIT_SITE_ID));
+    const url = new URL(rybbitScriptSrc(COPYSPEECH_RYBBIT_SITE_ID));
     expect(url.origin).toBe(RYBBIT_HOST);
     expect(url.pathname).toBe("/api/script.js");
   });
@@ -14,7 +14,7 @@ describe("rybbit script src", () => {
   });
 
   it("derives the tracker API base from the src, as the tracker does", () => {
-    const src = rybbitScriptSrc(COPYSPEAK_RYBBIT_SITE_ID);
+    const src = rybbitScriptSrc(COPYSPEECH_RYBBIT_SITE_ID);
     expect(src.split("/script.js")[0]).toBe(`${RYBBIT_HOST}/api`);
   });
 });

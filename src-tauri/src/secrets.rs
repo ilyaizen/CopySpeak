@@ -130,7 +130,7 @@ mod tests {
     /// Fresh, empty directory under the OS temp dir. Callers remove it.
     fn temp_dir(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!(
-            "copyspeak-secrets-test-{}-{}",
+            "copyspeech-secrets-test-{}-{}",
             std::process::id(),
             name
         ));

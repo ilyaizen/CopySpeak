@@ -1,6 +1,6 @@
-"""Feedback loop for the CopySpeak native-host relay deadlock.
+"""Feedback loop for the CopySpeech native-host relay deadlock.
 
-Launches copyspeak-browser-host.exe directly and feeds it hello + start frames
+Launches copyspeech-browser-host.exe directly and feeds it hello + start frames
 on stdin, exactly as Chrome's worker would. Desktop-side pass/fail signal:
 %APPDATA%\\CopySpeak\\logs\\app_rCURRENT.log must show
 "[Browser] Hello: automatic=false" then "[Browser] Start: request_id=harness1".
@@ -15,7 +15,7 @@ import subprocess
 import sys
 import time
 
-HOST = r"D:\Projects\CopySpeak\browser-native-host\target\debug\copyspeak-browser-host.exe"
+HOST = r"D:\Projects\CopySpeech\browser-native-host\target\debug\copyspeech-browser-host.exe"
 TEXT = "Hello harness world, this is the native host deadlock test passage."
 
 

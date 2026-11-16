@@ -795,7 +795,7 @@ mod tests {
         captions.validate().unwrap();
         assert!(captions.words.len() > 20);
         assert!(captions.words.last().unwrap().end_ms <= bytes.len() as f64 / 48.0 + 20.0);
-        let path = std::env::temp_dir().join("copyspeak-alignment-elevenlabs.wav");
+        let path = std::env::temp_dir().join("copyspeech-alignment-elevenlabs.wav");
         std::fs::write(
             &path,
             super::super::stream::pcm_to_wav(&bytes, &stream.meta),

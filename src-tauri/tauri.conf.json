@@ -1,7 +1,7 @@
 {
   "productName": "CopySpeech",
   "version": "0.3.0",
-  "identifier": "com.copyspeak.tts",
+  "identifier": "com.copyspeech.tts",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",

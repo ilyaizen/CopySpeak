@@ -34,7 +34,7 @@ function fixture(
     height
   });
   const mark = () => {
-    const found = d.querySelector<HTMLElement>(".copyspeak-mark");
+    const found = d.querySelector<HTMLElement>(".copyspeech-mark");
     if (found === null) throw new Error("the pill is not painted");
     return found;
   };
@@ -215,7 +215,7 @@ describe("caption glide", () => {
     const collapsed = wordRange(d, "p", 4, 7);
     setRects(collapsed, [rect(0, 0, 0, 0)]);
     glide.paint(collapsed, "4:7");
-    expect(d.querySelector(".copyspeak-mark")).toBeNull();
+    expect(d.querySelector(".copyspeech-mark")).toBeNull();
   });
 
   test("release strips the pill", () => {
@@ -225,7 +225,7 @@ describe("caption glide", () => {
     setRects(range, [rect(40, 20, 30, 12)]);
     glide.paint(range, "0:3");
     glide.release();
-    expect(d.querySelector(".copyspeak-mark")).toBeNull();
+    expect(d.querySelector(".copyspeech-mark")).toBeNull();
   });
 
   test("a late first frame anchors the glide instead of snapping", async () => {

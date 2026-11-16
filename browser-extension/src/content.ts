@@ -11,7 +11,7 @@ import { paragraphHover } from "./hover";
 import { CaptionGlide } from "./glide";
 
 // Repeated scripting.executeScript calls do not install duplicate listeners.
-const marker = "__copyspeak_companion_v1__";
+const marker = "__copyspeech_companion_v1__";
 // SAFETY: only adds the optional script-unique marker; globalThis members are untouched.
 const scope = globalThis as typeof globalThis & { [marker]?: boolean };
 if (!scope[marker]) {

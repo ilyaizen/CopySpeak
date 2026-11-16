@@ -1,5 +1,5 @@
 {
-  "name": "@local/copyspeak-voice",
+  "name": "@local/copyspeech-voice",
   "version": "0.1.1",
   "private": true,
   "description": "Reads DSH assistant messages aloud through the running CopySpeech app.",

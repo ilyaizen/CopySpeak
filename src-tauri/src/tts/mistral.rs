@@ -305,7 +305,7 @@ mod tests {
             eprintln!("MISTRAL_API_KEY not set; skipping live synthesis test");
             return Ok(());
         };
-        const TEXT: &str = "Mistral live check. CopySpeak reads this short paragraph to verify \
+        const TEXT: &str = "Mistral live check. CopySpeech reads this short paragraph to verify \
             that the Voxtral batch endpoint returns a decodable WAV container with real \
             speech inside it. The quick brown fox jumps over the lazy dog while the \
             evening sun settles behind the hills and the town lights begin to glow one \

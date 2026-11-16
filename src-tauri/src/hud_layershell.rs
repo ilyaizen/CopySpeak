@@ -63,7 +63,7 @@ pub fn apply_anchors(
         // not the app, places the window.
         gtk_win.init_layer_shell();
         gtk_win.set_layer(Layer::Overlay);
-        gtk_win.set_namespace("copyspeak-hud");
+        gtk_win.set_namespace("copyspeech-hud");
         // The HUD is display-only (click-through via set_ignore_cursor_events
         // on the input side); never take keyboard focus.
         gtk_win.set_keyboard_mode(KeyboardMode::None);

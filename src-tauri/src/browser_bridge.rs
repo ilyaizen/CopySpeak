@@ -47,7 +47,7 @@ use crate::sanitize::tts_normalize::punct_equivalent;
 use crate::text_map::{align, TextAlignment};
 use crate::tts::captions::{CaptionAlignment, WordTiming};
 
-const PIPE_NAME: &str = r"\\.\pipe\copyspeak-browser";
+const PIPE_NAME: &str = r"\\.\pipe\copyspeech-browser";
 const MAX_FRAME: usize = 256 * 1024;
 /// Largest text (UTF-16 units) a page selection can carry, the same bound the
 /// extension and native host put on captured readings.
@@ -184,7 +184,7 @@ struct BrowserSession {
     id: String,
     kind: SessionKind,
     sequence: AtomicU64,
-    /// Sanitized text CopySpeak actually speaks.
+    /// Sanitized text CopySpeech actually speaks.
     spoken_text: String,
     /// Raw ↔ spoken word alignment; always present.
     source_map: TextAlignment,
@@ -417,7 +417,7 @@ fn bridge_socket_path() -> std::path::PathBuf {
         )
         .into()
     });
-    std::path::PathBuf::from(dir).join("copyspeak-browser.sock")
+    std::path::PathBuf::from(dir).join("copyspeech-browser.sock")
 }
 
 /// Start the browser bridge on the platform transport. Sets up the caption

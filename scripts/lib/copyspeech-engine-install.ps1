@@ -1,11 +1,11 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Shared helpers for CopySpeak uv-based engine installers.
+    Shared helpers for CopySpeech uv-based engine installers.
 
 .PROGRESS-MARKERS
     Installers emit three machine-parseable line prefixes on stdout so the
-    CopySpeak frontend can track state transitions through the streamed event
+    CopySpeech frontend can track state transitions through the streamed event
     pipe (everything else is free-form log noise):
         [STEP] <name>   - a phase started (name = 'voice:<id>' for per-voice
                           Piper downloads, or 'engine'/'model' for shared steps)
@@ -14,16 +14,16 @@
 
 .DESCRIPTION
     Dot-source this file from an engine installer:
-        . "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
+        . "$PSScriptRoot/lib/copyspeech-engine-install.ps1"
 
     All Python engines are managed by `uv`. These helpers stay deliberately
     boring: require uv, locate the engine root, create a uv project, run uv,
-    validate audio output, and print a CopySpeak profile snippet.
+    validate audio output, and print a CopySpeech profile snippet.
 #>
 
 # Add uv's standard install locations to this process's PATH.
 #
-# Installers launched by the app inherit CopySpeak's PATH, which is a snapshot
+# Installers launched by the app inherit CopySpeech's PATH, which is a snapshot
 # from app launch. Right after install-uv.ps1 runs, uv exists on disk but not
 # in that snapshot, so every engine installer would fail until the app is
 # restarted. Re-probing the well-known locations avoids that restart.
@@ -58,7 +58,7 @@ function Require-Uv {
 }
 
 # %LOCALAPPDATA%\CopySpeak\engines  (matches the {engine_dir} placeholder).
-function Get-CopySpeakEngineRoot {
+function Get-CopySpeechEngineRoot {
     return Join-Path $env:LOCALAPPDATA "CopySpeak\engines"
 }
 
@@ -80,7 +80,7 @@ function New-EngineProject {
         # ponytail: --name avoids a collision when the directory basename equals
         # a PyPI package name (e.g. engines\piper + `uv add piper` -> "self-
         # dependencies are not permitted"). Prefix keeps the project name unique.
-        $projectName = "copyspeak-$(Split-Path $EngineDir -Leaf)"
+        $projectName = "copyspeech-$(Split-Path $EngineDir -Leaf)"
         # ponytail: the target dir is positional. `uv --project X init` was
         # accepted by older uv and is a hard error from 0.12 on
         # ("The `--project` option cannot be used in `uv init`").
@@ -107,7 +107,7 @@ function Invoke-Uv {
 #
 # The nvidia-* wheels carry the CUDA/cuDNN DLLs. onnxruntime cannot find them on
 # its own under Windows, so each wrapper registers their bin directories itself
-# (enable_cuda_dlls in scripts/<engine>/copyspeak-<engine>.py).
+# (enable_cuda_dlls in scripts/<engine>/copyspeech-<engine>.py).
 function Add-CudaRuntime {
     param(
         [Parameter(Mandatory)][string]$EngineDir,
@@ -273,7 +273,7 @@ function Write-EngineManifest {
 # stdin closed, so any Read-Host would fail or block forever. Every interactive
 # helper below silently takes its default in that mode.
 function Test-NonInteractive {
-    return ($env:COPYSPEAK_NONINTERACTIVE -eq "1")
+    return ($env:COPYSPEECH_NONINTERACTIVE -eq "1")
 }
 
 function Write-EngineBanner {
@@ -342,7 +342,7 @@ function Select-VoiceFromMenu {
     } while ($true)
 }
 
-# Print a ready-to-paste CopySpeak profile snippet. Does NOT edit config (v1).
+# Print a ready-to-paste CopySpeech profile snippet. Does NOT edit config (v1).
 function Write-ProfileSnippet {
     param([Parameter(Mandatory)][string]$Json)
     Write-Host ""

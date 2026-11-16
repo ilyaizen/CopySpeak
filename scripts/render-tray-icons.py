@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Derive colored tray artwork from CopySpeak's original RGBA icon.
+"""Derive colored tray artwork from CopySpeech's original RGBA icon.
 
 Requires Pillow. Hue rotation retains each pixel's saturation, brightness and alpha.
 """

@@ -1,8 +1,8 @@
 /*
  * Regression driver for the DSH plugin caption pill.
  *
- * Loads the real copyspeak-dsh/client.js into a stub-host page, fakes the
- * CopySpeak control server on 127.0.0.1:43117, starts one message reading, and
+ * Loads the real copyspeech-dsh/client.js into a stub-host page, fakes the
+ * CopySpeech control server on 127.0.0.1:43117, starts one message reading, and
  * asserts the difference-blend pill paints over the spoken word. Further checks
  * cover a scrolled document, a scrolled chat scrollport, and a scrolled window.
  *
@@ -16,7 +16,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const clientPath = process.env.CAPTION_CLIENT ?? join(here, "..", "copyspeak-dsh", "client.js");
+const clientPath = process.env.CAPTION_CLIENT ?? join(here, "..", "copyspeech-dsh", "client.js");
 const clientSrc = readFileSync(clientPath, "utf8");
 
 /* The reading entry point sits inside the bundle closure. Expose it to the
@@ -181,8 +181,8 @@ async function openFixture(browser, server, options = {}) {
   });
   await page.addInitScript((follow) => {
     try {
-      localStorage.setItem("dsh.copyspeak-voice.captions", "1");
-      if (!follow) localStorage.setItem("dsh.copyspeak-voice.follow", "0");
+      localStorage.setItem("dsh.copyspeech-voice.captions", "1");
+      if (!follow) localStorage.setItem("dsh.copyspeech-voice.follow", "0");
     } catch {
       /* about:blank has no storage. */
     }

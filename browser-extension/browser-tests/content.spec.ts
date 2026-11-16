@@ -34,7 +34,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
       },
       runtime: {
         // The hover button resolves its icon through runtime.getURL at load.
-        getURL: (asset: string) => `chrome-extension://copyspeak/${asset}`,
+        getURL: (asset: string) => `chrome-extension://copyspeech/${asset}`,
         sendMessage: async (m: any) => {
           w.sent.push(m);
           if (m.type === "site-access") return true;
@@ -84,7 +84,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
   expect(await page.evaluate(() => getSelection()!.rangeCount)).toBe(0);
   // Reading paints only the pill; the page keeps its own background and styles.
   expect(await page.evaluate(() => [...CSS.highlights.keys()])).toEqual([]);
-  expect(await page.evaluate(() => document.querySelectorAll(".copyspeak-mark").length)).toBe(0);
+  expect(await page.evaluate(() => document.querySelectorAll(".copyspeech-mark").length)).toBe(0);
   expect(
     await page.evaluate(() =>
       document.querySelector<HTMLElement>("#source")?.style.getPropertyValue("isolation")
@@ -111,7 +111,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
     );
   }, capture.document_token);
   const firstPill = await page.evaluate(() => {
-    const mark = document.querySelector<HTMLElement>(".copyspeak-mark");
+    const mark = document.querySelector<HTMLElement>(".copyspeech-mark");
     if (mark === null) throw new Error("the pill is not painted");
     return {
       left: mark.style.left,
@@ -147,7 +147,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
       {},
       () => {}
     );
-    const mark = document.querySelector<HTMLElement>(".copyspeak-mark");
+    const mark = document.querySelector<HTMLElement>(".copyspeech-mark");
     return mark === null ? null : { left: mark.style.left, transform: mark.style.transform };
   }, capture.document_token);
   expect(glideStart).not.toBeNull();
@@ -157,7 +157,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
   await expect
     .poll(() =>
       page.evaluate(() => {
-        const mark = document.querySelector<HTMLElement>(".copyspeak-mark");
+        const mark = document.querySelector<HTMLElement>(".copyspeech-mark");
         // The missing pill reads as a distinct value, never as a settled pill.
         return mark === null ? null : { left: mark.style.left, transform: mark.style.transform };
       })
@@ -187,7 +187,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
   }, capture.document_token);
   expect(
     await page.evaluate(() => {
-      const mark = document.querySelector<HTMLElement>(".copyspeak-mark");
+      const mark = document.querySelector<HTMLElement>(".copyspeech-mark");
       return mark === null ? null : { left: mark.style.left, transform: mark.style.transform };
     })
   ).toEqual({ left: glideStart!.left, transform: "" });
@@ -215,7 +215,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
       {},
       () => {}
     );
-    const mark = document.querySelector<HTMLElement>(".copyspeak-mark");
+    const mark = document.querySelector<HTMLElement>(".copyspeech-mark");
     return mark === null ? null : { left: mark.style.left, transform: mark.style.transform };
   }, capture.document_token);
   expect(jumped).not.toBeNull();
@@ -230,7 +230,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
   ).toBe("pause");
   await page.getByRole("button", { name: "Hide playback box", exact: true }).click();
   await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeHidden();
-  expect(await page.evaluate(() => document.querySelectorAll(".copyspeak-mark").length)).toBe(1);
+  expect(await page.evaluate(() => document.querySelectorAll(".copyspeech-mark").length)).toBe(1);
   expect(
     await page.evaluate(() => {
       // SAFETY: sent is installed by this test's browser fixture.
@@ -244,7 +244,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
   await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   await page.locator("#source b").evaluate((el) => (el.textContent = "changed"));
   await expect
-    .poll(() => page.evaluate(() => document.querySelectorAll(".copyspeak-mark").length))
+    .poll(() => page.evaluate(() => document.querySelectorAll(".copyspeech-mark").length))
     .toBe(0);
   expect(
     await page.evaluate(() => {
@@ -305,7 +305,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
     return (window as any).chrome.storage.local.set({ hoverRead: false });
   });
   await expect(page.getByRole("button", { name: "Read paragraph with CopySpeech" })).toHaveCount(0);
-  expect(await page.evaluate(() => CSS.highlights.has("copyspeak-hover"))).toBe(false);
+  expect(await page.evaluate(() => CSS.highlights.has("copyspeech-hover"))).toBe(false);
 });
 
 test("follows the spoken word into view", async ({ page }) => {
@@ -330,7 +330,7 @@ test("follows the spoken word into view", async ({ page }) => {
         onChanged: { addListener: () => {} }
       },
       runtime: {
-        getURL: (asset: string) => `chrome-extension://copyspeak/${asset}`,
+        getURL: (asset: string) => `chrome-extension://copyspeech/${asset}`,
         sendMessage: async (m: any) => {
           w.sent.push(m);
           if (m.type === "site-access") return true;
@@ -394,7 +394,7 @@ test("follows the spoken word into view", async ({ page }) => {
   // The smooth scroll ends with the pill on the anchor line, inside the viewport.
   const pillTop = () =>
     page.evaluate(() => {
-      const mark = document.querySelector<HTMLElement>(".copyspeak-mark");
+      const mark = document.querySelector<HTMLElement>(".copyspeech-mark");
       // A missing pill reads as infinity, so the poll keeps waiting for it.
       return mark === null
         ? Number.POSITIVE_INFINITY

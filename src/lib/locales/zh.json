@@ -191,7 +191,7 @@
       "temporary": "临时",
       "generationsFolder": "生成文件夹",
       "generationsFolderDescription": "保存 TTS 生成内容的目录。留空则使用默认位置。",
-      "generationsFolderPlaceholder": "默认：Documents/CopySpeak",
+      "generationsFolderPlaceholder": "默认：Documents/CopySpeech",
       "autoDeleteTitle": "自动删除生成内容",
       "autoDeleteKeepLatest": "保留最新",
       "autoDeleteNever": "从不",

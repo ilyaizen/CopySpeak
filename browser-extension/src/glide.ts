@@ -130,7 +130,7 @@ export class CaptionGlide {
     }
     this.removeMark();
     const mark = this.doc.createElement("div");
-    mark.className = "copyspeak-mark";
+    mark.className = "copyspeech-mark";
     mark.setAttribute("aria-hidden", "true");
     mark.style.position = "absolute";
     mark.style.borderRadius = `${MARK_RADIUS_PX}px`;

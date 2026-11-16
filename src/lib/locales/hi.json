@@ -191,7 +191,7 @@
       "temporary": "अस्थायी",
       "generationsFolder": "जनरेशन फ़ोल्डर",
       "generationsFolderDescription": "TTS जनरेशन सहेजने की डायरेक्टरी। डिफ़ॉल्ट के लिए खाली छोड़ें।",
-      "generationsFolderPlaceholder": "डिफ़ॉल्ट: Documents/CopySpeak",
+      "generationsFolderPlaceholder": "डिफ़ॉल्ट: Documents/CopySpeech",
       "autoDeleteTitle": "जनरेशन अपने-आप हटाएँ",
       "autoDeleteKeepLatest": "नवीनतम रखें",
       "autoDeleteNever": "कभी नहीं",

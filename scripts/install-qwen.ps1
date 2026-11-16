@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Installs Qwen3-TTS CustomVoice for CopySpeak via uv.
+    Installs Qwen3-TTS CustomVoice for CopySpeech via uv.
 #>
 
 param(
@@ -12,7 +12,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-. "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
+. "$PSScriptRoot/lib/copyspeech-engine-install.ps1"
 
 $Voices = ConvertTo-VoiceIds $Voices
 
@@ -27,7 +27,7 @@ $effectiveForce = if ($Force) {
     Get-Confirmation -Prompt "Reinstall Qwen3-TTS from scratch? (deletes the existing engine dir)" -DefaultYes:$false
 }
 
-$EngineDir = Join-Path (Get-CopySpeakEngineRoot) "qwen"
+$EngineDir = Join-Path (Get-CopySpeechEngineRoot) "qwen"
 New-EngineProject -EngineDir $EngineDir -Force:$effectiveForce
 
 Write-Host ""
@@ -39,8 +39,8 @@ $scriptsDir = Join-Path $EngineDir "scripts"
 $outputDir = Join-Path $EngineDir "output"
 New-Item -ItemType Directory -Force $scriptsDir | Out-Null
 New-Item -ItemType Directory -Force $outputDir | Out-Null
-$srcWrapper = Join-Path $PSScriptRoot "qwen/copyspeak-qwen.py"
-$dstWrapper = Join-Path $scriptsDir "copyspeak-qwen.py"
+$srcWrapper = Join-Path $PSScriptRoot "qwen/copyspeech-qwen.py"
+$dstWrapper = Join-Path $scriptsDir "copyspeech-qwen.py"
 Copy-Item $srcWrapper $dstWrapper -Force
 Write-Host "  Wrapper installed: $dstWrapper" -ForegroundColor Gray
 Write-Host "  [DONE] engine" -ForegroundColor Green

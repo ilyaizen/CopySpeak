@@ -381,7 +381,7 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 /// The Windows AppUserModelID. Must match the `identifier` in tauri.conf.json
 /// so the taskbar can tie a pinned button to this process.
 #[cfg(target_os = "windows")]
-const APP_USER_MODEL_ID: &str = "com.copyspeak.tts";
+const APP_USER_MODEL_ID: &str = "com.copyspeech.tts";
 
 /// Give the process an explicit AppUserModelID on Windows.
 ///
@@ -414,7 +414,7 @@ fn main() {
     // Linux: GTK derives the Wayland app_id / X11 WM_CLASS from
     // g_get_prgname() (tao never propagates the gtk app id to the window
     // class), so without this the bare binary's lowercase file name
-    // ("copyspeak") leaks into compositors, docks, and .desktop matching.
+    // ("copyspeech") leaks into compositors, docks, and .desktop matching.
     #[cfg(target_os = "linux")]
     glib::set_prgname(Some("CopySpeech"));
 

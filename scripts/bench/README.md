@@ -1,6 +1,6 @@
 # Local-engine bench (Stage 0)
 
-Measures TTFA, RAM, and VRAM for CopySpeak's five local daemon engines
+Measures TTFA, RAM, and VRAM for CopySpeech's five local daemon engines
 (Kitten, Qwen, Piper, Kokoro, Pocket) by speaking the daemon protocol v2
 directly — no app code runs, no product code changes.
 

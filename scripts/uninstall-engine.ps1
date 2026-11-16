@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Uninstalls a CopySpeak local TTS engine.
+    Uninstalls a CopySpeech local TTS engine.
 
 .DESCRIPTION
     The mirror of the install-*.ps1 scripts. Every local engine leaves at most
@@ -39,9 +39,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
+. "$PSScriptRoot/lib/copyspeech-engine-install.ps1"
 
-# What each engine leaves behind. Dir is relative to the CopySpeak engine root;
+# What each engine leaves behind. Dir is relative to the CopySpeech engine root;
 # Tool is the `uv tool` name (engines installed as project deps have none).
 $layout = @{
     kitten = @{ Dir = "kitten"; Tool = $null;          Title = "Kitten TTS" }
@@ -82,7 +82,7 @@ if ($layout.Tool) {
 
 # -- engine directory --------------------------------------------------------
 if ($layout.Dir) {
-    $engineDir = Join-Path (Get-CopySpeakEngineRoot) $layout.Dir
+    $engineDir = Join-Path (Get-CopySpeechEngineRoot) $layout.Dir
     Write-Host "  [STEP] files" -ForegroundColor Yellow
     if (-not (Test-Path $engineDir)) {
         Write-Host "  Nothing at $engineDir." -ForegroundColor Gray
@@ -115,4 +115,4 @@ if ($failed) {
     exit 1
 }
 Write-Host "  $($layout.Title) uninstalled." -ForegroundColor Green
-Write-Host "  Remove any CopySpeak profile that pointed at it from the Voices page." -ForegroundColor Gray
+Write-Host "  Remove any CopySpeech profile that pointed at it from the Voices page." -ForegroundColor Gray

@@ -69,7 +69,7 @@ fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
                 "--project",
                 "{engine_dir}/kitten",
                 "python",
-                "{engine_dir}/kitten/scripts/copyspeak-kitten.py",
+                "{engine_dir}/kitten/scripts/copyspeech-kitten.py",
                 "--text-file",
                 "{input}",
                 "--voice",
@@ -89,7 +89,7 @@ fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
                 "--project",
                 "{engine_dir}/qwen",
                 "python",
-                "{engine_dir}/qwen/scripts/copyspeak-qwen.py",
+                "{engine_dir}/qwen/scripts/copyspeech-qwen.py",
                 "--text-file",
                 "{input}",
                 "--voice",
@@ -107,7 +107,7 @@ fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
                 "--project",
                 "{engine_dir}/piper",
                 "python",
-                "{engine_dir}/piper/scripts/copyspeak-piper.py",
+                "{engine_dir}/piper/scripts/copyspeech-piper.py",
                 "--text-file",
                 "{input}",
                 "--voice",
@@ -123,7 +123,7 @@ fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
                 "--project",
                 "{engine_dir}/kokoro",
                 "python",
-                "{engine_dir}/kokoro/scripts/copyspeak-kokoro.py",
+                "{engine_dir}/kokoro/scripts/copyspeech-kokoro.py",
                 "--text-file",
                 "{input}",
                 "--voice",
@@ -139,7 +139,7 @@ fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
                 "--project",
                 "{engine_dir}/pocket",
                 "python",
-                "{engine_dir}/pocket/scripts/copyspeak-pocket.py",
+                "{engine_dir}/pocket/scripts/copyspeech-pocket.py",
                 "--text-file",
                 "{input}",
                 "--voice",
@@ -395,7 +395,7 @@ pub(crate) fn create_backend_from_effective(
 
 /// Get the voice string for the active backend.
 /// Warm the active profile's engine so the first utterance skips the model
-/// load. No-op for cloud engines and for local CLIs without a CopySpeak wrapper.
+/// load. No-op for cloud engines and for local CLIs without a CopySpeech wrapper.
 pub(crate) fn prewarm_active_profile(tts_config: &TtsConfig) {
     let eff = resolve_effective(tts_config);
     create_backend_from_effective(&eff, tts_config).prewarm(&eff.voice);

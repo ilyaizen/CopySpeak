@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# Installs uv (the Python package/environment manager) for CopySpeak local engines.
+# Installs uv (the Python package/environment manager) for CopySpeech local engines.
 #
-# uv is a hard requirement for all CopySpeak Python-based TTS engines. This is
+# uv is a hard requirement for all CopySpeech Python-based TTS engines. This is
 # the ONLY installer allowed to run when uv is missing; every other engine
 # installer fails fast and points here.
 #
@@ -13,8 +13,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib/copyspeak-engine-install.sh
-source "$SCRIPT_DIR/lib/copyspeak-engine-install.sh"
+# shellcheck source=lib/copyspeech-engine-install.sh
+source "$SCRIPT_DIR/lib/copyspeech-engine-install.sh"
 
 FORCE=0
 for arg in "$@"; do
@@ -35,7 +35,7 @@ done
 
 echo ""
 log C_MAGENTA "  ========================================"
-log C_MAGENTA "  |  uv Installer for CopySpeak          |"
+log C_MAGENTA "  |  uv Installer for CopySpeech          |"
 log C_MAGENTA "  ========================================"
 echo ""
 

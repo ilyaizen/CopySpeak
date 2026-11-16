@@ -80,14 +80,14 @@ POST /profiles/active
 The CLI is a thin wrapper over the localhost control server:
 
 ```bash
-node scripts/copyspeak.mjs health
-node scripts/copyspeak.mjs speak --profile pi "hello"
-node scripts/copyspeak.mjs speak -p narrator --stdin
-node scripts/copyspeak.mjs profiles list
-node scripts/copyspeak.mjs profiles use pi
-node scripts/copyspeak.mjs profiles show pi
-node scripts/copyspeak.mjs engines list
-node scripts/copyspeak.mjs voices list --engine elevenlabs
+node scripts/copyspeech.mjs health
+node scripts/copyspeech.mjs speak --profile pi "hello"
+node scripts/copyspeech.mjs speak -p narrator --stdin
+node scripts/copyspeech.mjs profiles list
+node scripts/copyspeech.mjs profiles use pi
+node scripts/copyspeech.mjs profiles show pi
+node scripts/copyspeech.mjs engines list
+node scripts/copyspeech.mjs voices list --engine elevenlabs
 ```
 
 The server is trusted localhost automation. Do not bind it to `0.0.0.0` without adding authentication first.

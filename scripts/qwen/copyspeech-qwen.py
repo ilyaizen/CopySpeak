@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stable CopySpeak protocol-v2 wrapper for Qwen3-TTS CustomVoice."""
+"""Stable CopySpeech protocol-v2 wrapper for Qwen3-TTS CustomVoice."""
 
 import argparse
 import contextlib
@@ -185,7 +185,7 @@ def serve(tts, voice: str) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Qwen3-TTS CLI wrapper for CopySpeak")
+    parser = argparse.ArgumentParser(description="Qwen3-TTS CLI wrapper for CopySpeech")
     parser.add_argument("--text")
     parser.add_argument("--text-file")
     parser.add_argument("--voice", default="Aiden")

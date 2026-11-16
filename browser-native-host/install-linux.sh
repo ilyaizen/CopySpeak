@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Install the CopySpeak native-messaging host on Linux.
+# Install the CopySpeech native-messaging host on Linux.
 #
 # 1. Writes two host manifests with the Linux host path
-#    (build target overridable via COPYSPEAK_HOST_BIN):
-#      com.copyspeak.browser.json          Chromium family (allowed_origins)
-#      com.copyspeak.browser.firefox.json  Firefox (allowed_extensions)
+#    (build target overridable via COPYSPEECH_HOST_BIN):
+#      com.copyspeech.browser.json          Chromium family (allowed_origins)
+#      com.copyspeech.browser.firefox.json  Firefox (allowed_extensions)
 # 2. Registers the Chrome manifest for Chromium-family browsers:
 #    ~/.config/chromium/NativeMessagingHosts and ~/.config/google-chrome/...
 #    (each directory is written only when its browser config dir exists).
@@ -18,7 +18,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
-HOST_BIN="${COPYSPEAK_HOST_BIN:-$REPO_DIR/browser-native-host/target/debug/copyspeak-browser-host}"
+HOST_BIN="${COPYSPEECH_HOST_BIN:-$REPO_DIR/browser-native-host/target/debug/copyspeech-browser-host}"
 EXT_ID="hojbmioeiccpgkpnpblkdbeegjkcccad"
 FIREFOX_EXT_ID="copyspeak-companion@ilyaizen.github.io"
 
@@ -28,14 +28,14 @@ if [ ! -x "$HOST_BIN" ]; then
   exit 1
 fi
 
-MANIFEST_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/copyspeak"
+MANIFEST_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/copyspeech"
 mkdir -p "$MANIFEST_DIR"
-CHROME_MANIFEST="$MANIFEST_DIR/com.copyspeak.browser.json"
-FIREFOX_MANIFEST="$MANIFEST_DIR/com.copyspeak.browser.firefox.json"
+CHROME_MANIFEST="$MANIFEST_DIR/com.copyspeech.browser.json"
+FIREFOX_MANIFEST="$MANIFEST_DIR/com.copyspeech.browser.firefox.json"
 
 cat > "$CHROME_MANIFEST" <<JSON
 {
-  "name": "com.copyspeak.browser",
+  "name": "com.copyspeech.browser",
   "description": "CopySpeech browser companion native host",
   "path": "$HOST_BIN",
   "type": "stdio",
@@ -45,7 +45,7 @@ JSON
 
 cat > "$FIREFOX_MANIFEST" <<JSON
 {
-  "name": "com.copyspeak.browser",
+  "name": "com.copyspeech.browser",
   "description": "CopySpeech browser companion native host (Firefox)",
   "path": "$HOST_BIN",
   "type": "stdio",
@@ -62,7 +62,7 @@ for browser_dir in \
   "$HOME/.config/google-chrome/NativeMessagingHosts"; do
   if [ -d "${browser_dir%/*}" ]; then
     mkdir -p "$browser_dir"
-    ln -sfn "$CHROME_MANIFEST" "$browser_dir/com.copyspeak.browser.json"
+    ln -sfn "$CHROME_MANIFEST" "$browser_dir/com.copyspeech.browser.json"
     echo "registered: $browser_dir"
     registered=1
   fi
@@ -71,7 +71,7 @@ done
 # Firefox: the file name must match the name passed to connectNative.
 if [ -d "$HOME/.mozilla" ]; then
   mkdir -p "$HOME/.mozilla/native-messaging-hosts"
-  ln -sfn "$FIREFOX_MANIFEST" "$HOME/.mozilla/native-messaging-hosts/com.copyspeak.browser.json"
+  ln -sfn "$FIREFOX_MANIFEST" "$HOME/.mozilla/native-messaging-hosts/com.copyspeech.browser.json"
   echo "registered: $HOME/.mozilla/native-messaging-hosts"
   registered=1
 fi

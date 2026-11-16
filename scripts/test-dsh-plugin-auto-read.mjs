@@ -1,7 +1,7 @@
 /*
  * Auto-read gate fixture.
  *
- * Loads the real copyspeak-dsh/client.js unmodified into a stub-host page,
+ * Loads the real copyspeech-dsh/client.js unmodified into a stub-host page,
  * mounts the registered AutoReader component with a fake Chat store and a fake
  * Session store, and asserts which replies POST /speak.
  *
@@ -24,7 +24,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 /* AUTO_READ_CLIENT points the fixture at another build, such as the committed
    or the pre-fix copy, to prove the checks fail on the bug. */
 const clientSrc = readFileSync(
-  process.env.AUTO_READ_CLIENT ?? join(here, "..", "copyspeak-dsh", "client.js"),
+  process.env.AUTO_READ_CLIENT ?? join(here, "..", "copyspeech-dsh", "client.js"),
   "utf8"
 );
 if (clientSrc.includes("</" + "script>")) throw new Error("client.js contains a script closer");
@@ -375,8 +375,8 @@ async function main() {
   });
 
   await page.addInitScript(() => {
-    localStorage.setItem("dsh.copyspeak-voice.auto-read", "1");
-    localStorage.setItem("dsh.copyspeak-voice.captions", "1");
+    localStorage.setItem("dsh.copyspeech-voice.auto-read", "1");
+    localStorage.setItem("dsh.copyspeech-voice.captions", "1");
   });
   await page.route("**/fixture.local/**", async (route) => {
     const url = new URL(route.request().url());
@@ -470,21 +470,21 @@ async function main() {
      reads localStorage once at load. */
   async function reloadWithExcerpt(excerpt) {
     await page.evaluate((next) => {
-      localStorage.setItem("dsh.copyspeak-voice.excerpt", "1");
+      localStorage.setItem("dsh.copyspeech-voice.excerpt", "1");
       if (next.mode === undefined) {
-        localStorage.removeItem("dsh.copyspeak-voice.excerpt-mode");
+        localStorage.removeItem("dsh.copyspeech-voice.excerpt-mode");
       } else {
-        localStorage.setItem("dsh.copyspeak-voice.excerpt-mode", next.mode);
+        localStorage.setItem("dsh.copyspeech-voice.excerpt-mode", next.mode);
       }
       if (next.top === undefined) {
-        localStorage.removeItem("dsh.copyspeak-voice.excerpt-top");
+        localStorage.removeItem("dsh.copyspeech-voice.excerpt-top");
       } else {
-        localStorage.setItem("dsh.copyspeak-voice.excerpt-top", String(next.top));
+        localStorage.setItem("dsh.copyspeech-voice.excerpt-top", String(next.top));
       }
       if (next.bottom === undefined) {
-        localStorage.removeItem("dsh.copyspeak-voice.excerpt-bottom");
+        localStorage.removeItem("dsh.copyspeech-voice.excerpt-bottom");
       } else {
-        localStorage.setItem("dsh.copyspeak-voice.excerpt-bottom", String(next.bottom));
+        localStorage.setItem("dsh.copyspeech-voice.excerpt-bottom", String(next.bottom));
       }
     }, excerpt);
     await page.reload({ waitUntil: "load" });
@@ -598,7 +598,7 @@ async function main() {
     });
   }
 
-  await page.evaluate(() => localStorage.removeItem("dsh.copyspeak-voice.excerpt"));
+  await page.evaluate(() => localStorage.removeItem("dsh.copyspeech-voice.excerpt"));
   await page.reload({ waitUntil: "load" });
   await page.waitForFunction(() => window.__autoReader !== undefined, null, { timeout: 5000 });
   await captionPaints("caption: whole reply aligns", CAPTION_PARAGRAPHS);
