@@ -23,6 +23,8 @@ public class Win {
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hWnd);
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
   [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
+  [DllImport("user32.dll")] public static extern bool SetProcessDpiAwarenessContext(IntPtr value);
+  [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr hWnd, IntPtr hdcBlt, uint nFlags);
   [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
 
   public static List<KeyValuePair<IntPtr, string>> Enumerate() {
@@ -40,6 +42,9 @@ public class Win {
   }
 }
 "@
+
+# Per-monitor DPI aware (v2). Without it, rects are scaled at 125% or 150% and the crop is wrong.
+[Win]::SetProcessDpiAwarenessContext([IntPtr](-4)) | Out-Null
 
 $all = [Win]::Enumerate()
 
@@ -81,9 +86,14 @@ $width  = $rect.Right - $rect.Left
 $height = $rect.Bottom - $rect.Top
 if ($width -le 0 -or $height -le 0) { throw "Invalid window rect: ${width}x${height}" }
 
+# PrintWindow reads the window's own surface, so overlapping windows do not leak into the capture.
+# PW_RENDERFULLCONTENT = 2 is needed for DWM-composed (WebView2) content.
 $bitmap   = New-Object System.Drawing.Bitmap $width, $height
 $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-$graphics.CopyFromScreen($rect.Left, $rect.Top, 0, 0, (New-Object System.Drawing.Size $width, $height))
+$hdc = $graphics.GetHdc()
+$printed = [Win]::PrintWindow($handle, $hdc, 2)
+$graphics.ReleaseHdc($hdc)
+if (-not $printed) { throw "PrintWindow failed for handle $handle." }
 
 $resolvedDir = (Resolve-Path -LiteralPath (Split-Path -Parent $OutPath)).Path
 $finalPath   = Join-Path $resolvedDir (Split-Path -Leaf $OutPath)
