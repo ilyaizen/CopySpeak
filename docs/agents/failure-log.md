@@ -189,7 +189,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Pass `draft: true` to `softprops/action-gh-release` when attaching extra assets to tauri-action's draft release, or the step publishes the release unreviewed.
 - Keep `src-tauri/Cargo.lock` tracked and update it deliberately: without it CI resolves fresh, and the 2026-10-16 mass-yank of `zip` <9 left every `tauri-plugin-updater` 2.x unresolvable mid-release (Cargo still honours a yanked version a lockfile pins).
 - In a fresh clone or worktree, run `bun run build` once before any `cargo` command in `src-tauri/`; tauri-build fails with `frontendDist "../dist" doesn't exist` until `dist/` exists.
-- Every `latest.json` platform entry must keep both `url` and `signature`; a signature-only entry (the 0.3.0 Linux step) breaks the updater manifest. The Linux workflow checks this with `jq -e` before upload.
+- Every `latest.json` platform entry must keep both `url` and `signature`; a signature-only entry (the 0.3.0 Linux step) breaks the updater manifest. The Linux workflow checks this with `jq -e` before upload. Patch every entry that points at the AppImage, including `linux-x86_64-appimage`, or AppImage installs get a stale signature.
 
 ## i18n
 

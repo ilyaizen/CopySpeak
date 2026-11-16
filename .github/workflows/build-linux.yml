@@ -244,15 +244,25 @@ jobs:
             --pattern "latest.json" --output latest.json
           # Set BOTH signature and url. Tauri's updater needs a url on every
           # platform entry; a signature-only entry breaks the manifest.
+          # Aliases (linux-x86_64-appimage) point at the same AppImage, so
+          # they carry the same signature. Patch every entry that points at it.
           APPIMAGE_NAME=$(basename "$APPIMAGE")
           APPIMAGE_URL="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/$APPIMAGE_NAME"
           jq --arg sig "$(cat "$APPIMAGE.sig")" --arg url "$APPIMAGE_URL" \
             '.platforms["linux-x86_64"].signature = $sig
-             | .platforms["linux-x86_64"].url = $url' \
+             | .platforms["linux-x86_64"].url = $url
+             | .platforms |= with_entries(
+                 if (.value.url | endswith(".AppImage"))
+                 then .value.signature = $sig
+                 else . end)' \
             latest.json > latest.json.tmp && mv latest.json.tmp latest.json
-          # Fail loud if any platform entry lacks a signature or url.
+          # Fail loud if any platform entry lacks a signature or url, or if
+          # an AppImage entry carries a signature other than the new one.
           jq -e '[.platforms[] | (has("url") and has("signature"))] | all' latest.json
           jq -e '.platforms["linux-x86_64"].url | endswith("/" + "'"$APPIMAGE_NAME"'")' latest.json
+          jq -e --arg sig "$(cat "$APPIMAGE.sig")" \
+            '[.platforms[] | select(.url | endswith(".AppImage")) | .signature == $sig] | (length > 0 and all)' \
+            latest.json
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber \
             "$APPIMAGE" "$APPIMAGE.sig" latest.json
 
