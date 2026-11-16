@@ -1,0 +1,7 @@
+{
+  "bundle": {
+    "resources": {
+      "../browser-native-host/target/release/copyspeech-browser-host.exe": "./"
+    }
+  }
+}

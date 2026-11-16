@@ -51,13 +51,34 @@ sanitizer rewrote maps to the source run it replaced and a word it invented
 sent no usable caption timings keeps the passage highlighted without a
 current-word marker, while the fragments around it still follow the word.
 
+## Chrome registration
+
+Installed Windows builds register Chrome automatically. On launch, CopySpeech
+writes `com.copyspeech.browser.json` next to its bundled
+`copyspeech-browser-host.exe` and points
+`HKCU\Software\Google\Chrome\NativeMessagingHosts\com.copyspeech.browser` at it.
+Dev builds skip this step, so a repo registration is never overwritten.
+
+The extension ID is `hojbmioeiccpgkpnpblkdbeegjkcccad`. The manifest pins it
+with a `key` field, so the ID does not change with the folder.
+
+Windows Tauri builds (`bun run tauri dev` and `bun run tauri build`) bundle
+`browser-native-host/target/release/copyspeech-browser-host.exe`. Build it
+first, or the Tauri build fails on the missing resource:
+
+```
+cargo build --release --manifest-path browser-native-host/Cargo.toml
+```
+
+The Windows release workflow runs this step before the Tauri build.
+
 ## Developer setup
 
 This is currently a developer preview, not a packaged extension.
 
 1. Build the native host from `browser-native-host/` and update
    `browser-native-host/com.copyspeech.browser.json` with its absolute `.exe`
-   path.
+   path. Dev builds do not write this registration for you.
 2. Register that manifest for the matching unpacked Chrome extension ID.
 3. Run `bun run build` in `browser-extension/`, then load
    `browser-extension/dist/` as an unpacked extension in Chrome or Edge.
@@ -85,6 +106,6 @@ document-targeted messaging and injection the companion uses.
 The gecko ID is a release identity. Changing it breaks the native host's
 `allowed_extensions` and any signed build, so keep it stable.
 
-The manifest currently embeds a development executable path and a single
-extension origin. A release needs an installer that writes the browser registry
-entry, ships the host binary, and binds the production extension ID.
+Still open for releases: the Windows build registers Chrome only. Edge and
+Firefox registration, Linux and macOS packaging, and removing the registry
+entry on uninstall are not covered yet.

@@ -191,6 +191,8 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - In a fresh clone or worktree, run `bun run build` once before any `cargo` command in `src-tauri/`; tauri-build fails with `frontendDist "../dist" doesn't exist` until `dist/` exists.
 - Every `latest.json` platform entry must keep both `url` and `signature`; a signature-only entry (the 0.3.0 Linux step) breaks the updater manifest. The Linux workflow checks this with `jq -e` before upload. Patch every entry that points at the AppImage, including `linux-x86_64-appimage`, or AppImage installs get a stale signature.
 - Read `CHANGELOG.md` with `-Encoding utf8` in every PowerShell release step; Windows PowerShell decodes UTF-8 dashes as cp1252 mojibake without it.
+- Build `browser-native-host` in release mode before any Windows `tauri dev` or `tauri build`; `tauri.windows.conf.json` bundles its `.exe`, and tauri-build fails loudly when the file is missing.
+- Keep the browser extension's `key` field and `com.copyspeech.browser` host name in sync with `browser_registration.rs`; a mismatch makes Chrome show `!` with no visible error.
 
 ## i18n
 

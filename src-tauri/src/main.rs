@@ -7,6 +7,7 @@ mod audio;
 mod audio_duck;
 mod autostart;
 mod browser_bridge;
+mod browser_registration;
 mod clipboard;
 mod commands;
 mod config;
@@ -488,6 +489,17 @@ fn main() {
             // --- Move the 0.2.x launch-on-login entry to the CopySpeech name ---
             if let Err(e) = autostart::migrate_legacy_autostart(launch_on_login) {
                 log::warn!("[autostart] legacy entry migration failed: {e}");
+            }
+
+            // --- Point Chrome at the bundled browser companion host ---
+            match tauri::Manager::path(app).resource_dir() {
+                Ok(resource_dir) => {
+                    let registered = browser_registration::ensure_chrome_registration(&resource_dir);
+                    if let Err(e) = registered {
+                        log::warn!("[browser] Chrome native host registration failed: {e}");
+                    }
+                }
+                Err(e) => log::warn!("[browser] resource dir unavailable: {e}"),
             }
 
             // --- Wayland: configure the HUD as a layer surface (BEFORE first map) ---
