@@ -265,4 +265,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Hook replies with `[data-slot="aui_assistant-message-root"][data-role="assistant"]` and read text from `.aui-md`, skipping reasoning slots, because the DOM marks replies that way.
 - Link a `message.complete` to the last assistant root in the focused chat, because no other link was found in the desktop source.
 - Install the plugin through a junction made with PowerShell `New-Item -ItemType Junction`, because the watcher hot-reloads edits made in the repo.
+- Check the CopySpeak app log for the missed fragment's `Clamped` line before tuning plugin alignment, because a missing line means the engine never delivered that fragment's captions; the missed reply aligned offline (approximate sanitizer: 170 of 173 words).
+- Run `bunx vp fmt` before writing a regex that strips the SDK import: the formatter splits long imports across lines, and a single-line regex then leaves a dangling import in the test copy.
+- Write boolean and string guards without `typeof`: `vp check` rejects runtime `typeof` (no-runtime-typeof); use `Array.isArray`, `String(x) === x`, or `??` with a typed default.
 - Keep helpers in `plugin.js`, because the loader rejects relative imports; `plugin.test.mjs` strips the SDK import lines into a temp copy.

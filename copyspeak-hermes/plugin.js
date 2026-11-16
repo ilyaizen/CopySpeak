@@ -216,9 +216,9 @@ function resync(words, tokens, i, from) {
   return -1;
 }
 
-// Map each caption word to a rendered token, in order. Returns null when under half map.
+// Map each caption word to a rendered token, in order. Reports the counts even on failure.
 // The first word of each fragment uses resync, so an excerpt gap cannot pull the anchor onto a common word.
-export function alignWords(words, tokens, from) {
+function alignDetail(words, tokens, from) {
   const map = words.map(() => -1);
   let cursor = from;
   let mapped = 0;
@@ -230,8 +230,14 @@ export function alignWords(words, tokens, from) {
     cursor = at + 1;
     mapped += 1;
   }
-  if (mapped === 0 || mapped * 2 < words.length) return null;
-  return { map: map, cursor: cursor };
+  const ok = mapped > 0 && mapped * 2 >= words.length;
+  return { ok: ok, map: map, cursor: cursor, mapped: mapped };
+}
+
+// Returns null when under half the words map.
+export function alignWords(words, tokens, from) {
+  const detail = alignDetail(words, tokens, from);
+  return detail.ok ? { map: detail.map, cursor: detail.cursor } : null;
 }
 
 function nextRequestId() {
@@ -277,12 +283,16 @@ function captionsSupported() {
   );
 }
 
-// Text nodes of the newest assistant reply, minus reasoning. Words keep their node and range.
-function replyTokens() {
+function assistantRoot() {
   const roots = document.querySelectorAll(
     '[data-slot="aui_assistant-message-root"][data-role="assistant"]'
   );
-  const root = roots[roots.length - 1];
+  return roots[roots.length - 1];
+}
+
+// Text nodes of the newest assistant reply, minus reasoning. Words keep their node and range.
+function replyTokens() {
+  const root = assistantRoot();
   const tokens = [];
   if (root === undefined) return tokens;
   for (const body of root.querySelectorAll(".aui-md")) {
@@ -306,19 +316,46 @@ function stopCaptions() {
   clearCaptionPaint();
 }
 
+// One log line per failed alignment: shows whether the spoken words or the rendered tokens were short.
+function warnNoAlignment(spoken, rendered, mapped, reason) {
+  console.warn(
+    "[copyspeak-hermes] captions: no alignment (" +
+      spoken +
+      " spoken, " +
+      rendered +
+      " rendered, " +
+      mapped +
+      " mapped, reason=" +
+      reason +
+      ")"
+  );
+}
+
 // Paint the word at `position`. Returns true while the fragment is aligned, even on a held gap.
 function paintCaption(run, caption, position, fragmentIndex) {
-  if (caption.text == null || !Array.isArray(caption.words)) return false;
+  if (String(caption.text) !== caption.text || !Array.isArray(caption.words)) return false;
   const key = String(fragmentIndex) + "|" + caption.text;
   if (key !== run.key) {
     const tokens = replyTokens();
-    if (tokens.length === 0) return false;
+    if (tokens.length === 0) {
+      if (!run.warnedEmpty) {
+        run.warnedEmpty = true;
+        const reason = assistantRoot() === undefined ? "no-root" : "empty-root";
+        warnNoAlignment(captionWords(caption).length, 0, 0, reason);
+      }
+      return false;
+    }
     run.key = key;
     run.words = captionWords(caption);
     run.tokens = tokens;
-    const aligned = alignWords(run.words, tokens, run.cursor);
-    run.map = aligned === null ? null : aligned.map;
-    if (aligned !== null) run.cursor = aligned.cursor;
+    const detail = alignDetail(run.words, tokens, run.cursor);
+    run.map = detail.ok ? detail.map : null;
+    if (detail.ok) {
+      run.cursor = detail.cursor;
+    } else {
+      const reason = detail.mapped === 0 ? "resync" : "floor";
+      warnNoAlignment(run.words.length, tokens.length, detail.mapped, reason);
+    }
   }
   if (run.map === null) return false;
   const active = activeWordIndex(run.words, position);
@@ -377,6 +414,7 @@ function startCaptions(ctx, enabled) {
     tokens: [],
     map: null,
     cursor: 0,
+    warnedEmpty: false,
     busy: false,
     enabled: enabled,
     startedAt: now,
