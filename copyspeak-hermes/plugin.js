@@ -1,8 +1,11 @@
 // CopySpeak auto-read for Hermes Desktop.
 // Reads each new completed assistant reply through the running CopySpeak app.
-// Optional: highlights the word CopySpeak speaks inside the reply (CSS Custom Highlight API).
+// Optional: highlights the word CopySpeak speaks inside the reply (CSS Custom Highlight API,
+// or a gliding pill when "Glide between words" is on).
+// Optional: follows the spoken word, scrolling the reply to keep it in view.
 import {
   PALETTE_AREA,
+  Button,
   Input,
   SegmentedControl,
   ToggleRow,
@@ -11,9 +14,12 @@ import {
   useQuery,
   useValue
 } from "@hermes/plugin-sdk";
+import { useEffect, useState } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
 
 const ID = "copyspeak-hermes";
+// ctx.storage keys live under hermes.plugin.<id>. (localStorage), so this is the key for "settings".
+const SETTINGS_KEY = "hermes.plugin." + ID + ".settings";
 const SPEAK_URL = "http://127.0.0.1:43117/speak";
 const HEALTH_URL = "http://127.0.0.1:43117/health";
 const STATUS_URL = "http://127.0.0.1:43117/status";
@@ -28,21 +34,40 @@ const DEFAULTS = {
   excerptMode: "both",
   excerptTop: 2,
   excerptBottom: 2,
-  captions: true
+  captions: true,
+  glide: false,
+  follow: false
 };
 const CAPTION_NAME = "copyspeak-word";
 const CAPTION_STYLE_ID = "copyspeak-hermes-captions";
 const CAPTION_POLL_MS = 120;
-const CAPTION_IDLE_MS = 2000;
-const CAPTION_START_MS = 60000;
+const CAPTION_SILENCE_MS = 60000;
+// Follow keeps the spoken word between these fractions of the reply's scrollport.
+// Outside the band, its line moves to the anchor. Manual input pauses follow.
+const FOLLOW_BAND_TOP = 0.15;
+const FOLLOW_BAND_BOTTOM = 0.82;
+const FOLLOW_ANCHOR = 0.34;
+const FOLLOW_INTERVAL_MS = 400;
+const FOLLOW_PAUSE_MS = 5000;
+const FOLLOW_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End"]);
 const ALIGN_WINDOW = 24;
 const RUN_NEEDED = 3;
 const REASONING_SELECTOR =
   '[data-slot="aui_reasoning-text"], [data-slot="aui_thinking-disclosure"], [data-slot="aui_thinking-body"]';
+// Glide pill: the glide duration, the per-frame cap, the padding around a word, and the look.
+const GLIDE_MS = 120;
+const GLIDE_FRAME_CAP_MS = 40;
+const PILL_PAD_X = 4;
+const PILL_PAD_Y = 2;
+const PILL_RADIUS_PX = 4;
+const PILL_Z_INDEX = 2147483646;
+// Any overflow other than `visible` clips a box's content.
+const CLIP_OVERFLOW = ["auto", "scroll", "hidden", "clip"];
 
 let requestCounter = 0;
 let notifiedDown = false;
 let captionRun = null;
+let pill = null;
 
 export function clampCount(value) {
   const number = Math.round(Number(value));
@@ -63,7 +88,9 @@ export function normalizeSettings(raw) {
     excerptMode: MODES.includes(source.excerptMode) ? source.excerptMode : DEFAULTS.excerptMode,
     excerptTop: clampCount(source.excerptTop ?? DEFAULTS.excerptTop),
     excerptBottom: clampCount(source.excerptBottom ?? DEFAULTS.excerptBottom),
-    captions: boolOr(source.captions, DEFAULTS.captions)
+    captions: boolOr(source.captions, DEFAULTS.captions),
+    glide: boolOr(source.glide, DEFAULTS.glide),
+    follow: boolOr(source.follow, DEFAULTS.follow)
   };
 }
 
@@ -101,13 +128,13 @@ export function excerptSpeech(text, mode, topCount, bottomCount) {
   return blocks.slice(0, top).concat(blocks.slice(-bottom)).join("\n\n");
 }
 
-export function prepareSpeech(text, settings) {
+function prepareSpeech(text, settings) {
   const speech = toSpeech(text);
   if (!settings.excerpt) return speech;
   return excerptSpeech(speech, settings.excerptMode, settings.excerptTop, settings.excerptBottom);
 }
 
-export function claimKey(event) {
+function claimKey(event) {
   return "claim." + event.session_id + "." + event.seq;
 }
 
@@ -138,11 +165,7 @@ export function speakVerdict(event, state) {
   return { speak: true, reason: "ok" };
 }
 
-export function shouldSpeak(event, state) {
-  return speakVerdict(event, state).speak;
-}
-
-export function builtInAutoSpeakOn() {
+function builtInAutoSpeakOn() {
   try {
     return localStorage.getItem(BUILT_IN_KEY) === "true";
   } catch {
@@ -234,12 +257,6 @@ function alignDetail(words, tokens, from) {
   return { ok: ok, map: map, cursor: cursor, mapped: mapped };
 }
 
-// Returns null when under half the words map.
-export function alignWords(words, tokens, from) {
-  const detail = alignDetail(words, tokens, from);
-  return detail.ok ? { map: detail.map, cursor: detail.cursor } : null;
-}
-
 function nextRequestId() {
   requestCounter += 1;
   return "hermes." + Date.now() + "." + requestCounter;
@@ -283,8 +300,36 @@ function captionsSupported() {
   );
 }
 
+// The session the chat shows. Hosts without focusedSessionId fall back to activeSessionId.
+function focusedSession() {
+  const atom =
+    host.state.focusedSessionId !== undefined
+      ? host.state.focusedSessionId
+      : host.state.activeSessionId;
+  return atom.get();
+}
+
+// The chat pane the user works in. Hermes marks each chat pane with data-session-anchor:
+// `session-tile:<storedId>` for a tile, `workspace` for the primary. A focused tile has
+// focusedStoredSessionId = its storedId; otherwise that id is the primary's selection.
+// With no anchors at all (an older Hermes), the whole document is the scope.
+// Null when anchors exist but none matches, so no caption paints in the wrong chat.
+function focusedPane() {
+  if (document.querySelectorAll("[data-session-anchor]").length === 0) return document;
+  const stored = host.state.focusedStoredSessionId?.get?.() ?? null;
+  const tile = stored ? document.querySelector(anchorSelector("session-tile:" + stored)) : null;
+  return tile ?? document.querySelector(anchorSelector("workspace")) ?? null;
+}
+
+function anchorSelector(anchor) {
+  return '[data-session-anchor="' + String(anchor).replace(/["\\]/g, "\\$&") + '"]';
+}
+
+// The newest assistant reply in the focused pane.
 function assistantRoot() {
-  const roots = document.querySelectorAll(
+  const scope = focusedPane();
+  if (scope === null) return undefined;
+  const roots = scope.querySelectorAll(
     '[data-slot="aui_assistant-message-root"][data-role="assistant"]'
   );
   return roots[roots.length - 1];
@@ -309,14 +354,166 @@ function clearCaptionPaint() {
   if (captionsSupported()) window.CSS.highlights.delete(CAPTION_NAME);
 }
 
+function tokenRange(token) {
+  const range = document.createRange();
+  range.setStart(token.node, token.start);
+  range.setEnd(token.node, token.end);
+  return range;
+}
+
+function liveStyle(el) {
+  return window.getComputedStyle(el);
+}
+
+// The visible area, in viewport coordinates.
+function liveViewport() {
+  const root = document.documentElement;
+  return { left: 0, top: 0, right: root.clientWidth, bottom: root.clientHeight };
+}
+
+// Browser hooks for the glide pill. The pill itself touches no globals.
+function livePillEnv() {
+  return {
+    make: function () {
+      return document.createElement("div");
+    },
+    attach: function (el) {
+      document.documentElement.appendChild(el);
+    },
+    measure: function (range) {
+      return measureWord(range, liveStyle, liveViewport());
+    },
+    clip: function (range) {
+      return clipBox(range.startContainer, liveStyle, liveViewport());
+    },
+    reduced: function () {
+      return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    },
+    raf: function (fn) {
+      return window.requestAnimationFrame(fn);
+    },
+    cancelRaf: function (id) {
+      window.cancelAnimationFrame(id);
+    },
+    listen: function (type, fn) {
+      window.addEventListener(type, fn, { capture: true, passive: true });
+      return function () {
+        window.removeEventListener(type, fn, true);
+      };
+    }
+  };
+}
+
+function ensurePill() {
+  if (pill === null) pill = createGlidePill(livePillEnv());
+  return pill;
+}
+
+function destroyPill() {
+  if (pill === null) return;
+  pill.destroy();
+  pill = null;
+}
+
 function stopCaptions() {
-  if (captionRun === null) return;
-  captionRun.dispose();
-  captionRun = null;
+  if (captionRun !== null) {
+    captionRun.dispose();
+    captionRun = null;
+  }
+  destroyPill();
   clearCaptionPaint();
 }
 
-// One log line per failed alignment: shows whether the spoken words or the rendered tokens were short.
+// Scroll behaviour for the reply: smooth, or an instant jump when the OS asks for reduced motion.
+// "instant" overrides the page's CSS scroll-behavior; "auto" would keep a page's smooth default.
+function motionBehavior() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth";
+}
+
+// The nearest ancestor that scrolls its content vertically, or null.
+function findScroller(element) {
+  let node = element.parentElement;
+  while (node !== null) {
+    const style = window.getComputedStyle(node);
+    if (
+      (style.overflowY === "auto" || style.overflowY === "scroll") &&
+      node.scrollHeight > node.clientHeight
+    ) {
+      return node;
+    }
+    node = node.parentElement;
+  }
+  return null;
+}
+
+// Listen for manual input on the run's scroller. A wheel, a scroll key, any touch inside it
+// (a tap on a word too, since a touch can start a scroll), or a press on the scroller's own
+// box (its scrollbar or background that no child covers) pauses follow. A mouse press on a
+// word does not.
+function watchScroller(run, scroller) {
+  if (run.watched === scroller) return;
+  unwatchScroller(run);
+  run.watched = scroller;
+  scroller.addEventListener("wheel", run.pause, { passive: true });
+  scroller.addEventListener("touchstart", run.pause, { passive: true });
+  scroller.addEventListener("keydown", run.pauseKey, true);
+  scroller.addEventListener("pointerdown", run.pauseScrollbar, { passive: true });
+}
+
+function unwatchScroller(run) {
+  const scroller = run.watched;
+  if (scroller === null) return;
+  scroller.removeEventListener("wheel", run.pause);
+  scroller.removeEventListener("touchstart", run.pause);
+  scroller.removeEventListener("keydown", run.pauseKey, true);
+  scroller.removeEventListener("pointerdown", run.pauseScrollbar);
+  run.watched = null;
+}
+
+// The scroller that holds the word. Keeps the current one while the word stays inside it.
+function ensureScroller(run, token) {
+  const current = run.scroller;
+  if (current !== null && current.isConnected && current.contains(token.node)) {
+    // Re-attach on reuse too. watchScroller is a no-op when the listeners are already attached.
+    watchScroller(run, current);
+    return current;
+  }
+  const element = token.node.parentElement;
+  run.scroller = element === null ? null : findScroller(element);
+  if (run.scroller === null) unwatchScroller(run);
+  else watchScroller(run, run.scroller);
+  return run.scroller;
+}
+
+// True while a text selection in the reply starts or ends inside the scroller. Follow then
+// leaves the view alone, so a reader's drag-select is not fought.
+function selectingIn(scroller) {
+  const selection = window.getSelection?.();
+  if (!selection || selection.isCollapsed) return false;
+  return [selection.anchorNode, selection.focusNode].some(
+    (node) => node !== null && node !== undefined && scroller.contains(node)
+  );
+}
+
+// Scroll only when the spoken word leaves the comfort band, so most words move nothing.
+function followToken(run, token) {
+  if (!run.follow) return;
+  const now = Date.now();
+  if (now < run.followPausedUntil || now - run.lastScrollAt < FOLLOW_INTERVAL_MS) return;
+  const scroller = ensureScroller(run, token);
+  if (scroller === null || selectingIn(scroller)) return;
+  const rect = firstPaintedRect(tokenRange(token));
+  if (rect === undefined) return;
+  const box = scroller.getBoundingClientRect();
+  const top = rect.top - box.top;
+  const bottom = top + rect.height;
+  if (top >= box.height * FOLLOW_BAND_TOP && bottom <= box.height * FOLLOW_BAND_BOTTOM) return;
+  run.lastScrollAt = now;
+  const offset = top - box.height * FOLLOW_ANCHOR;
+  scroller.scrollTo({ top: scroller.scrollTop + offset, behavior: motionBehavior() });
+}
+
+// One warning per failed alignment: shows whether the spoken words or the rendered tokens were short.
 function warnNoAlignment(spoken, rendered, mapped, reason) {
   console.warn(
     "[copyspeak-hermes] captions: no alignment (" +
@@ -329,6 +526,274 @@ function warnNoAlignment(spoken, rendered, mapped, reason) {
       reason +
       ")"
   );
+}
+
+// Linear blend of two rects. `p` runs from 0 (at `a`) to 1 (at `b`).
+function lerpRect(a, b, p) {
+  return {
+    left: a.left + (b.left - a.left) * p,
+    top: a.top + (b.top - a.top) * p,
+    width: a.width + (b.width - a.width) * p,
+    height: a.height + (b.height - a.height) * p
+  };
+}
+
+// CSS cubic-bezier(x1, y1, x2, y2) as an easing function over [0, 1].
+function cubicBezier(x1, y1, x2, y2) {
+  const axis = function (a1, a2, t) {
+    return ((1 - 3 * a2 + 3 * a1) * t + (3 * a2 - 6 * a1)) * t * t + 3 * a1 * t;
+  };
+  return function (x) {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let low = 0;
+    let high = 1;
+    let t = x;
+    for (let i = 0; i < 20; i += 1) {
+      t = (low + high) / 2;
+      if (axis(x1, x2, t) < x) low = t;
+      else high = t;
+    }
+    return axis(y1, y2, t);
+  };
+}
+
+// Swift start, then settle. The same curve as the DSH pill.
+const easeGlide = cubicBezier(0, 0.5, 0, 1);
+
+// Overflow clips a box's content, but an inline box does not clip, so it is skipped.
+function clipsContent(style) {
+  if (style.display === "inline") return false;
+  return CLIP_OVERFLOW.includes(style.overflowX) || CLIP_OVERFLOW.includes(style.overflowY);
+}
+
+// The area an element's overflow clips to: its padding box, without scrollbars.
+function paddingBox(el) {
+  const box = el.getBoundingClientRect();
+  const left = box.left + el.clientLeft;
+  const top = box.top + el.clientTop;
+  return { left: left, top: top, right: left + el.clientWidth, bottom: top + el.clientHeight };
+}
+
+// The overlap of two boxes. Null when they do not overlap.
+function overlapBox(a, b) {
+  const box = {
+    left: Math.max(a.left, b.left),
+    top: Math.max(a.top, b.top),
+    right: Math.min(a.right, b.right),
+    bottom: Math.min(a.bottom, b.bottom)
+  };
+  if (box.right <= box.left || box.bottom <= box.top) return null;
+  return box;
+}
+
+// The viewport cut by every ancestor whose overflow clips `node`. Null when nothing is left.
+function clipBox(node, styleOf, viewport) {
+  let box = viewport;
+  for (let el = node.parentElement; el !== null && box !== null; el = el.parentElement) {
+    if (clipsContent(styleOf(el))) box = overlapBox(box, paddingBox(el));
+  }
+  return box;
+}
+
+// Cut a {left, top, width, height} rect to a clip box. Null when nothing is left.
+function cutRect(rect, clip) {
+  if (clip === null) return null;
+  const left = Math.max(rect.left, clip.left);
+  const top = Math.max(rect.top, clip.top);
+  const right = Math.min(rect.left + rect.width, clip.right);
+  const bottom = Math.min(rect.top + rect.height, clip.bottom);
+  if (right <= left || bottom <= top) return null;
+  return { left: left, top: top, width: right - left, height: bottom - top };
+}
+
+// The first client rect of a range that has a size. Undefined when none does.
+function firstPaintedRect(range) {
+  let rects = [];
+  try {
+    rects = Array.from(range.getClientRects());
+  } catch {
+    rects = [];
+  }
+  return rects.find(function (r) {
+    return r.width > 0 && r.height > 0;
+  });
+}
+
+// The padded box of a word's first painted client rect, cut to every clipping ancestor
+// and the viewport. Returns null when no part of the word is visible.
+export function measureWord(range, styleOf, viewport) {
+  const rect = firstPaintedRect(range);
+  if (rect === undefined) return null;
+  const padded = {
+    left: rect.left - PILL_PAD_X,
+    top: rect.top - PILL_PAD_Y,
+    width: rect.width + 2 * PILL_PAD_X,
+    height: rect.height + 2 * PILL_PAD_Y
+  };
+  return cutRect(padded, clipBox(range.startContainer, styleOf, viewport));
+}
+
+// The glide pill: one fixed div over the spoken word, moved by one rAF loop.
+// The loop runs only while the pill moves. It re-reads the word's rect on every frame,
+// so scroll and layout changes during a glide land on the word.
+// `env` supplies the browser hooks: make, attach, measure, reduced, raf, cancelRaf, listen.
+export function createGlidePill(env) {
+  let el = null;
+  let range = null;
+  let drawn = null;
+  let from = null;
+  let frame = 0;
+  let elapsed = 0;
+  let last = null;
+  let offs = [];
+
+  function target() {
+    return range === null ? null : env.measure(range);
+  }
+
+  function draw(rect) {
+    drawn = rect;
+    if (el === null) return;
+    if (rect === null) {
+      el.style.display = "none";
+      return;
+    }
+    el.style.display = "block";
+    el.style.left = rect.left + "px";
+    el.style.top = rect.top + "px";
+    el.style.width = rect.width + "px";
+    el.style.height = rect.height + "px";
+  }
+
+  function stopLoop() {
+    if (frame !== 0) env.cancelRaf(frame);
+    frame = 0;
+  }
+
+  function tick(ts) {
+    frame = 0;
+    if (el === null || range === null || !range.startContainer.isConnected) {
+      destroy();
+      return;
+    }
+    const next = target();
+    if (next === null) {
+      from = null;
+      draw(null);
+      return;
+    }
+    // Cap each frame's step, so a late frame does not skip ahead.
+    const step = last === null ? 0 : Math.min(ts - last, GLIDE_FRAME_CAP_MS);
+    last = ts;
+    elapsed = Math.min(elapsed + step, GLIDE_MS);
+    // Bound each intermediate frame to the target's clip. Start and target can sit in different clips.
+    draw(cutRect(lerpRect(from, next, easeGlide(elapsed / GLIDE_MS)), env.clip(range)));
+    if (elapsed < GLIDE_MS) {
+      frame = env.raf(tick);
+    } else {
+      from = null;
+      last = null;
+    }
+  }
+
+  // Move the pill to a word. A glide starts from the drawn place, so a new word mid-glide
+  // continues from where the pill is, not from where the last glide began.
+  function move(next) {
+    range = next;
+    if (el === null) create();
+    stopLoop();
+    last = null;
+    elapsed = 0;
+    const rect = target();
+    if (rect === null) {
+      from = null;
+      draw(null);
+      return;
+    }
+    if (drawn === null || env.reduced()) {
+      from = null;
+      draw(rect);
+      return;
+    }
+    from = drawn;
+    frame = env.raf(tick);
+  }
+
+  // Re-place the pill on the word. A running glide already reads the live rect each frame.
+  function reposition() {
+    if (el === null) return;
+    if (range !== null && !range.startContainer.isConnected) {
+      destroy();
+      return;
+    }
+    if (frame !== 0) return;
+    draw(target());
+  }
+
+  function create() {
+    el = env.make();
+    el.setAttribute("aria-hidden", "true");
+    el.style.position = "fixed";
+    el.style.zIndex = String(PILL_Z_INDEX);
+    el.style.pointerEvents = "none";
+    el.style.borderRadius = PILL_RADIUS_PX + "px";
+    el.style.background = "#fff";
+    el.style.mixBlendMode = "difference";
+    env.attach(el);
+    offs = [env.listen("scroll", reposition), env.listen("resize", reposition)];
+  }
+
+  function destroy() {
+    stopLoop();
+    for (const off of offs) off();
+    offs = [];
+    if (el !== null) el.remove();
+    el = null;
+    range = null;
+    drawn = null;
+    from = null;
+    last = null;
+    elapsed = 0;
+  }
+
+  return {
+    move: move,
+    reposition: reposition,
+    destroy: destroy,
+    moving: function () {
+      return frame !== 0;
+    },
+    element: function () {
+      return el;
+    }
+  };
+}
+
+// Paint one word. Plain mode uses the CSS highlight. Glide mode moves the pill,
+// and only when the word changes, so repeated status ticks do not restart the glide.
+function paintToken(run, token) {
+  if (run.mode === "none") return;
+  if (run.mode !== "glide") {
+    destroyPill();
+    if (captionsSupported()) {
+      window.CSS.highlights.set(CAPTION_NAME, new window.Highlight(tokenRange(token)));
+    }
+    return;
+  }
+  clearCaptionPaint();
+  if (token === run.pillToken) return;
+  run.pillToken = token;
+  ensurePill().move(tokenRange(token));
+}
+
+// Change the paint mode between two words. The last word repaints in the new mode.
+function switchMode(run, mode) {
+  run.mode = mode;
+  run.pillToken = null;
+  destroyPill();
+  clearCaptionPaint();
+  if (run.lastToken !== null && run.lastToken.node.isConnected) paintToken(run, run.lastToken);
 }
 
 // Paint the word at `position`. Returns true while the fragment is aligned, even on a held gap.
@@ -345,36 +810,67 @@ function paintCaption(run, caption, position, fragmentIndex) {
       }
       return false;
     }
-    run.key = key;
-    run.words = captionWords(caption);
+    const words = captionWords(caption);
+    const detail = alignDetail(words, tokens, run.cursor);
+    // A miss stores no key, so the next poll aligns again. The reply may still be rendering.
+    run.key = detail.ok ? key : null;
+    run.words = words;
     run.tokens = tokens;
-    const detail = alignDetail(run.words, tokens, run.cursor);
     run.map = detail.ok ? detail.map : null;
     if (detail.ok) {
       run.cursor = detail.cursor;
-    } else {
+    } else if (run.warnedKey !== key) {
+      run.warnedKey = key;
       const reason = detail.mapped === 0 ? "resync" : "floor";
-      warnNoAlignment(run.words.length, tokens.length, detail.mapped, reason);
+      warnNoAlignment(words.length, tokens.length, detail.mapped, reason);
     }
   }
   if (run.map === null) return false;
   const active = activeWordIndex(run.words, position);
+  // A gap between words holds the last painted word: no paint call, no clear.
   if (active < 0) return true;
   const token = run.tokens[run.map[active]];
   if (token === undefined || token.node === undefined) return true;
   if (!token.node.isConnected) {
     run.key = null;
+    destroyPill();
+    run.pillToken = null;
     return false;
   }
-  const range = document.createRange();
-  range.setStart(token.node, token.start);
-  range.setEnd(token.node, token.end);
-  window.CSS.highlights.set(CAPTION_NAME, new window.Highlight(range));
+  run.lastToken = token;
+  followToken(run, token);
+  paintToken(run, token);
+  return true;
+}
+
+// Stop the run only while it is still the live one, so a stale run cannot stop its replacement.
+function endRun(run) {
+  if (captionRun === run) stopCaptions();
+}
+
+// Re-check focus and settings for a run. Applies a paint-mode change and the follow flag.
+// False when the run must stop.
+function syncRun(run) {
+  const current = run.settings();
+  const plan = pollPlan(run, current, focusedSession());
+  if (plan === "stop") return false;
+  run.follow = current.follow;
+  // Drop the cached scroller with its listeners, so a re-enable looks it up and watches it again.
+  if (!run.follow) {
+    unwatchScroller(run);
+    run.scroller = null;
+  }
+  if (plan === "switch") switchMode(run, paintMode(current));
   return true;
 }
 
 function onStatus(run, body) {
   if (captionRun !== run) return;
+  // Re-check before painting: focus or settings may have changed while the request was pending.
+  if (!syncRun(run)) {
+    endRun(run);
+    return;
+  }
   const now = Date.now();
   const caption = body !== null && body.active === true ? body.captions : null;
   if (caption && paintCaption(run, caption, body.position_ms, body.fragment_index)) {
@@ -382,17 +878,34 @@ function onStatus(run, body) {
     run.matched = true;
     return;
   }
-  const quiet = now - run.lastMatch;
-  if (run.matched ? quiet >= CAPTION_IDLE_MS : now - run.startedAt >= CAPTION_START_MS)
-    stopCaptions();
+  // Inactive with captions can be a synthesis stall; the end report has no captions.
+  const ended = body !== null && body.active !== true && !body.captions;
+  const silent = now - (run.matched ? run.lastMatch : run.startedAt) >= CAPTION_SILENCE_MS;
+  if (silent || (run.matched && ended)) stopCaptions();
+}
+
+// Paint mode of a run: none with captions off, glide with the pill, else the CSS highlight.
+function paintMode(settings) {
+  if (!settings.captions) return "none";
+  return settings.glide ? "glide" : "plain";
+}
+
+// What one status poll does: stop the run, switch paint mode, or keep going.
+// A run with follow on keeps polling while captions are off.
+export function pollPlan(run, settings, focusedId) {
+  if (run.sessionId !== focusedId) return "stop";
+  if (!settings.captions && !settings.follow) return "stop";
+  return paintMode(settings) === run.mode ? "keep" : "switch";
 }
 
 function pollCaptions(run) {
-  if (run.busy) return;
-  if (!run.enabled()) {
-    stopCaptions();
+  if (captionRun !== run) return;
+  // Check focus and settings before the busy return, so a pending request cannot hide a change.
+  if (!syncRun(run)) {
+    endRun(run);
     return;
   }
+  if (run.busy) return;
   run.busy = true;
   void fetch(STATUS_URL, { mode: "cors", cache: "no-store" })
     .then((response) => (response.ok ? response.json() : null))
@@ -403,10 +916,14 @@ function pollCaptions(run) {
     });
 }
 
-// Start one poll loop for the reply just sent. A new reply replaces the old loop.
-function startCaptions(ctx, enabled) {
+// Start one status poll for the reply just sent. Captions and follow share it; a new reply replaces it.
+function startCaptions(ctx, settingsNow, sessionId) {
   stopCaptions();
-  if (!captionsSupported()) return;
+  const current = settingsNow();
+  // Glide paints with the pill, which needs no highlight API. Plain captions need it.
+  const paints = current.captions && (current.glide || captionsSupported());
+  // Follow needs no paint, so it runs where captions cannot paint.
+  if (!current.follow && !paints) return;
   const now = Date.now();
   const run = {
     key: null,
@@ -415,14 +932,37 @@ function startCaptions(ctx, enabled) {
     map: null,
     cursor: 0,
     warnedEmpty: false,
+    warnedKey: null,
     busy: false,
-    enabled: enabled,
+    settings: settingsNow,
+    sessionId: sessionId,
+    mode: paintMode(current),
+    follow: current.follow,
+    scroller: null,
+    watched: null,
+    followPausedUntil: 0,
+    lastScrollAt: 0,
+    lastToken: null,
+    pillToken: null,
     startedAt: now,
     lastMatch: now,
     matched: false,
     dispose: null
   };
-  run.dispose = ctx.setInterval(() => pollCaptions(run), CAPTION_POLL_MS);
+  run.pause = function () {
+    run.followPausedUntil = Date.now() + FOLLOW_PAUSE_MS;
+  };
+  run.pauseKey = function (event) {
+    if (FOLLOW_KEYS.has(event.key)) run.pause();
+  };
+  run.pauseScrollbar = function (event) {
+    if (event.target === run.watched) run.pause();
+  };
+  const stopPoll = ctx.setInterval(() => pollCaptions(run), CAPTION_POLL_MS);
+  run.dispose = function () {
+    stopPoll();
+    unwatchScroller(run);
+  };
   captionRun = run;
 }
 
@@ -455,14 +995,50 @@ function saveSettings(storage, settings, patch) {
   return next;
 }
 
+// Draft edits whose value differs from the saved value. Only these are written on Save.
+export function pendingEdits(saved, draft) {
+  const pending = {};
+  for (const key of Object.keys(draft)) {
+    if (draft[key] !== saved[key]) pending[key] = draft[key];
+  }
+  return pending;
+}
+
+// Form values: unsaved edits win, every other field follows the saved settings.
+export function draftView(saved, draft) {
+  return { ...saved, ...draft };
+}
+
+// One edit on top of the draft. A value equal to the saved value is not an edit, so it is dropped.
+export function applyEdit(saved, draft, patch) {
+  return pendingEdits(saved, { ...draft, ...patch });
+}
+
+// Edits stay in local state until Save. Cancel clears them.
 function SettingsPage({ storage, settings }) {
-  const s = useValue(settings);
+  const saved = useValue(settings);
+  const [changes, setChanges] = useState({});
+  useEffect(() => {
+    // A saved change (palette toggle, storage event) can make an edit equal. Drop it so it cannot return.
+    setChanges((draft) => {
+      const kept = pendingEdits(saved, draft);
+      return Object.keys(kept).length === Object.keys(draft).length ? draft : kept;
+    });
+  }, [saved]);
+  const s = draftView(saved, changes);
+  const dirty = Object.keys(pendingEdits(saved, changes)).length > 0;
   const health = useQuery({
     queryKey: [ID, "health"],
     queryFn: probeCopySpeak,
     refetchInterval: 10000
   });
-  const update = (patch) => saveSettings(storage, settings, patch);
+  const update = (patch) => setChanges((draft) => applyEdit(settings.get(), draft, patch));
+  const save = () => {
+    // Compare with stored settings, not this window's copy: another window may have saved since.
+    saveSettings(storage, settings, pendingEdits(readSettings(storage), changes));
+    setChanges({});
+  };
+  const cancel = () => setChanges({});
   const builtIn = builtInAutoSpeakOn();
   const status =
     health.data === undefined
@@ -493,6 +1069,18 @@ function SettingsPage({ storage, settings }) {
         label: "Highlight spoken words",
         checked: s.captions,
         onChange: (on) => update({ captions: on })
+      }),
+      s.captions
+        ? jsx(ToggleRow, {
+            label: "Glide between words",
+            checked: s.glide,
+            onChange: (on) => update({ glide: on })
+          })
+        : null,
+      jsx(ToggleRow, {
+        label: "Follow playback",
+        checked: s.follow,
+        onChange: (on) => update({ follow: on })
       }),
       jsx(ToggleRow, {
         label: "Read only part of the reply",
@@ -539,6 +1127,19 @@ function SettingsPage({ storage, settings }) {
               })
             ]
           })
+        : null,
+      dirty
+        ? jsxs("div", {
+            className: "flex items-center justify-end gap-2",
+            children: [
+              jsx("span", {
+                className: "me-auto text-(--ui-text-tertiary)",
+                children: "Unsaved changes"
+              }),
+              jsx(Button, { variant: "outline", size: "sm", onClick: cancel, children: "Cancel" }),
+              jsx(Button, { size: "sm", onClick: save, children: "Save" })
+            ]
+          })
         : null
     ]
   });
@@ -557,6 +1158,9 @@ export default {
       stopCaptions();
       style.remove();
     });
+    ctx.addEventListener(window, "storage", (event) => {
+      if (event.key === null || event.key === SETTINGS_KEY) settings.set(readSettings(storage));
+    });
 
     ctx.onEvent("message.start", (event) => {
       if (event && event.session_id) armed.add(event.session_id);
@@ -565,13 +1169,9 @@ export default {
     ctx.onEvent("message.complete", (event) => {
       const current = readSettings(storage);
       settings.set(current);
-      const focusAtom =
-        host.state.focusedSessionId !== undefined
-          ? host.state.focusedSessionId
-          : host.state.activeSessionId;
       const verdict = speakVerdict(event, {
         settings: current,
-        focusedSessionId: focusAtom.get(),
+        focusedSessionId: focusedSession(),
         armed,
         claims: readClaims(storage),
         builtInOn: builtInAutoSpeakOn()
@@ -585,8 +1185,11 @@ export default {
       const speech = prepareSpeech(String(event.payload.text || ""), current);
       if (!speech) return;
       storage.set("claims", withClaim(readClaims(storage), claimKey(event), Date.now()));
+      // Speech starts first. Captions only follow it, so they never delay speech.
       void postSpeech(speech);
-      if (current.captions) startCaptions(ctx, () => readSettings(storage).captions);
+      if (current.captions || current.follow) {
+        startCaptions(ctx, () => readSettings(storage), event.session_id);
+      }
     });
 
     ctx.register({

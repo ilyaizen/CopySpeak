@@ -223,6 +223,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 ## Settings
 
 - Keep the Lenis content element stable across route changes; MotionWrapper replaces its inner node on navigation.
+- Sync Lenis's cached limit through `syncLenisToLayout` after collapses, not only on resize: the fixed-height content box never resizes when a section grows, so smooth scrolls clamp short. Call `lenis.dimensions.resize()` (not `lenis.resize()`, which cancels the in-flight scroll) before a programmatic `scrollTo`.
 - Keep the footer handle's @ at the same tracking as its letters.
 - Update `play-page.svelte`'s browser mock config when adding required `AppConfig` fields, matching backend defaults.
 - Pass the current locale direction to Bits UI tooltip content: its floating wrapper defaults to `dir="ltr"` even when the document is RTL, scrambling mixed Hebrew or Arabic and Latin text.
@@ -263,9 +264,12 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Require half of the caption words to map to the reply, because a lower share means a foreign reading.
 - Resync across the excerpt gap only on a run of 3 words, because one common word matches far ahead.
 - Hook replies with `[data-slot="aui_assistant-message-root"][data-role="assistant"]` and read text from `.aui-md`, skipping reasoning slots, because the DOM marks replies that way.
-- Link a `message.complete` to the last assistant root in the focused chat, because no other link was found in the desktop source.
+- Look up the reply in the focused pane, `[data-session-anchor]` = `session-tile:<focusedStoredSessionId>` else `workspace`, never the last assistant root in the document, because a reply in another pane can be the last root.
+- Keep a caption alignment miss unkeyed so the next poll retries, because the reply can render after the first poll.
 - Install the plugin through a junction made with PowerShell `New-Item -ItemType Junction`, because the watcher hot-reloads edits made in the repo.
 - Check the CopySpeak app log for the missed fragment's `Clamped` line before tuning plugin alignment, because a missing line means the engine never delivered that fragment's captions; the missed reply aligned offline (approximate sanitizer: 170 of 173 words).
 - Run `bunx vp fmt` before writing a regex that strips the SDK import: the formatter splits long imports across lines, and a single-line regex then leaves a dangling import in the test copy.
 - Write boolean and string guards without `typeof`: `vp check` rejects runtime `typeof` (no-runtime-typeof); use `Array.isArray`, `String(x) === x`, or `??` with a typed default.
 - Keep helpers in `plugin.js`, because the loader rejects relative imports; `plugin.test.mjs` strips the SDK import lines into a temp copy.
+- Re-check focus and settings when a `/status` response lands, not only before the request: a late reply from the old chat otherwise paints in the new one.
+- Use `scrollTo` behavior `instant` for Reduce Motion, not `auto`: `auto` defers to the page's CSS `scroll-behavior`, so a smooth-scroll page still animates the follow move.

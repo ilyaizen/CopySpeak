@@ -26,6 +26,7 @@
   import { Button } from "#lib/components/ui/button/index.js";
   import { _ } from "svelte-i18n";
   import { groundParallax } from "#lib/utils/ground-parallax";
+  import { syncLenisToLayout } from "#lib/utils/lenis-layout-sync";
   import { COPYSPEAK_RYBBIT_SITE_ID, rybbitScriptSrc } from "#lib/utils/web-analytics";
 
   let { children } = $props();
@@ -82,11 +83,16 @@
     // OS/browser reduced-motion request into `effective`. A change either way
     // destroys Lenis and hands scrolling back to the browser, or recreates it.
     lenis?.destroy();
-    lenis = animationsStore.effective
-      ? new Lenis({ wrapper, content, autoRaf: true, allowNestedScroll: true })
-      : undefined;
+    if (!animationsStore.effective) {
+      lenis = undefined;
+      return;
+    }
+    const instance = new Lenis({ wrapper, content, autoRaf: true, allowNestedScroll: true });
+    lenis = instance;
+    const stopLayoutSync = syncLenisToLayout(instance, wrapper, content);
     return () => {
-      lenis?.destroy();
+      stopLayoutSync();
+      instance.destroy();
       lenis = undefined;
     };
   });
@@ -247,7 +253,7 @@
 
 <svelte:head>
   {#if isWeb}
-    <title>CopySpeak: AI text-to-speech for your clipboard</title>
+    <title>CopySpeak: Clipboard AI text-to-speech</title>
     <meta
       name="description"
       content="AI text-to-speech for your clipboard. Copy the same text twice and hear it read aloud."
@@ -334,7 +340,7 @@
 
     {#if saveBar.visible}
       <div
-        class="border-border bg-card fixed end-4 bottom-12 z-[60] flex items-center gap-3 border px-4 py-2.5 shadow-lg"
+        class="border-border bg-card fixed end-4 bottom-12 z-[60] flex items-center gap-3 rounded-md border px-4 py-2.5 shadow-lg"
       >
         <Button
           size="sm"

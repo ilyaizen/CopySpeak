@@ -126,8 +126,12 @@
     isScrollingToSection = true;
     const section = document.getElementById(id);
     const lenis = getLenis?.();
-    if (section && lenis) lenis.scrollTo(section);
-    else
+    if (section && lenis) {
+      // Lenis clamps the target to its cached limit. Re-measure first so a section
+      // that just grew stays reachable within the same click.
+      lenis.dimensions.resize();
+      lenis.scrollTo(section);
+    } else
       section?.scrollIntoView({
         behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth",
         block: "start"

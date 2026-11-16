@@ -173,11 +173,15 @@ it("renders centered acknowledgment marquees with accessible provider links", as
 
 it("uses the shared app scroller for sidebar navigation", async () => {
   const scrollTo = vi.fn();
-  const view = render(SettingsPage, { context: new Map([["app-lenis", () => ({ scrollTo })]]) });
+  const resize = vi.fn();
+  const view = render(SettingsPage, {
+    context: new Map([["app-lenis", () => ({ scrollTo, dimensions: { resize } })]])
+  });
   const nav = await view.findByRole("navigation");
   const misc = within(nav).getByRole("button", { name: "Misc" });
   await fireEvent.click(misc);
   expect(misc.getAttribute("aria-current")).toBe("page");
+  expect(resize).toHaveBeenCalled();
   expect(scrollTo).toHaveBeenCalledWith(view.container.querySelector("#about"));
   expect(scrollIntoView).not.toHaveBeenCalled();
 });

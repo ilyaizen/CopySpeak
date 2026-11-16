@@ -40,3 +40,6 @@ nul
 
 # Local impeccable design-workflow artifacts (critique snapshots, config)
 .impeccable/
+browser-extension/bun.lock
+bun.lock
+file-structure.txt

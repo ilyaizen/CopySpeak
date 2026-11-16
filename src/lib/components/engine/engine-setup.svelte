@@ -134,7 +134,7 @@
     </div>
   </header>
 
-  <div class="engine-table-wrapper">
+  <div class="engine-table-wrapper settings-card bg-card rounded-lg border">
     <div class="flex flex-wrap items-center justify-between gap-3 pb-3">
       <div
         class="inline-flex flex-wrap gap-1"

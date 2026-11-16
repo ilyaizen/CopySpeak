@@ -8,6 +8,7 @@
   import RecentHistory from "#lib/components/recent-history.svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { Kbd } from "#lib/components/ui/kbd/index.js";
+  import { X } from "@lucide/svelte";
   import { Textarea } from "#lib/components/ui/textarea/index.js";
   import { playbackStore } from "#lib/stores/playback-store.svelte";
   import { historyStore } from "#lib/stores/history-store.svelte";
@@ -17,7 +18,7 @@
   import { isTauri } from "#lib/services/tauri.js";
   import type { AppConfig } from "#lib/types";
   import { groupHistoryReadings, historyProfile } from "#lib/models/history";
-  import { activeCaptionWord, buildCaptions, spokenUntil } from "#lib/models/captions";
+  import { activeCaptionWord, buildCaptions } from "#lib/models/captions";
   import { captionGlide } from "#lib/utils/caption-glide";
   import { _ } from "svelte-i18n";
 
@@ -245,7 +246,6 @@
   let currentWord = $derived(
     caption?.active ? activeCaptionWord(captionWords, caption.position_ms) : -1
   );
-  let spokenEnd = $derived(spokenUntil(captionWords, caption?.position_ms ?? 0));
   // The saved glide preference; before the config lands the feature defaults on.
   let captionAnimated = $derived(config === null || config.playback.caption_animation);
   let readingView = $state<HTMLElement | null>(null);
@@ -674,9 +674,7 @@
         >
           {#each captionWords as word, i (word.offset)}<span
               data-word-offset={word.offset}
-              data-current={i === currentWord || undefined}
-              class={word.end !== null && word.end <= spokenEnd ? "text-muted-foreground" : ""}
-              >{word.text}</span
+              data-current={i === currentWord || undefined}>{word.text}</span
             >{:else}{captionText}{/each}
         </div>
       {:else}
@@ -701,7 +699,6 @@
           onSkipForward={() => playbackStore.skipForward()}
         />
         {#if manualText}
-          <Button variant="ghost" onclick={() => (manualText = "")}>{$_("play.clear")}</Button>
           <span class="text-muted-foreground ms-auto text-xs whitespace-nowrap tabular-nums">
             {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
           </span>
@@ -715,6 +712,15 @@
               {$_("play.keyboardHint", { values: { keys: `${modKey}+Enter` } })}
             </span>
           </span>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={$_("play.clear")}
+            title={$_("play.clear")}
+            onclick={() => (manualText = "")}
+          >
+            <X />
+          </Button>
         {/if}
       </div>
     </section>

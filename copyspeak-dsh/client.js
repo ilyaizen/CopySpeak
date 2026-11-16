@@ -48,14 +48,6 @@ window.__ModuleLoader__.load({
     const SELECTION_ID = "copyspeak-read-selection";
     const CONTROL_URL = "http://127.0.0.1:43117";
     const STYLE_KEY = PACKAGE + "/client.css";
-    /* Custom-highlight names. Namespace them: other plugins may paint
-       highlights. A normal word uses the first name plus the rounded mark
-       behind it. A word inside a code chip or code block uses the same name:
-       the plugin makes chip backgrounds transparent, so the mark shows. */
-    const HIGHLIGHT_NAME = "copyspeak-read-word";
-    /* Tween-only names: the outgoing and incoming word during one glide. */
-    const HIGHLIGHT_NAME_OUT = "copyspeak-read-word-out";
-    const HIGHLIGHT_NAME_IN = "copyspeak-read-word-in";
     const STORAGE = {
       autoRead: "dsh.copyspeak-voice.auto-read",
       captions: "dsh.copyspeak-voice.captions",
@@ -95,15 +87,16 @@ window.__ModuleLoader__.load({
     const FOLLOW_ANCHOR = 0.34;
     /* A manual scroll pauses following for a few seconds. */
     const FOLLOW_PAUSE_MS = 5000;
-    /* The rounded word mark sits behind the spoken word. The CSS Custom
-     * Highlight API cannot round its background, so a positioned mark paints
-     * the brand pill behind the text while the highlight recolors the word. */
-    const MARK_PADDING_X = 2;
-    const MARK_PADDING_Y = 1;
-    /* The mark's glide duration. The word's text recolor must land when the
-     * pill arrives, not when the word becomes active, so the pending recolor
-     * waits this long plus a frame. */
+    /* The difference-blend pill: absolute div with white fill, mix-blend-mode
+     * difference, pointer-events none. The white fill inverts the pill area so
+     * the word reads as black on light pages, white on dark pages. */
+    const MARK_PADDING_X = 4;
+    const MARK_PADDING_Y = 2;
+    const MARK_RADIUS_PX = 4;
+    /* The mark's glide duration. The pill glides position and width together. */
     const MARK_TRANSITION_MS = 120;
+    /* Per-frame cap so a heavy frame does not skip ahead. */
+    const MARK_FRAME_CAP_MS = 40;
     /* Host Tooltip: the bubble sits this far from its anchor. */
     const TOOLTIP_GAP = 8;
     /* Keep the centered bubble this far from the viewport edge. */
@@ -154,8 +147,7 @@ window.__ModuleLoader__.load({
       "follow.title": "Follow playback",
       "follow.description": "Scrolls the chat to keep the spoken word in view.",
       "excerpt.title": "Read only part of the reply",
-      "excerpt.description":
-        "Reads the first or last paragraphs of each automatic reply.",
+      "excerpt.description": "Reads the first or last paragraphs of each automatic reply.",
       "excerpt.badge": "Experimental",
       "excerpt.mode": "Part to read",
       "excerpt.mode.top": "Top",
@@ -240,40 +232,6 @@ window.__ModuleLoader__.load({
       "@media (hover:hover){.dsh-csva-barControl:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}}",
       ".dsh-csva-barControl:focus-visible{outline:var(--dsw-focus-ring-width,2px) solid var(--dsw-focus-ring-color,var(--dsw-alias-brand-primary));outline-offset:2px}",
       ".dsh-csva-barStop{color:var(--dsw-alias-label-primary)}",
-      "::highlight(" + HIGHLIGHT_NAME + "){color:var(--dsw-alias-bg-base)}",
-      /* During the animated glide the outgoing and incoming words carry their
-         own names, so their text colors can be tweened frame by frame in
-         lockstep with the gliding pill. The custom properties default to the
-         settled knockout color, so an unset tween paints the same as the
-         settled highlight. */
-      /* The fallbacks are the plain text color: a custom property is absent
-         only in an unmanaged gap (cancel, re-render), where plain text is
-         safe. The old knockout fallback painted dark-on-dark in that gap. */
-      "::highlight(" + HIGHLIGHT_NAME_OUT + "){color:var(--dsh-csva-out-color,currentColor)}",
-      "::highlight(" + HIGHLIGHT_NAME_IN + "){color:var(--dsh-csva-in-color,currentColor)}",
-      /* Code chips go transparent inside the reply: their own background
-         paints over the z-index:-1 mark layer, so a spoken code word could
-         never wear the rounded pill. With the chip see-through, code words
-         run the same mark path as plain words. The declaration is marked
-         !important because the host re-asserts an opaque background on
-         shiki-highlighted code blocks (pre._shiki) with !important of its
-         own; a plain declaration loses to it and the block would hide the
-         pill under its background (dark-on-dark knockout text). */
-      "[data-text-interaction-source] code, [data-text-interaction-source] pre" +
-        "{background-color:transparent!important}",
-      /* The rounded mark: a positioned layer inside the reply's own stacking
-         context. Negative z-index keeps it behind the text, so the word wears
-         the highlight's recolored text over a rounded brand pill. */
-      "[data-dsh-csva-mark-host]{isolation:isolate}",
-      ".dsh-csva-markLayer{position:absolute;top:0;left:0;width:0;height:0;z-index:-1;pointer-events:none}",
-      ".dsh-csva-mark{position:absolute;border-radius:4px;background-color:var(--dsw-alias-brand-primary);pointer-events:none}",
-      /* Animated glide: the mark layer carries data-animate while the
-         animation switch is on, so the reading tweens the pill position and
-         the two words' text colors in one rAF loop. The blend windows follow
-         the pill's coverage of each word: the outgoing word keeps its
-         knockout until the pill slides off it, and the incoming word keeps
-         its plain color until the pill reaches it, so neither word darkens
-         over the empty background mid-glide. Off keeps the instant jump. */
       /* The text-selection surface holds one pill group: Quote and Read sit
          inside one rounded floating container, separated from the error note.
          The group copies the host Quote pill fill (floating fill, elevation
@@ -424,11 +382,7 @@ window.__ModuleLoader__.load({
       /* The status poll runs for the whole reading, so the bar keeps its pause
          state and Show in chat keeps its target. Disabling captions only drops
          the inline highlight. */
-      if (name === "captions" && !enabled) {
-        clearHighlight();
-        releaseMarkHost();
-      }
-      if (name === "animation") syncMarkAnimation();
+      if (name === "captions" && !enabled) clearHighlight();
       emit(preferences.listeners);
     }
 
@@ -503,19 +457,12 @@ window.__ModuleLoader__.load({
       scroller: null,
       watchedScroller: null,
       activeToken: -1,
-      /* The rounded mark: the element that hosts its stacking context, the
-         layer, and one positioned mark per line of the spoken word. */
-      markHost: null,
-      markLayer: null,
-      markRects: [],
-      markContaining: null,
-      /* The settled highlighted word: its token is where the highlight name
-         points between glides, and where the next glide fades out from. */
-      paintedToken: null,
-      /* The running text-color tween, in lockstep with one pill glide. */
+      /* The difference-blend pill: one fixed div with white fill and
+         mix-blend-mode difference. Appended to document.documentElement so
+         the word is inside the inverted backdrop. */
+      mark: null,
+      paintedRange: null,
       tween: null,
-      /* A hidden probe that resolves theme variables to concrete rgb colors. */
-      colorProbe: null,
       lastScrollAt: 0,
       followPausedUntil: 0
     };
@@ -975,7 +922,9 @@ window.__ModuleLoader__.load({
         return reading.element;
       }
       const found = reading.range === null ? findMessageTarget() : findSelectionTarget();
-      releaseMarkHost();
+      /* The physical spans may be gone, so the painted pill must not outlive
+         them. The caller repaints on the next caption snapshot. */
+      clearHighlight();
       const previous = reading.tokens;
       const previousActive = reading.activeToken;
       reading.element = found === null ? null : found.element;
@@ -1081,89 +1030,66 @@ window.__ModuleLoader__.load({
       return map;
     }
 
+    /* Clear the difference-blend pill and any running tween. */
     function clearHighlight() {
-      cancelHighlightTween();
-      if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
-        window.CSS.highlights.delete(HIGHLIGHT_NAME);
-        window.CSS.highlights.delete(HIGHLIGHT_NAME_OUT);
-        window.CSS.highlights.delete(HIGHLIGHT_NAME_IN);
+      cancelTween();
+      if (reading.mark !== null) {
+        reading.mark.remove();
+        reading.mark = null;
       }
-      reading.paintedToken = null;
-      clearMarks();
-      /* The mapped token stays, so Show in chat still finds the spoken word
-         during a gap between words. A new reading resets it in resetReading. */
+      reading.paintedRange = null;
     }
 
-    /* Drop every painted mark but keep the layer and its host. */
-    function clearMarks() {
-      for (const mark of reading.markRects) mark.remove();
-      reading.markRects.length = 0;
-    }
-
-    /* The animation switch decides whether the mark glides between words or
-       jumps. Keep the live layer in step when the switch flips mid-reading. */
-    function syncMarkAnimation() {
-      if (reading.markLayer === null) return;
-      if (preferences.animation) reading.markLayer.setAttribute("data-animate", "");
-      else reading.markLayer.removeAttribute("data-animate");
-    }
-
-    /* Drop the layer and its host attribute: the stack context must not
-       outlive the reading or outlive the target element. */
-    function releaseMarkHost() {
-      cancelHighlightTween();
-      clearMarks();
-      if (reading.markLayer !== null) reading.markLayer.remove();
-      if (reading.markHost !== null) reading.markHost.removeAttribute("data-dsh-csva-mark-host");
-      reading.markHost = null;
-      reading.markLayer = null;
-      reading.markContaining = null;
-    }
-
-    /* The rounded pill paints inside the mark host's own stacking context. A
-       React re-render can drop the layer, so this re-creates it on demand. */
-    function ensureMarkLayer() {
-      const host = reading.element;
-      if (host === null) return null;
-      if (
-        reading.markHost === host &&
-        reading.markLayer !== null &&
-        reading.markLayer.isConnected
-      ) {
-        return reading.markLayer;
+    /* Drop the mark element. */
+    function removeMark() {
+      if (reading.mark !== null) {
+        reading.mark.remove();
+        reading.mark = null;
       }
-      if (reading.markHost !== null) releaseMarkHost();
-      host.setAttribute("data-dsh-csva-mark-host", "");
-      const layer = document.createElement("div");
-      layer.className = "dsh-csva-markLayer";
-      layer.setAttribute("aria-hidden", "true");
-      host.appendChild(layer);
-      reading.markHost = host;
-      reading.markLayer = layer;
-      syncMarkAnimation();
-      return layer;
     }
 
-    /* The positioned ancestor the marks sit in. It travels with the reply when
-       the chat scrolls, so the mark needs no scroll listener. */
-    function markContainingBlock(host) {
-      const cached = reading.markContaining;
-      if (cached !== null && cached.isConnected && cached.contains(host)) return cached;
-      let node = host.parentElement;
-      while (node !== null) {
-        const position = window.getComputedStyle(node).position;
-        if (position !== undefined && position !== "static") {
-          reading.markContaining = node;
-          return node;
+    /* Whether the pill animates: animation switch on, mark exists, reduced
+       motion off. */
+    function markGlides() {
+      return (
+        preferences.animation &&
+        reading.mark !== null &&
+        !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      );
+    }
+
+    /* CSS cubic-bezier(x1, y1, x2, y2) as an easing function over [0, 1]. */
+    function cubicBezier(x1, y1, x2, y2) {
+      const axis = function (a1, a2, t) {
+        return ((1 - 3 * a2 + 3 * a1) * t + (3 * a2 - 6 * a1)) * t * t + 3 * a1 * t;
+      };
+      return function (x) {
+        if (x <= 0) return 0;
+        if (x >= 1) return 1;
+        let low = 0;
+        let high = 1;
+        let t = x;
+        for (let i = 0; i < 20; i += 1) {
+          t = (low + high) / 2;
+          if (axis(x1, x2, t) < x) low = t;
+          else high = t;
         }
-        node = node.parentElement;
-      }
-      reading.markContaining = null;
-      return null;
+        return axis(y1, y2, t);
+      };
     }
 
-    /* Range.getClientRects is missing in jsdom and can throw on a stale node,
-       so a thrown call reads as "no layout rect". */
+    /** Extra swift easing in: most of the travel happens early, then it settles. */
+    const easeGlide = cubicBezier(0, 0.5, 0, 1);
+
+    /* Get numeric value from a CSS pixel string. */
+    function markOffset(value) {
+      if (value === undefined || value === null || value === "") return NaN;
+      const parsed = parseFloat(value);
+      return Number.isNaN(parsed) ? NaN : parsed;
+    }
+
+    /* The layout rects of one word. Range.getClientRects is missing in jsdom
+       and can throw on a stale node, so a thrown call reads as no rect. */
     function wordRects(range) {
       let rects = [];
       try {
@@ -1176,305 +1102,143 @@ window.__ModuleLoader__.load({
       });
     }
 
-    /* Paint one rounded mark per line of the spoken word. */
-    function placeMarks(rects) {
-      const layer = ensureMarkLayer();
-      if (layer === null) return;
-      const block = markContainingBlock(reading.markHost);
-      const blockRect = block === null ? null : block.getBoundingClientRect();
-      /* Absolute offsets count from the containing block's padding box, or
-         from the document when no ancestor is positioned. */
-      const baseX = blockRect === null ? window.scrollX : -blockRect.left - block.clientLeft;
-      const baseY = blockRect === null ? window.scrollY : -blockRect.top - block.clientTop;
-      while (reading.markRects.length < rects.length) {
-        const mark = document.createElement("div");
-        mark.className = "dsh-csva-mark";
-        mark.setAttribute("aria-hidden", "true");
-        layer.appendChild(mark);
-        reading.markRects.push(mark);
+    /* Ensure the single difference-blend pill exists, positioned at the
+       target word's viewport rect. The pill is fixed, so it needs no scroll
+       offset. The pill is appended to document.documentElement so the word
+       itself is inside the inverted backdrop. */
+    function ensureMark(range) {
+      const rects = wordRects(range);
+      if (rects.length === 0) {
+        removeMark();
+        return;
       }
-      while (reading.markRects.length > rects.length) {
-        const mark = reading.markRects.pop();
-        mark.remove();
+      const rect = rects[0];
+      const left = Math.round(rect.left - MARK_PADDING_X) + "px";
+      const top = Math.round(rect.top - MARK_PADDING_Y) + "px";
+      const width = Math.round(rect.width + MARK_PADDING_X * 2) + "px";
+      const height = Math.round(rect.height + MARK_PADDING_Y * 2) + "px";
+      if (reading.mark !== null && reading.mark.isConnected) {
+        /* Update the existing pill to the new word's position. */
+        reading.mark.style.left = left;
+        reading.mark.style.top = top;
+        reading.mark.style.width = width;
+        reading.mark.style.height = height;
+        return;
       }
-      for (let index = 0; index < rects.length; index += 1) {
-        const rect = rects[index];
-        const mark = reading.markRects[index];
-        mark.style.transform = "";
-        mark.style.left = Math.round(rect.left + baseX - MARK_PADDING_X) + "px";
-        mark.style.top = Math.round(rect.top + baseY - MARK_PADDING_Y) + "px";
-        mark.style.width = Math.round(rect.width + MARK_PADDING_X * 2) + "px";
-        mark.style.height = Math.round(rect.height + MARK_PADDING_Y * 2) + "px";
-      }
+      removeMark();
+      const mark = document.createElement("div");
+      mark.className = "dsh-csva-mark";
+      mark.setAttribute("aria-hidden", "true");
+      mark.style.position = "fixed";
+      mark.style.borderRadius = MARK_RADIUS_PX + "px";
+      mark.style.background = "#fff";
+      mark.style.mixBlendMode = "difference";
+      mark.style.pointerEvents = "none";
+      mark.style.boxSizing = "border-box";
+      mark.style.zIndex = "2147483646";
+      mark.style.display = "block";
+      mark.style.left = left;
+      mark.style.top = top;
+      mark.style.width = width;
+      mark.style.height = height;
+      document.documentElement.appendChild(mark);
+      reading.mark = mark;
     }
 
-    /* Recolor the word, place its rounded mark, then follow it. A word inside a
-       code chip or code block takes the code highlight: that highlight paints
-       its own background, and no mark paints, because the chip background
-       covers the mark layer. A browser without the CSS Custom Highlight API
-       keeps the old behavior: no mark, because the mark only reads as a
-       highlight under the recolored text. */
+    /* Paint the difference-blend pill for the given token, with optional
+       glide animation from the previous position. */
     function paintWord(token) {
       const range = tokenRange(token);
-      if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
-        const previous = reading.paintedToken;
-        const glider = reading.markRects[0] ?? null;
-        const fromLeft = glider === null ? NaN : parseFloat(glider.style.left);
-        const fromTop = glider === null ? NaN : parseFloat(glider.style.top);
-        /* Read the width before placeMarks overwrites the mark geometry with
-           the NEW word's rects: the tween needs the OLD width as its start. */
-        const fromWidth =
-          glider === null || Number.isNaN(parseFloat(glider.style.width))
-            ? 0
-            : parseFloat(glider.style.width);
-        const settlesInstantly =
-          !markGlides() || previous === null || reading.markRects.length === 0;
-        placeMarks(wordRects(range));
-        if (settlesInstantly) {
-          cancelHighlightTween();
-          applyHighlight(HIGHLIGHT_NAME, range);
-          reading.paintedToken = token;
-        } else {
-          /* One rAF clock glides the pill and blends the two words' text
-             colors, with each blend windowed to when the pill actually
-             covers that word, so no word darkens over bare background
-             mid-glide. */
-          startHighlightTween(previous, token, range, {
-            left: fromLeft,
-            top: fromTop,
-            width: fromWidth
-          });
-        }
+      if (!preferences.captions && !reading.forceCaptions) {
+        followRange(token, range);
+        return;
       }
+      const previous = reading.paintedRange;
+      const fromLeft = markOffset(reading.mark?.style.left);
+      const fromTop = markOffset(reading.mark?.style.top);
+      const fromWidth = markOffset(reading.mark?.style.width);
+      const settlesInstantly = !markGlides() || previous === null || reading.mark === null;
+      ensureMark(range);
+      if (settlesInstantly) {
+        cancelTween();
+        reading.paintedRange = range;
+      } else {
+        startTween(range, { left: fromLeft, top: fromTop, width: fromWidth });
+      }
+      /* Learn the scrollport even with follow off, so a manual scroll keeps
+         the fixed pill on the word. */
+      ensureScroller(token);
       followRange(token, range);
     }
 
-    /* Set exactly one highlight name, replacing whatever word was painted. */
-    function applyHighlight(name, range) {
-      window.CSS.highlights.delete(HIGHLIGHT_NAME);
-      window.CSS.highlights.delete(HIGHLIGHT_NAME_OUT);
-      window.CSS.highlights.delete(HIGHLIGHT_NAME_IN);
-      window.CSS.highlights.set(name, new window.Highlight(range));
-    }
-
-    /* Whether the pill animates toward this word: the switch is on and the
-     * layer is live; reduced motion disables the glide entirely. */
-    function markGlides() {
-      return (
-        reading.markLayer !== null &&
-        reading.markLayer.hasAttribute("data-animate") &&
-        !window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      );
-    }
-
-    /* Resolve one CSS color value to concrete rgb components through a hidden
-     * probe inside the reply, so theme variables and hex/oklch aliases all
-     * arrive as numbers a tween can blend. */
-    function resolveColor(value) {
-      if (reading.colorProbe === null) {
-        const probe = document.createElement("span");
-        probe.setAttribute("aria-hidden", "true");
-        probe.style.position = "absolute";
-        probe.style.visibility = "hidden";
-        reading.colorProbe = probe;
+    /* Glide the pill position and width together in one rAF loop. */
+    function startTween(range, from) {
+      cancelTween();
+      const mark = reading.mark;
+      const rects = wordRects(range);
+      if (mark === null || rects.length === 0) {
+        reading.paintedRange = range;
+        return;
       }
-      const probe = reading.colorProbe;
-      const host = reading.element;
-      if (host === null || !host.isConnected) return null;
-      probe.remove();
-      host.appendChild(probe);
-      probe.style.color = value;
-      const computed = window.getComputedStyle(probe).color;
-      const match = computed.match(/rgba?\(([^)]+)\)/);
-      if (match === null) return null;
-      const parts = match[1]
-        .split(/[,/\s]+/)
-        .map(parseFloat)
-        .filter(Number.isFinite);
-      if (parts.length < 3) return null;
-      return { r: parts[0], g: parts[1], b: parts[2] };
-    }
-
-    function blendColor(from, to, t) {
-      const channel = (a, b) => Math.round(a + (b - a) * t);
-      return (
-        "rgb(" +
-        channel(from.r, to.r) +
-        "," +
-        channel(from.g, to.g) +
-        "," +
-        channel(from.b, to.b) +
-        ")"
-      );
-    }
-
-    /* The single easing curve for the glide: one rAF loop uses it for the
-     * pill position and both color blends, so they cannot drift apart. */
-    function easeGlide(t) {
-      return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-    }
-
-    /* Glide the pill and blend the two words' text colors across one rAF
-       clock, so the colors land exactly when the pill covers each word. Each
-       blend runs inside a coverage window computed from the two word boxes:
-       the outgoing word stays knocked out until the pill slides off it, and
-       the incoming word stays plain until the pill reaches it, so neither
-       word darkens over bare background mid-glide. The custom properties and
-       the mark transform live on the reply element, so a frame costs three
-       style writes and a recalc scoped to one subtree. */
-    function startHighlightTween(previous, token, range, from) {
-      cancelHighlightTween();
-      const normalOut = resolveColor("currentColor");
-      const knockout = resolveColor("var(--dsw-alias-bg-base)");
-      const normalIn = resolveColor("currentColor");
-      const glider = reading.markRects[0] ?? null;
-      const toLeft = glider === null ? NaN : parseFloat(glider.style.left);
-      const toTop = glider === null ? NaN : parseFloat(glider.style.top);
-      const toWidth = glider === null ? NaN : parseFloat(glider.style.width);
+      const toLeft = markOffset(mark.style.left);
+      const toTop = markOffset(mark.style.top);
+      const toWidth = markOffset(mark.style.width);
       if (
-        knockout === null ||
-        normalIn === null ||
-        reading.element === null ||
-        from === null ||
-        glider === null ||
         Number.isNaN(toLeft) ||
         Number.isNaN(toTop) ||
         Number.isNaN(toWidth) ||
         Number.isNaN(from.left) ||
-        Number.isNaN(from.top)
+        Number.isNaN(from.top) ||
+        Number.isNaN(from.width)
       ) {
-        /* Unresolvable colors or geometry: keep the instant, correct swap. */
-        applyHighlight(HIGHLIGHT_NAME, range);
-        reading.paintedToken = token;
+        reading.paintedRange = range;
         return;
       }
-      const scope = reading.element;
-      const previousRange = previous === null ? null : tokenRange(previous);
-      const plain = normalOut ?? normalIn;
-      /* Blend each word by how much of it the pill actually covers, measured
-         per frame in the mark layer's own coordinate space. Coverage handles
-         any direction, any width change, and line changes uniformly: a word
-         darkens only in step with the pill arriving over it and recovers as
-         the pill leaves, so no word ever shows the knockout color over bare
-         background. The old closed-form windows assumed forward motion and a
-         fixed pill width, and dimmed words on backward and line-change
-         glides. */
-      const block = markContainingBlock(reading.markHost);
-      const blockRect = block === null ? null : block.getBoundingClientRect();
-      const baseX = blockRect === null ? window.scrollX : -blockRect.left - block.clientLeft;
-      const baseY = blockRect === null ? window.scrollY : -blockRect.top - block.clientTop;
-      const layerRects = function (range) {
-        return wordRects(range).map(function (rect) {
-          return {
-            left: rect.left + baseX,
-            top: rect.top + baseY,
-            width: rect.width,
-            height: rect.height
-          };
-        });
-      };
+      const dx = from.left - toLeft;
+      const dy = from.top - toTop;
+      const w0 = from.width;
+      const w1 = toWidth;
       const tween = {
         raf: 0,
-        start: performance.now(),
-        duration: MARK_TRANSITION_MS,
-        knockout: knockout,
-        plainOut: plain,
-        plainIn: normalIn,
+        elapsed: 0,
+        last: null,
+        mark: mark,
         range: range,
-        token: token,
-        scope: scope,
-        hadOut: previousRange !== null,
-        mark: glider,
-        dx: from.left - toLeft,
-        dy: from.top - toTop,
-        /* The pill keeps the OLD word's width at the start of the glide and
-           eases to the new width on the same clock. Snapping the width first
-           leaves the outgoing word's uncovered tail painted in the knockout
-           color over bare background: the text vanishes for the first frames.
-           One rAF drives position, width, and both blends, so nothing drifts. */
-        w0: from.width,
-        w1: toWidth,
-        outRects: previousRange !== null ? layerRects(previousRange) : null,
-        inRects: layerRects(range)
+        dx: dx,
+        dy: dy,
+        w0: w0,
+        w1: w1
       };
-      /* Fraction of the given word rects the pill currently covers. */
-      const coverage = function (rects, pillLeft, pillTop, pillWidth, pillHeight) {
-        if (rects === null) return 0;
-        const pillRight = pillLeft + pillWidth;
-        const pillBottom = pillTop + pillHeight;
-        let covered = 0;
-        let total = 0;
-        rects.forEach(function (rect) {
-          const across =
-            Math.min(pillRight, rect.left + rect.width) - Math.max(pillLeft, rect.left);
-          const down = Math.min(pillBottom, rect.top + rect.height) - Math.max(pillTop, rect.top);
-          total += rect.width * rect.height;
-          if (across > 0 && down > 0) covered += across * down;
-        });
-        return total === 0 ? 0 : Math.min(Math.max(covered / total, 0), 1);
-      };
-      /* Paint the first frame's state before the first rAF, so the pill and
-         the colors never show their settled neighbors for a frame. */
-      tween.mark.style.transform = "translate(" + tween.dx + "px," + tween.dy + "px)";
-      tween.mark.style.width = tween.w0 + "px";
-      if (tween.hadOut) {
-        scope.style.setProperty("--dsh-csva-out-color", blendColor(knockout, plain, 0));
-      }
-      scope.style.setProperty("--dsh-csva-in-color", blendColor(normalIn, knockout, 0));
-      if (previousRange !== null && previousRange.startContainer.isConnected) {
-        window.CSS.highlights.delete(HIGHLIGHT_NAME);
-        window.CSS.highlights.set(HIGHLIGHT_NAME_OUT, new window.Highlight(previousRange));
-        window.CSS.highlights.set(HIGHLIGHT_NAME_IN, new window.Highlight(range));
-      } else {
-        applyHighlight(HIGHLIGHT_NAME_IN, range);
-      }
+      mark.style.transform = "translate(" + dx + "px," + dy + "px)";
+      mark.style.width = w0 + "px";
       const frame = function () {
         if (reading.tween !== tween) return;
-        if (!token.node.isConnected) {
-          /* The chat re-rendered mid-glide: drop the tween and both names.
-             The next aligned paint restores the highlight. */
-          cancelHighlightTween();
+        if (!range.startContainer.isConnected) {
+          cancelTween();
           return;
         }
-        const t = Math.min((performance.now() - tween.start) / tween.duration, 1);
+        const now = performance.now();
+        const step = tween.last === null ? 0 : Math.min(now - tween.last, MARK_FRAME_CAP_MS);
+        tween.last = now;
+        tween.elapsed = Math.min(tween.elapsed + step, MARK_TRANSITION_MS);
+        const t = tween.elapsed / MARK_TRANSITION_MS;
         const p = easeGlide(t);
-        /* One eased progress drives the pill position, width, and both
-           blends, so they cannot drift apart. */
-        const pillLeft = toLeft + tween.dx * (1 - p);
-        const pillTop = toTop + tween.dy * (1 - p);
-        const pillWidth = tween.w0 + (tween.w1 - tween.w0) * p;
-        tween.mark.style.transform =
-          "translate(" + tween.dx * (1 - p) + "px," + tween.dy * (1 - p) + "px)";
-        tween.mark.style.width = pillWidth + "px";
-        const pillHeight = parseFloat(tween.mark.style.height) || 0;
-        if (tween.hadOut) {
-          /* The outgoing word recovers its plain color as coverage drops. */
-          const outBlend = 1 - coverage(tween.outRects, pillLeft, pillTop, pillWidth, pillHeight);
-          tween.scope.style.setProperty(
-            "--dsh-csva-out-color",
-            blendColor(tween.knockout, tween.plainOut, outBlend)
-          );
-        }
-        /* The incoming word darkens only as the pill slides over it. */
-        const inBlend = coverage(tween.inRects, pillLeft, pillTop, pillWidth, pillHeight);
-        tween.scope.style.setProperty(
-          "--dsh-csva-in-color",
-          blendColor(tween.plainIn, tween.knockout, inBlend)
-        );
+        mark.style.transform = "translate(" + dx * (1 - p) + "px," + dy * (1 - p) + "px)";
+        mark.style.width = w0 + (w1 - w0) * p + "px";
         if (t < 1) {
           tween.raf = window.requestAnimationFrame(frame);
           return;
         }
-        /* Settled: swap to the single settled highlight name. */
-        cancelHighlightTween();
-        applyHighlight(HIGHLIGHT_NAME, tween.range);
-        reading.paintedToken = tween.token;
+        cancelTween();
+        reading.paintedRange = tween.range;
+        /* The target rect can move mid-glide (follow scroll, host layout). */
+        repositionMark();
       };
       reading.tween = tween;
       tween.raf = window.requestAnimationFrame(frame);
     }
 
-    function cancelHighlightTween() {
+    function cancelTween() {
       const tween = reading.tween;
       if (tween === null) return;
       reading.tween = null;
@@ -1482,31 +1246,30 @@ window.__ModuleLoader__.load({
       if (tween.mark !== null && tween.mark.isConnected) {
         tween.mark.style.transform = "";
       }
-      tween.scope.style.removeProperty("--dsh-csva-out-color");
-      tween.scope.style.removeProperty("--dsh-csva-in-color");
-      if (window.CSS !== undefined && window.CSS.highlights !== undefined) {
-        window.CSS.highlights.delete(HIGHLIGHT_NAME_OUT);
-        window.CSS.highlights.delete(HIGHLIGHT_NAME_IN);
-      }
     }
 
-    /* A React re-render can drop the mark layer while the same word plays.
+    /* A React re-render can drop the mark while the same word plays.
        Re-assert the painted word when that happened. */
     function keepWordPainted() {
       const paint = preferences.captions || reading.forceCaptions;
       if (!paint || reading.activeToken < 0 || reading.tokens === null) return;
-      if (window.CSS === undefined || window.CSS.highlights === undefined) return;
       const token = reading.tokens[reading.activeToken];
       if (!token.node.isConnected) return;
       const placed =
-        reading.markHost === reading.element &&
-        reading.markLayer !== null &&
-        reading.markLayer.isConnected &&
-        reading.markRects.length > 0 &&
-        reading.markRects.every(function (mark) {
-          return mark.isConnected;
-        });
+        reading.mark !== null && reading.mark.isConnected && reading.paintedRange !== null;
       if (!placed) paintWord(token);
+    }
+
+    /* A fixed pill does not travel with the chat scrollport or the window, so
+       re-read the active word's rect after a scroll. A running glide owns the
+       transform, and its end repositions instead. */
+    function repositionMark() {
+      if (reading.mark === null || !reading.mark.isConnected) return;
+      if (reading.tween !== null) return;
+      if (reading.activeToken < 0 || reading.tokens === null) return;
+      const token = reading.tokens[reading.activeToken];
+      if (!token.node.isConnected) return;
+      ensureMark(tokenRange(token));
     }
 
     /* Resolve the scrollport of the painted word, and keep it while the word
@@ -1539,6 +1302,8 @@ window.__ModuleLoader__.load({
       scroller.addEventListener("wheel", pauseFollow, { passive: true });
       scroller.addEventListener("touchstart", pauseFollow, { passive: true });
       scroller.addEventListener("keydown", pauseFollowKey, true);
+      /* The fixed pill must stay on the word when the chat content moves. */
+      scroller.addEventListener("scroll", repositionMark, { passive: true });
     }
 
     function unwatchScroller() {
@@ -1547,6 +1312,7 @@ window.__ModuleLoader__.load({
       scroller.removeEventListener("wheel", pauseFollow);
       scroller.removeEventListener("touchstart", pauseFollow);
       scroller.removeEventListener("keydown", pauseFollowKey, true);
+      scroller.removeEventListener("scroll", repositionMark);
       reading.watchedScroller = null;
     }
 
@@ -1718,7 +1484,6 @@ window.__ModuleLoader__.load({
       reading.followPausedUntil = 0;
       unwatchScroller();
       clearHighlight();
-      releaseMarkHost();
     }
 
     /* The status poll. It runs for the whole reading, with captions off too: the
@@ -3031,6 +2796,15 @@ window.__ModuleLoader__.load({
         ctx.effect(function () {
           return ctx.locale.register(NS, { en: en });
         }, PACKAGE + ": dictionaries");
+
+        /* A host that scrolls the document moves the words too. The chat
+           scrollport gets its own listener in watchScroller. */
+        ctx.effect(function () {
+          window.addEventListener("scroll", repositionMark, { passive: true });
+          return function () {
+            window.removeEventListener("scroll", repositionMark);
+          };
+        }, PACKAGE + ": pill scroll");
 
         ctx.effect(function () {
           return function () {

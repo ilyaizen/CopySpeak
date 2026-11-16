@@ -100,9 +100,9 @@ The redesign adopts a brutalist approach with a muted slate color palette. This 
 ### Subtle Edges (6px)
 
 ```css
---radius: 6px;      /* same value as the landing hero CTA (.landing .btn) */
+--radius: 6px; /* same value as the landing hero CTA (.landing .btn) */
 --radius-sm: 4px;
---radius-md: 6px;   /* var(--radius) */
+--radius-md: 6px; /* var(--radius) */
 --radius-lg: 8px;
 --radius-xl: 12px;
 ```

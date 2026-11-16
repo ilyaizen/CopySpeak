@@ -523,7 +523,7 @@
       "placeholderXai": "Clave de API de xAI",
       "placeholderMistral": "Clave de API de Mistral",
       "placeholderGoogle": "AIza...",
-      "placeholderMicrosoft": "________________",
+      "placeholderMicrosoft": "Clave de API de Microsoft",
       "endpointLabel": "Endpoint",
       "endpointPlaceholder": "https://<region>.tts.speech.microsoft.com/",
       "installButton": "Instalar",

@@ -512,9 +512,7 @@ async function main() {
   speaks = await scenario(page, "excerpt: top and bottom", async () => {
     await liveReply(page, FIVE_PARAGRAPHS);
   });
-  check("excerpt: keeps two top and two bottom paragraphs", speaks, [
-    "P1\n\nP2\n\nP4\n\nP5"
-  ]);
+  check("excerpt: keeps two top and two bottom paragraphs", speaks, ["P1\n\nP2\n\nP4\n\nP5"]);
 
   speaks = await scenario(page, "excerpt: short reply", async () => {
     await liveReply(page, "A\n\nB\n\nC");
@@ -537,20 +535,37 @@ async function main() {
      The app strips newlines before it speaks, so an excerpt fragment is one
      flat run of words: the top block is followed directly by the bottom block,
      with the omitted middle absent from the caption text. */
+  /* The painted word is whichever rendered word the difference-blend pill
+     covers. Its box pads the word by MARK_PADDING_X/Y, so the word's center
+     sits inside the pill. */
   async function paintReport(page) {
     return page.evaluate(() => {
-      const highlight =
-        window.CSS !== undefined && window.CSS.highlights !== undefined
-          ? window.CSS.highlights.get("copyspeak-read-word")
-          : undefined;
-      const ranges = [];
-      if (highlight !== undefined) {
-        for (const range of highlight) ranges.push(range.toString());
+      const mark = document.documentElement.querySelector(".dsh-csva-mark");
+      if (mark === null) return { marks: 0, text: "" };
+      const box = mark.getBoundingClientRect();
+      const words = [];
+      for (const source of document.querySelectorAll("[data-text-interaction-source]")) {
+        const walker = document.createTreeWalker(source, NodeFilter.SHOW_TEXT);
+        let node = walker.nextNode();
+        while (node !== null) {
+          const word = /\S+/gu;
+          let match;
+          while ((match = word.exec(node.textContent)) !== null) {
+            const range = document.createRange();
+            range.setStart(node, match.index);
+            range.setEnd(node, match.index + match[0].length);
+            const rect = range.getBoundingClientRect();
+            if (rect.width === 0 && rect.height === 0) continue;
+            const x = rect.left + rect.width / 2;
+            const y = rect.top + rect.height / 2;
+            if (x >= box.left && x <= box.right && y >= box.top && y <= box.bottom) {
+              words.push(match[0]);
+            }
+          }
+          node = walker.nextNode();
+        }
       }
-      return {
-        marks: document.querySelectorAll(".dsh-csva-mark").length,
-        text: ranges.join(" ")
-      };
+      return { marks: 1, text: words.join(" ") };
     });
   }
 
@@ -565,9 +580,12 @@ async function main() {
       const spoken = await page.evaluate(() => window.__speaks[0].text);
       /* The app sanitizes the fragment before speaking: newlines become
          spaces, so the caption text is one flat run. */
-      await page.evaluate((text) => {
-        window.__status = window.__caption.status(text, 0, 50);
-      }, spoken.replace(/\s+/g, " "));
+      await page.evaluate(
+        (text) => {
+          window.__status = window.__caption.status(text, 0, 50);
+        },
+        spoken.replace(/\s+/g, " ")
+      );
       await page.waitForTimeout(400);
       const paint = await paintReport(page);
       console.log("[" + label + "] paint: " + JSON.stringify(paint));
@@ -595,10 +613,9 @@ async function main() {
   const firstFragment = [captionBlocks[0].join(" "), captionBlocks[3].slice(0, 5).join(" ")].join(
     " "
   );
-  const secondFragment = [
-    captionBlocks[3].slice(5).join(" "),
-    captionBlocks[4].join(" ")
-  ].join(" ");
+  const secondFragment = [captionBlocks[3].slice(5).join(" "), captionBlocks[4].join(" ")].join(
+    " "
+  );
 
   await scenario(page, "caption: excerpt fragments", async () => {
     await page.evaluate((value) => {

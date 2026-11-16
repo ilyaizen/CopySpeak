@@ -5,12 +5,7 @@
   import { animationsStore } from "#lib/stores/animations-store.svelte.js";
   import { hudStore } from "#lib/stores/hud-store.svelte.js";
   import { captionGlide } from "#lib/utils/caption-glide.js";
-  import {
-    activeCaptionWord,
-    buildCaptions,
-    captionPhrase,
-    spokenUntil
-  } from "#lib/models/captions.js";
+  import { activeCaptionWord, buildCaptions, captionPhrase } from "#lib/models/captions.js";
 
   let { barValues, spokenText }: { barValues: number[]; spokenText: string | null } = $props();
 
@@ -31,7 +26,6 @@
   // Retain the current phrase during buffering; only the highlight goes away.
   let phraseIndex = $derived(captionPhrase(words, hudStore.caption?.position_ms ?? 0));
   let phrase = $derived(words.filter((word) => word.phrase === phraseIndex));
-  let spokenEnd = $derived(spokenUntil(words, hudStore.caption?.position_ms ?? 0));
 </script>
 
 <div class="hud-playback-container">
@@ -53,10 +47,8 @@
         }}
       >
         {#each phrase as word (word.offset)}
-          <span
-            data-word-offset={word.offset}
-            class:spoken={word.end !== null && word.end <= spokenEnd}
-            class:current={word === words[activeIndex]}>{word.text}</span
+          <span data-word-offset={word.offset} class:current={word === words[activeIndex]}
+            >{word.text}</span
           >
         {:else}
           {spokenText}
@@ -106,8 +98,5 @@
     white-space: pre-wrap;
     /* The absolute pill layer (caption-glide.ts) positions against the caption. */
     position: relative;
-  }
-  .caption .spoken {
-    color: var(--muted-foreground);
   }
 </style>

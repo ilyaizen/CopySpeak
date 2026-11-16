@@ -523,7 +523,7 @@
       "placeholderXai": "xAI API कुंजी",
       "placeholderMistral": "Mistral API कुंजी",
       "placeholderGoogle": "AIza...",
-      "placeholderMicrosoft": "________________",
+      "placeholderMicrosoft": "Microsoft API कुंजी",
       "endpointLabel": "एंडपॉइंट",
       "endpointPlaceholder": "https://<region>.tts.speech.microsoft.com/",
       "installButton": "इंस्टॉल करें",

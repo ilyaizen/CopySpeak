@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "CopySpeak",
-    "tagline": "AI text-to-speech for your clipboard",
+    "tagline": "Clipboard AI text-to-speech",
     "logoAlt": "CopySpeak logo"
   },
   "nav": {
@@ -15,7 +15,7 @@
     "engines": "Engines",
     "history": "History",
     "settings": "Settings",
-    "tagline": "AI text-to-speech for your clipboard",
+    "tagline": "Clipboard AI text-to-speech",
     "navAria": "Main navigation"
   },
   "common": {
@@ -523,7 +523,7 @@
       "placeholderXai": "xAI API key",
       "placeholderMistral": "Mistral API key",
       "placeholderGoogle": "AIza...",
-      "placeholderMicrosoft": "________________",
+      "placeholderMicrosoft": "Microsoft API key",
       "endpointLabel": "Endpoint",
       "endpointPlaceholder": "https://<region>.tts.speech.microsoft.com/",
       "installButton": "Install",

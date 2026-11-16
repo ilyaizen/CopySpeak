@@ -523,7 +523,7 @@
       "placeholderXai": "xAI API 密钥",
       "placeholderMistral": "Mistral API 密钥",
       "placeholderGoogle": "AIza...",
-      "placeholderMicrosoft": "________________",
+      "placeholderMicrosoft": "Microsoft API 密钥",
       "endpointLabel": "端点",
       "endpointPlaceholder": "https://<region>.tts.speech.microsoft.com/",
       "installButton": "安装",
