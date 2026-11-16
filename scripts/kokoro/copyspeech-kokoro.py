@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI wrapper for Kokoro (kokoro-onnx) - used by CopySpeak.
+"""CLI wrapper for Kokoro (kokoro-onnx) - used by CopySpeech.
 
 Replaces the third-party `kokoro-tts` binary: that CLI reloads its ~310 MB ONNX
 model on every invocation and exposes no way to choose an execution provider, so
@@ -8,8 +8,8 @@ neither the resident daemon nor GPU inference was reachable through it.
 Reads text (inline or from a file), synthesizes with kokoro-onnx, and writes a
 24kHz WAV file.
 
-Invoked by CopySpeak via:
-    uv run --project {engine_dir}/kokoro python {engine_dir}/kokoro/scripts/copyspeak-kokoro.py \
+Invoked by CopySpeech via:
+    uv run --project {engine_dir}/kokoro python {engine_dir}/kokoro/scripts/copyspeech-kokoro.py \
         --text-file {input} --voice {voice} --output {output} [--device cuda]
 
 With --serve the model is loaded once and stays in RAM, speaking protocol v2
@@ -190,7 +190,7 @@ def stream(kokoro, voice: str, text: str, frontend):
         samples, durations = kokoro.sess.run(["waveform", "duration"], {
             "input_ids": np.array([[0, *ids, 0]], dtype=np.int64),
             "style": kokoro.get_voice_style(voice)[len(ids) - 1].reshape(1, 256).astype(np.float32),
-            # Playback speed/pitch belong to CopySpeak's TimeStretcher.
+            # Playback speed/pitch belong to CopySpeech's TimeStretcher.
             "speed": np.array([1.0], dtype=np.float32),
         })
         samples, durations = samples.reshape(-1), durations.reshape(-1)
@@ -219,7 +219,7 @@ def serve(kokoro, voice: str, frontend) -> int:
     Synthesis is warmed before the handshake: the first call after a model load
     pays one-off costs (phonemizer init, ONNX graph warmup) that later calls do
     not, and folding that into startup keeps the first real utterance as fast as
-    every one after it. CopySpeak prewarms in the background, so this is free.
+    every one after it. CopySpeech prewarms in the background, so this is free.
     """
     out = sys.stdout.buffer
 
@@ -272,7 +272,7 @@ def serve(kokoro, voice: str, frontend) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Kokoro CLI wrapper for CopySpeak")
+    parser = argparse.ArgumentParser(description="Kokoro CLI wrapper for CopySpeech")
     parser.add_argument("--text", help="Inline text to synthesize")
     parser.add_argument("--text-file", help="Path to a UTF-8 text file to synthesize")
     parser.add_argument("--voice", default="af_heart", help="Kokoro voice id (e.g. af_heart)")

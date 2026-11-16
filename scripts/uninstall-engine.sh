@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Uninstalls a CopySpeak local TTS engine (Linux port).
+# Uninstalls a CopySpeech local TTS engine (Linux port).
 #
 # The mirror of install-*.sh and the bash twin of uninstall-engine.ps1. Every
 # local engine leaves at most two traces, so one script covers all of them:
@@ -22,8 +22,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib/copyspeak-engine-install.sh
-source "$SCRIPT_DIR/lib/copyspeak-engine-install.sh"
+# shellcheck source=lib/copyspeech-engine-install.sh
+source "$SCRIPT_DIR/lib/copyspeech-engine-install.sh"
 
 ENGINE=""
 KEEP_MODELS=0
@@ -41,7 +41,7 @@ while (( $# > 0 )); do
     esac
 done
 
-# Dir is relative to the CopySpeak engine root; Tool is the `uv tool` name
+# Dir is relative to the CopySpeech engine root; Tool is the `uv tool` name
 # (engines installed as project deps have none). Mirrors the ps1 layout table.
 case "$ENGINE" in
     kitten) TITLE="Kitten TTS"; DIR="kitten"; TOOL="" ;;
@@ -81,7 +81,7 @@ fi
 
 # -- engine directory --------------------------------------------------------
 if [[ -n "$DIR" ]]; then
-    ENGINE_DIR="$(copyspeak_engine_root)/$DIR"
+    ENGINE_DIR="$(copyspeech_engine_root)/$DIR"
     log C_YELLOW "  [STEP] files"
     if [[ ! -e "$ENGINE_DIR" ]]; then
         log C_GRAY "  Nothing at $ENGINE_DIR."
@@ -112,4 +112,4 @@ if (( FAILED )); then
     exit 1
 fi
 log C_GREEN "  $TITLE uninstalled."
-log C_GRAY "  Remove any CopySpeak profile that pointed at it from the Voices page."
+log C_GRAY "  Remove any CopySpeech profile that pointed at it from the Voices page."

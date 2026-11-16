@@ -2,9 +2,9 @@
 
 Speaks AI-agent activity through the running CopySpeech app.
 
-- **Pi extension** (project-local): `.pi/extensions/copyspeak/`
-- **Claude Code hook** (project-local): `scripts/claude-copyspeak-hook.mjs`, wired from `.claude/settings.json` or `.claude/settings.local.json`
-- **DSH plugin** (separate package): `copyspeak-dsh/`, installed into a DeepSeek Harness profile
+- **Pi extension** (project-local): `.pi/extensions/copyspeech/`
+- **Claude Code hook** (project-local): `scripts/claude-copyspeech-hook.mjs`, wired from `.claude/settings.json` or `.claude/settings.local.json`
+- **DSH plugin** (separate package): `copyspeech-dsh/`, installed into a DeepSeek Harness profile
 
 ## What it does
 
@@ -20,11 +20,11 @@ Pi (start from this repository):
 
 ```powershell
 $env:CARTESIA_API_KEY="..."
-$env:COPYSPEAK_PI_ENGINE="cartesia" # optional override; omit to use app settings
+$env:COPYSPEECH_PI_ENGINE="cartesia" # optional override; omit to use app settings
 pi
 ```
 
-Start CopySpeech yourself before using the extension. If `COPYSPEAK_PI_LAUNCH=1` is set, the extension looks for release/debug `copyspeech.exe` under `src-tauri/target/` and launches it when needed.
+Start CopySpeech yourself before using the extension. If `COPYSPEECH_PI_LAUNCH=1` is set, the extension looks for release/debug `copyspeech.exe` under `src-tauri/target/` and launches it when needed.
 
 ## Claude Code hook
 
@@ -36,13 +36,13 @@ The repo-local Claude hook is configured in `.claude/settings.json`; `.claude/se
     "Stop": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "node scripts/claude-copyspeak-hook.mjs" }]
+        "hooks": [{ "type": "command", "command": "node scripts/claude-copyspeech-hook.mjs" }]
       }
     ],
     "SubagentStop": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "node scripts/claude-copyspeak-hook.mjs" }]
+        "hooks": [{ "type": "command", "command": "node scripts/claude-copyspeech-hook.mjs" }]
       }
     ]
   }
@@ -53,9 +53,9 @@ The repo-local Claude hook is configured in `.claude/settings.json`; `.claude/se
 
 ## DSH plugin
 
-The DSH plugin is a separate package in `copyspeak-dsh/` (not part of the app build). It adds a **CopySpeech** panel in the DeepSeek Harness sidebar, and a speaker action to each finished assistant message.
+The DSH plugin is a separate package in `copyspeech-dsh/` (not part of the app build). It adds a **CopySpeech** panel in the DeepSeek Harness sidebar, and a speaker action to each finished assistant message.
 
-Install it into a DSH profile with the Plugin Manager's `install_bundle` action pointed at the `copyspeak-dsh` directory. The profile links that directory, so browser-half edits reach an open page through Client HMR; a host-half edit needs a DSH restart.
+Install it into a DSH profile with the Plugin Manager's `install_bundle` action pointed at the `copyspeech-dsh` directory. The profile links that directory, so browser-half edits reach an open page through Client HMR; a host-half edit needs a DSH restart.
 
 The panel is the only settings place. It carries four switches, stored in the page's `localStorage`:
 
@@ -77,28 +77,28 @@ The plugin finds the settled message through the Chat row's `data-chat-node-key`
 ## Commands
 
 ```text
-/copyspeak status
-/copyspeak on
-/copyspeak off
-/copyspeak test hello from pi
-/copyspeak engine cartesia|openai|elevenlabs|local
-/copyspeak activity on|off
-/copyspeak assistant on|off
-/copyspeak thinking on|off
+/copyspeech status
+/copyspeech on
+/copyspeech off
+/copyspeech test hello from pi
+/copyspeech engine cartesia|openai|elevenlabs|local
+/copyspeech activity on|off
+/copyspeech assistant on|off
+/copyspeech thinking on|off
 ```
 
 ## Environment flags
 
-- `COPYSPEAK_PI_ENABLED=0` / `COPYSPEAK_CLAUDE_ENABLED=0` disables voice on startup.
-- `COPYSPEAK_PI_ENGINE=cartesia|openai|elevenlabs|local` / `COPYSPEAK_CLAUDE_ENGINE=...` overrides the running app engine.
-- `COPYSPEAK_PI_EFFECT=walkie_talkie` / `COPYSPEAK_CLAUDE_EFFECT=...` overrides the running app effect.
-- `COPYSPEAK_PI_ASSISTANT=0` disables final assistant-message speech in Pi.
-- `COPYSPEAK_PI_ACTIVITY=1` enables thinking/tool announcements in Pi.
-- `COPYSPEAK_PI_THINKING=0` disables spoken thinking blocks in Pi.
-- `COPYSPEAK_PI_MAX_CHARS=700` / `COPYSPEAK_CLAUDE_MAX_CHARS=700` limits final response speech length.
-- `COPYSPEAK_PI_LAUNCH=1` / `COPYSPEAK_CLAUDE_LAUNCH=1` enables auto-launching CopySpeech.
-- `COPYSPEAK_CONTROL_URL=http://127.0.0.1:43117/speak` overrides the local control endpoint.
+- `COPYSPEECH_PI_ENABLED=0` / `COPYSPEECH_CLAUDE_ENABLED=0` disables voice on startup.
+- `COPYSPEECH_PI_ENGINE=cartesia|openai|elevenlabs|local` / `COPYSPEECH_CLAUDE_ENGINE=...` overrides the running app engine.
+- `COPYSPEECH_PI_EFFECT=walkie_talkie` / `COPYSPEECH_CLAUDE_EFFECT=...` overrides the running app effect.
+- `COPYSPEECH_PI_ASSISTANT=0` disables final assistant-message speech in Pi.
+- `COPYSPEECH_PI_ACTIVITY=1` enables thinking/tool announcements in Pi.
+- `COPYSPEECH_PI_THINKING=0` disables spoken thinking blocks in Pi.
+- `COPYSPEECH_PI_MAX_CHARS=700` / `COPYSPEECH_CLAUDE_MAX_CHARS=700` limits final response speech length.
+- `COPYSPEECH_PI_LAUNCH=1` / `COPYSPEECH_CLAUDE_LAUNCH=1` enables auto-launching CopySpeech.
+- `COPYSPEECH_CONTROL_URL=http://127.0.0.1:43117/speak` overrides the local control endpoint.
 
 ## History
 
-Merged from `docs/COPYSPEAK_PI_VOICE.md` + `docs/COPYSPEAK_PI_VOICE_2.md` (2026-09-22). The V1-only clipboard-primer trigger described the pre-control-server behavior and no longer matches the extension code.
+Merged from `docs/COPYSPEECH_PI_VOICE.md` + `docs/COPYSPEECH_PI_VOICE_2.md` (2026-09-22). The V1-only clipboard-primer trigger described the pre-control-server behavior and no longer matches the extension code.

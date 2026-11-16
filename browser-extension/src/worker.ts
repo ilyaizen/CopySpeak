@@ -102,7 +102,7 @@ async function release(disconnected = false) {
 }
 function connect() {
   if (port) return port;
-  const p = chrome.runtime.connectNative("com.copyspeak.browser");
+  const p = chrome.runtime.connectNative("com.copyspeech.browser");
   port = p;
   // A fresh connection heals the "!" a dead port left behind: the badge
   // text persists across worker restarts, long after the app it blamed for

@@ -187,7 +187,7 @@ impl HistoryConfig {
 /// - `{text}` - First N characters of the spoken text, sanitized for filenames
 ///
 /// # Arguments
-/// * `pattern` - The filename pattern with placeholders (e.g., "copyspeak_{timestamp}.wav")
+/// * `pattern` - The filename pattern with placeholders (e.g., "copyspeech_{timestamp}.wav")
 /// * `voice` - The voice ID to substitute for `{voice}`
 /// * `text` - The spoken text to substitute for `{text}` (truncated and sanitized)
 ///

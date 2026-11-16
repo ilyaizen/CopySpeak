@@ -25,7 +25,7 @@ Palette command `CopySpeech: Toggle auto-read` saves at once and changes only th
 
 - Needs CopySpeech running and the reply open in the focused chat.
 - Reads CopySpeech's `GET /status` every 120 ms while a reading plays, for highlights or follow. With both off, the plugin sends no status requests.
-- Paints with the CSS Custom Highlight API (`::highlight(copyspeak-word)`). No Hermes source or bundle is patched. Without that API, plain highlights paint nothing; glide and follow still work.
+- Paints with the CSS Custom Highlight API (`::highlight(copyspeech-word)`). No Hermes source or bundle is patched. Without that API, plain highlights paint nothing; glide and follow still work.
 - With glide on, a fixed white `mix-blend-mode: difference` pill moves between words in one rAF loop. It follows scroll, clips to every ancestor whose overflow hides or scrolls content and to the viewport, and hides when its word scrolls out of view.
 - Finds the reply's text in the newest assistant message, skipping reasoning blocks.
 - Stops 2 s after the last matched word, or after 60 s with no match. Clears on stop or on disable.
@@ -46,10 +46,10 @@ Palette command `CopySpeech: Toggle auto-read` saves at once and changes only th
 Create a junction so the app loads the repo file in place:
 
 ```
-New-Item -ItemType Junction -Path "$env:LOCALAPPDATA\hermes\desktop-plugins\copyspeak-hermes" -Target "D:\Projects\CopySpeech\copyspeak-hermes"
+New-Item -ItemType Junction -Path "$env:LOCALAPPDATA\hermes\desktop-plugins\copyspeech-hermes" -Target "D:\Projects\CopySpeech\copyspeech-hermes"
 ```
 
-Edits to `plugin.js` reload in the app. Load errors appear in `desktop.log` as `runtime load failed (copyspeak-hermes)`.
+Edits to `plugin.js` reload in the app. Load errors appear in `desktop.log` as `runtime load failed (copyspeech-hermes)`.
 
 ## Double playback rule
 

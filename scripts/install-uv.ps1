@@ -1,10 +1,10 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Installs uv (the Python package/environment manager) for CopySpeak local engines.
+    Installs uv (the Python package/environment manager) for CopySpeech local engines.
 
 .DESCRIPTION
-    uv is a hard requirement for all CopySpeak Python-based TTS engines. This is
+    uv is a hard requirement for all CopySpeech Python-based TTS engines. This is
     the ONLY installer allowed to run when uv is missing; every other engine
     installer fails fast and points here.
 
@@ -25,7 +25,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host ""
 Write-Host "  ========================================" -ForegroundColor Magenta
-Write-Host "  |  uv Installer for CopySpeak          |" -ForegroundColor Magenta
+Write-Host "  |  uv Installer for CopySpeech          |" -ForegroundColor Magenta
 Write-Host "  ========================================" -ForegroundColor Magenta
 Write-Host ""
 

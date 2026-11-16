@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""CLI wrapper for KittenTTS - used by CopySpeak.
+"""CLI wrapper for KittenTTS - used by CopySpeech.
 
 Reads text (inline or from a file), synthesizes with KittenTTS, and writes a
-24kHz WAV file. Kept stable so CopySpeak's args_template never changes when
+24kHz WAV file. Kept stable so CopySpeech's args_template never changes when
 upstream shifts.
 
-Invoked by CopySpeak via:
-    uv run --project {engine_dir}/kitten python {engine_dir}/kitten/scripts/copyspeak-kitten.py \
+Invoked by CopySpeech via:
+    uv run --project {engine_dir}/kitten python {engine_dir}/kitten/scripts/copyspeech-kitten.py \
         --text-file {input} --voice {voice} --output {output} [--speed 1.0] [--device cuda]
 
 With --serve the model is loaded once and stays in RAM, speaking protocol v2
@@ -19,7 +19,7 @@ time: each sentence becomes one PCM chunk, so first audio flows without
 waiting for the whole request. Each chunk is preceded by a cumulative caption
 frame, the shape ElevenLabs streams: its text covers every sentence so far
 with exact UTF-16 word offsets, while word times are estimated proportionally
-from each sentence's real audio duration. CopySpeak keeps only the newest
+from each sentence's real audio duration. CopySpeech keeps only the newest
 snapshot on every consumer, so the final frame doubles as the whole-request
 alignment.
 """
@@ -98,7 +98,7 @@ def read_text(args) -> str:
 
 
 def utf16_len(s: str) -> int:
-    """UTF-16 code units — the offset unit CopySpeak's captions address."""
+    """UTF-16 code units — the offset unit CopySpeech's captions address."""
     return len(s.encode("utf-16-le")) // 2
 
 
@@ -180,7 +180,7 @@ def offset_timings(timings: list[dict], text_offset: int, ms_offset: float) -> l
 def pcm16(samples) -> bytes:
     """float32 in [-1, 1] -> signed 16-bit little-endian PCM bytes.
 
-    CopySpeak's player only accepts 16-bit samples, so the conversion belongs
+    CopySpeech's player only accepts 16-bit samples, so the conversion belongs
     here rather than in Rust.
     """
     import numpy as np
@@ -230,7 +230,7 @@ def stream(tts, voice: str, speed: float, text: str):
 
     The caption frame before a chunk covers every sentence so far — word
     offsets exact in the joined text, word times estimated from each sentence's
-    real audio duration — because CopySpeak's live player and its batch
+    real audio duration — because CopySpeech's live player and its batch
     collector both keep only the newest snapshot. Anything the wheel prints
     during generate is destaged to stderr: on stdout it would interleave with
     the protocol's binary frames.
@@ -276,7 +276,7 @@ def serve(tts, voice: str, speed: float) -> int:
     Synthesis is warmed before the handshake: the first call after a model load
     pays one-off costs (phonemizer init, ONNX graph warmup) that later calls do
     not, and folding that into startup keeps the first real utterance as fast as
-    every one after it. CopySpeak prewarms in the background, so this is free.
+    every one after it. CopySpeech prewarms in the background, so this is free.
     """
     out = sys.stdout.buffer
 
@@ -332,7 +332,7 @@ def serve(tts, voice: str, speed: float) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="KittenTTS CLI wrapper for CopySpeak")
+    parser = argparse.ArgumentParser(description="KittenTTS CLI wrapper for CopySpeech")
     parser.add_argument("--text", help="Inline text to synthesize")
     parser.add_argument("--text-file", help="Path to a UTF-8 text file to synthesize")
     parser.add_argument(

@@ -416,29 +416,29 @@ fn local_engine_spec(engine: &str) -> Option<LocalEngineSpec> {
     let spec = match engine {
         "piper" => LocalEngineSpec {
             command: "uv".into(),
-            args_template: uv_run("piper", "copyspeak-piper.py"),
+            args_template: uv_run("piper", "copyspeech-piper.py"),
             voice: "en_US-amy-medium".into(),
         },
         "kitten" => LocalEngineSpec {
             command: "uv".into(),
-            args_template: uv_run("kitten", "copyspeak-kitten.py"),
+            args_template: uv_run("kitten", "copyspeech-kitten.py"),
             voice: "Rosie".into(),
         },
         "qwen" => LocalEngineSpec {
             command: "uv".into(),
-            args_template: uv_run("qwen", "copyspeak-qwen.py"),
+            args_template: uv_run("qwen", "copyspeech-qwen.py"),
             voice: "Aiden".into(),
         },
         "kokoro" => LocalEngineSpec {
             command: "uv".into(),
             // The wrapper resolves <engine_dir>/kokoro/models/ relative to
             // itself, so no explicit --model/--voices are needed here.
-            args_template: uv_run("kokoro", "copyspeak-kokoro.py"),
+            args_template: uv_run("kokoro", "copyspeech-kokoro.py"),
             voice: "af_heart".into(),
         },
         "pocket" => LocalEngineSpec {
             command: "uv".into(),
-            args_template: uv_run("pocket", "copyspeak-pocket.py"),
+            args_template: uv_run("pocket", "copyspeech-pocket.py"),
             voice: "alba".into(),
         },
         _ => return None,

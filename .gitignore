@@ -36,7 +36,7 @@ DO_NOT_TOUCH/
 nul
 .crowdin/
 /.zcode
-/copyspeak-dsh/debug
+/copyspeech-dsh/debug
 
 # Local impeccable design-workflow artifacts (critique snapshots, config)
 .impeccable/

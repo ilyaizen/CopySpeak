@@ -17,7 +17,7 @@ export function paragraphHover(read: () => void) {
     host = null;
     highlightStyle?.remove();
     highlightStyle = null;
-    CSS.highlights?.delete("copyspeak-hover");
+    CSS.highlights?.delete("copyspeech-hover");
   }
   function show(target: Element) {
     clear();
@@ -26,9 +26,9 @@ export function paragraphHover(read: () => void) {
     const captured = captureSelection(document, range);
     if (!captured || captured.text.length > 65536) return;
     paragraph = target;
-    CSS.highlights.set("copyspeak-hover", new Highlight(range));
+    CSS.highlights.set("copyspeech-hover", new Highlight(range));
     highlightStyle = document.createElement("style");
-    highlightStyle.textContent = "::highlight(copyspeak-hover){background-color:#8cbcff22}";
+    highlightStyle.textContent = "::highlight(copyspeech-hover){background-color:#8cbcff22}";
     document.documentElement.append(highlightStyle);
     host = document.createElement("aside");
     const shadow = host.attachShadow({ mode: "open" });

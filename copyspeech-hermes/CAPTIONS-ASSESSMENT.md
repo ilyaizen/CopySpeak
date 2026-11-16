@@ -29,7 +29,7 @@ Verdict: GO, narrow scope. Paint runs on source-read DOM hooks only. No live DOM
    - Electron `44.10.2` (`apps/desktop/package.json:195`). Chromium supports `CSS.highlights` and `Highlight` well before that. Known from Chromium history, not probed in this runtime.
    - Pitfalls from `docs/agents/failure-log.md:242-253`: never shadow `CSS`; hold on index -1; group per-character entries; resync across the excerpt gap.
 
-5. **Reference port size (`copyspeak-dsh/client.js`, read only):**
+5. **Reference port size (`copyspeech-dsh/client.js`, read only):**
    - Poll loop: `:1503-1557`. Status read: `:1589-1600`. Caption parse: `:1606-1624`.
    - Alignment: `:472-745`. Caption grouping: `:715-738`. Gap resync: `:631-645`.
    - Paint: `:1093-1175` (range rects, glide). Glide, pill, scroll follow: not ported.

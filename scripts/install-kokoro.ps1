@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Installs Kokoro TTS for CopySpeak via uv.
+    Installs Kokoro TTS for CopySpeech via uv.
 
 .DESCRIPTION
     Creates a uv-managed project under %LOCALAPPDATA%\CopySpeak\engines\kokoro,
@@ -49,7 +49,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
+. "$PSScriptRoot/lib/copyspeech-engine-install.ps1"
 
 $Voices = ConvertTo-VoiceIds $Voices
 
@@ -67,13 +67,13 @@ $effectiveForce = if ($Force) {
     Get-Confirmation -Prompt "Reinstall Kokoro from scratch? (deletes the existing engine dir)" -DefaultYes:$false
 }
 
-$EngineDir = Join-Path (Get-CopySpeakEngineRoot) "kokoro"
+$EngineDir = Join-Path (Get-CopySpeechEngineRoot) "kokoro"
 # ponytail: models/ sits inside the engine dir, so -Force would re-download
 # 335 MB. Stash the model files across the reset and put them back.
 $modelsDir = Join-Path $EngineDir "models"
 $stash = $null
 if ($effectiveForce -and (Test-Path $modelsDir)) {
-    $stash = Join-Path $env:TEMP "copyspeak-kokoro-models-$(Get-Random)"
+    $stash = Join-Path $env:TEMP "copyspeech-kokoro-models-$(Get-Random)"
     Move-Item $modelsDir $stash
 }
 New-EngineProject -EngineDir $EngineDir -Force:$effectiveForce
@@ -99,8 +99,8 @@ New-Item -ItemType Directory -Force $scriptsDir | Out-Null
 New-Item -ItemType Directory -Force $outputDir | Out-Null
 New-Item -ItemType Directory -Force $modelsDir | Out-Null
 
-$srcWrapper = Join-Path $PSScriptRoot "kokoro/copyspeak-kokoro.py"
-$dstWrapper = Join-Path $scriptsDir "copyspeak-kokoro.py"
+$srcWrapper = Join-Path $PSScriptRoot "kokoro/copyspeech-kokoro.py"
+$dstWrapper = Join-Path $scriptsDir "copyspeech-kokoro.py"
 Copy-Item $srcWrapper $dstWrapper -Force
 Write-Host "  Wrapper installed: $dstWrapper" -ForegroundColor Gray
 if ($engineOk) { Write-Host "  [DONE] engine" -ForegroundColor Green }

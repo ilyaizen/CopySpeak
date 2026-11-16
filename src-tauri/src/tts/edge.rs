@@ -161,14 +161,14 @@ impl EdgeTtsBackend {
 
     fn input_path() -> String {
         let tmp = std::env::temp_dir();
-        tmp.join("copyspeak_edge_input.txt")
+        tmp.join("copyspeech_edge_input.txt")
             .to_string_lossy()
             .into_owned()
     }
 
     fn output_path() -> String {
         let tmp = std::env::temp_dir();
-        tmp.join("copyspeak_edge_out.mp3")
+        tmp.join("copyspeech_edge_out.mp3")
             .to_string_lossy()
             .into_owned()
     }
@@ -249,7 +249,7 @@ impl EdgeTtsBackend {
             "python",
             "-c",
         ])
-        .arg(include_str!("../../../scripts/edge/copyspeak-edge.py"))
+        .arg(include_str!("../../../scripts/edge/copyspeech-edge.py"))
         .arg(&input_path)
         .arg(&output_path)
         .arg(voice)

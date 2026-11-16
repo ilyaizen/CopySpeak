@@ -41,7 +41,7 @@ viewer. Highlighting still requires ordinary selectable HTML in the file tab.
 
 `browser-extension/` captures the selection and owns the page UI.
 `browser-native-host/` relays Chrome native-messaging frames to
-`\\.\pipe\copyspeak-browser`. The desktop bridge starts a normal CopySpeech
+`\\.\pipe\copyspeech-browser`. The desktop bridge starts a normal CopySpeech
 reading and projects audible caption timings back to the original selection.
 
 Word highlighting degrades per word and per fragment, never per reading. The
@@ -56,7 +56,7 @@ current-word marker, while the fragments around it still follow the word.
 This is currently a developer preview, not a packaged extension.
 
 1. Build the native host from `browser-native-host/` and update
-   `browser-native-host/com.copyspeak.browser.json` with its absolute `.exe`
+   `browser-native-host/com.copyspeech.browser.json` with its absolute `.exe`
    path.
 2. Register that manifest for the matching unpacked Chrome extension ID.
 3. Run `bun run build` in `browser-extension/`, then load
@@ -80,7 +80,7 @@ document-targeted messaging and injection the companion uses.
    - Linux: `browser-native-host/install-linux.sh` writes both manifests and
      registers Firefox in `~/.mozilla/native-messaging-hosts/`.
    - Windows: point the registry default value at the Firefox manifest:
-     `reg add "HKCU\Software\Mozilla\NativeMessagingHosts\com.copyspeak.browser" /ve /t REG_SZ /d "D:\Projects\CopySpeech\browser-native-host\com.copyspeak.browser.firefox.json" /f`
+     `reg add "HKCU\Software\Mozilla\NativeMessagingHosts\com.copyspeech.browser" /ve /t REG_SZ /d "D:\Projects\CopySpeech\browser-native-host\com.copyspeech.browser.firefox.json" /f`
 
 The gecko ID is a release identity. Changing it breaks the native host's
 `allowed_extensions` and any signed build, so keep it stable.

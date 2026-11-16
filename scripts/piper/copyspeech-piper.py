@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""CLI wrapper for Piper (piper1-gpl) - used by CopySpeak.
+"""CLI wrapper for Piper (piper1-gpl) - used by CopySpeech.
 
 Reads text (inline or from a file), loads the Piper voice model named by
 --voice (resolved as ../voices/<voice>.onnx relative to this wrapper), synthesizes,
 and writes a WAV file.
 
-Invoked by CopySpeak via:
-    uv run --project {engine_dir}/piper python scripts/copyspeak-piper.py \
+Invoked by CopySpeech via:
+    uv run --project {engine_dir}/piper python scripts/copyspeech-piper.py \
         --text-file {input} --voice {voice} --output {output} [--device cuda]
 
 With --serve the model is loaded once and stays in RAM, speaking protocol v2
@@ -14,7 +14,7 @@ With --serve the model is loaded once and stays in RAM, speaking protocol v2
 one JSON request per stdin line with a format header, length-prefixed 16-bit LE
 PCM chunks, and an end frame. Piper yields one chunk per sentence, so playback
 starts after the first sentence rather than after the whole passage. Stdin EOF
-ends the process, so the daemon dies with CopySpeak.
+ends the process, so the daemon dies with CopySpeech.
 
 Place <voice>.onnx + <voice>.onnx.json in <engine_dir>/voices/. Get voices
 from https://github.com/OHF-Voice/piper1-gpl#voices
@@ -219,7 +219,7 @@ def serve(voice) -> int:
     Synthesis is warmed before the handshake: the first call after a model load
     pays one-off costs (phonemizer init, ONNX graph warmup) that later calls do
     not, and folding that into startup keeps the first real utterance as fast as
-    every one after it. CopySpeak prewarms in the background, so this is free.
+    every one after it. CopySpeech prewarms in the background, so this is free.
     """
     out = sys.stdout.buffer
 
@@ -274,7 +274,7 @@ def serve(voice) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Piper CLI wrapper for CopySpeak")
+    parser = argparse.ArgumentParser(description="Piper CLI wrapper for CopySpeech")
     parser.add_argument("--text", help="Inline text to synthesize")
     parser.add_argument("--text-file", help="Path to a UTF-8 text file to synthesize")
     parser.add_argument("--voice", default="en_US-joe-medium", help="Voice model basename in voices/")

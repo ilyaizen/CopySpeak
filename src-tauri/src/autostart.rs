@@ -19,7 +19,7 @@ mod windows_imp {
     use winreg::RegKey;
 
     const APP_NAME: &str = "CopySpeech";
-    /// Run value written by CopySpeak 0.2.x. Removed when CopySpeech takes over,
+    /// Run value written by CopySpeech 0.2.x. Removed when CopySpeech takes over,
     /// so one login does not start both apps.
     const LEGACY_APP_NAME: &str = "CopySpeak";
     const REGISTRY_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
@@ -27,7 +27,7 @@ mod windows_imp {
     /// Installed folder and executable of this build, under %LOCALAPPDATA%.
     const INSTALL_DIR: &str = "CopySpeech";
     const INSTALL_EXE: &str = "copyspeech.exe";
-    /// Installed folder and executable of CopySpeak 0.2.x, under %LOCALAPPDATA%.
+    /// Installed folder and executable of CopySpeech 0.2.x, under %LOCALAPPDATA%.
     const LEGACY_INSTALL_DIR: &str = "CopySpeak";
     const LEGACY_INSTALL_EXE: &str = "copyspeak.exe";
 
@@ -136,7 +136,7 @@ mod windows_imp {
             return Ok(false);
         }
         enable_autostart()?;
-        log::info!("Migrated auto-start from CopySpeak to CopySpeech");
+        log::info!("Migrated auto-start from CopySpeech to CopySpeech");
         Ok(true)
     }
 
@@ -204,7 +204,7 @@ mod windows_imp {
 
         #[test]
         fn debug_build_is_not_migrated() {
-            let dev = r"D:\Projects\CopySpeak\src-tauri\target\debug\copyspeech.exe";
+            let dev = r"D:\Projects\CopySpeech\src-tauri\target\debug\copyspeech.exe";
             assert!(!allowed(dev, false, Some(LEGACY_RUN)));
             assert!(!allowed(
                 dev,
@@ -241,7 +241,7 @@ mod linux_imp {
     use std::path::Path;
 
     const APP_NAME: &str = "CopySpeech";
-    /// Entry name written by CopySpeak 0.2.x. Removed when CopySpeech takes over.
+    /// Entry name written by CopySpeech 0.2.x. Removed when CopySpeech takes over.
     const LEGACY_APP_NAME: &str = "CopySpeak";
 
     const DESKTOP_ENTRY: &str = "\
@@ -259,13 +259,13 @@ X-GNOME-Autostart-enabled=true
         "[Desktop Entry]",
         "Type=Application",
         "Name=CopySpeak",
-        "Exec=copyspeak",
+        "Exec=copyspeech",
         "Terminal=false",
         "X-GNOME-Autostart-enabled=true",
     ];
 
     /// Installed locations that prove a packaged build. The legacy entry runs
-    /// `copyspeak` from PATH, so only these PATH-visible binaries count.
+    /// `copyspeech` from PATH, so only these PATH-visible binaries count.
     const SYSTEM_BINS: &[&str] = &["/usr/bin/copyspeech", "/usr/local/bin/copyspeech"];
 
     /// `$XDG_CONFIG_HOME/autostart` (default `~/.config/autostart`).
@@ -381,7 +381,7 @@ X-GNOME-Autostart-enabled=true
         const LEGACY_ENTRY: &str = "[Desktop Entry]
 Type=Application
 Name=CopySpeak
-Exec=copyspeak
+Exec=copyspeech
 Terminal=false
 X-GNOME-Autostart-enabled=true
 ";
@@ -452,7 +452,7 @@ X-GNOME-Autostart-enabled=true
             let (dir, _guard) = scratch("dev");
             std::fs::write(dir.join("CopySpeak.desktop"), LEGACY_ENTRY).unwrap();
 
-            let dev = Path::new("/home/user/CopySpeak/src-tauri/target/debug/copyspeech");
+            let dev = Path::new("/home/user/CopySpeech/src-tauri/target/debug/copyspeech");
             assert!(!migrate_in(&dir, dev, &bins()).unwrap());
             assert!(!dir.join("CopySpeech.desktop").exists());
         }
@@ -483,7 +483,7 @@ X-GNOME-Autostart-enabled=true
 mod macos_imp {
     use super::*;
 
-    const LABEL: &str = "com.copyspeak.tts";
+    const LABEL: &str = "com.copyspeech.tts";
 
     /// `~/Library/LaunchAgents` — per-user launchd agents.
     fn launch_agents_dir() -> Result<PathBuf, String> {
@@ -578,7 +578,7 @@ pub fn sync_autostart_with_config(enabled: bool) -> Result<(), String> {
     }
 }
 
-/// Startup migration from the CopySpeak 0.2.x launch-on-login registration to
+/// Startup migration from the CopySpeech 0.2.x launch-on-login registration to
 /// CopySpeech. Returns whether a migration ran.
 ///
 /// Runs only when launch-on-login is enabled and the build is not a dev build.

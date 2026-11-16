@@ -322,7 +322,7 @@ mod tests {
     #[test]
     fn history_round_trip_preserves_native_gaps_and_rejects_invalid_metadata() {
         let path =
-            std::env::temp_dir().join(format!("copyspeak-captions-test-{}", std::process::id()));
+            std::env::temp_dir().join(format!("copyspeech-captions-test-{}", std::process::id()));
         let path = path.to_str().unwrap();
         let captions = CaptionAlignment {
             text: "😀 Hi there".into(),

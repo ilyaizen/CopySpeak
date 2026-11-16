@@ -195,7 +195,7 @@ pub fn run_clipboard_listener(app: AppHandle, is_listening: Arc<AtomicBool>) {
         };
 
         // Register window class
-        let class_name = w!("CopySpeakClipboardListener");
+        let class_name = w!("CopySpeechClipboardListener");
         let wc = WNDCLASSW {
             style: CS_HREDRAW | CS_VREDRAW,
             lpfnWndProc: Some(clipboard_wndproc),
@@ -214,7 +214,7 @@ pub fn run_clipboard_listener(app: AppHandle, is_listening: Arc<AtomicBool>) {
         let hwnd = match CreateWindowExW(
             Default::default(),
             class_name,
-            w!("CopySpeak Clipboard Listener"),
+            w!("CopySpeech Clipboard Listener"),
             WS_OVERLAPPEDWINDOW,
             CW_USEDEFAULT,
             CW_USEDEFAULT,

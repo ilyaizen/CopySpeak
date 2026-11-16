@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CopySpeak local-engine bench: TTFA, RAM, and VRAM at the daemon protocol layer.
+"""CopySpeech local-engine bench: TTFA, RAM, and VRAM at the daemon protocol layer.
 
 Stage 0 of docs_internal/egm/concepts_brief.md. No product code changes.
 
@@ -47,7 +47,7 @@ except Exception:  # no NVIDIA driver, or package missing
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENGINE_ROOT = Path(
     os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
-) / "CopySpeak" / "engines"
+) / "CopySpeech" / "engines"
 CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 
 # Defaults mirror the app's default profiles and catalog
@@ -55,15 +55,15 @@ CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 # src-tauri/src/config/tts.rs default profiles). The default-profile shape for
 # Kitten sends NO --model/--speed, so the wrapper defaults ship: nano-0.8, 1.0.
 ENGINE_SPECS: dict[str, dict] = {
-    "kitten": {"wrapper": "scripts/copyspeak-kitten.py", "voice": "Rosie", "model": None},
+    "kitten": {"wrapper": "scripts/copyspeech-kitten.py", "voice": "Rosie", "model": None},
     "qwen": {
-        "wrapper": "scripts/copyspeak-qwen.py",
+        "wrapper": "scripts/copyspeech-qwen.py",
         "voice": "Aiden",
         "model": "Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice",
     },
-    "piper": {"wrapper": "scripts/copyspeak-piper.py", "voice": "en_US-amy-medium", "model": None},
-    "kokoro": {"wrapper": "scripts/copyspeak-kokoro.py", "voice": "af_heart", "model": None},
-    "pocket": {"wrapper": "scripts/copyspeak-pocket.py", "voice": "alba", "model": None},
+    "piper": {"wrapper": "scripts/copyspeech-piper.py", "voice": "en_US-amy-medium", "model": None},
+    "kokoro": {"wrapper": "scripts/copyspeech-kokoro.py", "voice": "af_heart", "model": None},
+    "pocket": {"wrapper": "scripts/copyspeech-pocket.py", "voice": "alba", "model": None},
 }
 ENGINE_ORDER = ["kitten", "qwen", "piper", "kokoro", "pocket"]
 

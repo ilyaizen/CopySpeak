@@ -1,13 +1,13 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Smoke-tests an installed CopySpeak uv engine by synthesizing one WAV.
+    Smoke-tests an installed CopySpeech uv engine by synthesizing one WAV.
 
 .PARAMETER Engine
     Engine name under %LOCALAPPDATA%\CopySpeak\engines (e.g. piper).
 
 .PARAMETER Text
-    Text to synthesize. Default: "CopySpeak engine test".
+    Text to synthesize. Default: "CopySpeech engine test".
 
 .PARAMETER Voice
     Voice name. Default: default.
@@ -23,25 +23,25 @@
 
 param(
     [Parameter(Mandatory)][string]$Engine,
-    [string]$Text = "CopySpeak engine test",
+    [string]$Text = "CopySpeech engine test",
     [string]$Voice = "default",
     [ValidateSet("cpu", "cuda")][string]$Device = "cpu"
 )
 
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
+. "$PSScriptRoot/lib/copyspeech-engine-install.ps1"
 
 Require-Uv
 
-$EngineDir = Join-Path (Get-CopySpeakEngineRoot) $Engine
+$EngineDir = Join-Path (Get-CopySpeechEngineRoot) $Engine
 if (-not (Test-Path $EngineDir)) {
     Write-Host "ERROR: engine not installed: $EngineDir" -ForegroundColor Red
     Write-Host "  Install it first, e.g. ./scripts/install-$Engine.ps1" -ForegroundColor Yellow
     exit 1
 }
 
-$wrapper = Join-Path $EngineDir "scripts/copyspeak-$Engine.py"
+$wrapper = Join-Path $EngineDir "scripts/copyspeech-$Engine.py"
 if (-not (Test-Path $wrapper)) {
     Write-Host "ERROR: wrapper not found: $wrapper" -ForegroundColor Red
     exit 1

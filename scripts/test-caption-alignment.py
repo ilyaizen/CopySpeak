@@ -15,9 +15,9 @@ def load(relative):
     return module
 
 
-piper = load("piper/copyspeak-piper.py")
-edge = load("edge/copyspeak-edge.py")
-kokoro = load("kokoro/copyspeak-kokoro.py")
+piper = load("piper/copyspeech-piper.py")
+edge = load("edge/copyspeech-edge.py")
+kokoro = load("kokoro/copyspeech-kokoro.py")
 
 
 class AlignmentTests(unittest.TestCase):

@@ -509,7 +509,7 @@ mod tests {
 
     fn temp_cache(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!(
-            "copyspeak-voice-cache-{}-{}",
+            "copyspeech-voice-cache-{}-{}",
             name,
             std::process::id()
         ));

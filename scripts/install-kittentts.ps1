@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Installs KittenTTS for CopySpeak via uv (CPU-only, 25-80MB).
+    Installs KittenTTS for CopySpeech via uv (CPU-only, 25-80MB).
 
 .DESCRIPTION
     Creates a uv-managed project under %LOCALAPPDATA%\CopySpeak\engines\kitten,
@@ -38,7 +38,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
+. "$PSScriptRoot/lib/copyspeech-engine-install.ps1"
 
 $Voices = ConvertTo-VoiceIds $Voices
 
@@ -56,7 +56,7 @@ $effectiveForce = if ($Force) {
     Get-Confirmation -Prompt "Reinstall KittenTTS from scratch? (deletes the existing engine dir)" -DefaultYes:$false
 }
 
-$EngineDir = Join-Path (Get-CopySpeakEngineRoot) "kitten"
+$EngineDir = Join-Path (Get-CopySpeechEngineRoot) "kitten"
 New-EngineProject -EngineDir $EngineDir -Force:$effectiveForce
 
 # KittenTTS is published as a GitHub release wheel (not on PyPI).
@@ -75,8 +75,8 @@ New-Item -ItemType Directory -Force $scriptsDir | Out-Null
 New-Item -ItemType Directory -Force $voicesDir | Out-Null
 New-Item -ItemType Directory -Force $outputDir | Out-Null
 
-$srcWrapper = Join-Path $PSScriptRoot "kitten/copyspeak-kitten.py"
-$dstWrapper = Join-Path $scriptsDir "copyspeak-kitten.py"
+$srcWrapper = Join-Path $PSScriptRoot "kitten/copyspeech-kitten.py"
+$dstWrapper = Join-Path $scriptsDir "copyspeech-kitten.py"
 Copy-Item $srcWrapper $dstWrapper -Force
 Write-Host "  Wrapper installed: $dstWrapper" -ForegroundColor Gray
 Write-Host "  [DONE] engine" -ForegroundColor Green
@@ -126,7 +126,7 @@ $profileJson = @"
     "engine": "local",
     "preset": "kitten-tts",
     "command": "uv",
-    "args_template": ["run", "--project", "{engine_dir}/kitten", "python", "{engine_dir}/kitten/scripts/copyspeak-kitten.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}", "--model", "{model}", "--speed", "{speed}"]
+    "args_template": ["run", "--project", "{engine_dir}/kitten", "python", "{engine_dir}/kitten/scripts/copyspeech-kitten.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}", "--model", "{model}", "--speed", "{speed}"]
   }
 }
 "@

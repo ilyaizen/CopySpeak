@@ -191,7 +191,7 @@
       "temporary": "Temporary",
       "generationsFolder": "Generations Folder",
       "generationsFolderDescription": "Directory to save TTS generations. Leave blank for default.",
-      "generationsFolderPlaceholder": "Default: Documents/CopySpeak",
+      "generationsFolderPlaceholder": "Default: Documents/CopySpeech",
       "autoDeleteTitle": "Auto-Delete Generations",
       "autoDeleteKeepLatest": "Keep latest",
       "autoDeleteNever": "Never",

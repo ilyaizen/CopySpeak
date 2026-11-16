@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# Shared helpers for CopySpeak uv-based engine installers (Linux port).
+# Shared helpers for CopySpeech uv-based engine installers (Linux port).
 #
 # PROGRESS MARKERS
 # ----------------
 # Installers emit three machine-parseable line prefixes on stdout so the
-# CopySpeak frontend can track state transitions through the streamed event
+# CopySpeech frontend can track state transitions through the streamed event
 # pipe (everything else is free-form log noise):
 #     [STEP] <name>   - a phase started (name = 'voice:<id>' for per-voice
 #                       Piper downloads, or 'engine'/'model'/'cuda'/
@@ -15,17 +15,17 @@
 #
 # NONINTERACTIVE MODE
 # -------------------
-# COPYSPEAK_NONINTERACTIVE=1 means the app (not a human) is driving: the app
+# COPYSPEECH_NONINTERACTIVE=1 means the app (not a human) is driving: the app
 # spawns installers with stdin closed, so any `read` would fail or block
 # forever. Every interactive helper below silently takes its default in that
 # mode.
 #
 # Source this file from an engine installer:
-#     source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/copyspeak-engine-install.sh"
+#     source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/copyspeech-engine-install.sh"
 #
 # All Python engines are managed by `uv`. These helpers stay deliberately
 # boring: require uv, locate the engine root, create a uv project, run uv,
-# validate audio output, and print a CopySpeak profile snippet.
+# validate audio output, and print a CopySpeech profile snippet.
 
 # ANSI color helpers. Only colorize when stdout is a real terminal; the app
 # parses stdout, and ANSI codes in the event pipe would be pure noise.
@@ -55,7 +55,7 @@ log() {
 
 # Add uv's standard install locations to this process's PATH.
 #
-# Installers launched by the app inherit CopySpeak's PATH, which is a snapshot
+# Installers launched by the app inherit CopySpeech's PATH, which is a snapshot
 # from app launch. Right after install-uv.sh runs, uv exists on disk but not
 # in that snapshot, so every engine installer would fail until the app is
 # restarted. Re-probing the well-known locations avoids that restart.
@@ -92,7 +92,7 @@ require_uv() {
 #
 # Matches dirs::data_local_dir on each platform, which the Tauri app's
 # engine_dir setting uses (XDG_DATA_HOME wins when set, else $HOME/.local/share).
-copyspeak_engine_root() {
+copyspeech_engine_root() {
     case "$(uname -s)" in
         Darwin)
             printf '%s\n' "$HOME/Library/Application Support/CopySpeak/engines"
@@ -122,7 +122,7 @@ new_engine_project() {
         # dependencies are not permitted"). Prefix keeps the project name
         # unique.
         local project_name
-        project_name="copyspeak-$(basename "$engine_dir")"
+        project_name="copyspeech-$(basename "$engine_dir")"
         # The target dir is positional. `uv --project X init` was accepted by
         # older uv and is a hard error from 0.12 on ("The `--project` option
         # cannot be used in `uv init`").
@@ -291,7 +291,7 @@ write_engine_manifest() {
 # True when the app (not a human) is driving. Every interactive helper below
 # silently takes its default in that mode.
 is_noninteractive() {
-    [[ "${COPYSPEAK_NONINTERACTIVE:-}" == "1" ]]
+    [[ "${COPYSPEECH_NONINTERACTIVE:-}" == "1" ]]
 }
 
 write_engine_banner() {
@@ -385,7 +385,7 @@ select_voice_from_menu() {
     done
 }
 
-# Print a ready-to-paste CopySpeak profile snippet. Does NOT edit config (v1).
+# Print a ready-to-paste CopySpeech profile snippet. Does NOT edit config (v1).
 write_profile_snippet() {
     local json=$1
     echo ""

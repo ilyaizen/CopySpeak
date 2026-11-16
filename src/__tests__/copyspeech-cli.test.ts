@@ -11,7 +11,7 @@ import { promisify } from "node:util";
 import { expect, test } from "vite-plus/test";
 
 const run = promisify(execFile);
-const cli = fileURLToPath(new URL("../../scripts/copyspeak.mjs", import.meta.url));
+const cli = fileURLToPath(new URL("../../scripts/copyspeech.mjs", import.meta.url));
 
 type Captured = { method?: string; path?: string; body: string };
 
@@ -34,7 +34,7 @@ async function runCli(args: string[], reply = "{}") {
     // SAFETY: listen(0, "127.0.0.1") has completed; this is a bound TCP server, not a pipe.
     const { port } = server.address() as AddressInfo;
     const { stdout } = await run(process.execPath, [cli, ...args], {
-      env: { ...process.env, COPYSPEAK_CONTROL_ADDR: `127.0.0.1:${port}` },
+      env: { ...process.env, COPYSPEECH_CONTROL_ADDR: `127.0.0.1:${port}` },
       timeout: 5000
     });
     return { stdout: stdout.trim(), requests };
@@ -133,7 +133,7 @@ test("stop without --request-id stays the bodyless global stop", async () => {
 });
 
 test("a cancelled speak still writes the ack and reports cancelled", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "copyspeak-cli-"));
+  const dir = await mkdtemp(join(tmpdir(), "copyspeech-cli-"));
   try {
     const ack = join(dir, "ack.wav");
     const { stdout } = await runCli(

@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Installs Piper (piper1-gpl) for CopySpeak via uv.
+    Installs Piper (piper1-gpl) for CopySpeech via uv.
 
 .DESCRIPTION
     Creates a uv-managed project under %LOCALAPPDATA%\CopySpeak\engines\piper,
@@ -47,7 +47,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
+. "$PSScriptRoot/lib/copyspeech-engine-install.ps1"
 
 $Voices = ConvertTo-VoiceIds $Voices
 
@@ -65,7 +65,7 @@ $effectiveForce = if ($Force) {
     Get-Confirmation -Prompt "Reinstall Piper from scratch? (deletes the existing engine dir)" -DefaultYes:$false
 }
 
-$EngineDir = Join-Path (Get-CopySpeakEngineRoot) "piper"
+$EngineDir = Join-Path (Get-CopySpeechEngineRoot) "piper"
 New-EngineProject -EngineDir $EngineDir -Force:$effectiveForce
 
 Write-Host ""
@@ -81,8 +81,8 @@ New-Item -ItemType Directory -Force $scriptsDir | Out-Null
 New-Item -ItemType Directory -Force $voicesDir | Out-Null
 New-Item -ItemType Directory -Force $outputDir | Out-Null
 
-$srcWrapper = Join-Path $PSScriptRoot "piper/copyspeak-piper.py"
-$dstWrapper = Join-Path $scriptsDir "copyspeak-piper.py"
+$srcWrapper = Join-Path $PSScriptRoot "piper/copyspeech-piper.py"
+$dstWrapper = Join-Path $scriptsDir "copyspeech-piper.py"
 Copy-Item $srcWrapper $dstWrapper -Force
 Write-Host "  Wrapper installed: $dstWrapper" -ForegroundColor Gray
 

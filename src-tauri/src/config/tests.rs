@@ -40,9 +40,9 @@ mod tests {
             "copyspeech-{compact_datetime}-{seq}.wav"
         );
         let mut saved = serde_json::to_value(OutputConfig::default()).unwrap();
-        saved["filename_pattern"] = serde_json::json!("copyspeak-custom-{seq}.wav");
+        saved["filename_pattern"] = serde_json::json!("copyspeech-custom-{seq}.wav");
         let restored: OutputConfig = serde_json::from_value(saved).unwrap();
-        assert_eq!(restored.filename_pattern, "copyspeak-custom-{seq}.wav");
+        assert_eq!(restored.filename_pattern, "copyspeech-custom-{seq}.wav");
     }
 
     #[test]
@@ -85,11 +85,11 @@ mod tests {
 
     #[test]
     fn test_expand_filename_pattern_datetime() {
-        let result = expand_filename_pattern("copyspeak_{datetime}.wav", "voice", "text");
-        assert!(result.starts_with("copyspeak_"));
+        let result = expand_filename_pattern("copyspeech_{datetime}.wav", "voice", "text");
+        assert!(result.starts_with("copyspeech_"));
         assert!(result.ends_with(".wav"));
         let datetime_part = result
-            .strip_prefix("copyspeak_")
+            .strip_prefix("copyspeech_")
             .unwrap()
             .strip_suffix(".wav")
             .unwrap();
@@ -367,7 +367,7 @@ mod tests {
                     "--project",
                     "{engine_dir}/piper",
                     "python",
-                    "{engine_dir}/piper/scripts/copyspeak-piper.py",
+                    "{engine_dir}/piper/scripts/copyspeech-piper.py",
                     "--text-file",
                     "{input}",
                     "--voice",
@@ -821,7 +821,7 @@ mod tests {
         static NEXT_ID: AtomicU32 = AtomicU32::new(0);
         let id = NEXT_ID.fetch_add(1, Ordering::SeqCst);
         let dir = std::env::temp_dir().join(format!(
-            "copyspeak-config-test-{}-{}-{label}",
+            "copyspeech-config-test-{}-{}-{label}",
             std::process::id(),
             id
         ));
@@ -868,7 +868,7 @@ mod tests {
                         "--project",
                         "{engine_dir}/kitten",
                         "python",
-                        "{engine_dir}/kitten/scripts/copyspeak-kitten.py",
+                        "{engine_dir}/kitten/scripts/copyspeech-kitten.py",
                         "--text-file",
                         "{input}",
                         "--voice",

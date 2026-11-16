@@ -111,7 +111,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Rebuild and include tracked `browser-extension/dist/` after companion source edits; the loaded unpacked extension executes these bundles, so source-only fixes and passing source tests leave the browser on old code.
 - A companion follow does not survive a page refresh: the worker stops a page-started reading on `tabs.onUpdated`, `hello` only stores the automatic flag (no re-announce), and trigger claims bind to the pre-refresh documentId — the pill returns only after the user starts a new read, so reproduce mid-reading glide bugs inside that new reading.
 - Set the Firefox build's `strict_min_version` to 153.0 or later: `sendMessage` `documentId`, `executeScript` `documentIds`, and `sender.documentId` ship only in Firefox 153. Derive `dist-firefox/manifest.json` in `build.mjs` (`bun run build:firefox`), never by hand.
-- Firefox native host manifests use `allowed_extensions` with the gecko ID, and live at `HKCU\Software\Mozilla\NativeMessagingHosts\com.copyspeak.browser` on Windows and `~/.mozilla/native-messaging-hosts/` on Linux, not the Chrome `NativeMessagingHosts` directories.
+- Firefox native host manifests use `allowed_extensions` with the gecko ID, and live at `HKCU\Software\Mozilla\NativeMessagingHosts\com.copyspeech.browser` on Windows and `~/.mozilla/native-messaging-hosts/` on Linux, not the Chrome `NativeMessagingHosts` directories.
 - The companion's icons come from `src-tauri/icons` at build time. A stale `dist/icons` keeps the old colour until the build reruns.
 - Smoke-test Firefox with `npx web-ext@latest run ... --profile-create-if-missing --arg=-headless --no-input`; web-ext has no `--headless` flag, and `--firefox-profile` needs a `user.js` with `devtools.debugger.remote-enabled=true` or the devtools port never binds (web-ext then loops on ECONNREFUSED and exits).
 - Run the extension's Playwright specs from the repo root: the specs resolve `browser-extension/dist` against the process CWD, so running them inside `browser-extension/` doubles the path and every fixture asset 404s.
@@ -123,7 +123,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Append the companion's caption pill to `document.documentElement` and never isolate the anchor root for it: `isolation` on a non-ancestor cannot change the mark's backdrop, and the whole page IS the backdrop that makes `mix-blend-mode: difference` invert the text behind the word.
 - Fill the caption pill white under `mix-blend-mode: difference` and paint it above the word (`z-index` in the extension, positioned-over-inline in the app): a border-only mark never inverts the word, so the bubble reads as a plain outline. An isolated but transparent host breaks the fill into a solid white block, because the blend then sees no opaque backdrop — the Play page host is safe (it carries `bg-card`), the HUD caption must stay un-isolated.
 - Follow the spoken word only when its line leaves a 15–82 % band of its scroll port, with a pause after a user wheel/touch/scroll-key gesture: scrolling on every word fights the reader, and one full-viewport jump loses their place. Call `glide.reposition()` from the scroll port's `scroll` event, because an inner box scroll moves the word without moving the document.
-- Run `browser-extension/tests/glide.test.ts` and the content Playwright spec after changing the pill: they pin the mark's geometry, blend mode and settle/glide split, and the KISS rewrite left both asserting removed `copyspeak-word*` highlights (12 unit failures) while the app's vitest suite stayed green.
+- Run `browser-extension/tests/glide.test.ts` and the content Playwright spec after changing the pill: they pin the mark's geometry, blend mode and settle/glide split, and the KISS rewrite left both asserting removed `copyspeech-word*` highlights (12 unit failures) while the app's vitest suite stayed green.
 
 ## History & cache
 
@@ -144,7 +144,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 ## Text pipeline
 
 - Capture the on-disk TTS schema version before `migrate_tts_config`: it resets the version to 2 on every load, so a later schema-gated migration otherwise overwrites per-profile preferences at every restart.
-- Rename request flags in `scripts/copyspeak.mjs`; the Node helper is the live CLI used by Hermes, so verify its emitted `/speak` payload separately. `src-tauri/src/cli.rs` was never compiled (no `mod cli;`) and was deleted.
+- Rename request flags in `scripts/copyspeech.mjs`; the Node helper is the live CLI used by Hermes, so verify its emitted `/speak` payload separately. `src-tauri/src/cli.rs` was never compiled (no `mod cli;`) and was deleted.
 - Fold Cyrillic homoglyphs only inside a word that also holds a Latin letter (`fold_homoglyphs`); a per-character fold turned every Russian word into mixed script ("привет" → "пpивeт").
 - Keep U+200C (ZWNJ) out of both invisible-character regexes in `tts_normalize.rs`; Persian and Indic words are spelled with it.
 - Add a script's sentence terminator to both `is_sentence_end` in `pagination.rs` and the phrase regex in `captions.ts`; text with no terminator falls to whitespace-snapped force-splits — no mid-word cuts since #88, but sentence-level breaks degrade to clause/word boundaries.
@@ -163,7 +163,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 - Grep `src/` for the filename before removing or renaming anything in `static/`; the 0.2.6 screenshot swap left `screenshots.svelte` requesting the deleted `screen-v0.1.8.png` and the live landing page shipped a broken image.
 - Keep version numbers out of locale strings; they rot on every release (all nine locales carried `v0.1.8` inside the screenshot caption).
-- The landing flag `VITE_IS_WEB` is never read from the environment: `vite.config.js` `define` maps it from `process.env.COPYSPEAK_WEB`. Local previews must run `bun run dev:landing` / `preview:landing` (they set `COPYSPEAK_WEB=1`); exporting `VITE_IS_WEB=1` yourself silently serves the Play UI.
+- The landing flag `VITE_IS_WEB` is never read from the environment: `vite.config.js` `define` maps it from `process.env.COPYSPEECH_WEB`. Local previews must run `bun run dev:landing` / `preview:landing` (they set `COPYSPEECH_WEB=1`); exporting `VITE_IS_WEB=1` yourself silently serves the Play UI.
 - Format imported HTML/CSS/JS under `static/` before running `bun run check`; the global formatter checks those files too.
 - Scope landing CSS under `.landing` in `landing.css`: `+layout.svelte` renders the Play UI's root too, so a bare `h2`, `footer` or `:root` rule restyles the app.
 - Target `.dark .landing` for dark-only rules: mode-watcher adds `.dark` to `<html>` and never `.light`, so light is the base selector.
@@ -241,7 +241,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Read the active effect through `effectiveEffect` (`src/lib/effects-gate.ts`), never `profile.effects` directly: the config-changed re-sync read the profile and bypassed the Experimental gate.
 - Gate every history IPC that deletes stored audio (`run_history_cleanup` included): the synthesis saves and the automatic cleanup service do not cover the explicit command path.
 
-## DSH plugin (copyspeak-dsh)
+## DSH plugin (copyspeech-dsh)
 
 - Register one interaction id per gesture, not one per button: `uiConversation.interactions.dispatch()` tries handlers in registration order and returns the first id that calls `request.open()`, so a second id competes with the host Quote interaction instead of appearing beside it. Shadow the host cell for its `quote` key and render both actions there.
 - Shadow a keyed slot cell by registering the same key at a DIFFERENT priority and let the lowest live priority render; a same-key registration at the same priority throws. Keep the host interaction registered for admission and replace only its cell.
@@ -254,7 +254,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Grep every call of a helper a caption port deletes: a bare `wordRects` or `releaseMarkHost` throws inside the status-poll promise, so the pill silently never paints while every other test stays green. Run `bun scripts/test-dsh-plugin-captions.mjs` after touching the pill; `CAPTION_CLIENT=<path>` proves the checks fail on the old code.
 - Repaint the fixed pill on every scroll: a `position: fixed` pill does not travel with the chat scrollport, so it detaches from the word until the next paint. Re-read the active word's rect on the scroller and the window, and once more at glide end, because the follow scroll can move the target mid-glide.
 
-## Hermes plugin (copyspeak-hermes)
+## Hermes plugin (copyspeech-hermes)
 
 - Gate auto-read on a `message.start` seen for the same session_id, because the gate needs the turn's start.
 - Drop events with `replayed === true`, because replayed events repeat old replies.

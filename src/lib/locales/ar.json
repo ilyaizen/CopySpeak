@@ -191,7 +191,7 @@
       "temporary": "مؤقت",
       "generationsFolder": "مجلد التوليدات",
       "generationsFolderDescription": "المجلد الذي تُحفظ فيه التوليدات الصوتية. اتركه فارغًا لاستخدام الافتراضي.",
-      "generationsFolderPlaceholder": "الافتراضي: Documents/CopySpeak",
+      "generationsFolderPlaceholder": "الافتراضي: Documents/CopySpeech",
       "autoDeleteTitle": "الحذف التلقائي للتوليدات",
       "autoDeleteKeepLatest": "الاحتفاظ بالأحدث",
       "autoDeleteNever": "أبدًا",

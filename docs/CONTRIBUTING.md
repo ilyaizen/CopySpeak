@@ -28,7 +28,7 @@ Before you begin, ensure you have the following installed:
 
    ```bash
    git clone https://github.com/ilyaizen/CopySpeech.git
-   cd CopySpeak
+   cd CopySpeech
    ```
 
 3. **Add upstream remote**:
@@ -276,7 +276,7 @@ Documentation improvements are highly valued! You can contribute by:
 
 ### Adding or Changing Strings
 
-UI strings live in `src/lib/locales/en.json`, the source of truth. Translations are managed in [Crowdin](https://crowdin.com/project/copyspeak).
+UI strings live in `src/lib/locales/en.json`, the source of truth. Translations are managed in [Crowdin](https://crowdin.com/project/copyspeech).
 
 - Add or change English strings only in `en.json`, then run `node scripts/generate-i18n-types.js`.
 - Do not hand-edit other locale files such as `src/lib/locales/es.json`. Crowdin overwrites them on download.

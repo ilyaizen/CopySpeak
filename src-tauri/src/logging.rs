@@ -83,6 +83,7 @@ mod tests {
     fn test_logs_dir_returns_valid_path() {
         let path = logs_dir();
         assert!(path.ends_with("logs"));
+        // Logs stay in the CopySpeak data folder so upgrades keep existing logs.
         assert!(path.to_string_lossy().contains("CopySpeak"));
     }
 

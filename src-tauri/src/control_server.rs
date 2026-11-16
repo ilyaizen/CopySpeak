@@ -96,7 +96,9 @@ enum SpeakOutcome {
 }
 
 pub fn start(app: AppHandle) {
-    let addr = std::env::var("COPYSPEAK_CONTROL_ADDR").unwrap_or_else(|_| DEFAULT_ADDR.to_string());
+    let addr = std::env::var("COPYSPEECH_CONTROL_ADDR")
+        .or_else(|_| std::env::var("COPYSPEAK_CONTROL_ADDR"))
+        .unwrap_or_else(|_| DEFAULT_ADDR.to_string());
     if !is_loopback_addr(&addr) {
         log::error!(
             "[Control] Refusing to bind control server to non-loopback address {}.",
@@ -307,7 +309,11 @@ async fn handle_speak(
         move |seq, generation| speak(app, request, seq, generation),
         move |_| {
             let waiter = crate::playback_signal::PlaybackWait::new(wait_request_id.as_deref());
-            async move { waiter.wait(Duration::from_secs(SPEAK_WAIT_TIMEOUT_SECS)).await }
+            async move {
+                waiter
+                    .wait(Duration::from_secs(SPEAK_WAIT_TIMEOUT_SECS))
+                    .await
+            }
         },
     )
     .await
@@ -360,7 +366,8 @@ where
         || false,
         move |seq, _| speak(seq),
         wait_finished,
-    ).await
+    )
+    .await
 }
 
 fn abort_generation() -> u64 {
@@ -450,7 +457,8 @@ where
     spoken.map_err(|error| (500, error))?;
 
     if wait {
-        match speak_requests::until_cancelled_or_aborted(seq, globally_aborted, &mut finished).await {
+        match speak_requests::until_cancelled_or_aborted(seq, globally_aborted, &mut finished).await
+        {
             None => match ticket.as_ref().filter(|t| t.is_cancelled()) {
                 Some(ticket) => {
                     Ok(settle_cancelled(request_label.as_deref(), ticket, &mut finished).await)

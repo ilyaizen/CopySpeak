@@ -35,7 +35,7 @@ pub fn read_clipboard_text() -> Option<String> {
 }
 
 /// Set clipboard text. `clearContents` + `setString` is the standard write
-/// pair; the value keeps working after CopySpeak exits (system-owned
+/// pair; the value keeps working after CopySpeech exits (system-owned
 /// pasteboard, same as Windows).
 pub fn set_clipboard_text(text: &str) -> Result<(), String> {
     let pb = NSPasteboard::generalPasteboard();

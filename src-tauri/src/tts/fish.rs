@@ -714,7 +714,7 @@ mod tests {
             ..Default::default()
         });
         let bytes = backend
-            .synthesize("Hello from the CopySpeak live test.", "")
+            .synthesize("Hello from the CopySpeech live test.", "")
             .expect("live synthesis must succeed");
         assert!(
             bytes.len() > 10_000,

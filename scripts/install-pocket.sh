@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Installs Kyutai Pocket TTS for CopySpeak via uv (Linux port).
+# Installs Kyutai Pocket TTS for CopySpeech via uv (Linux port).
 #
 # Creates a uv-managed project under $XDG_DATA_HOME/CopySpeak/engines/pocket,
 # installs pocket-tts, and drops the stable CLI wrapper. Model weights
@@ -13,8 +13,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib/copyspeak-engine-install.sh
-source "$SCRIPT_DIR/lib/copyspeak-engine-install.sh"
+# shellcheck source=lib/copyspeech-engine-install.sh
+source "$SCRIPT_DIR/lib/copyspeech-engine-install.sh"
 
 FORCE=0
 CUDA=0
@@ -62,7 +62,7 @@ else
     fi
 fi
 
-ENGINE_DIR="$(copyspeak_engine_root)/pocket"
+ENGINE_DIR="$(copyspeech_engine_root)/pocket"
 new_engine_project "$ENGINE_DIR" "$EFFECTIVE_FORCE"
 
 echo ""
@@ -76,8 +76,8 @@ SCRIPTS_DIR="$ENGINE_DIR/scripts"
 OUTPUT_DIR="$ENGINE_DIR/output"
 mkdir -p "$SCRIPTS_DIR" "$OUTPUT_DIR"
 
-SRC_WRAPPER="$SCRIPT_DIR/pocket/copyspeak-pocket.py"
-DST_WRAPPER="$SCRIPTS_DIR/copyspeak-pocket.py"
+SRC_WRAPPER="$SCRIPT_DIR/pocket/copyspeech-pocket.py"
+DST_WRAPPER="$SCRIPTS_DIR/copyspeech-pocket.py"
 cp -f "$SRC_WRAPPER" "$DST_WRAPPER"
 log C_GRAY "  Wrapper installed: $DST_WRAPPER"
 log C_GREEN "  [DONE] engine"

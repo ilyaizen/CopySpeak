@@ -52,9 +52,9 @@ pub fn convert_audio_format(
 
     // Create temp files for input and output
     let temp_dir = std::env::temp_dir();
-    let input_path = temp_dir.join("copyspeak_convert_input.wav");
+    let input_path = temp_dir.join("copyspeech_convert_input.wav");
     let output_path = temp_dir.join(format!(
-        "copyspeak_convert_output.{}",
+        "copyspeech_convert_output.{}",
         format_config.format.default_extension()
     ));
 

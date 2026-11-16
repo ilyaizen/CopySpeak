@@ -191,7 +191,7 @@
       "temporary": "זמני",
       "generationsFolder": "תיקיית יצירות",
       "generationsFolderDescription": "התיקייה לשמירת יצירות TTS. השאר ריק לברירת המחדל.",
-      "generationsFolderPlaceholder": "ברירת מחדל: Documents/CopySpeak",
+      "generationsFolderPlaceholder": "ברירת מחדל: Documents/CopySpeech",
       "autoDeleteTitle": "מחיקה אוטומטית של יצירות",
       "autoDeleteKeepLatest": "שמור את האחרונות",
       "autoDeleteNever": "אף פעם",

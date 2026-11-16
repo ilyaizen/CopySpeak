@@ -1,7 +1,7 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Installs Kyutai Pocket TTS for CopySpeak via uv.
+    Installs Kyutai Pocket TTS for CopySpeech via uv.
 
 .DESCRIPTION
     Creates a uv-managed project under %LOCALAPPDATA%\CopySpeak\engines\pocket,
@@ -40,7 +40,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
+. "$PSScriptRoot/lib/copyspeech-engine-install.ps1"
 
 $Voices = ConvertTo-VoiceIds $Voices
 
@@ -58,7 +58,7 @@ $effectiveForce = if ($Force) {
     Get-Confirmation -Prompt "Reinstall Pocket from scratch? (deletes the existing engine dir)" -DefaultYes:$false
 }
 
-$EngineDir = Join-Path (Get-CopySpeakEngineRoot) "pocket"
+$EngineDir = Join-Path (Get-CopySpeechEngineRoot) "pocket"
 New-EngineProject -EngineDir $EngineDir -Force:$effectiveForce
 
 Write-Host ""
@@ -73,8 +73,8 @@ $outputDir = Join-Path $EngineDir "output"
 New-Item -ItemType Directory -Force $scriptsDir | Out-Null
 New-Item -ItemType Directory -Force $outputDir | Out-Null
 
-$srcWrapper = Join-Path $PSScriptRoot "pocket/copyspeak-pocket.py"
-$dstWrapper = Join-Path $scriptsDir "copyspeak-pocket.py"
+$srcWrapper = Join-Path $PSScriptRoot "pocket/copyspeech-pocket.py"
+$dstWrapper = Join-Path $scriptsDir "copyspeech-pocket.py"
 Copy-Item $srcWrapper $dstWrapper -Force
 Write-Host "  Wrapper installed: $dstWrapper" -ForegroundColor Gray
 Write-Host "  [DONE] engine" -ForegroundColor Green

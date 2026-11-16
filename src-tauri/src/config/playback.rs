@@ -10,7 +10,7 @@ pub enum RetriggerMode {
     Queue,
 }
 
-/// How other apps are quieted while CopySpeak speaks.
+/// How other apps are quieted while CopySpeech speaks.
 ///
 /// The old `mode: lower|mute` dropdown is gone (mute was volume 0 — the
 /// level slider covers it) and the fade is fixed; configs saved with those

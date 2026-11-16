@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
-const CONFIG_PATH = join(CLAUDE_DIR, "hooks", "copyspeak", "config.json");
+const CONFIG_PATH = join(CLAUDE_DIR, "hooks", "copyspeech", "config.json");
 
 let cfg = { enabled: true, engine: null };
 if (existsSync(CONFIG_PATH)) {
@@ -16,5 +16,5 @@ if (existsSync(CONFIG_PATH)) {
   }
 }
 
-const label = cfg.engine ?? "copyspeak";
-process.stdout.write(cfg.enabled ? `🔊 [${label}]` : "🔇 [copyspeak]");
+const label = cfg.engine ?? "copyspeech";
+process.stdout.write(cfg.enabled ? `🔊 [${label}]` : "🔇 [copyspeech]");

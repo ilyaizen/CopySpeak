@@ -93,7 +93,7 @@ impl SynthesisFiles {
         loop {
             let id = NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
             let path =
-                std::env::temp_dir().join(format!("copyspeak-tts-{}-{id}", std::process::id()));
+                std::env::temp_dir().join(format!("copyspeech-tts-{}-{id}", std::process::id()));
             match std::fs::create_dir(&path) {
                 Ok(()) => return Ok(Self(path)),
                 Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
@@ -295,14 +295,14 @@ impl CliTtsBackend {
     }
 
     /// Which daemon-capable engine this backend runs, identified by the
-    /// CopySpeak wrapper script in its args template. Third-party CLIs return
+    /// CopySpeech wrapper script in its args template. Third-party CLIs return
     /// `None` — they have no `--serve` mode, so attempting a daemon would only
     /// burn a process start per session.
     fn engine_kind(&self) -> Option<&'static str> {
         let haystack = self.args_template.join(" ").to_lowercase();
         crate::tts::local_daemon::DAEMON_ENGINES
             .into_iter()
-            .find(|engine| haystack.contains(&format!("copyspeak-{engine}.py")))
+            .find(|engine| haystack.contains(&format!("copyspeech-{engine}.py")))
     }
 
     fn daemon_engine_kind(&self) -> Option<&'static str> {
@@ -1133,7 +1133,7 @@ mod tests {
             vec![
                 "run".into(),
                 "python".into(),
-                "copyspeak-piper.py".into(),
+                "copyspeech-piper.py".into(),
                 "--text-file".into(),
                 "{input}".into(),
                 "--voice".into(),
@@ -1147,7 +1147,7 @@ mod tests {
             vec![
                 "run",
                 "python",
-                "copyspeak-piper.py",
+                "copyspeech-piper.py",
                 "--voice",
                 "en_US-amy-medium",
                 "--serve"
@@ -1159,19 +1159,19 @@ mod tests {
     fn engine_kind_matches_on_the_wrapper_script_only() {
         let piper = CliTtsBackend::new(
             "uv".into(),
-            vec!["{engine_dir}/piper/scripts/copyspeak-piper.py".into()],
+            vec!["{engine_dir}/piper/scripts/copyspeech-piper.py".into()],
         );
         assert_eq!(piper.engine_kind(), Some("piper"));
 
         let pocket = CliTtsBackend::new(
             "uv".into(),
-            vec!["{engine_dir}/pocket/scripts/copyspeak-pocket.py".into()],
+            vec!["{engine_dir}/pocket/scripts/copyspeech-pocket.py".into()],
         );
         assert_eq!(pocket.engine_kind(), Some("pocket"));
 
         let qwen = CliTtsBackend::new(
             "uv".into(),
-            vec!["{engine_dir}/qwen/scripts/copyspeak-qwen.py".into()],
+            vec!["{engine_dir}/qwen/scripts/copyspeech-qwen.py".into()],
         );
         assert_eq!(qwen.engine_kind(), Some("qwen"));
 
@@ -1185,7 +1185,7 @@ mod tests {
     fn one_shot_backend_is_not_daemon_eligible() {
         let backend = CliTtsBackend::new(
             "uv".into(),
-            vec!["{engine_dir}/qwen/scripts/copyspeak-qwen.py".into()],
+            vec!["{engine_dir}/qwen/scripts/copyspeech-qwen.py".into()],
         )
         .one_shot();
 
@@ -1197,7 +1197,7 @@ mod tests {
     fn cuda_appends_device_only_for_our_own_wrappers() {
         let mut ours = CliTtsBackend::new(
             "uv".into(),
-            vec!["{engine_dir}/kitten/scripts/copyspeak-kitten.py".into()],
+            vec!["{engine_dir}/kitten/scripts/copyspeech-kitten.py".into()],
         );
         // Off by default the arg list must be byte-identical to before, or every
         // warm daemon key would be invalidated for existing users.
@@ -1280,7 +1280,7 @@ mod tests {
         // while runtime_ready reports cold. The call sites require both.
         let piper = CliTtsBackend::new(
             "uv".into(),
-            vec!["{engine_dir}/piper/scripts/copyspeak-piper.py".into()],
+            vec!["{engine_dir}/piper/scripts/copyspeech-piper.py".into()],
         );
         assert!(piper.supports_streaming());
         assert!(!piper.runtime_ready());

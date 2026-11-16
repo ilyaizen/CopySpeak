@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Installs Piper (piper1-gpl) for CopySpeak via uv (Linux port).
+# Installs Piper (piper1-gpl) for CopySpeech via uv (Linux port).
 #
 # Creates a uv-managed project under $XDG_DATA_HOME/CopySpeak/engines/piper,
 # installs the `piper` package, and drops the stable CLI wrapper.
@@ -13,8 +13,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib/copyspeak-engine-install.sh
-source "$SCRIPT_DIR/lib/copyspeak-engine-install.sh"
+# shellcheck source=lib/copyspeech-engine-install.sh
+source "$SCRIPT_DIR/lib/copyspeech-engine-install.sh"
 
 FORCE=0
 CUDA=0
@@ -64,7 +64,7 @@ else
     fi
 fi
 
-ENGINE_DIR="$(copyspeak_engine_root)/piper"
+ENGINE_DIR="$(copyspeech_engine_root)/piper"
 new_engine_project "$ENGINE_DIR" "$EFFECTIVE_FORCE"
 
 echo ""
@@ -78,8 +78,8 @@ VOICES_DIR="$ENGINE_DIR/voices"
 OUTPUT_DIR="$ENGINE_DIR/output"
 mkdir -p "$SCRIPTS_DIR" "$VOICES_DIR" "$OUTPUT_DIR"
 
-SRC_WRAPPER="$SCRIPT_DIR/piper/copyspeak-piper.py"
-DST_WRAPPER="$SCRIPTS_DIR/copyspeak-piper.py"
+SRC_WRAPPER="$SCRIPT_DIR/piper/copyspeech-piper.py"
+DST_WRAPPER="$SCRIPTS_DIR/copyspeech-piper.py"
 cp -f "$SRC_WRAPPER" "$DST_WRAPPER"
 log C_GRAY "  Wrapper installed: $DST_WRAPPER"
 

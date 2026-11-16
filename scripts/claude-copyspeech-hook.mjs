@@ -8,7 +8,7 @@ import { dirname, join } from "node:path";
 const ENGINES = new Set(["cartesia", "openai", "elevenlabs", "local"]);
 
 const CLAUDE_DIR = process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
-const CONFIG_PATH = join(CLAUDE_DIR, "hooks", "copyspeak", "config.json");
+const CONFIG_PATH = join(CLAUDE_DIR, "hooks", "copyspeech", "config.json");
 
 const DEFAULT_CONFIG = {
   enabled: true,
@@ -38,21 +38,41 @@ function loadConfig() {
   }
 
   // Env vars override config file (backward compat / CI override)
-  const envEnabled = process.env.COPYSPEAK_CLAUDE_ENABLED ?? process.env.COPYSPEAK_PI_ENABLED;
+  const envEnabled =
+    process.env.COPYSPEECH_CLAUDE_ENABLED ??
+    process.env.COPYSPEAK_CLAUDE_ENABLED ??
+    process.env.COPYSPEECH_PI_ENABLED ??
+    process.env.COPYSPEAK_PI_ENABLED;
   if (envEnabled != null && envEnabled !== "") {
     cfg.enabled = !/^(0|false|no|off)$/i.test(envEnabled);
   }
 
-  const envEngine = process.env.COPYSPEAK_CLAUDE_ENGINE ?? process.env.COPYSPEAK_PI_ENGINE;
+  const envEngine =
+    process.env.COPYSPEECH_CLAUDE_ENGINE ??
+    process.env.COPYSPEAK_CLAUDE_ENGINE ??
+    process.env.COPYSPEECH_PI_ENGINE ??
+    process.env.COPYSPEAK_PI_ENGINE;
   if (ENGINES.has(envEngine)) cfg.engine = envEngine;
 
-  const envEffect = process.env.COPYSPEAK_CLAUDE_EFFECT ?? process.env.COPYSPEAK_PI_EFFECT;
+  const envEffect =
+    process.env.COPYSPEECH_CLAUDE_EFFECT ??
+    process.env.COPYSPEAK_CLAUDE_EFFECT ??
+    process.env.COPYSPEECH_PI_EFFECT ??
+    process.env.COPYSPEAK_PI_EFFECT;
   if (envEffect) cfg.effect = envEffect;
 
-  const envMaxChars = process.env.COPYSPEAK_CLAUDE_MAX_CHARS ?? process.env.COPYSPEAK_PI_MAX_CHARS;
+  const envMaxChars =
+    process.env.COPYSPEECH_CLAUDE_MAX_CHARS ??
+    process.env.COPYSPEAK_CLAUDE_MAX_CHARS ??
+    process.env.COPYSPEECH_PI_MAX_CHARS ??
+    process.env.COPYSPEAK_PI_MAX_CHARS;
   if (envMaxChars) cfg.max_chars = Number(envMaxChars);
 
-  const envLaunch = process.env.COPYSPEAK_CLAUDE_LAUNCH ?? process.env.COPYSPEAK_PI_LAUNCH;
+  const envLaunch =
+    process.env.COPYSPEECH_CLAUDE_LAUNCH ??
+    process.env.COPYSPEAK_CLAUDE_LAUNCH ??
+    process.env.COPYSPEECH_PI_LAUNCH ??
+    process.env.COPYSPEAK_PI_LAUNCH;
   if (envLaunch != null && envLaunch !== "") {
     cfg.launch = !/^(0|false|no|off)$/i.test(envLaunch);
   }
@@ -64,11 +84,11 @@ const config = loadConfig();
 const hookInput = await readStdinJson();
 
 if (!config.enabled) {
-  console.log("🔇 copyspeak disabled");
+  console.log("🔇 copyspeech disabled");
   process.exit(0);
 }
 
-if (config.launch) launchCopySpeak();
+if (config.launch) launchCopySpeech();
 
 const transcriptPath = hookInput?.transcript_path;
 const text = truncateAtBoundary(
@@ -81,12 +101,12 @@ if (!text) process.exit(0);
 try {
   await postSpeak(text, config.engine, config.effect);
   const label = config.engine ?? "default";
-  console.log(`🔊 copyspeak · ${text.length} chars [${label}]`);
+  console.log(`🔊 copyspeech · ${text.length} chars [${label}]`);
 } catch (error) {
   if (error.code === "ECONNREFUSED") {
-    console.log("⚠️ copyspeak · app not running");
+    console.log("⚠️ copyspeech · app not running");
   } else {
-    console.error(`copyspeak hook: ${String(error)}`);
+    console.error(`copyspeech hook: ${String(error)}`);
   }
   process.exit(0);
 }
@@ -142,7 +162,10 @@ function extractText(message) {
 
 async function postSpeak(text, engine, effect) {
   const body = JSON.stringify({ text, engine, effect });
-  const url = new URL(process.env.COPYSPEAK_CONTROL_URL || "http://127.0.0.1:43117/speak");
+  const url = new URL(
+    (process.env.COPYSPEECH_CONTROL_URL ?? process.env.COPYSPEAK_CONTROL_URL) ||
+      "http://127.0.0.1:43117/speak"
+  );
 
   await new Promise((resolve, reject) => {
     const req = request(
@@ -171,27 +194,27 @@ async function postSpeak(text, engine, effect) {
   });
 }
 
-function launchCopySpeak() {
-  if (isCopySpeakRunning()) return;
-  const exe = process.env.COPYSPEAK_EXE || findBuiltCopySpeak();
+function launchCopySpeech() {
+  if (isCopySpeechRunning()) return;
+  const exe = (process.env.COPYSPEECH_EXE ?? process.env.COPYSPEAK_EXE) || findBuiltCopySpeech();
   if (!exe || !existsSync(exe)) return;
   spawn(exe, [], { detached: true, stdio: "ignore", windowsHide: true }).unref();
 }
 
-function isCopySpeakRunning() {
+function isCopySpeechRunning() {
   if (process.platform !== "win32") return false;
   try {
     const output = execFileSync("tasklist.exe", ["/NH"], {
       encoding: "utf8",
       windowsHide: true
     });
-    return /^(?:copyspeech|copyspeak(?:-tts)?)\.exe\s+/im.test(output);
+    return /^(?:copyspeech|copyspeech(?:-tts)?)\.exe\s+/im.test(output);
   } catch {
     return false;
   }
 }
 
-function findBuiltCopySpeak() {
+function findBuiltCopySpeech() {
   const cwd = process.cwd();
   const binary = process.platform === "win32" ? "copyspeech.exe" : "copyspeech";
   const candidates = [

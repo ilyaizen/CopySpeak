@@ -191,7 +191,7 @@
       "temporary": "Временный",
       "generationsFolder": "Папка генераций",
       "generationsFolderDescription": "Папка для сохранения озвучек. Оставьте пустым для значения по умолчанию.",
-      "generationsFolderPlaceholder": "По умолчанию: Documents/CopySpeak",
+      "generationsFolderPlaceholder": "По умолчанию: Documents/CopySpeech",
       "autoDeleteTitle": "Автоудаление генераций",
       "autoDeleteKeepLatest": "Хранить последние",
       "autoDeleteNever": "Никогда",

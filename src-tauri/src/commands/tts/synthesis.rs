@@ -3168,7 +3168,7 @@ mod cache_tests {
         // entries-length suffix can collide across tests.
         static NEXT: AtomicUsize = AtomicUsize::new(0);
         let path = std::env::temp_dir().join(format!(
-            "copyspeak-cache-test-{}-{}.wav",
+            "copyspeech-cache-test-{}-{}.wav",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::SeqCst)
         ));
@@ -3236,7 +3236,7 @@ mod cache_tests {
     #[test]
     fn speech_cache_evicts_oldest_entries_past_its_byte_budget() {
         let dir = std::env::temp_dir().join(format!(
-            "copyspeak-speech-cache-budget-{}",
+            "copyspeech-speech-cache-budget-{}",
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&dir);
@@ -3270,7 +3270,7 @@ mod cache_tests {
     #[test]
     fn history_on_falls_back_to_the_content_addressed_cache() {
         let dir = std::env::temp_dir().join(format!(
-            "copyspeak-speech-cache-fallback-{}",
+            "copyspeech-speech-cache-fallback-{}",
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&dir);
@@ -3335,7 +3335,7 @@ mod cache_tests {
         assert_ne!(profile_engine_str, active_engine_str);
 
         let path = std::env::temp_dir().join(format!(
-            "copyspeak-prof-cache-test-{}.wav",
+            "copyspeech-prof-cache-test-{}.wav",
             std::process::id()
         ));
         let meta = AudioFormatMeta {
@@ -3397,7 +3397,7 @@ mod cache_tests {
     #[test]
     fn same_text_cache_keys_on_resolved_profile_engine() {
         let dir = std::env::temp_dir().join(format!(
-            "copyspeak-prof-speech-cache-{}",
+            "copyspeech-prof-speech-cache-{}",
             std::process::id()
         ));
         let _ = std::fs::remove_dir_all(&dir);
@@ -3420,7 +3420,7 @@ mod cache_tests {
     #[test]
     fn a_paginated_fragment_replays_only_for_a_saved_audio_repeat() {
         let dir =
-            std::env::temp_dir().join(format!("copyspeak-fragment-replay-{}", std::process::id()));
+            std::env::temp_dir().join(format!("copyspeech-fragment-replay-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let history = Mutex::new(HistoryLog::new());
         let speech = SpeechAudio {

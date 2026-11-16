@@ -17,7 +17,7 @@ import {
 import { useEffect, useState } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
 
-const ID = "copyspeak-hermes";
+const ID = "copyspeech-hermes";
 // ctx.storage keys live under hermes.plugin.<id>. (localStorage), so this is the key for "settings".
 const SETTINGS_KEY = "hermes.plugin." + ID + ".settings";
 const SPEAK_URL = "http://127.0.0.1:43117/speak";
@@ -38,8 +38,8 @@ const DEFAULTS = {
   glide: false,
   follow: false
 };
-const CAPTION_NAME = "copyspeak-word";
-const CAPTION_STYLE_ID = "copyspeak-hermes-captions";
+const CAPTION_NAME = "copyspeech-word";
+const CAPTION_STYLE_ID = "copyspeech-hermes-captions";
 const CAPTION_POLL_MS = 120;
 const CAPTION_SILENCE_MS = 60000;
 // Follow keeps the spoken word between these fractions of the reply's scrollport.
@@ -262,7 +262,7 @@ function nextRequestId() {
   return "hermes." + Date.now() + "." + requestCounter;
 }
 
-// Same transport as copyspeak-dsh: no-cors and text/plain avoid a preflight.
+// Same transport as copyspeech-dsh: no-cors and text/plain avoid a preflight.
 function postSpeech(text) {
   return fetch(SPEAK_URL, {
     method: "POST",
@@ -277,13 +277,13 @@ function postSpeech(text) {
     (error) => {
       if (notifiedDown) return;
       notifiedDown = true;
-      console.warn("[copyspeak-hermes] speak failed", error);
+      console.warn("[copyspeech-hermes] speak failed", error);
       host.notify({ kind: "error", message: "CopySpeech not reachable on 127.0.0.1:43117" });
     }
   );
 }
 
-async function probeCopySpeak() {
+async function probeCopySpeech() {
   try {
     await fetch(HEALTH_URL, { mode: "no-cors", cache: "no-store" });
     return true;
@@ -516,7 +516,7 @@ function followToken(run, token) {
 // One warning per failed alignment: shows whether the spoken words or the rendered tokens were short.
 function warnNoAlignment(spoken, rendered, mapped, reason) {
   console.warn(
-    "[copyspeak-hermes] captions: no alignment (" +
+    "[copyspeech-hermes] captions: no alignment (" +
       spoken +
       " spoken, " +
       rendered +
@@ -1029,7 +1029,7 @@ function SettingsPage({ storage, settings }) {
   const dirty = Object.keys(pendingEdits(saved, changes)).length > 0;
   const health = useQuery({
     queryKey: [ID, "health"],
-    queryFn: probeCopySpeak,
+    queryFn: probeCopySpeech,
     refetchInterval: 10000
   });
   const update = (patch) => setChanges((draft) => applyEdit(settings.get(), draft, patch));
@@ -1178,7 +1178,7 @@ export default {
       });
       if (!verdict.speak) {
         if (verdict.reason === BUILT_IN_REASON) {
-          console.info("[copyspeak-hermes] skipped reply: Hermes built-in auto-read is on");
+          console.info("[copyspeech-hermes] skipped reply: Hermes built-in auto-read is on");
         }
         return;
       }
@@ -1198,7 +1198,7 @@ export default {
       data: {
         id: ID + ".toggle-auto-read",
         label: "CopySpeech: Toggle auto-read",
-        keywords: ["copyspeech", "copyspeak", "speak", "read", "aloud", "tts"],
+        keywords: ["copyspeech", "copyspeech", "speak", "read", "aloud", "tts"],
         run: () => {
           const next = !readSettings(storage).autoRead;
           saveSettings(storage, settings, { autoRead: next });
@@ -1216,6 +1216,6 @@ export default {
       render: () => jsx(SettingsPage, { storage, settings })
     });
 
-    console.info("[copyspeak-hermes] registered");
+    console.info("[copyspeech-hermes] registered");
   }
 };

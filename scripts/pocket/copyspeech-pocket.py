@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CLI wrapper for Pocket TTS (kyutai-labs/pocket-tts) - used by CopySpeak.
+"""CLI wrapper for Pocket TTS (kyutai-labs/pocket-tts) - used by CopySpeech.
 
 Replaces the third-party `pocket-tts generate` CLI: that path reloads the model
 and re-derives the voice state on every invocation, and `load_model()` plus
@@ -9,8 +9,8 @@ whole point of the daemon.
 Reads text (inline or from a file), synthesizes with pocket-tts, and writes a WAV
 file at the model's own sample rate.
 
-Invoked by CopySpeak via:
-    uv run --project {engine_dir}/pocket python {engine_dir}/pocket/scripts/copyspeak-pocket.py \
+Invoked by CopySpeech via:
+    uv run --project {engine_dir}/pocket python {engine_dir}/pocket/scripts/copyspeech-pocket.py \
         --text-file {input} --voice {voice} --output {output} [--device cuda]
 
 With --serve the model is loaded once and stays in RAM, speaking protocol v2
@@ -117,7 +117,7 @@ def serve(model, voice_state) -> int:
     Synthesis is warmed before the handshake: the first call after a model load
     pays one-off costs (phonemizer init, ONNX graph warmup) that later calls do
     not, and folding that into startup keeps the first real utterance as fast as
-    every one after it. CopySpeak prewarms in the background, so this is free.
+    every one after it. CopySpeech prewarms in the background, so this is free.
     """
     out = sys.stdout.buffer
 
@@ -168,7 +168,7 @@ def serve(model, voice_state) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Pocket TTS CLI wrapper for CopySpeak")
+    parser = argparse.ArgumentParser(description="Pocket TTS CLI wrapper for CopySpeech")
     parser.add_argument("--text", help="Inline text to synthesize")
     parser.add_argument("--text-file", help="Path to a UTF-8 text file to synthesize")
     parser.add_argument("--voice", default="alba", help="Pocket voice name, or a path to a wav/safetensors prompt")

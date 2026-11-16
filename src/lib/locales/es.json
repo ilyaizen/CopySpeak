@@ -191,7 +191,7 @@
       "temporary": "Temporal",
       "generationsFolder": "Carpeta de generaciones",
       "generationsFolderDescription": "Carpeta donde se guardan las generaciones de TTS. Déjala en blanco para usar la predeterminada.",
-      "generationsFolderPlaceholder": "Predeterminada: Documents/CopySpeak",
+      "generationsFolderPlaceholder": "Predeterminada: Documents/CopySpeech",
       "autoDeleteTitle": "Eliminar generaciones automáticamente",
       "autoDeleteKeepLatest": "Mantener las últimas",
       "autoDeleteNever": "Nunca",

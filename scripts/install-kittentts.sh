@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Installs KittenTTS for CopySpeak via uv (CPU-only, 25-80MB; Linux port).
+# Installs KittenTTS for CopySpeech via uv (CPU-only, 25-80MB; Linux port).
 #
 # Creates a uv-managed project under $XDG_DATA_HOME/CopySpeak/engines/kitten,
 # installs the KittenTTS wheel + soundfile, and drops the stable CLI wrapper.
@@ -10,8 +10,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib/copyspeak-engine-install.sh
-source "$SCRIPT_DIR/lib/copyspeak-engine-install.sh"
+# shellcheck source=lib/copyspeech-engine-install.sh
+source "$SCRIPT_DIR/lib/copyspeech-engine-install.sh"
 
 FORCE=0
 CUDA=0
@@ -59,7 +59,7 @@ else
     fi
 fi
 
-ENGINE_DIR="$(copyspeak_engine_root)/kitten"
+ENGINE_DIR="$(copyspeech_engine_root)/kitten"
 new_engine_project "$ENGINE_DIR" "$EFFECTIVE_FORCE"
 
 # KittenTTS is published as a GitHub release wheel (not on PyPI).
@@ -76,8 +76,8 @@ VOICES_DIR="$ENGINE_DIR/voices"
 OUTPUT_DIR="$ENGINE_DIR/output"
 mkdir -p "$SCRIPTS_DIR" "$VOICES_DIR" "$OUTPUT_DIR"
 
-SRC_WRAPPER="$SCRIPT_DIR/kitten/copyspeak-kitten.py"
-DST_WRAPPER="$SCRIPTS_DIR/copyspeak-kitten.py"
+SRC_WRAPPER="$SCRIPT_DIR/kitten/copyspeech-kitten.py"
+DST_WRAPPER="$SCRIPTS_DIR/copyspeech-kitten.py"
 cp -f "$SRC_WRAPPER" "$DST_WRAPPER"
 log C_GRAY "  Wrapper installed: $DST_WRAPPER"
 log C_GREEN "  [DONE] engine"
@@ -136,7 +136,7 @@ PROFILE_JSON='{
     "engine": "local",
     "preset": "kitten-tts",
     "command": "uv",
-    "args_template": ["run", "--project", "{engine_dir}/kitten", "python", "{engine_dir}/kitten/scripts/copyspeak-kitten.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}", "--model", "{model}", "--speed", "{speed}"]
+    "args_template": ["run", "--project", "{engine_dir}/kitten", "python", "{engine_dir}/kitten/scripts/copyspeech-kitten.py", "--text-file", "{input}", "--voice", "{voice}", "--output", "{output}", "--model", "{model}", "--speed", "{speed}"]
   }
 }'
 

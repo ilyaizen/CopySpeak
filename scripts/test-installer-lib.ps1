@@ -8,7 +8,7 @@
 
       1. Non-interactive mode. The app spawns installers with stdin closed, so
          any Read-Host blocks forever. Every interactive helper must return its
-         default when COPYSPEAK_NONINTERACTIVE=1. Run this with stdin closed
+         default when COPYSPEECH_NONINTERACTIVE=1. Run this with stdin closed
          (`< NUL`) and a hang IS the failure.
       2. uninstall-engine.ps1 on a machine where the engine was never installed
          must be a clean no-op that exits 0. Pointed at a throwaway
@@ -24,7 +24,7 @@
 
 $ErrorActionPreference = "Stop"
 
-. "$PSScriptRoot/lib/copyspeak-engine-install.ps1"
+. "$PSScriptRoot/lib/copyspeech-engine-install.ps1"
 
 $script:failed = 0
 function Assert-That {
@@ -38,7 +38,7 @@ function Assert-That {
 }
 
 Write-Host "non-interactive helpers" -ForegroundColor Cyan
-$env:COPYSPEAK_NONINTERACTIVE = "1"
+$env:COPYSPEECH_NONINTERACTIVE = "1"
 try {
     Assert-That (Test-NonInteractive) "Test-NonInteractive is true when the env var is set"
     Assert-That ((Get-Confirmation -Prompt "x") -eq $false) "Get-Confirmation defaults to No"
@@ -48,7 +48,7 @@ try {
     Assert-That ((Select-VoiceFromMenu -Title "t" -Voices $voices -Default "b") -eq "b") "Select-VoiceFromMenu takes -Default"
     Assert-That ((Select-VoiceFromMenu -Title "t" -Voices $voices) -eq "a") "Select-VoiceFromMenu falls back to the first voice"
 } finally {
-    Remove-Item Env:\COPYSPEAK_NONINTERACTIVE -ErrorAction SilentlyContinue
+    Remove-Item Env:\COPYSPEECH_NONINTERACTIVE -ErrorAction SilentlyContinue
 }
 Assert-That (-not (Test-NonInteractive)) "Test-NonInteractive is false when the env var is unset"
 
@@ -69,15 +69,15 @@ foreach ($file in Get-ChildItem -Path $PSScriptRoot -Recurse -Filter *.ps1) {
 }
 
 Write-Host "uninstall-engine.ps1 no-op" -ForegroundColor Cyan
-# A throwaway LOCALAPPDATA guarantees Get-CopySpeakEngineRoot points at an
+# A throwaway LOCALAPPDATA guarantees Get-CopySpeechEngineRoot points at an
 # empty tree, so the dir branch takes its "nothing to remove" path. kitten has
 # no uv tool, so nothing outside this sandbox is touched.
-$sandbox = Join-Path ([IO.Path]::GetTempPath()) "copyspeak-uninstall-test-$PID"
+$sandbox = Join-Path ([IO.Path]::GetTempPath()) "copyspeech-uninstall-test-$PID"
 New-Item -ItemType Directory -Force $sandbox | Out-Null
 try {
     $out = & powershell -NoProfile -ExecutionPolicy Bypass -Command "
         `$env:LOCALAPPDATA = '$sandbox'
-        `$env:COPYSPEAK_NONINTERACTIVE = '1'
+        `$env:COPYSPEECH_NONINTERACTIVE = '1'
         & '$PSScriptRoot/uninstall-engine.ps1' -Engine kitten
         exit `$LASTEXITCODE" 2>&1
     $code = $LASTEXITCODE

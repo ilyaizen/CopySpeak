@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# Installs Qwen3-TTS CustomVoice for CopySpeak via uv (Linux port).
+# Installs Qwen3-TTS CustomVoice for CopySpeech via uv (Linux port).
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# shellcheck source=lib/copyspeak-engine-install.sh
-source "$SCRIPT_DIR/lib/copyspeak-engine-install.sh"
+# shellcheck source=lib/copyspeech-engine-install.sh
+source "$SCRIPT_DIR/lib/copyspeech-engine-install.sh"
 
 FORCE=0
 CUDA=0
@@ -54,7 +54,7 @@ else
     fi
 fi
 
-ENGINE_DIR="$(copyspeak_engine_root)/qwen"
+ENGINE_DIR="$(copyspeech_engine_root)/qwen"
 new_engine_project "$ENGINE_DIR" "$EFFECTIVE_FORCE"
 
 echo ""
@@ -65,8 +65,8 @@ invoke_uv add --project "$ENGINE_DIR" "qwen-tts" "soundfile"
 SCRIPTS_DIR="$ENGINE_DIR/scripts"
 OUTPUT_DIR="$ENGINE_DIR/output"
 mkdir -p "$SCRIPTS_DIR" "$OUTPUT_DIR"
-SRC_WRAPPER="$SCRIPT_DIR/qwen/copyspeak-qwen.py"
-DST_WRAPPER="$SCRIPTS_DIR/copyspeak-qwen.py"
+SRC_WRAPPER="$SCRIPT_DIR/qwen/copyspeech-qwen.py"
+DST_WRAPPER="$SCRIPTS_DIR/copyspeech-qwen.py"
 cp -f "$SRC_WRAPPER" "$DST_WRAPPER"
 log C_GRAY "  Wrapper installed: $DST_WRAPPER"
 log C_GREEN "  [DONE] engine"

@@ -35,28 +35,28 @@
  * reading plays, and the highlight hides when the route is absent.
  */
 window.__ModuleLoader__.load({
-  id: "@local/copyspeak-voice",
+  id: "@local/copyspeech-voice",
   factory(require) {
     const React = require("react");
     const h = React.createElement;
 
-    const NS = "copyspeak-voice";
-    const PACKAGE = "@local/copyspeak-voice";
-    const PANEL_ID = "copyspeak";
+    const NS = "copyspeech-voice";
+    const PACKAGE = "@local/copyspeech-voice";
+    const PANEL_ID = "copyspeech";
     /* The read-only selection interaction. The host Quote id owns a writable
        selection, so this id admits the read action where Quote cannot open. */
-    const SELECTION_ID = "copyspeak-read-selection";
+    const SELECTION_ID = "copyspeech-read-selection";
     const CONTROL_URL = "http://127.0.0.1:43117";
     const STYLE_KEY = PACKAGE + "/client.css";
     const STORAGE = {
-      autoRead: "dsh.copyspeak-voice.auto-read",
-      captions: "dsh.copyspeak-voice.captions",
-      follow: "dsh.copyspeak-voice.follow",
-      animation: "dsh.copyspeak-voice.animation",
-      excerpt: "dsh.copyspeak-voice.excerpt",
-      excerptMode: "dsh.copyspeak-voice.excerpt-mode",
-      excerptTop: "dsh.copyspeak-voice.excerpt-top",
-      excerptBottom: "dsh.copyspeak-voice.excerpt-bottom"
+      autoRead: "dsh.copyspeech-voice.auto-read",
+      captions: "dsh.copyspeech-voice.captions",
+      follow: "dsh.copyspeech-voice.follow",
+      animation: "dsh.copyspeech-voice.animation",
+      excerpt: "dsh.copyspeech-voice.excerpt",
+      excerptMode: "dsh.copyspeech-voice.excerpt-mode",
+      excerptTop: "dsh.copyspeech-voice.excerpt-top",
+      excerptBottom: "dsh.copyspeech-voice.excerpt-bottom"
     };
     /* Partial auto-read: keep the first and last paragraphs of a reply. */
     const EXCERPT_MODES = ["top", "bottom", "both"];
@@ -1899,7 +1899,7 @@ window.__ModuleLoader__.load({
     }
 
     /* Sidebar panel icon: the idle read mark, shared with the message action. */
-    function CopySpeakPanelIcon(props) {
+    function CopySpeechPanelIcon(props) {
       return h(ReadGlyph, { size: props.size ?? 16 });
     }
 
@@ -2118,7 +2118,7 @@ window.__ModuleLoader__.load({
       };
     }
 
-    function CopySpeakAction(props) {
+    function CopySpeechAction(props) {
       const messageId = props.messageId;
       const useChat = props.useChat;
       const t = props.t;
@@ -2412,7 +2412,7 @@ window.__ModuleLoader__.load({
             : full;
           if (speech === "") return;
           void beginReading(found.messageId, found.key, speech).then(function (error) {
-            if (error !== null) console.error("[copyspeak-voice] auto-read failed:", error);
+            if (error !== null) console.error("[copyspeech-voice] auto-read failed:", error);
           });
         },
         [latestId, watch]
@@ -2694,7 +2694,7 @@ window.__ModuleLoader__.load({
     }
 
     /** CopySpeech options and app status on the CopySpeech sidebar panel. */
-    function CopySpeakScreen(props) {
+    function CopySpeechScreen(props) {
       const t = props.t;
       const state = usePreferencesState();
       const status = statusCopy(useControlServerStatus());
@@ -2837,7 +2837,7 @@ window.__ModuleLoader__.load({
               },
               locale: NS
             },
-            CopySpeakPanelIcon
+            CopySpeechPanelIcon
           );
         });
 
@@ -2848,7 +2848,7 @@ window.__ModuleLoader__.load({
               key: PANEL_ID,
               locale: NS
             },
-            CopySpeakScreen
+            CopySpeechScreen
           );
         });
 
@@ -2856,11 +2856,11 @@ window.__ModuleLoader__.load({
           return ctx.slots.register(
             {
               name: "conversation.chat.assistant-actions",
-              id: "copyspeak-voice",
+              id: "copyspeech-voice",
               order: 20,
               locale: NS
             },
-            CopySpeakAction
+            CopySpeechAction
           );
         });
 
@@ -2870,7 +2870,7 @@ window.__ModuleLoader__.load({
           return ctx.slots.register(
             {
               name: "conversation.composer.dock",
-              id: "copyspeak-auto-reader",
+              id: "copyspeech-auto-reader",
               order: 90,
               locale: NS
             },
@@ -2884,7 +2884,7 @@ window.__ModuleLoader__.load({
           return ctx.slots.register(
             {
               name: "shell.overlay",
-              id: "copyspeak-playback",
+              id: "copyspeech-playback",
               order: 40,
               locale: NS
             },

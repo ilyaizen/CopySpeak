@@ -40,7 +40,7 @@ fn strip_ansi(line: &str) -> String {
     re.replace_all(line, "").to_string()
 }
 
-/// Map a CopySpeak engine id to its installer script filename under `scripts/`.
+/// Map a CopySpeech engine id to its installer script filename under `scripts/`.
 /// `.ps1` on Windows, `.sh` on Linux (the platform's `uninstall-engine` twin
 /// lives next to them and is named directly at the uninstall call site).
 fn installer_script_for(engine: &str) -> Result<&'static str, String> {
@@ -134,7 +134,7 @@ fn spawn_streamed(
     cmd.args(extra_args);
     // stdin is closed below, so any Read-Host would hang. The shared installer
     // lib checks this and takes the default for every prompt.
-    cmd.env("COPYSPEAK_NONINTERACTIVE", "1");
+    cmd.env("COPYSPEECH_NONINTERACTIVE", "1");
     cmd.stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .stdin(Stdio::null());
@@ -210,9 +210,9 @@ fn spawn_streamed(
     cmd.arg(&script_path.display().to_string());
     cmd.args(extra_args);
     // stdin closed: any `read` in the script must fail fast. The shared
-    // installer lib checks COPYSPEAK_NONINTERACTIVE and takes the default
+    // installer lib checks COPYSPEECH_NONINTERACTIVE and takes the default
     // for every prompt instead of blocking on the dead stdin.
-    cmd.env("COPYSPEAK_NONINTERACTIVE", "1");
+    cmd.env("COPYSPEECH_NONINTERACTIVE", "1");
     cmd.stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .stdin(Stdio::null());
@@ -433,7 +433,7 @@ fn manifest_voices(name: &str) -> Vec<String> {
 
 /// Prepend uv's standard binary locations to this process's PATH.
 ///
-/// Mirrors `Add-UvToPath` in scripts/lib/copyspeak-engine-install.ps1. Called
+/// Mirrors `Add-UvToPath` in scripts/lib/copyspeech-engine-install.ps1. Called
 /// once at startup so command probing, health checks, and synthesis subprocesses
 /// all see engines installed since the app last launched. Idempotent.
 pub fn augment_path_for_local_engines() {

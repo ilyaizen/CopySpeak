@@ -2,7 +2,7 @@
 //
 // Compositors that speak wlr-data-control — Hyprland, Sway, and the rest of
 // the wlroots family — let a client read and write the clipboard and the
-// primary selection without focus. CopySpeak targets exactly that family.
+// primary selection without focus. CopySpeech targets exactly that family.
 //
 // There is no clipboard-changed event in the protocol, so the double-copy
 // trigger polls: one `get_contents` round-trip per second. Polling reads the
@@ -55,7 +55,7 @@ pub fn read_clipboard_text() -> Option<String> {
 
 /// Set clipboard text. With default `Options` the crate daemonizes a helper
 /// that serves paste requests indefinitely, so the copy keeps working after
-/// CopySpeak exits — the same behavior as the Windows clipboard.
+/// CopySpeech exits — the same behavior as the Windows clipboard.
 pub fn set_clipboard_text(text: &str) -> Result<(), String> {
     let opts = CopyOptions::new();
     let source = Source::Bytes(text.as_bytes().into());

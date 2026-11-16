@@ -12,7 +12,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, "plugin.js"), "utf8");
 const stripped = source.replace(/^import\s[\s\S]*?from\s+['"][^'"]+['"];?\s*$/gm, "");
 
-const scratch = mkdtempSync(join(process.env.TMPDIR || tmpdir(), "copyspeak-hermes-test-"));
+const scratch = mkdtempSync(join(process.env.TMPDIR || tmpdir(), "copyspeech-hermes-test-"));
 const copy = join(scratch, "plugin-under-test.mjs");
 // Test-only hooks, appended to the copy: they expose the module's caption state.
 const hooks = [
@@ -1006,7 +1006,7 @@ test("captions paint in the focused chat when another chat is last in the docume
   world.startRun();
   await world.tick(bodyAt(100));
   assert.equal(
-    world.highlights.get("copyspeak-word")?.range.startContainer,
+    world.highlights.get("copyspeech-word")?.range.startContainer,
     focusedReply.texts[0],
     "the word is painted in the focused pane, not the document's last pane"
   );
@@ -1021,7 +1021,7 @@ test("a caption miss is retried on the next poll, so a reply rendered later stil
   reply.texts = [{ nodeValue: REPLY, parentElement: reply, isConnected: true, x: 0 }];
   await world.tick(bodyAt(100));
   assert.equal(
-    world.highlights.get("copyspeak-word")?.range.startContainer,
+    world.highlights.get("copyspeech-word")?.range.startContainer,
     reply.texts[0],
     "the next poll aligns the reply that now renders"
   );
@@ -1136,7 +1136,11 @@ test("switch mode: plain to glide and back repaints the word in each mode", asyn
   world.addReply(REPLY_RECT, REPLY);
   world.startRun();
   await world.tick(bodyAt(100));
-  assert.equal(world.highlights.has("copyspeak-word"), true, "plain mode paints the CSS highlight");
+  assert.equal(
+    world.highlights.has("copyspeech-word"),
+    true,
+    "plain mode paints the CSS highlight"
+  );
   world.settings.glide = true;
   world.poll();
   assert.equal(world.highlights.size, 0, "switching to glide clears the highlight");
@@ -1148,7 +1152,7 @@ test("switch mode: plain to glide and back repaints the word in each mode", asyn
   await world.tick(bodyAt(500));
   assert.equal(livePill(), null, "switching back destroys the pill");
   assert.equal(
-    world.highlights.has("copyspeak-word"),
+    world.highlights.has("copyspeech-word"),
     true,
     "plain mode paints the highlight again"
   );
@@ -1329,8 +1333,8 @@ test("captions resume after an inactive synthesis stall", async () => {
   await world.tick({ ...bodyAt(100), active: false });
   assert.equal(liveCaptionRun(), run, "inactive status with captions keeps the run");
   await world.tick(bodyAt(500));
-  assert.equal(world.highlights.get("copyspeak-word").range.start, 6);
-  assert.equal(world.highlights.get("copyspeak-word").range.startContainer, reply.texts[0]);
+  assert.equal(world.highlights.get("copyspeech-word").range.start, 6);
+  assert.equal(world.highlights.get("copyspeech-word").range.startContainer, reply.texts[0]);
 });
 
 test("an end status clears a matched caption run", async () => {
@@ -1399,7 +1403,7 @@ test("follow on: a word that leaves the band scrolls its line to the anchor, onc
   assert.equal(scroller.scrollLog[0].top, 214, "the line lands on the anchor");
   assert.equal(scroller.scrollLog[0].behavior, "smooth");
   assert.equal(
-    world.highlights.get("copyspeak-word").range.startContainer,
+    world.highlights.get("copyspeech-word").range.startContainer,
     world.replies[0].texts[1]
   );
 });
@@ -1627,7 +1631,7 @@ test("captions turned on mid-run paint the current word and keep following", asy
   world.settings.captions = true;
   await world.tick(followBody(1950));
   assert.equal(
-    world.highlights.get("copyspeak-word").range.startContainer,
+    world.highlights.get("copyspeech-word").range.startContainer,
     world.replies[0].texts[1]
   );
   assert.equal(scroller.scrollLog.length, 1, "the reply moved once");
