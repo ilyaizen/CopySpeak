@@ -7,7 +7,8 @@
   import QuickSettings from "#lib/components/quick-settings.svelte";
   import RecentHistory from "#lib/components/recent-history.svelte";
   import { Button } from "#lib/components/ui/button/index.js";
-  import { Kbd } from "#lib/components/ui/kbd/index.js";
+  // TODO: (261116) Kbd import hidden with the char count and hotkey hint. Restore with them.
+  // import { Kbd } from "#lib/components/ui/kbd/index.js";
   import { X } from "@lucide/svelte";
   import { Textarea } from "#lib/components/ui/textarea/index.js";
   import { playbackStore } from "#lib/stores/playback-store.svelte";
@@ -94,7 +95,13 @@
       },
       edge: { voice: "en-US-AvaMultilingualNeural" },
       google: { api_key: "", model: "", voice_name: "", output_format: "" },
-      microsoft: { api_key: "", endpoint: "", model: "", voice_name: "", output_format: "" },
+      microsoft: {
+        api_key: "",
+        endpoint: "",
+        model: "",
+        voice_name: "",
+        output_format: ""
+      },
       http: {
         profile_id: "",
         url_template: "",
@@ -404,8 +411,9 @@
   // Determine current content from manual text input
   let currentContent = $derived(manualText.trim() || "");
 
+  // modKey hidden with the char count and hotkey hint. Restore with them.
   // Modifier label for the speak shortcut hint: Cmd on macOS, Ctrl elsewhere.
-  let modKey = $derived(/mac/i.test(navigator.userAgent) ? "⌘" : "Ctrl");
+  // let modKey = $derived(/mac/i.test(navigator.userAgent) ? "⌘" : "Ctrl");
 
   // Smart play mode: what the Play button will do
   type PlayMode = "play" | "replay" | "disabled";
@@ -507,7 +515,11 @@
   // Speak failures arrive as raw backend strings. Classify the known classes so
   // the error box leads with a plain message and one action; the raw string
   // stays available behind a Details disclosure.
-  type SpeakErrorView = { message: string; raw: string | null; openEngines: boolean };
+  type SpeakErrorView = {
+    message: string;
+    raw: string | null;
+    openEngines: boolean;
+  };
 
   function classifyError(raw: string): SpeakErrorView {
     const r = raw.toLowerCase();
@@ -516,13 +528,21 @@
     if (/(api key|401|403|unauthorized|forbidden)/.test(r))
       return { message: $_("play.errorBadKey"), raw, openEngines: true };
     if (/(timed out|timeout|deadline)/.test(r))
-      return { message: $_("play.errorTimeout"), raw: null, openEngines: false };
+      return {
+        message: $_("play.errorTimeout"),
+        raw: null,
+        openEngines: false
+      };
     if (
       /(error sending request|request or response body error|connection refused|connection reset|dns error)/.test(
         r
       )
     )
-      return { message: $_("play.errorNetwork"), raw: null, openEngines: false };
+      return {
+        message: $_("play.errorNetwork"),
+        raw: null,
+        openEngines: false
+      };
     // Unknown failure: the raw string is the only truth we have, so show it.
     return { message: raw, raw: null, openEngines: false };
   }
@@ -546,7 +566,9 @@
     try {
       error = null;
       abortRequested = false;
-      await invoke(fresh ? "regenerate_now" : "speak_now", { text: currentContent });
+      await invoke(fresh ? "regenerate_now" : "speak_now", {
+        text: currentContent
+      });
       lastPlayedContent = currentContent;
     } catch (e) {
       // Don't show error if abort was requested (process was killed)
@@ -699,6 +721,9 @@
           onSkipForward={() => playbackStore.skipForward()}
         />
         {#if manualText}
+          <!--
+            Char count and hotkey hint hidden for a clearer view.
+            Restore these spans and the Kbd import/modKey to bring them back.
           <span class="text-muted-foreground ms-auto text-xs whitespace-nowrap tabular-nums">
             {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
           </span>
@@ -712,8 +737,9 @@
               {$_("play.keyboardHint", { values: { keys: `${modKey}+Enter` } })}
             </span>
           </span>
+          -->
           <Button
-            variant="ghost"
+            variant="default"
             size="icon-sm"
             aria-label={$_("play.clear")}
             title={$_("play.clear")}

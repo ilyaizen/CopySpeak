@@ -143,7 +143,7 @@
       >
         {#each filters as kind (kind)}
           <Button
-            variant={filter === kind ? "secondary" : "ghost"}
+            variant={filter === kind ? "default" : "ghost"}
             size="sm"
             aria-pressed={filter === kind}
             onclick={() => (filter = kind)}
