@@ -4,24 +4,16 @@
 
 # CopySpeech
 
-**Copy twice. Hear it.**
+**AI text-to-speech for your clipboard. Copy twice. Hear it.**
 
 CopySpeech reads your clipboard aloud. Copy the same text twice within 1.5 s, and an AI voice speaks it, with a HUD and word-level captions.
 
 [![Release](https://img.shields.io/github/v/release/ilyaizen/CopySpeech)](https://github.com/ilyaizen/CopySpeech/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-Windows · macOS (Intel) · Linux (x86_64)
-
 [Download](https://github.com/ilyaizen/CopySpeech/releases) · [Changelog](CHANGELOG.md) · [Contributing](docs/CONTRIBUTING.md) · [Issues](https://github.com/ilyaizen/CopySpeech/issues)
 
 </div>
-
-![CopySpeech screenshot](static/screen-0.3.0.png)
-
-## Why
-
-Most read-aloud tools need a browser tab, a cloud account, or a hotkey and a settings detour. CopySpeech watches the clipboard. Copy twice, and it speaks. Local engines run offline with no API key. Cloud engines stay available when you want them.
 
 ## Features
 
@@ -38,6 +30,8 @@ Most read-aloud tools need a browser tab, a cloud account, or a hotkey and a set
 - **Browser companion.** Reads your selection through the app. Chrome, Edge, and Firefox are supported. The page highlights the passage as it plays.
 - **Control server.** A local HTTP API for scripts and tools. See [Control server](#control-server).
 - **Interface.** 9 languages, right-to-left layouts, tray, dark and light themes, and an auto-updater.
+
+![CopySpeech screenshot](static/screen-0.3.0.png)
 
 ## Experimental features
 
