@@ -481,8 +481,14 @@ fn main() {
             let start_minimized = cfg.general.start_minimized;
             let show_tray_icon = cfg.general.show_tray_icon;
             let listen_enabled = cfg.trigger.listen_enabled;
+            let launch_on_login = cfg.general.launch_on_login;
             tts::local_daemon::set_idle_timeout(cfg.tts.daemon_idle_timeout_secs);
             app.manage(std::sync::Mutex::new(cfg));
+
+            // --- Move the 0.2.x launch-on-login entry to the CopySpeech name ---
+            if let Err(e) = autostart::migrate_legacy_autostart(launch_on_login) {
+                log::warn!("[autostart] legacy entry migration failed: {e}");
+            }
 
             // --- Wayland: configure the HUD as a layer surface (BEFORE first map) ---
             // On Wayland a toplevel cannot position itself (compositor owns

@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **CopySpeech** – CopySpeak is now CopySpeech. Existing settings, history, and local engine files remain in their original folders.
-- **Installer identity** – CopySpeech may install alongside CopySpeak. Keep the old installation and its data until the upgrade path is verified.
+- **Installer identity** – CopySpeech may install alongside CopySpeak. Keep the old installation and its data until the upgrade path is verified. Close one version before starting the other; both use the same single-instance identity.
 
 ## [0.2.16] - 2026-11-16
 
