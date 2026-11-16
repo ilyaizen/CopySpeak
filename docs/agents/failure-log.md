@@ -198,6 +198,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Grep components for `>Text<` and `label="Text"` after an i18n pass; literal UI text bypasses `$_` and passes locale parity.
 - Pass caught errors to `$_` values as `String(e)`; a catch binding is `unknown` and svelte-check rejects it.
 - Run `vp fmt src/lib/i18n/types.ts` after `node scripts/generate-i18n-types.js`; raw generator output reflows `NestedKeyOf` and adds trailing whitespace, so the diff picks up noise.
+- List only directories that hold locale JSON in `.vscode/settings.json` `i18n-ally.localesPaths`; i18n-ally warns "No locale files loaded" when any listed directory is empty, even if another one loads.
 
 ## Frontend checks
 
@@ -245,6 +246,8 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Capture a selection Range when the action opens: the text-interaction host passes only `readText()`/`dismiss()`, and a click collapses the native selection unless the pill's `pointerdown` calls `preventDefault()`.
 - Clear the native selection when a selection reading starts; the cloned range survives, so the caption highlight still paints the spoken words inside the former selection.
 - Commit DSH plugin client.js with an explicit pathspec (`git commit -- client.js`); a plain `git commit` swept another session's staged settings-file renames into the commit.
-- Tween the caption recolor inside the pill's coverage windows: compute each word's blend window from the old and new mark rects, and drive the pill transform and both color blends from ONE rAF loop. A whole-glide color fade darkens the incoming word over bare background before the pill arrives (the post-word flash), and a CSS transform transition beside a rAF color tween drifts mid-glide because the curves differ.
+- Drive the pill glide from ONE rAF loop: a CSS transition beside it drifts mid-glide, because the transform curve and the transition curve differ.
 - Gate auto-read on the Session snapshot, never on the first reply id alone: the Chat history loads after the composer dock mounts, so the last loaded reply's id arrives as a change and reads aloud on every DSH restart. The watcher waits for `openState === 'open'` and speaks a reply only after it has seen `running` true. Run `bun scripts/test-dsh-plugin-auto-read.mjs` after touching the watcher; `AUTO_READ_CLIENT=<path to another client.js>` proves the checks fail on the old code.
 - A partial auto-read excerpt drops the reply's middle, so one caption fragment can jump from the top block to the bottom block. Align across that gap only on a proven run of the next spoken words (`resyncForward`); the normal 24-token window otherwise leaves the fragment below its 50% match floor, and no highlight paints at all.
+- Grep every call of a helper a caption port deletes: a bare `wordRects` or `releaseMarkHost` throws inside the status-poll promise, so the pill silently never paints while every other test stays green. Run `bun scripts/test-dsh-plugin-captions.mjs` after touching the pill; `CAPTION_CLIENT=<path>` proves the checks fail on the old code.
+- Repaint the fixed pill on every scroll: a `position: fixed` pill does not travel with the chat scrollport, so it detaches from the word until the next paint. Re-read the active word's rect on the scroller and the window, and once more at glide end, because the follow scroll can move the target mid-glide.
