@@ -185,7 +185,7 @@ function isCopySpeakRunning() {
       encoding: "utf8",
       windowsHide: true
     });
-    return /^(?:copyspeak(?:-tts)?|CopySpeak)\.exe\s+/im.test(output);
+    return /^(?:copyspeech|copyspeak(?:-tts)?)\.exe\s+/im.test(output);
   } catch {
     return false;
   }
@@ -193,11 +193,10 @@ function isCopySpeakRunning() {
 
 function findBuiltCopySpeak() {
   const cwd = process.cwd();
+  const binary = process.platform === "win32" ? "copyspeech.exe" : "copyspeech";
   const candidates = [
-    join(cwd, "src-tauri", "target", "release", "copyspeak.exe"),
-    join(cwd, "src-tauri", "target", "release", "CopySpeak.exe"),
-    join(cwd, "src-tauri", "target", "debug", "copyspeak.exe"),
-    join(cwd, "src-tauri", "target", "debug", "CopySpeak.exe")
+    join(cwd, "src-tauri", "target", "release", binary),
+    join(cwd, "src-tauri", "target", "debug", binary)
   ];
   return candidates.find(existsSync);
 }

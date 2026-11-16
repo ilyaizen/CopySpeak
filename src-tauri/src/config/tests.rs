@@ -34,6 +34,18 @@ mod tests {
     }
 
     #[test]
+    fn output_filename_default_does_not_override_saved_pattern() {
+        assert_eq!(
+            OutputConfig::default().filename_pattern,
+            "copyspeech-{compact_datetime}-{seq}.wav"
+        );
+        let mut saved = serde_json::to_value(OutputConfig::default()).unwrap();
+        saved["filename_pattern"] = serde_json::json!("copyspeak-custom-{seq}.wav");
+        let restored: OutputConfig = serde_json::from_value(saved).unwrap();
+        assert_eq!(restored.filename_pattern, "copyspeak-custom-{seq}.wav");
+    }
+
+    #[test]
     fn test_expand_filename_pattern_timestamp() {
         let result = expand_filename_pattern("output_{timestamp}.wav", "af_heart", "hello");
         assert!(result.starts_with("output_"));

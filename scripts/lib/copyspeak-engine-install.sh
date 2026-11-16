@@ -389,7 +389,7 @@ select_voice_from_menu() {
 write_profile_snippet() {
     local json=$1
     echo ""
-    log C_CYAN "  Paste this into a CopySpeak profile (Engine settings -> Import):"
+    log C_CYAN "  Paste this into a CopySpeech profile (Engine settings -> Import):"
     log C_DGRAY "  ----------------------------------------------------------------"
     local line
     while IFS= read -r line; do

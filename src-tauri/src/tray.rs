@@ -244,7 +244,7 @@ pub fn sync_visibility(app: &AppHandle, visible: bool) -> Result<(), String> {
             .available
             .store(visible, Ordering::Relaxed);
     } else if visible {
-        return Err("Tray is unavailable; restart CopySpeak to try again".into());
+        return Err("Tray is unavailable; restart CopySpeech to try again".into());
     }
     if !visible {
         show_main_window(app);

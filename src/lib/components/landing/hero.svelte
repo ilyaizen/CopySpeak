@@ -7,8 +7,8 @@
   import { INTRO_AUDIO, INTRO_LINES } from "./intro-captions";
   import { groundParallax } from "#lib/utils/ground-parallax";
 
-  const DOWNLOAD_URL = "https://github.com/ilyaizen/CopySpeak/releases";
-  const GITHUB_URL = "https://github.com/ilyaizen/CopySpeak";
+  const DOWNLOAD_URL = "https://github.com/ilyaizen/CopySpeech/releases";
+  const GITHUB_URL = "https://github.com/ilyaizen/CopySpeech";
 
   type Phase = "idle" | "selected" | "copy1" | "copy2" | "speaking" | "done";
 

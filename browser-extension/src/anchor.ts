@@ -7,7 +7,7 @@ export interface SelectionAnchor {
 }
 
 /**
- * Match text CopySpeak copied (the clipboard, as the app read it) against a
+ * Match text CopySpeech copied (the clipboard, as the app read it) against a
  * captured selection. The two never agree on whitespace: the clipboard has
  * CRLF on Windows and blank lines between paragraphs, while a capture keeps
  * the page source's whitespace and joins blocks with one "\n". They match
@@ -44,7 +44,7 @@ export function matchCopiedText(
   };
 }
 
-/** Offsets are UTF16, as in DOM Range and native CopySpeak captions. */
+/** Offsets are UTF16, as in DOM Range and native CopySpeech captions. */
 export function captureSelection(doc: Document, paragraph?: Range): SelectionAnchor | null {
   const selection = doc.getSelection();
   if (!paragraph && (!selection || selection.rangeCount !== 1 || selection.isCollapsed))

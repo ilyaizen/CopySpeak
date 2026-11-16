@@ -346,7 +346,7 @@ function Select-VoiceFromMenu {
 function Write-ProfileSnippet {
     param([Parameter(Mandatory)][string]$Json)
     Write-Host ""
-    Write-Host "  Paste this into a CopySpeak profile (Engine settings -> Import):" -ForegroundColor Cyan
+    Write-Host "  Paste this into a CopySpeech profile (Engine settings -> Import):" -ForegroundColor Cyan
     Write-Host "  ----------------------------------------------------------------" -ForegroundColor DarkGray
     $Json -split "`n" | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
     Write-Host "  ----------------------------------------------------------------" -ForegroundColor DarkGray

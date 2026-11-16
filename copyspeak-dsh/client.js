@@ -1,23 +1,23 @@
 /**
- * Browser half of the CopySpeak voice bundle.
+ * Browser half of the CopySpeech voice bundle.
  *
- * Adds six surfaces that share one transport to the CopySpeak control server:
+ * Adds six surfaces that share one transport to the CopySpeech control server:
  *
  *   POST http://127.0.0.1:43117/speak
  *   {"text": "...", "request_id": "dsh.<stamp>.<n>", "wait": true}
  *
- * - A CopySpeak panel in the sidebar, holding the three options and the app status.
+ * - A CopySpeech panel in the sidebar, holding the three options and the app status.
  * - A speaker action in the action row of each finished assistant message.
  * - A per-session reader that speaks the final reply of each completed turn,
- *   and highlights the word CopySpeak plays inside the reply text itself.
+ *   and highlights the word CopySpeech plays inside the reply text itself.
  * - A read-selection action that sits beside the host Quote action, speaks
- *   only the selected words, and highlights them as CopySpeak plays.
+ *   only the selected words, and highlights them as CopySpeech plays.
  * - A frame-wide icon-only playback bar. It pauses, resumes, rewinds and
  *   skips, stops the reading, and scrolls back to the spoken word when the
  *   message action scrolled out of view.
  *
  * The request uses `mode: 'no-cors'` and a `text/plain` content type, so the
- * browser sends no CORS preflight; CopySpeak parses the JSON body without
+ * browser sends no CORS preflight; CopySpeech parses the JSON body without
  * reading the content type. The response is opaque, so a success only proves
  * the request reached the app. `wait: true` makes it resolve at playback end,
  * which restores the idle action state. A paused reading keeps that request
@@ -30,7 +30,7 @@
  *   POST /seek   {"request_id": "...", "delta_ms": -5000}
  *
  * Captions and the bar poll `GET http://127.0.0.1:43117/status`, which answers
- * the caption snapshot and the pause state the CopySpeak webview already emits.
+ * the caption snapshot and the pause state the CopySpeech webview already emits.
  * That read-only route is CORS-open. Polling runs only while this plugin's own
  * reading plays, and the highlight hides when the route is absent.
  */
@@ -66,7 +66,7 @@ window.__ModuleLoader__.load({
     /* The webview reports its audible clock every ~25 ms and throttles the
      * control-server report to ~100 ms, so one poll per 100 ms stays current. */
     const STATUS_POLL_MS = 100;
-    /* Stop polling when the status route never answers (older CopySpeak). */
+    /* Stop polling when the status route never answers (older CopySpeech). */
     const STATUS_ATTEMPTS = 3;
     /* The seek controls move the reading by this many milliseconds. */
     const SEEK_STEP_MS = 5000;
@@ -111,7 +111,7 @@ window.__ModuleLoader__.load({
     const RESYNC_LOOKAHEAD = 3;
 
     /*
-     * CopySpeak app-logo mark: the speaker and its two sound waves. It is one
+     * CopySpeech app-logo mark: the speaker and its two sound waves. It is one
      * currentColor silhouette, so the playing action follows the host theme.
      * The idle action and the sidebar icon share the outlined variant below.
      */
@@ -130,17 +130,17 @@ window.__ModuleLoader__.load({
     const GLYPH_ARC_INNER = "M45.06 31.13A9.43 9.43 0 0 1 45.06 46.87";
 
     const en = {
-      "panel.label": "CopySpeak",
-      "panel.title": "CopySpeak",
-      "panel.intro": "Reads assistant replies aloud through the CopySpeak desktop app.",
-      "status.checking": "Checking for CopySpeak…",
-      "status.online": "CopySpeak is running.",
-      "status.offline": "CopySpeak is not running. Start it to read replies aloud.",
+      "panel.label": "CopySpeech",
+      "panel.title": "CopySpeech",
+      "panel.intro": "Reads assistant replies aloud through the CopySpeech desktop app.",
+      "status.checking": "Checking for CopySpeech…",
+      "status.online": "CopySpeech is running.",
+      "status.offline": "CopySpeech is not running. Start it to read replies aloud.",
       "autoRead.title": "Read new replies aloud",
       "autoRead.description":
-        "CopySpeak reads each reply in the open session once its turn completes.",
+        "CopySpeech reads each reply in the open session once its turn completes.",
       "captions.title": "Show captions while reading",
-      "captions.description": "Highlights each word in the reply as CopySpeak plays it.",
+      "captions.description": "Highlights each word in the reply as CopySpeech plays it.",
       "animation.title": "Animate caption highlight",
       "animation.description":
         "Glides the highlight from word to word. Turn off to jump between words.",
@@ -155,7 +155,7 @@ window.__ModuleLoader__.load({
       "excerpt.mode.both": "Top and bottom",
       "excerpt.top": "Paragraphs from the top",
       "excerpt.bottom": "Paragraphs from the bottom",
-      "bar.label": "CopySpeak playback",
+      "bar.label": "CopySpeech playback",
       "bar.pause": "Pause reading",
       "bar.resume": "Resume reading",
       "bar.back5": "Back 5 seconds",
@@ -164,13 +164,13 @@ window.__ModuleLoader__.load({
       "bar.showInChat": "Show in chat",
       "switch.on": "On",
       "switch.off": "Off",
-      "action.read": "Read aloud with CopySpeak",
+      "action.read": "Read aloud with CopySpeech",
       "action.stop": "Stop reading",
       "selection.quote": "Quote text",
       "selection.read": "Read aloud",
       "error.empty": "Nothing to read aloud",
-      "error.offline": "CopySpeak is not running",
-      "error.failed": "CopySpeak request failed",
+      "error.offline": "CopySpeech is not running",
+      "error.failed": "CopySpeech request failed",
       "error.selection": "The selection is gone"
     };
 
@@ -408,7 +408,7 @@ window.__ModuleLoader__.load({
      * and each Chat row carries `data-chat-node-key` (the durable node key the
      * Chat snapshot also exposes) plus `data-chat-flow-kind`.
      *
-     * Caption word offsets index the fragment text CopySpeak spoke, not the
+     * Caption word offsets index the fragment text CopySpeech spoke, not the
      * rendered Markdown. Sanitizers and pagination change the two strings, so
      * offsets cannot transfer directly. The reader instead aligns the fragment's
      * normalized words onto the rendered text nodes once per fragment, then
@@ -1583,7 +1583,7 @@ window.__ModuleLoader__.load({
       return true;
     }
 
-    /* CopySpeak reports the caption it renders in its own webview, plus the
+    /* CopySpeech reports the caption it renders in its own webview, plus the
        pause state. A missing route stops the polling; an inactive snapshot
        clears the highlight. */
     function readPlaybackStatus() {
@@ -1642,7 +1642,7 @@ window.__ModuleLoader__.load({
       );
     }
 
-    /* CopySpeak reachability: a no-cors GET rejects only when nothing listens. */
+    /* CopySpeech reachability: a no-cors GET rejects only when nothing listens. */
     function probeControlServer() {
       return fetch(CONTROL_URL + "/health", { mode: "no-cors", cache: "no-store" }).then(
         function () {
@@ -2234,10 +2234,10 @@ window.__ModuleLoader__.load({
       );
     }
 
-    /* The selection pills: the host Quote action beside the CopySpeak read
+    /* The selection pills: the host Quote action beside the CopySpeech read
        action. The read pill only starts a reading; stop, pause, and seek stay
        on the floating playback bar. A writable session shows both pills. A
-       read-only session opens this surface through the CopySpeak interaction
+       read-only session opens this surface through the CopySpeech interaction
        alone, so Quote is absent: the host Quote admission refuses a
        non-writable conversation. */
     function SelectionAction(props) {
@@ -2693,7 +2693,7 @@ window.__ModuleLoader__.load({
       );
     }
 
-    /** CopySpeak options and app status on the CopySpeak sidebar panel. */
+    /** CopySpeech options and app status on the CopySpeech sidebar panel. */
     function CopySpeakScreen(props) {
       const t = props.t;
       const state = usePreferencesState();

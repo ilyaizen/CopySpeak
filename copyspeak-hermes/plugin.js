@@ -1,6 +1,6 @@
-// CopySpeak auto-read for Hermes Desktop.
-// Reads each new completed assistant reply through the running CopySpeak app.
-// Optional: highlights the word CopySpeak speaks inside the reply (CSS Custom Highlight API,
+// CopySpeech auto-read for Hermes Desktop.
+// Reads each new completed assistant reply through the running CopySpeech app.
+// Optional: highlights the word CopySpeech speaks inside the reply (CSS Custom Highlight API,
 // or a gliding pill when "Glide between words" is on).
 // Optional: follows the spoken word, scrolling the reply to keep it in view.
 import {
@@ -186,7 +186,7 @@ export function wordTokens(text) {
   return tokens;
 }
 
-// Group CopySpeak caption entries under each spoken word. ElevenLabs sends one
+// Group CopySpeech caption entries under each spoken word. ElevenLabs sends one
 // entry per character; other engines send whole words. Both give one window per word.
 export function captionWords(caption) {
   const entries = Array.isArray(caption.words) ? caption.words : [];
@@ -278,7 +278,7 @@ function postSpeech(text) {
       if (notifiedDown) return;
       notifiedDown = true;
       console.warn("[copyspeak-hermes] speak failed", error);
-      host.notify({ kind: "error", message: "CopySpeak not reachable on 127.0.0.1:43117" });
+      host.notify({ kind: "error", message: "CopySpeech not reachable on 127.0.0.1:43117" });
     }
   );
 }
@@ -1042,10 +1042,10 @@ function SettingsPage({ storage, settings }) {
   const builtIn = builtInAutoSpeakOn();
   const status =
     health.data === undefined
-      ? "Checking CopySpeak…"
+      ? "Checking CopySpeech…"
       : health.data
-        ? "CopySpeak is running"
-        : "CopySpeak not reachable on 127.0.0.1:43117";
+        ? "CopySpeech is running"
+        : "CopySpeech not reachable on 127.0.0.1:43117";
   const showTop = s.excerptMode !== "bottom";
   const showBottom = s.excerptMode !== "top";
 
@@ -1147,8 +1147,8 @@ function SettingsPage({ storage, settings }) {
 
 export default {
   id: ID,
-  name: "CopySpeak",
-  description: "Reads new completed Hermes replies aloud through the running CopySpeak app.",
+  name: "CopySpeech",
+  description: "Reads new completed Hermes replies aloud through the running CopySpeech app.",
   register(ctx) {
     const storage = ctx.storage;
     const settings = atom(readSettings(storage));
@@ -1197,14 +1197,14 @@ export default {
       area: PALETTE_AREA,
       data: {
         id: ID + ".toggle-auto-read",
-        label: "CopySpeak: Toggle auto-read",
-        keywords: ["copyspeak", "speak", "read", "aloud", "tts"],
+        label: "CopySpeech: Toggle auto-read",
+        keywords: ["copyspeech", "copyspeak", "speak", "read", "aloud", "tts"],
         run: () => {
           const next = !readSettings(storage).autoRead;
           saveSettings(storage, settings, { autoRead: next });
           host.notify({
             kind: "info",
-            message: next ? "CopySpeak auto-read is on" : "CopySpeak auto-read is off"
+            message: next ? "CopySpeech auto-read is on" : "CopySpeech auto-read is off"
           });
         }
       }
@@ -1212,7 +1212,7 @@ export default {
 
     ctx.registerSettingsPage({
       id: ID,
-      title: "CopySpeak",
+      title: "CopySpeech",
       render: () => jsx(SettingsPage, { storage, settings })
     });
 

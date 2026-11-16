@@ -1,8 +1,8 @@
 [package]
-name = "copyspeak"
-version = "0.2.16"
+name = "copyspeech"
+version = "0.3.0"
 edition = "2021"
-description = "CopySpeak - AI text-to-speech orchestrator"
+description = "CopySpeech - AI text-to-speech orchestrator"
 
 [dependencies]
 tauri = { version = "2", features = ["tray-icon", "image-png"] }
@@ -12,6 +12,7 @@ tauri-plugin-process = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-global-shortcut = "2"
+rfd = { version = "0.17.2", default-features = false, features = ["gtk3"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 rodio = "0.19"

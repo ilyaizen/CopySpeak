@@ -1,5 +1,5 @@
 export type Status = "playing" | "paused" | "buffering" | "completed" | "cancelled" | "error";
-/** What started a desktop speak the page may follow: CopySpeak's double-copy or hotkey. */
+/** What started a desktop speak the page may follow: CopySpeech's double-copy or hotkey. */
 export type TriggerSource = "double_copy" | "hotkey";
 type StateFields = {
   v: 1;

@@ -634,8 +634,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "copyspeak"
-version = "0.2.16"
+name = "copyspeech"
+version = "0.3.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -651,6 +651,7 @@ dependencies = [
  "objc2-foundation",
  "regex",
  "reqwest 0.12.28",
+ "rfd",
  "rodio",
  "serde",
  "serde_json",

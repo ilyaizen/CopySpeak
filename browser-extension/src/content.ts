@@ -193,9 +193,9 @@ if (!scope[marker]) {
     css.textContent =
       ":host{all:initial;position:fixed;z-index:2147483647;bottom:16px;right:16px}:host([hidden]){display:none}section{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;color:#172232;border:1px solid #8394aa;border-radius:8px;box-shadow:0 2px 12px #17223233;font:13px system-ui}button{font:inherit;color:#172232;background:#edf3fa;border:1px solid #8394aa;border-radius:4px;padding:6px 10px;cursor:pointer}button:focus-visible{outline:3px solid #1672de;outline-offset:2px}";
     const strip = document.createElement("section");
-    strip.setAttribute("aria-label", "CopySpeak reading controls");
+    strip.setAttribute("aria-label", "CopySpeech reading controls");
     label = document.createElement("span");
-    label.textContent = "CopySpeak · Buffering";
+    label.textContent = "CopySpeech · Buffering";
     label.setAttribute("role", "status");
     const button = (text: string, name: string, onclick: () => void) => {
       const element = document.createElement("button");
@@ -214,7 +214,7 @@ if (!scope[marker]) {
       if (panel) panel.hidden = true;
       void chrome.storage.local.set({ showPanel: false });
     });
-    hide.title = "Hide playback box. Restore it in CopySpeak Companion settings.";
+    hide.title = "Hide playback box. Restore it in CopySpeech Companion settings.";
     // Skips only when the app takes them: an older native host drops the
     // whole connection on an action it does not know.
     strip.append(label);
@@ -244,7 +244,7 @@ if (!scope[marker]) {
       pauseButton.setAttribute("aria-label", pauseButton.textContent);
     }
     if (label)
-      label.textContent = `CopySpeak · ${status}${wordAvailable ? "" : " · Word highlighting unavailable"}`;
+      label.textContent = `CopySpeech · ${status}${wordAvailable ? "" : " · Word highlighting unavailable"}`;
     if (word === null || glide === null || anchor === null) {
       // A wordless state frame (caption gap, trailing fragment audio, a
       // degraded fragment) holds the last paint: the native side keeps the

@@ -1,8 +1,8 @@
 {
   "app": {
-    "title": "CopySpeak",
+    "title": "CopySpeech",
     "tagline": "Texto a voz con IA para tu portapapeles",
-    "logoAlt": "Logotipo de CopySpeak"
+    "logoAlt": "Logotipo de CopySpeech"
   },
   "nav": {
     "play": "Reproducir",
@@ -109,7 +109,7 @@
     },
     "general": {
       "showTrayIcon": "Mostrar icono en la bandeja",
-      "showTrayIconTooltip": "Mostrar CopySpeak en la bandeja del sistema. Sin el icono, la aplicación se abre normalmente y se cierra al cerrar la ventana.",
+      "showTrayIconTooltip": "Mostrar CopySpeech en la bandeja del sistema. Sin el icono, la aplicación se abre normalmente y se cierra al cerrar la ventana.",
       "language": "Idioma",
       "languageDescription": "Selecciona tu idioma preferido",
       "systemLanguage": "Sistema",
@@ -122,11 +122,11 @@
       "updateChecks": "Buscar actualizaciones automáticamente",
       "autoSave": "Guardar cambios automáticamente",
       "autoSaveDescription": "Guarda los cambios automáticamente 800 ms después del último cambio en Configuración, Motores y Voces, sin barra de Guardar/Cancelar",
-      "launchOnLoginTooltip": "Abrir CopySpeak al iniciar sesión",
+      "launchOnLoginTooltip": "Abrir CopySpeech al iniciar sesión",
       "startMinimizedLabel": "Iniciar en la bandeja",
       "startMinimizedTooltip": "Iniciar con la ventana oculta cuando el icono de la bandeja está activado. La configuración inicial siempre se abre normalmente.",
       "minimizeToTray": "Cerrar a la bandeja",
-      "minimizeToTrayTooltip": "Mantener CopySpeak en ejecución en la bandeja al cerrar la ventana. Si se desactiva, cerrar la ventana cierra la aplicación.",
+      "minimizeToTrayTooltip": "Mantener CopySpeech en ejecución en la bandeja al cerrar la ventana. Si se desactiva, cerrar la ventana cierra la aplicación.",
       "experimental": "Funciones experimentales",
       "experimentalDescription": "Desactivar esto pausa el Historial, el Posprocesamiento y los Efectos, pero conserva sus ajustes y las lecturas guardadas. El historial ocupa espacio en disco; el posprocesamiento puede aumentar el uso de red y la demora. Volver a activarlo restaura las opciones guardadas.",
       "profileEffects": "Los efectos se configuran por perfil de voz en Voces."
@@ -140,7 +140,7 @@
       "streaming": "Transmitir audio",
       "streamingDescription": "Comienza la reproducción a medida que llega el audio en motores en la nube compatibles y motores locales listos. Desactivado, la reproducción espera a que finalice la síntesis.",
       "duck": "Bajar otras apps al leer",
-      "duckDescription": "Baja el audio de otras aplicaciones mientras CopySpeak habla y luego lo restaura. Por ahora, solo en Windows.",
+      "duckDescription": "Baja el audio de otras aplicaciones mientras CopySpeech habla y luego lo restaura. Por ahora, solo en Windows.",
       "duckLevel": "Volumen de otras apps al leer",
       "duckLevelDescription": "Volumen al que bajan las otras aplicaciones, como porcentaje de su nivel propio",
       "captionAnimation": "Animar los subtítulos",
@@ -286,9 +286,9 @@
     },
     "about": {
       "version": "Versión",
-      "versionDescription": "Versión actual de CopySpeak",
+      "versionDescription": "Versión actual de CopySpeech",
       "sourceCode": "Contribuir",
-      "sourceCodeDescription": "Consulta CopySpeak en GitHub",
+      "sourceCodeDescription": "Consulta CopySpeech en GitHub",
       "website": "Sitio web",
       "github": "GitHub",
       "acknowledgments": "Reconocimientos",
@@ -672,7 +672,7 @@
     "success": {
       "engineSaved": "Motor guardado correctamente",
       "settingsSaved": "Ajustes guardados",
-      "welcome": "¡Bienvenido a CopySpeak!",
+      "welcome": "¡Bienvenido a CopySpeech!",
       "configSaved": "¡Configuración guardada! Empecemos.",
       "hudTest": "Prueba del HUD iniciada",
       "historyCleanup": "Limpieza del historial completada",
@@ -713,7 +713,7 @@
   },
   "onboarding": {
     "welcome": {
-      "title": "Bienvenido a CopySpeak",
+      "title": "Bienvenido a CopySpeech",
       "subtitle": "Configura tu motor de texto a voz para empezar, o sáltate este paso y configúralo más tarde."
     },
     "chooseEngine": "Elige tu motor de voz",
@@ -804,7 +804,7 @@
       }
     },
     "screenshots": {
-      "alt": "Captura de pantalla de CopySpeak",
+      "alt": "Captura de pantalla de CopySpeech",
       "caption": "Interfaz principal con la pestaña Reproducir"
     },
     "footer": {
@@ -940,7 +940,7 @@
     }
   },
   "tray": {
-    "open": "Abrir CopySpeak",
+    "open": "Abrir CopySpeech",
     "stop": "Detener lectura",
     "listening": "● Escuchando",
     "paused": "○ En pausa",

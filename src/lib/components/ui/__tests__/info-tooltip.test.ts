@@ -24,9 +24,9 @@ it("renders the floating tooltip in the current RTL locale", async () => {
   setLocale("he");
   await waitForI18nReady();
   await waitFor(() => expect(get(isRtl)).toBe(true));
-  render(InfoTooltip, { text: "הפעל את CopySpeak כשאתה מתחבר" });
+  render(InfoTooltip, { text: "הפעל את CopySpeech כשאתה מתחבר" });
   await fireEvent.focus(screen.getByRole("button"));
-  const text = await screen.findByText("הפעל את CopySpeak כשאתה מתחבר");
+  const text = await screen.findByText("הפעל את CopySpeech כשאתה מתחבר");
   const wrapper = text.closest("[data-bits-floating-content-wrapper]");
   expect(wrapper?.getAttribute("dir")).toBe("rtl");
   setLocale("en");

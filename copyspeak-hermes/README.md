@@ -1,17 +1,17 @@
-# CopySpeak for Hermes Desktop
+# CopySpeech for Hermes Desktop
 
-Reads each new completed assistant reply aloud through the running CopySpeak app.
+Reads each new completed assistant reply aloud through the running CopySpeech app.
 
 Verified live in the app on 2026-11-16: the highlight moves with speech, excerpt auto-read works, and replies do not replay. The explicit-Save Settings page and follow playback are not yet verified live.
 
 ## Settings
 
-Settings → Plugins → CopySpeak.
+Settings → Plugins → CopySpeech.
 
 - **Read new replies aloud** – off by default.
 - **Read only part of the reply** – on by default. Reads top, bottom, or both.
 - **Paragraph counts** – 1 to 20 for top and bottom.
-- **Highlight spoken words** – on by default. Highlights the word CopySpeak speaks inside the reply.
+- **Highlight spoken words** – on by default. Highlights the word CopySpeech speaks inside the reply.
   - **Glide between words** – off by default. Shown only with highlight on. Moves one pill from word to word instead of switching the highlight.
 - **Follow playback** – off by default. Scrolls the reply to keep the spoken word in view. Works with highlights off.
 
@@ -19,12 +19,12 @@ Changes apply only when you press **Save**. The page shows **Unsaved changes** w
 
 Save writes only the fields you changed, compared with the stored settings. An edit that you change back to the saved value is dropped.
 
-Palette command `CopySpeak: Toggle auto-read` saves at once and changes only the first setting. It keeps your unsaved edits to other settings. If a palette toggle or another window saves the same value as a pending edit, that edit is dropped. Otherwise your pending edit wins on Save.
+Palette command `CopySpeech: Toggle auto-read` saves at once and changes only the first setting. It keeps your unsaved edits to other settings. If a palette toggle or another window saves the same value as a pending edit, that edit is dropped. Otherwise your pending edit wins on Save.
 
 ## Captions
 
-- Needs CopySpeak running and the reply open in the focused chat.
-- Reads CopySpeak's `GET /status` every 120 ms while a reading plays, for highlights or follow. With both off, the plugin sends no status requests.
+- Needs CopySpeech running and the reply open in the focused chat.
+- Reads CopySpeech's `GET /status` every 120 ms while a reading plays, for highlights or follow. With both off, the plugin sends no status requests.
 - Paints with the CSS Custom Highlight API (`::highlight(copyspeak-word)`). No Hermes source or bundle is patched. Without that API, plain highlights paint nothing; glide and follow still work.
 - With glide on, a fixed white `mix-blend-mode: difference` pill moves between words in one rAF loop. It follows scroll, clips to every ancestor whose overflow hides or scrolls content and to the viewport, and hides when its word scrolls out of view.
 - Finds the reply's text in the newest assistant message, skipping reasoning blocks.
@@ -58,6 +58,6 @@ If Hermes's own "Read replies aloud" is on, both readers speak. The plugin skips
 ## Limits (v1)
 
 - No playback bar. Requests use `wait: false`.
-- Captions match on text. A reading that CopySpeak runs for other text paints nothing.
+- Captions match on text. A reading that CopySpeech runs for other text paints nothing.
 - Two windows on one chat may race on a claim. The window is small.
-- CopySpeak must run. If it does not, the plugin shows one error toast.
+- CopySpeech must run. If it does not, the plugin shows one error toast.

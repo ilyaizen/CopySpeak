@@ -19,7 +19,7 @@ async function request(path, options = {}) {
       headers: { "Content-Type": "application/json", ...options.headers }
     });
   } catch {
-    die(`CopySpeak control server is not reachable at ${base}`);
+    die(`CopySpeech control server is not reachable at ${base}`);
   }
   const text = await response.text();
   if (!response.ok) {
@@ -65,16 +65,16 @@ function printProfiles(profiles) {
 const [cmd, subcmd, ...rest] = process.argv.slice(2);
 
 if (!cmd || has([cmd], ["-h", "--help"])) {
-  console.log(`copyspeak health
-copyspeak stop [--request-id <id>]
-copyspeak speak --profile pi "hello"
-copyspeak speak -p pi --stdin [--post-process] [--wait] [--ack <path>] [--request-id <id>]
+  console.log(`copyspeech health
+copyspeech stop [--request-id <id>]
+copyspeech speak --profile pi "hello"
+copyspeech speak -p pi --stdin [--post-process] [--wait] [--ack <path>] [--request-id <id>]
   --condense is a backward-compatible alias for --post-process.
   --request-id names the speak so "stop --request-id <id>" cancels exactly it,
   even when the stop arrives first; without it, stop stops whatever plays.
-copyspeak profiles list|use <id>|show <id>
-copyspeak engines list
-copyspeak voices list --engine elevenlabs`);
+copyspeech profiles list|use <id>|show <id>
+copyspeech engines list
+copyspeech voices list --engine elevenlabs`);
   process.exit(0);
 }
 

@@ -1,7 +1,7 @@
 # Capture a screenshot of a running window by title (substring, case-insensitive).
-# Usage: pwsh scripts/screenshot-window.ps1 [-WindowTitle "CopySpeak"] [-OutPath "static/screen-v0.1.7.png"] [-List]
+# Usage: pwsh scripts/screenshot-window.ps1 [-WindowTitle "CopySpeech"] [-OutPath "static/screen-v0.1.7.png"] [-List]
 param(
-  [string]$WindowTitle = "CopySpeak",
+  [string]$WindowTitle = "CopySpeech",
   [string]$OutPath = "static/screen-v0.1.7.png",
   [switch]$List
 )
@@ -48,7 +48,7 @@ if ($List) {
   return
 }
 
-# Prefer exact title match over substring match (avoids e.g. VS Code "CopySpeak - Visual Studio Code")
+# Prefer exact title match over substring match (avoids e.g. VS Code "CopySpeech - Visual Studio Code")
 $exact = $all | Where-Object { $_.Value -eq $WindowTitle }
 if ($exact.Count -gt 0) {
   $target = $exact[0]

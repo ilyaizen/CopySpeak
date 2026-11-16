@@ -41,13 +41,13 @@ export default function (pi: ExtensionAPI) {
       ctx.ui.notify(statusText(), "info");
     } catch (error) {
       ctx.ui.setStatus("copyspeak", "voice config failed");
-      ctx.ui.notify(`CopySpeak voice setup failed: ${String(error)}`, "error");
+      ctx.ui.notify(`CopySpeech voice setup failed: ${String(error)}`, "error");
     }
   });
 
   pi.on("agent_start", async (_event, ctx) => {
     spokenThinkingBlocks = new Set();
-    if (state.enabled && state.speakActivity) await speakSafe("CopySpeak: agent thinking.", ctx);
+    if (state.enabled && state.speakActivity) await speakSafe("CopySpeech: agent thinking.", ctx);
   });
 
   pi.on("message_update", async (event, ctx) => {
@@ -83,7 +83,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerCommand("copyspeak", {
     description:
-      "Control CopySpeak voice notifications: on/off/status/test/engine <cartesia|openai|elevenlabs|local>",
+      "Control CopySpeech voice notifications: on/off/status/test/engine <cartesia|openai|elevenlabs|local>",
     handler: async (args, ctx) => {
       const [cmd, value] = args.trim().split(/\s+/);
       try {
@@ -96,7 +96,7 @@ export default function (pi: ExtensionAPI) {
         else if (cmd === "test")
           await speakSafe(
             args.replace(/^test\s*/, "") ||
-              "CopySpeak voice hook is online with walkie talkie effect.",
+              "CopySpeech voice hook is online with walkie talkie effect.",
             ctx,
             true
           );
@@ -114,7 +114,7 @@ export default function (pi: ExtensionAPI) {
         ctx.ui.setStatus("copyspeak", statusText());
         ctx.ui.notify(statusText(), "info");
       } catch (error) {
-        ctx.ui.notify(`CopySpeak voice: ${String(error)}`, "error");
+        ctx.ui.notify(`CopySpeech voice: ${String(error)}`, "error");
       }
     }
   });
@@ -128,7 +128,7 @@ function statusText() {
     state.speakActivity === true ? "activity on" : undefined
   ].filter(Boolean);
   const detail = overrides.length ? ` (${overrides.join(", ")})` : "";
-  return `copyspeak ${power}${detail}`;
+  return `copyspeech ${power}${detail}`;
 }
 
 async function speakSafe(text: string, ctx?: any, force = false, clean = true) {
@@ -144,7 +144,7 @@ async function speakSafe(text: string, ctx?: any, force = false, clean = true) {
       ctx?.ui?.setStatus?.("copyspeak", "voice failed");
       if (!clipboardFailureNotified) {
         clipboardFailureNotified = true;
-        ctx?.ui?.notify?.(`CopySpeak voice failed; voice disabled: ${String(error)}`, "error");
+        ctx?.ui?.notify?.(`CopySpeech voice failed; voice disabled: ${String(error)}`, "error");
       }
       if (clipboardFailureCount >= 2) state.enabled = false;
     });
@@ -210,11 +210,11 @@ function launchCopySpeak() {
 function isCopySpeakRunning() {
   if (process.platform !== "win32") return false;
   try {
-    const output = execFileSync("tasklist.exe", ["/FI", "IMAGENAME eq copyspeak.exe", "/NH"], {
+    const output = execFileSync("tasklist.exe", ["/FI", "IMAGENAME eq copyspeech.exe", "/NH"], {
       encoding: "utf8",
       windowsHide: true
     });
-    return /^copyspeak\.exe\s+/im.test(output);
+    return /^copyspeech\.exe\s+/im.test(output);
   } catch {
     return false;
   }
@@ -222,9 +222,10 @@ function isCopySpeakRunning() {
 
 function findBuiltCopySpeak() {
   const cwd = process.cwd();
+  const binary = process.platform === "win32" ? "copyspeech.exe" : "copyspeech";
   const candidates = [
-    join(cwd, "src-tauri", "target", "release", "copyspeak.exe"),
-    join(cwd, "src-tauri", "target", "debug", "copyspeak.exe")
+    join(cwd, "src-tauri", "target", "release", binary),
+    join(cwd, "src-tauri", "target", "debug", binary)
   ];
   return candidates.find(existsSync);
 }

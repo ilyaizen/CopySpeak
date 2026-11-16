@@ -89,7 +89,7 @@ jobs:
         run: |
           cd browser-extension
           bun run build
-          Compress-Archive -Path dist/* -DestinationPath ../CopySpeak-Companion-${{ steps.version.outputs.version }}.zip -Force
+          Compress-Archive -Path dist/* -DestinationPath ../CopySpeech-Companion-${{ steps.version.outputs.version }}.zip -Force
         shell: pwsh
 
       - name: Setup Rust toolchain
@@ -109,7 +109,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           tagName: ${{ steps.tag.outputs.tag }}
-          releaseName: "CopySpeak ${{ steps.tag.outputs.tag }}"
+          releaseName: "CopySpeech ${{ steps.tag.outputs.tag }}"
           releaseBody: ${{ steps.changelog.outputs.notes }}
           releaseDraft: true
           prerelease: false
@@ -122,4 +122,4 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           draft: true
-          files: CopySpeak-Companion-*.zip
+          files: CopySpeech-Companion-*.zip

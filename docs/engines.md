@@ -1,6 +1,6 @@
-# CopySpeak Engines
+# CopySpeech Engines
 
-CopySpeak is a TTS **orchestrator**: it drives engines you choose, it does not
+CopySpeech is a TTS **orchestrator**: it drives engines you choose, it does not
 bundle one. Pick an engine, set it up once on the **Engine** page (API key or
 local install), then create **Profiles** that bundle engine + voice + speed +
 pitch + effect as one swappable unit.
@@ -90,7 +90,7 @@ uv tool install edge-tts            # edge-tts CLI (no app installer)
 
 ### Resident models
 
-Every local engine keeps its model in RAM between utterances. CopySpeak starts
+Every local engine keeps its model in RAM between utterances. CopySpeech starts
 one wrapper process per engine in `--serve` mode at launch and talks to it over
 a pipe. Each wrapper also synthesizes a throwaway phrase before reporting ready,
 so the one-off costs of a first call (phonemizer init, ONNX graph warmup) land
@@ -99,10 +99,10 @@ streams sentence by sentence, so audio starts before the passage is finished.
 
 Switching voice, engine, or the GPU toggle restarts that engine's process: the
 utterance that triggered the switch runs one-shot, and the next one is warm.
-Nothing is left running after CopySpeak quits.
+Nothing is left running after CopySpeech quits.
 
 If an engine was installed before this existed, its wrapper is out of date and
-CopySpeak silently stays on the slower one-shot path. Re-run its installer with
+CopySpeech silently stays on the slower one-shot path. Re-run its installer with
 `-Force` to pick up the new wrapper.
 
 ### GPU acceleration

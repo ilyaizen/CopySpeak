@@ -143,7 +143,7 @@
     output: {
       enabled: false,
       directory: "",
-      filename_pattern: "copyspeak-{compact_datetime}-{seq}.wav",
+      filename_pattern: "copyspeech-{compact_datetime}-{seq}.wav",
       format_config: {
         format: "wav",
         mp3_bitrate: 192,

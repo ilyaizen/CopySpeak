@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="static/app-logo.svg" alt="CopySpeak logo" width="96" />
+<img src="static/app-logo.svg" alt="CopySpeech logo" width="96" />
 
-# CopySpeak
+# CopySpeech
 
 **Your clipboard, read aloud.** Double-copy any text and an AI voice reads it back — with a floating HUD, live word-synced captions, and 12 TTS engines that run offline by default.
 
-[Download](https://github.com/ilyaizen/CopySpeak/releases) · [Changelog](CHANGELOG.md) · [Issues](https://github.com/ilyaizen/CopySpeak/issues) · [Contributing](docs/CONTRIBUTING.md)
+[Download](https://github.com/ilyaizen/CopySpeech/releases) · [Changelog](CHANGELOG.md) · [Issues](https://github.com/ilyaizen/CopySpeech/issues) · [Contributing](docs/CONTRIBUTING.md)
 
 **Windows · macOS (Intel) · Linux (x86_64)**
 
@@ -14,11 +14,11 @@
 
 ---
 
-![CopySpeak screenshot](static/screen-0.2.13.png)
+![CopySpeech screenshot](static/screen-0.2.13.png)
 
-## Why CopySpeak
+## Why CopySpeech
 
-Most read-aloud tools are browser extensions chained to a cloud API, or desktop apps that need a hotkey and a settings detour before anything speaks. CopySpeak watches your clipboard instead: copy any text twice, and it speaks — no window focus, no selection dance. Voices run locally by default (Kokoro installs in one click from onboarding, no API key), cloud engines are there when you want them, and the whole surface — triggers, voices, effects, captions, export — is configurable.
+Most read-aloud tools are browser extensions chained to a cloud API, or desktop apps that need a hotkey and a settings detour before anything speaks. CopySpeech watches your clipboard instead: copy any text twice, and it speaks — no window focus, no selection dance. Voices run locally by default (Kokoro installs in one click from onboarding, no API key), cloud engines are there when you want them, and the whole surface — triggers, voices, effects, captions, export — is configurable.
 
 ## Features
 
@@ -29,7 +29,7 @@ Most read-aloud tools are browser extensions chained to a cloud API, or desktop 
 - ✅ **Play page** — paste text and speak, with full transport controls: rewind/forward ±5 s, play/pause (Space), stop (Escape — aborts in-flight synthesis immediately)
 - ✅ **Streaming playback** — first audio starts after ~150 ms of buffering; local engines stream once warm, OpenAI streams on `gpt-4o-mini-tts`
 - ✅ **Speed 0.25×–4×, pitch 0.5×–2×, volume** — with output device selection and MP3/OGG/FLAC export
-- ✅ **Duck other apps** (Windows) — lowers or mutes other apps' audio while CopySpeak speaks, restores them after, per app
+- ✅ **Duck other apps** (Windows) — lowers or mutes other apps' audio while CopySpeech speaks, restores them after, per app
 
 ### Engines & voices
 
@@ -54,7 +54,7 @@ Most read-aloud tools are browser extensions chained to a cloud API, or desktop 
 
 - ✅ **Browser companion** (Chrome/Edge) — read your selection or hovered paragraphs through the app; the extension highlights the passage on the page while it's read, with ±5 s skip on its pill
 - ✅ **Control server** — local HTTP API (`/health`, `/speak` with optional blocking wait) for scripts and external tools; see [profile & engine settings](docs/profile-engine-settings.md)
-- ✅ **Pi & Claude Code extensions** — speak AI assistant responses through CopySpeak
+- ✅ **Pi & Claude Code extensions** — speak AI assistant responses through CopySpeech
 
 ### System
 
@@ -64,7 +64,7 @@ Most read-aloud tools are browser extensions chained to a cloud API, or desktop 
 
 ## Install
 
-Grab a build from [Releases](https://github.com/ilyaizen/CopySpeak/releases). Asset names per platform (v0.2.16 shown):
+Grab a build from [Releases](https://github.com/ilyaizen/CopySpeech/releases). Asset names per platform (v0.2.16 shown):
 
 | Platform          | Asset                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------ |
@@ -81,7 +81,7 @@ Grab a build from [Releases](https://github.com/ilyaizen/CopySpeak/releases). As
 
 ### macOS (Intel)
 
-1. Open the `.dmg` and drag CopySpeak to Applications. (Apple Silicon Macs run the x86_64 build through Rosetta 2.)
+1. Open the `.dmg` and drag CopySpeech to Applications. (Apple Silicon Macs run the x86_64 build through Rosetta 2.)
 2. On first launch, onboarding walks you through picking an engine and voice.
 3. Updates: the built-in auto-updater handles new releases.
 

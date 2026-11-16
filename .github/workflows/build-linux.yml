@@ -98,7 +98,7 @@ jobs:
           cd browser-extension
           bun run build
           cd ..
-          zip -r "CopySpeak-Companion-${{ steps.version.outputs.version }}.zip" browser-extension/dist
+          zip -r "CopySpeech-Companion-${{ steps.version.outputs.version }}.zip" browser-extension/dist
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -117,7 +117,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         with:
           tagName: ${{ steps.tag.outputs.tag }}
-          releaseName: "CopySpeak ${{ steps.tag.outputs.tag }}"
+          releaseName: "CopySpeech ${{ steps.tag.outputs.tag }}"
           releaseBody: ${{ steps.changelog.outputs.notes }}
           releaseDraft: true
           prerelease: false
@@ -255,4 +255,4 @@ jobs:
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           draft: true
-          files: CopySpeak-Companion-*.zip
+          files: CopySpeech-Companion-*.zip

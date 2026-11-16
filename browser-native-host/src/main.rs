@@ -322,10 +322,10 @@ fn run() {
         Ok(p) => p,
         Err(e) => {
             eprintln!(
-                "[native-host] Cannot connect to CopySpeak at {}: {}",
+                "[native-host] Cannot connect to CopySpeech at {}: {}",
                 pipe_name, e
             );
-            write_error_frame(&mut writer, "Open CopySpeak");
+            write_error_frame(&mut writer, "Open CopySpeech");
             return;
         }
     };
@@ -353,7 +353,7 @@ fn run() {
                     }
                     if let Err(e) = forward_to_pipe(&mut pipe, &message) {
                         eprintln!("[native-host] Pipe write failed: {}", e);
-                        let _ = stdin_tx.send(HostEvent::BrowserError("CopySpeak pipe error"));
+                        let _ = stdin_tx.send(HostEvent::BrowserError("CopySpeech pipe error"));
                         return;
                     }
                 }
@@ -384,7 +384,8 @@ fn run() {
                     }
                 }
                 Ok(None) => {
-                    let _ = pipe_tx.send(HostEvent::DesktopClosed("CopySpeak disconnected".into()));
+                    let _ =
+                        pipe_tx.send(HostEvent::DesktopClosed("CopySpeech disconnected".into()));
                     return;
                 }
                 Err(e) => {

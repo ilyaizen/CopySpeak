@@ -1,6 +1,6 @@
 # AGENTS.md
 
-CopySpeak: A lightweight and modern cross-platform AI text-to-speech orchestrator that reads clipboard text aloud when double-copied. Stack: Svelte 5, Tauri 2.
+CopySpeech: A lightweight and modern cross-platform AI text-to-speech orchestrator that reads clipboard text aloud when double-copied. Stack: Svelte 5, Tauri 2.
 
 ## Rules
 
@@ -69,7 +69,7 @@ EGM artifact directory: docs_internal/egm
 
 ### Issue tracker
 
-GitHub Issues on `ilyaizen/CopySpeak`, via `gh`. See `docs/agents/issue-tracker.md`.
+GitHub Issues on `ilyaizen/CopySpeech`, via `gh`. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

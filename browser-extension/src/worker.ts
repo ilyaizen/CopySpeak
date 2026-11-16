@@ -97,7 +97,7 @@ async function release(disconnected = false) {
   if (disconnected)
     await badge(
       "!",
-      "Open CopySpeak and check native-host installation. Invoke Read selection to retry."
+      "Open CopySpeech and check native-host installation. Invoke Read selection to retry."
     );
 }
 function connect() {
@@ -107,7 +107,7 @@ function connect() {
   // A fresh connection heals the "!" a dead port left behind: the badge
   // text persists across worker restarts, long after the app it blamed for
   // "native-host installation" came back.
-  void badge("", "Read selection with CopySpeak");
+  void badge("", "Read selection with CopySpeech");
   p.onDisconnect.addListener(() => {
     if (port !== p) return;
     port = null;
@@ -145,10 +145,10 @@ function connect() {
     if (route !== r) return;
     if (r.owner.ended) {
       await release();
-      if (e.type === "rejected") await badge("!", `CopySpeak refused the selection: ${e.reason}`);
+      if (e.type === "rejected") await badge("!", `CopySpeech refused the selection: ${e.reason}`);
       else if (e.type === "state" && e.status === "error")
-        await badge("!", "CopySpeak could not read the selection. Check the app for the error.");
-    } else await badge("", "CopySpeak · Reading selected text");
+        await badge("!", "CopySpeech could not read the selection. Check the app for the error.");
+    } else await badge("", "CopySpeech · Reading selected text");
   });
   p.postMessage({ v: 1, type: "hello", automatic });
   return p;
@@ -415,11 +415,11 @@ chrome.runtime.onInstalled.addListener(() => {
   // Menus persist across worker restarts; reading lastError silences the
   // duplicate-id error an extension reload can raise.
   chrome.contextMenus.create(
-    { id: "read-selection", title: "Read with CopySpeak", contexts: ["selection"] },
+    { id: "read-selection", title: "Read with CopySpeech", contexts: ["selection"] },
     () => void chrome.runtime.lastError
   );
   chrome.contextMenus.create(
-    { id: "companion-settings", title: "CopySpeak Companion settings", contexts: ["action"] },
+    { id: "companion-settings", title: "CopySpeech Companion settings", contexts: ["action"] },
     () => void chrome.runtime.lastError
   );
   void initialize();

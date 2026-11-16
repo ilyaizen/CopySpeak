@@ -1,11 +1,11 @@
-# CopySpeak
+# CopySpeech
 
 A lightweight Windows app that reads copied text aloud using local or cloud
 text-to-speech engines. Copy the same text twice in quick succession to listen
 without leaving the app you're working in.
 
 - **Purpose:** Make listening to text as easy as copying it.
-- **Workflow:** Double-copy, use a global hotkey, or paste text manually; CopySpeak
+- **Workflow:** Double-copy, use a global hotkey, or paste text manually; CopySpeech
   cleans the text and speaks it with your chosen engine and voice.
 - **Controls:** Voice profiles, adjustable playback, a floating HUD, and history
   for replaying previous readings.

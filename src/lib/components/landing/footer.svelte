@@ -3,8 +3,8 @@
   import { Download } from "@lucide/svelte";
   import Github from "#lib/components/icons/github.svelte";
 
-  const DOWNLOAD_URL = "https://github.com/ilyaizen/CopySpeak/releases";
-  const GITHUB_URL = "https://github.com/ilyaizen/CopySpeak";
+  const DOWNLOAD_URL = "https://github.com/ilyaizen/CopySpeech/releases";
+  const GITHUB_URL = "https://github.com/ilyaizen/CopySpeech";
 </script>
 
 <div class="coda">

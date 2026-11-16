@@ -1,8 +1,8 @@
 {
   "app": {
-    "title": "CopySpeak",
+    "title": "CopySpeech",
     "tagline": "تحويل النص إلى كلام بالذكاء الاصطناعي لحافظتك",
-    "logoAlt": "شعار CopySpeak"
+    "logoAlt": "شعار CopySpeech"
   },
   "nav": {
     "play": "تشغيل",
@@ -109,7 +109,7 @@
     },
     "general": {
       "showTrayIcon": "إظهار أيقونة علبة النظام",
-      "showTrayIconTooltip": "إظهار CopySpeak في علبة النظام. عند إخفائها، يفتح التطبيق بشكل عادي ويؤدي إغلاق النافذة إلى الخروج.",
+      "showTrayIconTooltip": "إظهار CopySpeech في علبة النظام. عند إخفائها، يفتح التطبيق بشكل عادي ويؤدي إغلاق النافذة إلى الخروج.",
       "language": "اللغة",
       "languageDescription": "اختر لغتك المفضلة",
       "systemLanguage": "النظام",
@@ -122,11 +122,11 @@
       "updateChecks": "التحقق من التحديثات تلقائيًا",
       "autoSave": "حفظ التغييرات تلقائيًا",
       "autoSaveDescription": "حفظ التعديلات تلقائيًا بعد 800 مللي ثانية من آخر تغيير في صفحات الإعدادات والمحركات والأصوات — دون شريط حفظ/إلغاء",
-      "launchOnLoginTooltip": "تشغيل CopySpeak عند تسجيل الدخول",
+      "launchOnLoginTooltip": "تشغيل CopySpeech عند تسجيل الدخول",
       "startMinimizedLabel": "البدء في علبة النظام",
       "startMinimizedTooltip": "بدء التشغيل بنافذة مخفية عند تفعيل أيقونة علبة النظام. يفتح الإعداد الأولي دائماً بشكل عادي.",
       "minimizeToTray": "الإغلاق إلى علبة النظام",
-      "minimizeToTrayTooltip": "إبقاء CopySpeak قيد التشغيل في علبة النظام عند إغلاق النافذة. عند التعطيل، يؤدي إغلاق النافذة إلى الخروج من التطبيق.",
+      "minimizeToTrayTooltip": "إبقاء CopySpeech قيد التشغيل في علبة النظام عند إغلاق النافذة. عند التعطيل، يؤدي إغلاق النافذة إلى الخروج من التطبيق.",
       "experimental": "ميزات تجريبية",
       "experimentalDescription": "يؤدي إيقاف هذا إلى إيقاف السجل والمعالجة اللاحقة والمؤثرات مؤقتًا مع الاحتفاظ بإعداداتها والقراءات المحفوظة. يستهلك السجل مساحة على القرص؛ وقد تزيد المعالجة اللاحقة من استهلاك الشبكة والتأخير. تؤدي إعادة التشغيل إلى استعادة الخيارات المحفوظة.",
       "profileEffects": "يتم تكوين المؤثرات لكل ملف تعريف صوتي في الأصوات."
@@ -140,7 +140,7 @@
       "streaming": "بث الصوت",
       "streamingDescription": "بدء التشغيل بمجرد وصول الصوت على المحركات السحابية المدعومة والمحركات المحلية الجاهزة. عند الإيقاف، ينتظر التشغيل اكتمال التوليف.",
       "duck": "خفض صوت التطبيقات الأخرى أثناء القراءة",
-      "duckDescription": "يخفض صوت التطبيقات الأخرى أثناء حديث CopySpeak ثم يعيده. على Windows فقط حاليًا.",
+      "duckDescription": "يخفض صوت التطبيقات الأخرى أثناء حديث CopySpeech ثم يعيده. على Windows فقط حاليًا.",
       "duckLevel": "صوت التطبيقات الأخرى أثناء القراءة",
       "duckLevelDescription": "مستوى الصوت الذي تنخفض إليه التطبيقات الأخرى، كنسبة مئوية من مستواها",
       "captionAnimation": "تحريك التسميات التوضيحية",
@@ -286,9 +286,9 @@
     },
     "about": {
       "version": "الإصدار",
-      "versionDescription": "إصدار CopySpeak الحالي",
+      "versionDescription": "إصدار CopySpeech الحالي",
       "sourceCode": "المساهمة",
-      "sourceCodeDescription": "عرض CopySpeak على GitHub",
+      "sourceCodeDescription": "عرض CopySpeech على GitHub",
       "website": "الموقع الإلكتروني",
       "github": "GitHub",
       "acknowledgments": "شكر وتقدير",
@@ -672,7 +672,7 @@
     "success": {
       "engineSaved": "تم حفظ المحرك بنجاح",
       "settingsSaved": "تم حفظ الإعدادات",
-      "welcome": "مرحبًا بك في CopySpeak!",
+      "welcome": "مرحبًا بك في CopySpeech!",
       "configSaved": "تم حفظ التهيئة! لنبدأ.",
       "hudTest": "تم تشغيل اختبار HUD",
       "historyCleanup": "اكتمل تنظيف السجل",
@@ -713,7 +713,7 @@
   },
   "onboarding": {
     "welcome": {
-      "title": "مرحبًا بك في CopySpeak",
+      "title": "مرحبًا بك في CopySpeech",
       "subtitle": "هيّئ محرك تحويل النص إلى كلام للبدء، أو تخطَّ هذه الخطوة وأعدّه لاحقًا."
     },
     "chooseEngine": "اختر محرك الصوت",
@@ -804,7 +804,7 @@
       }
     },
     "screenshots": {
-      "alt": "لقطة شاشة لتطبيق CopySpeak",
+      "alt": "لقطة شاشة لتطبيق CopySpeech",
       "caption": "الواجهة الرئيسية مع تبويب التشغيل"
     },
     "footer": {
@@ -940,7 +940,7 @@
     }
   },
   "tray": {
-    "open": "فتح CopySpeak",
+    "open": "فتح CopySpeech",
     "stop": "إيقاف القراءة",
     "listening": "● في وضع الاستماع",
     "paused": "○ متوقف مؤقتًا",

@@ -1,6 +1,6 @@
 {
   "name": "com.copyspeak.browser",
-  "description": "CopySpeak browser companion native host (Firefox)",
+  "description": "CopySpeech browser companion native host (Firefox)",
   "path": "D:\\Projects\\CopySpeak\\browser-native-host\\target\\debug\\copyspeak-browser-host.exe",
   "type": "stdio",
   "allowed_extensions": ["copyspeak-companion@ilyaizen.github.io"]

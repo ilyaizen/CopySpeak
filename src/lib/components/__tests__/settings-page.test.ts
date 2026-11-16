@@ -202,7 +202,7 @@ it("places About actions before acknowledgments and keeps the credit outside the
   if (!(about instanceof HTMLElement) || !(footerAbout instanceof HTMLElement))
     throw new Error("About section missing");
   expect(within(footerAbout).queryByRole("heading", { name: "About" })).toBeNull();
-  expect(within(footerAbout).getByText(`CopySpeak v${VERSION}`)).toBeTruthy();
+  expect(within(footerAbout).getByText(`CopySpeech v${VERSION}`)).toBeTruthy();
   expect(within(about).queryByText(`v${VERSION}`)).toBeNull();
   const donate = within(footerAbout).getByRole("link", { name: "Buy Me a Coffee" });
   expect(donate.getAttribute("href")).toBe("https://www.buymeacoffee.com/ilyaizen");
@@ -222,7 +222,7 @@ it("places About actions before acknowledgments and keeps the credit outside the
   expect(openExternal).toHaveBeenCalledTimes(1);
   openExternal.mockClear();
   await fireEvent.click(source);
-  expect(openExternal).toHaveBeenCalledWith("https://github.com/ilyaizen/CopySpeak");
+  expect(openExternal).toHaveBeenCalledWith("https://github.com/ilyaizen/CopySpeech");
   await fireEvent.click(donate);
   expect(openExternal).toHaveBeenCalledWith("https://www.buymeacoffee.com/ilyaizen");
   await fireEvent.click(donate, { ctrlKey: true });

@@ -1,19 +1,19 @@
 # Browser Extension
 
-CopySpeak Companion is a Chromium and Firefox extension for reading a text selection aloud
+CopySpeech Companion is a Chromium and Firefox extension for reading a text selection aloud
 without leaving the current page. It works with the running Windows desktop app
 through Chrome native messaging and a local named pipe.
 
 ## What it does
 
 - Click the extension action, press `Alt+Shift+T`, or right-click the
-  selection and choose **Read with CopySpeak** to read the current selection.
+  selection and choose **Read with CopySpeech** to read the current selection.
   Chrome applies the suggested shortcut only on a fresh install; change it at
   `chrome://extensions/shortcuts`.
 - Hover the extension icon when it shows `!` for the reason a reading failed.
 - Shows the selected passage and, when the engine supplies matching caption
   timings, follows the current word.
-- Text that CopySpeak reads after a double-copy or its hotkey is highlighted
+- Text that CopySpeech reads after a double-copy or its hotkey is highlighted
   too, on websites you allowed, when your current selection there is the text
   being read. Whitespace differences are ignored. A copy from another app, a
   cleared selection, or different text highlights nothing. Two tabs that hold
@@ -31,17 +31,17 @@ supported. Editors, PDFs, shadow DOM, and browsers without CSS Custom Highlight
 support are rejected.
 
 Local HTML and rendered Markdown files (for example, Markdown Viewer) also support
-double-copy highlighting. Enable **Allow access to file URLs** on CopySpeak
+double-copy highlighting. Enable **Allow access to file URLs** on CopySpeech
 Companion's details page in `chrome://extensions` or `edge://extensions`, then
 reload the file tab. This browser-controlled permission is separate from saved
-website grants and must be enabled for CopySpeak Companion, not just the Markdown
+website grants and must be enabled for CopySpeech Companion, not just the Markdown
 viewer. Highlighting still requires ordinary selectable HTML in the file tab.
 
 ## Architecture
 
 `browser-extension/` captures the selection and owns the page UI.
 `browser-native-host/` relays Chrome native-messaging frames to
-`\\.\pipe\copyspeak-browser`. The desktop bridge starts a normal CopySpeak
+`\\.\pipe\copyspeak-browser`. The desktop bridge starts a normal CopySpeech
 reading and projects audible caption timings back to the original selection.
 
 Word highlighting degrades per word and per fragment, never per reading. The
@@ -61,7 +61,7 @@ This is currently a developer preview, not a packaged extension.
 2. Register that manifest for the matching unpacked Chrome extension ID.
 3. Run `bun run build` in `browser-extension/`, then load
    `browser-extension/dist/` as an unpacked extension in Chrome or Edge.
-4. Start CopySpeak, select ordinary page text, then use the action or shortcut.
+4. Start CopySpeech, select ordinary page text, then use the action or shortcut.
 
 ### Firefox
 

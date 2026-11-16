@@ -12,7 +12,7 @@ test("settings persist and website access can be granted, refused, and removed",
       )
     )
       return route.abort();
-    return route.fulfill({ path: path.resolve("browser-extension/dist", asset) });
+    return route.fulfill({ path: path.resolve(import.meta.dirname, "../dist", asset) });
   });
   await page.addInitScript(() => {
     // SAFETY: this isolated page fixture owns the chrome stub and settings state.

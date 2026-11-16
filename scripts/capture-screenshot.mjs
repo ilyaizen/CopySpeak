@@ -1,9 +1,9 @@
 /**
- * Capture a fresh screenshot of the CopySpeak Tauri window and update references.
+ * Capture a fresh screenshot of the CopySpeech Tauri window and update references.
  *
  * Prerequisites:
  *   - Tauri dev server running: `bun run tauri dev`
- *   - The CopySpeak window must be visible (not minimized to tray)
+ *   - The CopySpeech window must be visible (not minimized to tray)
  *
  * What it does:
  *   1. Reads the current version from src-tauri/tauri.conf.json
@@ -38,7 +38,7 @@ function getVersion() {
 function captureScreenshot(outPath) {
   const result = spawnSync(
     "pwsh",
-    ["-NoProfile", "-File", SCREENSHOT_SCRIPT, "-WindowTitle", "CopySpeak", "-OutPath", outPath],
+    ["-NoProfile", "-File", SCREENSHOT_SCRIPT, "-WindowTitle", "CopySpeech", "-OutPath", outPath],
     { stdio: "inherit", shell: false }
   );
 
@@ -46,7 +46,7 @@ function captureScreenshot(outPath) {
     console.error(
       "\nScreenshot capture failed. Make sure:\n" +
         "  1. Tauri dev is running: bun run tauri dev\n" +
-        "  2. The CopySpeak window is visible (not minimized to tray)\n"
+        "  2. The CopySpeech window is visible (not minimized to tray)\n"
     );
     process.exit(result.status ?? 1);
   }
@@ -77,7 +77,7 @@ const filename = `screen-v${version}.png`;
 const outPath = resolve(STATIC_DIR, filename);
 const shouldUpdate = !process.argv.includes("--no-update");
 
-console.log(`CopySpeak v${version}`);
+console.log(`CopySpeech v${version}`);
 console.log(`Capturing to static/${filename}...\n`);
 
 captureScreenshot(outPath);

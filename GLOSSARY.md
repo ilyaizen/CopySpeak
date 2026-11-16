@@ -1,6 +1,6 @@
-# CopySpeak Glossary
+# CopySpeech Glossary
 
-CopySpeak reads clipboard text aloud. This is the project's single ubiquitous language: use these terms exactly in code, docs, issues, and discussion.
+CopySpeech reads clipboard text aloud. This is the project's single ubiquitous language: use these terms exactly in code, docs, issues, and discussion.
 
 ## Language
 
@@ -17,7 +17,7 @@ The local Qwen3-TTS engine (`Qwen/Qwen3-TTS-12Hz-*`). Never refers to a cloud se
 _Avoid_: Qwen cloud, DashScope (except when discussing the rejected provider)
 
 **Emote tags**:
-Markup inside the spoken text that an engine interprets as delivery (laugh, pause, whisper) instead of reading aloud. Each engine has its own dialect; the syntax belongs to the engine, not to CopySpeak.
+Markup inside the spoken text that an engine interprets as delivery (laugh, pause, whisper) instead of reading aloud. Each engine has its own dialect; the syntax belongs to the engine, not to CopySpeech.
 _Avoid_: speech tags, expressive markup (as a noun for the feature)
 
 **Dramatize**:
@@ -25,5 +25,5 @@ The LLM post-process that rewrites text to include emote tags before synthesis. 
 _Avoid_: post-processing (the broader pipeline), condense (the older name)
 
 **Captions**:
-Word-level timings aligned to the synthesized audio, used for playback highlighting. Either **native** (the provider returns timings) or **estimated** (CopySpeak derives them from audio duration).
+Word-level timings aligned to the synthesized audio, used for playback highlighting. Either **native** (the provider returns timings) or **estimated** (CopySpeech derives them from audio duration).
 _Avoid_: subtitles, transcript

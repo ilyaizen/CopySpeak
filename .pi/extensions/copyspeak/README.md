@@ -29,7 +29,7 @@ pi
 
 Start CopySpeak yourself before using the extension. CopySpeak must be running a build that includes the local control server.
 
-If you explicitly set `COPYSPEAK_PI_LAUNCH=1`, the extension can auto-launch CopySpeak. With `COPYSPEAK_EXE` omitted, it tries `src-tauri/target/release/copyspeak.exe` and `src-tauri/target/debug/copyspeak.exe` under the current working directory.
+If you explicitly set `COPYSPEAK_PI_LAUNCH=1`, the extension can auto-launch CopySpeak. With `COPYSPEAK_EXE` omitted, it tries `src-tauri/target/release/copyspeech.exe` and `src-tauri/target/debug/copyspeech.exe` under the current working directory.
 
 ## Commands inside Pi
 

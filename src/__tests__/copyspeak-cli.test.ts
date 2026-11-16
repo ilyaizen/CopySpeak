@@ -151,6 +151,6 @@ test("a cancelled speak still writes the ack and reports cancelled", async () =>
 
 test("help documents --request-id on speak and stop", async () => {
   const { stdout } = await run(process.execPath, [cli, "--help"], { timeout: 5000 });
-  expect(stdout).toContain("copyspeak stop [--request-id <id>]");
+  expect(stdout).toContain("copyspeech stop [--request-id <id>]");
   expect(stdout).toContain("[--request-id <id>]");
 });

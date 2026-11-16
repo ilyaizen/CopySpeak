@@ -163,7 +163,7 @@ fn handle_connection(
     };
 
     let response = match read_result.and_then(|()| parse_request(&buffer)) {
-        Ok(ControlRequest::Health) => http_response(200, "OK", r#"{"ok":true,"app":"CopySpeak"}"#),
+        Ok(ControlRequest::Health) => http_response(200, "OK", r#"{"ok":true,"app":"CopySpeech"}"#),
         Ok(ControlRequest::Status) => http_response_cors(200, "OK", &status_body()),
         Ok(ControlRequest::Stop(StopRequest { request_id: None })) => {
             // Abort readings that have not reached playback as well.

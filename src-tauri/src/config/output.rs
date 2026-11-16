@@ -78,7 +78,7 @@ impl Default for OutputConfig {
         Self {
             enabled: false,
             directory: String::new(),
-            filename_pattern: "copyspeak-{compact_datetime}-{seq}.wav".into(),
+            filename_pattern: "copyspeech-{compact_datetime}-{seq}.wav".into(),
             format_config: FormatConfig::default(),
         }
     }

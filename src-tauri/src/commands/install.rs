@@ -341,7 +341,7 @@ pub fn uninstall_engine(app: tauri::AppHandle, engine: String) -> Result<(), Str
         .ok_or_else(|| format!("unknown engine to uninstall: {engine}"))?;
     if name == "uv" {
         return Err(
-            "uv is shared by every local engine and cannot be removed from CopySpeak.".into(),
+            "uv is shared by every local engine and cannot be removed from CopySpeech.".into(),
         );
     }
     let uninstaller_script = uninstaller_script_for();

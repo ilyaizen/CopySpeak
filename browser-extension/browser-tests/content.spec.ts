@@ -46,7 +46,7 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
     r.selectNodeContents(document.querySelector("#source")!);
     getSelection()!.addRange(r);
   });
-  await page.addScriptTag({ path: path.resolve("browser-extension/dist/content.js") });
+  await page.addScriptTag({ path: path.resolve(import.meta.dirname, "../dist/content.js") });
   const capture = await page.evaluate(() => {
     let result: any;
     // SAFETY: receive is the chrome stub installed above; page context is untyped by design.
@@ -259,8 +259,8 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
     getSelection()!.addRange(range);
   });
   await page.locator("#source").hover({ position: { x: 4, y: 4 } });
-  await expect(page.getByRole("button", { name: "Read paragraph with CopySpeak" })).toBeVisible();
-  await page.getByRole("button", { name: "Read paragraph with CopySpeak" }).click();
+  await expect(page.getByRole("button", { name: "Read paragraph with CopySpeech" })).toBeVisible();
+  await page.getByRole("button", { name: "Read paragraph with CopySpeech" }).click();
   expect(
     await page.evaluate(() => {
       // SAFETY: sent is installed by this test's browser fixture.
@@ -299,12 +299,12 @@ test("real DOM acceptance, native interval, controls, mutation and cleanup (tran
   }, paragraph.document_token);
   expect(await page.evaluate(() => getSelection()!.toString())).toBe("other");
   await page.locator("#other").hover({ position: { x: 4, y: 4 } });
-  await expect(page.getByRole("button", { name: "Read paragraph with CopySpeak" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Read paragraph with CopySpeech" })).toBeVisible();
   await page.evaluate(() => {
     // SAFETY: chrome.storage is installed by this test's browser fixture.
     return (window as any).chrome.storage.local.set({ hoverRead: false });
   });
-  await expect(page.getByRole("button", { name: "Read paragraph with CopySpeak" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Read paragraph with CopySpeech" })).toHaveCount(0);
   expect(await page.evaluate(() => CSS.highlights.has("copyspeak-hover"))).toBe(false);
 });
 
@@ -342,7 +342,7 @@ test("follows the spoken word into view", async ({ page }) => {
     range.selectNodeContents(document.querySelector("main")!);
     getSelection()!.addRange(range);
   });
-  await page.addScriptTag({ path: path.resolve("browser-extension/dist/content.js") });
+  await page.addScriptTag({ path: path.resolve(import.meta.dirname, "../dist/content.js") });
   const capture = await page.evaluate(() => {
     let result: any;
     // SAFETY: receive is the chrome stub installed above; page context is untyped by design.

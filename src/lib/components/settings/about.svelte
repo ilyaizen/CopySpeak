@@ -255,7 +255,7 @@
 
 <section class="pt-2 pb-6 text-center" aria-labelledby="footer-version">
   <p id="footer-version" class="text-muted-foreground pb-6 font-mono">
-    CopySpeak v{VERSION}
+    CopySpeech v{VERSION}
   </p>
   <div class="flex flex-wrap justify-center gap-3">
     <Button
@@ -273,7 +273,7 @@
       class="cursor-pointer"
       variant="outline"
       size="sm"
-      onclick={() => openExternal("https://github.com/ilyaizen/CopySpeak")}
+      onclick={() => openExternal("https://github.com/ilyaizen/CopySpeech")}
     >
       {$_("settings.about.github")}
     </Button>

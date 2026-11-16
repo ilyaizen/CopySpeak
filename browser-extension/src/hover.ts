@@ -40,7 +40,7 @@ export function paragraphHover(read: () => void) {
     icon.src = ICON_URL;
     icon.alt = "";
     button.append(icon);
-    button.title = "Read paragraph with CopySpeak";
+    button.title = "Read paragraph with CopySpeech";
     button.setAttribute("aria-label", button.title);
     button.onpointerdown = (event) => event.preventDefault();
     button.onclick = () => {

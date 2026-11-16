@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "CopySpeak Companion",
-  "version": "0.2.16",
-  "description": "Read selected page text aloud with CopySpeak and follow along with live word highlighting.",
+  "name": "CopySpeech Companion",
+  "version": "0.3.0",
+  "description": "Read selected page text aloud with CopySpeech and follow along with live word highlighting.",
   "permissions": [
     "activeTab",
     "contextMenus",
@@ -37,7 +37,7 @@
     "128": "icons/128.png"
   },
   "action": {
-    "default_title": "Read selection with CopySpeak",
+    "default_title": "Read selection with CopySpeech",
     "default_icon": {
       "32": "icons/32.png",
       "64": "icons/64.png",
@@ -49,7 +49,7 @@
       "suggested_key": {
         "default": "Alt+Shift+T"
       },
-      "description": "Read the selected text with CopySpeak"
+      "description": "Read the selected text with CopySpeech"
     }
   },
   "background": {

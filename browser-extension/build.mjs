@@ -83,4 +83,4 @@ for (const size of [32, 64, 128]) {
     Bun.file(`../src-tauri/icons/${size}x${size}.png`)
   );
 }
-console.log(`${outdir}/ ready (${target}): companion scripts, settings page, and CopySpeak icons`);
+console.log(`${outdir}/ ready (${target}): companion scripts, settings page, and CopySpeech icons`);

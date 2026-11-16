@@ -1,8 +1,8 @@
 {
   "app": {
-    "title": "CopySpeak",
+    "title": "CopySpeech",
     "tagline": "המרת טקסט לדיבור ב-AI ללוח ההעתקה שלך",
-    "logoAlt": "הלוגו של CopySpeak"
+    "logoAlt": "הלוגו של CopySpeech"
   },
   "nav": {
     "play": "הפעל",
@@ -109,7 +109,7 @@
     },
     "general": {
       "showTrayIcon": "הצגת סמל באזור ההודעות",
-      "showTrayIconTooltip": "הצגת CopySpeak באזור ההודעות. כשהסמל מוסתר, האפליקציה נפתחת כרגיל וסגירת החלון יוצאת ממנה.",
+      "showTrayIconTooltip": "הצגת CopySpeech באזור ההודעות. כשהסמל מוסתר, האפליקציה נפתחת כרגיל וסגירת החלון יוצאת ממנה.",
       "language": "שפה",
       "languageDescription": "בחר את השפה המועדפת עליך",
       "systemLanguage": "מערכת",
@@ -122,11 +122,11 @@
       "updateChecks": "בדוק עדכונים אוטומטית",
       "autoSave": "שמור שינויים אוטומטית",
       "autoSaveDescription": "שמור עריכות אוטומטית 800 מילישניות לאחר השינוי האחרון בהגדרות, במנועים ובקולות — ללא סרגל שמירה וביטול",
-      "launchOnLoginTooltip": "הפעל את CopySpeak כשאתה מתחבר",
+      "launchOnLoginTooltip": "הפעל את CopySpeech כשאתה מתחבר",
       "startMinimizedLabel": "הפעלה באזור ההודעות",
       "startMinimizedTooltip": "הפעלה עם חלון מוסתר כאשר הסמל באזור ההודעות מופעל. ההגדרה הראשונית תמיד נפתחת כרגיל.",
       "minimizeToTray": "סגירה לאזור ההודעות",
-      "minimizeToTrayTooltip": "השארת CopySpeak פועל באזור ההודעות בעת סגירת החלון. כשהאפשרות כבויה, סגירת החלון יוצאת מהאפליקציה.",
+      "minimizeToTrayTooltip": "השארת CopySpeech פועל באזור ההודעות בעת סגירת החלון. כשהאפשרות כבויה, סגירת החלון יוצאת מהאפליקציה.",
       "experimental": "תכונות ניסיוניות",
       "experimentalDescription": "כיבוי אפשרות זו משהה את ההיסטוריה, העיבוד לאחר והאפקטים, אך שומר על ההגדרות ועל קריאות שמורות. ההיסטוריה תופסת מקום בדיסק; עיבוד לאחר עשוי להוסיף שימוש ברשת והשהיה. הפעלה מחדש משחזרת את הבחירות השמורות.",
       "profileEffects": "אפקטים מוגדרים לכל פרופיל קול תחת 'קולות'."
@@ -140,7 +140,7 @@
       "streaming": "הזרמת שמע",
       "streamingDescription": "התחל השמעה ברגע שהשמע מגיע במנועי ענן נתמכים ובמנועים מקומיים מוכנים. כאשר כבוי, ההשמעה ממתינה לסיום הסינתזה.",
       "duck": "הנמכת אפליקציות אחרות בזמן הקראה",
-      "duckDescription": "הנמך את השמע של אפליקציות אחרות בזמן ש-CopySpeak מדבר, ואז שחזר אותו. כרגע Windows בלבד.",
+      "duckDescription": "הנמך את השמע של אפליקציות אחרות בזמן ש-CopySpeech מדבר, ואז שחזר אותו. כרגע Windows בלבד.",
       "duckLevel": "עוצמת אפליקציות אחרות בזמן הקראה",
       "duckLevelDescription": "הרמה שאליה יורדות אפליקציות אחרות, באחוזים מהרמה הנוכחית שלהן",
       "captionAnimation": "הנפשת הכתוביות",
@@ -286,9 +286,9 @@
     },
     "about": {
       "version": "גרסה",
-      "versionDescription": "גרסת CopySpeak הנוכחית",
+      "versionDescription": "גרסת CopySpeech הנוכחית",
       "sourceCode": "לתרום לפרויקט",
-      "sourceCodeDescription": "צפה ב-CopySpeak ב-GitHub",
+      "sourceCodeDescription": "צפה ב-CopySpeech ב-GitHub",
       "website": "אתר אינטרנט",
       "github": "GitHub",
       "acknowledgments": "קרדיטים",
@@ -672,7 +672,7 @@
     "success": {
       "engineSaved": "המנוע נשמר בהצלחה",
       "settingsSaved": "ההגדרות נשמרו",
-      "welcome": "ברוך הבא ל-CopySpeak!",
+      "welcome": "ברוך הבא ל-CopySpeech!",
       "configSaved": "התצורה נשמרה! בואו נתחיל.",
       "hudTest": "בדיקת HUD הופעלה",
       "historyCleanup": "ניקוי ההיסטוריה הושלם",
@@ -713,7 +713,7 @@
   },
   "onboarding": {
     "welcome": {
-      "title": "ברוך הבא ל-CopySpeak",
+      "title": "ברוך הבא ל-CopySpeech",
       "subtitle": "הגדר את מנוע ההמרה של טקסט לדיבור כדי להתחיל, או דלג והגדר אותו מאוחר יותר."
     },
     "chooseEngine": "בחר את מנוע הקול שלך",
@@ -804,7 +804,7 @@
       }
     },
     "screenshots": {
-      "alt": "צילום מסך של CopySpeak",
+      "alt": "צילום מסך של CopySpeech",
       "caption": "ממשק ראשי עם לשונית ההשמעה"
     },
     "footer": {
@@ -940,7 +940,7 @@
     }
   },
   "tray": {
-    "open": "פתיחת CopySpeak",
+    "open": "פתיחת CopySpeech",
     "stop": "עצירת ההקראה",
     "listening": "● מקשיב",
     "paused": "○ מושהה",

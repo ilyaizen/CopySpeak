@@ -1,6 +1,6 @@
 # Profile Engine Settings
 
-CopySpeak profiles are the user-facing synthesis abstraction. Users should pick `Cartesia - Katie`, `Narrator`, or `Rachel`, not rebuild a long engine/voice/model/effect command every time.
+CopySpeech profiles are the user-facing synthesis abstraction. Users should pick `Cartesia - Katie`, `Narrator`, or `Rachel`, not rebuild a long engine/voice/model/effect command every time.
 
 ## Boundary
 

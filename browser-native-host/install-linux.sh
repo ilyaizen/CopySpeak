@@ -36,7 +36,7 @@ FIREFOX_MANIFEST="$MANIFEST_DIR/com.copyspeak.browser.firefox.json"
 cat > "$CHROME_MANIFEST" <<JSON
 {
   "name": "com.copyspeak.browser",
-  "description": "CopySpeak browser companion native host",
+  "description": "CopySpeech browser companion native host",
   "path": "$HOST_BIN",
   "type": "stdio",
   "allowed_origins": ["chrome-extension://$EXT_ID/"]
@@ -46,7 +46,7 @@ JSON
 cat > "$FIREFOX_MANIFEST" <<JSON
 {
   "name": "com.copyspeak.browser",
-  "description": "CopySpeak browser companion native host (Firefox)",
+  "description": "CopySpeech browser companion native host (Firefox)",
   "path": "$HOST_BIN",
   "type": "stdio",
   "allowed_extensions": ["$FIREFOX_EXT_ID"]

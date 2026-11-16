@@ -88,7 +88,7 @@
       <a href={page.url.pathname === "/" ? undefined : "/"} class="flex items-center gap-3">
         <img src="/app-logo.png" alt={$_("app.logoAlt")} class="h-10 w-10" />
         <div>
-          <h1 class="text-foreground app-brand text-xl font-semibold tracking-tight">CopySpeak</h1>
+          <h1 class="text-foreground app-brand text-xl font-semibold tracking-tight">CopySpeech</h1>
           <p class="text-muted-foreground text-xs">{$_("header.tagline")}</p>
         </div>
       </a>

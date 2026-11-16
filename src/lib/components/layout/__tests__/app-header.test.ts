@@ -70,7 +70,7 @@ describe("app-header history gating", () => {
     expect(home.getAttribute("aria-current")).toBe("page");
     expect(home.hasAttribute("href")).toBe(false);
     expect(
-      view.getByRole("heading", { name: "CopySpeak" }).closest("a")?.hasAttribute("href")
+      view.getByRole("heading", { name: "CopySpeech" }).closest("a")?.hasAttribute("href")
     ).toBe(false);
     expect(view.getByTestId("nav-voices").getAttribute("href")).toBe("/voices");
     expect(home.textContent?.trim()).not.toBe("");
@@ -83,7 +83,7 @@ describe("app-header history gating", () => {
     mockInvoke.mockResolvedValueOnce(makeConfig(false, false));
     const view = render(AppHeader);
     expect(
-      view.getByRole("heading", { name: "CopySpeak" }).closest("a")?.getAttribute("href")
+      view.getByRole("heading", { name: "CopySpeech" }).closest("a")?.getAttribute("href")
     ).toBe("/");
     view.unmount();
   });

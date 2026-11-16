@@ -1,7 +1,7 @@
 {
-  "name": "copyspeak-browser-companion",
+  "name": "copyspeech-browser-companion",
   "private": true,
-  "version": "0.2.16",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "build": "bun build.mjs chrome",

@@ -10,8 +10,8 @@ use std::path::PathBuf;
 const DESKTOP_ENTRY: &str = "\
 [Desktop Entry]
 Type=Application
-Name=CopySpeak
-Exec=copyspeak
+Name=CopySpeech
+Exec=copyspeech
 Terminal=false
 X-GNOME-Autostart-enabled=true
 ";
@@ -27,13 +27,25 @@ mod windows_imp {
     use winreg::enums::*;
     use winreg::RegKey;
 
-    const APP_NAME: &str = "CopySpeak";
+    const APP_NAME: &str = "CopySpeech";
+    /// Run value written by CopySpeak 0.2.x. Removed when CopySpeech takes over,
+    /// so one login does not start both apps.
+    const LEGACY_APP_NAME: &str = "CopySpeak";
     const REGISTRY_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
 
     fn get_run_key() -> Result<RegKey, String> {
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
         hkcu.open_subkey_with_flags(REGISTRY_KEY, KEY_SET_VALUE | KEY_READ)
             .map_err(|e| format!("Failed to open registry key: {}", e))
+    }
+
+    /// Delete one Run value. A missing value counts as success.
+    fn remove_run_value(run_key: &RegKey, name: &str) -> Result<(), String> {
+        match run_key.delete_value(name) {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(format!("Failed to remove registry value {name}: {e}")),
+        }
     }
 
     pub fn enable_autostart() -> Result<(), String> {
@@ -46,6 +58,7 @@ mod windows_imp {
         run_key
             .set_value(APP_NAME, &quoted_path)
             .map_err(|e| format!("Failed to set registry value: {}", e))?;
+        remove_run_value(&run_key, LEGACY_APP_NAME)?;
 
         log::info!("Enabled auto-start: {}", quoted_path);
         Ok(())
@@ -53,21 +66,10 @@ mod windows_imp {
 
     pub fn disable_autostart() -> Result<(), String> {
         let run_key = get_run_key()?;
-
-        match run_key.delete_value(APP_NAME) {
-            Ok(()) => {
-                log::info!("Disabled auto-start");
-                Ok(())
-            }
-            Err(e) => {
-                if e.kind() == std::io::ErrorKind::NotFound {
-                    log::info!("Auto-start was already disabled (registry value not found)");
-                    Ok(())
-                } else {
-                    Err(format!("Failed to remove registry value: {}", e))
-                }
-            }
-        }
+        remove_run_value(&run_key, APP_NAME)?;
+        remove_run_value(&run_key, LEGACY_APP_NAME)?;
+        log::info!("Disabled auto-start");
+        Ok(())
     }
 
     pub fn is_autostart_enabled() -> Result<bool, String> {
@@ -105,7 +107,9 @@ mod windows_imp {
 mod linux_imp {
     use super::*;
 
-    const APP_NAME: &str = "CopySpeak";
+    const APP_NAME: &str = "CopySpeech";
+    /// Entry name written by CopySpeak 0.2.x. Removed when CopySpeech takes over.
+    const LEGACY_APP_NAME: &str = "CopySpeak";
 
     /// `$XDG_CONFIG_HOME/autostart` (default `~/.config/autostart`).
     fn autostart_dir() -> Result<PathBuf, String> {
@@ -120,37 +124,39 @@ mod linux_imp {
         Ok(config.join("autostart"))
     }
 
-    fn entry_path() -> Result<PathBuf, String> {
-        Ok(autostart_dir()?.join(format!("{APP_NAME}.desktop")))
+    fn entry_path(name: &str) -> Result<PathBuf, String> {
+        Ok(autostart_dir()?.join(format!("{name}.desktop")))
+    }
+
+    /// Delete one desktop entry. A missing file counts as success.
+    fn remove_entry(path: &PathBuf) -> Result<(), String> {
+        match std::fs::remove_file(path) {
+            Ok(()) => Ok(()),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(format!("Failed to remove autostart entry: {e}")),
+        }
     }
 
     pub fn enable_autostart() -> Result<(), String> {
-        let path = entry_path()?;
+        let path = entry_path(APP_NAME)?;
         let dir = path.parent().expect("entry path has a parent");
         std::fs::create_dir_all(dir).map_err(|e| format!("Failed to create autostart dir: {e}"))?;
         std::fs::write(&path, DESKTOP_ENTRY)
             .map_err(|e| format!("Failed to write autostart entry: {e}"))?;
+        remove_entry(&entry_path(LEGACY_APP_NAME)?)?;
         log::info!("Enabled auto-start: {}", path.display());
         Ok(())
     }
 
     pub fn disable_autostart() -> Result<(), String> {
-        let path = entry_path()?;
-        match std::fs::remove_file(&path) {
-            Ok(()) => {
-                log::info!("Disabled auto-start");
-                Ok(())
-            }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                log::info!("Auto-start was already disabled (entry not found)");
-                Ok(())
-            }
-            Err(e) => Err(format!("Failed to remove autostart entry: {e}")),
-        }
+        remove_entry(&entry_path(APP_NAME)?)?;
+        remove_entry(&entry_path(LEGACY_APP_NAME)?)?;
+        log::info!("Disabled auto-start");
+        Ok(())
     }
 
     pub fn is_autostart_enabled() -> Result<bool, String> {
-        Ok(entry_path()?.exists())
+        Ok(entry_path(APP_NAME)?.exists())
     }
 }
 
@@ -338,7 +344,7 @@ mod tests {
         let path = result.unwrap();
         assert!(
             path.to_string_lossy().ends_with(".exe")
-                || path.to_string_lossy().contains("copyspeak")
+                || path.to_string_lossy().contains("copyspeech")
         );
     }
 

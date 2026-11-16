@@ -12,7 +12,7 @@ General desktop reader on Windows, macOS (Intel), or Linux. They hit long text â
 
 ## Product Purpose
 
-CopySpeak reads clipboard text aloud. Copy the same text twice and it speaks, with a floating HUD, word-synced captions, and configurable playback. It orchestrates 12 TTS engines, offline by default. The next release targets low time-to-first-audio (TTFA) and a small VRAM/RAM footprint, so local engines run on low-VRAM GPUs and CPU-only machines.
+CopySpeech reads clipboard text aloud. Copy the same text twice and it speaks, with a floating HUD, word-synced captions, and configurable playback. It orchestrates 12 TTS engines, offline by default. The next release targets low time-to-first-audio (TTFA) and a small VRAM/RAM footprint, so local engines run on low-VRAM GPUs and CPU-only machines.
 
 ## Positioning
 
@@ -40,7 +40,7 @@ The double-copy trigger. Copy any text twice within 1.5 s and it speaks â€” no h
 
 ## Brand Commitments
 
-- Name: CopySpeak. Tagline in use: "Your clipboard, read aloud."
+- Name: CopySpeech. Tagline in use: "Your clipboard, read aloud."
 - Logo: `static/app-logo.svg`.
 - License: MIT.
 

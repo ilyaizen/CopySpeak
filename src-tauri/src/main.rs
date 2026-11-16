@@ -1,4 +1,4 @@
-// CopySpeak - Clipboard-to-speech orchestrator
+// CopySpeech - Clipboard-to-speech orchestrator
 // Main entry: wires up tray, clipboard watcher, and IPC commands.
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -25,6 +25,7 @@ mod post_process;
 mod sanitize;
 mod secrets;
 mod speak_requests;
+mod startup_data_guard;
 mod telemetry;
 mod text_map;
 mod tray;
@@ -415,10 +416,31 @@ fn main() {
     // class), so without this the bare binary's lowercase file name
     // ("copyspeak") leaks into compositors, docks, and .desktop matching.
     #[cfg(target_os = "linux")]
-    glib::set_prgname(Some("CopySpeak"));
+    glib::set_prgname(Some("CopySpeech"));
 
     if let Err(e) = logging::init_logging() {
         eprintln!("Failed to initialize logging: {}", e);
+    }
+
+    if let Err(error) = startup_data_guard::check_startup_data() {
+        log::error!("{error}");
+        eprintln!("{error}");
+        #[cfg(any(target_os = "linux", target_os = "macos"))]
+        let _ = rfd::MessageDialog::new()
+            .set_title("CopySpeech could not start")
+            .set_description(error.to_string())
+            .set_level(rfd::MessageLevel::Error)
+            .show();
+        #[cfg(target_os = "windows")]
+        {
+            use windows::core::HSTRING;
+            use windows::Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK};
+            let message = HSTRING::from(error.to_string());
+            let title = HSTRING::from("CopySpeech");
+            // SAFETY: both strings remain alive and null-terminated for the call.
+            unsafe { MessageBoxW(None, &message, &title, MB_OK | MB_ICONERROR) };
+        }
+        std::process::exit(1);
     }
 
     // Identify the process to the Windows taskbar before any window is created.
@@ -441,7 +463,7 @@ fn main() {
         }
     }
 
-    // Load .env (next to copyspeak.exe) before any backend reads credentials.
+    // Load the adjacent .env or the old Windows installation's fallback.
     secrets::load_dotenv();
 
     // uv and its tool shims (edge-tts, kokoro-tts, pocket-tts) install into
@@ -546,7 +568,7 @@ fn main() {
             let version_item = MenuItem::with_id(
                 app,
                 "version",
-                format!("CopySpeak v{version}"),
+                format!("CopySpeech v{version}"),
                 false,
                 None::<&str>,
             )?;
@@ -605,7 +627,7 @@ fn main() {
             let is_listening_for_tray = is_listening.clone();
             let tray_result = TrayIconBuilder::with_id("main")
                 .menu(&menu)
-                .tooltip("CopySpeak")
+                .tooltip("CopySpeech")
                 .icon(tray::initial_icon(app.handle()))
                 .icon_as_template(false)
                 .show_menu_on_left_click(!cfg!(target_os = "windows"))
@@ -880,7 +902,7 @@ fn main() {
                 log::error!("Failed to start browser bridge: {}", e);
             }
 
-            log::info!("CopySpeak started");
+            log::info!("CopySpeech started");
             Ok(())
         })
         .plugin(
@@ -1031,7 +1053,7 @@ fn main() {
             crate::playback_signal::report_playback_caption,
         ])
         .build(tauri::generate_context!())
-        .expect("error while building CopySpeak")
+        .expect("error while building CopySpeech")
         .run(|app, event| match event {
             tauri::RunEvent::Exit => {
                 tts::local_daemon::shutdown();

@@ -253,7 +253,7 @@
 
 <svelte:head>
   {#if isWeb}
-    <title>CopySpeak: Clipboard AI text-to-speech</title>
+    <title>CopySpeech: Clipboard AI text-to-speech</title>
     <meta
       name="description"
       content="AI text-to-speech for your clipboard. Copy the same text twice and hear it read aloud."
