@@ -7,6 +7,13 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* The app shell sets select-none. Fields still need selectable text. */
+input,
+textarea,
+[contenteditable="true"] {
+  user-select: text;
+}
+
 :root {
   --font-sans: "Lato", "ui-sans-serif", "system-ui", "sans-serif";
   --radius: 6px;

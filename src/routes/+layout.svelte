@@ -106,6 +106,16 @@
   onMount(async () => {
     if (isWeb) return;
 
+    // Block the webview's native right-click menu (Reload, Save as, Print).
+    // Fields keep it for Cut, Copy, and Paste. Same idea as Handy.
+    window.addEventListener("contextmenu", (e) => {
+      const onField =
+        e.target instanceof Element &&
+        e.target.closest("input, textarea, [contenteditable='true']") !== null;
+      if (onField) return;
+      e.preventDefault();
+    });
+
     console.log(
       "[LAYOUT] onMount, isHudWindow:",
       isHudWindow,
@@ -288,7 +298,7 @@
 
   <TooltipProvider delayDuration={300}>
     <div
-      class="app-shell bg-background grid h-dvh min-w-0 overflow-hidden {isOnboarding
+      class="app-shell bg-background grid h-dvh min-w-0 cursor-default overflow-hidden select-none {isOnboarding
         ? 'grid-rows-[minmax(0,1fr)]'
         : 'grid-rows-[auto_minmax(0,1fr)_auto]'}"
       dir={$isRtl ? "rtl" : "ltr"}
