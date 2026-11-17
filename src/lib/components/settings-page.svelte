@@ -385,10 +385,15 @@
               <h3 class="settings-category mb-3">
                 {$_("settings.sections.pagination")}
               </h3>
-              <div class="space-y-3">
-                <PaginationSettings bind:localConfig />
-                <IdleShutdownSettings bind:localConfig />
-              </div>
+              <PaginationSettings bind:localConfig />
+            </div>
+
+            <div class="settings-separator border-border my-5 border-t"></div>
+            <div>
+              <h3 class="settings-category mb-3">
+                {$_("engines.daemonIdleTimeout")}
+              </h3>
+              <IdleShutdownSettings bind:localConfig />
             </div>
 
             <div class="settings-separator border-border my-5 border-t"></div>

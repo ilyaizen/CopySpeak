@@ -303,6 +303,11 @@ it("keeps streaming in Advanced while legacy experimental flags are inert and hi
   expect(
     streaming.compareDocumentPosition(preparation) & Node.DOCUMENT_POSITION_FOLLOWING
   ).toBeTruthy();
+  // Idle Shutdown is its own labelled group after Text Preparation.
+  const idleHeading = within(advanced).getByRole("heading", { name: "Idle Shutdown" });
+  expect(
+    preparation.compareDocumentPosition(idleHeading) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
   expect(within(advanced).getAllByRole("heading", { name: "Advanced" })).toHaveLength(1);
   expect(view.container.querySelector("#history")).toBeNull();
   expect(view.container.querySelector("#postProcess")).toBeNull();
