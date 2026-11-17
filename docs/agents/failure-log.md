@@ -74,7 +74,9 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - A "called from X" comment is not the call site — `local_daemon.rs` claimed prewarm ran "from the set_config path" while `set_config` never called it; grep the named call site before trusting the comment.
 - Local engine wrappers speak daemon protocol v2 (`READY 2`) and emit 16-bit signed LE PCM; `pcm-stream.ts` drops any other `bits_per_sample`.
 - Gate every streaming branch on `supports_streaming()` AND `runtime_ready()`; the static claim alone sends a cold CLI daemon's one-shot command down the stream branch.
-- Adding a `TtsEngine` variant: update the catalog test's engine list, entry count, and the caption-support list in `tts/catalog.rs` tests (`caption_support_matches_timing_adapters`, in catalog order), and the default-config profile count in `config/tests.rs` (`test_default_tts_config_uses_kokoro_profile`).
+- Adding a `TtsEngine` variant: update the catalog test's engine list, entry count, and the caption-support list in `tts/catalog.rs` tests (`caption_support_matches_timing_adapters`, in catalog order), and the default-config profile count in `config/tests.rs` (`test_default_tts_config_uses_the_os_default_profile`, which follows the OS default).
+- Seed a bundled profile for any engine that becomes the OS default: `complete_onboarding` finds an engine's profile by engine id and fails with "No profile configured" when none exists (tiny-voca default, 2026-11-17).
+- Pin each `TtsEngine` serde id to the frontend union and presets with `#[serde(rename)]`: plain lowercase turned `TinyVoca` into `tinyvoca`, which rejected the `tiny-voca` preset (found 2026-11-17, fixed before 0.3.1 shipped).
 - Add every new first-class local engine to `DAEMON_ENGINES` in `tts/local_daemon.rs`: `engine_kind()` matches the wrapper filename against that list, and prewarm, daemon streaming, `runtime_ready`, and `supports_streaming` all hang off it. Without the entry the app runs the engine one-shot forever (hit with tiny-voca, 2026-11-17); the catalog parity test `daemon_engines_match_the_first_class_local_catalog_entries` fails until both sides match.
 - Wrapper fixes reach an installed engine only when its installer re-runs (for wrapper-only fixes, `cp` the repo file into `engines/<e>/scripts/`), and shared wrapper functions must be backported to EVERY engine — `diff` the engine wrappers against each other when touching one.
 - Bundle each installer wrapper directory in `tauri.conf.json`; a lone `install-*.ps1` breaks app-driven installs in dev and release builds.
@@ -209,6 +211,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Grep components for `>Text<` and `label="Text"` after an i18n pass; literal UI text bypasses `$_` and passes locale parity.
 - Pass caught errors to `$_` values as `String(e)`; a catch binding is `unknown` and svelte-check rejects it.
 - Run `vp fmt src/lib/i18n/types.ts` after `node scripts/generate-i18n-types.js`; raw generator output reflows `NestedKeyOf` and adds trailing whitespace, so the diff picks up noise.
+- Write locale JSON with LF bytes: Python `Path.write_text` turns LF into CRLF on Windows, and git then warns on every locale file; use `open(path, "w", encoding="utf-8", newline="\n")`.
 - List only directories that hold locale JSON in `.vscode/settings.json` `i18n-ally.localesPaths`; i18n-ally warns "No locale files loaded" when any listed directory is empty, even if another one loads.
 
 ## Frontend checks
