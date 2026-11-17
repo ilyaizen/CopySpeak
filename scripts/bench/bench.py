@@ -47,7 +47,7 @@ except Exception:  # no NVIDIA driver, or package missing
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENGINE_ROOT = Path(
     os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
-) / "CopySpeech" / "engines"
+) / "CopySpeak" / "engines"
 CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 
 # Defaults mirror the app's default profiles and catalog
@@ -64,8 +64,9 @@ ENGINE_SPECS: dict[str, dict] = {
     "piper": {"wrapper": "scripts/copyspeech-piper.py", "voice": "en_US-amy-medium", "model": None},
     "kokoro": {"wrapper": "scripts/copyspeech-kokoro.py", "voice": "af_heart", "model": None},
     "pocket": {"wrapper": "scripts/copyspeech-pocket.py", "voice": "alba", "model": None},
+    "tiny-voca": {"wrapper": "scripts/copyspeech-tiny-voca.py", "voice": "M2", "model": None},
 }
-ENGINE_ORDER = ["kitten", "qwen", "piper", "kokoro", "pocket"]
+ENGINE_ORDER = ["kitten", "qwen", "piper", "kokoro", "pocket", "tiny-voca"]
 
 SENTENCE = (
     "The morning train arrived late, so Maya read forty pages of her novel "
