@@ -186,6 +186,10 @@ struct BrowserSession {
     sequence: AtomicU64,
     /// Sanitized text CopySpeech actually speaks.
     spoken_text: String,
+    /// The raw selection or copy in UTF-16 units — the coordinate space the
+    /// extension's word spans live in, scanned per tick for attached
+    /// punctuation. Encoded once, never rebuilt.
+    raw_text: Vec<u16>,
     /// Raw ↔ spoken word alignment; always present.
     source_map: TextAlignment,
     fragments: Mutex<Vec<FragmentEntry>>,
@@ -1025,6 +1029,7 @@ fn start_browser_reading(
         kind: SessionKind::Reading,
         sequence: AtomicU64::new(0),
         spoken_text,
+        raw_text: raw_text.encode_utf16().collect(),
         source_map,
         fragments: Mutex::new(fragments),
         active_fragment: AtomicUsize::new(NO_FRAGMENT),
@@ -1134,6 +1139,7 @@ pub fn begin_trigger(app: &AppHandle, trigger_id: &str, trigger: &SpeakTrigger, 
         kind: SessionKind::Trigger,
         sequence: AtomicU64::new(0),
         spoken_text: spoken_text.to_string(),
+        raw_text: raw_text.encode_utf16().collect(),
         source_map: align(raw_text, spoken_text),
         fragments: Mutex::new(Vec::new()),
         active_fragment: AtomicUsize::new(NO_FRAGMENT),
@@ -1427,7 +1433,13 @@ fn current_word(session: &BrowserSession) -> Option<(usize, usize)> {
     if page_end > entry.text_end {
         return None;
     }
-    session.source_map.source_span_utf16(page_start, page_end)
+    // The pill must cover the word together with the punctuation attached to
+    // it, not the bare alphanumeric run: a comma or quote outside the span is
+    // never painted by any word and visually disappears mid-glide.
+    session
+        .source_map
+        .source_span_utf16(page_start, page_end)
+        .map(|span| crate::text_map::widen_word_span(&session.raw_text, span))
 }
 
 fn send_accepted(pipe: &SafeHandle, request_id: &str, reading_id: &str) -> Result<(), String> {
@@ -1608,6 +1620,7 @@ mod tests {
             kind: SessionKind::Reading,
             sequence: AtomicU64::new(0),
             spoken_text: spoken.to_string(),
+            raw_text: raw.encode_utf16().collect(),
             source_map: align(raw, spoken),
             fragments: Mutex::new(entries),
             active_fragment: AtomicUsize::new(0),
@@ -1657,6 +1670,33 @@ mod tests {
         let (s, e) = current_word(&session).unwrap();
         assert_eq!(s, 16);
         assert_eq!(&raw[s..e], "buffalo");
+    }
+
+    /// The pill must cover a word together with the punctuation attached to
+    /// it: characters outside every projected span would never be painted.
+    #[test]
+    fn word_projection_includes_attached_punctuation() {
+        let raw = "Hello, world! Really.";
+        let spoken = raw;
+        let fragment = (spoken, 0, spoken.encode_utf16().count());
+        let session = |words: Vec<crate::tts::captions::WordTiming>| {
+            session_with(
+                raw,
+                spoken,
+                vec![fragment],
+                Some(CaptionAlignment {
+                    text: spoken.to_string(),
+                    words,
+                }),
+            )
+        };
+        // "Hello" rides with its comma: the gap between two words belongs to
+        // the word before them, matching the app's caption text model.
+        let (s, e) = current_word(&session(vec![word(0, 5)])).unwrap();
+        assert_eq!(&raw[s..e], "Hello,");
+        // "world!" keeps its exclamation mark but not the next word's gap.
+        let (s, e) = current_word(&session(vec![word(7, 12)])).unwrap();
+        assert_eq!(&raw[s..e], "world!");
     }
 
     /// Regression for the 2026-09-10 live failure: one `%` in the selection

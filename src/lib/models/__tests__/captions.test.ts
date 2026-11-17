@@ -109,3 +109,63 @@ it("keeps the sentence-end class in step with pagination.rs is_sentence_end", ()
   expect(tsEnds).not.toBeNull();
   expect(Array.from(tsEnds![1]).sort()).toEqual([...new Set(rustEnds)].sort());
 });
+
+/** xAI/estimation-style stream: one WordTiming per alphanumeric run, so the
+ * characters between runs (apostrophes, decimal points) carry no timing. */
+function perToken(text: string, msPerToken = 100) {
+  const spans: { start: number; end: number }[] = [];
+  for (const run of text.matchAll(/[\p{L}\p{N}]+/gu)) {
+    spans.push({ start: run.index, end: run.index + run[0].length });
+  }
+  return {
+    text,
+    words: spans.map((span, i) => ({
+      text_start: span.start,
+      text_end: span.end,
+      start_ms: i * msPerToken,
+      end_ms: (i + 1) * msPerToken
+    }))
+  };
+}
+
+it("highlights a contraction through its untimed apostrophe", () => {
+  // A per-token stream splits "don't" into "don" + "t". Requiring contiguous
+  // timing text dropped the whole word's timing and made the pill jump past
+  // it; a timing that starts inside the word's span belongs to the word.
+  const text = "don't stop; it's 3.14 approx.";
+  const words = buildCaptions(text, perToken(text));
+  expect(words.map((word) => word.text).join("")).toBe(text);
+  const contractionIndex = words.findIndex((word) => word.text.startsWith("don't"));
+  expect(contractionIndex).toBeGreaterThanOrEqual(0);
+  const contraction = words[contractionIndex];
+  expect(contraction.start).toBe(0);
+  expect(contraction.end).toBe(200);
+  expect(activeCaptionWord(words, 150)).toBe(contractionIndex);
+  // The next timed run ("stop") starts the caption word after it.
+  expect(activeCaptionWord(words, 250)).toBe(contractionIndex + 1);
+  const decimal = words.find((word) => word.text.startsWith("3.14"));
+  expect(decimal?.start).not.toBeNull();
+});
+
+it("maps every timed run onto the caption word containing it", () => {
+  for (const text of [
+    "Hello, world!",
+    "well-known fact, tested.",
+    "don't stop; it's 3.14 approx.",
+    "state of the art",
+    "2026 was warm; 2027 will be warmer."
+  ]) {
+    const alignment = perToken(text);
+    const words = buildCaptions(text, alignment);
+    for (const timing of alignment.words) {
+      const sample = (timing.start_ms + timing.end_ms) / 2;
+      const active = activeCaptionWord(words, sample);
+      const slice = text.slice(timing.text_start, timing.text_end);
+      expect(
+        active,
+        `no word active for ${slice} at ${sample}ms in ${text}`
+      ).toBeGreaterThanOrEqual(0);
+      expect(words[active].text.includes(slice)).toBe(true);
+    }
+  }
+});

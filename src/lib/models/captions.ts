@@ -71,12 +71,16 @@ export function buildCaptions(text: string, alignment?: CaptionAlignment | null)
         timingIndex++;
       const first = timings[timingIndex];
       let last = first;
-      let covered = first && first.text_start <= segment.index ? first.text_end : segment.index;
-      for (let i = timingIndex + 1; covered < end && i < timings.length; i++) {
-        if (timings[i].text_start > covered) break;
+      // Timings can leave characters inside a word untimed: per-token streams
+      // split "don't" into "don" + "t" around the apostrophe. A timing that
+      // starts inside this word's span belongs to it, so accumulate every
+      // overlapping entry; requiring contiguous timing text dropped the whole
+      // word's highlight and made the pill jump past it.
+      for (let i = timingIndex + 1; i < timings.length && timings[i].text_start < end; i++) {
         last = timings[i];
-        covered = last.text_end;
       }
+      const covered =
+        first && first.text_start <= segment.index ? (last ?? first).text_end : segment.index;
       const aligned =
         first &&
         last &&

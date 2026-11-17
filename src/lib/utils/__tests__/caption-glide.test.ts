@@ -271,4 +271,25 @@ describe("caption glide (KISS: mix-blend-mode: difference)", () => {
     expect(a.style.color).toBe("");
     expect(b.style.color).toBe("");
   });
+
+  it("a word on a new line snaps to that line and animates its width there", async () => {
+    const { host, a, b, mark } = fixture();
+    setRects(a, [rect(40, 20, 30, 12)]);
+    // The wrapped word starts on the next line.
+    setRects(b, [rect(80, 44, 20, 12)]);
+    const pump = manualRaf();
+    const glide = new CaptionGlider(host, true);
+    glide.paint(a);
+    glide.paint(b);
+    // No diagonal travel across the old line: the pill sits on the new line
+    // from the first frame and only its width morphs.
+    expect(mark().style.left).toBe("76px");
+    expect(mark().style.top).toBe("42px");
+    expect(mark().style.transform).not.toBe("");
+    for (let i = 0; i < 10; i += 1) await pump(30);
+    expect(mark().style.left).toBe("76px");
+    expect(mark().style.top).toBe("42px");
+    expect(mark().style.width).toBe("28px");
+    expect(mark().style.transform).toBe("");
+  });
 });

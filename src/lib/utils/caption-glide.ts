@@ -197,6 +197,12 @@ export class CaptionGlider {
     }
     const dx = from.left - toLeft;
     const dy = from.top - toTop;
+    // A word on another line animates on its own line: sliding the pill
+    // there would sweep it diagonally across the text between the two lines.
+    // The mark already sits at the target, so only the width morphs.
+    const crossesLines = Math.abs(dy) >= 1;
+    const travelX = crossesLines ? 0 : dx;
+    const travelY = crossesLines ? 0 : dy;
     const w0 = from.width;
     const w1 = toWidth;
     const tween: GlideTween = {
@@ -206,12 +212,12 @@ export class CaptionGlider {
       mark,
       view,
       target,
-      dx,
-      dy,
+      dx: travelX,
+      dy: travelY,
       w0,
       w1
     };
-    mark.style.transform = `translate(${dx}px,${dy}px)`;
+    mark.style.transform = `translate(${travelX}px,${travelY}px)`;
     mark.style.width = `${w0}px`;
     const frame = () => {
       if (this.tween !== tween) return;
@@ -225,7 +231,7 @@ export class CaptionGlider {
       tween.elapsed = Math.min(tween.elapsed + step, MARK_TRANSITION_MS);
       const t = tween.elapsed / MARK_TRANSITION_MS;
       const p = easeGlide(t);
-      mark.style.transform = `translate(${dx * (1 - p)}px,${dy * (1 - p)}px)`;
+      mark.style.transform = `translate(${tween.dx * (1 - p)}px,${tween.dy * (1 - p)}px)`;
       mark.style.width = `${w0 + (w1 - w0) * p}px`;
       if (t < 1) {
         tween.raf = view.requestAnimationFrame(frame);

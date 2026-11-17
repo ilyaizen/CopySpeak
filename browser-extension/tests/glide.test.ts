@@ -279,4 +279,27 @@ describe("caption glide", () => {
     expect(mark().style.left).toBe("76px");
     expect(mark().style.transform).toBe("");
   });
+
+  test("a word on a new line snaps to that line and animates its width there", async () => {
+    const { d, view, setRects, rect, mark } = fixture("<main><p>one two</p></main>");
+    const pump = manualRaf(view);
+    const glide = new CaptionGlide(d, true);
+    const first = wordRange(d, "p", 0, 3);
+    setRects(first, [rect(40, 20, 30, 12)]);
+    glide.paint(first, "0:3");
+    const second = wordRange(d, "p", 4, 7);
+    // The wrapped word starts on the next line.
+    setRects(second, [rect(80, 44, 20, 12)]);
+    glide.paint(second, "4:7");
+    // No diagonal travel across the old line: the pill sits on the new line
+    // from the first frame and only its width morphs.
+    expect(mark().style.left).toBe("76px");
+    expect(mark().style.top).toBe("42px");
+    expect(mark().style.transform).not.toBe("");
+    for (let i = 0; i < 10; i += 1) await pump(30);
+    expect(mark().style.left).toBe("76px");
+    expect(mark().style.top).toBe("42px");
+    expect(mark().style.width).toBe("28px");
+    expect(mark().style.transform).toBe("");
+  });
 });

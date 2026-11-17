@@ -199,6 +199,38 @@ fn is_space(unit: u16) -> bool {
     char::from_u32(unit as u32).is_some_and(char::is_whitespace)
 }
 
+/// Widen a projected word span over the non-speech characters attached to it,
+/// so the companion's pill covers the punctuation and symbols around the word
+/// instead of skipping or clipping them. Gaps follow the app's caption model:
+/// the characters between two words belong to the word before them, and the
+/// characters before the first word belong to that word. Whitespace separates
+/// the widened spans; a surrogate pair is never split.
+pub(crate) fn widen_word_span(raw: &[u16], span: Span) -> Span {
+    let alphanumeric = |unit: &u16| char::from_u32(*unit as u32).is_some_and(char::is_alphanumeric);
+    // Trailing gap: everything up to the next word's first character, minus
+    // the whitespace ahead of it.
+    let mut end = raw.len();
+    for (index, unit) in raw.iter().enumerate().skip(span.1) {
+        if alphanumeric(unit) {
+            end = index;
+            break;
+        }
+    }
+    while end > span.1 && is_space(raw[end - 1]) {
+        end -= 1;
+    }
+    // Leading characters belong to this word only when no word precedes it;
+    // every later gap is already covered by the word before it.
+    let mut start = span.0;
+    if raw[..span.0].iter().all(|unit| !alphanumeric(unit)) {
+        start = 0;
+        while start < end && is_space(raw[start]) {
+            start += 1;
+        }
+    }
+    (start, end)
+}
+
 #[cfg(test)]
 #[path = "text_map_tests.rs"]
 mod tests;
