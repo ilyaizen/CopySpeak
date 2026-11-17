@@ -62,6 +62,9 @@ pub struct OnboardingStatus {
     pub voice: String,
     /// True when the active engine needs no API key (Edge, local engines).
     pub keyless: bool,
+    /// Build OS (`windows`, `macos`, `linux`). Onboarding hides engine cards
+    /// whose installer ships for other systems only.
+    pub platform: String,
 }
 
 #[tauri::command]
@@ -86,6 +89,7 @@ pub fn get_onboarding_status(config: State<'_, Mutex<AppConfig>>) -> OnboardingS
         engine_name: engine_display_name(&engine),
         voice,
         keyless: engine_is_keyless(&engine),
+        platform: std::env::consts::OS.into(),
     }
 }
 
@@ -135,6 +139,7 @@ pub fn complete_onboarding(
             engine_name,
             voice,
             keyless,
+            platform: std::env::consts::OS.into(),
         }
     };
 

@@ -696,8 +696,6 @@
       "cleanup": "सफ़ाई विफल",
       "installer": "इंस्टॉलर नहीं चल सका",
       "switchEngine": "इंजन बदला नहीं जा सका",
-      "kokoroInstallFailed": "Kokoro इंस्टॉल विफल। कोई अन्य इंजन चुनें या इंस्टॉल फिर से आज़माएँ।",
-      "kokoroInstallStart": "Kokoro इंस्टॉल शुरू नहीं हो सका: {error}",
       "saveFailed": "सेटिंग्स सहेजना विफल रहा: {error}",
       "cleanupFailed": "सफ़ाई विफल रही: {error}",
       "hotkeyRegistration": "हॉटकी पंजीकरण विफल रहा: {error}",
@@ -707,7 +705,9 @@
       "voicesSave": "सहेजना विफल रहा: {error}",
       "effectsLoad": "प्रभाव लोड करना विफल रहा: {error}",
       "effectSave": "प्रभाव सहेजना विफल रहा: {error}",
-      "previewFailed": "पूर्वावलोकन विफल रहा: {error}"
+      "previewFailed": "पूर्वावलोकन विफल रहा: {error}",
+      "engineInstallFailed": "{engine} इंस्टॉल विफल रहा। कोई दूसरा इंजन चुनें या फिर से कोशिश करें।",
+      "engineInstallStart": "{engine} इंस्टॉल शुरू नहीं हो सका: {error}"
     },
     "info": {
       "httpEngineRemoved": "HTTP इंजन हटा दिया गया है। लोकल इंजन पर स्विच किया गया।"
@@ -724,35 +724,32 @@
     "noKeyNeeded": "API की ज़रूरत नहीं",
     "apiKeyInSettings": "सेटिंग्स में API की",
     "engines": {
+      "tinyvoca": {
+        "detail": "CPU पर तुरंत अंग्रेज़ी आवाज़ें। दो आवाज़ें, लगभग 45 MB, बिना key के।"
+      },
       "kokoro": {
         "detail": "प्राकृतिक आवाज़ें, पूरी तरह ऑफ़लाइन। एक बार का ~335 MB डाउनलोड।"
       },
       "edge": {
         "detail": "Microsoft की मुफ़्त आवाज़ें। इंस्टॉल करने की ज़रूरत नहीं, तुरंत काम करती हैं।"
       },
-      "cartesia": {
-        "detail": "तेज़ प्रीमियम आवाज़ें। मुफ़्त प्लान उपलब्ध है।"
-      },
-      "elevenlabs": {
-        "detail": "प्रीमियम बहुभाषी आवाज़ें। मुफ़्त प्लान उपलब्ध है।"
-      },
       "fish": {
         "detail": "अभिव्यंजक आवाज़ें, मुफ़्त मॉडल शामिल है।"
       }
     },
-    "kokoroReady": "Kokoro इंस्टॉल हो चुका है और तैयार है।",
-    "kokoroInstallHint": "डाउनलोड यहीं दिखता है। छोड़ना चाहेंगे? Edge-TTS तुरंत काम करता है।",
     "otherLocalEngines": "अन्य लोकल इंजन (Kitten, Qwen, Piper) बाद में इंजन पेज से इंस्टॉल किए जा सकते हैं।",
-    "installKokoroCta": "Kokoro इंस्टॉल करें और शुरू करें",
     "loading": "कॉन्फ़िगरेशन लोड हो रहा है...",
     "installing": "इंस्टॉल हो रहा है...",
-    "installingKokoro": "Kokoro इंस्टॉल हो रहा है… (~335 MB, एक बार)",
     "installFailed": "इंस्टॉल विफल रहा।",
     "installed": "इंस्टॉल हो गया",
     "complete": "शुरू करें",
     "installingUv": "uv इंस्टॉल हो रहा है…",
     "installUv": "uv इंस्टॉल करें",
-    "uvRequired": "लोकल इंजन uv से इंस्टॉल होते हैं, एक छोटा कमांड-लाइन इंस्टॉलर (~30 MB, एक बार)।"
+    "uvRequired": "लोकल इंजन uv से इंस्टॉल होते हैं, एक छोटा कमांड-लाइन इंस्टॉलर (~30 MB, एक बार)।",
+    "installingEngine": "{engine} इंस्टॉल हो रहा है (एक बार)",
+    "engineReady": "{engine} इंस्टॉल हो गया है और तैयार है।",
+    "engineInstallHint": "डाउनलोड यहीं दिखता है। छोड़ना चाहेंगे? Edge-TTS तुरंत काम करता है।",
+    "installEngineCta": "{engine} इंस्टॉल करें और शुरू करें"
   },
   "effects": {
     "title": "ऑडियो इफ़ेक्ट",

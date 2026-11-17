@@ -696,8 +696,6 @@
       "cleanup": "فشل التنظيف",
       "installer": "تعذّر تشغيل برنامج التثبيت",
       "switchEngine": "تعذّر تبديل المحرك",
-      "kokoroInstallFailed": "فشل تثبيت Kokoro. اختر محركاً آخر أو أعد محاولة التثبيت.",
-      "kokoroInstallStart": "تعذّر بدء تثبيت Kokoro: {error}",
       "saveFailed": "فشل حفظ الإعدادات: {error}",
       "cleanupFailed": "فشل التنظيف: {error}",
       "hotkeyRegistration": "فشل تسجيل الاختصار: {error}",
@@ -707,7 +705,9 @@
       "voicesSave": "فشل الحفظ: {error}",
       "effectsLoad": "فشل تحميل التأثيرات: {error}",
       "effectSave": "فشل حفظ التأثير: {error}",
-      "previewFailed": "فشلت المعاينة: {error}"
+      "previewFailed": "فشلت المعاينة: {error}",
+      "engineInstallFailed": "فشل تثبيت {engine}. اختر محركًا آخر أو أعد المحاولة.",
+      "engineInstallStart": "تعذّر بدء تثبيت {engine}: {error}"
     },
     "info": {
       "httpEngineRemoved": "تمت إزالة محرك HTTP. تم التبديل إلى المحرك المحلي."
@@ -724,35 +724,32 @@
     "noKeyNeeded": "بدون مفتاح API",
     "apiKeyInSettings": "مفتاح API في الإعدادات",
     "engines": {
+      "tinyvoca": {
+        "detail": "أصوات إنجليزية فورية على المعالج. صوتان، نحو 45 ميغابايت، بدون مفتاح."
+      },
       "kokoro": {
         "detail": "أصوات طبيعية تعمل دون اتصال بالكامل. تنزيل لمرة واحدة بحجم 335 ميغابايت تقريباً."
       },
       "edge": {
         "detail": "أصوات Microsoft مجانية. لا حاجة للتثبيت، وتعمل فوراً."
       },
-      "cartesia": {
-        "detail": "أصوات مميزة سريعة. تتوفر خطة مجانية."
-      },
-      "elevenlabs": {
-        "detail": "أصوات مميزة متعددة اللغات. تتوفر خطة مجانية."
-      },
       "fish": {
         "detail": "أصوات معبرة مع نموذج مجاني مضمّن."
       }
     },
-    "kokoroReady": "تم تثبيت Kokoro وهو جاهز.",
-    "kokoroInstallHint": "يظهر التنزيل هنا. تفضّل التخطي؟ Edge-TTS يعمل فوراً.",
     "otherLocalEngines": "يمكن تثبيت محركات محلية أخرى (Kitten وQwen وPiper) لاحقاً من صفحة المحركات.",
-    "installKokoroCta": "تثبيت Kokoro والبدء",
     "loading": "جارٍ تحميل التهيئة...",
     "installing": "جارٍ التثبيت...",
-    "installingKokoro": "جارٍ تثبيت Kokoro… (~335 ميغابايت، مرة واحدة)",
     "installFailed": "فشل التثبيت.",
     "installed": "تم التثبيت",
     "complete": "ابدأ",
     "installingUv": "جارٍ تثبيت uv…",
     "installUv": "تثبيت uv",
-    "uvRequired": "تُثبَّت المحركات المحلية عبر uv، وهو مثبِّت صغير لسطر الأوامر (نحو 30 ميغابايت، مرة واحدة)."
+    "uvRequired": "تُثبَّت المحركات المحلية عبر uv، وهو مثبِّت صغير لسطر الأوامر (نحو 30 ميغابايت، مرة واحدة).",
+    "installingEngine": "جارٍ تثبيت {engine} (مرة واحدة)",
+    "engineReady": "تم تثبيت {engine} وهو جاهز.",
+    "engineInstallHint": "يظهر التنزيل هنا. تفضّل التخطي؟ Edge-TTS يعمل فوراً.",
+    "installEngineCta": "ثبّت {engine} وابدأ"
   },
   "effects": {
     "title": "المؤثرات الصوتية",

@@ -696,8 +696,6 @@
       "cleanup": "Bereinigung fehlgeschlagen",
       "installer": "Installer konnte nicht ausgeführt werden",
       "switchEngine": "Engine konnte nicht gewechselt werden",
-      "kokoroInstallFailed": "Kokoro-Installation fehlgeschlagen. Wählen Sie eine andere Engine oder wiederholen Sie die Installation.",
-      "kokoroInstallStart": "Kokoro-Installation konnte nicht gestartet werden: {error}",
       "saveFailed": "Einstellungen konnten nicht gespeichert werden: {error}",
       "cleanupFailed": "Bereinigung fehlgeschlagen: {error}",
       "hotkeyRegistration": "Registrierung des Tastenkürzels fehlgeschlagen: {error}",
@@ -707,7 +705,9 @@
       "voicesSave": "Speichern fehlgeschlagen: {error}",
       "effectsLoad": "Effekte konnten nicht geladen werden: {error}",
       "effectSave": "Effekt konnte nicht gespeichert werden: {error}",
-      "previewFailed": "Vorschau fehlgeschlagen: {error}"
+      "previewFailed": "Vorschau fehlgeschlagen: {error}",
+      "engineInstallFailed": "Installation von {engine} fehlgeschlagen. Wähle einen anderen Motor oder wiederhole die Installation.",
+      "engineInstallStart": "Installation von {engine} konnte nicht starten: {error}"
     },
     "info": {
       "httpEngineRemoved": "Die HTTP-Engine wurde entfernt. Zur lokalen Engine gewechselt."
@@ -724,35 +724,32 @@
     "noKeyNeeded": "Kein API-Schlüssel nötig",
     "apiKeyInSettings": "API-Schlüssel in den Einstellungen",
     "engines": {
+      "tinyvoca": {
+        "detail": "Sofortige englische Stimmen auf der CPU. Zwei Stimmen, etwa 45 MB, kein Schlüssel."
+      },
       "kokoro": {
         "detail": "Natürliche Stimmen, komplett offline. Einmaliger Download von ca. 335 MB."
       },
       "edge": {
         "detail": "Kostenlose Microsoft-Stimmen. Keine Installation, sofort einsatzbereit."
       },
-      "cartesia": {
-        "detail": "Schnelle Premium-Stimmen. Kostenloser Tarif verfügbar."
-      },
-      "elevenlabs": {
-        "detail": "Premium-Stimmen in vielen Sprachen. Kostenloser Tarif verfügbar."
-      },
       "fish": {
         "detail": "Ausdrucksstarke Stimmen, kostenloses Modell inklusive."
       }
     },
-    "kokoroReady": "Kokoro ist installiert und bereit.",
-    "kokoroInstallHint": "Der Download läuft hier. Lieber überspringen? Edge-TTS ist sofort einsatzbereit.",
     "otherLocalEngines": "Weitere lokale Engines (Kitten, Qwen, Piper) lassen sich später auf der Engines-Seite installieren.",
-    "installKokoroCta": "Kokoro installieren und loslegen",
     "loading": "Konfiguration wird geladen...",
     "installing": "Wird installiert...",
-    "installingKokoro": "Kokoro wird installiert… (~335 MB, einmalig)",
     "installFailed": "Installation fehlgeschlagen.",
     "installed": "Installiert",
     "complete": "Loslegen",
     "installingUv": "uv wird installiert…",
     "installUv": "uv installieren",
-    "uvRequired": "Lokale Engines werden über uv installiert, einem kleinen Befehlszeilen-Tool (~30 MB, einmalig)."
+    "uvRequired": "Lokale Engines werden über uv installiert, einem kleinen Befehlszeilen-Tool (~30 MB, einmalig).",
+    "installingEngine": "{engine} wird installiert (einmalig)",
+    "engineReady": "{engine} ist installiert und bereit.",
+    "engineInstallHint": "Der Download läuft hier. Lieber überspringen? Edge-TTS ist sofort einsatzbereit.",
+    "installEngineCta": "{engine} installieren und loslegen"
   },
   "effects": {
     "title": "Audioeffekte",

@@ -703,8 +703,6 @@
       "cleanup": "Cleanup failed",
       "installer": "Failed to run installer",
       "switchEngine": "Failed to switch engine",
-      "kokoroInstallFailed": "Kokoro install failed. Pick another engine or retry the install.",
-      "kokoroInstallStart": "Kokoro install failed to start: {error}",
       "saveFailed": "Failed to save settings: {error}",
       "cleanupFailed": "Cleanup failed: {error}",
       "hotkeyRegistration": "Hotkey registration failed: {error}",
@@ -714,7 +712,9 @@
       "voicesSave": "Failed to save: {error}",
       "effectsLoad": "Failed to load effects: {error}",
       "effectSave": "Failed to save effect: {error}",
-      "previewFailed": "Preview failed: {error}"
+      "previewFailed": "Preview failed: {error}",
+      "engineInstallFailed": "{engine} install failed. Pick another engine or retry the install.",
+      "engineInstallStart": "{engine} install failed to start: {error}"
     },
     "info": {
       "httpEngineRemoved": "HTTP engine has been removed. Switched to Local engine."
@@ -731,35 +731,32 @@
     "noKeyNeeded": "No key needed",
     "apiKeyInSettings": "API key in Settings",
     "engines": {
+      "tinyvoca": {
+        "detail": "Instant English voices on your CPU. Two voices, about 45 MB, no key."
+      },
       "kokoro": {
         "detail": "Natural voices, fully offline. One-time ~335 MB download."
       },
       "edge": {
         "detail": "Free Microsoft voices. Nothing to install, works instantly."
       },
-      "cartesia": {
-        "detail": "Fast premium voices. Free tier available."
-      },
-      "elevenlabs": {
-        "detail": "Premium multilingual voices. Free tier available."
-      },
       "fish": {
         "detail": "Expressive voices with a free model included."
       }
     },
-    "kokoroReady": "Kokoro is installed and ready.",
-    "kokoroInstallHint": "The download streams here. Prefer to skip it? Edge-TTS works instantly.",
     "otherLocalEngines": "More local engines (Kitten, Qwen, Piper) can be installed later from the Engines page.",
-    "installKokoroCta": "Install Kokoro & Get Started",
     "loading": "Loading configuration...",
     "installing": "Installing...",
-    "installingKokoro": "Installing Kokoro… (~335 MB, one time)",
     "installFailed": "Install failed.",
     "installed": "Installed",
     "complete": "Get Started",
     "installingUv": "Installing uv…",
     "installUv": "Install uv",
-    "uvRequired": "Local engines install through uv, a small command-line installer (~30 MB, one time)."
+    "uvRequired": "Local engines install through uv, a small command-line installer (~30 MB, one time).",
+    "installingEngine": "Installing {engine} (one time)",
+    "engineReady": "{engine} is installed and ready.",
+    "engineInstallHint": "The download streams here. Prefer to skip it? Edge-TTS works instantly.",
+    "installEngineCta": "Install {engine} & Get Started"
   },
   "effects": {
     "title": "Audio Effects",

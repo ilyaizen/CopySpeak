@@ -696,8 +696,6 @@
       "cleanup": "清理失败",
       "installer": "无法运行安装程序",
       "switchEngine": "无法切换引擎",
-      "kokoroInstallFailed": "Kokoro 安装失败。请选择其他引擎，或重试安装。",
-      "kokoroInstallStart": "Kokoro 安装无法启动：{error}",
       "saveFailed": "保存设置失败：{error}",
       "cleanupFailed": "清理失败：{error}",
       "hotkeyRegistration": "快捷键注册失败：{error}",
@@ -707,7 +705,9 @@
       "voicesSave": "保存失败：{error}",
       "effectsLoad": "加载效果失败：{error}",
       "effectSave": "保存效果失败：{error}",
-      "previewFailed": "预览失败：{error}"
+      "previewFailed": "预览失败：{error}",
+      "engineInstallFailed": "{engine} 安装失败。请选择其他引擎或重试安装。",
+      "engineInstallStart": "{engine} 无法开始安装：{error}"
     },
     "info": {
       "httpEngineRemoved": "HTTP 引擎已移除，已切换到本地引擎。"
@@ -724,35 +724,32 @@
     "noKeyNeeded": "无需 API 密钥",
     "apiKeyInSettings": "在设置中填写 API 密钥",
     "engines": {
+      "tinyvoca": {
+        "detail": "在 CPU 上即时生成英文语音。两种声音，约 45 MB，无需密钥。"
+      },
       "kokoro": {
         "detail": "自然语音，完全离线。一次性下载约 335 MB。"
       },
       "edge": {
         "detail": "免费的 Microsoft 语音。无需安装，立即可用。"
       },
-      "cartesia": {
-        "detail": "快速的高级语音。提供免费额度。"
-      },
-      "elevenlabs": {
-        "detail": "高级多语言语音。提供免费额度。"
-      },
       "fish": {
         "detail": "富有表现力的语音，内置免费模型。"
       }
     },
-    "kokoroReady": "Kokoro 已安装并准备就绪。",
-    "kokoroInstallHint": "下载进度会在这里显示。想跳过？Edge-TTS 立即可用。",
     "otherLocalEngines": "更多本地引擎（Kitten、Qwen、Piper）可稍后在引擎页面安装。",
-    "installKokoroCta": "安装 Kokoro 并开始",
     "loading": "正在加载配置...",
     "installing": "正在安装...",
-    "installingKokoro": "正在安装 Kokoro…（约 335 MB，仅需一次）",
     "installFailed": "安装失败。",
     "installed": "已安装",
     "complete": "开始使用",
     "installingUv": "正在安装 uv…",
     "installUv": "安装 uv",
-    "uvRequired": "本地引擎通过 uv 安装：一个小型命令行安装器（约 30 MB，仅需一次）。"
+    "uvRequired": "本地引擎通过 uv 安装：一个小型命令行安装器（约 30 MB，仅需一次）。",
+    "installingEngine": "正在安装 {engine}（仅一次）",
+    "engineReady": "{engine} 已安装并就绪。",
+    "engineInstallHint": "下载进度会在这里显示。想跳过？Edge-TTS 立即可用。",
+    "installEngineCta": "安装 {engine} 并开始使用"
   },
   "effects": {
     "title": "音频效果",

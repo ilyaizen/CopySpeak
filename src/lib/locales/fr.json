@@ -696,8 +696,6 @@
       "cleanup": "Échec du nettoyage",
       "installer": "Impossible de lancer l'installateur",
       "switchEngine": "Impossible de changer de moteur",
-      "kokoroInstallFailed": "Échec de l'installation de Kokoro : choisissez un autre moteur ou relancez l'installation.",
-      "kokoroInstallStart": "Impossible de démarrer l'installation de Kokoro : {error}",
       "saveFailed": "Échec de l'enregistrement des paramètres : {error}",
       "cleanupFailed": "Échec du nettoyage : {error}",
       "hotkeyRegistration": "Échec de l'enregistrement du raccourci : {error}",
@@ -707,7 +705,9 @@
       "voicesSave": "Échec de l'enregistrement : {error}",
       "effectsLoad": "Échec du chargement des effets : {error}",
       "effectSave": "Échec de l'enregistrement de l'effet : {error}",
-      "previewFailed": "Échec de l'aperçu : {error}"
+      "previewFailed": "Échec de l'aperçu : {error}",
+      "engineInstallFailed": "Échec de l'installation de {engine}. Choisissez un autre moteur ou réessayez.",
+      "engineInstallStart": "L'installation de {engine} n'a pas pu démarrer : {error}"
     },
     "info": {
       "httpEngineRemoved": "Le moteur HTTP a été supprimé. Passage au moteur local."
@@ -724,35 +724,32 @@
     "noKeyNeeded": "Sans clé API",
     "apiKeyInSettings": "Clé API dans les Paramètres",
     "engines": {
+      "tinyvoca": {
+        "detail": "Voix anglaises instantanées sur votre processeur. Deux voix, environ 45 Mo, sans clé."
+      },
       "kokoro": {
         "detail": "Voix naturelles 100 % hors ligne. Téléchargement unique d'environ 335 Mo."
       },
       "edge": {
         "detail": "Voix Microsoft gratuites. Rien à installer, fonctionne immédiatement."
       },
-      "cartesia": {
-        "detail": "Voix premium rapides. Offre gratuite disponible."
-      },
-      "elevenlabs": {
-        "detail": "Voix premium multilingues. Offre gratuite disponible."
-      },
       "fish": {
         "detail": "Voix expressives avec modèle gratuit inclus."
       }
     },
-    "kokoroReady": "Kokoro est installé et prêt.",
-    "kokoroInstallHint": "Le téléchargement s'affiche ici. Vous préférez le sauter ? Edge-TTS fonctionne immédiatement.",
     "otherLocalEngines": "D'autres moteurs locaux (Kitten, Qwen, Piper) s'installent plus tard depuis la page des moteurs.",
-    "installKokoroCta": "Installer Kokoro et commencer",
     "loading": "Chargement de la configuration...",
     "installing": "Installation...",
-    "installingKokoro": "Installation de Kokoro… (~335 Mo, une seule fois)",
     "installFailed": "Échec de l'installation.",
     "installed": "Installé",
     "complete": "Commencer",
     "installingUv": "Installation d’uv…",
     "installUv": "Installer uv",
-    "uvRequired": "Les moteurs locaux s’installent via uv, un petit installateur en ligne de commande (~30 Mo, une seule fois)."
+    "uvRequired": "Les moteurs locaux s’installent via uv, un petit installateur en ligne de commande (~30 Mo, une seule fois).",
+    "installingEngine": "Installation de {engine} (une seule fois)",
+    "engineReady": "{engine} est installé et prêt.",
+    "engineInstallHint": "Le téléchargement s'affiche ici. Vous préférez le sauter ? Edge-TTS fonctionne immédiatement.",
+    "installEngineCta": "Installer {engine} et commencer"
   },
   "effects": {
     "title": "Effets audio",

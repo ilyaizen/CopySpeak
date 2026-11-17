@@ -17,14 +17,14 @@
     RotateCw
   } from "@lucide/svelte";
   import { installStore } from "#lib/stores/install-store.svelte";
-  import { ENGINE_CHOICES } from "#lib/onboarding/engine-choices.js";
+  import { recommendedEngineId, visibleEngineChoices } from "#lib/onboarding/engine-choices.js";
 
   // Issue #43 structural fix: onboarding never calls the full `get_config`
   // (its invoke() promise hangs on fresh installs). Everything here runs
   // through tiny dedicated commands: get_onboarding_status / complete_onboarding.
   //
-  // Kokoro is the fresh-install default (schema v6): keyless offline voices.
-  // The one-time ~335 MB install streams right here via the same
+  // The fresh-install default depends on the OS (see recommendedEngineId).
+  // Local engines stream their one-time install right here via the same
   // `install-progress` pipeline the Engines page uses (installStore is the
   // single owner of that listener), so "install from onboarding" and "install
   // from Settings" can never fight over progress state.
@@ -36,26 +36,16 @@
     engine_name: string;
     voice: string;
     keyless: boolean;
+    platform: string;
   };
 
-  // Shared-model engine: one download covers every voice. Mirrors the default
-  // set the installer records in manifest.json (Settings path passes the same).
-  const KOKORO_VOICES = [
-    "af_heart",
-    "af_bella",
-    "af_nicole",
-    "af_sarah",
-    "am_adam",
-    "am_michael",
-    "bf_emma",
-    "bm_george"
-  ];
-
-  let selectedEngine = $state("kokoro");
+  let selectedEngine = $state("");
+  let platform = $state("");
   let status = $state<OnboardingStatus | null>(null);
   let isLoading = $state(true);
   let isSaving = $state(false);
-  let kokoroInstalled = $state<boolean | null>(null);
+  // Install state per installer engine id. A missing key means not probed yet.
+  let installed = $state<Record<string, boolean>>({});
   // uv is the prerequisite for every local installer (install-uv.ps1) and is
   // no longer offered on the Engines page, so onboarding owns the one-time
   // install. Probed on mount; install streams via the shared installStore.
@@ -65,42 +55,55 @@
   let settledHandled = $state(false);
   let launchFailed = $state(false);
 
-  const kokoroRun = $derived(installStore.run("kokoro"));
-  const isInstalling = $derived(kokoroRun?.running ?? false);
+  const choices = $derived(visibleEngineChoices(platform));
+  const recommendedId = $derived(recommendedEngineId(platform));
+  const selectedChoice = $derived(choices.find((choice) => choice.id === selectedEngine));
+  const installer = $derived(selectedChoice?.installer ?? null);
+  const installerName = $derived(selectedChoice?.name ?? "");
+  const installRun = $derived(installer ? installStore.run(installer) : undefined);
+  const isInstalling = $derived(installRun?.running ?? false);
   const uvRun = $derived(installStore.run("uv"));
   const isInstallingUv = $derived(uvRun?.running ?? false);
-  const needsKokoro = $derived(selectedEngine === "kokoro" && !kokoroInstalled);
-  // Only the installable local engine needs uv; keyless/cloud choices do not.
-  const uvMissing = $derived(needsKokoro && uvAvailable === false);
+  // undefined while the probe runs; false when the local download is still missing.
+  const isInstalled = $derived(installer ? installed[installer] : undefined);
+  const needsInstall = $derived(installer !== null && isInstalled === false);
+  // Only a local installer needs uv; keyless/cloud choices do not.
+  const uvMissing = $derived(needsInstall && uvAvailable === false);
 
-  async function probeKokoro() {
+  async function probeInstalled(engine: string) {
     try {
-      const s = await invoke<{ installed: boolean }>("engine_status", { engine: "kokoro" });
-      kokoroInstalled = s.installed;
+      const s = await invoke<{ installed: boolean }>("engine_status", { engine });
+      installed[engine] = s.installed;
     } catch {
-      kokoroInstalled = false;
+      installed[engine] = false;
     }
   }
 
   onMount(async () => {
     try {
       status = await invoke<OnboardingStatus>("get_onboarding_status");
-      if (status.has_config) selectedEngine = status.engine;
+      platform = status.platform;
+      selectedEngine = status.has_config ? status.engine : recommendedEngineId(status.platform);
     } catch (e) {
-      // Even if this fails, defaults are safe: Kokoro is the fresh-install
-      // default in Rust, and completing with any offered engine is valid.
+      // Without status the page still works: platform stays unknown, so only
+      // the cross-platform cards show and Kokoro is recommended.
       console.error("Failed to load onboarding status:", e);
       status = {
         has_config: false,
         engine: "kokoro",
         engine_name: "Kokoro",
         voice: "af_heart",
-        keyless: true
+        keyless: true,
+        platform: ""
       };
+      platform = "";
+      selectedEngine = recommendedEngineId("");
     } finally {
       isLoading = false;
     }
-    void probeKokoro();
+    for (const choice of visibleEngineChoices(platform)) {
+      if (choice.installer) void probeInstalled(choice.installer);
+    }
     void checkUv();
   });
 
@@ -113,21 +116,21 @@
     }
   }
 
-  // A settled kokoro install run either completes onboarding (exit 0) or
+  // A settled local install run either completes onboarding (exit 0) or
   // surfaces the failure and stays here for a retry / different choice.
   $effect(() => {
-    const run = kokoroRun;
+    const run = installRun;
     if (!run || run.running || settledHandled) return;
     settledHandled = true;
     if (run.exitCode === 0) {
-      void finish("kokoro");
+      void finish(selectedEngine);
     } else if (!launchFailed) {
-      toast.error($_("toast.error.kokoroInstallFailed"));
+      toast.error($_("toast.error.engineInstallFailed", { values: { engine: installerName } }));
     }
   });
 
   // A settled uv install re-probes availability; the CTA then flips back to
-  // the Kokoro install.
+  // the engine install.
   $effect(() => {
     const run = uvRun;
     if (!run || run.running || run.exitCode !== 0) return;
@@ -148,15 +151,25 @@
     }
   }
 
-  async function startKokoroInstall() {
+  async function startEngineInstall() {
+    const engine = installer;
+    if (!selectedChoice || !engine) return;
     launchFailed = false;
     settledHandled = false;
-    await installStore.start("kokoro", KOKORO_VOICES);
+    await installStore.start(engine, selectedChoice.installVoices);
     try {
-      await invoke("install_engine", { engine: "kokoro", voice: KOKORO_VOICES, cuda: false });
+      await invoke("install_engine", {
+        engine,
+        voice: selectedChoice.installVoices,
+        cuda: false
+      });
     } catch (e) {
       launchFailed = true;
-      toast.error($_("toast.error.kokoroInstallStart", { values: { error: String(e) } }));
+      toast.error(
+        $_("toast.error.engineInstallStart", {
+          values: { engine: selectedChoice.name, error: String(e) }
+        })
+      );
     }
   }
 
@@ -173,14 +186,14 @@
   function primaryAction() {
     if (uvMissing) {
       void startUvInstall();
-    } else if (selectedEngine === "kokoro" && !kokoroInstalled) {
-      void startKokoroInstall();
+    } else if (needsInstall) {
+      void startEngineInstall();
     } else {
       void finish(selectedEngine);
     }
   }
 
-  let lastLogLine = $derived(kokoroRun?.lines[kokoroRun.lines.length - 1] ?? "");
+  let lastLogLine = $derived(installRun?.lines[(installRun?.lines.length ?? 0) - 1] ?? "");
   let uvLastLogLine = $derived(uvRun?.lines[uvRun.lines.length - 1] ?? "");
 </script>
 
@@ -217,7 +230,7 @@
           </div>
 
           <div class="mt-4 grid gap-3">
-            {#each ENGINE_CHOICES as choice (choice.id)}
+            {#each choices as choice (choice.id)}
               <button
                 type="button"
                 onclick={() => (selectedEngine = choice.id)}
@@ -228,7 +241,7 @@
                 <div class="flex items-center justify-between gap-3">
                   <div class="flex flex-wrap items-center gap-2">
                     <span class="font-medium">{choice.name}</span>
-                    {#if choice.recommended}
+                    {#if choice.id === recommendedId}
                       <span
                         class="bg-primary/10 text-primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
                       >
@@ -236,7 +249,7 @@
                         {$_("onboarding.recommended")}
                       </span>
                     {/if}
-                    {#if choice.installable && kokoroInstalled}
+                    {#if choice.installer && installed[choice.installer]}
                       <span
                         class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400"
                       >
@@ -265,7 +278,7 @@
           </div>
 
           {#if uvMissing}
-            <!-- uv prerequisite: install it first; the CTA flips back to Kokoro after. -->
+            <!-- uv prerequisite: install it first; the CTA flips back to the engine install after. -->
             <div class="border-border bg-muted/30 rounded-lg border p-3">
               {#if isInstallingUv}
                 <div class="flex items-start gap-2">
@@ -297,14 +310,16 @@
                 <p class="text-muted-foreground text-sm">{$_("onboarding.uvRequired")}</p>
               {/if}
             </div>
-          {:else if selectedEngine === "kokoro"}
-            <!-- Kokoro inline install status: stream here, or show the green verdict. -->
+          {:else if installer}
+            <!-- Local engine install status: stream here, or show the green verdict. -->
             <div class="border-border bg-muted/30 rounded-lg border p-3">
               {#if isInstalling}
                 <div class="flex items-start gap-2">
                   <Loader2 size={16} class="text-muted-foreground mt-0.5 animate-spin" />
                   <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium">{$_("onboarding.installingKokoro")}</p>
+                    <p class="text-sm font-medium">
+                      {$_("onboarding.installingEngine", { values: { engine: installerName } })}
+                    </p>
                     {#if lastLogLine}
                       <p
                         class="text-muted-foreground mt-1 truncate font-mono text-[11px]"
@@ -315,27 +330,27 @@
                     {/if}
                   </div>
                 </div>
-              {:else if kokoroRun && !kokoroRun.running && kokoroRun.exitCode !== 0}
+              {:else if installRun && !installRun.running && installRun.exitCode !== 0}
                 <div class="flex items-start justify-between gap-2">
                   <div class="flex items-start gap-2">
                     <AlertCircle size={16} class="text-destructive mt-0.5" />
                     <p class="text-destructive text-sm">{$_("onboarding.installFailed")}</p>
                   </div>
-                  <Button variant="outline" size="sm" onclick={startKokoroInstall}>
+                  <Button variant="outline" size="sm" onclick={startEngineInstall}>
                     <RotateCw size={12} class="me-1" />
                     {$_("common.tryAgain")}
                   </Button>
                 </div>
-              {:else if kokoroInstalled}
+              {:else if isInstalled}
                 <p
                   class="inline-flex items-center gap-1 text-sm text-emerald-600 dark:text-emerald-400"
                 >
                   <Check size={14} />
-                  {$_("onboarding.kokoroReady")}
+                  {$_("onboarding.engineReady", { values: { engine: installerName } })}
                 </p>
               {:else}
                 <p class="text-muted-foreground text-sm">
-                  {$_("onboarding.kokoroInstallHint")}
+                  {$_("onboarding.engineInstallHint")}
                 </p>
               {/if}
             </div>
@@ -354,7 +369,7 @@
             disabled={isSaving ||
               isInstalling ||
               isInstallingUv ||
-              (selectedEngine === "kokoro" && kokoroInstalled === null)}
+              (installer !== null && isInstalled === undefined)}
             class="w-full"
           >
             {#if isSaving}
@@ -368,9 +383,9 @@
             {:else if uvMissing}
               <Download size={14} class="me-2" />
               {$_("onboarding.installUv")}
-            {:else if selectedEngine === "kokoro" && !kokoroInstalled}
+            {:else if needsInstall}
               <Download size={14} class="me-2" />
-              {$_("onboarding.installKokoroCta")}
+              {$_("onboarding.installEngineCta", { values: { engine: installerName } })}
             {:else}
               {$_("onboarding.complete")}
             {/if}

@@ -9,7 +9,7 @@ import he from "#lib/locales/he.json";
 import hi from "#lib/locales/hi.json";
 import ru from "#lib/locales/ru.json";
 import zh from "#lib/locales/zh.json";
-import { ENGINE_CHOICES } from "../engine-choices.js";
+import { ENGINE_CHOICES, recommendedEngineId, visibleEngineChoices } from "../engine-choices.js";
 
 type Catalog = { [key: string]: Catalog | string };
 
@@ -69,26 +69,50 @@ function leafPaths(catalog: Catalog, prefix: string): string[] {
 const PAGE_TOAST_KEYS = [
   "toast.success.welcome",
   "toast.error.saveFailed",
-  "toast.error.kokoroInstallFailed",
-  "toast.error.kokoroInstallStart"
+  "toast.error.engineInstallFailed",
+  "toast.error.engineInstallStart"
 ];
 
-it("offers the five engines in display order", () => {
+it("offers four engines in display order, tiny-voca first", () => {
   expect(ENGINE_CHOICES.map((choice) => choice.id)).toEqual([
+    "tiny-voca",
     "kokoro",
     "edge",
-    "cartesia",
-    "elevenlabs",
     "fish"
   ]);
 });
 
-it("marks exactly Kokoro, ElevenLabs and Fish as recommended", () => {
-  expect(ENGINE_CHOICES.filter((choice) => choice.recommended).map((choice) => choice.id)).toEqual([
+it("shows tiny-voca only on Windows, where its installer ships", () => {
+  expect(visibleEngineChoices("windows").map((choice) => choice.id)).toEqual([
+    "tiny-voca",
     "kokoro",
-    "elevenlabs",
+    "edge",
     "fish"
   ]);
+  expect(visibleEngineChoices("macos").map((choice) => choice.id)).toEqual([
+    "kokoro",
+    "edge",
+    "fish"
+  ]);
+  expect(visibleEngineChoices("linux").map((choice) => choice.id)).toEqual([
+    "kokoro",
+    "edge",
+    "fish"
+  ]);
+});
+
+it("recommends tiny-voca on Windows and Kokoro elsewhere", () => {
+  expect(recommendedEngineId("windows")).toBe("tiny-voca");
+  expect(recommendedEngineId("macos")).toBe("kokoro");
+  expect(recommendedEngineId("linux")).toBe("kokoro");
+});
+
+it("gives only the local engines an installer, with tiny-voca voices M2 first", () => {
+  const installable = ENGINE_CHOICES.filter((choice) => choice.installer !== null);
+  expect(installable.map((choice) => choice.id)).toEqual(["tiny-voca", "kokoro"]);
+  const tinyVoca = ENGINE_CHOICES[0];
+  expect(tinyVoca.installer).toBe("tiny-voca");
+  expect(tinyVoca.installVoices[0]).toBe("M2");
 });
 
 it("keeps card copy short and free of dashes", () => {
