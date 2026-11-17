@@ -218,6 +218,8 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - After `git checkout` of a watched source file, `touch` it and re-fetch the module from the dev server: the Vite watcher can miss the checkout write and keep serving the pre-revert transform, so the app paints deleted code.
 - After moving a test into `__tests__/`, rewrite its `./` and `../` specifiers, `vi.mock` targets and dynamic `import()` paths from the old folder; `import.meta.dirname` paths that point at the source folder need one more `..`.
 - Format only the moved file with `vp fmt <file>` after editing a test; a long line that fails `vp check` is not a reason to loosen the check.
+- Bump `vite`, `vitest` and the `overrides` pins together with `vite-plus`: `vite-plus` 1.7.0 needs `vite-plus-core@8.3.8000` and `vitest@5.1.0`, and mismatched pins fail `svelte-check` on `vitest.config.ts` with "Excessive stack depth" (types only, tests still run).
+- The extension tests resolve `jsdom` from the root `node_modules`: jsdom 31 serializes `translate(-40px,0px)` as `translate(-40px)`. Same transform; expect that string in `browser-extension/tests/glide.test.ts`.
 
 ## Rust tests
 

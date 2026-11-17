@@ -11,6 +11,6 @@
     "test:browser": "playwright test --config playwright.config.ts"
   },
   "devDependencies": {
-    "@types/chrome": "^0.1.0"
+    "@types/chrome": "^0.3.7"
   }
 }

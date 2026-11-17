@@ -114,7 +114,7 @@ describe("caption glide", () => {
     setRects(second, [rect(80, 20, 20, 12)]);
     glide.paint(second, "4:7");
     // The tween starts synchronously from the previous pill position.
-    expect(mark().style.transform).toBe("translate(-40px,0px)");
+    expect(mark().style.transform).toBe("translate(-40px)");
     expect(mark().style.width).toBe("38px");
     await pump(0);
     // One rendered frame later the swift curve has taken most of the way.
@@ -183,7 +183,7 @@ describe("caption glide", () => {
     const second = wordRange(d, "p", 4, 7);
     setRects(second, [rect(80, 20, 20, 12)]);
     glide.paint(second, "4:7");
-    expect(mark().style.transform).toBe("translate(-40px,0px)");
+    expect(mark().style.transform).toBe("translate(-40px)");
   });
 
   test("a wordless frame mid-glide leaves the tween to settle", async () => {
@@ -241,7 +241,7 @@ describe("caption glide", () => {
     // A busy page delivers the first rendered frame late; the glide must
     // still start from its beginning, not land at the end position.
     await pump(130);
-    expect(mark().style.transform).toBe("translate(-40px,0px)");
+    expect(mark().style.transform).toBe("translate(-40px)");
   });
 
   test("late frames stretch the glide instead of collapsing it", async () => {
