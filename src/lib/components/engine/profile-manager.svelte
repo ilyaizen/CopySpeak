@@ -737,7 +737,7 @@
     <div class="ms-auto flex flex-wrap justify-end gap-1.5 rtl:justify-start">
       <DropdownMenu>
         <DropdownMenuTrigger
-          class="border-input bg-background hover:bg-accent inline-flex h-8 items-center justify-center gap-1.5 rounded-md border px-3 text-sm font-medium whitespace-nowrap"
+          class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-8 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium whitespace-nowrap shadow-xs"
           title={$_("profiles.newFromTemplate")}
         >
           <Plus size={14} />
