@@ -298,27 +298,43 @@ mod tests {
     // ========== TTS Profile / Migration Tests ==========
 
     #[test]
-    fn test_default_tts_config_uses_kokoro_profile() {
+    fn test_default_tts_config_uses_the_os_default_profile() {
         let tts = TtsConfig::default();
-        assert_eq!(TtsEngine::default(), TtsEngine::Kokoro);
+        // Windows starts on tiny-voca; mac and Linux stay on Kokoro.
+        let (engine, profile_id, profile_count) = if cfg!(target_os = "windows") {
+            (TtsEngine::TinyVoca, "profile-tiny-voca-default", 11)
+        } else {
+            (TtsEngine::Kokoro, "profile-kokoro-default", 10)
+        };
+        assert_eq!(TtsEngine::default(), engine);
         assert_eq!(tts.schema_version, 8);
-        assert_eq!(tts.active_backend, TtsEngine::Kokoro);
+        assert_eq!(tts.active_backend, engine);
         // The Edge seed profile is back (engine revived on edge-tts 7.3.1):
         // zero-download fallback for onboarding.
         assert!(tts
             .profiles
             .iter()
             .any(|profile| profile.engine == TtsEngine::Edge));
-        assert_eq!(tts.profiles.len(), 10);
-        // The ACTIVE profile is the bundled Kokoro one.
-        assert_eq!(tts.active_profile_id, "profile-kokoro-default");
+        assert_eq!(tts.profiles.len(), profile_count);
+        // The ACTIVE profile is the bundled profile for the OS default engine.
+        assert_eq!(tts.active_profile_id, profile_id);
         assert_eq!(
             tts.profiles
                 .iter()
                 .find(|profile| profile.id == tts.active_profile_id)
                 .map(|profile| &profile.engine),
-            Some(&TtsEngine::Kokoro)
+            Some(&engine)
         );
+    }
+
+    #[test]
+    fn tiny_voca_engine_id_matches_the_frontend_union() {
+        // The frontend union, preset, and installer all say "tiny-voca". A plain
+        // lowercase serde id ("tinyvoca") would reject a saved tiny-voca preset.
+        let json = serde_json::to_string(&TtsEngine::TinyVoca).unwrap();
+        assert_eq!(json, "\"tiny-voca\"");
+        let parsed: TtsEngine = serde_json::from_str("\"tiny-voca\"").unwrap();
+        assert_eq!(parsed, TtsEngine::TinyVoca);
     }
 
     #[test]

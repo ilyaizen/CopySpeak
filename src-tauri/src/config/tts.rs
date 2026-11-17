@@ -26,17 +26,24 @@ pub enum TtsEngine {
     Piper,
     Kokoro,
     Pocket,
+    // Serialized as "tiny-voca" to match the frontend engine union, the preset
+    // engine id, and the installer id. Plain lowercase gave "tinyvoca".
+    #[serde(rename = "tiny-voca")]
     TinyVoca,
 }
 
 impl Default for TtsEngine {
     fn default() -> Self {
-        // Kokoro is the fresh-install default: natural offline voices, no API
-        // key; onboarding streams the one-time ~335 MB install. Edge-TTS
-        // remains the zero-download fallback (issue #43 commands never touch
-        // full get_config). Existing configs are never migrated to a new
-        // active engine — the bundled profile migration only ADDS the profile.
-        TtsEngine::Kokoro
+        // Fresh-install default per OS. Windows starts on tiny-voca: CPU only,
+        // instant time-to-first-audio, installer ships for Windows only.
+        // mac and Linux stay on Kokoro until tiny-voca ships there. Existing
+        // configs are never migrated to a new active engine — the bundled
+        // profile migration only ADDS the profile.
+        if cfg!(target_os = "windows") {
+            TtsEngine::TinyVoca
+        } else {
+            TtsEngine::Kokoro
+        }
     }
 }
 
@@ -1394,6 +1401,33 @@ pub(crate) fn default_kokoro_profile() -> VoiceProfile {
     }
 }
 
+/// Stable id for the bundled tiny-voca profile (Windows fresh installs).
+pub(crate) const TINY_VOCA_DEFAULT_PROFILE_ID: &str = "profile-tiny-voca-default";
+
+/// The voice Windows fresh installs start on. The installer's first default
+/// (M2) and the catalog voice id.
+pub(crate) const TINY_VOCA_DEFAULT_VOICE: &str = "M2";
+
+pub(crate) fn default_tiny_voca_profile() -> VoiceProfile {
+    let engine = TtsEngine::TinyVoca;
+    let voice = TINY_VOCA_DEFAULT_VOICE.to_string();
+    let voice_label = catalog_voice_label(&engine, &voice);
+    VoiceProfile {
+        id: TINY_VOCA_DEFAULT_PROFILE_ID.into(),
+        name: "tiny-voca".into(),
+        description: None,
+        engine,
+        voice,
+        voice_label,
+        speed: 1.0,
+        pitch: 1.0,
+        effects: ProfileEffects::default(),
+        post_process: ProfilePostProcess::default(),
+        text_processing: ProfileTextProcessing::default(),
+        engine_options: ProfileEngineOptions::default_for(&TtsEngine::TinyVoca),
+    }
+}
+
 /// v5 -> v6: make Kokoro reachable as a first-class bundled profile (and the
 /// fresh-install default) without changing existing profiles or the active
 /// engine. Idempotent by profile id.
@@ -1525,28 +1559,37 @@ pub(crate) fn migrate_post_process_to_profiles_v8(cfg: &mut crate::config::AppCo
 impl Default for TtsConfig {
     fn default() -> Self {
         let cartesia_profile = default_cartesia_profile();
-        // Fresh installs start on Kokoro (bundled profile
-        // profile-kokoro-default): keyless offline voices, installed from
-        // onboarding with streamed progress. Edge-TTS is offered again as
-        // the zero-download fallback (edge-tts 7.3.1 speaks the revived
-        // endpoint). Existing configs on disk are unaffected — defaults only
-        // apply when no config file exists.
+        // Fresh installs start on the engine `TtsEngine::default()` picks for
+        // this OS: tiny-voca on Windows, Kokoro elsewhere. The matching
+        // bundled profile is seeded here (onboarding finds an engine's
+        // profile by engine). Edge-TTS stays the zero-download fallback.
+        // Existing configs on disk are unaffected — defaults only apply when
+        // no config file exists.
+        let active_backend = TtsEngine::default();
+        let active_profile_id = match active_backend {
+            TtsEngine::TinyVoca => TINY_VOCA_DEFAULT_PROFILE_ID,
+            _ => KOKORO_DEFAULT_PROFILE_ID,
+        };
+        let mut profiles = vec![
+            default_kitten_profile(),
+            default_qwen_profile(),
+            default_kokoro_profile(),
+            default_elevenlabs_profile(),
+            default_fish_profile(),
+            default_xai_profile(),
+            default_mistral_profile(),
+            cartesia_profile,
+            default_google_profile(),
+            default_edge_profile(),
+        ];
+        if active_backend == TtsEngine::TinyVoca {
+            profiles.push(default_tiny_voca_profile());
+        }
         Self {
             schema_version: 8,
-            active_backend: TtsEngine::Kokoro,
-            active_profile_id: KOKORO_DEFAULT_PROFILE_ID.into(),
-            profiles: vec![
-                default_kitten_profile(),
-                default_qwen_profile(),
-                default_kokoro_profile(),
-                default_elevenlabs_profile(),
-                default_fish_profile(),
-                default_xai_profile(),
-                default_mistral_profile(),
-                cartesia_profile,
-                default_google_profile(),
-                default_edge_profile(),
-            ],
+            active_backend,
+            active_profile_id: active_profile_id.into(),
+            profiles,
             preset: "kitten-tts".into(),
             command: "uv".into(),
             args_template: vec![

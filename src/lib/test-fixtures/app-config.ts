@@ -5,13 +5,13 @@ export function testConfig(): AppConfig {
   return {
     trigger: { listen_enabled: true, double_copy_window_ms: 800, max_text_length: 50000 },
     tts: {
-      active_backend: "kokoro",
+      active_backend: "tiny-voca",
       active_profile_id: "default",
       profiles: [],
-      preset: "kokoro-tts",
-      command: "kokoro-tts",
+      preset: "tiny-voca",
+      command: "tiny-voca",
       args_template: [],
-      voice: "af_heart",
+      voice: "M2",
       openai: { api_key: "", model: "", voice: "" },
       elevenlabs: {
         api_key: "",
