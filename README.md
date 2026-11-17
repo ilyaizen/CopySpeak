@@ -18,8 +18,8 @@ CopySpeech reads your clipboard aloud. Copy the same text twice within 1.5 s, an
 ## Features
 
 - **Double-copy trigger.** No hotkey needed. The tray and the Play page work too.
-- **16 engine backends.**
-  - Local: Kokoro (default), Piper, Kitten, Qwen3-TTS, Pocket, and any CLI TTS tool.
+- **17 engine backends.**
+  - Local: Kokoro (default), Piper, Kitten, Qwen3-TTS, Pocket, tiny-voca, and any CLI TTS tool.
   - Cloud: OpenAI, ElevenLabs, Cartesia, Fish Audio, xAI, Mistral, Google, Microsoft Azure, Edge (keyless), and any HTTP endpoint.
 - **One-click local installs.** Kokoro installs from onboarding. Installs stream progress and support optional CUDA.
 - **Live captions.** Words highlight in sync with the audio on the Play page, the HUD, and the browser companion. Captions need an engine that reports timings.

@@ -59,7 +59,7 @@ CopySpeech follows a clean architecture pattern:
 - `commands/` - Tauri command handlers for frontend communication
 - `clipboard/` - Double-copy detection trigger
 - `audio/` - Rodio safety-net player (audible playback runs in the webview, `src/lib/stores/playback/`)
-- `tts/` - TTS backend abstraction (cloud: ElevenLabs, OpenAI, Cartesia, Microsoft, Google · local: Kokoro, Piper, Kitten, Qwen, Pocket · generic: HTTP)
+- `tts/` - TTS backend abstraction (cloud: ElevenLabs, OpenAI, Cartesia, Microsoft, Google · local: Kokoro, Piper, Kitten, Qwen, Pocket, tiny-voca · generic: HTTP)
 - `sanitize/` - Text normalization modules
 - `history.rs` - Speech history and saved-audio cache
 - `control_server.rs` - Loopback HTTP API used by the CLI and agent integrations

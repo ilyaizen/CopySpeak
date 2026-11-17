@@ -128,6 +128,9 @@
 │   │   └── copyspeech-pocket.py
 │   ├── qwen
 │   │   └── copyspeech-qwen.py
+│   ├── tiny-voca
+│   │   ├── copyspeech-tiny-voca.py
+│   │   └── fetch-weights.py
 │   ├── tmp-beep-debug
 │   ├── capture-screenshot.mjs
 │   ├── claude-copyspeech-hook.mjs
@@ -146,6 +149,7 @@
 │   ├── install-pocket.sh
 │   ├── install-qwen.ps1
 │   ├── install-qwen.sh
+│   ├── install-tiny-voca.ps1
 │   ├── install-uv.ps1
 │   ├── install-uv.sh
 │   ├── render-tray-icons.py
