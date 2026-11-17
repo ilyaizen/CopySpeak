@@ -1,9 +1,16 @@
 <script lang="ts">
   import { _ } from "svelte-i18n";
+  import { save as saveDialog } from "@tauri-apps/plugin-dialog";
   import { Button } from "#lib/components/ui/button/index.js";
+  import {
+    Drawer,
+    DrawerClose,
+    DrawerContent,
+    DrawerTitle
+  } from "#lib/components/ui/drawer/index.js";
   import { Copy, Download, Upload, X } from "@lucide/svelte";
   import { toast } from "svelte-sonner";
-  import { portal } from "#lib/utils";
+  import { invoke } from "#lib/services/tauri";
   import type { VoiceProfile } from "#lib/types";
   import { isValidProfile, normalizeImportedProfile } from "./profile-validation";
 
@@ -16,16 +23,20 @@
     onDelete,
     onClose
   }: {
-    mode: DialogMode;
+    mode: DialogMode | null;
     profile: VoiceProfile | null;
     onImport: (profile: VoiceProfile) => void;
     onDelete: () => void;
     onClose: () => void;
   } = $props();
 
+  const open = $derived(mode !== null);
+
   let exportJson = $state("");
   let importJson = $state("");
   let importError = $state<string | null>(null);
+  let isDownloading = $state(false);
+  let fileInput: HTMLInputElement | null = $state(null);
 
   $effect(() => {
     if (mode === "export" && profile) {
@@ -42,16 +53,22 @@
     }
   }
 
-  function downloadJson() {
+  async function downloadJson() {
     if (!profile) return;
-    const blob = new Blob([exportJson], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${profile.id}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    toast.success($_("profiles.toast.downloaded"));
+    const suggested = await saveDialog({
+      defaultPath: `${profile.id}.json`,
+      filters: [{ name: "JSON", extensions: ["json"] }]
+    });
+    if (!suggested) return;
+    isDownloading = true;
+    try {
+      await invoke("save_text_file", { path: suggested, contents: exportJson });
+      toast.success($_("profiles.toast.downloaded"));
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      isDownloading = false;
+    }
   }
 
   function handleFileSelect(event: Event) {
@@ -92,46 +109,58 @@
   }
 </script>
 
-<div use:portal class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-  <div class="bg-card border-border flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border">
-    <!-- Header -->
-    <div class="border-border border-b p-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h3 class="text-lg font-semibold">
-            {#if mode === "export"}
-              Export Profile
-            {:else if mode === "import"}
-              Import Profile
-            {:else}
-              Delete Profile
-            {/if}
-          </h3>
-          {#if mode === "export" && profile}
-            <p class="text-muted-foreground text-sm">{profile.name}</p>
-          {/if}
-        </div>
-        <Button variant="ghost" size="sm" onclick={onClose}>
-          <X size={16} />
-        </Button>
-      </div>
-    </div>
+<Drawer {open} onOpenChange={(o) => (o ? null : onClose())}>
+  <DrawerContent
+    class="h-[min(85dvh,720px)] max-h-[85dvh] [&>div:first-child]:!hidden"
+    onOpenAutoFocus={(e: Event) => e.preventDefault()}
+  >
+    <DrawerTitle class="sr-only">
+      {#if mode === "export"}
+        Export Profile
+      {:else if mode === "import"}
+        Import Profile
+      {:else}
+        Delete Profile
+      {/if}
+    </DrawerTitle>
 
-    <!-- Body -->
+    <header class="flex shrink-0 items-center justify-between px-5 pt-3">
+      <div>
+        <h3 class="text-lg font-semibold">
+          {#if mode === "export"}
+            Export Profile
+          {:else if mode === "import"}
+            Import Profile
+          {:else}
+            Delete Profile
+          {/if}
+        </h3>
+        {#if mode === "export" && profile}
+          <p class="text-muted-foreground text-sm">{profile.name}</p>
+        {/if}
+      </div>
+      <DrawerClose
+        aria-label={$_("common.close")}
+        class="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-9 items-center justify-center rounded-sm focus-visible:ring-2"
+      >
+        <X size={16} />
+      </DrawerClose>
+    </header>
+
     {#if mode === "export"}
       <div class="flex-1 overflow-hidden p-4">
         <textarea
           readonly
-          class="bg-muted/50 border-border focus:ring-ring h-64 w-full resize-none rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
+          class="bg-muted/50 border-border focus:ring-ring h-full w-full resize-none rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
           value={exportJson}></textarea>
       </div>
-      <div class="border-border flex justify-end gap-2 border-t p-4">
+      <div class="border-border flex shrink-0 justify-end gap-2 border-t p-4">
         <Button variant="outline" onclick={onClose}>{$_("common.close")}</Button>
         <Button variant="outline" onclick={copyToClipboard}>
           <Copy class="me-2" size={16} />
           Copy
         </Button>
-        <Button onclick={downloadJson}>
+        <Button onclick={downloadJson} disabled={isDownloading}>
           <Download class="me-2" size={16} />
           Download
         </Button>
@@ -139,12 +168,14 @@
     {:else if mode === "import"}
       <div class="flex-1 space-y-4 overflow-hidden p-4">
         <label class="block">
-          <input type="file" accept=".json" onchange={handleFileSelect} class="hidden" />
-          <Button
-            variant="outline"
-            class="w-full"
-            onclick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}
-          >
+          <input
+            type="file"
+            accept=".json"
+            onchange={handleFileSelect}
+            class="hidden"
+            bind:this={fileInput}
+          />
+          <Button variant="outline" class="w-full" onclick={() => fileInput?.click()}>
             <Upload class="me-2" size={16} />
             Choose File
           </Button>
@@ -161,7 +192,7 @@
           </div>
         {/if}
       </div>
-      <div class="border-border flex justify-end gap-2 border-t p-4">
+      <div class="border-border flex shrink-0 justify-end gap-2 border-t p-4">
         <Button variant="outline" onclick={onClose}>{$_("common.cancel")}</Button>
         <Button onclick={validateAndImport} disabled={!importJson.trim()}>
           <Upload class="me-2" size={16} />
@@ -169,15 +200,15 @@
         </Button>
       </div>
     {:else if mode === "delete" && profile}
-      <div class="p-6">
+      <div class="flex-1 p-6">
         <p class="text-muted-foreground">
           Delete <strong class="text-foreground">{profile.name}</strong>? This cannot be undone.
         </p>
       </div>
-      <div class="border-border flex justify-end gap-2 border-t p-4">
+      <div class="border-border flex shrink-0 justify-end gap-2 border-t p-4">
         <Button variant="outline" onclick={onClose}>{$_("common.cancel")}</Button>
         <Button variant="destructive" onclick={onDelete}>{$_("common.delete")}</Button>
       </div>
     {/if}
-  </div>
-</div>
+  </DrawerContent>
+</Drawer>

@@ -3,6 +3,7 @@
 // Each command is thin — it delegates to the appropriate module.
 
 mod config;
+mod files;
 mod history;
 mod install;
 mod logging;
@@ -15,6 +16,7 @@ mod update;
 
 // Re-export all public commands and types so `main.rs` can use `commands::*` unchanged.
 pub use config::*;
+pub use files::*;
 pub use history::*;
 pub use install::*;
 pub use logging::*;

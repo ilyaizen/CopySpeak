@@ -1042,6 +1042,7 @@ fn main() {
             commands::get_file_metadata,
             commands::is_file_tracked,
             commands::validate_config,
+            commands::save_text_file,
             commands::get_history_batch,
             commands::delete_history_batch,
             commands::play_history_batch,

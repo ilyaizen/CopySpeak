@@ -1,13 +1,19 @@
 <script lang="ts">
   import { Button } from "#lib/components/ui/button/index.js";
   import { invoke } from "#lib/services/tauri";
+  import { save as saveDialog } from "@tauri-apps/plugin-dialog";
   import { toast } from "svelte-sonner";
   import { goto } from "$app/navigation";
   import type { AppConfig } from "#lib/types";
   import { SettingRow } from "#lib/components/ui/setting-row/index.js";
-  import { Upload, Download, RotateCcw, Copy } from "@lucide/svelte";
+  import {
+    Drawer,
+    DrawerClose,
+    DrawerContent,
+    DrawerTitle
+  } from "#lib/components/ui/drawer/index.js";
+  import { Upload, Download, RotateCcw, Copy, X } from "@lucide/svelte";
   import { _ } from "svelte-i18n";
-  import { portal } from "#lib/utils";
 
   let {
     localConfig,
@@ -26,6 +32,8 @@
   let importJson = $state("");
   let importError = $state<string | null>(null);
   let isImporting = $state(false);
+  let isDownloading = $state(false);
+  let fileInput: HTMLInputElement | null = $state(null);
 
   function openExportDialog() {
     if (!localConfig) return;
@@ -33,21 +41,10 @@
     showExportDialog = true;
   }
 
-  function closeExportDialog() {
-    showExportDialog = false;
-    exportJson = "";
-  }
-
   function openImportDialog() {
     importJson = "";
     importError = null;
     showImportDialog = true;
-  }
-
-  function closeImportDialog() {
-    showImportDialog = false;
-    importJson = "";
-    importError = null;
   }
 
   async function copyToClipboard() {
@@ -59,17 +56,21 @@
     }
   }
 
-  function downloadJson() {
-    const blob = new Blob([exportJson], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `copyspeech-settings-${new Date().toISOString().split("T")[0]}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success($_("toast.success.settingsDownloaded"));
+  async function downloadJson() {
+    const suggested = await saveDialog({
+      defaultPath: `copyspeech-settings-${new Date().toISOString().split("T")[0]}.json`,
+      filters: [{ name: "JSON", extensions: ["json"] }]
+    });
+    if (!suggested) return;
+    isDownloading = true;
+    try {
+      await invoke("save_text_file", { path: suggested, contents: exportJson });
+      toast.success($_("toast.success.settingsDownloaded"));
+    } catch (e) {
+      toast.error(String(e));
+    } finally {
+      isDownloading = false;
+    }
   }
 
   function handleFileSelect(event: Event) {
@@ -126,7 +127,7 @@
       await invoke("validate_config", { config: parsed });
 
       onImport(parsed);
-      closeImportDialog();
+      showImportDialog = false;
       toast.success($_("toast.success.settingsImported"));
     } catch (e) {
       if (e instanceof SyntaxError) {
@@ -173,97 +174,117 @@
   </div>
 </SettingRow>
 
-<!-- Export Dialog -->
-{#if showExportDialog}
-  <div use:portal class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div
-      class="bg-card border-border flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border"
-    >
-      <div class="border-border border-b p-4">
+<!-- Export Drawer -->
+<Drawer bind:open={showExportDialog}>
+  <DrawerContent
+    class="h-[min(85dvh,720px)] max-h-[85dvh] [&>div:first-child]:!hidden"
+    onOpenAutoFocus={(e: Event) => e.preventDefault()}
+  >
+    <DrawerTitle class="sr-only">{$_("settings.importExport.exportTitle")}</DrawerTitle>
+    <header class="flex shrink-0 items-center justify-between px-5 pt-3">
+      <div>
         <h3 class="text-lg font-semibold">{$_("settings.importExport.exportTitle")}</h3>
         <p class="text-muted-foreground text-sm">{$_("settings.importExport.exportDescription")}</p>
       </div>
+      <DrawerClose
+        aria-label={$_("common.close")}
+        class="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-9 items-center justify-center rounded-sm focus-visible:ring-2"
+      >
+        <X size={16} />
+      </DrawerClose>
+    </header>
 
-      <div class="flex-1 overflow-hidden p-4">
-        <textarea
-          readonly
-          class="bg-muted/50 border-border focus:ring-ring h-64 w-full resize-none rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
-          value={exportJson}></textarea>
-      </div>
-
-      <div class="border-border flex justify-end gap-2 border-t p-4">
-        <Button variant="outline" onclick={closeExportDialog}>{$_("common.close")}</Button>
-        <Button variant="outline" onclick={copyToClipboard}>
-          <Copy class="me-2" size={16} />
-          Copy
-        </Button>
-        <Button onclick={downloadJson}>
-          <Upload class="me-2" size={16} />
-          Download
-        </Button>
-      </div>
+    <div class="flex-1 overflow-hidden p-4">
+      <textarea
+        readonly
+        class="bg-muted/50 border-border focus:ring-ring h-full w-full resize-none rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
+        value={exportJson}></textarea>
     </div>
-  </div>
-{/if}
 
-<!-- Import Dialog -->
-{#if showImportDialog}
-  <div use:portal class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div
-      class="bg-card border-border flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg border"
-    >
-      <div class="border-border border-b p-4">
+    <div class="border-border flex shrink-0 justify-end gap-2 border-t p-4">
+      <Button variant="outline" onclick={() => (showExportDialog = false)}
+        >{$_("common.close")}</Button
+      >
+      <Button variant="outline" onclick={copyToClipboard}>
+        <Copy class="me-2" size={16} />
+        Copy
+      </Button>
+      <Button onclick={downloadJson} disabled={isDownloading}>
+        <Download class="me-2" size={16} />
+        Download
+      </Button>
+    </div>
+  </DrawerContent>
+</Drawer>
+
+<!-- Import Drawer -->
+<Drawer bind:open={showImportDialog}>
+  <DrawerContent
+    class="h-[min(85dvh,720px)] max-h-[85dvh] [&>div:first-child]:!hidden"
+    onOpenAutoFocus={(e: Event) => e.preventDefault()}
+  >
+    <DrawerTitle class="sr-only">{$_("settings.importExport.importTitle")}</DrawerTitle>
+    <header class="flex shrink-0 items-center justify-between px-5 pt-3">
+      <div>
         <h3 class="text-lg font-semibold">{$_("settings.importExport.importTitle")}</h3>
         <p class="text-muted-foreground text-sm">{$_("settings.importExport.importDescription")}</p>
       </div>
+      <DrawerClose
+        aria-label={$_("common.close")}
+        class="text-muted-foreground hover:text-foreground focus-visible:ring-ring inline-flex size-9 items-center justify-center rounded-sm focus-visible:ring-2"
+      >
+        <X size={16} />
+      </DrawerClose>
+    </header>
 
-      <div class="flex-1 space-y-4 overflow-hidden p-4">
-        <div class="flex items-center gap-2">
-          <label class="flex-1">
-            <input type="file" accept=".json" onchange={handleFileSelect} class="hidden" />
-            <Button
-              variant="outline"
-              class="w-full"
-              onclick={() =>
-                document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}
-            >
-              <Download class="me-2" size={16} />
-              Choose File
-            </Button>
-          </label>
-        </div>
-
-        <textarea
-          class="bg-background border-border focus:ring-ring h-48 w-full resize-none rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
-          placeholder={$_("settings.importExport.pastePlaceholder")}
-          bind:value={importJson}></textarea>
-
-        {#if importError}
-          <div class="text-destructive bg-destructive/10 rounded-md p-3 text-sm">
-            {importError}
-          </div>
-        {/if}
-      </div>
-
-      <div class="border-border flex justify-end gap-2 border-t p-4">
-        <Button variant="outline" onclick={closeImportDialog}>{$_("common.cancel")}</Button>
-        <Button onclick={validateAndImport} disabled={isImporting || !importJson.trim()}>
-          {#if isImporting}
-            Importing...
-          {:else}
-            <Download class="me-2" size={16} />
-            Import Settings
-          {/if}
+    <div class="flex-1 space-y-4 overflow-hidden p-4">
+      <label class="block">
+        <input
+          type="file"
+          accept=".json"
+          onchange={handleFileSelect}
+          class="hidden"
+          bind:this={fileInput}
+        />
+        <Button variant="outline" class="w-full" onclick={() => fileInput?.click()}>
+          <Upload class="me-2" size={16} />
+          Choose File
         </Button>
-      </div>
-    </div>
-  </div>
-{/if}
+      </label>
 
-<!-- Reset Confirmation Dialog -->
-{#if showResetDialog}
-  <div use:portal class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-    <div class="bg-card border-border w-full max-w-sm rounded-lg border p-6">
+      <textarea
+        class="bg-background border-border focus:ring-ring h-48 w-full resize-none rounded-md border p-3 font-mono text-xs focus:ring-2 focus:outline-none"
+        placeholder={$_("settings.importExport.pastePlaceholder")}
+        bind:value={importJson}></textarea>
+
+      {#if importError}
+        <div class="text-destructive bg-destructive/10 rounded-md p-3 text-sm">
+          {importError}
+        </div>
+      {/if}
+    </div>
+
+    <div class="border-border flex shrink-0 justify-end gap-2 border-t p-4">
+      <Button variant="outline" onclick={() => (showImportDialog = false)}
+        >{$_("common.cancel")}</Button
+      >
+      <Button onclick={validateAndImport} disabled={isImporting || !importJson.trim()}>
+        {#if isImporting}
+          Importing...
+        {:else}
+          <Download class="me-2" size={16} />
+          Import Settings
+        {/if}
+      </Button>
+    </div>
+  </DrawerContent>
+</Drawer>
+
+<!-- Reset Confirmation Drawer -->
+<Drawer bind:open={showResetDialog}>
+  <DrawerContent class="max-h-[85dvh] pb-6 [&>div:first-child]:!hidden">
+    <DrawerTitle class="sr-only">{$_("settings.importExport.resetTitle")}</DrawerTitle>
+    <div class="px-8 pt-4">
       <h3 class="mb-2 text-lg font-semibold">{$_("settings.importExport.resetTitle")}</h3>
       <p class="text-muted-foreground mb-6">
         This will restore all settings to their default values and open the initial setup wizard.
@@ -278,5 +299,5 @@
         >
       </div>
     </div>
-  </div>
-{/if}
+  </DrawerContent>
+</Drawer>

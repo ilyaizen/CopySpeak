@@ -1078,13 +1078,11 @@
   {/if}
 </div>
 
-<!-- Export / Import / Delete dialogs -->
-{#if dialogMode}
-  <ProfileExportDialog
-    mode={dialogMode}
-    profile={active}
-    onImport={handleImportProfile}
-    onDelete={confirmDelete}
-    onClose={() => (dialogMode = null)}
-  />
-{/if}
+<!-- Export / Import / Delete drawer -->
+<ProfileExportDialog
+  mode={dialogMode}
+  profile={active}
+  onImport={handleImportProfile}
+  onDelete={confirmDelete}
+  onClose={() => (dialogMode = null)}
+/>
