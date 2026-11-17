@@ -29,6 +29,7 @@ if (!scope[marker]) {
   let panel: HTMLElement | null = null;
   let pauseButton: HTMLButtonElement | null = null;
   let label: HTMLElement | null = null;
+  let dot: HTMLElement | null = null;
   let glide: CaptionGlide | null = null;
   let paused = false;
   let showPanel = false;
@@ -175,6 +176,64 @@ if (!scope[marker]) {
     owner = null;
     trigger = null;
   }
+  // Glyphs match the DSH playback bar (client.js PauseGlyph, PlayGlyph,
+  // StopGlyph, SkipGlyph). Back and forward are the Material fast_rewind and
+  // fast_forward paths. Each shape is one SVG child element.
+  type Glyph = "pause" | "play" | "stop" | "back" | "forward" | "close";
+  type Shape = { tag: "rect" | "path"; attrs: Record<string, string> };
+  const GLYPHS: Record<Glyph, { viewBox: string; shapes: Shape[] }> = {
+    pause: {
+      viewBox: "0 0 16 16",
+      shapes: [
+        { tag: "rect", attrs: { x: "4.6", y: "3", width: "2.5", height: "10", rx: "0.9", fill: "currentColor" } },
+        { tag: "rect", attrs: { x: "8.9", y: "3", width: "2.5", height: "10", rx: "0.9", fill: "currentColor" } }
+      ]
+    },
+    play: {
+      viewBox: "0 0 16 16",
+      shapes: [
+        {
+          tag: "path",
+          attrs: { d: "M5.8 3.5 12.2 8 5.8 12.5Z", fill: "currentColor", stroke: "currentColor", "stroke-width": "1", "stroke-linejoin": "round" }
+        }
+      ]
+    },
+    stop: {
+      viewBox: "0 0 16 16",
+      shapes: [{ tag: "rect", attrs: { x: "3.8", y: "3.8", width: "8.4", height: "8.4", rx: "1.3", fill: "currentColor" } }]
+    },
+    back: {
+      viewBox: "0 0 24 24",
+      shapes: [{ tag: "path", attrs: { d: "M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z", fill: "currentColor" } }]
+    },
+    forward: {
+      viewBox: "0 0 24 24",
+      shapes: [{ tag: "path", attrs: { d: "M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z", fill: "currentColor" } }]
+    },
+    close: {
+      viewBox: "0 0 16 16",
+      shapes: [
+        {
+          tag: "path",
+          attrs: { d: "M3 3l10 10M13 3 3 13", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round" }
+        }
+      ]
+    }
+  };
+  /** One glyph as an SVG element, built from the GLYPHS table. */
+  function glyphElement(name: Glyph): SVGSVGElement {
+    const glyph = GLYPHS[name];
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", glyph.viewBox);
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("focusable", "false");
+    for (const shape of glyph.shapes) {
+      const element = document.createElementNS("http://www.w3.org/2000/svg", shape.tag);
+      for (const [key, value] of Object.entries(shape.attrs)) element.setAttribute(key, value);
+      svg.append(element);
+    }
+    return svg;
+  }
   /** The playback box, controls and follow scroll, over the current anchor. */
   function present(skip: boolean) {
     if (!anchor?.valid()) {
@@ -190,37 +249,68 @@ if (!scope[marker]) {
     panel.hidden = !showPanel;
     const shadow = panel.attachShadow({ mode: "open" });
     const css = document.createElement("style");
-    css.textContent =
-      ":host{all:initial;position:fixed;z-index:2147483647;bottom:16px;right:16px}:host([hidden]){display:none}section{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fff;color:#172232;border:1px solid #8394aa;border-radius:8px;box-shadow:0 2px 12px #17223233;font:13px system-ui}button{font:inherit;color:#172232;background:#edf3fa;border:1px solid #8394aa;border-radius:4px;padding:6px 10px;cursor:pointer}button:focus-visible{outline:3px solid #1672de;outline-offset:2px}";
+    // Icon-only bar, like the DSH playback bar: a floating pill of 26 px
+    // controls. System colors follow the page's light or dark scheme.
+    css.textContent = [
+      ":host{all:initial;position:fixed;z-index:2147483647;bottom:20px;right:20px}",
+      ":host([hidden]){display:none}",
+      ".bar{display:inline-flex;align-items:center;gap:2px;box-sizing:border-box;max-width:calc(100vw - 40px);padding:6px;border:.5px solid rgb(127 127 127 / 40%);border-radius:12px;background:Canvas;color:CanvasText;box-shadow:0 6px 20px rgb(0 0 0 / 14%);font:13px system-ui}",
+      ".control{flex:none;display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:none;border-radius:6px;background:none;color:inherit;cursor:pointer}",
+      "@media (hover:hover){.control:hover{background:rgb(127 127 127 / 16%)}}",
+      ".control:focus-visible{outline:2px solid #1672de;outline-offset:2px}",
+      ".control svg{width:16px;height:16px;fill:currentColor;pointer-events:none}",
+      ".close{width:22px;height:22px;opacity:.7}",
+      ".close svg{width:12px;height:12px}",
+      ".dot{flex:none;width:7px;height:7px;margin:0 6px 0 4px;border-radius:50%;background:#8394aa}",
+      '.dot[data-state="playing"]{background:#1672de}',
+      '.dot[data-state="buffering"]{background:#e0a100;animation:pulse 1s ease-in-out infinite}',
+      "@keyframes pulse{50%{opacity:.35}}",
+      "@media (prefers-reduced-motion:reduce){.dot{animation:none!important}}",
+      ".sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}"
+    ].join("");
     const strip = document.createElement("section");
+    strip.className = "bar";
     strip.setAttribute("aria-label", "CopySpeech reading controls");
+    dot = document.createElement("span");
+    dot.className = "dot";
+    dot.setAttribute("aria-hidden", "true");
+    // Screen readers hear the state; sighted users see the dot.
     label = document.createElement("span");
+    label.className = "sr";
     label.textContent = "CopySpeech · Buffering";
     label.setAttribute("role", "status");
-    const button = (text: string, name: string, onclick: () => void) => {
+    const control = (glyph: Glyph, name: string, onclick: () => void, extra = "") => {
       const element = document.createElement("button");
-      element.textContent = text;
+      element.type = "button";
+      element.className = extra ? `control ${extra}` : "control";
+      element.title = name;
       element.setAttribute("aria-label", name);
+      element.append(glyphElement(glyph));
       element.onclick = onclick;
       return element;
     };
-    pauseButton = button("Pause", "Pause", () => sendControl(paused ? "resume" : "pause"));
-    const stop = button("Stop", "Stop", () => {
+    pauseButton = control("pause", "Pause", () => sendControl(paused ? "resume" : "pause"));
+    const stop = control("stop", "Stop", () => {
       sendControl("stop");
       cleanup();
     });
-    const hide = button("×", "Hide playback box", () => {
-      showPanel = false;
-      if (panel) panel.hidden = true;
-      void chrome.storage.local.set({ showPanel: false });
-    });
+    const hide = control(
+      "close",
+      "Hide playback box",
+      () => {
+        showPanel = false;
+        if (panel) panel.hidden = true;
+        void chrome.storage.local.set({ showPanel: false });
+      },
+      "close"
+    );
     hide.title = "Hide playback box. Restore it in CopySpeech Companion settings.";
     // Skips only when the app takes them: an older native host drops the
     // whole connection on an action it does not know.
-    strip.append(label);
-    if (skip) strip.append(button("−5s", "Back 5 seconds", () => sendControl("skip-back")));
+    strip.append(label, dot);
+    if (skip) strip.append(control("back", "Back 5 seconds", () => sendControl("skip-back")));
     strip.append(pauseButton);
-    if (skip) strip.append(button("+5s", "Forward 5 seconds", () => sendControl("skip-forward")));
+    if (skip) strip.append(control("forward", "Forward 5 seconds", () => sendControl("skip-forward")));
     strip.append(stop, hide);
     shadow.append(css, strip);
     document.documentElement.append(panel);
@@ -240,9 +330,12 @@ if (!scope[marker]) {
   function show(status: Status, wordAvailable: boolean, word: [number, number] | null) {
     paused = status === "paused";
     if (pauseButton) {
-      pauseButton.textContent = paused ? "Resume" : "Pause";
-      pauseButton.setAttribute("aria-label", pauseButton.textContent);
+      const name = paused ? "Resume" : "Pause";
+      pauseButton.replaceChildren(glyphElement(paused ? "play" : "pause"));
+      pauseButton.title = name;
+      pauseButton.setAttribute("aria-label", name);
     }
+    if (dot) dot.dataset.state = status;
     if (label)
       label.textContent = `CopySpeech · ${status}${wordAvailable ? "" : " · Word highlighting unavailable"}`;
     if (word === null || glide === null || anchor === null) {
