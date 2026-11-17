@@ -61,7 +61,7 @@ Not yet verified live, per the plugin notes:
 
 ## Install
 
-Get a build from [Releases](https://github.com/ilyaizen/CopySpeech/releases). Replace `<version>` with the release number. The latest is 0.3.0.
+Get a build from [Releases](https://github.com/ilyaizen/CopySpeech/releases). Replace `<version>` with the release number. The latest is 0.3.1.
 
 | Platform          | Asset                                                                    |
 | ----------------- | ------------------------------------------------------------------------ |
