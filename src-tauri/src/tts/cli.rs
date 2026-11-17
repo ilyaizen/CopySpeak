@@ -1175,6 +1175,12 @@ mod tests {
         );
         assert_eq!(qwen.engine_kind(), Some("qwen"));
 
+        let tiny_voca = CliTtsBackend::new(
+            "uv".into(),
+            vec!["{engine_dir}/tiny-voca/scripts/copyspeech-tiny-voca.py".into()],
+        );
+        assert_eq!(tiny_voca.engine_kind(), Some("tiny-voca"));
+
         // A third-party CLI has no --serve mode; attempting a daemon would only
         // burn a process start per session.
         let third_party = CliTtsBackend::new("kokoro-tts".into(), vec!["{input}".into()]);
@@ -1269,7 +1275,7 @@ mod tests {
     fn incremental_engines_claim_streaming() {
         // Whether the daemon is warm is a runtime question, answered by
         // `runtime_ready` and gated at the call sites.
-        for engine in ["piper", "kitten", "qwen", "kokoro"] {
+        for engine in ["piper", "kitten", "qwen", "kokoro", "tiny-voca"] {
             assert!(claims_streaming(engine), "{engine} should claim streaming");
         }
     }

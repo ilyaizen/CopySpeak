@@ -60,7 +60,7 @@ impl Drop for SynthesisGuard {
 /// contract — not user-editable. Returns `None` for non-local engines and for
 /// `Local` itself. `{engine_dir}`/`{input}`/`{voice}`/`{output}`/`{model}`/
 /// `{speed}` are resolved by `CliTtsBackend::build_args` at run time.
-fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
+pub(crate) fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
     let (cmd, args): (&str, Vec<&str>) = match engine {
         TtsEngine::Kitten => (
             "uv",

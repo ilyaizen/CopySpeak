@@ -1460,6 +1460,25 @@ mod tests {
     }
 
     #[test]
+    fn daemon_engines_match_the_first_class_local_catalog_entries() {
+        // The resident-daemon registry is keyed by the wrapper-file
+        // identifier, so the list must track the first-class local engines
+        // exactly: an engine missing from DAEMON_ENGINES never gets a warm
+        // daemon, and a stale entry points at nothing.
+        for entry in list_engines() {
+            let id = crate::commands::helpers::engine_identifier(&entry.engine);
+            let listed = crate::tts::local_daemon::DAEMON_ENGINES.contains(&id.as_str());
+            let first_class =
+                crate::commands::helpers::first_class_local_cli(&entry.engine).is_some();
+            assert_eq!(
+                listed, first_class,
+                "{id}: first-class local = {first_class}, DAEMON_ENGINES lists it = {listed}"
+            );
+        }
+        assert_eq!(crate::tts::local_daemon::DAEMON_ENGINES.len(), 6);
+    }
+
+    #[test]
     fn catalog_entries_have_labels_and_docs() {
         for entry in list_engines() {
             assert!(!entry.label.trim().is_empty());
