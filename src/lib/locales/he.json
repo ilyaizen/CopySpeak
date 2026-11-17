@@ -357,6 +357,10 @@
       "title": "Pocket TTS",
       "description": "Kyutai Pocket — מודל בן 100 מיליון פרמטרים שנבנה למעבד, עם קולות בשש שפות. תומך בהאצת GPU."
     },
+    "tiny-voca": {
+      "title": "tiny-voca",
+      "description": "TTS מקומי וחינמי, באנגלית בלבד. 4.5 מיליון פרמטרים, מעבד בלבד, שני קולות. קורא טקסט באנגלית בלבד."
+    },
     "cartesia": {
       "title": "Cartesia",
       "description": "TTS טבעי עם השהיה נמוכה, המופעל על ידי Sonic 3.5. דורש מפתח API וחיבור לאינטרנט.",
@@ -456,8 +460,6 @@
     },
     "localEngine": {
       "voice": "קול",
-      "kittenInstall": "הרץ את ./install-kittentts.ps1 מתיקיית הפרויקט כדי להתקין את Kitten TTS. הדגמים יורדים אוטומטית בשימוש הראשון (כ-25–80MB, לפי הווריאנט).",
-      "pocketInstall": "הרץ את ./install-pocket.ps1 מתיקיית הפרויקט כדי להתקין את Pocket TTS. נוצר פרויקט uv עבור pocket-tts; משקלי הדגם יורדים בשימוש הראשון.",
       "piperModels": "קבצי הדגם (.onnx + .onnx.json) חייבים להיות ממוקמים ב-{dataDir}. הורד מ-",
       "commandPreview": "תצוגה מקדימה של הפקודה",
       "tempDirectory": "נפתר לתיקייה הזמנית של המערכת בזמן ריצה.",

@@ -73,7 +73,8 @@
     "qwen",
     "piper",
     "kokoro",
-    "pocket"
+    "pocket",
+    "tiny-voca"
   ];
   const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy", "cyberpunk"];
 
@@ -117,6 +118,13 @@
       voice: "Rosie",
       voiceLabel: "Rosie",
       engineOptions: { engine: "kitten" }
+    },
+    {
+      name: "tiny-voca - M2",
+      engine: "tiny-voca",
+      voice: "M2",
+      voiceLabel: "M2",
+      engineOptions: { engine: "tiny-voca" }
     },
     {
       name: "Qwen3-TTS - Aiden",

@@ -182,6 +182,17 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
     downloadSize: "~100M params, fetched on first use",
     credential: "none",
     docsUrl: "https://github.com/kyutai-labs/pocket-tts"
+  },
+  {
+    id: "tiny-voca",
+    menuLabel: "tiny-voca",
+    kind: "local",
+    installerId: "tiny-voca",
+    // Two voices (F2, M2), both served by the one 18 MB ONNX model.
+    voiceMode: "shared",
+    downloadSize: "~45 MB, fetched at install",
+    credential: "none",
+    docsUrl: "https://github.com/n4ze3m/tiny-voca"
   }
 ];
 

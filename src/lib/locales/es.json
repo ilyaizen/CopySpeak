@@ -357,6 +357,10 @@
       "title": "Pocket TTS",
       "description": "Kyutai Pocket, un modelo de 100 M de parámetros diseñado para CPU, con voces en seis idiomas. Admite aceleración GPU."
     },
+    "tiny-voca": {
+      "title": "tiny-voca",
+      "description": "TTS local y gratuita solo en inglés. 4,5 M de parámetros, solo CPU, dos voces. Solo lee texto en inglés."
+    },
     "cartesia": {
       "title": "Cartesia",
       "description": "TTS natural y de baja latencia con Sonic 3.5. Requiere una clave de API y conexión a internet.",
@@ -456,8 +460,6 @@
     },
     "localEngine": {
       "voice": "Voz",
-      "kittenInstall": "Ejecuta ./install-kittentts.ps1 desde la raíz del proyecto para instalar Kitten TTS. Los modelos se descargan automáticamente la primera vez que se usan (~25-80 MB según la variante).",
-      "pocketInstall": "Ejecuta ./install-pocket.ps1 desde la raíz del proyecto para instalar Pocket TTS. Crea un proyecto de uv para pocket-tts; los pesos del modelo se descargan la primera vez que se usan.",
       "piperModels": "Los archivos del modelo (.onnx + .onnx.json) deben colocarse en {dataDir}. Descárgalos desde",
       "commandPreview": "Vista previa del comando",
       "tempDirectory": "se resuelve en la carpeta temporal del sistema durante la ejecución.",

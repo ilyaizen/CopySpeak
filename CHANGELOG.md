@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.3.1] - 2026-11-17
 
+### Added
+
+- **tiny-voca engine** – a new local engine with two voices (F2, M2). It runs on the CPU only, uses about 45 MB of files, and needs no API key. It reads English text only; other scripts fail with a clear message instead of silence. Windows installer only for now.
+
 ### Fixed
 
 - **Chrome companion connects again** – installed builds registered the browser companion host with `\\?\` extended-length paths, and Chrome fails the handshake for such paths, so the extension showed an error and double-copy fell back without the companion. The app now registers plain paths.

@@ -61,7 +61,8 @@ export type TtsEngine =
   | "qwen"
   | "piper"
   | "kokoro"
-  | "pocket";
+  | "pocket"
+  | "tiny-voca";
 
 export interface OpenAIConfig {
   api_key: string;

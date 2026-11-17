@@ -357,6 +357,10 @@
       "title": "Pocket TTS",
       "description": "Kyutai Pocket——专为 CPU 打造的 1 亿参数模型，提供六种语言的语音。支持 GPU 加速。"
     },
+    "tiny-voca": {
+      "title": "tiny-voca",
+      "description": "免费的本地英文 TTS，4.5M 参数，仅使用 CPU，两种声音。只能朗读英文文本。"
+    },
     "cartesia": {
       "title": "Cartesia",
       "description": "由 Sonic 3.5 驱动的低延迟自然 TTS。需要 API 密钥和网络连接。",
@@ -456,8 +460,6 @@
     },
     "localEngine": {
       "voice": "语音",
-      "kittenInstall": "在项目根目录运行 ./install-kittentts.ps1 以安装 Kitten TTS。模型会在首次使用时自动下载（约 25-80MB，视版本而定）。",
-      "pocketInstall": "在项目根目录运行 ./install-pocket.ps1 以安装 Pocket TTS。将为 pocket-tts 创建一个 uv 项目；模型权重在首次使用时下载。",
       "piperModels": "模型文件（.onnx + .onnx.json）必须放在 {dataDir} 中。下载地址：",
       "commandPreview": "命令预览",
       "tempDirectory": "运行时解析为系统临时目录。",

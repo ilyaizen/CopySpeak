@@ -357,6 +357,10 @@
       "title": "Pocket TTS",
       "description": "Kyutai Pocket — نموذج بـ100 مليون معامل مصمم للمعالج، بأصوات في ست لغات. يدعم تسريع GPU."
     },
+    "tiny-voca": {
+      "title": "tiny-voca",
+      "description": "نظام تحويل نص إلى كلام محلي ومجاني، باللغة الإنجليزية فقط. 4.5 مليون معامل، يعمل على المعالج فقط، وصوتان. يقرأ النص الإنجليزي فقط."
+    },
     "cartesia": {
       "title": "Cartesia",
       "description": "TTS طبيعي منخفض الكمون يعمل بـ Sonic 3.5. يتطلب مفتاح API واتصالًا بالإنترنت.",
@@ -456,8 +460,6 @@
     },
     "localEngine": {
       "voice": "الصوت",
-      "kittenInstall": "شغّل ./install-kittentts.ps1 من جذر المشروع لتثبيت Kitten TTS. تُنزَّل النماذج تلقائيًا عند أول استخدام (~25-80 ميغابايت حسب الإصدار).",
-      "pocketInstall": "شغّل ./install-pocket.ps1 من جذر المشروع لتثبيت Pocket TTS. يُنشئ مشروع uv لـ pocket-tts؛ وتُنزَّل أوزان النموذج عند أول استخدام.",
       "piperModels": "يجب وضع ملفات النموذج (.onnx + .onnx.json) في {dataDir}. نزّلها من",
       "commandPreview": "معاينة الأمر",
       "tempDirectory": "يُستبدل أثناء التشغيل بمجلد النظام المؤقت.",

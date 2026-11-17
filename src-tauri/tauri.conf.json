@@ -33,6 +33,7 @@
       "../scripts/lib/*.sh": "scripts/lib/",
       "../scripts/piper/*.py": "scripts/piper/",
       "../scripts/kitten/*.py": "scripts/kitten/",
+      "../scripts/tiny-voca/*.py": "scripts/tiny-voca/",
       "../scripts/kokoro/*.py": "scripts/kokoro/",
       "../scripts/pocket/*.py": "scripts/pocket/",
       "../scripts/qwen/*.py": "scripts/qwen/"

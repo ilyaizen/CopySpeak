@@ -329,6 +329,23 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             ],
         },
         EngineCatalogEntry {
+            engine: TtsEngine::TinyVoca,
+            label: "tiny-voca".into(),
+            description:
+                "Free local English TTS, 4.5M parameters, CPU only. Two voices. English text only."
+                    .into(),
+            docs_url: "https://github.com/n4ze3m/tiny-voca".into(),
+            supports_voice_refresh: false,
+            supports_pitch: false,
+            supports_captions: true,
+            supports_bracket_emotes: false,
+            options: vec![],
+            voices: vec![
+                voice("F2", "F2 (female)", Some("en"), None, Some("female")),
+                voice("M2", "M2 (male)", Some("en"), None, Some("male")),
+            ],
+        },
+        EngineCatalogEntry {
             engine: TtsEngine::Pocket,
             label: "Pocket".into(),
             description:
@@ -1429,6 +1446,7 @@ mod tests {
             TtsEngine::Piper,
             TtsEngine::Kokoro,
             TtsEngine::Pocket,
+            TtsEngine::TinyVoca,
         ] {
             assert_eq!(
                 entries
@@ -1438,7 +1456,7 @@ mod tests {
                 1
             );
         }
-        assert_eq!(entries.len(), 16);
+        assert_eq!(entries.len(), 17);
     }
 
     #[test]
@@ -1463,6 +1481,7 @@ mod tests {
                 TtsEngine::Qwen,
                 TtsEngine::Piper,
                 TtsEngine::Kokoro,
+                TtsEngine::TinyVoca,
                 TtsEngine::ElevenLabs,
                 TtsEngine::Fish,
                 TtsEngine::Cartesia,

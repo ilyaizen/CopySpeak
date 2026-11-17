@@ -63,6 +63,10 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Engines
 
+- Point `scripts/bench/bench.py` at `%LOCALAPPDATA%\CopySpeak\engines`, the root the installers and app use; the bench had `CopySpeech\engines`, which never holds engines.
+- Catch only dizione's `ValueError` with "nothing to pronounce" as a skip; dizione raises it instead of returning empty ids, and other ValueErrors are real failures.
+- Split engine text on CJK sentence marks (。！？) too; ASCII-only splitting merges a Japanese sentence into the next English one and gives it caption timings.
+- Stop or idle a running `tauri dev` before `cargo check`: its cargo process holds the build-directory lock, so a second `cargo check` waits silently.
 - Keep the engine-test lock separate from displayed results; invalidate results after credential replacement or installer changes.
 - Stop cloud engine tests when the environment-key warning defers saving; a resolved save callback does not prove persistence.
 
@@ -70,7 +74,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - A "called from X" comment is not the call site — `local_daemon.rs` claimed prewarm ran "from the set_config path" while `set_config` never called it; grep the named call site before trusting the comment.
 - Local engine wrappers speak daemon protocol v2 (`READY 2`) and emit 16-bit signed LE PCM; `pcm-stream.ts` drops any other `bits_per_sample`.
 - Gate every streaming branch on `supports_streaming()` AND `runtime_ready()`; the static claim alone sends a cold CLI daemon's one-shot command down the stream branch.
-- Adding a `TtsEngine` variant: update the catalog test's engine list and entry count, and the default-config profile count in `config/tests.rs` (`test_default_tts_config_uses_kokoro_profile`).
+- Adding a `TtsEngine` variant: update the catalog test's engine list, entry count, and the caption-support list in `tts/catalog.rs` tests (`caption_support_matches_timing_adapters`, in catalog order), and the default-config profile count in `config/tests.rs` (`test_default_tts_config_uses_kokoro_profile`).
 - Wrapper fixes reach an installed engine only when its installer re-runs (for wrapper-only fixes, `cp` the repo file into `engines/<e>/scripts/`), and shared wrapper functions must be backported to EVERY engine — `diff` the engine wrappers against each other when touching one.
 - Bundle each installer wrapper directory in `tauri.conf.json`; a lone `install-*.ps1` breaks app-driven installs in dev and release builds.
 - Run Engines-page health checks in one-shot mode; daemon prewarming plus the immediate fallback launches two copies of large local models.

@@ -148,6 +148,24 @@ fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<String>)> {
                 "{output}",
             ],
         ),
+        TtsEngine::TinyVoca => (
+            "uv",
+            vec![
+                "run",
+                "--project",
+                "{engine_dir}/tiny-voca",
+                "python",
+                "{engine_dir}/tiny-voca/scripts/copyspeech-tiny-voca.py",
+                "--text-file",
+                "{input}",
+                "--voice",
+                "{voice}",
+                "--output",
+                "{output}",
+                "--speed",
+                "{speed}",
+            ],
+        ),
         _ => return None,
     };
     Some((cmd.into(), args.into_iter().map(String::from).collect()))
@@ -164,7 +182,8 @@ pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<
         | TtsEngine::Qwen
         | TtsEngine::Piper
         | TtsEngine::Kokoro
-        | TtsEngine::Pocket => {
+        | TtsEngine::Pocket
+        | TtsEngine::TinyVoca => {
             // Command/args are fixed by the installer wrapper contract.
             let (command, args) = first_class_local_cli(active).unwrap();
             Box::new(CliTtsBackend::new(command, args))
@@ -220,7 +239,8 @@ pub(crate) fn create_backend_from_effective(
         | TtsEngine::Qwen
         | TtsEngine::Piper
         | TtsEngine::Kokoro
-        | TtsEngine::Pocket => {
+        | TtsEngine::Pocket
+        | TtsEngine::TinyVoca => {
             // Voice comes from eff.voice (profile-owned); CLI is fixed.
             let (command, args) = first_class_local_cli(&eff.engine).unwrap();
             let mut backend = CliTtsBackend::new(command, args);
@@ -428,6 +448,7 @@ pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> S
         | TtsEngine::Piper
         | TtsEngine::Kokoro
         | TtsEngine::Pocket => String::new(),
+        TtsEngine::TinyVoca => String::new(),
     }
 }
 
@@ -441,6 +462,7 @@ pub(crate) fn engine_identifier(active: &TtsEngine) -> String {
         TtsEngine::Piper => "piper".to_string(),
         TtsEngine::Kokoro => "kokoro".to_string(),
         TtsEngine::Pocket => "pocket".to_string(),
+        TtsEngine::TinyVoca => "tiny-voca".to_string(),
         TtsEngine::OpenAI => "openai".to_string(),
         TtsEngine::ElevenLabs => "elevenlabs".to_string(),
         TtsEngine::Cartesia => "cartesia".to_string(),
@@ -553,6 +575,8 @@ pub(crate) fn voice_display_name(
             .to_lowercase(),
         // Pocket voice ids are already bare names (alba, anna, charles).
         TtsEngine::Pocket => voice_id.to_lowercase(),
+        // tiny-voca ids are F2 and M2; lowercase them like the other bare-name engines.
+        TtsEngine::TinyVoca => voice_id.to_lowercase(),
         TtsEngine::Http | TtsEngine::Google | TtsEngine::Microsoft => {
             slugify_filename_part(voice_id)
         }
@@ -715,6 +739,7 @@ pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
         TtsEngine::Piper => "piper",
         TtsEngine::Kokoro => "kokoro",
         TtsEngine::Pocket => "pocket",
+        TtsEngine::TinyVoca => "tiny-voca",
     }
 }
 

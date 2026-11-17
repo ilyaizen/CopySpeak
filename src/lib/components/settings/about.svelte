@@ -68,6 +68,13 @@
 
   const localProviders = [
     {
+      name: "tiny-voca",
+      url: "https://github.com/n4ze3m/tiny-voca",
+      mark: "",
+      w: 0,
+      h: 0
+    },
+    {
       name: "Kitten TTS",
       url: "https://github.com/KittenML/KittenTTS",
       mark: "kitten",

@@ -144,6 +144,7 @@ fn parse_engine(engine: &str) -> Result<TtsEngine, String> {
         "piper" => Ok(TtsEngine::Piper),
         "kokoro" => Ok(TtsEngine::Kokoro),
         "pocket" => Ok(TtsEngine::Pocket),
+        "tiny-voca" => Ok(TtsEngine::TinyVoca),
         _ => Err(format!("unknown engine: {}", engine)),
     }
 }
@@ -248,6 +249,7 @@ fn effective_backend_name(eff: &EffectiveTtsRequest, tts: &TtsConfig) -> String 
         TtsEngine::Piper => "Piper".to_string(),
         TtsEngine::Kokoro => "Kokoro".to_string(),
         TtsEngine::Pocket => "Pocket".to_string(),
+        TtsEngine::TinyVoca => "tiny-voca".to_string(),
     }
 }
 
@@ -289,6 +291,7 @@ pub async fn test_tts_engine_config(
         TtsEngine::Piper => "Piper".to_string(),
         TtsEngine::Kokoro => "Kokoro".to_string(),
         TtsEngine::Pocket => "Pocket".to_string(),
+        TtsEngine::TinyVoca => "tiny-voca".to_string(),
         TtsEngine::Edge => format!("Edge-TTS ({})", first_set(&[&tts_config.edge.voice])),
     };
     tauri::async_runtime::spawn_blocking(move || health_result(backend, backend_name))
@@ -440,6 +443,11 @@ fn local_engine_spec(engine: &str) -> Option<LocalEngineSpec> {
             command: "uv".into(),
             args_template: uv_run("pocket", "copyspeech-pocket.py"),
             voice: "alba".into(),
+        },
+        "tiny-voca" => LocalEngineSpec {
+            command: "uv".into(),
+            args_template: uv_run("tiny-voca", "copyspeech-tiny-voca.py"),
+            voice: "M2".into(),
         },
         _ => return None,
     };
