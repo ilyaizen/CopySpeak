@@ -14,12 +14,27 @@ pub const HOST_EXE: &str = "copyspeech-browser-host.exe";
 pub const CHROME_EXTENSION_ID: &str = "hojbmioeiccpgkpnpblkdbeegjkcccad";
 const CHROME_HOSTS_KEY: &str = r"Software\Google\Chrome\NativeMessagingHosts";
 
+/// Windows paths from Tauri's `resource_dir()` (and `canonicalize` generally)
+/// carry the `\\?\` extended-length prefix. Chrome fails the native-messaging
+/// handshake for a host registered with such paths — the host process never
+/// reaches the pipe and the extension reports a communication error — so the
+/// manifest `path` and the registry value must both use plain paths.
+fn plain_path(path: &Path) -> String {
+    let s = path.to_string_lossy();
+    if let Some(rest) = s.strip_prefix(r"\\?\UNC\") {
+        return format!(r"\\{rest}");
+    }
+    s.strip_prefix(r"\\?\")
+        .map(str::to_string)
+        .unwrap_or_else(|| s.to_string())
+}
+
 /// Chrome native-messaging manifest for the bundled host.
 pub fn host_manifest_json(host_exe: &Path) -> String {
     serde_json::json!({
         "name": HOST_NAME,
         "description": "CopySpeech browser companion native host",
-        "path": host_exe.to_string_lossy(),
+        "path": plain_path(host_exe),
         "type": "stdio",
         "allowed_origins": [format!("chrome-extension://{CHROME_EXTENSION_ID}/")],
     })
@@ -69,7 +84,7 @@ fn point_registry_at(hosts_key: &str, manifest_path: &Path) -> Result<bool, Stri
     let (key, _) = hkcu
         .create_subkey(format!(r"{hosts_key}\{HOST_NAME}"))
         .map_err(|e| format!("Failed to open Chrome host registry key: {e}"))?;
-    let target = manifest_path.to_string_lossy().to_string();
+    let target = plain_path(manifest_path);
     let current: Option<String> = key.get_value("").ok();
     if current.as_deref() == Some(target.as_str()) {
         return Ok(false);
@@ -142,6 +157,26 @@ mod tests {
     }
 
     #[test]
+    fn plain_path_strips_extended_length_prefixes() {
+        assert_eq!(
+            plain_path(Path::new(
+                r"\\?\C:\Users\User\AppData\Local\CopySpeech\copyspeech-browser-host.exe"
+            )),
+            r"C:\Users\User\AppData\Local\CopySpeech\copyspeech-browser-host.exe"
+        );
+        assert_eq!(
+            plain_path(Path::new(r"\\?\UNC\server\share\host.exe")),
+            r"\\server\share\host.exe"
+        );
+        assert_eq!(
+            plain_path(Path::new(
+                r"C:\Program Files\CopySpeech\copyspeech-browser-host.exe"
+            )),
+            r"C:\Program Files\CopySpeech\copyspeech-browser-host.exe"
+        );
+    }
+
+    #[test]
     fn manifest_names_host_and_pins_extension_origin() {
         let exe = Path::new(r"C:\Users\User\AppData\Local\CopySpeech\copyspeech-browser-host.exe");
         let parsed: serde_json::Value =
@@ -153,6 +188,25 @@ mod tests {
             parsed["allowed_origins"][0],
             format!("chrome-extension://{CHROME_EXTENSION_ID}/")
         );
+    }
+
+    #[test]
+    fn manifest_carries_a_plain_path_for_canonicalized_input() {
+        // Tauri's resource_dir() hands us this shape on Windows.
+        let exe =
+            Path::new(r"\\?\C:\Users\User\AppData\Local\CopySpeech\copyspeech-browser-host.exe");
+        let parsed: serde_json::Value =
+            serde_json::from_str(&host_manifest_json(exe)).expect("valid json");
+        assert_eq!(
+            parsed["path"],
+            serde_json::json!(
+                "C:\\Users\\User\\AppData\\Local\\CopySpeech\\copyspeech-browser-host.exe"
+            )
+        );
+        assert!(!parsed["path"]
+            .as_str()
+            .expect("string path")
+            .contains(r"\\?\"));
     }
 
     #[test]
