@@ -3,7 +3,7 @@
   import { marquee } from "#lib/utils/marquee";
 
   // Mirrors CLOUD_ENGINES / LOCAL_ENGINES order from #lib/components/engine/engine-meta.ts,
-  // minus Edge (retired from every UI surface). Wordmarks exist where the owner's terms
+  // minus Edge (no wordmark on this band; Edge is visible in the app UI). Wordmarks exist where the owner's terms
   // permit the placement or the project owner chose to proceed (decisions + sources:
   // static/landing/providers/README.md); every other engine stays plain text on purpose.
   // Width/height are the intrinsic box size at a

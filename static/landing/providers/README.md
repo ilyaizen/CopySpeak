@@ -295,7 +295,7 @@ hand-scrollable instead).
   applicable brand-use terms were found in the wrapper or original model
   sources. Plain text.
 
-Edge remains excluded because it is retired from the UI; uv is a
+Edge has no wordmark on this band; it is visible in the app UI. uv is a
 prerequisite, not a speech engine. The lists track
 `src/lib/components/engine/engine-meta.ts` otherwise.
 
