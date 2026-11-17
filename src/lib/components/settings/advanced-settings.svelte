@@ -40,22 +40,6 @@
 
 <div>
   <div>
-    <h3 class="settings-category mb-3">
-      {$_("settings.sections.audioDelivery")}
-    </h3>
-    <SettingRow
-      label={$_("settings.playback.streaming")}
-      tooltip={$_("settings.playback.streamingDescription")}
-    >
-      <Switch
-        id="playback-streaming"
-        aria-label={$_("settings.playback.streaming")}
-        bind:checked={localConfig.playback.streaming_enabled}
-      />
-    </SettingRow>
-  </div>
-  <div class="settings-separator border-border my-5 border-t"></div>
-  <div>
     <SettingRow
       label={`${$_("settings.general.experimental")} (Alpha)`}
       tooltip={$_("settings.general.experimentalDescription")}

@@ -297,6 +297,12 @@ it("keeps streaming in Advanced while legacy experimental flags are inert and hi
   const advanced = view.container.querySelector<HTMLElement>("#advanced")!;
   expect(advanced.querySelector("#playback-streaming")).not.toBeNull();
   expect(view.container.querySelector("#playback #playback-streaming")).toBeNull();
+  // Streaming leads the Advanced section: its row precedes Text Preparation.
+  const streaming = advanced.querySelector("#playback-streaming")!;
+  const preparation = within(advanced).getByRole("heading", { name: "Text Preparation" });
+  expect(
+    streaming.compareDocumentPosition(preparation) & Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
   expect(within(advanced).getAllByRole("heading", { name: "Advanced" })).toHaveLength(1);
   expect(view.container.querySelector("#history")).toBeNull();
   expect(view.container.querySelector("#postProcess")).toBeNull();
