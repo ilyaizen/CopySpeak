@@ -163,13 +163,12 @@
     },
     "pagination": {
       "title": "分段设置",
-      "enabled": "启用分段",
+      "enabled": "分段",
       "description": "将长文本拆分为片段，逐段进行 TTS 播放",
       "fragmentSize": "片段大小（字符）",
       "fragmentSizeDescription": "每个文本片段的最大字符数（100-10000）"
     },
     "hud": {
-      "enabled": "启用 HUD",
       "enabledDescription": "播放时显示波形浮层",
       "overlay": "HUD 浮层",
       "position": "位置",
@@ -212,7 +211,7 @@
     },
     "sanitization": {
       "title": "文本清理设置",
-      "enabled": "启用文本清理",
+      "enabled": "文本清理",
       "enabledDescription": "在 TTS 之前去除剪贴板文本中不需要的格式",
       "markdown": "去除 Markdown 语法",
       "markdownDescription": "去除所有 Markdown 格式（标题、粗体、斜体、代码块、链接、列表、引用）",
@@ -273,8 +272,6 @@
       "resetTemplate": "重置为内置"
     },
     "effects": {
-      "enabled": "启用效果",
-      "enabledDescription": "在主菜单中显示“效果”标签页，并对 TTS 播放应用后处理",
       "active": "当前效果",
       "activeDescription": "应用于每次 TTS 播放的音频效果",
       "options": {
@@ -323,7 +320,7 @@
       "animationsReducedTooltip": "系统的减弱动态效果设置会保持淡入过渡关闭。"
     },
     "hotkey": {
-      "enable": "启用全局快捷键",
+      "enable": "快捷键",
       "enableTooltip": "在任意应用中触发 TTS",
       "globalHotkey": "全局快捷键",
       "globalHotkeyTooltip": "按下组合键进行设置。至少需要一个修饰键（Ctrl、Alt、Shift、Win）。"

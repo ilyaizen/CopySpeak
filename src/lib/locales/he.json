@@ -163,13 +163,12 @@
     },
     "pagination": {
       "title": "הגדרות עימוד",
-      "enabled": "אפשר עימוד",
+      "enabled": "עימוד",
       "description": "פצל טקסטים ארוכים לקטעים להשמעה הדרגתית של TTS",
       "fragmentSize": "גודל קטע (תווים)",
       "fragmentSizeDescription": "מספר התווים המרבי לכל קטע טקסט (100-10000)"
     },
     "hud": {
-      "enabled": "אפשר HUD",
       "enabledDescription": "הצג שכבת גלי קול במהלך ההשמעה",
       "overlay": "שכבת HUD",
       "position": "מיקום",
@@ -212,7 +211,7 @@
     },
     "sanitization": {
       "title": "הגדרות ניקוי",
-      "enabled": "אפשר ניקוי",
+      "enabled": "ניקוי",
       "enabledDescription": "הסר עיצוב לא רצוי מטקסט הלוח לפני TTS",
       "markdown": "הסר תחביר Markdown",
       "markdownDescription": "הסר את כל עיצובי ה-Markdown (כותרות, מודגש, נטוי, בלוקי קוד, קישורים, רשימות, ציטוטים)",
@@ -273,8 +272,6 @@
       "resetTemplate": "איפוס למובנית"
     },
     "effects": {
-      "enabled": "אפשר אפקטים",
-      "enabledDescription": "הצג את לשונית האפקטים בתפריט הראשי והחל עיבוד על השמעת TTS",
       "active": "אפקט פעיל",
       "activeDescription": "אפקט שמע המוחל על כל השמעת TTS",
       "options": {
@@ -323,7 +320,7 @@
       "animationsReducedTooltip": "הגדרת התנועה המופחתת במערכת משאירה את המעברים כבויים."
     },
     "hotkey": {
-      "enable": "הפעל מקש קיצור גלובלי",
+      "enable": "מקש קיצור",
       "enableTooltip": "הפעל TTS מכל יישום",
       "globalHotkey": "מקש קיצור גלובלי",
       "globalHotkeyTooltip": "לחץ על שילוב מקשים להגדרה. נדרש לפחות מקש שינוי אחד (Ctrl, Alt, Shift, Win)."

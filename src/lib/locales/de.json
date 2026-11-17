@@ -163,13 +163,12 @@
     },
     "pagination": {
       "title": "Aufteilungseinstellungen",
-      "enabled": "Aufteilung aktivieren",
+      "enabled": "Aufteilung",
       "description": "Lange Texte für die schrittweise TTS-Wiedergabe in Fragmente aufteilen",
       "fragmentSize": "Fragmentgröße (Zeichen)",
       "fragmentSizeDescription": "Maximale Zeichen pro Textfragment (100–10000)"
     },
     "hud": {
-      "enabled": "HUD aktivieren",
       "enabledDescription": "Wellenform-Overlay während der Wiedergabe anzeigen",
       "overlay": "HUD-Overlay",
       "position": "Position",
@@ -212,7 +211,7 @@
     },
     "sanitization": {
       "title": "Bereinigungseinstellungen",
-      "enabled": "Bereinigung aktivieren",
+      "enabled": "Bereinigung",
       "enabledDescription": "Unerwünschte Formatierung vor der TTS aus dem Zwischenablagetext entfernen",
       "markdown": "Markdown-Syntax entfernen",
       "markdownDescription": "Sämtliche Markdown-Formatierung entfernen (Überschriften, Fett, Kursiv, Codeblöcke, Links, Listen, Zitate)",
@@ -273,8 +272,6 @@
       "resetTemplate": "Auf eingebaut zurücksetzen"
     },
     "effects": {
-      "enabled": "Effekte aktivieren",
-      "enabledDescription": "Tab „Effekte“ im Hauptmenü anzeigen und Nachbearbeitung auf die TTS-Wiedergabe anwenden",
       "active": "Aktiver Effekt",
       "activeDescription": "Audioeffekt, der auf jede TTS-Wiedergabe angewendet wird",
       "options": {
@@ -323,7 +320,7 @@
       "animationsReducedTooltip": "Die Systemeinstellung für reduzierte Bewegung deaktiviert die Übergänge."
     },
     "hotkey": {
-      "enable": "Globales Tastenkürzel aktivieren",
+      "enable": "Tastenkürzel",
       "enableTooltip": "TTS aus jeder Anwendung auslösen",
       "globalHotkey": "Globales Tastenkürzel",
       "globalHotkeyTooltip": "Drücken Sie eine Tastenkombination zum Festlegen. Mindestens eine Modifiertaste ist erforderlich (Strg, Alt, Umschalt, Win)."

@@ -163,13 +163,12 @@
     },
     "pagination": {
       "title": "Paramètres de découpage",
-      "enabled": "Activer le découpage",
+      "enabled": "Découpage",
       "description": "Découper les textes longs en fragments pour une lecture TTS progressive",
       "fragmentSize": "Taille des fragments (caractères)",
       "fragmentSizeDescription": "Nombre maximal de caractères par fragment (100-10000)"
     },
     "hud": {
-      "enabled": "Activer le HUD",
       "enabledDescription": "Afficher la forme d'onde en superposition pendant la lecture",
       "overlay": "Superposition HUD",
       "position": "Position",
@@ -212,7 +211,7 @@
     },
     "sanitization": {
       "title": "Paramètres de nettoyage",
-      "enabled": "Activer le nettoyage",
+      "enabled": "Nettoyage",
       "enabledDescription": "Retirer la mise en forme indésirable du texte copié avant la TTS",
       "markdown": "Supprimer la syntaxe Markdown",
       "markdownDescription": "Retirer toute mise en forme Markdown (titres, gras, italique, blocs de code, liens, listes, citations)",
@@ -273,8 +272,6 @@
       "resetTemplate": "Réinitialiser au modèle intégré"
     },
     "effects": {
-      "enabled": "Activer les effets",
-      "enabledDescription": "Afficher l'onglet Effets dans le menu principal et appliquer un post-traitement à la lecture TTS",
       "active": "Effet actif",
       "activeDescription": "Effet audio appliqué à chaque lecture TTS",
       "options": {
@@ -323,7 +320,7 @@
       "animationsReducedTooltip": "Le réglage système de réduction des animations maintient les transitions désactivées."
     },
     "hotkey": {
-      "enable": "Activer le raccourci global",
+      "enable": "Raccourci",
       "enableTooltip": "Déclencher le TTS depuis n'importe quelle application",
       "globalHotkey": "Raccourci global",
       "globalHotkeyTooltip": "Appuyez sur une combinaison de touches pour la définir. Au moins une touche de modification est requise (Ctrl, Alt, Maj, Win)."

@@ -163,13 +163,12 @@
     },
     "pagination": {
       "title": "विभाजन सेटिंग्स",
-      "enabled": "विभाजन चालू करें",
+      "enabled": "विभाजन",
       "description": "क्रमिक TTS प्लेबैक के लिए लंबे टेक्स्ट को खंडों में बाँटें",
       "fragmentSize": "खंड आकार (अक्षर)",
       "fragmentSizeDescription": "प्रति टेक्स्ट खंड अधिकतम अक्षर (100-10000)"
     },
     "hud": {
-      "enabled": "HUD चालू करें",
       "enabledDescription": "प्लेबैक के दौरान वेवफ़ॉर्म ओवरले दिखाएँ",
       "overlay": "HUD ओवरले",
       "position": "स्थिति",
@@ -212,7 +211,7 @@
     },
     "sanitization": {
       "title": "सफ़ाई सेटिंग्स",
-      "enabled": "सफ़ाई चालू करें",
+      "enabled": "सफ़ाई",
       "enabledDescription": "TTS से पहले क्लिपबोर्ड टेक्स्ट से अनचाही फ़ॉर्मैटिंग हटाएँ",
       "markdown": "Markdown सिंटैक्स हटाएँ",
       "markdownDescription": "सारी Markdown फ़ॉर्मैटिंग हटाएँ (हेडर, बोल्ड, इटैलिक, कोड ब्लॉक, लिंक, सूचियाँ, उद्धरण)",
@@ -273,8 +272,6 @@
       "resetTemplate": "बिल्ट-इन पर रीसेट करें"
     },
     "effects": {
-      "enabled": "इफ़ेक्ट चालू करें",
-      "enabledDescription": "मुख्य मेनू में इफ़ेक्ट टैब दिखाएँ और TTS प्लेबैक पर पोस्ट-प्रोसेसिंग लागू करें",
       "active": "सक्रिय इफ़ेक्ट",
       "activeDescription": "हर TTS प्लेबैक पर लागू होने वाला ऑडियो इफ़ेक्ट",
       "options": {
@@ -323,7 +320,7 @@
       "animationsReducedTooltip": "सिस्टम की रिड्यूस्ड मोशन सेटिंग फ़ेड ट्रांज़िशन को बंद रखती है।"
     },
     "hotkey": {
-      "enable": "वैश्विक हॉटकी सक्षम करें",
+      "enable": "हॉटकी",
       "enableTooltip": "किसी भी एप्लिकेशन से TTS शुरू करें",
       "globalHotkey": "वैश्विक हॉटकी",
       "globalHotkeyTooltip": "सेट करने के लिए कुंजी संयोजन दबाएँ। कम से कम एक मॉडिफ़ायर आवश्यक है (Ctrl, Alt, Shift, Win)।"

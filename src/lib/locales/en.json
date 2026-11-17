@@ -163,13 +163,12 @@
     },
     "pagination": {
       "title": "Pagination Settings",
-      "enabled": "Enable Pagination",
+      "enabled": "Pagination",
       "description": "Splits long text into fragments so playback starts sooner; off, the whole text is synthesized as one request.",
       "fragmentSize": "Fragment Size (characters)",
       "fragmentSizeDescription": "Maximum characters per text fragment (100-10000)"
     },
     "hud": {
-      "enabled": "Enable HUD",
       "enabledDescription": "Shows the waveform overlay during playback; off, playback is audio-only.",
       "overlay": "HUD Overlay",
       "position": "Position",
@@ -212,7 +211,7 @@
     },
     "sanitization": {
       "title": "Sanitization Settings",
-      "enabled": "Enable Sanitization",
+      "enabled": "Sanitization",
       "enabledDescription": "Cleans clipboard text before synthesis; off, text reaches the engine exactly as copied.",
       "markdown": "Strip Markdown Syntax",
       "markdownDescription": "Remove all markdown formatting (headers, bold, italic, code blocks, links, lists, blockquotes)",
@@ -273,8 +272,6 @@
       "resetTemplate": "Reset to builtin"
     },
     "effects": {
-      "enabled": "Enable Effects",
-      "enabledDescription": "Show the Effects tab in the main menu and apply post-processing to TTS playback",
       "active": "Active Effect",
       "activeDescription": "Audio effect applied to every TTS playback",
       "options": {
@@ -323,7 +320,7 @@
       "animationsReducedTooltip": "Your system reduced motion setting keeps the fade transitions off."
     },
     "hotkey": {
-      "enable": "Enable Global Hotkey",
+      "enable": "Hotkey",
       "enableTooltip": "Trigger TTS from any application",
       "globalHotkey": "Global Hotkey",
       "globalHotkeyTooltip": "Press a key combination to set. Requires at least one modifier (Ctrl, Alt, Shift, Win)."

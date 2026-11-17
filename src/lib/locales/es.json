@@ -163,13 +163,12 @@
     },
     "pagination": {
       "title": "Ajustes de paginación",
-      "enabled": "Activar paginación",
+      "enabled": "Paginación",
       "description": "Divide los textos largos en fragmentos para reproducir el TTS de forma progresiva",
       "fragmentSize": "Tamaño del fragmento (caracteres)",
       "fragmentSizeDescription": "Número máximo de caracteres por fragmento (100-10.000)"
     },
     "hud": {
-      "enabled": "Activar HUD",
       "enabledDescription": "Muestra la superposición de la forma de onda durante la reproducción",
       "overlay": "Superposición HUD",
       "position": "Posición",
@@ -212,7 +211,7 @@
     },
     "sanitization": {
       "title": "Ajustes de limpieza de texto",
-      "enabled": "Activar limpieza de texto",
+      "enabled": "Limpieza de texto",
       "enabledDescription": "Elimina el formato no deseado del texto del portapapeles antes del TTS",
       "markdown": "Quitar la sintaxis de Markdown",
       "markdownDescription": "Elimina todo el formato de Markdown (títulos, negrita, cursiva, bloques de código, enlaces, listas y citas)",
@@ -273,8 +272,6 @@
       "resetTemplate": "Restablecer a integrada"
     },
     "effects": {
-      "enabled": "Activar efectos",
-      "enabledDescription": "Muestra la pestaña Efectos en el menú principal y aplica efectos a la reproducción del TTS",
       "active": "Efecto activo",
       "activeDescription": "Efecto de audio aplicado a cada reproducción del TTS",
       "options": {
@@ -323,7 +320,7 @@
       "animationsReducedTooltip": "La preferencia de movimiento reducido del sistema mantiene las transiciones desactivadas."
     },
     "hotkey": {
-      "enable": "Activar atajo global",
+      "enable": "Atajo",
       "enableTooltip": "Activar TTS desde cualquier aplicación",
       "globalHotkey": "Atajo global",
       "globalHotkeyTooltip": "Pulsa una combinación de teclas para definirla. Requiere al menos un modificador (Ctrl, Alt, Mayús, Win)."
