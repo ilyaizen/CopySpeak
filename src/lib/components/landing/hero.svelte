@@ -6,17 +6,27 @@
   import { VERSION } from "#lib/version";
   import { INTRO_AUDIO, INTRO_LINES } from "./intro-captions";
   import { groundParallax } from "#lib/utils/ground-parallax";
+  import { captionGlide } from "#lib/utils/caption-glide";
+  import type { CaptionWord } from "#lib/models/captions.js";
 
   const DOWNLOAD_URL = "https://github.com/ilyaizen/CopySpeech/releases";
   const GITHUB_URL = "https://github.com/ilyaizen/CopySpeech";
 
   type Phase = "idle" | "selected" | "copy1" | "copy2" | "speaking" | "done";
 
-  // Each word carries its index in the whole intro, so highlighting and the caption window
+  // Each word carries its index in the whole intro, so the glide and the speaking state
   // run across line breaks.
   let count = 0;
   const LINES = INTRO_LINES.map((line) => line.map((w) => ({ ...w, index: count++ })));
   const WORDS = LINES.flat();
+  // captionGlide reads offset as the word's data-word-offset, which is the intro index.
+  const GLIDE_WORDS: CaptionWord[] = WORDS.map((w) => ({
+    text: w.text,
+    offset: w.index,
+    start: w.start,
+    end: w.end,
+    phrase: 0
+  }));
   // Static frame (no JS / reduced motion / before playback): "buck" lit.
   const STATIC_WORD = WORDS.findIndex((w) => w.text === "buck");
 
@@ -33,21 +43,12 @@
   // run the copy illustration first. Before that, play() must start inside a click.
   let unlocked = false;
 
-  const caption = $derived.by(() => {
-    // Before the first word the HUD previews it; the static frame keeps its lit word.
-    const i = live >= 0 ? live : phase === null ? STATIC_WORD : 0;
-    const text = (from: number, to: number) =>
-      WORDS.slice(Math.max(0, from), to)
-        .map((w) => w.text)
-        .join(" ");
-    return { before: text(i - 2, i), now: WORDS[i].text, after: text(i + 1, i + 3) };
-  });
+  // The glide lights the word being spoken. Its pill holds on pause and clears on each phase
+  // change (the resetKey), so a replay starts clean.
+  const glideIndex = $derived(phase === null ? STATIC_WORD : phase === "speaking" ? live : -1);
 
   function wordClass(index: number): string {
-    if (phase === null) return index === STATIC_WORD ? "w now" : "w";
-    if (phase !== "speaking") return "w";
-    if (index === live) return "w live";
-    return index > live ? "w unsaid" : "w";
+    return phase === "speaking" && index > live ? "w unsaid" : "w";
   }
 
   function indexAt(ms: number): number {
@@ -174,12 +175,23 @@
   <section class="hero">
     <div class="stage" class:paused={!playing} data-phase={phase ?? undefined} bind:this={stage}>
       <div class="win">
-        <h1 class="promise" class:sel={selected} bind:this={promise}>
+        <h1
+          class="promise"
+          class:sel={selected}
+          bind:this={promise}
+          use:captionGlide={{
+            words: GLIDE_WORDS,
+            activeIndex: glideIndex,
+            animated: true,
+            resetKey: phase
+          }}
+        >
           {#each LINES as line, li (li)}
             <span class="line"
-              >{#each line as word (word.index)}<span class={wordClass(word.index)}
-                  >{word.text}</span
-                >{word === line[line.length - 1] ? "" : " "}{/each}</span
+              >{#each line as word (word.index)}<span
+                  class={wordClass(word.index)}
+                  data-word-offset={word.index}>{word.text}</span
+                >{word === line[line.length - 1] || word.text.endsWith("—") ? "" : " "}{/each}</span
             >
           {/each}
         </h1>
@@ -192,13 +204,6 @@
           {/key}
           <span class="window-bar"><i></i></span>
         </div>
-      </div>
-      <div class="hud" aria-hidden="true">
-        <span class="wave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
-        <p class="cap">
-          {#if caption.before}<b>{caption.before}</b>{" "}{/if}<span class="now">{caption.now}</span
-          >{#if caption.after}{" "}<b>{caption.after}</b>{/if}
-        </p>
       </div>
       <p class="label stage-label">{$_("landing.hero.previewLabel")}</p>
       <div class="demo-controls">

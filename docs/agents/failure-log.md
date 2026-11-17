@@ -169,6 +169,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Scope landing CSS under `.landing` in `landing.css`: `+layout.svelte` renders the Play UI's root too, so a bare `h2`, `footer` or `:root` rule restyles the app.
 - Target `.dark .landing` for dark-only rules: mode-watcher adds `.dark` to `<html>` and never `.light`, so light is the base selector.
 - Copy preview assets the landing uses from the untracked `docs_internal/` into `static/landing/`: the gitignored folder never deploys.
+- Give the hero `.promise` heading `position: relative` when it uses `captionGlide`: the glide pill positions against its host, so a static host puts the pill at the wrong offset.
 - End the landing Listen demo on `audio.ended`, not on the silent loop's `LAST_END + 300` clock: a clip shorter than that tail never reaches it, so the button stays on Stop and the silent loop stays off.
 - Never mark the providers marquee clone `inert`: each copy is narrower than the carousel viewport, so the clone is on screen for most of the loop and `inert` makes visible logos swallow clicks (events retarget to `.providers-track` with no href). Keep the clone `aria-hidden` with `tabindex="-1"` on its links — mouse-clickable, still unfocusable and silent to assistive tech.
 - Translate a source mark's ink-box origin to (0, 0) before scaling it into a tight lockup viewBox; scaling alone shifts and clips artwork whose source coordinates start elsewhere.

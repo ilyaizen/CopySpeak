@@ -1,5 +1,6 @@
 <script lang="ts">
   import { _ } from "svelte-i18n";
+  import { marquee } from "#lib/utils/marquee";
 
   // Mirrors CLOUD_ENGINES / LOCAL_ENGINES order from #lib/components/engine/engine-meta.ts,
   // minus Edge (retired from every UI surface). Wordmarks exist where the owner's terms
@@ -89,6 +90,11 @@
       mark: { mark: "pocket", w: 102.9, h: 16 }
     }
   ];
+
+  const rows: { items: Provider[]; label: string }[] = [
+    { items: cloud, label: "landing.providers.cloud" },
+    { items: localEngines, label: "landing.providers.offline" }
+  ];
 </script>
 
 {#snippet providerItems(items: Provider[], clone: boolean = false)}
@@ -110,36 +116,36 @@
             style:--mark={`url("/landing/providers/${item.mark.mark}.svg")`}
           ></span>
         {:else}
-          {item.name}
+          <span class="provider-text-mark">{item.name}</span>
         {/if}
       </a>
     </li>
   {/each}
 {/snippet}
 
-{#snippet providerLine(clone: boolean = false)}
-  <li class="label">{$_("landing.providers.cloud")}</li>
-  {@render providerItems(cloud, clone)}
-  <li class="label">{$_("landing.providers.offline")}</li>
-  {@render providerItems(localEngines, clone)}
-{/snippet}
-
 <div class="wrap">
   <section class="providers" aria-labelledby="providers-title">
     <h2 class="sr-only" id="providers-title">{$_("landing.providers.title")}</h2>
-    <div class="providers-carousel">
-      <div class="providers-track">
-        <ul class="providers-list">
-          {@render providerLine()}
-        </ul>
-        <!-- Marquee clone: stays mouse-clickable (no inert — each copy is
-             narrower than the carousel, so the clone is on screen for most
-             of the loop and inert would make visible logos dead). It keeps
-             aria-hidden, and tabindex=-1 keeps focus out of that subtree. -->
-        <ul class="providers-list" aria-hidden="true">
-          {@render providerLine(true)}
-        </ul>
+    <!-- Two thin rows, one per direction, the same marquee as the Settings About page.
+         Clones stay mouse-clickable (no inert: each copy is narrower than the row, so a
+         visible clone would swallow clicks). They keep aria-hidden and tabindex=-1. -->
+    {#each rows as { items, label }, index}
+      <div
+        class="marquee"
+        role="group"
+        aria-label={$_(label)}
+        dir="ltr"
+        use:marquee={index === 0 ? 1 : -1}
+      >
+        <div class="track">
+          <ul class="provider-list">
+            {@render providerItems(items)}
+          </ul>
+          <ul class="provider-list" aria-hidden="true">
+            {@render providerItems(items, true)}
+          </ul>
+        </div>
       </div>
-    </div>
+    {/each}
   </section>
 </div>

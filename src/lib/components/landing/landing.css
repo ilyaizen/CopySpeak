@@ -243,7 +243,7 @@
   position: relative;
   width: 100%;
   max-width: 840px;
-  padding: 64px 24px 104px;
+  padding: 64px 24px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
@@ -272,6 +272,8 @@
   box-shadow: 0 12px 32px oklch(0 0 0 / 0.3);
 }
 .landing .promise {
+  /* containing block for the glide pill, which positions against this heading */
+  position: relative;
   margin: 0;
   font: 700 32px/38px var(--mono);
   letter-spacing: -0.02em;
@@ -285,16 +287,9 @@
 .landing .promise .line + .line {
   margin-top: 10px;
 }
+/* the spoken word is lit by the caption glide pill (caption-glide.ts), not by the word */
 .landing .w {
-  border-radius: 2px;
-  transition:
-    background-color 0.12s ease-out,
-    color 0.12s ease-out;
-}
-/* static default (no JS / reduced motion): speaking frame with one word lit */
-.landing .w.now {
-  background: var(--accent);
-  color: var(--accent-ink);
+  transition: color 0.12s ease-out;
 }
 /* copied selection: CSS Highlight API paints one range; .sel is the fallback */
 .landing .promise.sel .w {
@@ -342,76 +337,6 @@
   height: 100%;
   background: var(--muted-foreground);
 }
-.landing .hud {
-  position: absolute;
-  left: 50%;
-  bottom: 40px;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-width: min(420px, calc(100% - 48px));
-  max-width: calc(100% - 48px);
-  padding: 12px 16px;
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  text-align: start;
-  box-shadow: 0 12px 28px oklch(0.16 0 0 / 0.1);
-}
-.dark .landing .hud {
-  box-shadow: 0 16px 40px oklch(0 0 0 / 0.4);
-}
-.landing .wave {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  height: 24px;
-}
-.landing .wave i {
-  display: block;
-  width: 3px;
-  height: 100%;
-  border-radius: 1px;
-  background: var(--accent);
-  transform: scaleY(0.5);
-}
-.landing .wave i:nth-child(2) {
-  transform: scaleY(0.9);
-}
-.landing .wave i:nth-child(3) {
-  transform: scaleY(0.4);
-}
-.landing .wave i:nth-child(4) {
-  transform: scaleY(1);
-}
-.landing .wave i:nth-child(5) {
-  transform: scaleY(0.6);
-}
-.landing .wave i:nth-child(6) {
-  transform: scaleY(0.8);
-}
-.landing .wave i:nth-child(7) {
-  transform: scaleY(0.35);
-}
-.landing .cap {
-  margin: 0;
-  font: 400 14px/21px var(--sans);
-  color: var(--muted-foreground);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: clip;
-}
-.landing .cap b {
-  font-weight: 400;
-  color: var(--foreground);
-}
-.landing .cap .now {
-  padding: 0 4px;
-  border-radius: 2px;
-  background: var(--accent);
-  color: var(--accent-ink);
-}
 .landing .stage-label {
   position: absolute;
   inset-inline-start: 16px;
@@ -451,40 +376,6 @@
 
 /* animated phases, driven by hero.svelte */
 @media (prefers-reduced-motion: no-preference) {
-  .landing .stage[data-phase] .hud {
-    transition:
-      opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .landing .stage[data-phase] .wave i {
-    animation: landing-wave 900ms ease-in-out infinite alternate;
-  }
-  .landing .stage[data-phase] .wave i:nth-child(2) {
-    animation-delay: -0.2s;
-  }
-  .landing .stage[data-phase] .wave i:nth-child(3) {
-    animation-delay: -0.45s;
-  }
-  .landing .stage[data-phase] .wave i:nth-child(4) {
-    animation-delay: -0.1s;
-  }
-  .landing .stage[data-phase] .wave i:nth-child(5) {
-    animation-delay: -0.6s;
-  }
-  .landing .stage[data-phase] .wave i:nth-child(6) {
-    animation-delay: -0.3s;
-  }
-  .landing .stage[data-phase] .wave i:nth-child(7) {
-    animation-delay: -0.7s;
-  }
-  .landing .stage[data-phase="idle"] .hud,
-  .landing .stage[data-phase="selected"] .hud,
-  .landing .stage[data-phase="copy1"] .hud,
-  .landing .stage[data-phase="copy2"] .hud,
-  .landing .stage[data-phase="done"] .hud {
-    opacity: 0;
-    transform: translate(-50%, 8px);
-  }
   .landing .stage[data-phase] .copied {
     transition: opacity 0.2s ease-out;
   }
@@ -513,24 +404,11 @@
     animation: none;
     width: 0;
   }
-  .landing .stage[data-phase="speaking"] .w.live {
-    background: var(--accent);
-    color: var(--accent-ink);
-  }
   .landing .stage[data-phase="speaking"] .w.unsaid {
     color: var(--muted-foreground);
   }
-  .landing .stage.paused .wave i,
   .landing .stage.paused .window-bar i {
     animation-play-state: paused;
-  }
-}
-@keyframes landing-wave {
-  from {
-    transform: scaleY(0.25);
-  }
-  to {
-    transform: scaleY(1);
   }
 }
 @keyframes landing-pop {
@@ -603,73 +481,77 @@
   margin: 16px 0 0;
 }
 
-/* Supported engines: one continuous carousel line; the Cloud/Local group labels
-   are inline separators inside it. The row duplicates its contents for a seamless
-   marquee, edge fades are static, and animation is disabled for
-   prefers-reduced-motion. */
+/* Supported engines: two thin marquee rows, the same as the Settings About page. The JS
+   action (#lib/utils/marquee) drives the scroll; these rules only style it. */
 .landing .providers {
   padding: 40px 0;
   border-top: 1px solid var(--border);
 }
-.landing .providers-carousel {
+.landing .providers .marquee {
+  width: 100%;
+  max-width: 480px;
+  margin: 12px auto 0;
   overflow: hidden;
+  user-select: none;
+  touch-action: pan-y;
+  cursor: grab;
   -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent 0,
-    #000 48px,
-    #000 calc(100% - 48px),
+    to right,
+    transparent 0%,
+    black 10%,
+    black 90%,
     transparent 100%
   );
-  mask-image: linear-gradient(
-    90deg,
-    transparent 0,
-    #000 48px,
-    #000 calc(100% - 48px),
-    transparent 100%
-  );
+  mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
 }
-.landing .providers-track {
+.landing .providers .marquee:active {
+  cursor: grabbing;
+}
+.landing .providers .track {
   display: flex;
   width: max-content;
-  /* ~1.9x the old cloud row's content at 90s keeps the linear speed below the
-     old 40s cloud row's px/s — slower to read, one knob for the whole line. */
-  animation: providers-marquee 90s linear infinite;
+  will-change: transform;
 }
-.landing .providers-list {
+.landing .providers .provider-list {
   display: flex;
-  flex-wrap: wrap;
+  flex: none;
   align-items: center;
-  /* ElevenLabs requires one logo-height of clear space on every side. */
-  gap: 32px;
+  gap: 48px;
   margin: 0;
-  padding: 16px 0;
+  padding: 0 48px 0 0;
   list-style: none;
 }
-/* Inside each marquee the row must stay single-file; the trailing
-   padding makes both copies identical so the -50% loop has no seam. */
-.landing .providers-track .providers-list {
-  flex-wrap: nowrap;
-  padding-right: 32px;
-}
-@keyframes providers-marquee {
-  to {
-    transform: translateX(-50%);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .landing .providers-track {
-    animation: none;
-  }
-  /* Static content is wider than the row, so hand scroll back to the user. */
-  .landing .providers-carousel {
-    overflow-x: auto;
-  }
-}
-.landing .providers-list a {
+.landing .providers .provider-list a {
   display: inline-flex;
   align-items: center;
-  font: 600 14px/20px var(--sans);
+  min-height: 24px;
+  color: var(--muted-foreground);
   text-decoration: none;
+  transition: color 150ms;
+}
+.landing .providers .provider-list a:hover,
+.landing .providers .provider-list a:focus-visible {
+  color: var(--foreground);
+}
+.landing .providers .provider-list a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 3px;
+}
+.landing .providers .provider-text-mark {
+  font: 600 16px/16px var(--sans);
+}
+@media (prefers-reduced-motion: reduce) {
+  .landing .providers .marquee {
+    overflow-x: auto;
+    cursor: auto;
+    touch-action: auto;
+  }
+  .landing .providers .track {
+    will-change: auto;
+  }
+  .landing .providers .provider-list[aria-hidden="true"] {
+    display: none;
+  }
 }
 /* Provider marks: one SVG per owner, alpha-masked and painted with the text
    color, so a single file serves both themes (no light/dark variants, no DOM
@@ -765,14 +647,16 @@
 .landing .close .actions {
   margin-top: 0;
 }
+/* credits: the same block as the app's About page */
 .landing footer {
   display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-  padding: 24px 16px;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 16px 40px;
   border-top: 1px solid var(--border);
   background: var(--lift);
+  text-align: center;
 }
 .landing footer a {
   text-decoration: none;
@@ -780,13 +664,43 @@
 .landing footer a:hover {
   text-decoration: underline;
 }
+.landing footer .credit-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.landing footer .credit-links .btn {
+  height: 32px;
+  padding: 0 12px;
+  font: 500 12px/16px var(--mono);
+}
+.landing footer .credit-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  font: 500 11px/16px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.landing footer .heart {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-inline: 0.1em;
+  vertical-align: -0.12em;
+}
 
 @media (max-width: 767px) {
   .landing .hero {
     padding-top: 32px;
   }
   .landing .stage {
-    padding: 32px 16px 96px;
+    padding: 32px 16px 64px;
   }
   .landing .win {
     padding: 24px 16px;
@@ -794,10 +708,6 @@
   .landing .promise {
     font-size: 24px;
     line-height: 30px;
-  }
-  .landing .hud {
-    gap: 12px;
-    padding: 12px;
   }
   .landing .section {
     padding: 56px 0;

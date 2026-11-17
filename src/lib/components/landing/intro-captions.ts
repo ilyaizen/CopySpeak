@@ -47,7 +47,7 @@ export const INTRO_LINES: IntroWord[][] = [
     { text: "And", start: 10600, end: 10720 },
     { text: "forced", start: 10800, end: 11040 },
     { text: "the", start: 11120, end: 11200 },
-    { text: "underbrush,", start: 11280, end: 12160 },
+    { text: "underbrush—", start: 11280, end: 12160 },
     { text: "and", start: 12240, end: 12320 },
     { text: "that", start: 12400, end: 12560 },
     { text: "was", start: 12640, end: 12720 },
