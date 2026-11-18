@@ -1019,8 +1019,8 @@ function freshWorld() {
   };
   // Speech requests resolve at once. Each status request waits until the test answers it.
   globalThis.fetch = (url) => {
-    world.fetchUrls.push(String(url));
-    if (String(url) === SPEAK_URL) return Promise.resolve({ ok: true });
+    world.fetchUrls.push(fetchUrlText(url));
+    if (fetchUrlText(url) === SPEAK_URL) return Promise.resolve({ ok: true });
     return new Promise((resolve) => {
       world.calls.push({
         resolve: (answer) => resolve({ ok: true, json: () => Promise.resolve(answer) })
@@ -1328,6 +1328,10 @@ test("clip: every drawn glide frame stays inside the target word's clip", async 
 
 // Follow: captions on and off, manual input, and cleanup. A fake clock drives the pause and interval timers.
 const SPEAK_URL = "http://127.0.0.1:43117/speak";
+// fetch accepts a string, a URL, or a Request. Normalize to the absolute URL text.
+function fetchUrlText(input) {
+  return input instanceof Request ? input.url : new URL(input).href;
+}
 const clock = { now: 1000000 };
 function useFakeClock() {
   clock.now = 1000000;
@@ -1558,7 +1562,7 @@ test("auto-read sends the request id and wait false", () => {
   const bodies = [];
   const previousFetch = globalThis.fetch;
   globalThis.fetch = (url, options) => {
-    if (String(url) === SPEAK_URL) {
+    if (fetchUrlText(url) === SPEAK_URL) {
       bodies.push(JSON.parse(options.body));
       return Promise.resolve({ ok: true });
     }
@@ -1936,8 +1940,8 @@ test("clicking another reply replaces a manual reading still waiting for complet
   globalThis.host = { state: { focusedSessionId: { get: () => "s1" } }, notify() {} };
   const requests = [];
   globalThis.fetch = (url, options) => {
-    requests.push({ url: String(url), body: JSON.parse(options.body) });
-    if (String(url).endsWith("/speak")) return new Promise(() => {});
+    requests.push({ url: fetchUrlText(url), body: JSON.parse(options.body) });
+    if (fetchUrlText(url).endsWith("/speak")) return new Promise(() => {});
     return Promise.resolve({ ok: true });
   };
   const disposers = [];
