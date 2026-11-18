@@ -768,7 +768,6 @@
       "previewLabel": "Preview"
     },
     "providers": {
-      "title": "Moteurs pris en charge",
       "cloud": "Cloud",
       "offline": "Local"
     },

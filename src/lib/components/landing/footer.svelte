@@ -51,11 +51,10 @@
       ({new Date().getFullYear()})</span
     >
   </p>
-  <p class="small">
+  <p class="legal">
     {$_("landing.footer.nameOrigin")}
-    <a href={POEM_URL} target="_blank" rel="noopener noreferrer"
-      >“The Most of It” by Robert Frost (1942)</a
-    >
+    <a href={POEM_URL} target="_blank" rel="noopener noreferrer">“The Most of It” by Robert Frost</a
+    > (1942)
   </p>
-  <p class="small">{$_("landing.footer.license")}</p>
+  <p class="legal">{$_("landing.footer.license")}</p>
 </footer>

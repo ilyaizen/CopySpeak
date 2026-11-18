@@ -642,7 +642,6 @@ export type TranslationKeys =
   | "landing.hero.pauseDemo"
   | "landing.hero.playDemo"
   | "landing.hero.previewLabel"
-  | "landing.providers.title"
   | "landing.providers.cloud"
   | "landing.providers.offline"
   | "landing.features.title"

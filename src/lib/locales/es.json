@@ -768,7 +768,6 @@
       "previewLabel": "Preview"
     },
     "providers": {
-      "title": "Motores compatibles",
       "cloud": "Nube",
       "offline": "Local"
     },

@@ -1,7 +1,7 @@
 {
   "app": {
     "title": "CopySpeech",
-    "tagline": "Clipboard AI text-to-speech",
+    "tagline": "Your clipboard, read aloud.",
     "logoAlt": "CopySpeech logo"
   },
   "nav": {
@@ -775,7 +775,6 @@
       "previewLabel": "Preview"
     },
     "providers": {
-      "title": "Supported engines",
       "cloud": "Cloud",
       "offline": "Local"
     },

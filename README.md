@@ -33,7 +33,6 @@ CopySpeech reads your clipboard aloud. Copy the same text twice within 1.5 secon
 - **Text cleanup.** Strips markdown, expands URLs, and normalizes Unicode.
 - **Duck other apps (Windows).** Other apps get quieter while CopySpeech speaks.
 - **Browser companion.** Reads selected text on a page. Chrome, Edge, and Firefox are supported. The page highlights each word as it plays.
-- **Control server.** A local HTTP API for scripts and tools. See [Control server](#control-server).
 - **Interface.** 9 languages, right-to-left layouts, dark and light themes, tray icon, and auto-updates.
 
 ## Install
@@ -49,7 +48,7 @@ Download a build from [Releases](https://github.com/ilyaizen/CopySpeech/releases
 
 On first launch, onboarding asks you to pick an engine and a voice. Kokoro is the default.
 
-**Linux:** Wayland blocks global hotkeys. Use double-copy, the tray, or a compositor keybind that calls the [control server](#control-server).
+**Linux:** Wayland blocks global hotkeys. Use double-copy or the tray.
 
 ### Browser companion (Chrome)
 
@@ -64,19 +63,6 @@ Installed Windows builds register the Chrome host at launch. Edge, Firefox, Linu
 
 - **Hermes Desktop and DeepSeek Harness (DSH) plugins.** Speak new assistant replies in those apps. See [copyspeech-dsh/README.md](copyspeech-dsh/README.md) for DSH.
 - **Pi extension and Claude Code hook.** Speak final assistant replies. See [docs/agent-voice.md](docs/agent-voice.md).
-
-## Control server
-
-A local HTTP API on `127.0.0.1:43117`.
-
-| Route                         | Purpose                                     |
-| ----------------------------- | ------------------------------------------- |
-| `GET /health`                 | Check that the app runs                     |
-| `GET /status`                 | Read the current caption                    |
-| `POST /speak`                 | Speak text. Pass `wait` to block until done |
-| `POST /pause`, `POST /resume` | Pause or resume a reading                   |
-| `POST /seek`                  | Move a reading by a signed step             |
-| `POST /stop`                  | Stop playback                               |
 
 ## Development
 

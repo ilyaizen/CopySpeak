@@ -768,7 +768,6 @@
       "previewLabel": "Preview"
     },
     "providers": {
-      "title": "Unterstützte Engines",
       "cloud": "Cloud",
       "offline": "Lokal"
     },

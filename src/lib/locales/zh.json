@@ -768,7 +768,6 @@
       "previewLabel": "Preview"
     },
     "providers": {
-      "title": "支持的引擎",
       "cloud": "云端",
       "offline": "本地"
     },

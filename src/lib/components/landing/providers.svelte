@@ -125,7 +125,7 @@
 
 <div class="wrap">
   <section class="providers" aria-labelledby="providers-title">
-    <h2 class="sr-only" id="providers-title">{$_("landing.providers.title")}</h2>
+    <h2 class="ack-title" id="providers-title">{$_("settings.about.acknowledgments")}</h2>
     <!-- Two thin rows, one per direction, the same marquee as the Settings About page.
          Clones stay mouse-clickable (no inert: each copy is narrower than the row, so a
          visible clone would swallow clicks). They keep aria-hidden and tabindex=-1. -->
@@ -147,5 +147,6 @@
         </div>
       </div>
     {/each}
+    <p class="ack-thanks">{$_("settings.about.acknowledgmentsTagline")}</p>
   </section>
 </div>

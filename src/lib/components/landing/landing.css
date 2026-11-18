@@ -259,7 +259,7 @@
 }
 .landing .win {
   position: relative;
-  max-width: 600px;
+  max-width: 750px;
   margin: 0 auto;
   padding: 32px;
   background: var(--card);
@@ -484,13 +484,30 @@
 /* Supported engines: two thin marquee rows, the same as the Settings About page. The JS
    action (#lib/utils/marquee) drives the scroll; these rules only style it. */
 .landing .providers {
-  padding: 40px 0;
+  padding: 72px 0 56px;
   border-top: 1px solid var(--border);
+}
+/* Same as the Settings About acknowledgments header: a small uppercase label. */
+.landing .providers .ack-title {
+  margin: 0;
+  font: 500 11px/16px var(--mono);
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+.landing .providers .ack-thanks {
+  margin: 24px 0 0;
+  font: 500 11px/16px var(--mono);
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
 }
 .landing .providers .marquee {
   width: 100%;
   max-width: 480px;
-  margin: 12px auto 0;
+  margin: 20px auto 0;
   overflow: hidden;
   user-select: none;
   touch-action: pan-y;
@@ -617,13 +634,20 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 24px;
   margin: 0;
 }
+/* Same depth as the hero stage: a large soft shadow, a glow in dark mode. */
 .landing .shot img {
-  width: min(1000px, 100%);
+  width: min(750px, 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: 0 24px 60px oklch(0.16 0 0 / 0.08);
+}
+.dark .landing .shot img {
+  box-shadow:
+    0 0 130px oklch(0.95 0 0 / 0.18),
+    0 0 36px oklch(0.95 0 0 / 0.14);
 }
 .dark .landing .shot .shot-light {
   display: none;
@@ -660,8 +684,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding: 32px 16px 40px;
+  gap: 24px;
+  padding: 48px 16px 56px;
   border-top: 1px solid var(--border);
   background: var(--lift);
   text-align: center;
@@ -695,6 +719,13 @@
   text-transform: uppercase;
   color: var(--muted-foreground);
 }
+.landing footer .legal {
+  margin: 0;
+  font: 500 11px/16px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
 .landing footer .heart {
   display: inline-block;
   width: 1em;
@@ -721,7 +752,7 @@
     padding: 56px 0;
   }
   .landing .providers {
-    padding: 32px 0;
+    padding: 56px 0 40px;
   }
   .landing .nav a {
     padding: 0 8px;
