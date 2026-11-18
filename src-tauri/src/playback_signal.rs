@@ -11,10 +11,12 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, Weak};
 use std::time::{Duration, Instant};
 
-/// Freshness window for a reported caption snapshot. The webview reports at
-/// about 10 Hz while playback runs, so an older snapshot means playback
-/// stopped (the webview sends a final `active: false` report on stop).
-const CAPTION_FRESH: Duration = Duration::from_secs(1);
+/// Freshness window for a reported caption snapshot. The webview reports every
+/// 25 ms while playback runs, but a hidden or occluded webview throttles its
+/// timers to about 1 Hz, so a 1 s window expired between reports and made the
+/// Hermes plugin end its captions mid-reading. A stop still sends an explicit
+/// `active: false` report, so this window only covers a silent webview.
+const CAPTION_FRESH: Duration = Duration::from_secs(4);
 
 lazy_static::lazy_static! {
     static ref WAITERS: Mutex<Vec<Weak<WaitState>>> = Mutex::new(Vec::new());
@@ -194,7 +196,11 @@ mod tests {
     async fn unscoped_wait_observes_only_finishes_after_subscription() {
         let _guard = TEST_LOCK.lock().unwrap();
         signal_finished_for(None);
-        assert!(!PlaybackWait::new(None).wait(Duration::from_millis(50)).await);
+        assert!(
+            !PlaybackWait::new(None)
+                .wait(Duration::from_millis(50))
+                .await
+        );
         let waiter = PlaybackWait::new(None);
         signal_finished_for(Some(7));
         assert!(waiter.wait(Duration::from_millis(50)).await);
@@ -204,8 +210,7 @@ mod tests {
     async fn foreign_finish_cannot_overwrite_a_subscribed_readings_finish() {
         let _guard = TEST_LOCK.lock().unwrap();
         let id = "playback-finish-not-overwritten";
-        let crate::speak_requests::Registration::Proceed(seq) =
-            crate::speak_requests::register(id)
+        let crate::speak_requests::Registration::Proceed(seq) = crate::speak_requests::register(id)
         else {
             panic!("request must register");
         };
@@ -221,8 +226,7 @@ mod tests {
     async fn finishes_before_reading_attaches_do_not_satisfy_request() {
         let _guard = TEST_LOCK.lock().unwrap();
         let id = "playback-finish-before-reading";
-        let crate::speak_requests::Registration::Proceed(seq) =
-            crate::speak_requests::register(id)
+        let crate::speak_requests::Registration::Proceed(seq) = crate::speak_requests::register(id)
         else {
             panic!("request must register");
         };
@@ -237,8 +241,7 @@ mod tests {
     async fn foreign_and_unattributed_finishes_do_not_release_a_reading() {
         let _guard = TEST_LOCK.lock().unwrap();
         let id = "playback-finish-foreign";
-        let crate::speak_requests::Registration::Proceed(seq) =
-            crate::speak_requests::register(id)
+        let crate::speak_requests::Registration::Proceed(seq) = crate::speak_requests::register(id)
         else {
             panic!("request must register");
         };
@@ -255,12 +258,19 @@ mod tests {
         let _guard = TEST_LOCK.lock().unwrap();
         let waiter = PlaybackWait::new(None);
         let weak = Arc::downgrade(&waiter.0);
-        assert!(WAITERS.lock().unwrap().iter().any(|entry| entry.ptr_eq(&weak)));
+        assert!(WAITERS
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|entry| entry.ptr_eq(&weak)));
         drop(waiter);
-        assert!(!WAITERS.lock().unwrap().iter().any(|entry| entry.ptr_eq(&weak)));
+        assert!(!WAITERS
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|entry| entry.ptr_eq(&weak)));
         assert!(weak.upgrade().is_none());
     }
-
 
     /// A caption snapshot describes live playback only inside the freshness
     /// window; the status route falls back to inactive after it goes stale.
