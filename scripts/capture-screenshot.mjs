@@ -60,7 +60,7 @@ function updateSvelteReference(filename) {
   }
 
   const content = readFileSync(SCREENSHOTS_SVELTE, "utf-8");
-  const updated = content.replace(/src="\/screen-v[^"]+\.png"/, `src="/${filename}"`);
+  const updated = content.replace(/src="\/screen-[^"]+\.png"/, `src="/${filename}"`);
 
   if (updated === content) {
     console.log("Svelte reference already up to date or pattern not found.");
@@ -73,7 +73,7 @@ function updateSvelteReference(filename) {
 
 // --- Main ---
 const version = getVersion();
-const filename = `screen-v${version}.png`;
+const filename = `screen-${version}.png`;
 const outPath = resolve(STATIC_DIR, filename);
 const shouldUpdate = !process.argv.includes("--no-update");
 

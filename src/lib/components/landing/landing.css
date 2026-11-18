@@ -624,7 +624,15 @@
   width: min(1000px, 100%);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  filter: grayscale(1);
+}
+.dark .landing .shot .shot-light {
+  display: none;
+}
+.landing .shot .shot-dark {
+  display: none;
+}
+.dark .landing .shot .shot-dark {
+  display: block;
 }
 .landing .shot figcaption {
   font: 400 12px/18px var(--sans);

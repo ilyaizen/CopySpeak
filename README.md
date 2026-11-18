@@ -15,7 +15,10 @@ CopySpeech reads your clipboard aloud. Copy the same text twice within 1.5 secon
 
 </div>
 
-![CopySpeech screenshot](static/screen-0.3.0.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="static/screen-0.3.1-dark.png">
+  <img alt="CopySpeech screenshot" src="static/screen-0.3.1-light.png">
+</picture>
 
 ## Features
 
