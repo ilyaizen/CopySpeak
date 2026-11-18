@@ -28,7 +28,7 @@ const KOKORO_VOICES = [
   "bm_george"
 ];
 
-export const ENGINE_CHOICES = [
+export const ENGINE_CHOICES: EngineChoice[] = [
   {
     id: "tiny-voca",
     name: "tiny-voca",
@@ -65,7 +65,7 @@ export const ENGINE_CHOICES = [
     platforms: null,
     detailKey: "onboarding.engines.fish.detail"
   }
-] satisfies EngineChoice[];
+];
 
 // Fresh-install default on every OS. Mirrors TtsEngine::default in
 // src-tauri/src/config/tts.rs.

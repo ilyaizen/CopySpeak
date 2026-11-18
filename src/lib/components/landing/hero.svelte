@@ -18,7 +18,9 @@
   // Each word carries its index in the whole intro, so the glide and the speaking state
   // run across line breaks.
   type Intro = { audio: string; lines: IntroWord[][]; staticWord: string };
-  let { intro = { audio: HERO_AUDIO, lines: HERO_LINES, staticWord: HERO_STATIC_WORD } }: {
+  let {
+    intro = { audio: HERO_AUDIO, lines: HERO_LINES, staticWord: HERO_STATIC_WORD }
+  }: {
     intro?: Intro;
   } = $props();
 
