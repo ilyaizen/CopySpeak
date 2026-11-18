@@ -178,48 +178,88 @@ if (!scope[marker]) {
   }
   // Glyphs match the DSH playback bar (client.js PauseGlyph, PlayGlyph,
   // StopGlyph, SkipGlyph). Back and forward are the Material fast_rewind and
-  // fast_forward paths. Each shape is one SVG child element.
+  // fast_forward paths. Each part is one SVG child element.
   type Glyph = "pause" | "play" | "stop" | "back" | "forward" | "close";
-  type Shape = { tag: "rect" | "path"; attrs: Record<string, string> };
-  const GLYPHS: Record<Glyph, { viewBox: string; shapes: Shape[] }> = {
+  type GlyphPart = { tag: "rect" | "path"; attrs: Record<string, string> };
+  const GLYPHS = {
     pause: {
       viewBox: "0 0 16 16",
-      shapes: [
-        { tag: "rect", attrs: { x: "4.6", y: "3", width: "2.5", height: "10", rx: "0.9", fill: "currentColor" } },
-        { tag: "rect", attrs: { x: "8.9", y: "3", width: "2.5", height: "10", rx: "0.9", fill: "currentColor" } }
+      parts: [
+        {
+          tag: "rect",
+          attrs: { x: "4.6", y: "3", width: "2.5", height: "10", rx: "0.9", fill: "currentColor" }
+        },
+        {
+          tag: "rect",
+          attrs: { x: "8.9", y: "3", width: "2.5", height: "10", rx: "0.9", fill: "currentColor" }
+        }
       ]
     },
     play: {
       viewBox: "0 0 16 16",
-      shapes: [
+      parts: [
         {
           tag: "path",
-          attrs: { d: "M5.8 3.5 12.2 8 5.8 12.5Z", fill: "currentColor", stroke: "currentColor", "stroke-width": "1", "stroke-linejoin": "round" }
+          attrs: {
+            d: "M5.8 3.5 12.2 8 5.8 12.5Z",
+            fill: "currentColor",
+            stroke: "currentColor",
+            "stroke-width": "1",
+            "stroke-linejoin": "round"
+          }
         }
       ]
     },
     stop: {
       viewBox: "0 0 16 16",
-      shapes: [{ tag: "rect", attrs: { x: "3.8", y: "3.8", width: "8.4", height: "8.4", rx: "1.3", fill: "currentColor" } }]
+      parts: [
+        {
+          tag: "rect",
+          attrs: {
+            x: "3.8",
+            y: "3.8",
+            width: "8.4",
+            height: "8.4",
+            rx: "1.3",
+            fill: "currentColor"
+          }
+        }
+      ]
     },
     back: {
       viewBox: "0 0 24 24",
-      shapes: [{ tag: "path", attrs: { d: "M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z", fill: "currentColor" } }]
+      parts: [
+        {
+          tag: "path",
+          attrs: { d: "M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z", fill: "currentColor" }
+        }
+      ]
     },
     forward: {
       viewBox: "0 0 24 24",
-      shapes: [{ tag: "path", attrs: { d: "M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z", fill: "currentColor" } }]
+      parts: [
+        {
+          tag: "path",
+          attrs: { d: "M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z", fill: "currentColor" }
+        }
+      ]
     },
     close: {
       viewBox: "0 0 16 16",
-      shapes: [
+      parts: [
         {
           tag: "path",
-          attrs: { d: "M3 3l10 10M13 3 3 13", fill: "none", stroke: "currentColor", "stroke-width": "2", "stroke-linecap": "round" }
+          attrs: {
+            d: "M3 3l10 10M13 3 3 13",
+            fill: "none",
+            stroke: "currentColor",
+            "stroke-width": "2",
+            "stroke-linecap": "round"
+          }
         }
       ]
     }
-  };
+  } satisfies Record<Glyph, { viewBox: string; parts: GlyphPart[] }>;
   /** One glyph as an SVG element, built from the GLYPHS table. */
   function glyphElement(name: Glyph): SVGSVGElement {
     const glyph = GLYPHS[name];
@@ -227,9 +267,9 @@ if (!scope[marker]) {
     svg.setAttribute("viewBox", glyph.viewBox);
     svg.setAttribute("aria-hidden", "true");
     svg.setAttribute("focusable", "false");
-    for (const shape of glyph.shapes) {
-      const element = document.createElementNS("http://www.w3.org/2000/svg", shape.tag);
-      for (const [key, value] of Object.entries(shape.attrs)) element.setAttribute(key, value);
+    for (const part of glyph.parts) {
+      const element = document.createElementNS("http://www.w3.org/2000/svg", part.tag);
+      for (const [key, value] of Object.entries(part.attrs)) element.setAttribute(key, value);
       svg.append(element);
     }
     return svg;
@@ -310,7 +350,8 @@ if (!scope[marker]) {
     strip.append(label, dot);
     if (skip) strip.append(control("back", "Back 5 seconds", () => sendControl("skip-back")));
     strip.append(pauseButton);
-    if (skip) strip.append(control("forward", "Forward 5 seconds", () => sendControl("skip-forward")));
+    if (skip)
+      strip.append(control("forward", "Forward 5 seconds", () => sendControl("skip-forward")));
     strip.append(stop, hide);
     shadow.append(css, strip);
     document.documentElement.append(panel);
