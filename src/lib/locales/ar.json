@@ -360,7 +360,7 @@
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "TTS طبيعي منخفض الكمون يعمل بـ Sonic 3.5. يتطلب مفتاح API واتصالًا بالإنترنت.",
+      "description": "TTS طبيعي منخفض الكمون يعمل بـ Sonic 3.6. يتطلب مفتاح API واتصالًا بالإنترنت.",
       "apiKey": "مفتاح API",
       "apiKeyDescription": "يُخزَّن مفتاح API محليًا ولا تتم مشاركته أبدًا.",
       "check": "تحقق",

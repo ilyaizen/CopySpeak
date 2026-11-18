@@ -360,7 +360,7 @@
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "Natürliche TTS mit geringer Latenz auf Basis von Sonic 3.5. Erfordert API-Schlüssel und Internetverbindung.",
+      "description": "Natürliche TTS mit geringer Latenz auf Basis von Sonic 3.6. Erfordert API-Schlüssel und Internetverbindung.",
       "apiKey": "API-Schlüssel",
       "apiKeyDescription": "Ihr API-Schlüssel wird lokal gespeichert und niemals weitergegeben.",
       "check": "Prüfen",

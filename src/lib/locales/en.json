@@ -360,7 +360,7 @@
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "Low-latency, natural TTS powered by Sonic 3.5. Requires an API key and internet connection.",
+      "description": "Low-latency, natural TTS powered by Sonic 3.6. Requires an API key and internet connection.",
       "apiKey": "API Key",
       "apiKeyDescription": "Your API key is stored locally and never shared.",
       "check": "Check",

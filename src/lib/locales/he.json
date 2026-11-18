@@ -360,7 +360,7 @@
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "TTS טבעי עם השהיה נמוכה, המופעל על ידי Sonic 3.5. דורש מפתח API וחיבור לאינטרנט.",
+      "description": "TTS טבעי עם השהיה נמוכה, המופעל על ידי Sonic 3.6. דורש מפתח API וחיבור לאינטרנט.",
       "apiKey": "מפתח API",
       "apiKeyDescription": "מפתח ה-API שלך נשמר מקומית ולעולם אינו משותף.",
       "check": "בדוק",

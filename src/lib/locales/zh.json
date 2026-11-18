@@ -360,7 +360,7 @@
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "由 Sonic 3.5 驱动的低延迟自然 TTS。需要 API 密钥和网络连接。",
+      "description": "由 Sonic 3.6 驱动的低延迟自然 TTS。需要 API 密钥和网络连接。",
       "apiKey": "API 密钥",
       "apiKeyDescription": "你的 API 密钥仅存储在本地，绝不会被分享。",
       "check": "检查",

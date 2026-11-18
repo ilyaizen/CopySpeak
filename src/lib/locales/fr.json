@@ -360,7 +360,7 @@
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "TTS naturelle à faible latence reposant sur Sonic 3.5. Nécessite une clé API et une connexion Internet.",
+      "description": "TTS naturelle à faible latence reposant sur Sonic 3.6. Nécessite une clé API et une connexion Internet.",
       "apiKey": "Clé API",
       "apiKeyDescription": "Votre clé API est stockée localement et n'est jamais partagée.",
       "check": "Vérifier",

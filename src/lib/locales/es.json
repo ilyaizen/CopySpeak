@@ -360,7 +360,7 @@
     },
     "cartesia": {
       "title": "Cartesia",
-      "description": "TTS natural y de baja latencia con Sonic 3.5. Requiere una clave de API y conexión a internet.",
+      "description": "TTS natural y de baja latencia con Sonic 3.6. Requiere una clave de API y conexión a internet.",
       "apiKey": "Clave de API",
       "apiKeyDescription": "Tu clave de API se guarda en local y nunca se comparte.",
       "check": "Comprobar",
