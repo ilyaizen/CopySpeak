@@ -11,6 +11,9 @@ use serde_json::json;
 const CARTESIA_TTS_URL: &str = "https://api.cartesia.ai/tts/bytes";
 const CARTESIA_TTS_SSE_URL: &str = "https://api.cartesia.ai/tts/sse";
 const CARTESIA_VERSION: &str = "2024-06-10";
+/// Batch fallbacks for a profile that leaves the encoding or rate unset.
+const DEFAULT_ENCODING: &str = "pcm_f32le";
+const DEFAULT_SAMPLE_RATE: u32 = 44100;
 
 #[derive(Deserialize)]
 struct CartesiaSseEvent {
@@ -217,6 +220,21 @@ impl CartesiaTtsBackend {
         Self { config }
     }
 
+    /// Sample rate for both paths. The stream's audio metadata follows it.
+    fn output_sample_rate(&self) -> u32 {
+        self.config.sample_rate.unwrap_or(DEFAULT_SAMPLE_RATE)
+    }
+
+    /// Batch container, encoding and rate. The stream path keeps `pcm_s16le`
+    /// because the player decodes only signed 16-bit PCM.
+    fn batch_output_format(&self) -> serde_json::Value {
+        json!({
+            "container": self.config.output_format,
+            "encoding": self.config.encoding.as_deref().unwrap_or(DEFAULT_ENCODING),
+            "sample_rate": self.output_sample_rate(),
+        })
+    }
+
     fn synthesize_streaming_from(
         &self,
         url: &str,
@@ -228,6 +246,7 @@ impl CartesiaTtsBackend {
             return Err(TtsError::Unavailable("Cartesia API key is missing".into()));
         }
         // The shared player and history WAV writer consume signed integer PCM.
+        let sample_rate = self.output_sample_rate();
         let body = json!({
             "model_id": self.config.model_id,
             "transcript": text,
@@ -235,7 +254,7 @@ impl CartesiaTtsBackend {
             "output_format": {
                 "container": "raw",
                 "encoding": "pcm_s16le",
-                "sample_rate": 44100,
+                "sample_rate": sample_rate,
             },
             "add_timestamps": true,
             "use_normalized_timestamps": false,
@@ -243,7 +262,7 @@ impl CartesiaTtsBackend {
         let url = url.to_owned();
         let text = text.to_owned();
         let meta = AudioFormatMeta {
-            sample_rate: 44100,
+            sample_rate,
             channels: 1,
             bits_per_sample: 16,
         };
@@ -374,11 +393,7 @@ impl TtsBackend for CartesiaTtsBackend {
                 "mode": "id",
                 "id": voice,
             },
-            "output_format": {
-                "container": self.config.output_format,
-                "encoding": "pcm_f32le",
-                "sample_rate": 44100,
-            },
+            "output_format": self.batch_output_format(),
         });
 
         log::info!(
@@ -478,6 +493,29 @@ mod tests {
     use super::*;
     use std::io::{Read, Write};
     use std::time::Duration;
+
+    #[test]
+    fn batch_format_follows_profile_encoding_and_rate() {
+        let backend = CartesiaTtsBackend::new(CartesiaConfig {
+            encoding: Some("pcm_s16le".into()),
+            sample_rate: Some(24000),
+            ..Default::default()
+        });
+        assert_eq!(
+            backend.batch_output_format(),
+            json!({ "container": "wav", "encoding": "pcm_s16le", "sample_rate": 24000 })
+        );
+        assert_eq!(backend.output_sample_rate(), 24000);
+        let unset = CartesiaTtsBackend::new(CartesiaConfig {
+            encoding: None,
+            sample_rate: None,
+            ..Default::default()
+        });
+        assert_eq!(
+            unset.batch_output_format(),
+            json!({ "container": "wav", "encoding": "pcm_f32le", "sample_rate": 44100 })
+        );
+    }
 
     #[test]
     fn streams_before_response_finishes_and_reports_truncated_body() {

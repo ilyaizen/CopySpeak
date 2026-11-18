@@ -236,6 +236,15 @@ impl TtsBackend for OpenAiTtsBackend {
     fn voice_display_name(&self, voice_id: &str) -> String {
         voice_id.to_lowercase()
     }
+
+    // The request sends `response_format` unchanged, so the reply's container
+    // matches its name (mp3, opus, aac, flac, wav, pcm).
+    fn file_extension(&self) -> &str {
+        match self.config.response_format.as_str() {
+            "" => "wav",
+            other => other,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -258,6 +267,22 @@ mod tests {
         assert!(!backend_for_model("tts-1").supports_streaming());
         assert!(!backend_for_model("tts-1-hd").supports_streaming());
         assert!(!backend_for_model("some-unknown-model").supports_streaming());
+    }
+
+    #[test]
+    fn file_extension_follows_response_format() {
+        let backend = |format: &str| {
+            OpenAiTtsBackend::new(OpenAIConfig {
+                response_format: format.into(),
+                ..Default::default()
+            })
+        };
+        assert_eq!(backend("mp3").file_extension(), "mp3");
+        assert_eq!(backend("opus").file_extension(), "opus");
+        assert_eq!(backend("aac").file_extension(), "aac");
+        assert_eq!(backend("flac").file_extension(), "flac");
+        assert_eq!(backend("wav").file_extension(), "wav");
+        assert_eq!(backend("").file_extension(), "wav");
     }
 
     #[test]

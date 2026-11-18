@@ -41,6 +41,14 @@ const { CATALOG } = vi.hoisted(() => ({
           default_value: "mp3",
           choices: ["mp3", "wav"]
         },
+        {
+          key: "quality",
+          label: "Quality",
+          kind: "select",
+          help: "Numeric choices.",
+          default_value: 0.5,
+          choices: ["0", "0.5", "1"]
+        },
         { key: "speed", label: "Speed", kind: "number", help: "Speech pace.", default_value: 1.0 },
         {
           key: "instructions",
@@ -67,8 +75,7 @@ vi.mock("svelte-sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() }
 }));
 
-async function renderOpenAIProfile() {
-  const config = testConfig();
+async function renderOpenAIProfile(config = testConfig()) {
   config.tts.active_profile_id = "p1";
   config.tts.profiles = [
     {
@@ -144,7 +151,21 @@ describe("profile-manager advanced engine options", () => {
       "true"
     );
 
-    expect(visibleSelects(view)).toHaveLength(5);
+    expect(visibleSelects(view)).toHaveLength(6);
+
+    view.unmount();
+  });
+
+  it("stores a numeric select choice as a number", async () => {
+    const config = testConfig();
+    const view = await renderOpenAIProfile(config);
+
+    await fireEvent.click(view.getByRole("button", { name: "Advanced" }));
+    const quality = visibleSelects(view).find((s) => [...s.options].some((o) => o.value === "0.5"));
+    if (!quality) throw new Error("Quality select did not appear");
+    await fireEvent.change(quality, { target: { value: "1" } });
+
+    expect(config.tts.profiles[0].engine_options.quality).toBe(1);
 
     view.unmount();
   });

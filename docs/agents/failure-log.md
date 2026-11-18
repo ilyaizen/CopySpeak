@@ -67,6 +67,8 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Point `scripts/bench/bench.py` at `%LOCALAPPDATA%\CopySpeak\engines`, the root the installers and app use; the bench had `CopySpeech\engines`, which never holds engines.
 - Catch only dizione's `ValueError` with "nothing to pronounce" as a skip; dizione raises it instead of returning empty ids, and other ValueErrors are real failures.
 - Split engine text on CJK sentence marks (。！？) too; ASCII-only splitting merges a Japanese sentence into the next English one and gives it caption timings.
+- Keep Cartesia's stream request on `pcm_s16le`: the player decodes only signed 16-bit PCM, so the Encoding select applies to saved (batch) audio only.
+- Read Google's `output_format` in `google.rs` before trusting its select; the backend never reads it.
 - Stop or idle a running `tauri dev` before `cargo check`: its cargo process holds the build-directory lock, so a second `cargo check` waits silently.
 - Keep the engine-test lock separate from displayed results; invalidate results after credential replacement or installer changes.
 - Stop cloud engine tests when the environment-key warning defers saving; a resolved save callback does not prove persistence.
@@ -291,3 +293,9 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Keep helpers in `plugin.js`, because the loader rejects relative imports; `plugin.test.mjs` strips the SDK import lines into a temp copy.
 - Re-check focus and settings when a `/status` response lands, not only before the request: a late reply from the old chat otherwise paints in the new one.
 - Use `scrollTo` behavior `instant` for Reduce Motion, not `auto`: `auto` defers to the page's CSS `scroll-behavior`, so a smooth-scroll page still animates the follow move.
+- Inject manual playback UI into the chat DOM: the desktop plugin SDK has no per-message chat slot, so the play button rides the host hover action row `.aui-message-actions-desktop` inside `[data-slot="aui_msg-actions"]`. Verify the selector against the RUNNING build's renderer chunks, not the checkout source.
+- Start every plugin reading through the control server's request-scoped routes (`/speak` with `request_id`, `/pause`, `/resume`, `/seek`, `/stop`) and mirror the request in one playback record, so the bar can pause, seek, and stop any reading the plugin started, auto-read included.
+- Gate the plugin's injected UI on `window.MutationObserver !== undefined && window.document !== undefined`: the node test world's window fake offers neither, and `typeof` fails `vp check`.
+- Initialize injected buttons before attachment; prune their sync entries after detachment, not during creation.
+- Accept element-node selection boundaries inside the reply body; a Range does not always start in a text node.
+- Serialize manual starts, not the `wait: true` response; otherwise a new click cannot stop a blocked earlier reading.

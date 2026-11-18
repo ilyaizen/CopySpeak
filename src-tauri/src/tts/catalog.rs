@@ -85,6 +85,26 @@ fn select_option(
     }
 }
 
+/// A select whose stored value is a number. The picker lists each choice as
+/// text and writes back the matching number, so the typed backend fields
+/// (`f32`, `u32`) parse it. A numeric default marks the option as numeric.
+fn number_select_option(
+    key: &str,
+    label: &str,
+    help: &str,
+    default_value: f64,
+    choices: &[f64],
+) -> EngineOptionDescriptor {
+    EngineOptionDescriptor {
+        key: key.into(),
+        label: label.into(),
+        kind: EngineOptionKind::Select,
+        help: help.into(),
+        default_value: serde_json::json!(default_value),
+        choices: Some(choices.iter().map(f64::to_string).collect()),
+    }
+}
+
 fn voice(
     id: &str,
     label: &str,
@@ -445,12 +465,12 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                     serde_json::json!("gpt-4o-mini-tts"),
                     vec!["gpt-4o-mini-tts", "tts-1", "tts-1-hd"],
                 ),
-                option(
+                select_option(
                     "response_format",
                     "Response Format",
-                    EngineOptionKind::Text,
                     "Audio response format.",
                     serde_json::json!("wav"),
+                    vec!["mp3", "opus", "aac", "flac", "wav", "pcm"],
                 ),
                 // Style presets, expanded to full prompts in openai.rs. Unknown
                 // saved values (legacy free text) pass through unchanged.
@@ -575,40 +595,56 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                         "eleven_flash_v2",
                     ],
                 ),
-                option(
+                // The formats the Rust enum `ElevenLabsOutputFormat` accepts. The
+                // backend ignores any other saved value and uses its config default.
+                select_option(
                     "output_format",
                     "Output Format",
-                    EngineOptionKind::Text,
                     "ElevenLabs output format.",
                     serde_json::json!("mp3_44100_128"),
+                    vec![
+                        "mp3_44100_128",
+                        "mp3_44100_192",
+                        "mp3_44100_32",
+                        "mp3_22050_32",
+                        "pcm_44100",
+                        "pcm_22050",
+                        "pcm_16000",
+                        "ogg_vorbis_44100",
+                        "ogg_vorbis_22050",
+                        "flac_44100",
+                        "mulaw_8000",
+                    ],
                 ),
-                option(
+                // ElevenLabs documents 0 to 1. The v3 model takes only 0, 0.5, and
+                // 1 (Creative, Natural, Robust), so the list uses those three.
+                number_select_option(
                     "stability",
                     "Stability",
-                    EngineOptionKind::Number,
-                    "Voice stability from 0 to 1.",
-                    serde_json::json!(0.5),
+                    "Lower is more expressive. Higher is more consistent.",
+                    0.5,
+                    &[0.0, 0.5, 1.0],
                 ),
-                option(
+                number_select_option(
                     "similarity_boost",
                     "Similarity",
-                    EngineOptionKind::Number,
-                    "Similarity boost from 0 to 1.",
-                    serde_json::json!(0.75),
+                    "How closely the output follows the original voice.",
+                    0.75,
+                    &[0.0, 0.25, 0.5, 0.75, 1.0],
                 ),
-                option(
+                number_select_option(
                     "style",
                     "Style",
-                    EngineOptionKind::Number,
-                    "Optional style exaggeration.",
-                    serde_json::json!(null),
+                    "Style exaggeration. Keep at 0 for most voices; higher adds latency.",
+                    0.0,
+                    &[0.0, 0.25, 0.5, 0.75, 1.0],
                 ),
                 option(
                     "use_speaker_boost",
                     "Speaker Boost",
                     EngineOptionKind::Boolean,
-                    "Optional speaker boost flag.",
-                    serde_json::json!(null),
+                    "Boosts similarity to the original speaker. ElevenLabs default: on.",
+                    serde_json::json!(true),
                 ),
             ],
             voices: vec![
@@ -818,26 +854,30 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                     serde_json::json!("sonic-3.6"),
                     vec!["sonic-3.6", "sonic-3.5"],
                 ),
-                option(
+                // Only `wav` is listed: the batch path returns it with a .wav
+                // extension. `mp3` needs a bit rate this request never sends.
+                select_option(
                     "output_format",
                     "Output Format",
-                    EngineOptionKind::Text,
                     "Container format.",
                     serde_json::json!("wav"),
+                    vec!["wav"],
                 ),
-                option(
+                // Mu-law and A-law are left out: rodio cannot decode them. Live
+                // playback always uses pcm_s16le, so this applies to saved audio.
+                select_option(
                     "encoding",
                     "Encoding",
-                    EngineOptionKind::Text,
-                    "Optional output encoding.",
+                    "Saved audio sample encoding.",
                     serde_json::json!("pcm_f32le"),
+                    vec!["pcm_f32le", "pcm_s16le"],
                 ),
-                option(
+                number_select_option(
                     "sample_rate",
                     "Sample Rate",
-                    EngineOptionKind::Number,
-                    "Optional sample rate.",
-                    serde_json::json!(44100),
+                    "Output sample rate in Hz, for live playback and saved audio.",
+                    44100.0,
+                    &[8000.0, 16000.0, 22050.0, 24000.0, 44100.0, 48000.0],
                 ),
             ],
             voices: vec![
@@ -1060,12 +1100,14 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             supports_pitch: false,
             supports_captions: true,
             supports_bracket_emotes: false,
-            options: vec![option(
+            // 0.7 to 1.5 is the documented range. Steps of 0.1 are this list's
+            // choice, not an API rule. 1 is normal speech.
+            options: vec![number_select_option(
                 "speed",
                 "Speed",
-                EngineOptionKind::Number,
-                "Native synthesis speed rendered by the API, 0.7 to 1.5 (unset = normal). Multiplies with the profile's playback speed.",
-                serde_json::json!(null),
+                "Native synthesis speed rendered by the API (1 = normal). Multiplies with the profile's playback speed.",
+                1.0,
+                &[0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5],
             )],
             // 26 built-in voices — fetched from GET /v1/tts/voices docs
             // (2026-10-25). Custom voices are covered by manual voice-ID entry;
@@ -1175,12 +1217,13 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                         "gemini-2.5-flash-preview-tts",
                     ],
                 ),
-                option(
+                // Only `wav` is listed: unary replies already carry a WAV header.
+                select_option(
                     "output_format",
                     "Output Format",
-                    EngineOptionKind::Text,
                     "Output format after wrapping PCM.",
                     serde_json::json!("wav"),
+                    vec!["wav"],
                 ),
             ],
             voices: vec![
@@ -1312,19 +1355,25 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
                     "Deployment endpoint.",
                     serde_json::json!(""),
                 ),
-                option(
+                // The endpoint stays free text: it is the account's own URL.
+                select_option(
                     "model",
                     "Model",
-                    EngineOptionKind::Text,
-                    "Model or deployment name.",
+                    "MAI-Voice model.",
                     serde_json::json!("mai-voice-2"),
+                    vec![
+                        "mai-voice-2",
+                        "mai-voice-2-flash",
+                        "mai-voice-2.1",
+                        "mai-voice-2.1-flash",
+                    ],
                 ),
-                option(
+                select_option(
                     "output_format",
                     "Output Format",
-                    EngineOptionKind::Text,
                     "Response format.",
                     serde_json::json!("wav"),
+                    vec!["mp3", "wav", "pcm", "opus"],
                 ),
             ],
             voices: vec![],
@@ -1536,15 +1585,55 @@ mod tests {
                     continue;
                 }
                 let choices = option.choices.as_deref().unwrap_or_default();
+                // Number selects list their choices as text, so compare as numbers.
+                let listed = match &option.default_value {
+                    serde_json::Value::String(d) => choices.iter().any(|c| c == d),
+                    serde_json::Value::Number(n) => {
+                        choices.iter().any(|c| c.parse::<f64>().ok() == n.as_f64())
+                    }
+                    _ => false,
+                };
                 assert!(
-                    option
-                        .default_value
-                        .as_str()
-                        .is_some_and(|d| choices.iter().any(|c| c == d)),
+                    listed,
                     "{:?}.{}: default {} is not a listed choice",
-                    entry.engine,
-                    option.key,
-                    option.default_value
+                    entry.engine, option.key, option.default_value
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn cloud_engine_options_are_predefined_selects() {
+        // Account-specific values stay free text: the Microsoft endpoint is
+        // the account's own URL. The ElevenLabs speaker boost is an on/off flag.
+        let cloud = [
+            TtsEngine::OpenAI,
+            TtsEngine::ElevenLabs,
+            TtsEngine::Cartesia,
+            TtsEngine::Fish,
+            TtsEngine::Xai,
+            TtsEngine::Mistral,
+            TtsEngine::Google,
+            TtsEngine::Microsoft,
+        ];
+        for entry in list_engines()
+            .into_iter()
+            .filter(|e| cloud.contains(&e.engine))
+        {
+            for option in &entry.options {
+                let allowed = match (&entry.engine, option.key.as_str()) {
+                    (TtsEngine::Microsoft, "endpoint") => {
+                        matches!(option.kind, EngineOptionKind::Text)
+                    }
+                    (TtsEngine::ElevenLabs, "use_speaker_boost") => {
+                        matches!(option.kind, EngineOptionKind::Boolean)
+                    }
+                    _ => matches!(option.kind, EngineOptionKind::Select),
+                };
+                assert!(
+                    allowed,
+                    "{:?}.{} must be a select with predefined choices",
+                    entry.engine, option.key
                 );
             }
         }

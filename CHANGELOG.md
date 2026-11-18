@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Cloud engine options use selects** – OpenAI response format, ElevenLabs output format and voice settings, and Cartesia output format and encoding now offer only the values the backend accepts. Free-text entries no longer reach the API.
 - **Chrome companion connects again** – installed builds registered the browser companion host with `\\?\` extended-length paths, and Chrome fails the handshake for such paths, so the extension showed an error and double-copy fell back without the companion. The app now registers plain paths.
 
 ## [0.3.0] - 2026-11-16

@@ -467,6 +467,15 @@
     }));
   }
 
+  // A select with a numeric default stores a number: the backend parses these
+  // as f32 or u32, and a text value would fail to parse.
+  function selectOptionValue(
+    descriptor: EngineOptionDescriptor,
+    choice: string
+  ): EngineOptionValue {
+    return Number.isFinite(descriptor.default_value) ? Number(choice) : choice;
+  }
+
   function catalogVoicesFor(engine: TtsEngine): VoiceCatalogEntry[] {
     return voicesByEngine[engine] ?? [];
   }
@@ -1003,7 +1012,7 @@
                   value={String(optionValue(active, option) ?? "")}
                   onchange={(e) => {
                     const val = (e.target as HTMLSelectElement).value;
-                    setOptionValue(activeIndex, option.key, val);
+                    setOptionValue(activeIndex, option.key, selectOptionValue(option, val));
                   }}
                   class="w-56"
                 />
