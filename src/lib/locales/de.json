@@ -1,7 +1,6 @@
 {
   "app": {
     "title": "CopySpeech",
-    "tagline": "KI-Sprachausgabe für Ihre Zwischenablage",
     "logoAlt": "CopySpeech-Logo"
   },
   "nav": {
@@ -754,58 +753,6 @@
     "preview": "Vorschau",
     "previewing": "Vorschau läuft...",
     "activeTooltip": "Der Effekt, der auf jede TTS-Wiedergabe angewendet wird. Sofort umschaltbar ohne Neustart."
-  },
-  "landing": {
-    "nav": {
-      "home": "Home"
-    },
-    "hero": {
-      "download": "Herunterladen",
-      "github": "GitHub",
-      "version": "v{version}",
-      "pauseDemo": "Demo pausieren",
-      "playDemo": "Demo abspielen",
-      "previewLabel": "Preview"
-    },
-    "providers": {
-      "cloud": "Cloud",
-      "offline": "Lokal"
-    },
-    "features": {
-      "title": "Funktionen",
-      "doubleCopy": {
-        "title": "Auslösen per Doppelkopieren",
-        "description": "Text innerhalb von 1,5 Sekunden zweimal kopieren, um die Sprachausgabe sofort zu starten. Keine Tastenkürzel nötig."
-      },
-      "engines": {
-        "title": "Offline- & Cloud-TTS-Engines",
-        "description": "Kokoro, Piper, Kitten, Qwen3 und Pocket laufen vollständig offline. OpenAI, ElevenLabs, Cartesia, Google, Microsoft oder ein beliebiger HTTP-Endpunkt für Cloud-Stimmen."
-      },
-      "hud": {
-        "title": "HUD-Overlay",
-        "description": "Schwebendes Head-up-Display mit Echtzeit-Wellenform und Live-Untertiteln mit Wort-Hervorhebung."
-      },
-      "history": {
-        "title": "Verlauf",
-        "description": "Dauerhafter Generierungsverlauf mit Wiedergabe. Bei deaktiviertem Verlauf bleiben Vorlesungen unprotokolliert."
-      },
-      "sanitization": {
-        "title": "Textbereinigung",
-        "description": "Markdown-Entfernung, Ausschreiben von URLs und Normalisierung — plus optionaler KI-Umschreibpass für eine gut verständliche Sprache."
-      },
-      "browser": {
-        "title": "Browser companion",
-        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
-      }
-    },
-    "screenshots": {
-      "alt": "CopySpeech-Screenshot",
-      "caption": "Hauptoberfläche mit Tab Abspielen"
-    },
-    "footer": {
-      "license": "MIT-Lizenz",
-      "nameOrigin": "Name inspiriert von"
-    }
   },
   "footer": {
     "listening": "Lauscht",

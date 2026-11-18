@@ -1,7 +1,6 @@
 {
   "app": {
     "title": "CopySpeech",
-    "tagline": "המרת טקסט לדיבור ב-AI ללוח ההעתקה שלך",
     "logoAlt": "הלוגו של CopySpeech"
   },
   "nav": {
@@ -754,58 +753,6 @@
     "preview": "תצוגה מקדימה",
     "previewing": "מציג תצוגה מקדימה...",
     "activeTooltip": "האפקט שמוחל על כל השמעת TTS. ניתן להחליף מיד, ללא הפעלה מחדש."
-  },
-  "landing": {
-    "nav": {
-      "home": "Home"
-    },
-    "hero": {
-      "download": "הורדה",
-      "github": "GitHub",
-      "version": "v{version}",
-      "pauseDemo": "השהיית ההדגמה",
-      "playDemo": "הפעלת ההדגמה",
-      "previewLabel": "Preview"
-    },
-    "providers": {
-      "cloud": "ענן",
-      "offline": "מקומיים"
-    },
-    "features": {
-      "title": "תכונות",
-      "doubleCopy": {
-        "title": "טריגר העתקה כפולה",
-        "description": "העתק טקסט פעמיים תוך 1.5 שניות כדי להפעיל דיבור מיידית. ללא צורך במקשי קיצור."
-      },
-      "engines": {
-        "title": "מנועי TTS מקומיים ומהענן",
-        "description": "Kokoro, Piper, Kitten, Qwen3 ו-Pocket עובדים במלואם ללא אינטרנט. OpenAI, ElevenLabs, Cartesia, Google, Microsoft או כל נקודת קצה HTTP לקולות מהענן."
-      },
-      "hud": {
-        "title": "שכבת HUD",
-        "description": "תצוגת מידע צפה עם גלי קול בזמן אמת וכתוביות מודגשות מילה במילה."
-      },
-      "history": {
-        "title": "היסטוריה",
-        "description": "היסטוריית יצירות קבועה עם השמעה. כאשר היא כבויה, ההקראות לא נשמרות ביומן."
-      },
-      "sanitization": {
-        "title": "ניקוי טקסט",
-        "description": "הסרת Markdown, הרחבת כתובות URL ונרמול טקסט — ובנוסף ניסוח מחדש אופציונלי ב-AI לדיבור נעים להאזנה."
-      },
-      "browser": {
-        "title": "Browser companion",
-        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
-      }
-    },
-    "screenshots": {
-      "alt": "צילום מסך של CopySpeech",
-      "caption": "ממשק ראשי עם לשונית ההשמעה"
-    },
-    "footer": {
-      "license": "רישיון MIT",
-      "nameOrigin": "השם שאוב מ־"
-    }
   },
   "footer": {
     "listening": "מקשיב",

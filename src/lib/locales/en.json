@@ -1,7 +1,6 @@
 {
   "app": {
     "title": "CopySpeech",
-    "tagline": "Your clipboard, read aloud.",
     "logoAlt": "CopySpeech logo"
   },
   "nav": {
@@ -761,58 +760,6 @@
     "preview": "Preview",
     "previewing": "Previewing...",
     "activeTooltip": "The effect applied to every TTS playback. Switch instantly without restarting."
-  },
-  "landing": {
-    "nav": {
-      "home": "Home"
-    },
-    "hero": {
-      "download": "Download",
-      "github": "GitHub",
-      "version": "v{version}",
-      "pauseDemo": "Pause demo",
-      "playDemo": "Play demo",
-      "previewLabel": "Preview"
-    },
-    "providers": {
-      "cloud": "Cloud",
-      "offline": "Local"
-    },
-    "features": {
-      "title": "Features",
-      "doubleCopy": {
-        "title": "Double-Copy Trigger",
-        "description": "Copy the same text twice within 1.5 s to hear it. No hotkeys to learn."
-      },
-      "engines": {
-        "title": "Offline & Cloud TTS Engines",
-        "description": "Kokoro, Piper, Kitten, Qwen3 and Pocket run fully offline. OpenAI, ElevenLabs, Cartesia, Google, Microsoft, Edge or any HTTP endpoint for cloud voices."
-      },
-      "hud": {
-        "title": "HUD and live captions",
-        "description": "A floating waveform and word-level captions, synced to the audio clock."
-      },
-      "history": {
-        "title": "History",
-        "description": "Every generation is kept unless you switch history off. Replay and manage saved readings."
-      },
-      "sanitization": {
-        "title": "Text sanitization",
-        "description": "Strips markdown, expands URLs and normalizes text before it is spoken."
-      },
-      "browser": {
-        "title": "Browser companion",
-        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
-      }
-    },
-    "screenshots": {
-      "alt": "CopySpeech Play page with the quick controls",
-      "caption": "Play page, listening for a double-copy, with volume, speed and pitch controls"
-    },
-    "footer": {
-      "license": "MIT License",
-      "nameOrigin": "Name inspired by"
-    }
   },
   "footer": {
     "listening": "Listening",

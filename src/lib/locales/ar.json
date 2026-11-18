@@ -1,7 +1,6 @@
 {
   "app": {
     "title": "CopySpeech",
-    "tagline": "تحويل النص إلى كلام بالذكاء الاصطناعي لحافظتك",
     "logoAlt": "شعار CopySpeech"
   },
   "nav": {
@@ -754,58 +753,6 @@
     "preview": "معاينة",
     "previewing": "جارٍ المعاينة...",
     "activeTooltip": "المؤثر المطبَّق على كل تشغيل. يمكن التبديل فورًا دون إعادة التشغيل."
-  },
-  "landing": {
-    "nav": {
-      "home": "Home"
-    },
-    "hero": {
-      "download": "تنزيل",
-      "github": "GitHub",
-      "version": "v{version}",
-      "pauseDemo": "إيقاف العرض مؤقتًا",
-      "playDemo": "تشغيل العرض",
-      "previewLabel": "Preview"
-    },
-    "providers": {
-      "cloud": "سحابية",
-      "offline": "محلية"
-    },
-    "features": {
-      "title": "الميزات",
-      "doubleCopy": {
-        "title": "التشغيل بالنسخ المزدوج",
-        "description": "انسخ النص مرتين خلال 1.5 ثانية لبدء القراءة فورًا. لا حاجة إلى اختصارات لوحة المفاتيح."
-      },
-      "engines": {
-        "title": "محركات TTS محلية وسحابية",
-        "description": "يعمل Kokoro وPiper وKitten وQwen3 وPocket دون اتصال بالإنترنت. وOpenAI وElevenLabs وCartesia وGoogle وMicrosoft أو أي نقطة نهاية HTTP للأصوات السحابية."
-      },
-      "hud": {
-        "title": "طبقة HUD",
-        "description": "شاشة عرض عائمة بموجة صوتية حية وتسميات توضح كل كلمة أثناء التشغيل."
-      },
-      "history": {
-        "title": "السجل",
-        "description": "سجل دائم للتوليدات مع التشغيل، أو أوقفه فلا يُسجَّل شيء."
-      },
-      "sanitization": {
-        "title": "تنظيف النص",
-        "description": "إزالة Markdown وتوسيع الروابط وتوحيد النص — مع إعادة صياغة اختيارية بالذكاء الاصطناعي لكلام أسهل إصغاءً."
-      },
-      "browser": {
-        "title": "Browser companion",
-        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
-      }
-    },
-    "screenshots": {
-      "alt": "لقطة شاشة لتطبيق CopySpeech",
-      "caption": "الواجهة الرئيسية مع تبويب التشغيل"
-    },
-    "footer": {
-      "license": "رخصة MIT",
-      "nameOrigin": "الاسم مستوحى من"
-    }
   },
   "footer": {
     "listening": "في وضع الاستماع",

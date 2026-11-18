@@ -1,7 +1,6 @@
 {
   "app": {
     "title": "CopySpeech",
-    "tagline": "Texto a voz con IA para tu portapapeles",
     "logoAlt": "Logotipo de CopySpeech"
   },
   "nav": {
@@ -754,58 +753,6 @@
     "preview": "Vista previa",
     "previewing": "Reproduciendo vista previa...",
     "activeTooltip": "El efecto que se aplica a cada reproducción del TTS. Cámbialo al instante sin reiniciar."
-  },
-  "landing": {
-    "nav": {
-      "home": "Home"
-    },
-    "hero": {
-      "download": "Descargar",
-      "github": "GitHub",
-      "version": "v{version}",
-      "pauseDemo": "Pausar demo",
-      "playDemo": "Reproducir demo",
-      "previewLabel": "Preview"
-    },
-    "providers": {
-      "cloud": "Nube",
-      "offline": "Local"
-    },
-    "features": {
-      "title": "Funciones",
-      "doubleCopy": {
-        "title": "Activador por doble copia",
-        "description": "Copia un texto dos veces en menos de 1,5 segundos para iniciar la lectura al instante. No necesitas atajos de teclado."
-      },
-      "engines": {
-        "title": "Motores TTS locales y en la nube",
-        "description": "Kokoro, Piper, Kitten, Qwen3 y Pocket funcionan sin conexión. OpenAI, ElevenLabs, Cartesia, Google, Microsoft, Edge o cualquier endpoint HTTP para voces en la nube."
-      },
-      "hud": {
-        "title": "Superposición HUD",
-        "description": "Pantalla flotante con forma de onda en tiempo real y subtítulos con resaltado palabra por palabra."
-      },
-      "history": {
-        "title": "Historial",
-        "description": "Historial persistente con reproducción. Si lo desactivas, las lecturas no quedan registradas."
-      },
-      "sanitization": {
-        "title": "Limpieza de texto",
-        "description": "Eliminación de Markdown, expansión de URL y normalización — más una reescritura opcional con IA para una voz más amena."
-      },
-      "browser": {
-        "title": "Browser companion",
-        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
-      }
-    },
-    "screenshots": {
-      "alt": "Captura de pantalla de CopySpeech",
-      "caption": "Interfaz principal con la pestaña Reproducir"
-    },
-    "footer": {
-      "license": "Licencia MIT",
-      "nameOrigin": "Nombre inspirado en"
-    }
   },
   "footer": {
     "listening": "Escuchando",

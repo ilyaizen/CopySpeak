@@ -1,7 +1,6 @@
 {
   "app": {
     "title": "CopySpeech",
-    "tagline": "आपके क्लिपबोर्ड के लिए AI टेक्स्ट-टू-स्पीच",
     "logoAlt": "CopySpeech लोगो"
   },
   "nav": {
@@ -754,58 +753,6 @@
     "preview": "पूर्वावलोकन",
     "previewing": "पूर्वावलोकन चल रहा है...",
     "activeTooltip": "हर TTS प्लेबैक पर लागू होने वाला इफ़ेक्ट। बिना रीस्टार्ट किए तुरंत बदलें।"
-  },
-  "landing": {
-    "nav": {
-      "home": "Home"
-    },
-    "hero": {
-      "download": "डाउनलोड",
-      "github": "GitHub",
-      "version": "v{version}",
-      "pauseDemo": "डेमो रोकें",
-      "playDemo": "डेमो चलाएँ",
-      "previewLabel": "Preview"
-    },
-    "providers": {
-      "cloud": "क्लाउड",
-      "offline": "स्थानीय"
-    },
-    "features": {
-      "title": "विशेषताएँ",
-      "doubleCopy": {
-        "title": "डबल-कॉपी ट्रिगर",
-        "description": "तुरंत बोलने के लिए 1.5 सेकंड के भीतर टेक्स्ट दो बार कॉपी करें। किसी हॉटकी की ज़रूरत नहीं।"
-      },
-      "engines": {
-        "title": "ऑफ़लाइन और क्लाउड TTS इंजन",
-        "description": "Kokoro, Piper, Kitten, Qwen3 और Pocket पूरी तरह ऑफ़लाइन चलते हैं। क्लाउड आवाज़ों के लिए OpenAI, ElevenLabs, Cartesia, Google, Microsoft या कोई भी HTTP एंडपॉइंट।"
-      },
-      "hud": {
-        "title": "HUD ओवरले",
-        "description": "रीयल-टाइम वेवफ़ॉर्म और शब्द-दर-शब्द हाइलाइट होने वाले कैप्शन वाला तैरता हेड-अप डिस्प्ले।"
-      },
-      "history": {
-        "title": "इतिहास",
-        "description": "प्लेबैक के साथ स्थायी इतिहास। इसे बंद करने पर रीडिंग लॉग नहीं होती।"
-      },
-      "sanitization": {
-        "title": "टेक्स्ट सफ़ाई",
-        "description": "Markdown हटाना, URL विस्तार और टेक्स्ट सामान्यीकरण — साथ में सुनने में आसान आवाज़ के लिए वैकल्पिक AI रीराइट।"
-      },
-      "browser": {
-        "title": "Browser companion",
-        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
-      }
-    },
-    "screenshots": {
-      "alt": "CopySpeech का स्क्रीनशॉट",
-      "caption": "चलाएँ टैब के साथ मुख्य इंटरफ़ेस"
-    },
-    "footer": {
-      "license": "MIT लाइसेंस",
-      "nameOrigin": "नाम इससे प्रेरित है"
-    }
   },
   "footer": {
     "listening": "सुन रहा है",

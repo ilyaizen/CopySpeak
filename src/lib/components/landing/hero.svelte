@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { _ } from "svelte-i18n";
   import { Clipboard, Download, Pause, Play } from "@lucide/svelte";
   import Github from "#lib/components/icons/github.svelte";
   import { VERSION } from "#lib/version";
@@ -215,32 +214,32 @@
           <span class="window-bar"><i></i></span>
         </div>
       </div>
-      <p class="label stage-label">{$_("landing.hero.previewLabel")}</p>
+      <p class="label stage-label">Preview</p>
       <div class="demo-controls">
         <button class="demo-toggle" type="button" onclick={toggle}>
           {#if playing}
             <Pause class="icon" />
-            {$_("landing.hero.pauseDemo")}
+            Pause demo
           {:else}
             <Play class="icon" />
-            {$_("landing.hero.playDemo")}
+            Play demo
           {/if}
         </button>
       </div>
       <audio bind:this={audio} src={intro.audio} preload="auto"></audio>
     </div>
 
-    <p class="lede">{$_("app.tagline")}</p>
+    <p class="lede">Your clipboard, read aloud.</p>
     <div class="actions">
       <a class="btn primary" href={DOWNLOAD_URL}>
         <Download class="icon" />
-        <span>{$_("landing.hero.download")}</span>
+        <span>Download</span>
       </a>
       <a class="btn" href={GITHUB_URL}>
         <Github class="icon" />
-        <span>{$_("landing.hero.github")}</span>
+        <span>GitHub</span>
       </a>
     </div>
-    <p class="small meta">{$_("landing.hero.version", { values: { version: VERSION } })}</p>
+    <p class="small meta">v{VERSION}</p>
   </section>
 </div>

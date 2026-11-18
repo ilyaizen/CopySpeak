@@ -264,22 +264,22 @@
 
 {#if isWeb}
   <ModeWatcher defaultMode="dark" />
-  <div class="landing h-screen overflow-x-auto overflow-y-auto" dir={$isRtl ? "rtl" : "ltr"}>
+  <div class="landing h-screen overflow-x-auto overflow-y-auto" dir="ltr">
     <div class="wrap">
       <header class="top">
         <a class="brand" href="/">
           <img src="/landing/app-logo.svg" alt="" width="24" height="24" />
-          <span>{$_("app.title")}</span>
+          <span>CopySpeech</span>
         </a>
         <div class="top-end">
-          <nav class="nav" aria-label={$_("header.navAria")}>
-            <a href="/" aria-current="page">{$_("landing.nav.home")}</a>
+          <nav class="nav" aria-label="Main navigation">
+            <a href="/" aria-current="page">Home</a>
           </nav>
           <button
             class="theme"
             type="button"
             onclick={() => toggleMode()}
-            aria-label={$_("common.toggleTheme")}
+            aria-label="Toggle theme"
           >
             <Sun class="icon sun" />
             <Moon class="icon moon" />

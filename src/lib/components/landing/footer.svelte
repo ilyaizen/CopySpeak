@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { _ } from "svelte-i18n";
   import { Download } from "@lucide/svelte";
   import Github from "#lib/components/icons/github.svelte";
 
@@ -15,11 +14,11 @@
     <div class="actions">
       <a class="btn primary" href={DOWNLOAD_URL}>
         <Download class="icon" />
-        <span>{$_("landing.hero.download")}</span>
+        <span>Download</span>
       </a>
       <a class="btn" href={GITHUB_URL}>
         <Github class="icon" />
-        <span>{$_("landing.hero.github")}</span>
+        <span>GitHub</span>
       </a>
     </div>
   </section>
@@ -28,9 +27,7 @@
 <!-- Same credit block as the app's About page: links, then the maker line. -->
 <footer>
   <div class="credit-links">
-    <a class="btn" href={COFFEE_URL} target="_blank" rel="noopener noreferrer">
-      {$_("settings.about.buyMeCoffee")}
-    </a>
+    <a class="btn" href={COFFEE_URL} target="_blank" rel="noopener noreferrer"> Buy Me a Coffee </a>
   </div>
   <p class="credit-line">
     <span
@@ -52,9 +49,9 @@
     >
   </p>
   <p class="legal">
-    {$_("landing.footer.nameOrigin")}
+    Name inspired by
     <a href={POEM_URL} target="_blank" rel="noopener noreferrer">“The Most of It” by Robert Frost</a
     > (1942)
   </p>
-  <p class="legal">{$_("landing.footer.license")}</p>
+  <p class="legal">MIT License</p>
 </footer>

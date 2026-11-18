@@ -1,7 +1,6 @@
 {
   "app": {
     "title": "CopySpeech",
-    "tagline": "ИИ-озвучка текста из буфера обмена",
     "logoAlt": "Логотип CopySpeech"
   },
   "nav": {
@@ -754,58 +753,6 @@
     "preview": "Прослушать",
     "previewing": "Прослушивание...",
     "activeTooltip": "Эффект, применяемый к каждому воспроизведению. Переключается мгновенно, без перезапуска."
-  },
-  "landing": {
-    "nav": {
-      "home": "Home"
-    },
-    "hero": {
-      "download": "Скачать",
-      "github": "GitHub",
-      "version": "v{version}",
-      "pauseDemo": "Пауза демо",
-      "playDemo": "Запустить демо",
-      "previewLabel": "Preview"
-    },
-    "providers": {
-      "cloud": "Облако",
-      "offline": "Локально"
-    },
-    "features": {
-      "title": "Возможности",
-      "doubleCopy": {
-        "title": "Запуск двойным копированием",
-        "description": "Скопируйте текст дважды в течение 1,5 секунды — и он сразу будет озвучен. Горячие клавиши не нужны."
-      },
-      "engines": {
-        "title": "Офлайн- и облачные TTS-движки",
-        "description": "Kokoro, Piper, Kitten, Qwen3 и Pocket работают полностью офлайн. OpenAI, ElevenLabs, Cartesia, Google, Microsoft или любой HTTP-эндпоинт для облачных голосов."
-      },
-      "hud": {
-        "title": "HUD-оверлей",
-        "description": "Плавающий экранный индикатор с волной в реальном времени и подсветкой слов по ходу речи."
-      },
-      "history": {
-        "title": "История",
-        "description": "Постоянная история озвучек с воспроизведением. Если её выключить, записи не сохраняются."
-      },
-      "sanitization": {
-        "title": "Очистка текста",
-        "description": "Удаление Markdown, раскрытие URL и нормализация текста — плюс необязательная ИИ-перезапись для более лёгкой на слух речи."
-      },
-      "browser": {
-        "title": "Browser companion",
-        "description": "Reads your selection or hovered paragraphs in Chrome and Edge, highlighting the passage as it plays."
-      }
-    },
-    "screenshots": {
-      "alt": "Снимок экрана CopySpeech",
-      "caption": "Главный экран с вкладкой «Воспроизведение»"
-    },
-    "footer": {
-      "license": "Лицензия MIT",
-      "nameOrigin": "Название вдохновлено"
-    }
   },
   "footer": {
     "listening": "Ожидание",
