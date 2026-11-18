@@ -300,12 +300,9 @@ mod tests {
     #[test]
     fn test_default_tts_config_uses_the_os_default_profile() {
         let tts = TtsConfig::default();
-        // Windows starts on tiny-voca; mac and Linux stay on Kokoro.
-        let (engine, profile_id, profile_count) = if cfg!(target_os = "windows") {
-            (TtsEngine::TinyVoca, "profile-tiny-voca-default", 11)
-        } else {
-            (TtsEngine::Kokoro, "profile-kokoro-default", 10)
-        };
+        // Every OS starts on tiny-voca.
+        let (engine, profile_id, profile_count) =
+            (TtsEngine::TinyVoca, "profile-tiny-voca-default", 11);
         assert_eq!(TtsEngine::default(), engine);
         assert_eq!(tts.schema_version, 8);
         assert_eq!(tts.active_backend, engine);

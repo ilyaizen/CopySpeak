@@ -82,29 +82,21 @@ it("offers four engines in display order, tiny-voca first", () => {
   ]);
 });
 
-it("shows tiny-voca only on Windows, where its installer ships", () => {
-  expect(visibleEngineChoices("windows").map((choice) => choice.id)).toEqual([
-    "tiny-voca",
-    "kokoro",
-    "edge",
-    "fish"
-  ]);
-  expect(visibleEngineChoices("macos").map((choice) => choice.id)).toEqual([
-    "kokoro",
-    "edge",
-    "fish"
-  ]);
-  expect(visibleEngineChoices("linux").map((choice) => choice.id)).toEqual([
-    "kokoro",
-    "edge",
-    "fish"
-  ]);
+it("shows tiny-voca on every platform", () => {
+  for (const platform of ["windows", "macos", "linux"]) {
+    expect(visibleEngineChoices(platform).map((choice) => choice.id)).toEqual([
+      "tiny-voca",
+      "kokoro",
+      "edge",
+      "fish"
+    ]);
+  }
 });
 
-it("recommends tiny-voca on Windows and Kokoro elsewhere", () => {
+it("recommends tiny-voca on every platform", () => {
   expect(recommendedEngineId("windows")).toBe("tiny-voca");
-  expect(recommendedEngineId("macos")).toBe("kokoro");
-  expect(recommendedEngineId("linux")).toBe("kokoro");
+  expect(recommendedEngineId("macos")).toBe("tiny-voca");
+  expect(recommendedEngineId("linux")).toBe("tiny-voca");
 });
 
 it("gives only the local engines an installer, with tiny-voca voices M2 first", () => {

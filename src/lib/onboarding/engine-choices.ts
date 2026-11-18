@@ -35,7 +35,7 @@ export const ENGINE_CHOICES = [
     keyless: true,
     installer: "tiny-voca",
     installVoices: ["M2", "F2"],
-    platforms: ["windows"],
+    platforms: null,
     detailKey: "onboarding.engines.tinyvoca.detail"
   },
   {
@@ -67,10 +67,10 @@ export const ENGINE_CHOICES = [
   }
 ] satisfies EngineChoice[];
 
-// Fresh-install default per OS. Mirrors TtsEngine::default in
+// Fresh-install default on every OS. Mirrors TtsEngine::default in
 // src-tauri/src/config/tts.rs.
-export function recommendedEngineId(platform: string): string {
-  return platform === "windows" ? "tiny-voca" : "kokoro";
+export function recommendedEngineId(_platform: string): string {
+  return "tiny-voca";
 }
 
 export function visibleEngineChoices(platform: string): EngineChoice[] {

@@ -66,7 +66,7 @@ fn installer_script_for(engine: &str) -> Result<&'static str, String> {
             "piper" => Ok("install-piper.sh"),
             "kokoro" | "kokoro-tts" => Ok("install-kokoro.sh"),
             "pocket" | "pocket-tts" => Ok("install-pocket.sh"),
-            "tiny-voca" => Err("tiny-voca installer is Windows-only for now".into()),
+            "tiny-voca" => Ok("install-tiny-voca.sh"),
             other => Err(format!("unknown engine installer: {other}")),
         }
     }

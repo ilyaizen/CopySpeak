@@ -9,12 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **tiny-voca engine** – a new local engine with two voices (F2, M2). It runs on the CPU only, uses about 45 MB of files, and needs no API key. It reads English text only; other scripts fail with a clear message instead of silence. Windows installer only for now.
+- **tiny-voca engine** – a new local engine with two voices (F2, M2). It runs on the CPU only, uses about 45 MB of files, and needs no API key. It reads English text only; other scripts fail with a clear message instead of silence. Installers for Windows, macOS, and Linux.
 
 ### Changed
 
-- **Windows starts on tiny-voca** – fresh Windows installs use tiny-voca as the default engine. Existing settings keep their current engine. mac and Linux keep Kokoro.
-- **Onboarding offers four engines** – tiny-voca, Kokoro, Edge-TTS, and Fish Audio. tiny-voca appears first on Windows only. ElevenLabs and Cartesia left onboarding. Both stay in Settings.
+- **tiny-voca is the default engine everywhere** – fresh installs on Windows, macOS, and Linux use tiny-voca. Existing settings keep their current engine. Kokoro stays available.
+- **Onboarding offers four engines** – tiny-voca, Kokoro, Edge-TTS, and Fish Audio. tiny-voca appears first on every platform. ElevenLabs and Cartesia left onboarding. Both stay in Settings.
 - **Browser playback box** – the floating playback control is now an icon-only pill that matches the DSH bar.
 
 ### Fixed

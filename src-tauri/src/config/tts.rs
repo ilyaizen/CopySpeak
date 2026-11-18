@@ -34,16 +34,11 @@ pub enum TtsEngine {
 
 impl Default for TtsEngine {
     fn default() -> Self {
-        // Fresh-install default per OS. Windows starts on tiny-voca: CPU only,
-        // instant time-to-first-audio, installer ships for Windows only.
-        // mac and Linux stay on Kokoro until tiny-voca ships there. Existing
-        // configs are never migrated to a new active engine — the bundled
-        // profile migration only ADDS the profile.
-        if cfg!(target_os = "windows") {
-            TtsEngine::TinyVoca
-        } else {
-            TtsEngine::Kokoro
-        }
+        // Fresh-install default on every OS: tiny-voca is CPU only, starts
+        // fast, and runs without a GPU. Existing configs are never migrated to
+        // a new active engine — the bundled profile migration only ADDS the
+        // profile.
+        TtsEngine::TinyVoca
     }
 }
 
