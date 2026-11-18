@@ -660,7 +660,6 @@ export type TranslationKeys =
   | "landing.features.browser.description"
   | "landing.screenshots.alt"
   | "landing.screenshots.caption"
-  | "landing.footer.github"
   | "landing.footer.license"
   | "footer.listening"
   | "footer.paused"

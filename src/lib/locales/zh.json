@@ -804,8 +804,8 @@
       "caption": "带“播放”标签页的主界面"
     },
     "footer": {
-      "github": "GitHub",
-      "license": "MIT 许可证"
+      "license": "MIT 许可证",
+      "nameOrigin": "名称灵感来自"
     }
   },
   "footer": {

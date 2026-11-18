@@ -811,8 +811,8 @@
       "caption": "Play page, listening for a double-copy, with volume, speed and pitch controls"
     },
     "footer": {
-      "github": "GitHub",
-      "license": "MIT License"
+      "license": "MIT License",
+      "nameOrigin": "Name inspired by"
     }
   },
   "footer": {

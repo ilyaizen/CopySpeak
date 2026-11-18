@@ -4,7 +4,7 @@
 
 # CopySpeech
 
-**Copy twice. Hear it.**
+**Double-copy any text. CopySpeech reads it aloud.**
 
 CopySpeech reads your clipboard aloud. Copy the same text twice within 1.5 seconds, and an AI voice speaks it.
 

@@ -804,8 +804,8 @@
       "caption": "Hauptoberfläche mit Tab Abspielen"
     },
     "footer": {
-      "github": "GitHub",
-      "license": "MIT-Lizenz"
+      "license": "MIT-Lizenz",
+      "nameOrigin": "Name inspiriert von"
     }
   },
   "footer": {

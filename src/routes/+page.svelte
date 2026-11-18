@@ -9,9 +9,9 @@
 
 {#if import.meta.env.VITE_IS_WEB}
   <Hero />
-  <Providers />
-  <Features />
   <Screenshots />
+  <Features />
+  <Providers />
   <Footer />
 {:else}
   <div class="mx-auto flex w-full max-w-6xl min-w-0 flex-1 flex-col">

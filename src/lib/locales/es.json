@@ -804,8 +804,8 @@
       "caption": "Interfaz principal con la pestaña Reproducir"
     },
     "footer": {
-      "github": "GitHub",
-      "license": "Licencia MIT"
+      "license": "Licencia MIT",
+      "nameOrigin": "Nombre inspirado en"
     }
   },
   "footer": {

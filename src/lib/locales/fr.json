@@ -804,8 +804,8 @@
       "caption": "Interface principale avec l'onglet Lecture"
     },
     "footer": {
-      "github": "GitHub",
-      "license": "Licence MIT"
+      "license": "Licence MIT",
+      "nameOrigin": "Nom inspiré de"
     }
   },
   "footer": {

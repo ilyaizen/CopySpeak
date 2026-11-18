@@ -804,8 +804,8 @@
       "caption": "Главный экран с вкладкой «Воспроизведение»"
     },
     "footer": {
-      "github": "GitHub",
-      "license": "Лицензия MIT"
+      "license": "Лицензия MIT",
+      "nameOrigin": "Название вдохновлено"
     }
   },
   "footer": {

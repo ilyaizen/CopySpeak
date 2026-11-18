@@ -7,6 +7,7 @@
   const GITHUB_URL = "https://github.com/ilyaizen/CopySpeech";
   const COFFEE_URL = "https://www.buymeacoffee.com/ilyaizen";
   const AUTHOR_URL = "https://x.com/ilyaizen";
+  const POEM_URL = "https://allpoetry.com/poem/14326574-The-Most-Of-It-by-Robert-Frost";
 </script>
 
 <div class="coda">
@@ -27,7 +28,6 @@
 <!-- Same credit block as the app's About page: links, then the maker line. -->
 <footer>
   <div class="credit-links">
-    <a class="btn" href={GITHUB_URL}>{$_("landing.footer.github")}</a>
     <a class="btn" href={COFFEE_URL} target="_blank" rel="noopener noreferrer">
       {$_("settings.about.buyMeCoffee")}
     </a>
@@ -49,6 +49,12 @@
     <span
       >by <a href={AUTHOR_URL} target="_blank" rel="noopener noreferrer">@ilyaizen</a>
       ({new Date().getFullYear()})</span
+    >
+  </p>
+  <p class="small">
+    {$_("landing.footer.nameOrigin")}
+    <a href={POEM_URL} target="_blank" rel="noopener noreferrer"
+      >“The Most of It” by Robert Frost (1942)</a
     >
   </p>
   <p class="small">{$_("landing.footer.license")}</p>

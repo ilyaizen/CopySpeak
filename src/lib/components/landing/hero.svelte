@@ -4,7 +4,8 @@
   import { Clipboard, Download, Pause, Play } from "@lucide/svelte";
   import Github from "#lib/components/icons/github.svelte";
   import { VERSION } from "#lib/version";
-  import { INTRO_AUDIO, INTRO_LINES } from "./intro-captions";
+  import { HERO_AUDIO, HERO_LINES, HERO_STATIC_WORD } from "./hero-captions";
+  import type { IntroWord } from "./intro-captions";
   import { groundParallax } from "#lib/utils/ground-parallax";
   import { captionGlide } from "#lib/utils/caption-glide";
   import type { CaptionWord } from "#lib/models/captions.js";
@@ -16,8 +17,15 @@
 
   // Each word carries its index in the whole intro, so the glide and the speaking state
   // run across line breaks.
+  type Intro = { audio: string; lines: IntroWord[][]; staticWord: string };
+  let { intro = { audio: HERO_AUDIO, lines: HERO_LINES, staticWord: HERO_STATIC_WORD } }: {
+    intro?: Intro;
+  } = $props();
+
   let count = 0;
-  const LINES = INTRO_LINES.map((line) => line.map((w) => ({ ...w, index: count++ })));
+  // The intro is fixed per route, so reading it once at setup is intended.
+  // svelte-ignore state_referenced_locally
+  const LINES = intro.lines.map((line) => line.map((w) => ({ ...w, index: count++ })));
   const WORDS = LINES.flat();
   // captionGlide reads offset as the word's data-word-offset, which is the intro index.
   const GLIDE_WORDS: CaptionWord[] = WORDS.map((w) => ({
@@ -27,8 +35,8 @@
     end: w.end,
     phrase: 0
   }));
-  // Static frame (no JS / reduced motion / before playback): "buck" lit.
-  const STATIC_WORD = WORDS.findIndex((w) => w.text === "buck");
+  // Static frame (no JS / reduced motion / before playback): the static word lit.
+  const STATIC_WORD = WORDS.findIndex((w) => w.text === intro.staticWord);
 
   let stage: HTMLDivElement;
   let promise: HTMLHeadingElement;
@@ -217,7 +225,7 @@
           {/if}
         </button>
       </div>
-      <audio bind:this={audio} src={INTRO_AUDIO} preload="auto"></audio>
+      <audio bind:this={audio} src={intro.audio} preload="auto"></audio>
     </div>
 
     <p class="lede">{$_("app.tagline")}</p>
