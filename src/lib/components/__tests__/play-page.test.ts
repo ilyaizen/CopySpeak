@@ -33,6 +33,8 @@ vi.mock("#lib/stores/history-store.svelte", () => ({
   }
 }));
 
+const { handleStop } = vi.hoisted(() => ({ handleStop: vi.fn() }));
+
 vi.mock("#lib/stores/playback-store.svelte", () => ({
   playbackStore: {
     isPlaying: false,
@@ -42,7 +44,7 @@ vi.mock("#lib/stores/playback-store.svelte", () => ({
     hasCachedAudio: false,
     historyReadingId: null,
     startReading: vi.fn(),
-    handleStop: vi.fn(),
+    handleStop,
     handleReplay: vi.fn(),
     handleTogglePause: vi.fn(),
     skipBackward: vi.fn(),
@@ -131,7 +133,7 @@ describe("play-page stop", () => {
     try {
       await fireEvent.click(view.getByRole("button", { name: "Stop" }));
       await waitFor(() => expect(invoke).toHaveBeenCalledWith("abort_synthesis"));
-      expect(playbackStore.handleStop).toHaveBeenCalled();
+      expect(handleStop).toHaveBeenCalled();
     } finally {
       view.unmount();
       playbackStore.isPlaying = false;
