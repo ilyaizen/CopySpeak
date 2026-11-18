@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import assert from "node:assert/strict";
+import { JSDOM } from "jsdom";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(here, "plugin.js"), "utf8");
@@ -18,7 +19,9 @@ const copy = join(scratch, "plugin-under-test.mjs");
 const hooks = [
   "export function liveCaptionRun() { return captionRun; }",
   "export function livePill() { return pill; }",
-  "export { alignDetail, startCaptions, stopCaptions, livePillEnv };"
+  "export function playbackRequestIdNow() { return playbackRequestId; }",
+  "export function clearPlayback() { playbackForget(); }",
+  "export { alignDetail, startCaptions, stopCaptions, livePillEnv, makeMessageButton, selectionInsideReply, playbackRemember, speechForRead, prepareSpeech };"
 ].join("\n");
 writeFileSync(copy, stripped + "\n" + hooks + "\n");
 let mod;
@@ -31,6 +34,10 @@ try {
 const {
   toSpeech,
   excerptSpeech,
+  prepareSpeech,
+  speechForRead,
+  dropSkippedMarkup,
+  barStateFor,
   speakVerdict,
   withClaim,
   normalizeSettings,
@@ -49,7 +56,9 @@ const {
   stopCaptions,
   livePillEnv,
   liveCaptionRun,
-  livePill
+  livePill,
+  playbackRequestIdNow,
+  clearPlayback
 } = mod;
 const plugin = mod.default;
 let passed = 0;
@@ -97,6 +106,58 @@ test("excerpt bottom keeps last two paragraphs", () => {
 test("excerpt returns short text unchanged", () => {
   assert.equal(excerptSpeech("one block only", "both", 1, 1), "one block only");
 });
+test("message read keeps top two and bottom two of five paragraphs", () => {
+  const five = "one\n\ntwo\n\nthree\n\nfour\n\nfive";
+  assert.equal(speechForRead("message", five, ON), "one\n\ntwo\n\nfour\n\nfive");
+});
+test("message read reads in full when excerpt is off", () => {
+  const five = "one\n\ntwo\n\nthree\n\nfour\n\nfive";
+  assert.equal(speechForRead("message", five, { ...ON, excerpt: false }), five);
+});
+test("selection read ignores excerpt settings and reads in full", () => {
+  const five = "one\n\ntwo\n\nthree\n\nfour\n\nfive";
+  assert.equal(speechForRead("selection", five, ON), five);
+});
+const markup =
+  "## Answer\n\nIntro line.\n\n- first\n- second\n\n1. one\n\n---\n\n| a | b |\n\nClosing.";
+test("dropSkippedMarkup removes headings, bullets, numbered items, rules, and table rows", () => {
+  assert.equal(
+    dropSkippedMarkup(markup),
+    ["", "Intro line.", "", "", "", "", "", "Closing."].join("\n")
+  );
+});
+test("dropSkippedMarkup keeps bold text, hashtags, and dashes inside a sentence", () => {
+  assert.equal(
+    dropSkippedMarkup("**Bold** start\n#tag here\n-5 degrees\nA - B"),
+    "**Bold** start\n#tag here\n-5 degrees\nA - B"
+  );
+});
+test("prepareSpeech with skip on reads the text under a heading and drops the list", () => {
+  assert.equal(
+    prepareSpeech(markup, { excerpt: false, skipMarkdownSections: true }),
+    "Intro line.\n\nClosing."
+  );
+});
+test("prepareSpeech with skip off keeps the list items", () => {
+  assert.equal(
+    prepareSpeech("## Answer\n\n- first", { excerpt: false, skipMarkdownSections: false }).includes(
+      "first"
+    ),
+    true
+  );
+});
+test("barStateFor hides the bar when no reading plays", () => {
+  assert.deepEqual(barStateFor(null, true), { active: false, paused: false });
+});
+test("barStateFor shows a paused reading as paused", () => {
+  assert.deepEqual(barStateFor("req-1", true), { active: true, paused: true });
+});
+test("barStateFor shows a playing reading as not paused", () => {
+  assert.deepEqual(barStateFor("req-1", false), { active: true, paused: false });
+});
+test("selection read ignores the skip setting and reads in full", () => {
+  assert.equal(speechForRead("selection", markup, { ...ON, skipMarkdownSections: true }), markup);
+});
 test("excerpt returns whole text when top and bottom overlap", () => {
   const three = "a\n\nb\n\nc";
   assert.equal(excerptSpeech(three, "both", 2, 2), three);
@@ -125,8 +186,15 @@ test("normalizeSettings applies the documented defaults", () => {
     excerptBottom: 2,
     captions: true,
     glide: false,
-    follow: false
+    follow: false,
+    messageButtons: true,
+    selectionRead: true,
+    skipMarkdownSections: false
   });
+});
+test("normalizeSettings keeps a saved skipMarkdownSections value and rejects a non-boolean", () => {
+  assert.equal(normalizeSettings({ skipMarkdownSections: true }).skipMarkdownSections, true);
+  assert.equal(normalizeSettings({ skipMarkdownSections: "yes" }).skipMarkdownSections, false);
 });
 test("normalizeSettings keeps a saved follow value and rejects a non-boolean", () => {
   assert.equal(normalizeSettings({ follow: true }).follow, true);
@@ -278,6 +346,28 @@ test("alignDetail maps plain words in order", () => {
   const detail = alignDetail(words, tokens, 0);
   assert.equal(detail.ok, true);
   assert.deepEqual(detail.map, [0, 1, 2, 3]);
+});
+
+test("alignDetail does not anchor a common word inside a skipped excerpt gap", () => {
+  // Top + bottom excerpt: the caption skips the middle paragraph. "the" appears
+  // inside the skipped gap, close enough to match, but the bottom's "the model"
+  // run only follows the later occurrence.
+  const filler = Array.from({ length: 30 }, (_, i) => "filler" + i).join(" ");
+  const text = "alpha beta the cat sat in a box " + filler + " the model is good";
+  const tokens = wordTokens(text);
+  const bottomThe = tokens.map((t) => t.norm).lastIndexOf("the");
+  const words = [
+    { norm: "alpha", start_ms: 0, end_ms: 1 },
+    { norm: "beta", start_ms: 1, end_ms: 2 },
+    { norm: "the", start_ms: 2, end_ms: 3 },
+    { norm: "model", start_ms: 3, end_ms: 4 },
+    { norm: "is", start_ms: 4, end_ms: 5 },
+    { norm: "good", start_ms: 5, end_ms: 6 }
+  ];
+  const detail = alignDetail(words, tokens, 0);
+  assert.equal(detail.ok, true);
+  assert.equal(detail.map[2], bottomThe);
+  assert.equal(detail.map[3], bottomThe + 1);
 });
 
 test("alignDetail ignores case and punctuation in the rendered text", () => {
@@ -730,6 +820,18 @@ test("pollPlan stops when captions and follow are both off", () => {
 test("pollPlan switches a follow-only run when captions turn on", () => {
   const run = { sessionId: "s1", mode: "none" };
   assert.equal(pollPlan(run, { captions: true, glide: false, follow: true }, "s1"), "switch");
+});
+test("pollPlan keeps a controlled run alive with every paint switch off", () => {
+  const run = { sessionId: "s1", mode: "none", controlled: true };
+  assert.equal(pollPlan(run, { captions: false, glide: false, follow: false }, "s1"), "keep");
+});
+test("pollPlan keeps a selection read painting with captions off", () => {
+  const run = { sessionId: "s1", mode: "plain", forceCaptions: true };
+  assert.equal(pollPlan(run, { captions: false, glide: false, follow: false }, "s1"), "keep");
+});
+test("pollPlan switches a selection read to the pill when glide turns on", () => {
+  const run = { sessionId: "s1", mode: "plain", forceCaptions: true };
+  assert.equal(pollPlan(run, { captions: true, glide: true, follow: false }, "s1"), "switch");
 });
 
 // Production paint and status wiring. A small fake browser stands in for the DOM: text laid out at
@@ -1343,6 +1445,9 @@ test("an end status clears a matched caption run", async () => {
   world.addReply(REPLY_RECT, REPLY);
   world.startRun();
   await world.tick(bodyAt(100));
+  // One inactive poll can be a stale report, so an end takes two in a row.
+  await world.tick({ active: false });
+  assert.notEqual(liveCaptionRun(), null, "one inactive poll keeps the run");
   await world.tick({ active: false });
   assert.equal(liveCaptionRun(), null);
   assert.equal(world.highlights.size, 0);
@@ -1443,6 +1548,45 @@ test("both off: a finished reply starts no status poll", () => {
   assert.equal(world.timers.length, 0, "no poll loop");
   assert.equal(liveCaptionRun(), null);
   assert.deepEqual(world.fetchUrls, [SPEAK_URL], "only the speech request");
+  assert.match(playbackRequestIdNow(), /^hermes\./, "the reading carries a request id");
+  clearPlayback();
+});
+
+test("auto-read sends the request id and wait false", () => {
+  useFakeClock();
+  const world = freshWorld();
+  const bodies = [];
+  const previousFetch = globalThis.fetch;
+  globalThis.fetch = (url, options) => {
+    if (String(url) === SPEAK_URL) {
+      bodies.push(JSON.parse(options.body));
+      return Promise.resolve({ ok: true });
+    }
+    return previousFetch(url, options);
+  };
+  const handlers = wireRegister(world, { autoRead: true, captions: false, follow: false });
+  announceReply(handlers, REPLY);
+  globalThis.fetch = previousFetch;
+  assert.equal(bodies.length, 1);
+  assert.match(bodies[0].request_id, /^hermes\./);
+  assert.equal(bodies[0].wait, false);
+  clearPlayback();
+});
+
+test("a finished auto read retires the playback record", async () => {
+  useFakeClock();
+  const world = freshWorld();
+  world.addReply(REPLY_RECT, REPLY);
+  const handlers = wireRegister(world, { autoRead: true, captions: true, follow: false });
+  announceReply(handlers, REPLY);
+  assert.match(playbackRequestIdNow(), /^hermes\./);
+  await world.tick(bodyAt(100));
+  assert.notEqual(liveCaptionRun(), null, "the run is live while the reading plays");
+  await world.tick({ active: false });
+  await world.tick({ active: false });
+  assert.equal(liveCaptionRun(), null, "the ended status stops the run");
+  assert.equal(playbackRequestIdNow(), null, "the bar retires with the reading");
+  clearPlayback();
 });
 
 test("follow only: speech goes first, one poll starts, and the reply scrolls without paint", async () => {
@@ -1721,6 +1865,111 @@ test("follow turned on after the run stopped waits for the next reply", async ()
   assert.equal(liveCaptionRun(), null, "nothing restarts the stopped run mid-reading");
   assert.equal(world.calls.length, 1, "no status request after the stop");
   assert.equal(scroller.scrollLog.length, 0, "the view does not move");
+});
+
+test("message button has a label on insertion and can switch to stop", () => {
+  const dom = new JSDOM(
+    '<div data-slot="aui_assistant-message-root" data-role="assistant"><div class="aui-message-actions-desktop"></div></div>'
+  );
+  globalThis.window = dom.window;
+  globalThis.document = dom.window.document;
+  const root = document.querySelector('[data-role="assistant"]');
+  const row = document.querySelector(".aui-message-actions-desktop");
+  const button = mod.makeMessageButton(root);
+  row.appendChild(button);
+  assert.equal(button.getAttribute("aria-label"), "Read aloud with CopySpeech");
+  mod.playbackRemember("message", "test-id", root, null);
+  assert.equal(button.getAttribute("aria-label"), "Stop CopySpeech reading");
+  assert.equal(button.getAttribute("aria-pressed"), "true");
+  const stopPath = button.querySelector("path");
+  assert.equal(stopPath.getAttribute("stroke"), "currentColor");
+  assert.equal(stopPath.getAttribute("fill"), "none");
+  mod.clearPlayback();
+  assert.equal(button.getAttribute("aria-label"), "Read aloud with CopySpeech");
+  dom.window.close();
+});
+
+test("message button shows a themed tooltip on hover and hides it on leave", async () => {
+  const dom = new JSDOM(
+    '<div data-slot="aui_assistant-message-root" data-role="assistant"><div class="aui-message-actions-desktop"></div></div>',
+    { pretendToBeVisual: true }
+  );
+  globalThis.window = dom.window;
+  globalThis.document = dom.window.document;
+  const root = document.querySelector('[data-role="assistant"]');
+  const button = mod.makeMessageButton(root);
+  document.querySelector(".aui-message-actions-desktop").appendChild(button);
+  button.dispatchEvent(new dom.window.Event("pointerenter"));
+  await new Promise((resolve) => dom.window.setTimeout(resolve, 250));
+  const tooltip = document.querySelector('[role="tooltip"]');
+  assert.ok(tooltip, "hover shows a tooltip");
+  assert.equal(tooltip.textContent, "Read aloud with CopySpeech");
+  mod.playbackRemember("message", "tooltip-test", root, null);
+  assert.equal(tooltip.textContent, "Stop CopySpeech reading");
+  button.dispatchEvent(new dom.window.Event("pointerleave"));
+  assert.equal(document.querySelector('[role="tooltip"]'), null);
+  mod.clearPlayback();
+  dom.window.close();
+});
+
+test("selection can start at a reply paragraph boundary", () => {
+  const dom = new JSDOM(
+    '<div data-slot="aui_assistant-message-root" data-role="assistant"><div class="aui-md"><p>First</p><p>Second</p></div></div>'
+  );
+  const body = dom.window.document.querySelector(".aui-md");
+  const range = dom.window.document.createRange();
+  range.setStart(body, 0);
+  range.setEnd(body.lastChild.firstChild, 6);
+  assert.equal(mod.selectionInsideReply(range), true);
+  dom.window.close();
+});
+
+test("clicking another reply replaces a manual reading still waiting for completion", async () => {
+  const dom = new JSDOM(
+    '<div data-slot="aui_assistant-message-root" data-role="assistant"><div class="aui-md">First reply</div><div class="aui-message-actions-desktop"></div></div>' +
+      '<div data-slot="aui_assistant-message-root" data-role="assistant"><div class="aui-md">Second reply</div><div class="aui-message-actions-desktop"></div></div>',
+    { url: "https://hermes.local", pretendToBeVisual: true }
+  );
+  globalThis.window = dom.window;
+  globalThis.document = dom.window.document;
+  globalThis.NodeFilter = dom.window.NodeFilter;
+  globalThis.host = { state: { focusedSessionId: { get: () => "s1" } }, notify() {} };
+  const requests = [];
+  globalThis.fetch = (url, options) => {
+    requests.push({ url: String(url), body: JSON.parse(options.body) });
+    if (String(url).endsWith("/speak")) return new Promise(() => {});
+    return Promise.resolve({ ok: true });
+  };
+  const disposers = [];
+  const ctx = {
+    storage: { get: (_key, fallback) => fallback, set() {} },
+    onEvent() {},
+    onDispose(fn) {
+      disposers.push(fn);
+    },
+    addEventListener() {},
+    setInterval() {
+      return () => {};
+    },
+    register() {},
+    registerSettingsPage() {}
+  };
+  plugin.register(ctx);
+  const buttons = document.querySelectorAll("[data-copyspeech-play]");
+  assert.equal(buttons.length, 2);
+  buttons[0].click();
+  await flush();
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].body.text, "First reply");
+  assert.equal(requests[0].body.wait, true);
+  buttons[1].click();
+  await flush();
+  assert.equal(requests.length, 3, "replacement must stop the first request and start the second");
+  assert.ok(requests[1].url.endsWith("/stop"));
+  assert.equal(requests[1].body.request_id, requests[0].body.request_id);
+  assert.equal(requests[2].body.text, "Second reply");
+  for (const dispose of disposers) dispose();
+  dom.window.close();
 });
 
 for (const { name, fn } of cases) {

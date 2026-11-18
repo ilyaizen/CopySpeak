@@ -1,7 +1,11 @@
 // CopySpeech auto-read for Hermes Desktop.
 // Reads each new completed assistant reply through the running CopySpeech app.
+// Manual control: a play button on every reply (hover its action row), a
+// "Read aloud" pill on text selected inside a reply, and a playback bar above
+// the chat input (pause, resume, back and forward 5 seconds, stop, show in chat) for any
+// reading this plugin started, automatic ones included.
 // Optional: highlights the word CopySpeech speaks inside the reply (CSS Custom Highlight API,
-// or a gliding pill when "Glide between words" is on).
+// or a gliding pill when "Glide between words" is on). Manual reads paint too.
 // Optional: follows the spoken word, scrolling the reply to keep it in view.
 import {
   PALETTE_AREA,
@@ -20,9 +24,10 @@ import { jsx, jsxs } from "react/jsx-runtime";
 const ID = "copyspeech-hermes";
 // ctx.storage keys live under hermes.plugin.<id>. (localStorage), so this is the key for "settings".
 const SETTINGS_KEY = "hermes.plugin." + ID + ".settings";
-const SPEAK_URL = "http://127.0.0.1:43117/speak";
-const HEALTH_URL = "http://127.0.0.1:43117/health";
-const STATUS_URL = "http://127.0.0.1:43117/status";
+const CONTROL_URL = "http://127.0.0.1:43117";
+const SPEAK_URL = CONTROL_URL + "/speak";
+const HEALTH_URL = CONTROL_URL + "/health";
+const STATUS_URL = CONTROL_URL + "/status";
 const BUILT_IN_KEY = "hermes.desktop.autoSpeakReplies";
 const MAX_CLAIMS = 50;
 const EXCERPT_MIN = 1;
@@ -36,7 +41,10 @@ const DEFAULTS = {
   excerptBottom: 2,
   captions: true,
   glide: false,
-  follow: false
+  follow: false,
+  messageButtons: true,
+  selectionRead: true,
+  skipMarkdownSections: false
 };
 const CAPTION_NAME = "copyspeech-word";
 const CAPTION_STYLE_ID = "copyspeech-hermes-captions";
@@ -64,10 +72,143 @@ const PILL_Z_INDEX = 2147483646;
 // Any overflow other than `visible` clips a box's content.
 const CLIP_OVERFLOW = ["auto", "scroll", "hidden", "clip"];
 
+// ---- Playback controls: one shared reading, three ways to start it ----
+// The message play button, the selection read, and auto-read all register the
+// same request here. The bar and the buttons observe the record and repaint.
+const SEEK_STEP_MS = 5000;
+// An optimistic pause survives this long before a poll may override it, so a
+// poll that left before the app applied the command cannot flicker the glyph.
+const PAUSE_RECONCILE_MS = 350;
+const MESSAGE_ROOT_SELECTOR = '[data-slot="aui_assistant-message-root"][data-role="assistant"]';
+const MESSAGE_BODY_SELECTOR = ".aui-md";
+const MESSAGE_ACTIONS_SELECTOR = ".aui-message-actions-desktop";
+const PLAY_BUTTON_FLAG = "data-copyspeech-play";
+const UI_STYLE_ID = "copyspeech-hermes-ui";
+
+let playbackRequestId = null;
+// "auto" | "message" | "selection" — which surface owns the live reading.
+let playbackSource = null;
+let playbackRoot = null;
+let playbackRange = null;
+let playbackPaused = false;
+let playbackPauseChangedAt = 0;
+let playbackStopEpoch = 0;
+let playbackSpeakAbort = null;
+const playbackListeners = new Set();
+
+function playbackEmit() {
+  for (const listener of Array.from(playbackListeners)) listener();
+  updateBar();
+  syncMessageButtons();
+}
+
+function playbackRemember(source, requestId, root, range) {
+  playbackRequestId = requestId;
+  playbackSource = source;
+  playbackRoot = root ?? null;
+  playbackRange = range ?? null;
+  playbackPaused = false;
+  playbackPauseChangedAt = 0;
+  playbackEmit();
+}
+
+function playbackForget() {
+  playbackRequestId = null;
+  playbackSource = null;
+  playbackRoot = null;
+  playbackRange = null;
+  playbackPaused = false;
+  playbackPauseChangedAt = 0;
+  playbackSpeakAbort = null;
+  stopCaptions();
+  playbackEmit();
+}
+
+function playbackSetPaused(paused) {
+  if (playbackPaused === paused) return;
+  playbackPaused = paused;
+  playbackEmit();
+}
+
+// Same transport as before: no-cors and text/plain avoid a preflight.
+function controlPost(path, body, signal) {
+  return fetch(CONTROL_URL + path, {
+    method: "POST",
+    mode: "no-cors",
+    cache: "no-store",
+    headers: { "content-type": "text/plain" },
+    body: JSON.stringify(body),
+    signal: signal
+  }).then(
+    () => true,
+    () => false
+  );
+}
+
+function stopReading(requestId) {
+  return controlPost("/stop", { request_id: requestId });
+}
+
+// Pause and resume address the live reading by request id. The glyph flips at
+// once when a caption poll is running to confirm it; without a poll there is
+// nothing to reconcile against, so the request goes out alone.
+function pauseReading() {
+  const requestId = playbackRequestId;
+  if (requestId === null) return Promise.resolve();
+  const polled = captionRun !== null && captionRun.requestId === requestId;
+  if (polled) {
+    playbackSetPaused(true);
+    playbackPauseChangedAt = Date.now();
+  }
+  return controlPost("/pause", { request_id: requestId });
+}
+
+function resumeReading() {
+  const requestId = playbackRequestId;
+  if (requestId === null) return Promise.resolve();
+  const polled = captionRun !== null && captionRun.requestId === requestId;
+  if (polled) {
+    playbackSetPaused(false);
+    playbackPauseChangedAt = Date.now();
+  }
+  return controlPost("/resume", { request_id: requestId });
+}
+
+// Rewind or skip one reading. Seek stays available while paused: the app moves
+// the position, and a later resume plays from it.
+function seekReading(deltaMs) {
+  const requestId = playbackRequestId;
+  if (requestId === null) return Promise.resolve();
+  return controlPost("/seek", { request_id: requestId, delta_ms: deltaMs });
+}
+
+// Stop the live reading and clear every surface at once. The epoch bump also
+// cancels a reading still queued behind an earlier start.
+function stopReadingNow() {
+  const requestId = playbackRequestId;
+  playbackStopEpoch += 1;
+  if (playbackSpeakAbort !== null) {
+    playbackSpeakAbort.abort();
+    playbackSpeakAbort = null;
+  }
+  if (requestId === null) {
+    playbackForget();
+    return Promise.resolve();
+  }
+  return stopReading(requestId).then(() => playbackForget());
+}
+
 let requestCounter = 0;
 let notifiedDown = false;
 let captionRun = null;
 let pill = null;
+
+// One offline toast until a request succeeds again.
+function notifyOffline() {
+  if (notifiedDown) return;
+  notifiedDown = true;
+  host.notify({ kind: "error", message: "CopySpeech not reachable on 127.0.0.1:43117" });
+}
 
 export function clampCount(value) {
   const number = Math.round(Number(value));
@@ -90,8 +231,22 @@ export function normalizeSettings(raw) {
     excerptBottom: clampCount(source.excerptBottom ?? DEFAULTS.excerptBottom),
     captions: boolOr(source.captions, DEFAULTS.captions),
     glide: boolOr(source.glide, DEFAULTS.glide),
-    follow: boolOr(source.follow, DEFAULTS.follow)
+    follow: boolOr(source.follow, DEFAULTS.follow),
+    messageButtons: boolOr(source.messageButtons, DEFAULTS.messageButtons),
+    selectionRead: boolOr(source.selectionRead, DEFAULTS.selectionRead),
+    skipMarkdownSections: boolOr(source.skipMarkdownSections, DEFAULTS.skipMarkdownSections)
   };
+}
+
+// Drop whole Markdown lines that speech reads badly: headings, bullet and
+// numbered items, horizontal rules, and table rows. The text under a heading
+// stays, so an answer under "## Answer" still reads. Runs before toSpeech.
+export function dropSkippedMarkup(markdown) {
+  const skipped = /^\s{0,3}(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|\|| ?([-*_]) ?(?:\1 ?){2,}$)/;
+  return String(markdown ?? "")
+    .split("\n")
+    .filter((line) => !skipped.test(line))
+    .join("\n");
 }
 
 // Turn rendered Markdown into plain text for a speech engine.
@@ -129,9 +284,15 @@ export function excerptSpeech(text, mode, topCount, bottomCount) {
 }
 
 function prepareSpeech(text, settings) {
-  const speech = toSpeech(text);
+  const speech = toSpeech(settings.skipMarkdownSections ? dropSkippedMarkup(text) : text);
   if (!settings.excerpt) return speech;
   return excerptSpeech(speech, settings.excerptMode, settings.excerptTop, settings.excerptBottom);
+}
+
+// Message reads and auto-read follow the excerpt settings. A selection is the user's own pick, so it reads in full.
+function speechForRead(source, text, settings) {
+  if (source === "selection") return text;
+  return prepareSpeech(text, settings);
 }
 
 function claimKey(event) {
@@ -184,6 +345,105 @@ export function wordTokens(text) {
     });
   }
   return tokens;
+}
+
+// The norms of a speech text, for the code-split merge on selection reads.
+function wordNorms(text) {
+  return new Set(wordTokens(text).map((word) => word.norm));
+}
+
+// Lowercased letters and digits only, so punctuation and wrapping do not
+// split a match between the spoken text and the rendered text.
+function normalizeWord(raw) {
+  return String(raw)
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+const SELECTION_WORD = /\S+/gu;
+const SELECTION_WORD_CHAR = /[\p{L}\p{N}]/u;
+
+// The first and last letter or digit of a whitespace-free run.
+function wordSpan(raw) {
+  let start = 0;
+  let end = raw.length;
+  while (start < end && !SELECTION_WORD_CHAR.test(raw[start])) start += 1;
+  while (end > start && !SELECTION_WORD_CHAR.test(raw[end - 1])) end -= 1;
+  return { start: start, end: end };
+}
+
+// The words inside one cloned selection range, in document order. Code tokens
+// carry a flag, because syntax highlighters split one word across text nodes.
+function tokensFromRange(range, speechNorms) {
+  const tokens = [];
+  if (range === null) return tokens;
+  const root = range.commonAncestorContainer;
+  if (root === null || !root.isConnected) return tokens;
+  const area = root.nodeType === 3 ? root.parentElement : root;
+  if (area === null) return tokens;
+  const walker = document.createTreeWalker(area, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+    if (!range.intersectsNode(node)) continue;
+    const text = node.nodeValue ?? "";
+    const first = node === range.startContainer ? range.startOffset : 0;
+    const last = node === range.endContainer ? range.endOffset : text.length;
+    if (last <= first) continue;
+    const inCode = node.parentElement !== null && node.parentElement.closest("code, pre") !== null;
+    const slice = text.slice(first, last);
+    for (const match of slice.matchAll(SELECTION_WORD)) {
+      const norm = normalizeWord(match[0]);
+      if (norm === "") continue;
+      const span = wordSpan(match[0]);
+      const base = first + match.index;
+      tokens.push({
+        node: node,
+        start: base + span.start,
+        end: base + span.end,
+        norm: norm,
+        code: inCode
+      });
+    }
+  }
+  return mergeCodeSplits(tokens, speechNorms);
+}
+
+// Syntax highlighters split one code word across several text nodes, so the
+// per-node tokens never match the spoken word ("keep" + "_mark" vs "keepmark").
+// Merge adjacent code tokens while their concatenated norm exists in the
+// spoken stream: the merge can only create a spoken match, never break one.
+function mergeCodeSplits(tokens, speechNorms) {
+  if (speechNorms === undefined || speechNorms === null || speechNorms.size === 0) {
+    return tokens;
+  }
+  const out = [];
+  let index = 0;
+  while (index < tokens.length) {
+    const first = tokens[index];
+    if (first.code !== true) {
+      out.push(first);
+      index += 1;
+      continue;
+    }
+    let merged = first;
+    let cursor = index + 1;
+    while (cursor < tokens.length) {
+      const next = tokens[cursor];
+      if (next.code !== true) break;
+      const joined = merged.norm + next.norm;
+      if (!speechNorms.has(joined)) break;
+      merged = {
+        node: first.node,
+        start: first.start,
+        end: next.end,
+        norm: joined,
+        code: true
+      };
+      cursor += 1;
+    }
+    out.push(merged);
+    index = cursor;
+  }
+  return out;
 }
 
 // Group CopySpeech caption entries under each spoken word. ElevenLabs sends one
@@ -247,6 +507,13 @@ function alignDetail(words, tokens, from) {
   let mapped = 0;
   for (let i = 0; i < words.length; i += 1) {
     let at = mapped === 0 ? -1 : findNear(tokens, words[i].norm, cursor);
+    // A near match anchors only when the following words follow it. A common
+    // word inside a skipped excerpt gap fails this check, so resync finds the
+    // real run. With no later run, keep the near match (TTS may respell a word).
+    if (at >= 0 && !runAt(words, tokens, i, at, Math.min(RUN_NEEDED, words.length - i))) {
+      const far = resync(words, tokens, i, cursor);
+      if (far >= 0) at = far;
+    }
     if (at < 0) at = resync(words, tokens, i, cursor);
     if (at < 0) continue;
     map[i] = at;
@@ -263,22 +530,23 @@ function nextRequestId() {
 }
 
 // Same transport as copyspeech-dsh: no-cors and text/plain avoid a preflight.
-function postSpeech(text) {
+// A failure also clears the playback record, so the bar never hangs on a dead
+// request.
+function postSpeech(text, requestId) {
   return fetch(SPEAK_URL, {
     method: "POST",
     mode: "no-cors",
     cache: "no-store",
     headers: { "content-type": "text/plain" },
-    body: JSON.stringify({ text, request_id: nextRequestId(), wait: false })
+    body: JSON.stringify({ text, request_id: requestId, wait: false })
   }).then(
     () => {
       notifiedDown = false;
     },
     (error) => {
-      if (notifiedDown) return;
-      notifiedDown = true;
       console.warn("[copyspeech-hermes] speak failed", error);
-      host.notify({ kind: "error", message: "CopySpeech not reachable on 127.0.0.1:43117" });
+      notifyOffline();
+      if (playbackRequestId === requestId) playbackForget();
     }
   );
 }
@@ -335,19 +603,40 @@ function assistantRoot() {
   return roots[roots.length - 1];
 }
 
-// Text nodes of the newest assistant reply, minus reasoning. Words keep their node and range.
-function replyTokens() {
-  const root = assistantRoot();
+// Text nodes of a reply root, minus reasoning and code blocks. Words keep
+// their node and range. Code blocks are skipped for the same reason the
+// spoken text skips them: CopySpeech never reads them, so a code word must
+// not pull the highlight.
+function rootTokens(root, skipCode) {
   const tokens = [];
-  if (root === undefined) return tokens;
-  for (const body of root.querySelectorAll(".aui-md")) {
+  if (root === undefined || root === null) return tokens;
+  for (const body of root.querySelectorAll(MESSAGE_BODY_SELECTOR)) {
     if (body.closest(REASONING_SELECTOR) !== null) continue;
     const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
     for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      if (skipCode && node.parentElement !== null && node.parentElement.closest("pre") !== null) {
+        continue;
+      }
       for (const token of wordTokens(node.nodeValue ?? "")) tokens.push({ ...token, node: node });
     }
   }
   return tokens;
+}
+
+// Text nodes of the newest assistant reply, minus reasoning.
+function replyTokens() {
+  return rootTokens(assistantRoot(), true);
+}
+
+// The rendered tokens a caption run paints against: the newest reply for
+// auto-read, one specific reply for a message read, or the cloned selection
+// range for a selection read.
+function targetTokens(run) {
+  const target = run.target;
+  if (target === undefined || target === null) return replyTokens();
+  if (target.kind === "selection") return tokensFromRange(target.range, target.speechNorms);
+  if (target.kind === "message") return rootTokens(target.root, true);
+  return replyTokens();
 }
 
 function clearCaptionPaint() {
@@ -801,12 +1090,11 @@ function paintCaption(run, caption, position, fragmentIndex) {
   if (String(caption.text) !== caption.text || !Array.isArray(caption.words)) return false;
   const key = String(fragmentIndex) + "|" + caption.text;
   if (key !== run.key) {
-    const tokens = replyTokens();
+    const tokens = targetTokens(run);
     if (tokens.length === 0) {
       if (!run.warnedEmpty) {
         run.warnedEmpty = true;
-        const reason = assistantRoot() === undefined ? "no-root" : "empty-root";
-        warnNoAlignment(captionWords(caption).length, 0, 0, reason);
+        warnNoAlignment(captionWords(caption).length, 0, 0, targetMissReason(run));
       }
       return false;
     }
@@ -848,6 +1136,16 @@ function endRun(run) {
   if (captionRun === run) stopCaptions();
 }
 
+// Why a run found no rendered words: one label per target kind.
+function targetMissReason(run) {
+  const target = run.target;
+  if (target === null || target === undefined) {
+    return assistantRoot() === undefined ? "no-root" : "empty-root";
+  }
+  if (target.kind === "selection") return "no-selection";
+  return target.root === null ? "no-message" : "empty-message";
+}
+
 // Re-check focus and settings for a run. Applies a paint-mode change and the follow flag.
 // False when the run must stop.
 function syncRun(run) {
@@ -860,7 +1158,7 @@ function syncRun(run) {
     unwatchScroller(run);
     run.scroller = null;
   }
-  if (plan === "switch") switchMode(run, paintMode(current));
+  if (plan === "switch") switchMode(run, paintMode(run, current));
   return true;
 }
 
@@ -871,31 +1169,61 @@ function onStatus(run, body) {
     endRun(run);
     return;
   }
+  // Mirror the app's pause state into the playback record, so the bar's glyph
+  // follows a pause made in the CopySpeech window too. An optimistic flip
+  // keeps the field for a moment, so an in-flight poll cannot flicker it.
+  if (body !== null && run.requestId !== null && run.requestId === playbackRequestId) {
+    if (Date.now() - playbackPauseChangedAt >= PAUSE_RECONCILE_MS) {
+      playbackSetPaused(body.paused === true);
+    }
+  }
   const now = Date.now();
   const caption = body !== null && body.active === true ? body.captions : null;
   if (caption && paintCaption(run, caption, body.position_ms, body.fragment_index)) {
     run.lastMatch = now;
     run.matched = true;
+    run.endedPolls = 0;
     return;
   }
   // Inactive with captions can be a synthesis stall; the end report has no captions.
   const ended = body !== null && body.active !== true && !body.captions;
+  // One inactive poll can be a throttled or briefly stale webview report. End
+  // only after two in a row, so a single missed report never hides the captions.
+  run.endedPolls = ended ? (run.endedPolls || 0) + 1 : 0;
   const silent = now - (run.matched ? run.lastMatch : run.startedAt) >= CAPTION_SILENCE_MS;
-  if (silent || (run.matched && ended)) stopCaptions();
+  if (silent || (run.matched && run.endedPolls >= 2)) endPlaybackRun(run);
 }
 
-// Paint mode of a run: none with captions off, glide with the pill, else the CSS highlight.
-function paintMode(settings) {
-  if (!settings.captions) return "none";
+// A natural end also clears the playback record when the ending run owns it,
+// so the bar and the buttons retire with the reading. A run that lost focus
+// only stops painting; its reading keeps playing.
+function endPlaybackRun(run) {
+  if (run.requestId !== null && playbackRequestId === run.requestId) playbackForget();
+  else stopCaptions();
+}
+
+// Paint mode of a run: none with captions off, glide with the pill, else the
+// CSS highlight. A selection read paints even with the captions switch off.
+function paintMode(run, settings) {
+  if (!settings.captions && run.forceCaptions !== true) return "none";
   return settings.glide ? "glide" : "plain";
 }
 
 // What one status poll does: stop the run, switch paint mode, or keep going.
-// A run with follow on keeps polling while captions are off.
+// A run with follow on keeps polling while captions are off. A controlled run
+// (message or selection read) also keeps polling with every paint switch off,
+// because the same poll drives the bar's pause state.
 export function pollPlan(run, settings, focusedId) {
   if (run.sessionId !== focusedId) return "stop";
-  if (!settings.captions && !settings.follow) return "stop";
-  return paintMode(settings) === run.mode ? "keep" : "switch";
+  if (
+    !settings.captions &&
+    !settings.follow &&
+    run.forceCaptions !== true &&
+    run.controlled !== true
+  ) {
+    return "stop";
+  }
+  return paintMode(run, settings) === run.mode ? "keep" : "switch";
 }
 
 function pollCaptions(run) {
@@ -916,14 +1244,21 @@ function pollCaptions(run) {
     });
 }
 
-// Start one status poll for the reply just sent. Captions and follow share it; a new reply replaces it.
-function startCaptions(ctx, settingsNow, sessionId) {
+// Start one caption run. Captions and follow share the status poll; a new
+// reading replaces the run. A target names what the run paints against:
+// `latest` (auto-read), `message` (a play-button read), or `selection` (a
+// cloned range). A controlled run keeps polling even with paint off, because
+// the same poll drives the bar's pause state.
+function startRun(ctx, settingsNow, sessionId, target, requestId) {
   stopCaptions();
   const current = settingsNow();
+  const kind = target === undefined || target === null ? "latest" : target.kind;
+  const controlled = kind !== "latest";
+  const force = controlled && kind === "selection";
   // Glide paints with the pill, which needs no highlight API. Plain captions need it.
   const paints = current.captions && (current.glide || captionsSupported());
   // Follow needs no paint, so it runs where captions cannot paint.
-  if (!current.follow && !paints) return;
+  if (!controlled && !current.follow && !paints) return;
   const now = Date.now();
   const run = {
     key: null,
@@ -936,7 +1271,18 @@ function startCaptions(ctx, settingsNow, sessionId) {
     busy: false,
     settings: settingsNow,
     sessionId: sessionId,
-    mode: paintMode(current),
+    requestId: requestId === undefined ? null : requestId,
+    target: controlled
+      ? {
+          kind: kind,
+          root: target.root ?? null,
+          range: target.range ?? null,
+          speechNorms: target.speechNorms ?? null
+        }
+      : null,
+    controlled: controlled,
+    forceCaptions: force,
+    mode: paintMode({ forceCaptions: force }, current),
     follow: current.follow,
     scroller: null,
     watched: null,
@@ -966,6 +1312,11 @@ function startCaptions(ctx, settingsNow, sessionId) {
   captionRun = run;
 }
 
+// The auto-read entry: paint the newest assistant reply of the session.
+function startCaptions(ctx, settingsNow, sessionId) {
+  startRun(ctx, settingsNow, sessionId, null, null);
+}
+
 function installCaptionStyle() {
   const old = document.getElementById(CAPTION_STYLE_ID);
   if (old !== null) old.remove();
@@ -977,6 +1328,497 @@ function installCaptionStyle() {
     ") { background-color: color-mix(in oklab, var(--ui-accent) 30%, transparent); }";
   document.head.appendChild(style);
   return style;
+}
+
+// ---- Injected UI: icons, the playback bar, message buttons, selection pill ----
+
+// The desktop app provides MutationObserver and SVG; the node test world does
+// not, and the caption tests run without the injected UI.
+function uiAvailable() {
+  return window.MutationObserver !== undefined && window.document !== undefined;
+}
+
+// Register fills these two: they need ctx.storage and the begin chain.
+let pluginBeginRead = null;
+let pluginSettings = null;
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+// Icons draw in currentColor, so every surface follows the app theme. The
+// speaker is the outlined app-logo mark; the controls are filled, one family.
+const ICON_SPEAKER = {
+  viewBox: "14.86 14.717 48.611 48.611",
+  stroked: true,
+  paths: [
+    "m37.35 20.74c-0.74-0.04-1.46 0.21-2.02 0.71l-7.68 7.13c-0.24 0.23-0.56 0.37-0.9 0.39l-5.58 0.21c-2.55 0.1-4.51 2.23-4.51 5v7.99c0 2.81 2.1 4.95 4.74 5.09l5.3 0.28c0.28 0.02 0.54 0.15 0.74 0.35l7.94 8.12c0.71 0.71 1.67 1.04 2.55 1.02 1.52-0.04 2.65-1.2 2.65-2.76v-30.18c0-1.84-1.65-3.27-3.23-3.35z",
+    "M48.17 21.93A19.44 19.44 0 0 1 48.17 56.13",
+    "M45.06 31.13A9.43 9.43 0 0 1 45.06 46.87"
+  ]
+};
+const ICON_PLAY = { viewBox: "0 0 16 16", paths: ["M5.8 3.5 12.2 8 5.8 12.5Z"] };
+const ICON_PAUSE = { viewBox: "0 0 16 16", paths: ["M4.6 3h2.5v10H4.6zM8.9 3h2.5v10H8.9z"] };
+const ICON_STOP = { viewBox: "0 0 16 16", paths: ["M3.8 3.8h8.4v8.4H3.8z"] };
+// The message button's stop glyph: an outlined square in the speaker's own
+// viewBox and stroke, so the two glyphs share weight and size.
+const ICON_STOP_MESSAGE = {
+  viewBox: "14.86 14.717 48.611 48.611",
+  stroked: true,
+  paths: ["M23 29h20v20H23z"]
+};
+const ICON_BACK = {
+  viewBox: "0 0 24 24",
+  paths: ["M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"]
+};
+const ICON_FORWARD = {
+  viewBox: "0 0 24 24",
+  paths: ["M4 18l8.5-6L4 6v12zm9-12v12l8.5-6L13 6z"]
+};
+const ICON_CHAT = {
+  viewBox: "0 0 16 16",
+  paths: [
+    "M3.6 3.1H12.4A1.9 1.9 0 0 1 14.3 5V9A1.9 1.9 0 0 1 12.4 10.9H7.6L4.9 13.3V10.9H3.6A1.9 1.9 0 0 1 1.7 9V5A1.9 1.9 0 0 1 3.6 3.1Z"
+  ]
+};
+
+const UI_STYLE = [
+  /* The message play button sits in the host's hover action row, beside Copy
+     and the built-in Read aloud. The row is transparent until the message is
+     hovered; the button inherits that, so it appears with its neighbors. */
+  ".csh-msg-play{width:28px;height:28px;border:none;border-radius:6px;background:transparent;padding:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ui-text-tertiary)}",
+  "@media (hover:hover){.csh-msg-play:hover{background:color-mix(in oklab, var(--ui-text-tertiary) 12%, transparent);color:var(--ui-text-secondary)}}",
+  ".csh-msg-play:focus-visible{outline:2px solid var(--ui-accent);outline-offset:2px}",
+  ".csh-msg-play svg{width:15px;height:15px;display:block}",
+  ".csh-tooltip{position:fixed;z-index:2147483002;pointer-events:none;max-width:min(24rem, calc(100vw - 24px));border-radius:4px;background:var(--foreground);color:var(--background);padding:4px 8px;font-family:inherit;font-size:0.6875rem;font-weight:500;line-height:1.4;overflow-wrap:anywhere;white-space:normal}",
+  /* The playback bar sits in the composer's top slot, left-aligned above the
+     input. The composer ring draws its outline, so the bar has no border. */
+  ".csh-bar{display:inline-flex;align-items:center;align-self:flex-start;gap:2px;padding:0 2px}",
+  ".csh-bar-btn{width:26px;height:26px;border:none;border-radius:6px;background:transparent;padding:5px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ui-text-secondary)}",
+  "@media (hover:hover){.csh-bar-btn:hover{background:color-mix(in oklab, var(--ui-text-secondary) 12%, transparent)}}",
+  ".csh-bar-btn:focus-visible{outline:2px solid var(--ui-accent);outline-offset:1px}",
+  ".csh-bar-btn svg{width:15px;height:15px;display:block}",
+  ".csh-bar-stop{color:var(--ui-text-primary, var(--ui-text-secondary))}",
+  /* The selection pill: a small floating Read aloud above the selection. */
+  ".csh-pill{position:fixed;z-index:2147483001}",
+  ".csh-pill-btn{border:none;border-radius:999px;padding:5px 12px;background:var(--ui-accent);color:var(--ui-accent-foreground, #fff);font:inherit;font-size:12px;line-height:16px;cursor:pointer;box-shadow:0 4px 14px rgb(0 0 0 / 22%)}",
+  "@media (hover:hover){.csh-pill-btn:hover{filter:brightness(1.08)}}",
+  ".csh-pill-btn:focus-visible{outline:2px solid var(--ui-accent);outline-offset:2px}"
+].join("\n");
+
+function installUiStyle() {
+  const old = document.getElementById(UI_STYLE_ID);
+  if (old !== null) old.remove();
+  const style = document.createElement("style");
+  style.id = UI_STYLE_ID;
+  style.textContent = UI_STYLE;
+  document.head.appendChild(style);
+  return style;
+}
+
+function svgGlyph(icon, size) {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("viewBox", icon.viewBox);
+  svg.setAttribute("width", String(size));
+  svg.setAttribute("height", String(size));
+  svg.setAttribute("aria-hidden", "true");
+  svg.setAttribute("focusable", "false");
+  const stroke = icon.stroked === true ? String(3.3 * (17 / size)) : null;
+  for (const d of icon.paths) {
+    const path = document.createElementNS(SVG_NS, "path");
+    path.setAttribute("d", d);
+    if (stroke !== null) {
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "currentColor");
+      path.setAttribute("stroke-width", stroke);
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("stroke-linejoin", "round");
+    } else {
+      path.setAttribute("fill", "currentColor");
+    }
+    svg.appendChild(path);
+  }
+  return svg;
+}
+
+// ---- The playback bar ----
+
+// The bar renders in the composer's top slot, above the chat input. The composer
+// ring draws its outline. The slot name is app/chat/composer/contrib.ts's
+// composer.top; the SDK barrel does not export it, so the string lives here.
+const COMPOSER_TOP_AREA = "composer.top";
+
+// Pure: what the bar shows for the current reading.
+export function barStateFor(requestId, paused) {
+  const active = requestId !== null;
+  return { active: active, paused: active && paused };
+}
+
+// updateBar() writes this atom. PlaybackBar subscribes to it. register() creates it, like the settings atom.
+let barState = null;
+
+function barGlyph(icon, size) {
+  const stroke = icon.stroked === true ? String(3.3 * (17 / size)) : null;
+  return jsx("svg", {
+    viewBox: icon.viewBox,
+    width: size,
+    height: size,
+    "aria-hidden": "true",
+    focusable: "false",
+    children: icon.paths.map((d, i) =>
+      jsx("path", {
+        key: i,
+        d: d,
+        ...(stroke !== null
+          ? {
+              fill: "none",
+              stroke: "currentColor",
+              strokeWidth: stroke,
+              strokeLinecap: "round",
+              strokeLinejoin: "round"
+            }
+          : { fill: "currentColor" })
+      })
+    )
+  });
+}
+
+function barButton(label, icon, onClick, extraClass) {
+  return jsx("button", {
+    type: "button",
+    className: extraClass ? "csh-bar-btn " + extraClass : "csh-bar-btn",
+    "aria-label": label,
+    title: label,
+    onClick: onClick,
+    children: barGlyph(icon, 15)
+  });
+}
+
+function PlaybackBar({ barAtom }) {
+  const state = useValue(barAtom);
+  if (!state.active) return null;
+  const label = state.paused ? "Resume reading" : "Pause reading";
+  return jsxs("div", {
+    className: "csh-bar",
+    role: "region",
+    "aria-label": "CopySpeech playback",
+    children: [
+      barButton(label, state.paused ? ICON_PLAY : ICON_PAUSE, () => {
+        void (playbackPaused ? resumeReading() : pauseReading());
+      }),
+      barButton("Back 5 seconds", ICON_BACK, () => {
+        void seekReading(-SEEK_STEP_MS);
+      }),
+      barButton("Forward 5 seconds", ICON_FORWARD, () => {
+        void seekReading(SEEK_STEP_MS);
+      }),
+      barButton(
+        "Stop reading",
+        ICON_STOP,
+        () => {
+          void stopReadingNow();
+        },
+        "csh-bar-stop"
+      ),
+      barButton("Show the spoken word", ICON_CHAT, () => {
+        showPlaybackInChat();
+      })
+    ]
+  });
+}
+
+function updateBar() {
+  if (barState === null) return;
+  barState.set(barStateFor(playbackRequestId, playbackPaused));
+}
+
+// The bar's Show-in-chat control: bring the spoken word's line to the anchor.
+// With no aligned word yet, it brings the reading's target into view instead.
+function showPlaybackInChat() {
+  const run = captionRun;
+  let element = null;
+  let range = null;
+  if (run !== null && run.lastToken !== null && run.lastToken.node.isConnected) {
+    element = run.lastToken.node.parentElement;
+    range = tokenRange(run.lastToken);
+  } else if (playbackRoot !== null && playbackRoot.isConnected) {
+    element = playbackRoot;
+  } else if (playbackRange !== null && playbackRange.startContainer.isConnected) {
+    element = playbackRange.startContainer.parentElement;
+    range = playbackRange;
+  }
+  if (element === null) return;
+  const scroller = findScroller(element);
+  if (scroller === null) {
+    element.scrollIntoView({ block: "center", behavior: motionBehavior() });
+    return;
+  }
+  const rect =
+    range !== null
+      ? (firstPaintedRect(range) ?? range.getBoundingClientRect())
+      : element.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) return;
+  const box = scroller.getBoundingClientRect();
+  const offset = rect.top - box.top - box.height * FOLLOW_ANCHOR;
+  scroller.scrollTo({ top: scroller.scrollTop + offset, behavior: motionBehavior() });
+}
+
+// ---- Message play buttons ----
+
+const messageButtonSyncs = new Set();
+let messageTooltip = null;
+let messageTooltipTimer = null;
+let messageTooltipPending = null;
+
+function hideMessageTooltip() {
+  if (messageTooltipTimer !== null) {
+    window.clearTimeout(messageTooltipTimer);
+    messageTooltipTimer = null;
+  }
+  messageTooltipPending = null;
+  if (messageTooltip !== null) {
+    messageTooltip.el.remove();
+    messageTooltip = null;
+  }
+}
+
+function showMessageTooltip(button) {
+  hideMessageTooltip();
+  messageTooltipPending = button;
+  messageTooltipTimer = window.setTimeout(() => {
+    messageTooltipTimer = null;
+    messageTooltipPending = null;
+    if (!button.isConnected) return;
+    const el = document.createElement("div");
+    el.className = "csh-tooltip";
+    el.setAttribute("role", "tooltip");
+    el.textContent = button.getAttribute("aria-label");
+    document.documentElement.appendChild(el);
+    const target = button.getBoundingClientRect();
+    const tip = el.getBoundingClientRect();
+    const top = target.top - tip.height - 5;
+    el.style.top = (top >= 8 ? top : target.bottom + 5) + "px";
+    el.style.left =
+      Math.max(
+        8,
+        Math.min(target.left + (target.width - tip.width) / 2, window.innerWidth - tip.width - 8)
+      ) + "px";
+    messageTooltip = { el: el, button: button };
+  }, 200);
+}
+
+let buttonsObserver = null;
+let scanQueued = false;
+
+// The reply's rendered text for speech: the Markdown bodies' words, minus
+// reasoning and code blocks, joined as paragraphs.
+function spokenTextFromRoot(root) {
+  const parts = [];
+  for (const body of root.querySelectorAll(MESSAGE_BODY_SELECTOR)) {
+    if (body.closest(REASONING_SELECTOR) !== null) continue;
+    const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+      if (node.parentElement !== null && node.parentElement.closest("pre") !== null) continue;
+      parts.push(node.nodeValue ?? "");
+    }
+    parts.push("\n\n");
+  }
+  return toSpeech(parts.join(""));
+}
+
+function makeMessageButton(root) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "csh-msg-play";
+  button.setAttribute(PLAY_BUTTON_FLAG, "");
+  const sync = () => {
+    const active = playbackSource === "message" && playbackRoot === root;
+    const label = active ? "Stop CopySpeech reading" : "Read aloud with CopySpeech";
+    button.setAttribute("aria-label", label);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+    if (messageTooltip !== null && messageTooltip.button === button) {
+      messageTooltip.el.textContent = label;
+    }
+    button.dataset.active = active ? "true" : "false";
+    button.replaceChildren(svgGlyph(active ? ICON_STOP_MESSAGE : ICON_SPEAKER, 15));
+  };
+  button.addEventListener("pointerenter", () => showMessageTooltip(button));
+  button.addEventListener("pointerleave", () => {
+    if (!button.matches(":focus-visible")) hideMessageTooltip();
+  });
+  button.addEventListener("focus", () => {
+    if (button.matches(":focus-visible")) showMessageTooltip(button);
+  });
+  button.addEventListener("blur", hideMessageTooltip);
+  button.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") hideMessageTooltip();
+  });
+  button.addEventListener("click", () => {
+    if (playbackSource === "message" && playbackRoot === root) {
+      void stopReadingNow();
+      return;
+    }
+    if (pluginBeginRead === null) return;
+    const speech = spokenTextFromRoot(root);
+    if (speech === "") {
+      host.notify({ kind: "warning", message: "Nothing to read aloud in this reply" });
+      return;
+    }
+    pluginBeginRead({ source: "message", speech: speech, root: root });
+  });
+  messageButtonSyncs.add({ button: button, sync: sync });
+  sync();
+  return button;
+}
+
+// One injected button per hover action row. The row belongs to a settled
+// reply, so buttons appear when replies finish and ride virtualization.
+function scanMessageRows() {
+  if (messageTooltip !== null && !messageTooltip.button.isConnected) hideMessageTooltip();
+  if (messageTooltipPending !== null && !messageTooltipPending.isConnected) hideMessageTooltip();
+  for (const entry of messageButtonSyncs) {
+    if (!entry.button.isConnected) messageButtonSyncs.delete(entry);
+  }
+  for (const row of document.querySelectorAll(MESSAGE_ACTIONS_SELECTOR)) {
+    if (row.querySelector("button[" + PLAY_BUTTON_FLAG + "]") !== null) continue;
+    const root = row.closest(MESSAGE_ROOT_SELECTOR);
+    if (root === null) continue;
+    row.appendChild(makeMessageButton(root));
+  }
+}
+
+function scheduleScan() {
+  if (scanQueued || buttonsObserver === null) return;
+  scanQueued = true;
+  window.requestAnimationFrame(() => {
+    scanQueued = false;
+    scanMessageRows();
+  });
+}
+
+function installMessageButtons() {
+  if (buttonsObserver !== null || window.MutationObserver === undefined) return;
+  buttonsObserver = new window.MutationObserver(scheduleScan);
+  buttonsObserver.observe(document.documentElement, { childList: true, subtree: true });
+  scanMessageRows();
+}
+
+function removeMessageButtons() {
+  hideMessageTooltip();
+  if (buttonsObserver !== null) {
+    buttonsObserver.disconnect();
+    buttonsObserver = null;
+  }
+  for (const button of document.querySelectorAll("button[" + PLAY_BUTTON_FLAG + "]")) {
+    button.remove();
+  }
+  messageButtonSyncs.clear();
+}
+
+function syncMessageButtons() {
+  for (const entry of messageButtonSyncs) {
+    if (entry.button.isConnected) entry.sync();
+    else messageButtonSyncs.delete(entry);
+  }
+}
+
+// ---- The selection read pill ----
+
+let selectionPill = null;
+let selectionTimer = null;
+
+function dismissSelectionPill() {
+  if (selectionPill === null) return;
+  selectionPill.el.remove();
+  selectionPill = null;
+}
+
+function positionSelectionPill(range) {
+  if (selectionPill === null) return;
+  const rects = Array.from(range.getClientRects()).filter((r) => r.width > 0 && r.height > 0);
+  if (rects.length === 0) {
+    dismissSelectionPill();
+    return;
+  }
+  const last = rects[rects.length - 1];
+  const above = last.top > 52;
+  const top = above ? last.top - 44 : last.bottom + 8;
+  const left = Math.max(8, Math.min(last.right - 60, window.innerWidth - 150));
+  selectionPill.el.style.top = Math.max(8, top) + "px";
+  selectionPill.el.style.left = left + "px";
+}
+
+function showSelectionPill(range) {
+  if (selectionPill === null) {
+    const el = document.createElement("div");
+    el.className = "csh-pill";
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "csh-pill-btn";
+    button.textContent = "Read aloud";
+    // A pointer-down on the pill must not collapse the selection before the
+    // click can clone its range.
+    el.addEventListener("pointerdown", (event) => event.preventDefault());
+    button.addEventListener("click", () => {
+      readSelectedRange();
+    });
+    el.appendChild(button);
+    document.documentElement.appendChild(el);
+    selectionPill = { el: el, button: button, range: range };
+  } else {
+    selectionPill.range = range;
+  }
+  positionSelectionPill(range);
+}
+
+function selectionInsideReply(range) {
+  const node = range.startContainer;
+  const anchor = node.nodeType === 1 ? node : node.parentElement;
+  if (anchor === null) return false;
+  return (
+    anchor.closest(MESSAGE_BODY_SELECTOR) !== null && anchor.closest(MESSAGE_ROOT_SELECTOR) !== null
+  );
+}
+
+function updateSelectionPill() {
+  const settings = pluginSettings === null ? DEFAULTS : pluginSettings();
+  if (!settings.selectionRead) {
+    dismissSelectionPill();
+    return;
+  }
+  const selection = window.getSelection();
+  if (selection === null || selection.isCollapsed || selection.rangeCount !== 1) {
+    dismissSelectionPill();
+    return;
+  }
+  const range = selection.getRangeAt(0);
+  if (!selectionInsideReply(range)) {
+    dismissSelectionPill();
+    return;
+  }
+  showSelectionPill(range);
+}
+
+// selectionchange fires per drag movement; one trailing run per 120 ms.
+function onSelectionChange() {
+  if (selectionTimer !== null) return;
+  selectionTimer = window.setTimeout(() => {
+    selectionTimer = null;
+    updateSelectionPill();
+  }, 120);
+}
+
+function readSelectedRange() {
+  if (pluginBeginRead === null || selectionPill === null) return;
+  const range = selectionPill.range;
+  dismissSelectionPill();
+  if (range === null || !range.startContainer.isConnected) return;
+  const speech = toSpeech(range.toString());
+  const selection = window.getSelection();
+  if (selection !== null) selection.removeAllRanges();
+  if (speech === "") {
+    host.notify({ kind: "warning", message: "Nothing to read aloud in this selection" });
+    return;
+  }
+  pluginBeginRead({ source: "selection", speech: speech, range: range });
 }
 
 function readSettings(storage) {
@@ -1083,6 +1925,21 @@ function SettingsPage({ storage, settings }) {
         onChange: (on) => update({ follow: on })
       }),
       jsx(ToggleRow, {
+        label: "Show play buttons on replies",
+        checked: s.messageButtons,
+        onChange: (on) => update({ messageButtons: on })
+      }),
+      jsx(ToggleRow, {
+        label: "Read aloud on selection",
+        checked: s.selectionRead,
+        onChange: (on) => update({ selectionRead: on })
+      }),
+      jsx(ToggleRow, {
+        label: "Skip bullet points and sections",
+        checked: s.skipMarkdownSections,
+        onChange: (on) => update({ skipMarkdownSections: on })
+      }),
+      jsx(ToggleRow, {
         label: "Read only part of the reply",
         checked: s.excerpt,
         onChange: (on) => update({ excerpt: on })
@@ -1154,13 +2011,139 @@ export default {
     const settings = atom(readSettings(storage));
     const armed = new Set();
     const style = installCaptionStyle();
+    const ui = uiAvailable();
+    pluginSettings = () => readSettings(storage);
+    let uiStyle = null;
+    if (ui) uiStyle = installUiStyle();
+
+    // Start one controlled reading: a message play-button read or a selection
+    // read. Calls queue through the chain, so overlapping starts cannot post
+    // two /speak calls around one stop; a stop bumps the epoch and cancels a
+    // start still queued behind it.
+    let beginChain = Promise.resolve();
+    const beginReading = (plan) => {
+      const epoch = playbackStopEpoch;
+      const run = () => {
+        if (epoch !== playbackStopEpoch) return Promise.resolve(null);
+        const previous = playbackRequestId;
+        const stopping = previous === null ? Promise.resolve(true) : stopReading(previous);
+        return stopping.then((stopped) => {
+          if (!stopped) {
+            notifyOffline();
+            return "error.offline";
+          }
+          const requestId = nextRequestId();
+          const selection = plan.source === "selection";
+          const speech = speechForRead(plan.source, plan.speech, readSettings(storage));
+          if (speech === "") {
+            host.notify({
+              kind: "warning",
+              message: "Nothing to read aloud after skipping bullets and sections"
+            });
+            return null;
+          }
+          playbackRemember(
+            plan.source,
+            requestId,
+            selection ? null : (plan.root ?? null),
+            selection ? (plan.range ?? null) : null
+          );
+          const target = selection
+            ? {
+                kind: "selection",
+                range: plan.range ?? null,
+                speechNorms: wordNorms(speech)
+              }
+            : { kind: "message", root: plan.root ?? null };
+          startRun(ctx, () => readSettings(storage), focusedSession(), target, requestId);
+          const controller = new AbortController();
+          playbackSpeakAbort = controller;
+          void controlPost(
+            "/speak",
+            { text: speech, request_id: requestId, wait: true },
+            controller.signal
+          ).then((sent) => {
+            if (playbackSpeakAbort === controller) playbackSpeakAbort = null;
+            if (sent) notifiedDown = false;
+            if (playbackRequestId !== requestId) return null;
+            playbackForget();
+            // An aborted request is the stop the user asked for, not a failure.
+            if (controller.signal.aborted) return null;
+            if (!sent) {
+              notifyOffline();
+              return "error.offline";
+            }
+            return null;
+          });
+        });
+      };
+      const next = beginChain.then(run, run);
+      beginChain = next;
+      return next;
+    };
+    pluginBeginRead = beginReading;
+
     ctx.onDispose(() => {
+      pluginBeginRead = null;
+      pluginSettings = null;
+      // Unloading the plugin stops its reading, not just the paint.
+      if (playbackSpeakAbort !== null) {
+        playbackSpeakAbort.abort();
+        playbackSpeakAbort = null;
+      }
+      const requestId = playbackRequestId;
+      if (requestId !== null) void stopReading(requestId);
+      playbackForget();
+      if (ui) {
+        removeMessageButtons();
+        dismissSelectionPill();
+        if (uiStyle !== null) {
+          uiStyle.remove();
+          uiStyle = null;
+        }
+      }
       stopCaptions();
       style.remove();
     });
     ctx.addEventListener(window, "storage", (event) => {
-      if (event.key === null || event.key === SETTINGS_KEY) settings.set(readSettings(storage));
+      if (event.key === null || event.key === SETTINGS_KEY) {
+        settings.set(readSettings(storage));
+        syncUi();
+      }
     });
+
+    // The injected UI follows the saved settings: buttons and the pill can be
+    // turned off. The bar is a composer contribution and shows only while a reading plays.
+    function syncUi() {
+      if (!ui) return;
+      const current = readSettings(storage);
+      if (current.messageButtons) installMessageButtons();
+      else removeMessageButtons();
+      if (!current.selectionRead) dismissSelectionPill();
+    }
+    syncUi();
+    if (ui) {
+      ctx.addEventListener(document, "selectionchange", () => {
+        onSelectionChange();
+      });
+      ctx.addEventListener(
+        window,
+        "scroll",
+        () => {
+          dismissSelectionPill();
+          hideMessageTooltip();
+        },
+        { capture: true, passive: true }
+      );
+      ctx.addEventListener(
+        window,
+        "keydown",
+        (event) => {
+          if (event.key === "Escape") dismissSelectionPill();
+        },
+        { capture: true }
+      );
+    }
 
     ctx.onEvent("message.start", (event) => {
       if (event && event.session_id) armed.add(event.session_id);
@@ -1186,10 +2169,19 @@ export default {
       if (!speech) return;
       storage.set("claims", withClaim(readClaims(storage), claimKey(event), Date.now()));
       // Speech starts first. Captions only follow it, so they never delay speech.
-      void postSpeech(speech);
+      const requestId = nextRequestId();
+      playbackRemember("auto", requestId, null, null);
+      void postSpeech(speech, requestId);
       if (current.captions || current.follow) {
-        startCaptions(ctx, () => readSettings(storage), event.session_id);
+        startRun(ctx, () => readSettings(storage), event.session_id, null, requestId);
       }
+    });
+
+    barState = atom(barStateFor(playbackRequestId, playbackPaused));
+    ctx.register({
+      id: "playback-bar",
+      area: COMPOSER_TOP_AREA,
+      render: () => jsx(PlaybackBar, { barAtom: barState })
     });
 
     ctx.register({
@@ -1206,6 +2198,19 @@ export default {
             kind: "info",
             message: next ? "CopySpeech auto-read is on" : "CopySpeech auto-read is off"
           });
+        }
+      }
+    });
+
+    ctx.register({
+      id: "stop-reading",
+      area: PALETTE_AREA,
+      data: {
+        id: ID + ".stop-reading",
+        label: "CopySpeech: Stop reading",
+        keywords: ["copyspeech", "stop", "tts", "speak"],
+        run: () => {
+          void stopReadingNow();
         }
       }
     });
