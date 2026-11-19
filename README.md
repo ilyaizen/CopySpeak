@@ -37,7 +37,7 @@ CopySpeech reads your clipboard aloud. Copy the same text twice within 1.5 secon
 
 ## Install
 
-Download a build from [Releases](https://github.com/ilyaizen/CopySpeech/releases). The latest version is 0.3.1.
+Download a build from [Releases](https://github.com/ilyaizen/CopySpeech/releases). The latest version is 0.3.2.
 
 | Platform          | Asset                                                                    |
 | ----------------- | ------------------------------------------------------------------------ |

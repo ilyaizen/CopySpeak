@@ -7,12 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-19
+
 ### Changed
 
 - Landing page: the parallax offset now writes to a leaf element, the provider marquee pauses offscreen, and the runtime filters are baked into the ground textures. Scroll-phase style recalculation drops from about 3.1 s to about 0.1 s.
 - Data folders move from `CopySpeak` to `CopySpeech` on first launch (config, history, telemetry, logs, engines, speech cache, voice cache, duck state, persistent generations). Data migrates in place; keys and history stay intact. This supersedes the 0.3.0 note about folders keeping their original names. If an engine fails to start after the move, rerun its install script.
 - Firefox companion ID is now `copyspeech-companion@ilyaizen.github.io`. Reinstall the extension and re-register the native host manifest.
-## [0.3.2] - 2026-11-19
 
 ### Fixed
 
@@ -1013,7 +1014,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **SSML support removed** — SSML markup passthrough feature removed
 - **Streaming TTS mode removed** — Simplified to paginated synthesis only
 
-[Unreleased]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.16...HEAD
+[Unreleased]: https://github.com/ilyaizen/CopySpeech/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/ilyaizen/CopySpeech/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/ilyaizen/CopySpeech/compare/v0.3.0...v0.3.1
+[0.3.0]: https://github.com/ilyaizen/CopySpeech/compare/v0.2.16...v0.3.0
 [0.2.16]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.15...v0.2.16
 [0.2.15]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.14...v0.2.15
 [0.2.14]: https://github.com/ilyaizen/CopySpeak/compare/v0.2.13...v0.2.14
