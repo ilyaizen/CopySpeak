@@ -1,6 +1,6 @@
 // Infinite drag-and-hover marquee action for the provider rows (Settings About and the
 // landing page). Pass the viewport element; direction is +1 or -1. Reduced motion stops the
-// loop and leaves the row scrollable.
+// loop and leaves the row scrollable. The loop pauses while the viewport is offscreen.
 export function marquee(viewport: HTMLDivElement, direction: number) {
   const track = viewport.querySelector(".track");
   const row = viewport.querySelector(".provider-list");
@@ -20,11 +20,26 @@ export function marquee(viewport: HTMLDivElement, direction: number) {
   let previousX = 0;
   let moved = false;
   let frame = 0;
+  let visible = true;
+  let width = 0;
 
+  // The row width only changes on resize, so it is cached instead of read per frame.
+  function measure() {
+    width = rowElement.getBoundingClientRect().width;
+  }
   function updatePosition() {
-    const width = rowElement.getBoundingClientRect().width;
     if (width > 0) offset = ((offset % width) + width) % width;
     trackElement.style.transform = `translateX(${-offset}px)`;
+  }
+  // Offscreen viewports (the landing providers sit below the fold) must not run a rAF loop.
+  function start() {
+    if (frame || !visible || motion.matches) return;
+    last = 0;
+    frame = requestAnimationFrame(animate);
+  }
+  function stop() {
+    if (frame) cancelAnimationFrame(frame);
+    frame = 0;
   }
   function animate(time: number) {
     const elapsed = last ? Math.min(time - last, 100) : 0;
@@ -39,7 +54,7 @@ export function marquee(viewport: HTMLDivElement, direction: number) {
   }
   function syncMotion() {
     if (motion.matches) {
-      cancelAnimationFrame(frame);
+      stop();
       pointerId = null;
       offset = 0;
       speed = 0;
@@ -47,9 +62,22 @@ export function marquee(viewport: HTMLDivElement, direction: number) {
       updatePosition();
     } else {
       viewport.scrollLeft = 0;
-      frame = requestAnimationFrame(animate);
+      measure();
+      start();
     }
   }
+  const io =
+    "IntersectionObserver" in window
+      ? new IntersectionObserver((entries) => {
+          visible = entries.some((entry) => entry.isIntersecting);
+          if (visible) {
+            measure();
+            start();
+          } else {
+            stop();
+          }
+        })
+      : null;
   function pointerDown(event: PointerEvent) {
     if (motion.matches || !event.isPrimary || event.button !== 0) return;
     pointerId = event.pointerId;
@@ -97,11 +125,15 @@ export function marquee(viewport: HTMLDivElement, direction: number) {
   viewport.addEventListener("lostpointercapture", pointerEnd);
   viewport.addEventListener("focusin", focusIn);
   viewport.addEventListener("focusout", focusOut);
+  window.addEventListener("resize", measure);
+  io?.observe(viewport);
   motion.addEventListener("change", syncMotion);
   syncMotion();
   return {
     destroy() {
-      cancelAnimationFrame(frame);
+      stop();
+      io?.disconnect();
+      window.removeEventListener("resize", measure);
       motion.removeEventListener("change", syncMotion);
       viewport.removeEventListener("pointerenter", enter);
       viewport.removeEventListener("pointerleave", leave);

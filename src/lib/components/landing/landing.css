@@ -49,27 +49,29 @@
   --ring: oklch(0.78 0 0);
 }
 
-/* ground: grayscale texture; air: film grain + vignette (fixed, behind content) */
-.landing::before,
+/* ground: grayscale texture as a real leaf element. The per-frame --bg-shift write from
+   hero.svelte must restyle one node, not the page, so a pseudo-element on the scrolling
+   root cannot carry it. The contrast/blur filters are baked into the webp assets.
+   air: film grain + vignette (fixed, behind content) */
 .landing::after {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
 }
-.landing::before {
-  z-index: -2;
+.landing-bg {
+  position: fixed;
   inset: -15% 0; /* 130% of the viewport: 15% headroom per edge for the scroll drift */
+  z-index: -2;
+  pointer-events: none;
   background: url("/landing/bg-white.webp") center top / cover no-repeat;
   opacity: 0.28;
-  filter: contrast(1.08) blur(0.75px);
-  /* --bg-shift is written by hero.svelte from the .landing scroll position */
+  /* --bg-shift is written on this leaf by hero.svelte from the .landing scroll position */
   transform: translate3d(0, var(--bg-shift, 0px), 0) scale(1.03);
 }
-.dark .landing::before {
+.dark .landing-bg {
   background-image: url("/landing/bg-black.webp");
   opacity: 0.16;
-  filter: contrast(1.05) blur(0.75px);
 }
 .landing::after {
   z-index: -1;
@@ -235,8 +237,13 @@
   width: min(1060px, 100%);
   height: 660px;
   transform: translate(-50%, -50%);
-  background: radial-gradient(50% 50% at 50% 50%, oklch(0.95 0 0 / 0.19), transparent 72%);
-  filter: blur(52px);
+  /* the old blur(52px) re-rastered during scroll; the wider falloff does the softening */
+  background: radial-gradient(
+    58% 58% at 50% 50%,
+    oklch(0.95 0 0 / 0.15),
+    oklch(0.95 0 0 / 0.06) 55%,
+    transparent 100%
+  );
   pointer-events: none;
 }
 .landing .stage {
@@ -248,7 +255,6 @@
   border-radius: var(--radius);
   overflow: hidden;
   isolation: isolate;
-  backdrop-filter: blur(1px);
   background: radial-gradient(70% 60% at 50% 36%, oklch(0.95 0 0 / 0.2), transparent 74%);
   box-shadow: 0 24px 60px oklch(0.16 0 0 / 0.08);
 }

@@ -265,6 +265,7 @@
 {#if isWeb}
   <ModeWatcher defaultMode="dark" />
   <div class="landing h-screen overflow-x-auto overflow-y-auto" dir="ltr">
+    <div class="landing-bg" aria-hidden="true"></div>
     <div class="wrap">
       <header class="top">
         <a class="brand" href="/">

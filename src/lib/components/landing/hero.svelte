@@ -162,9 +162,11 @@
   onMount(() => {
     highlights = "highlights" in CSS ? CSS.highlights : null;
 
-    // The landing root is the scroll container, not the window.
+    // The landing root is the scroll container, not the window. The shift lands on the
+    // leaf background div, so a per-frame write restyles one element, not the page.
     const scroller = stage.closest<HTMLElement>(".landing");
-    const cleanup = scroller ? groundParallax(scroller, scroller) : null;
+    const bg = scroller?.querySelector<HTMLElement>(".landing-bg");
+    const cleanup = scroller && bg ? groundParallax(scroller, bg) : null;
 
     if (!matchMedia("(prefers-reduced-motion: reduce)").matches) run();
 
