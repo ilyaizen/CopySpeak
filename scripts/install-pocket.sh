@@ -2,7 +2,7 @@
 #
 # Installs Kyutai Pocket TTS for CopySpeech via uv (Linux port).
 #
-# Creates a uv-managed project under $XDG_DATA_HOME/CopySpeak/engines/pocket,
+# Creates a uv-managed project under $XDG_DATA_HOME/CopySpeech/engines/pocket,
 # installs pocket-tts, and drops the stable CLI wrapper. Model weights
 # auto-download from Hugging Face on first synthesis.
 #

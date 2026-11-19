@@ -2,7 +2,7 @@
 #
 # Installs Piper (piper1-gpl) for CopySpeech via uv (Linux port).
 #
-# Creates a uv-managed project under $XDG_DATA_HOME/CopySpeak/engines/piper,
+# Creates a uv-managed project under $XDG_DATA_HOME/CopySpeech/engines/piper,
 # installs the `piper` package, and drops the stable CLI wrapper.
 #
 # Prompts the user to pick an English voice and downloads the matching

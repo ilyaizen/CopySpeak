@@ -37,7 +37,10 @@ fn synthesize_preview(
     tts: &TtsConfig,
 ) -> Result<(Vec<u8>, String), String> {
     const TEXT: &str = "Hello, this is a preview of my voice.";
-    if matches!(effective.engine, TtsEngine::ElevenLabs | TtsEngine::Cartesia) {
+    if matches!(
+        effective.engine,
+        TtsEngine::ElevenLabs | TtsEngine::Cartesia
+    ) {
         let speech = backend
             .synthesize_with_captions(TEXT, &effective.voice)
             .map_err(|e| e.to_string())?;
@@ -48,7 +51,9 @@ fn synthesize_preview(
         .synthesize(TEXT, &effective.voice)
         .map_err(|e| e.to_string())?;
     let extension = if effective.engine == TtsEngine::OpenAI {
-        effective.engine_options.openai()
+        effective
+            .engine_options
+            .openai()
             .and_then(|options| options.response_format.as_deref())
             .unwrap_or(&tts.openai.response_format)
     } else {
@@ -180,7 +185,7 @@ static VOICE_CACHE_LOCK: Mutex<()> = Mutex::new(());
 fn voice_cache_path() -> PathBuf {
     dirs::cache_dir()
         .unwrap_or_else(|| PathBuf::from("."))
-        .join("CopySpeak")
+        .join(crate::paths::APP_DIR)
         .join("voice-cache.json")
 }
 
@@ -417,29 +422,45 @@ mod tests {
     struct PreviewBackend(&'static str);
 
     impl crate::tts::TtsBackend for PreviewBackend {
-        fn name(&self) -> &str { "preview test" }
+        fn name(&self) -> &str {
+            "preview test"
+        }
         fn synthesize(&self, _: &str, _: &str) -> Result<Vec<u8>, crate::tts::TtsError> {
             Ok(vec![1, 2, 3, 4])
         }
-        fn synthesize_with_captions(&self, _: &str, _: &str) -> Result<crate::tts::captions::SpeechAudio, crate::tts::TtsError> {
+        fn synthesize_with_captions(
+            &self,
+            _: &str,
+            _: &str,
+        ) -> Result<crate::tts::captions::SpeechAudio, crate::tts::TtsError> {
             Ok(vec![9, 8, 7].into())
         }
-        fn health_check(&self) -> Result<(), crate::tts::TtsError> { Ok(()) }
-        fn file_extension(&self) -> &str { self.0 }
+        fn health_check(&self) -> Result<(), crate::tts::TtsError> {
+            Ok(())
+        }
+        fn file_extension(&self) -> &str {
+            self.0
+        }
     }
 
     #[test]
     fn preview_wraps_provider_pcm_at_its_native_rate() {
         let mut tts = TtsConfig::default();
         tts.openai.response_format = "pcm".into();
-        for (engine, expected_rate) in [(TtsEngine::OpenAI, 24_000u32), (TtsEngine::Fish, 44_100u32)] {
+        for (engine, expected_rate) in
+            [(TtsEngine::OpenAI, 24_000u32), (TtsEngine::Fish, 44_100u32)]
+        {
             let mut profile = VoiceProfile::default();
             profile.engine = engine;
             let effective = preview_request(&profile, "voice".into(), &tts);
-            let (audio, extension) = synthesize_preview(&PreviewBackend("pcm"), &effective, &tts).unwrap();
+            let (audio, extension) =
+                synthesize_preview(&PreviewBackend("pcm"), &effective, &tts).unwrap();
             assert_eq!(extension, "wav");
             assert_eq!(&audio[..4], b"RIFF");
-            assert_eq!(u32::from_le_bytes(audio[24..28].try_into().unwrap()), expected_rate);
+            assert_eq!(
+                u32::from_le_bytes(audio[24..28].try_into().unwrap()),
+                expected_rate
+            );
             assert_eq!(&audio[34..36], &16u16.to_le_bytes());
             assert_eq!(&audio[44..], &[1, 2, 3, 4]);
         }
@@ -452,7 +473,8 @@ mod tests {
             let mut profile = VoiceProfile::default();
             profile.engine = engine;
             let effective = preview_request(&profile, "voice".into(), &tts);
-            let (audio, extension) = synthesize_preview(&PreviewBackend("raw"), &effective, &tts).unwrap();
+            let (audio, extension) =
+                synthesize_preview(&PreviewBackend("raw"), &effective, &tts).unwrap();
             assert_eq!(extension, "wav");
             assert_eq!(audio, [9, 8, 7]);
         }

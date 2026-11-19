@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Landing page: the parallax offset now writes to a leaf element, the provider marquee pauses offscreen, and the runtime filters are baked into the ground textures. Scroll-phase style recalculation drops from about 3.1 s to about 0.1 s.
+- Data folders move from `CopySpeak` to `CopySpeech` on first launch (config, history, telemetry, logs, engines, speech cache, voice cache, duck state, persistent generations). Data migrates in place; keys and history stay intact. This supersedes the 0.3.0 note about folders keeping their original names. If an engine fails to start after the move, rerun its install script.
+- Firefox companion ID is now `copyspeech-companion@ilyaizen.github.io`. Reinstall the extension and re-register the native host manifest.
+
 ## [0.3.1] - 2026-11-17
 
 ### Added

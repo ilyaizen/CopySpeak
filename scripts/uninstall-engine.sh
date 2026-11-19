@@ -5,7 +5,7 @@
 # The mirror of install-*.sh and the bash twin of uninstall-engine.ps1. Every
 # local engine leaves at most two traces, so one script covers all of them:
 #
-#   * a uv-managed project dir under $XDG_DATA_HOME/CopySpeak/engines/<name>
+#   * a uv-managed project dir under $XDG_DATA_HOME/CopySpeech/engines/<name>
 #     (kitten, qwen, piper, kokoro, pocket)
 #   * a `uv tool` install putting a binary on PATH (edge-tts; the Linux
 #     installers use project installs, so this only matters for engines

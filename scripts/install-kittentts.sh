@@ -2,7 +2,7 @@
 #
 # Installs KittenTTS for CopySpeech via uv (CPU-only, 25-80MB; Linux port).
 #
-# Creates a uv-managed project under $XDG_DATA_HOME/CopySpeak/engines/kitten,
+# Creates a uv-managed project under $XDG_DATA_HOME/CopySpeech/engines/kitten,
 # installs the KittenTTS wheel + soundfile, and drops the stable CLI wrapper.
 # The model auto-downloads on first synthesis. Prompts the user to pick one
 # of the 8 built-in voices, which is baked into the profile snippet.

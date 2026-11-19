@@ -57,9 +57,9 @@ function Require-Uv {
     Write-Host "  Found uv: $version" -ForegroundColor Green
 }
 
-# %LOCALAPPDATA%\CopySpeak\engines  (matches the {engine_dir} placeholder).
+# %LOCALAPPDATA%\CopySpeech\engines  (matches the {engine_dir} placeholder).
 function Get-CopySpeechEngineRoot {
-    return Join-Path $env:LOCALAPPDATA "CopySpeak\engines"
+    return Join-Path $env:LOCALAPPDATA "CopySpeech\engines"
 }
 
 # Create (or reset with -Force) a uv project directory for one engine.
@@ -244,7 +244,7 @@ function Test-AudioFile {
     return $true
 }
 
-# Write %LOCALAPPDATA%\CopySpeak\engines\<engine>\manifest.json recording which
+# Write %LOCALAPPDATA%\CopySpeech\engines\<engine>\manifest.json recording which
 # voices are installed. The frontend reads it to pre-check the "add a voice
 # later" dialog. Call once at the end of a successful install / voice re-run;
 # the caller is the source of truth for the voice list (Piper: present .onnx

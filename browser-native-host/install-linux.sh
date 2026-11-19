@@ -20,7 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname "$SCRIPT_DIR")"
 HOST_BIN="${COPYSPEECH_HOST_BIN:-$REPO_DIR/browser-native-host/target/debug/copyspeech-browser-host}"
 EXT_ID="hojbmioeiccpgkpnpblkdbeegjkcccad"
-FIREFOX_EXT_ID="copyspeak-companion@ilyaizen.github.io"
+FIREFOX_EXT_ID="copyspeech-companion@ilyaizen.github.io"
 
 if [ ! -x "$HOST_BIN" ]; then
   echo "host binary not found or not executable: $HOST_BIN" >&2

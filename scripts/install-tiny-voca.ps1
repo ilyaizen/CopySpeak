@@ -4,7 +4,7 @@
     Installs tiny-voca for CopySpeech via uv (CPU-only, about 45 MB of weights).
 
 .DESCRIPTION
-    Creates a uv-managed project under %LOCALAPPDATA%\CopySpeak\engines\tiny-voca,
+    Creates a uv-managed project under %LOCALAPPDATA%\CopySpeech\engines\tiny-voca,
     installs ONNX Runtime and the dizione phonemizer (pinned commit), downloads the
     ONNX model and phonemizer data from n4ze3m/tiny-voca, checks the model's
     sha256, and drops the stable CLI wrapper. No PyTorch, no CUDA.

@@ -97,7 +97,7 @@ document-targeted messaging and injection the companion uses.
 3. On the add-on's details page, turn on **Allow access to file URLs** if you
    want double-copy highlighting in local files.
 4. Register the native host for Firefox. The host manifest uses
-   `allowed_extensions` with the gecko ID `copyspeak-companion@ilyaizen.github.io`.
+   `allowed_extensions` with the gecko ID `copyspeech-companion@ilyaizen.github.io`.
    - Linux: `browser-native-host/install-linux.sh` writes both manifests and
      registers Firefox in `~/.mozilla/native-messaging-hosts/`.
    - Windows: point the registry default value at the Firefox manifest:

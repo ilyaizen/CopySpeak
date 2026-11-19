@@ -47,7 +47,7 @@ except Exception:  # no NVIDIA driver, or package missing
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENGINE_ROOT = Path(
     os.environ.get("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
-) / "CopySpeak" / "engines"
+) / "CopySpeech" / "engines"
 CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 
 # Defaults mirror the app's default profiles and catalog

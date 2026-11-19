@@ -20,7 +20,7 @@ await mkdir(outdir, { recursive: true });
 
 // Firefox 153 is the first release with documentId targeting (tabs.sendMessage,
 // scripting.executeScript documentIds, sender.documentId); the worker needs all three.
-const FIREFOX_GECKO_ID = "copyspeak-companion@ilyaizen.github.io";
+const FIREFOX_GECKO_ID = "copyspeech-companion@ilyaizen.github.io";
 const FIREFOX_MIN_VERSION = "153.0";
 
 const results = await Promise.all([

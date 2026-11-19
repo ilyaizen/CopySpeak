@@ -516,13 +516,13 @@ impl CliTtsBackend {
             .into_owned()
     }
 
-    /// Returns the CopySpeak engines root (e.g. %LOCALAPPDATA%\CopySpeak\engines).
+    /// Returns the CopySpeech engines root (e.g. %LOCALAPPDATA%\CopySpeech\engines).
     /// Used for the {engine_dir} placeholder so uv-managed engine projects can be
     /// referenced without hardcoding absolute paths in args templates.
     fn engine_dir() -> String {
         dirs::data_local_dir()
             .unwrap_or_else(|| std::path::PathBuf::from("."))
-            .join("CopySpeak")
+            .join(crate::paths::APP_DIR)
             .join("engines")
             .to_string_lossy()
             .into_owned()

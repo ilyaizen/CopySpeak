@@ -28,7 +28,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Gate only noise layers in an offline effect tail: a whole-tail on/off chop silences designed clicks that fall in off-windows (an older cyberpunk intro had clicks at 0.06, 0.12, 0.86 s that a 30 Hz gate chopped) and chops tones into clicks at every edge.
 - Fade speech before `effect.process` in `buildPlaybackUrl`, never after: a post-effect fade ramps the effect's own t=0 onset (the cyberpunk beep lost 7 dB to a 10 ms fade).
 - Keep an offline effect's start beep at 40 ms or longer: a 6 ms square burst at 0.5 peak was inaudible in playback while a 40 ms one at the same level was heard.
-- Tune offline effect onset and glitch levers on real TTS output (`engines/*/output/test.wav` under `%LOCALAPPDATA%\CopySpeak`), not synthetic bursts: the old silence gate found about 0 onsets per clip on speech, and synthetic clean gaps hid it.
+- Tune offline effect onset and glitch levers on real TTS output (`engines/*/output/test.wav` under `%LOCALAPPDATA%\CopySpeech`), not synthetic bursts: the old silence gate found about 0 onsets per clip on speech, and synthetic clean gaps hid it.
 - Glitch mid-speech onsets in place, never by inserting copies of the grain: a 40–70 ms grain replayed before its word sounds like slap-back echo, and each inserted copy pushes captions later.
 - Measure a provider WAV's duration from its parsed header clamped to the real byte count, never by iterating the container: Fish writes 0xFFFFFF00 into the data-chunk size and rodio's decode spins past EOF forever (busy tray, no audio, no error).
 - Claim speaker ownership when a reading becomes audible, not while it synthesizes: the webview sends `playback-started` with its `reading_id`, and Rust claims `PlaybackOwner` for that reading; `playback-finished` releases it. A scoped stop then cuts only the reading that owns the speakers. A reading that has merely started synthesizing owns nothing, so a guard-time claim makes cancelling it cut the previous reading. Heal the store's own `_streamStopped` gate from `_stoppedReadingId`; do not reintroduce `StreamRearm` or a per-chunk streamed claim.
@@ -64,7 +64,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Engines
 
-- Point `scripts/bench/bench.py` at `%LOCALAPPDATA%\CopySpeak\engines`, the root the installers and app use; the bench had `CopySpeech\engines`, which never holds engines.
+- Point `scripts/bench/bench.py` at `%LOCALAPPDATA%\CopySpeech\engines`, the root the installers and app use since the v0.3.x data-folder migration; the bench once pointed at a folder that held no engines and silently benched nothing.
 - Catch only dizione's `ValueError` with "nothing to pronounce" as a skip; dizione raises it instead of returning empty ids, and other ValueErrors are real failures.
 - Split engine text on CJK sentence marks (。！？) too; ASCII-only splitting merges a Japanese sentence into the next English one and gives it caption timings.
 - Keep Cartesia's stream request on `pcm_s16le`: the player decodes only signed 16-bit PCM, so the Encoding select applies to saved (batch) audio only.

@@ -1,4 +1,4 @@
-// Config: typed settings struct, persisted as JSON to %APPDATA%/CopySpeak/config.json.
+// Config: typed settings struct, persisted as JSON to %APPDATA%/CopySpeech/config.json.
 // Auto-saved on every change from the frontend via set_config command.
 
 /// Version stamp written into config files (the `version` field users see in
@@ -354,10 +354,10 @@ fn clamp_profile_rates(cfg: &mut AppConfig) {
     }
 }
 
-/// Returns the config file path: %APPDATA%/CopySpeak/config.json
+/// Returns the config file path: %APPDATA%/CopySpeech/config.json
 pub fn config_path() -> PathBuf {
     let base = dirs::config_dir().unwrap_or_else(|| PathBuf::from("."));
-    base.join("CopySpeak").join("config.json")
+    base.join(crate::paths::APP_DIR).join("config.json")
 }
 
 /// Load config from disk, or return defaults if missing/corrupt.
@@ -370,6 +370,8 @@ pub fn load_or_default() -> AppConfig {
 fn load_or_default_from(path: &Path) -> AppConfig {
     match std::fs::read_to_string(path) {
         Ok(contents) => {
+            // Engine-wrapper paths in old configs embed the legacy dir name.
+            let contents = crate::paths::rewrite_legacy_dir_prefixes(&contents);
             let mut cfg: AppConfig = serde_json::from_str(&contents).unwrap_or_else(|e| {
                 log::warn!("Config parse error, using defaults: {e}");
                 AppConfig::default()

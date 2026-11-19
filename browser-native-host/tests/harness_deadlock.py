@@ -2,7 +2,7 @@
 
 Launches copyspeech-browser-host.exe directly and feeds it hello + start frames
 on stdin, exactly as Chrome's worker would. Desktop-side pass/fail signal:
-%APPDATA%\\CopySpeak\\logs\\app_rCURRENT.log must show
+%APPDATA%\\CopySpeech\\logs\\app_rCURRENT.log must show
 "[Browser] Hello: automatic=false" then "[Browser] Start: request_id=harness1".
 
 RED (deadlock): host hangs, never exits, desktop logs neither line.

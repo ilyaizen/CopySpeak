@@ -4,7 +4,7 @@
     Smoke-tests an installed CopySpeech uv engine by synthesizing one WAV.
 
 .PARAMETER Engine
-    Engine name under %LOCALAPPDATA%\CopySpeak\engines (e.g. piper).
+    Engine name under %LOCALAPPDATA%\CopySpeech\engines (e.g. piper).
 
 .PARAMETER Text
     Text to synthesize. Default: "CopySpeech engine test".

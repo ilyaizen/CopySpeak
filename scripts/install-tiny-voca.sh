@@ -3,7 +3,7 @@
 # Installs tiny-voca for CopySpeech via uv (macOS and Linux port of
 # install-tiny-voca.ps1). CPU-only, about 45 MB of weights, English text only.
 #
-# Creates a uv-managed project under $XDG_DATA_HOME/CopySpeak/engines/tiny-voca
+# Creates a uv-managed project under $XDG_DATA_HOME/CopySpeech/engines/tiny-voca
 # (or the macOS equivalent), installs ONNX Runtime and the dizione phonemizer
 # (pinned commit), downloads the ONNX model and phonemizer data from
 # n4ze3m/tiny-voca, checks the model's sha256, and drops the CLI wrapper.

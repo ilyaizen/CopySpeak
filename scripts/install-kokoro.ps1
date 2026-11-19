@@ -4,7 +4,7 @@
     Installs Kokoro TTS for CopySpeech via uv.
 
 .DESCRIPTION
-    Creates a uv-managed project under %LOCALAPPDATA%\CopySpeak\engines\kokoro,
+    Creates a uv-managed project under %LOCALAPPDATA%\CopySpeech\engines\kokoro,
     installs kokoro-onnx and Misaki English, drops the CLI wrapper, and exports
     a duration-capable ONNX model using the pinned upstream exporter. The first
     installation also downloads the Kokoro checkpoint and export dependencies.

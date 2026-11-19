@@ -3,5 +3,5 @@
   "description": "CopySpeech browser companion native host (Firefox)",
   "path": "D:\\Projects\\CopySpeech\\browser-native-host\\target\\debug\\copyspeech-browser-host.exe",
   "type": "stdio",
-  "allowed_extensions": ["copyspeak-companion@ilyaizen.github.io"]
+  "allowed_extensions": ["copyspeech-companion@ilyaizen.github.io"]
 }

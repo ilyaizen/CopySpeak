@@ -405,12 +405,12 @@ fn which_shell() -> &'static str {
 
 /// `~/.local/share` on Linux, `%LOCALAPPDATA%` on Windows — `dirs` resolves
 /// both to the platform's user-local data root, so one code path serves
-/// `~/.local/share/CopySpeak/engines/<engine>` and
-/// `%LOCALAPPDATA%\CopySpeak\engines\<engine>` alike.
+/// `~/.local/share/CopySpeech/engines/<engine>` and
+/// `%LOCALAPPDATA%\CopySpeech\engines\<engine>` alike.
 fn engine_dir(name: &str) -> Option<PathBuf> {
     Some(
         dirs::data_local_dir()?
-            .join("CopySpeak")
+            .join(crate::paths::APP_DIR)
             .join("engines")
             .join(name),
     )

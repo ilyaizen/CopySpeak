@@ -87,18 +87,18 @@ require_uv() {
     log C_GREEN "  Found uv: $(uv --version)"
 }
 
-# "${XDG_DATA_HOME:-$HOME/.local/share}/CopySpeak/engines" (Linux)
-# "$HOME/Library/Application Support/CopySpeak/engines" (macOS)
+# "${XDG_DATA_HOME:-$HOME/.local/share}/CopySpeech/engines" (Linux)
+# "$HOME/Library/Application Support/CopySpeech/engines" (macOS)
 #
 # Matches dirs::data_local_dir on each platform, which the Tauri app's
 # engine_dir setting uses (XDG_DATA_HOME wins when set, else $HOME/.local/share).
 copyspeech_engine_root() {
     case "$(uname -s)" in
         Darwin)
-            printf '%s\n' "$HOME/Library/Application Support/CopySpeak/engines"
+            printf '%s\n' "$HOME/Library/Application Support/CopySpeech/engines"
             ;;
         *)
-            printf '%s\n' "${XDG_DATA_HOME:-$HOME/.local/share}/CopySpeak/engines"
+            printf '%s\n' "${XDG_DATA_HOME:-$HOME/.local/share}/CopySpeech/engines"
             ;;
     esac
 }

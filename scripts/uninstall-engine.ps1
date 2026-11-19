@@ -7,7 +7,7 @@
     The mirror of the install-*.ps1 scripts. Every local engine leaves at most
     two traces, so one script covers all of them:
 
-      * a uv-managed project dir under %LOCALAPPDATA%\CopySpeak\engines\<name>
+      * a uv-managed project dir under %LOCALAPPDATA%\CopySpeech\engines\<name>
         (piper, kitten) or a model dir (kokoro)
       * a `uv tool` install putting a binary on PATH (edge-tts, kokoro-tts,
         pocket-tts)

@@ -4,7 +4,7 @@
     Installs Piper (piper1-gpl) for CopySpeech via uv.
 
 .DESCRIPTION
-    Creates a uv-managed project under %LOCALAPPDATA%\CopySpeak\engines\piper,
+    Creates a uv-managed project under %LOCALAPPDATA%\CopySpeech\engines\piper,
     installs the `piper` package, and drops the stable CLI wrapper.
 
     Prompts the user to pick an English voice and downloads the matching

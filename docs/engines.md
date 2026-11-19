@@ -56,7 +56,7 @@ on Windows, a shell script on Linux) that runs the matching installer
 automatically — every installer ships as `.ps1` and `.sh`. If `uv` is missing,
 the Engine page shows an **Install uv** button first.
 
-Engines install into `%LOCALAPPDATA%\CopySpeak\engines\<engine>`. Each installer:
+Engines install into `%LOCALAPPDATA%\CopySpeech\engines\<engine>`. Each installer:
 
 1. Requires `uv` (fails fast with a pointer to `install-uv.ps1` otherwise).
 2. Creates a uv project (`uv tool install` for console-script engines, a uv

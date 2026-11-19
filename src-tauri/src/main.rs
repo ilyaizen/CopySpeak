@@ -21,6 +21,7 @@ mod hud;
 mod hud_layershell;
 mod logging;
 mod pagination;
+mod paths;
 mod playback_signal;
 mod post_process;
 mod sanitize;
@@ -419,6 +420,9 @@ fn main() {
     #[cfg(target_os = "linux")]
     glib::set_prgname(Some("CopySpeech"));
 
+    // Move legacy CopySpeak data roots before anything reads or writes them.
+    paths::migrate_legacy_data_dirs();
+
     if let Err(e) = logging::init_logging() {
         eprintln!("Failed to initialize logging: {}", e);
     }
@@ -494,7 +498,8 @@ fn main() {
             // --- Point Chrome at the bundled browser companion host ---
             match tauri::Manager::path(app).resource_dir() {
                 Ok(resource_dir) => {
-                    let registered = browser_registration::ensure_chrome_registration(&resource_dir);
+                    let registered =
+                        browser_registration::ensure_chrome_registration(&resource_dir);
                     if let Err(e) = registered {
                         log::warn!("[browser] Chrome native host registration failed: {e}");
                     }

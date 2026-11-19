@@ -56,7 +56,7 @@ pub fn descendants(root: u32, pairs: &[(u32, u32)]) -> HashSet<u32> {
 fn state_path() -> std::path::PathBuf {
     dirs::config_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("CopySpeak")
+        .join(crate::paths::APP_DIR)
         .join("duck-state.json")
 }
 

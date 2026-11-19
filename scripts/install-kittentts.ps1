@@ -4,7 +4,7 @@
     Installs KittenTTS for CopySpeech via uv (CPU-only, 25-80MB).
 
 .DESCRIPTION
-    Creates a uv-managed project under %LOCALAPPDATA%\CopySpeak\engines\kitten,
+    Creates a uv-managed project under %LOCALAPPDATA%\CopySpeech\engines\kitten,
     installs the KittenTTS wheel + soundfile, and drops the stable CLI wrapper.
     The model auto-downloads on first synthesis. Prompts the user to pick one
     of the 8 built-in voices, which is baked into the profile snippet.

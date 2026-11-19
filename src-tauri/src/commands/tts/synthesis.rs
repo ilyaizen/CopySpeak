@@ -881,7 +881,7 @@ const SPEECH_CACHE_BUDGET_BYTES: u64 = 256 * 1024 * 1024;
 fn speech_cache_dir() -> std::path::PathBuf {
     dirs::cache_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("CopySpeak")
+        .join(crate::paths::APP_DIR)
         .join("speech-cache")
 }
 

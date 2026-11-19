@@ -4,7 +4,7 @@
     Installs Kyutai Pocket TTS for CopySpeech via uv.
 
 .DESCRIPTION
-    Creates a uv-managed project under %LOCALAPPDATA%\CopySpeak\engines\pocket,
+    Creates a uv-managed project under %LOCALAPPDATA%\CopySpeech\engines\pocket,
     installs pocket-tts, and drops the stable CLI wrapper. Model weights
     auto-download from Hugging Face on first synthesis.
 
