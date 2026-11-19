@@ -59,8 +59,20 @@ Write-Host "  > irm https://astral.sh/uv/install.ps1 | iex" -ForegroundColor Dar
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
 $check = Get-Command uv -ErrorAction SilentlyContinue
+if (-not $check) {
+    # The Astral script can fail (network, blocked download, policy). Restart
+    # alone does not fix that, so the run must fail and say so.
+    foreach ($dir in @((Join-Path $env:USERPROFILE ".local\bin"), (Join-Path $env:LOCALAPPDATA "Programs\uv"))) {
+        if ((Test-Path (Join-Path $dir "uv.exe")) -and ($env:PATH -notlike "*$dir*")) {
+            $env:PATH = "$dir;$env:PATH"
+        }
+    }
+    $check = Get-Command uv -ErrorAction SilentlyContinue
+}
 if ($check) {
     Write-Host "  uv installed: $(& uv --version)" -ForegroundColor Green
 } else {
-    Write-Host "  uv installed. Restart your terminal so it appears on PATH." -ForegroundColor Yellow
+    Write-Host "  [ERROR] uv install failed: uv.exe was not found after the Astral script." -ForegroundColor Red
+    Write-Host "  Install uv manually from https://docs.astral.sh/uv/ and retry." -ForegroundColor Gray
+    exit 1
 }

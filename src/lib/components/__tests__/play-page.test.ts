@@ -120,6 +120,32 @@ describe("play-page history gating", () => {
   });
 });
 
+describe("play-page error dismissal", () => {
+  it("dismisses a speak failure from its error box", async () => {
+    await waitForI18nReady();
+    vi.clearAllMocks();
+    vi.mocked(invoke).mockImplementation(async (cmd) => {
+      if (cmd === "get_config") return testConfig();
+      if (cmd === "speak_now") throw "The voice engine is not installed.";
+      return undefined;
+    });
+    const view = render(PlayPage);
+    try {
+      await fireEvent.input(view.getByRole("textbox"), { target: { value: "hello" } });
+      await fireEvent.click(view.getByRole("button", { name: "Play" }));
+
+      const alert = await view.findByRole("alert");
+      expect(alert.textContent).toContain("not installed");
+
+      await fireEvent.click(view.getByRole("button", { name: "Dismiss error" }));
+      await waitFor(() => expect(view.queryByRole("alert")).toBeNull());
+    } finally {
+      view.unmount();
+      vi.restoreAllMocks();
+    }
+  });
+});
+
 describe("play-page stop", () => {
   it("aborts queued synthesis even when synthesis has not started", async () => {
     await waitForI18nReady();

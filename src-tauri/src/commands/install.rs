@@ -8,7 +8,9 @@
 use std::io::BufRead;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::sync::mpsc::RecvTimeoutError;
 use std::sync::OnceLock;
+use std::time::{Duration, Instant};
 
 use regex::Regex;
 use serde::Serialize;
@@ -111,68 +113,204 @@ fn resolve_script(app: &tauri::AppHandle, filename: &str) -> Result<PathBuf, Str
         })
 }
 
-/// Spawn a PowerShell script with piped stdio and stream stdout/stderr as
-/// `install-progress` events tagged with `engine`. Shared by install and
-/// uninstall so both drive the same frontend log/progress pipeline.
-///
-/// Returns as soon as the child is spawned; a terminal event (`done: true`)
-/// carries the exit code.
-#[cfg(target_os = "windows")]
-fn spawn_streamed(
-    app: tauri::AppHandle,
-    engine: String,
-    script_path: &PathBuf,
-    extra_args: &[String],
-) -> Result<(), String> {
-    let mut cmd = Command::new(which_shell());
-    cmd.args([
-        "-ExecutionPolicy",
-        "Bypass",
-        "-NoProfile",
-        "-NonInteractive",
-        "-File",
-        &script_path.display().to_string(),
-    ]);
-    cmd.args(extra_args);
-    // stdin is closed below, so any Read-Host would hang. The shared installer
-    // lib checks this and takes the default for every prompt.
-    cmd.env("COPYSPEECH_NONINTERACTIVE", "1");
+/// Quiet stretch after which a running installer counts as stalled. Downloads
+/// print nothing while they run, so this must outlast the slowest silent step:
+/// the installers bound each download at 15 minutes (`$downloadTimeoutSec`).
+const INSTALL_IDLE_TIMEOUT: Duration = Duration::from_secs(20 * 60);
+
+/// Hard cap on one installer run, whatever it prints.
+const INSTALL_MAX_RUNTIME: Duration = Duration::from_secs(2 * 60 * 60);
+
+/// How long output is still read after the installer exits. A process the
+/// installer started can keep the pipes open, so the run must not wait for EOF.
+const EXIT_DRAIN_GRACE: Duration = Duration::from_secs(2);
+
+/// How often the supervisor checks the child and the clock.
+const SUPERVISOR_POLL: Duration = Duration::from_millis(200);
+
+/// Time limits for one streamed run. Production uses the install constants;
+/// tests pass short values.
+#[derive(Clone, Copy)]
+struct RunLimits {
+    idle: Duration,
+    max: Duration,
+}
+
+impl RunLimits {
+    const INSTALL: RunLimits = RunLimits {
+        idle: INSTALL_IDLE_TIMEOUT,
+        max: INSTALL_MAX_RUNTIME,
+    };
+}
+
+/// Spawn one installer child with piped stdio and start a reader thread per
+/// stream. Lines from both streams arrive on the returned channel; the channel
+/// disconnects once both streams reach EOF.
+fn spawn_child(
+    mut cmd: Command,
+) -> Result<(std::process::Child, std::sync::mpsc::Receiver<String>), String> {
     cmd.stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .stdin(Stdio::null());
-    cmd.creation_flags(CREATE_NO_WINDOW);
-
     let mut child = cmd
         .spawn()
         .map_err(|e| format!("Failed to launch script: {e}"))?;
     let stdout = child.stdout.take().expect("piped stdout");
     let stderr = child.stderr.take().expect("piped stderr");
 
-    // stderr drains on its own thread; both streams share the event.
-    let app_err = app.clone();
-    let engine_err = engine.clone();
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+    let tx_err = tx.clone();
     std::thread::spawn(move || {
         for line in std::io::BufReader::new(stderr)
             .lines()
             .map_while(Result::ok)
         {
-            let _ = app_err.emit(
-                "install-progress",
-                InstallProgress {
-                    engine: engine_err.clone(),
-                    line: Some(strip_ansi(&line)),
-                    done: false,
-                    exit_code: None,
-                },
-            );
+            if tx_err.send(line).is_err() {
+                break;
+            }
         }
     });
-
     std::thread::spawn(move || {
         for line in std::io::BufReader::new(stdout)
             .lines()
             .map_while(Result::ok)
         {
+            if tx.send(line).is_err() {
+                break;
+            }
+        }
+    });
+    Ok((child, rx))
+}
+
+/// Forward lines until the grace window closes or every reader hangs up.
+fn drain_output(
+    lines: &std::sync::mpsc::Receiver<String>,
+    grace: Duration,
+    on_line: &mut dyn FnMut(String),
+) {
+    let deadline = Instant::now() + grace;
+    loop {
+        let left = deadline.saturating_duration_since(Instant::now());
+        if left.is_zero() {
+            return;
+        }
+        match lines.recv_timeout(left) {
+            Ok(line) => on_line(line),
+            Err(_) => return,
+        }
+    }
+}
+
+/// Kill an installer and everything it started. On Windows `Child::kill` only
+/// stops the PowerShell host, and the uv and Python processes under it keep
+/// the output pipes open.
+fn kill_tree(child: &mut std::process::Child) {
+    #[cfg(target_os = "windows")]
+    {
+        let _ = Command::new("taskkill")
+            .args(["/PID", &child.id().to_string(), "/T", "/F"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+    }
+    let _ = child.kill();
+}
+
+/// Human text for a time limit: "45 s" under a minute, "20 minutes" otherwise.
+fn describe_span(span: Duration) -> String {
+    let secs = span.as_secs();
+    if secs < 60 {
+        format!("{secs} s")
+    } else {
+        format!("{} minutes", secs / 60)
+    }
+}
+
+/// Drive one child to a terminal verdict and return its exit code.
+///
+/// Completion comes from the child's exit, never from pipe EOF alone: EOF only
+/// arrives once every process holding the pipes exits, which a stuck download
+/// or a leftover uv/Python child prevents. A child that stays silent past
+/// `limits.idle`, or runs past `limits.max`, is killed with its tree. That
+/// returns `None` and a `[ERROR]` line, so the caller always gets a result.
+fn supervise(
+    child: &mut std::process::Child,
+    lines: &std::sync::mpsc::Receiver<String>,
+    limits: RunLimits,
+    on_line: &mut dyn FnMut(String),
+) -> Option<i32> {
+    let start = Instant::now();
+    let mut last_output = start;
+    loop {
+        match lines.recv_timeout(SUPERVISOR_POLL) {
+            Ok(line) => {
+                last_output = Instant::now();
+                on_line(line);
+            }
+            Err(RecvTimeoutError::Timeout) => {}
+            // Both readers finished; keep polling for the exit code.
+            Err(RecvTimeoutError::Disconnected) => std::thread::sleep(SUPERVISOR_POLL),
+        }
+
+        match child.try_wait() {
+            Ok(Some(status)) => {
+                drain_output(lines, EXIT_DRAIN_GRACE, on_line);
+                return status.code();
+            }
+            Ok(None) => {}
+            Err(e) => {
+                on_line(format!(
+                    "[ERROR] install: could not poll the installer: {e}"
+                ));
+                kill_tree(child);
+                return None;
+            }
+        }
+
+        let now = Instant::now();
+        let reason = if now.duration_since(last_output) >= limits.idle {
+            Some(format!("no output for {}", describe_span(limits.idle)))
+        } else if now.duration_since(start) >= limits.max {
+            Some(format!("still running after {}", describe_span(limits.max)))
+        } else {
+            None
+        };
+        if let Some(reason) = reason {
+            on_line(format!(
+                "[ERROR] install stopped: {reason}. The installer was killed; retry the install."
+            ));
+            kill_tree(child);
+            let _ = child.wait();
+            drain_output(lines, EXIT_DRAIN_GRACE, on_line);
+            return None;
+        }
+    }
+}
+
+/// Spawn an installer or uninstaller and stream its output as
+/// `install-progress` events tagged with `engine`. Shared by install and
+/// uninstall so both drive the same frontend log/progress pipeline.
+///
+/// Returns as soon as the child is spawned. A supervisor thread then emits
+/// the terminal event (`done: true`) with the exit code, or with `None` when
+/// the run stalled and was killed.
+fn spawn_streamed(
+    app: tauri::AppHandle,
+    engine: String,
+    script_path: &PathBuf,
+    extra_args: &[String],
+) -> Result<(), String> {
+    let mut cmd = shell_command(script_path);
+    cmd.args(extra_args);
+    // stdin is closed, so any Read-Host would hang. The shared installer lib
+    // checks this and takes the default for every prompt.
+    cmd.env("COPYSPEECH_NONINTERACTIVE", "1");
+
+    let (mut child, lines) = spawn_child(cmd)?;
+    std::thread::spawn(move || {
+        let exit_code = supervise(&mut child, &lines, RunLimits::INSTALL, &mut |line| {
             let _ = app.emit(
                 "install-progress",
                 InstallProgress {
@@ -182,8 +320,7 @@ fn spawn_streamed(
                     exit_code: None,
                 },
             );
-        }
-        let exit_code = child.wait().ok().and_then(|s| s.code());
+        });
         let _ = app.emit(
             "install-progress",
             InstallProgress {
@@ -198,81 +335,30 @@ fn spawn_streamed(
     Ok(())
 }
 
-/// Spawn a bash installer script with piped stdio and stream stdout/stderr as
-/// `install-progress` events. Linux twin of the Windows `spawn_streamed` —
-/// same event shape, so the frontend pipeline is unchanged.
+/// The platform's command to run an installer script: PowerShell on Windows,
+/// bash elsewhere.
+#[cfg(target_os = "windows")]
+fn shell_command(script_path: &PathBuf) -> Command {
+    let mut cmd = Command::new(which_shell());
+    cmd.args([
+        "-ExecutionPolicy",
+        "Bypass",
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        &script_path.display().to_string(),
+    ]);
+    cmd.creation_flags(CREATE_NO_WINDOW);
+    cmd
+}
+
+/// The platform's command to run an installer script: PowerShell on Windows,
+/// bash elsewhere.
 #[cfg(not(target_os = "windows"))]
-fn spawn_streamed(
-    app: tauri::AppHandle,
-    engine: String,
-    script_path: &PathBuf,
-    extra_args: &[String],
-) -> Result<(), String> {
+fn shell_command(script_path: &PathBuf) -> Command {
     let mut cmd = Command::new("bash");
-    cmd.arg(&script_path.display().to_string());
-    cmd.args(extra_args);
-    // stdin closed: any `read` in the script must fail fast. The shared
-    // installer lib checks COPYSPEECH_NONINTERACTIVE and takes the default
-    // for every prompt instead of blocking on the dead stdin.
-    cmd.env("COPYSPEECH_NONINTERACTIVE", "1");
-    cmd.stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .stdin(Stdio::null());
-
-    let mut child = cmd
-        .spawn()
-        .map_err(|e| format!("Failed to launch script: {e}"))?;
-    let stdout = child.stdout.take().expect("piped stdout");
-    let stderr = child.stderr.take().expect("piped stderr");
-
-    // stderr drains on its own thread; both streams share the event.
-    let app_err = app.clone();
-    let engine_err = engine.clone();
-    std::thread::spawn(move || {
-        for line in std::io::BufReader::new(stderr)
-            .lines()
-            .map_while(Result::ok)
-        {
-            let _ = app_err.emit(
-                "install-progress",
-                InstallProgress {
-                    engine: engine_err.clone(),
-                    line: Some(strip_ansi(&line)),
-                    done: false,
-                    exit_code: None,
-                },
-            );
-        }
-    });
-
-    std::thread::spawn(move || {
-        for line in std::io::BufReader::new(stdout)
-            .lines()
-            .map_while(Result::ok)
-        {
-            let _ = app.emit(
-                "install-progress",
-                InstallProgress {
-                    engine: engine.clone(),
-                    line: Some(strip_ansi(&line)),
-                    done: false,
-                    exit_code: None,
-                },
-            );
-        }
-        let exit_code = child.wait().ok().and_then(|s| s.code());
-        let _ = app.emit(
-            "install-progress",
-            InstallProgress {
-                engine,
-                line: None,
-                done: true,
-                exit_code,
-            },
-        );
-    });
-
-    Ok(())
+    cmd.arg(script_path.display().to_string());
+    cmd
 }
 
 /// Launch an engine installer by id, streaming stdout/stderr as
@@ -595,9 +681,140 @@ pub fn engine_status(engine: String) -> Result<EngineStatus, String> {
 
 #[cfg(test)]
 mod tests {
-    use super::{installer_args, uninstaller_script_for};
+    use super::{installer_args, spawn_child, supervise, uninstaller_script_for, RunLimits};
     use regex::Regex;
     use std::path::Path;
+    use std::process::Command;
+    use std::time::{Duration, Instant};
+
+    /// A child that prints nothing and outlives every test wait.
+    fn silent_sleeper() -> Command {
+        #[cfg(target_os = "windows")]
+        {
+            let mut cmd = Command::new("powershell.exe");
+            cmd.args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "Start-Sleep -Seconds 600",
+            ]);
+            cmd
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let mut cmd = Command::new("sh");
+            cmd.args(["-c", "sleep 600"]);
+            cmd
+        }
+    }
+
+    fn exit_with(code: i32) -> Command {
+        #[cfg(target_os = "windows")]
+        {
+            let mut cmd = Command::new("cmd.exe");
+            cmd.args(["/C", &format!("exit {code}")]);
+            cmd
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let mut cmd = Command::new("sh");
+            cmd.args(["-c", &format!("exit {code}")]);
+            cmd
+        }
+    }
+
+    /// The installer exits at once, but a process it started keeps the output
+    /// pipes open. The run must still finish.
+    fn exits_and_leaves_a_pipe_holder() -> Command {
+        #[cfg(target_os = "windows")]
+        {
+            let mut cmd = Command::new("powershell.exe");
+            cmd.args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "Start-Process -NoNewWindow powershell.exe -ArgumentList '-NoProfile','-Command','Start-Sleep -Seconds 20'",
+            ]);
+            cmd
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            let mut cmd = Command::new("sh");
+            cmd.args(["-c", "sleep 20 & exit 0"]);
+            cmd
+        }
+    }
+
+    /// Run `cmd` under `supervise` and return the exit code, the lines it
+    /// emitted, and how long the run took.
+    fn run_supervised(cmd: Command, limits: RunLimits) -> (Option<i32>, Vec<String>, Duration) {
+        let (mut child, lines) = spawn_child(cmd).expect("spawn test child");
+        let mut out = Vec::new();
+        let started = Instant::now();
+        let code = supervise(&mut child, &lines, limits, &mut |line| out.push(line));
+        (code, out, started.elapsed())
+    }
+
+    /// An install that never completes must end with a clear error, not hang
+    /// the Settings dialog. The child is killed and the run reports no exit code.
+    #[test]
+    fn a_silent_install_is_killed_with_a_clear_error() {
+        let limits = RunLimits {
+            idle: Duration::from_secs(1),
+            max: Duration::from_secs(600),
+        };
+        let (code, out, elapsed) = run_supervised(silent_sleeper(), limits);
+
+        assert_eq!(code, None, "a stalled run has no exit code");
+        assert!(elapsed < Duration::from_secs(60), "took {elapsed:?}");
+        let error = out
+            .iter()
+            .find(|l| l.starts_with("[ERROR] install stopped:"))
+            .unwrap_or_else(|| panic!("no stop line in {out:?}"));
+        assert!(error.contains("no output for 1 s"), "{error}");
+    }
+
+    /// Output that never stops still hits the hard cap on total run time.
+    #[test]
+    fn an_install_past_the_hard_cap_is_killed() {
+        let limits = RunLimits {
+            idle: Duration::from_secs(600),
+            max: Duration::from_secs(1),
+        };
+        let (code, out, _) = run_supervised(silent_sleeper(), limits);
+
+        assert_eq!(code, None);
+        assert!(
+            out.iter().any(|l| l.contains("still running after 1 s")),
+            "{out:?}"
+        );
+    }
+
+    #[test]
+    fn a_finished_install_reports_its_exit_code_without_an_error() {
+        let limits = RunLimits {
+            idle: Duration::from_secs(60),
+            max: Duration::from_secs(60),
+        };
+        let (code, out, _) = run_supervised(exit_with(3), limits);
+
+        assert_eq!(code, Some(3));
+        assert!(!out.iter().any(|l| l.starts_with("[ERROR] install stopped")));
+    }
+
+    /// Completion follows the installer's exit, not EOF on its pipes: a
+    /// process the installer left behind must not hold the run open.
+    #[test]
+    fn a_pipe_holding_child_does_not_block_completion() {
+        let limits = RunLimits {
+            idle: Duration::from_secs(60),
+            max: Duration::from_secs(60),
+        };
+        let (code, _, elapsed) = run_supervised(exits_and_leaves_a_pipe_holder(), limits);
+
+        assert_eq!(code, Some(0));
+        assert!(elapsed < Duration::from_secs(15), "took {elapsed:?}");
+    }
 
     /// The bash installers take long flags with space-separated voice ids;
     /// the PowerShell installers take one comma-joined `-Voices` string.

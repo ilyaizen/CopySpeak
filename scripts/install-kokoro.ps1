@@ -111,6 +111,9 @@ if ($engineOk) { Write-Host "  [DONE] engine" -ForegroundColor Green }
 $modelFile = Join-Path $modelsDir "kokoro-v1.0-duration.onnx"
 $voicesFile = Join-Path $modelsDir "voices-v1.0.bin"
 $voicesUrl = "https://github.com/nazdridoy/kokoro-tts/releases/download/v1.0.0/voices-v1.0.bin"
+# Invoke-WebRequest defaults to TimeoutSec 0 (no timeout), so a stalled
+# connection would hang the install forever. Bound every model download.
+$downloadTimeoutSec = 900
 
 if (-not $SkipModelDownload) {
     Write-Host "  [STEP] model" -ForegroundColor Yellow
@@ -125,11 +128,15 @@ if (-not $SkipModelDownload) {
         Write-Host ""
         Write-Host "  Downloading $($f.Label)..." -ForegroundColor Yellow
         Write-Host "    -> $($f.Path)" -ForegroundColor Gray
+        # Download under a .download name and promote on success. A download
+        # cut short by a timeout or a force-close must not leave a truncated
+        # file at the final path, where the next run would treat it as present.
+        $partial = $f.Path + ".download"
         try {
-            Invoke-WebRequest -Uri $f.Url -OutFile $f.Path -UseBasicParsing
+            Invoke-WebRequest -Uri $f.Url -OutFile $partial -UseBasicParsing -TimeoutSec $downloadTimeoutSec
+            Move-Item -LiteralPath $partial -Destination $f.Path -Force
         } catch {
-            # Drop the partial file; otherwise the next run sees it as present.
-            Remove-Item -Force -ErrorAction SilentlyContinue $f.Path
+            Remove-Item -Force -ErrorAction SilentlyContinue $partial, $f.Path
             Write-Host "  WARNING: download failed: $_" -ForegroundColor Red
             Write-Host "  Re-run with -Force, or download manually from $($f.Url)" -ForegroundColor Gray
             $modelOk = $false
@@ -153,7 +160,7 @@ if (-not $SkipModelDownload) {
             )) {
                 if (-not (Test-Path $source.Path)) {
                     $partial = $source.Path + ".download"
-                    Invoke-WebRequest -Uri $source.Url -OutFile $partial -UseBasicParsing
+                    Invoke-WebRequest -Uri $source.Url -OutFile $partial -UseBasicParsing -TimeoutSec $downloadTimeoutSec
                     Move-Item -LiteralPath $partial -Destination $source.Path -Force
                 }
             }

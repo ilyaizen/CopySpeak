@@ -529,6 +529,7 @@ export type TranslationKeys =
   | "play.errorNetwork"
   | "play.errorDetails"
   | "play.errorOpenEngines"
+  | "play.errorDismiss"
   | "play.keyboardHint"
   | "history.title"
   | "history.loading"

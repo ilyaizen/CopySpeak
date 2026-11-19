@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Landing page: the parallax offset now writes to a leaf element, the provider marquee pauses offscreen, and the runtime filters are baked into the ground textures. Scroll-phase style recalculation drops from about 3.1 s to about 0.1 s.
 - Data folders move from `CopySpeak` to `CopySpeech` on first launch (config, history, telemetry, logs, engines, speech cache, voice cache, duck state, persistent generations). Data migrates in place; keys and history stay intact. This supersedes the 0.3.0 note about folders keeping their original names. If an engine fails to start after the move, rerun its install script.
 - Firefox companion ID is now `copyspeech-companion@ilyaizen.github.io`. Reinstall the extension and re-register the native host manifest.
+## [0.3.2] - 2026-11-19
+
+### Fixed
+
+- **Kokoro install no longer hangs forever** – each model download times out after 15 minutes, and the file is renamed into place only when it completes. A failed download no longer leaves a truncated file behind.
+- **Stalled installs stop themselves** – the installer is stopped after 20 minutes of silence or 2 hours in total, and the app shows a clear error instead of waiting forever.
+- **Engine errors can be dismissed** – the red error box on the Play page now has a dismiss button.
+- **Failed uv installs say so** – the uv installer now exits with an error when uv is still missing, instead of always asking you to restart your terminal.
 
 ## [0.3.1] - 2026-11-17
 

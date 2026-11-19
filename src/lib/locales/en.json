@@ -625,6 +625,7 @@
     "errorNetwork": "Could not reach the engine. Try again.",
     "errorDetails": "Details",
     "errorOpenEngines": "Open Engines",
+    "errorDismiss": "Dismiss error",
     "keyboardHint": "Press {keys} to speak"
   },
   "history": {

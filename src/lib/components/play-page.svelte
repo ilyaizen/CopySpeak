@@ -764,11 +764,22 @@
         <p class="text-destructive text-sm wrap-anywhere">
           {view.message}
         </p>
-        {#if view.openEngines}
-          <Button variant="outline" size="sm" href="/engines">
-            {$_("play.errorOpenEngines")}
+        <div class="flex items-center gap-2">
+          {#if view.openEngines}
+            <Button variant="outline" size="sm" href="/engines">
+              {$_("play.errorOpenEngines")}
+            </Button>
+          {/if}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={$_("play.errorDismiss")}
+            title={$_("play.errorDismiss")}
+            onclick={() => (error = null)}
+          >
+            <X />
           </Button>
-        {/if}
+        </div>
       </div>
       {#if view.raw}
         <details class="mt-2">
