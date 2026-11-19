@@ -63,6 +63,7 @@ Installed Windows builds register the Chrome host at launch. Edge, Firefox, Linu
 
 - **Hermes Desktop and DeepSeek Harness (DSH) plugins.** Speak new assistant replies in those apps. See [copyspeech-dsh/README.md](copyspeech-dsh/README.md) for DSH.
 - **Pi extension and Claude Code hook.** Speak final assistant replies. See [docs/agent-voice.md](docs/agent-voice.md).
+- **Claude Code plugin.** Play buttons, a spoken-word highlight, and a playback bar in Claude Code. See [copyspeech-claude/README.md](copyspeech-claude/README.md).
 
 ## Development
 

@@ -1,0 +1,58 @@
+{
+  "name": "copyspeech",
+  "version": "0.1.0",
+  "description": "Reads Claude's replies aloud through CopySpeech, with live word captions, a play button on every reply, and a playback bar.",
+  "author": { "name": "Ilya Aizenberg" },
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "autoRead": {
+      "type": "boolean",
+      "title": "Read new replies aloud",
+      "description": "Reads each finished reply through CopySpeech.",
+      "default": false
+    },
+    "skipSections": {
+      "type": "boolean",
+      "title": "Skip bullet points and sections",
+      "description": "Automatic and play-button reads skip headings, list items, rules, and table rows. Selection reads stay full.",
+      "default": false
+    },
+    "excerpt": {
+      "type": "boolean",
+      "title": "Read only part of the reply",
+      "description": "Automatic and play-button reads keep the top and bottom paragraphs. Selection reads stay full.",
+      "default": true
+    },
+    "excerptMode": {
+      "type": "string",
+      "title": "Part to read",
+      "description": "Top paragraphs, bottom paragraphs, or both.",
+      "options": ["both", "top", "bottom"],
+      "default": "both"
+    },
+    "excerptTop": {
+      "type": "number",
+      "title": "Top paragraphs",
+      "description": "1 to 20.",
+      "min": 1,
+      "max": 20,
+      "default": 2
+    },
+    "excerptBottom": {
+      "type": "number",
+      "title": "Bottom paragraphs",
+      "description": "1 to 20.",
+      "min": 1,
+      "max": 20,
+      "default": 2
+    },
+    "highlight": {
+      "type": "string",
+      "title": "Spoken-word highlight",
+      "description": "How the spoken word is marked inside the reply.",
+      "options": ["chip", "code", "bold", "off"],
+      "default": "chip"
+    }
+  }
+}

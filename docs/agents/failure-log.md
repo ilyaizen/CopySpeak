@@ -6,7 +6,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 - Double-copy and browser readings run `speak_queued`; Play page, hotkey and control server run `speak_now` — change both paths together.
 - Wire playback controls through `playbackStore` (webview audio); Rust `toggle_pause`/`skip_forward`/`skip_backward` commands drive only the Rodio safety-net player, which is never what you hear.
-- Treat `speak_now`'s return as playback-START, not completion: only the webview store's `finishPlayback`/`handleStop` → `playback-finished` → `playback_signal` chain means completion, and every terminal path must emit it or blocking `/speak --wait` callers hang until the 600 s cap.
+- Treat `speak_now`'s return as neither playback start nor completion: a single fragment returns at its audio emit, a paginated reading only once its last fragment is submitted, near the end. Answer a non-wait `/speak` when `speak_requests::is_audible` reports its reading audible. Only the webview store's `finishPlayback`/`handleStop` → `playback-finished` → `playback_signal` chain means completion, and every terminal path must emit it or blocking `/speak --wait` callers hang until the 600 s cap.
 - Route playback speed and pitch through `TimeStretcher` (SoundTouch `pitch` setter, then `stretch.tempo = speed / pitch`); keep `playbackRate` at 1 on PCM sources.
 - On a rate change, re-stretch only the native chunks of unstarted PCM sources; rendered audio keeps the rate it was rendered at.
 - Give `TimeStretcher`'s first output after every reset a ~5 ms fade-in and hold the last ~5 ms of input out of the WSOLA flush; cold-start or hard speech-to-silence steps click at fragment seams.
@@ -301,3 +301,14 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Initialize injected buttons before attachment; prune their sync entries after detachment, not during creation.
 - Accept element-node selection boundaries inside the reply body; a Range does not always start in a text node.
 - Serialize manual starts, not the `wait: true` response; otherwise a new click cannot stop a blocked earlier reading.
+
+## Claude Code plugin (copyspeech-claude)
+
+- Declare every helper that takes `$` as a top-level `function`, and never shadow its name with a local (`let start`): `claude plugin validate` loses `$` tracking and refuses the module.
+- Run a Button's work through `$.clock.after(0, () => void work())`, never `await` it in `onPress`: a `ui.press` hook has a 10 s budget. Keep `$.ui.scroll` direct, because a transcript scroll only works while answering the press.
+- Give a Box with `hover: { display: 'flex' }` its own `display: 'none'`; otherwise the tree is refused.
+- Mark the spoken word with Text spans and `backgroundColor`, not `<mark>` or backticks: the desktop shows HTML literally, and inline code changes the font, so later words shift.
+- Switch a reply to Text spans once at reading start and once at stop, not per word, so the layout changes twice per reading.
+- Treat a `$.http.fetch` give-up (`aborted`, `no complete answer`) on `/speak` as a running reading: the call has a fixed 30 s limit, and a queued reading answers only once audible. Let the `/status` poll end the reading.
+- Track auto-read rows from `AssistantMessage` renders between `turn.start` and `turn.complete` (main loop only); `turn.complete`'s `answer` holds only the final text block.
+- Keep `import()` out of the module and its tests: a module that holds one does not load.

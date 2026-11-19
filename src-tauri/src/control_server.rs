@@ -260,8 +260,10 @@ enum RequestState {
 }
 
 /// Run one speak, optionally blocking until playback finishes. `speak_now`
-/// resolves at playback START (the webview plays asynchronously), so the wait
-/// rides on the frontend's `playback-finished` signal. User stop and synthesis
+/// returns at the audio emit for one fragment, but only after the last
+/// fragment is submitted for a paginated reading, so a non-wait answer rides
+/// on the reading becoming audible and a wait on the frontend's
+/// `playback-finished` signal. User stop and synthesis
 /// abort also terminate playback, so a wait timeout is not an error.
 async fn handle_speak(
     app: AppHandle,
@@ -354,7 +356,7 @@ async fn run_speak<S, SF, W, WF>(
 ) -> Result<SpeakOutcome, (u16, String)>
 where
     S: FnOnce(u64) -> SF,
-    SF: Future<Output = Result<(), String>>,
+    SF: Future<Output = Result<(), String>> + Send + 'static,
     W: FnOnce(u64) -> WF + Send + 'static,
     WF: Future<Output = bool> + Send + 'static,
 {
@@ -386,11 +388,44 @@ async fn run_speak_with_interrupt<I, S, SF, W, WF>(
 where
     I: FnOnce() -> bool,
     S: FnOnce(u64, u64) -> SF,
-    SF: Future<Output = Result<(), String>>,
+    SF: Future<Output = Result<(), String>> + Send + 'static,
     W: FnOnce(u64) -> WF + Send + 'static,
     WF: Future<Output = bool> + Send + 'static,
 {
-    let (ticket, generation) = {
+    run_speak_inner(
+        request_id,
+        wait,
+        wait_lock,
+        read_generation,
+        speak_requests::is_audible,
+        interrupt,
+        speak,
+        wait_finished,
+    )
+    .await
+}
+
+/// [`run_speak_with_interrupt`] with the audible check injected, so tests do
+/// not race other tests on the process-global speaker owner.
+#[allow(clippy::too_many_arguments)]
+async fn run_speak_inner<I, S, SF, W, WF>(
+    request_id: Option<&str>,
+    wait: bool,
+    wait_lock: &tokio::sync::Mutex<()>,
+    read_generation: fn() -> u64,
+    is_audible: fn(u64) -> bool,
+    interrupt: I,
+    speak: S,
+    wait_finished: W,
+) -> Result<SpeakOutcome, (u16, String)>
+where
+    I: FnOnce() -> bool,
+    S: FnOnce(u64, u64) -> SF,
+    SF: Future<Output = Result<(), String>> + Send + 'static,
+    W: FnOnce(u64) -> WF + Send + 'static,
+    WF: Future<Output = bool> + Send + 'static,
+{
+    let (mut ticket, generation) = {
         let _guard = REGISTRATION_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let ticket = match request_id {
             None => None,
@@ -439,7 +474,36 @@ where
     if globally_aborted() || speak_requests::is_cancelled(seq) {
         return Ok(SpeakOutcome::Cancelled);
     }
-    let spoken = speak(seq, generation).await;
+    let speaking = speak(seq, generation);
+    // A paginated reading's speak returns only once its last fragment is
+    // submitted, near the end of playback. A non-wait request with an id
+    // answers once its reading is audible and finishes the rest detached.
+    let racing = if wait { None } else { ticket.take() };
+    let spoken = match racing {
+        None => speaking.await,
+        Some(live) => match until_done_or_audible(seq, is_audible, speaking).await {
+            Race::Done(spoken) => {
+                ticket = Some(live);
+                spoken
+            }
+            Race::Audible(rest) => {
+                log_slow_stage(request_label.as_deref(), "until audible", started);
+                tauri::async_runtime::spawn(async move {
+                    if let Err(error) = rest.await {
+                        if !live.is_cancelled() {
+                            log::warn!(
+                                "[Control] Speak {} failed after it became audible: {}",
+                                request_label.as_deref().unwrap_or("-"),
+                                error
+                            );
+                        }
+                    }
+                    track_until_finished(request_label, live, globally_aborted, finished).await;
+                });
+                return Ok(SpeakOutcome::Spoken);
+            }
+        },
+    };
     log_slow_stage(
         request_label.as_deref(),
         "synthesis and cache replay emit",
@@ -476,26 +540,63 @@ where
             }
         }
     } else {
-        // Answer at playback start, but keep the request stoppable until its
+        // Answer now, but keep the request stoppable until its
         // playback ends; the ticket's drop then marks it finished, so a stop
         // that arrives later is a no-op.
         if let Some(ticket) = ticket {
-            tauri::async_runtime::spawn(async move {
-                if speak_requests::until_cancelled_or_aborted(
-                    ticket.seq(),
-                    globally_aborted,
-                    &mut finished,
-                )
-                .await
-                .is_none()
-                    && ticket.is_cancelled()
-                {
-                    settle_cancelled(request_label.as_deref(), &ticket, &mut finished).await;
-                }
-                drop(ticket);
-            });
+            tauri::async_runtime::spawn(track_until_finished(
+                request_label,
+                ticket,
+                globally_aborted,
+                finished,
+            ));
         }
         Ok(SpeakOutcome::Spoken)
+    }
+}
+
+/// How often a non-wait speak checks whether its reading became audible.
+const AUDIBLE_POLL: Duration = Duration::from_millis(25);
+
+enum Race<F: Future> {
+    Done(F::Output),
+    Audible(std::pin::Pin<Box<F>>),
+}
+
+/// Drive `speak` until it returns or request `seq`'s reading is audible.
+async fn until_done_or_audible<F: Future>(
+    seq: u64,
+    is_audible: fn(u64) -> bool,
+    speak: F,
+) -> Race<F> {
+    let mut speak = Box::pin(speak);
+    loop {
+        if let Ok(spoken) = tokio::time::timeout(AUDIBLE_POLL, &mut speak).await {
+            return Race::Done(spoken);
+        }
+        if is_audible(seq) {
+            return Race::Audible(speak);
+        }
+    }
+}
+
+/// Keep a non-wait request stoppable until its playback ends; dropping the
+/// ticket then marks it finished, so a later stop is a no-op.
+async fn track_until_finished<P, F>(
+    request_label: Option<String>,
+    ticket: Ticket,
+    globally_aborted: P,
+    mut finished: std::pin::Pin<Box<F>>,
+) where
+    P: Fn() -> bool,
+    F: Future<Output = bool>,
+{
+    if speak_requests::until_cancelled_or_aborted(ticket.seq(), globally_aborted, &mut finished)
+        .await
+        .is_none()
+        && ticket.is_cancelled()
+    {
+        settle_cancelled(request_label.as_deref(), &ticket, &mut finished).await;
     }
 }
 

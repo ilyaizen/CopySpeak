@@ -1,0 +1,6 @@
+{
+  "name": "copyspeech",
+  "description": "CopySpeech plugins for Claude Code.",
+  "owner": { "name": "Ilya Aizenberg" },
+  "plugins": [{ "name": "copyspeech", "source": "./copyspeech-claude" }]
+}

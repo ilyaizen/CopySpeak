@@ -441,6 +441,14 @@ pub fn claim_playback(reading: u64, aborted: impl FnOnce() -> bool, emit: impl F
     OWNER.claim(reading, aborted, emit)
 }
 
+/// Whether request `seq`'s reading owns the speakers, that is, the webview
+/// reported it audible. Lock order owner -> registry, the same as [`cancel`].
+pub fn is_audible(seq: u64) -> bool {
+    OWNER.with_current(|current| {
+        current != NO_REQUEST && registry().reading_of(seq) == Some(current)
+    })
+}
+
 /// Audio that belongs to no request (history replay, cached replay) is about
 /// to play: take ownership away from any request, so a late scoped stop for
 /// an older request cannot cut it. Call before emitting the audio.

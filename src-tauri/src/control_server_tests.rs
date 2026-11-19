@@ -833,6 +833,41 @@ async fn non_wait_request_stays_stoppable_until_playback_ends() {
     );
 }
 
+/// A paginated reading's speak returns only after its last fragment, so a
+/// non-wait request answers once its reading is audible and the rest of the
+/// speak runs detached, still stoppable.
+#[tokio::test]
+async fn non_wait_request_answers_once_its_reading_is_audible() {
+    let id = unique_id("nowait-audible");
+    let lock = tokio::sync::Mutex::new(());
+    let (rest_tx, rest_rx) = oneshot::channel::<()>();
+    let outcome = bounded(run_speak_inner(
+        Some(&id),
+        false,
+        &lock,
+        abort_generation,
+        |_| true,
+        || false,
+        move |_, _| async move {
+            // Later fragments: still synthesizing when the answer goes out.
+            let _ = rest_rx.await;
+            Ok(())
+        },
+        never_finishes,
+    ))
+    .await;
+    assert_eq!(outcome, Ok(SpeakOutcome::Spoken));
+    assert!(
+        speak_requests::is_live(&id),
+        "the detached reading stays live"
+    );
+    let _ = rest_tx.send(());
+    assert!(matches!(
+        speak_requests::cancel(&id, || {}),
+        speak_requests::StopOutcome::Cancelled { .. }
+    ));
+}
+
 /// A known-slow client changes its mind and disconnects instead of
 /// completing the request; the reader must time out and free the
 /// connection rather than blocking forever.

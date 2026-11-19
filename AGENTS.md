@@ -113,3 +113,4 @@ Before editing an area, read its section in [`docs/agents/failure-log.md`](docs/
 - **Experimental gating**: feature gates and saved settings
 - **DSH plugin (`copyspeech-dsh`)**: selection surface, keyed-slot shadowing, interaction dispatch
 - **Hermes plugin (`copyspeech-hermes`)**: turn gating, cross-window claims, caption alignment, junction install
+- **Claude Code plugin (`copyspeech-claude`)**: mod validator rules, press budget, desktop Markdown, `/speak` timeouts

@@ -4,6 +4,7 @@ Speaks AI-agent activity through the running CopySpeech app.
 
 - **Pi extension** (project-local): `.pi/extensions/copyspeech/`
 - **Claude Code hook** (project-local): `scripts/claude-copyspeech-hook.mjs`, wired from `.claude/settings.json` or `.claude/settings.local.json`
+- **Claude Code plugin** (separate package): `copyspeech-claude/`, with play buttons, captions, and a playback bar. Its auto-read and this hook both speak a reply when both are on. See [copyspeech-claude/README.md](../copyspeech-claude/README.md).
 - **DSH plugin** (separate package): `copyspeech-dsh/`, installed into a DeepSeek Harness profile
 
 ## What it does
