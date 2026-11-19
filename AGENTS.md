@@ -4,8 +4,11 @@ CopySpeech: A lightweight and modern cross-platform AI text-to-speech orchestrat
 
 ## Rules
 
-- Fix causes, not symptoms. Report adjacent problems, don't fix them.
-- Delete obvious dead code in the files you touch: unused locale keys, exports, variables, imports, and CSS rules. Report larger adjacent problems.
+- Fix causes, not symptoms.
+- Fix stale docs, comments, and default-value claims in the same change. Do not ask first. Grep for every mention, including `docs/`, `docs_internal/`, `README.md`, `PRODUCT.md`, and code comments.
+- Delete dead code without asking: unused locale keys, exports, variables, imports, CSS rules, functions, and registry entries. Verify it is unused first (grep the whole repo, including `__tests__/` and `cfg`-gated blocks).
+- Ask only before behavior changes, new features, commits, pushes, or checks. Stale text and dead code are not questions.
+- Report only adjacent problems you cannot fix safely, and say why.
 - Never stub, loosen, or comment out check to get green. Broken and loud beats silent and wrong.
 - Unsure or blocked: ask. State assumptions, surface tradeoffs, push back on over-engineering.
 
