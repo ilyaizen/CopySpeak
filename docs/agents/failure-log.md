@@ -304,13 +304,12 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 
 ## Claude Code plugin (copyspeech-claude)
 
-- Declare every helper that takes `$` as a top-level `function`, and never shadow its name with a local (`let start`): `claude plugin validate` loses `$` tracking and refuses the module.
-- Run a Button's work through `$.clock.after(0, () => void work())`, never `await` it in `onPress`: a `ui.press` hook has a 10 s budget. Keep `$.ui.scroll` direct, because a transcript scroll only works while answering the press.
+- Run `plugin validate` and `plugin test` with the session's engine (`%LOCALAPPDATA%\Claude-Data\<id>\claude-code\<version>\<hash>\claude.exe`); the PATH `claude` 2.1.319 has no `ContextMenu`.
+- Declare each helper that takes `$` as a top-level `function`, and never shadow its name with a local; otherwise the validator loses `$` and refuses the module.
+- Keep `import()` out of the module and its tests; a module that holds one does not load.
+- Run Button work through `$.clock.after(0, ...)`, never `await` it in `onPress`: a press has a 10 s budget. Keep `$.ui.scroll` direct; it only works inside the press.
 - Give a Box with `hover: { display: 'flex' }` its own `display: 'none'`; otherwise the tree is refused.
-- Mark the spoken word with Text spans and `backgroundColor`, not `<mark>` or backticks: the desktop shows HTML literally, and inline code changes the font, so later words shift.
-- Switch a reply to Text spans once at reading start and once at stop, not per word, so the layout changes twice per reading.
-- Treat a `$.http.fetch` give-up (`aborted`, `no complete answer`) on `/speak` as a running reading: the call has a fixed 30 s limit, and a queued reading answers only once audible. Let the `/status` poll end the reading.
-- Track auto-read rows from `AssistantMessage` renders between `turn.start` and `turn.complete` (main loop only); `turn.complete`'s `answer` holds only the final text block.
-- Keep `import()` out of the module and its tests: a module that holds one does not load.
-- Run `plugin validate` and `plugin test` with the engine the desktop session runs (`%LOCALAPPDATA%\Claude-Data\<id>\claude-code\<version>\<hash>\claude.exe`), not the older `claude` on PATH: 2.1.319 has no `ContextMenu`, so it warns the hook "never runs" and `$.ui.mount` fails.
-- Change a plugin's own `userConfig` value with `$.config.set({ key: "<plugin>.<field>" })`, found through `$.config.list()`: `$.settings` only reads, and the plugin name can carry an `@inline` or marketplace suffix.
+- Paint the spoken word with Text spans and `backgroundColor`. The desktop shows `<mark>` literally, and backticks change the font. Switch to spans only at reading start and stop.
+- Treat a `/speak` fetch give-up (`aborted`, `no complete answer`, fixed 30 s) as a running reading; the `/status` poll ends it.
+- Collect auto-read rows from `AssistantMessage` renders between `turn.start` and `turn.complete`; `turn.complete`'s `answer` holds only the last text block.
+- Change the plugin's own setting with `$.config.set` on the row `$.config.list()` names `<plugin>.<field>`; `$.settings` only reads.
