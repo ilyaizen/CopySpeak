@@ -436,6 +436,20 @@ async function poll($: EngineInterface) {
   });
 }
 
+// Flips the "Read new replies aloud" /config row, as if the person changed it
+// there. The row's key is `<plugin>.autoRead`, and the plugin's name can carry
+// an `@inline` or marketplace suffix. Resolves the reply text.
+async function toggleAutoRead($: EngineInterface): Promise<string> {
+  const row = (await $.config.list()).find(
+    (r) => r.key.startsWith("copyspeech") && r.key.endsWith(".autoRead")
+  );
+  if (row === undefined) return "CopySpeech auto-read setting not found.";
+  const enabled = row.value !== true;
+  const { deny } = await $.config.set({ key: row.key, value: enabled });
+  if (deny !== undefined) return `CopySpeech auto-read unchanged: ${deny}`;
+  return enabled ? "CopySpeech auto-read is on." : "CopySpeech auto-read is off.";
+}
+
 export const register: Register = (on, options) => {
   const style = String(options.highlight ?? "chip");
   const skip = options.skipSections === true;
@@ -455,6 +469,10 @@ export const register: Register = (on, options) => {
       name: "copyspeech-stop",
       description: "Stop the CopySpeech reading"
     });
+    await $.command.register({
+      name: "copyspeech-autoread",
+      description: "Turn reading new replies aloud on or off"
+    });
     const health = await $.http
       .fetch(CONTROL + "/health")
       .then((r) => (r.ok ? null : `HTTP ${r.status}`))
@@ -469,6 +487,10 @@ export const register: Register = (on, options) => {
     await stop($);
     return { text: "Stopped." };
   });
+
+  on("command.run", { command: "copyspeech-autoread" }, async ($) => ({
+    text: await toggleAutoRead($)
+  }));
 
   on("turn.start", async ($, e, next) => {
     if (e.agentId === undefined) turnRows = [];

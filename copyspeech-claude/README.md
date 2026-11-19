@@ -41,10 +41,32 @@ While a reading this plugin started plays, a bar sits above the prompt:
 
 ## Settings
 
-Set these in the plugin's config menu.
+Change the settings in one of three ways:
+
+- **Terminal:** run `claude`, type `/config`, and find the CopySpeech rows. A change applies at once.
+- **Any surface, auto-read only:** type `/copyspeech-autoread`. It turns **Read new replies aloud** on or off and saves it, as `/config` does.
+- **Desktop app:** the Code tab has no settings screen for plugin options. Add a `pluginConfigs` block to `~/.claude/settings.json`:
+
+```json
+"pluginConfigs": {
+  "copyspeech": {
+    "options": {
+      "autoRead": false,
+      "skipSections": true,
+      "excerpt": true,
+      "excerptMode": "both",
+      "excerptTop": 2,
+      "excerptBottom": 2,
+      "highlight": "chip"
+    }
+  }
+}
+```
+
+The key is the plugin's name as Claude Code loaded it: `copyspeech` or `copyspeech@inline` for a folder loaded with `--plugin-dir`, else the installed plugin's name. A setting you leave out keeps its default.
 
 - **Read new replies aloud** – off by default. Reads every text block of the finished turn as one reading.
-- **Skip bullet points and sections** – off by default. Automatic and play-button reads skip headings, bullet and numbered items, horizontal rules, and table rows. The text under a heading still reads.
+- **Skip bullet points and sections** – on by default. Automatic and play-button reads skip headings, bullet and numbered items, horizontal rules, and table rows. The text under a heading still reads. A reply made only of those lines reads nothing.
 - **Read only part of the reply** – on by default. Automatic and play-button reads keep the top and bottom paragraphs.
 - **Part to read** – both (default), top, or bottom.
 - **Top paragraphs** and **Bottom paragraphs** – 1 to 20, 2 by default.

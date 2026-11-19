@@ -16,7 +16,7 @@
       "type": "boolean",
       "title": "Skip bullet points and sections",
       "description": "Automatic and play-button reads skip headings, list items, rules, and table rows. Selection reads stay full.",
-      "default": false
+      "default": true
     },
     "excerpt": {
       "type": "boolean",
