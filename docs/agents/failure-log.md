@@ -312,4 +312,5 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Treat a `$.http.fetch` give-up (`aborted`, `no complete answer`) on `/speak` as a running reading: the call has a fixed 30 s limit, and a queued reading answers only once audible. Let the `/status` poll end the reading.
 - Track auto-read rows from `AssistantMessage` renders between `turn.start` and `turn.complete` (main loop only); `turn.complete`'s `answer` holds only the final text block.
 - Keep `import()` out of the module and its tests: a module that holds one does not load.
+- Run `plugin validate` and `plugin test` with the engine the desktop session runs (`%LOCALAPPDATA%\Claude-Data\<id>\claude-code\<version>\<hash>\claude.exe`), not the older `claude` on PATH: 2.1.319 has no `ContextMenu`, so it warns the hook "never runs" and `$.ui.mount` fails.
 - Change a plugin's own `userConfig` value with `$.config.set({ key: "<plugin>.<field>" })`, found through `$.config.list()`: `$.settings` only reads, and the plugin name can carry an `@inline` or marketplace suffix.

@@ -26,7 +26,7 @@ Hover a reply and click **▶ Read aloud** under it. While CopySpeech reads that
 
 ## Read a selection
 
-Select text inside a reply, right-click, and choose **Read aloud with CopySpeech**. CopySpeech reads only the selected words. Not yet verified live.
+In the desktop app, select text inside a reply, right-click, and choose **Read aloud with CopySpeech**. CopySpeech reads only the selected words. The terminal has no right-click menu. Needs Claude Code 2.1.326 or later.
 
 ## Playback bar
 
@@ -99,7 +99,7 @@ The repo's Claude Code hook (`scripts/claude-copyspeech-hook.mjs`, see [docs/age
 
 ## Develop
 
-Load the folder for one session with `claude --plugin-dir copyspeech-claude`, or name it in `CLAUDE_CODE_PLUGIN_DIRS`. Then run:
+Load the folder for one session with `claude --plugin-dir copyspeech-claude`, or name it in `CLAUDE_CODE_PLUGIN_DIRS`. Then run the commands below with the same Claude Code version that runs the session. Version 2.1.319 has no right-click menu, so it warns that the `ContextMenu` hook never runs and the menu tests fail:
 
 ```
 claude plugin validate copyspeech-claude
