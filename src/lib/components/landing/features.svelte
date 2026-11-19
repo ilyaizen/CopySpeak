@@ -16,7 +16,7 @@
       icon: AudioLines,
       title: "Offline & Cloud TTS Engines",
       description:
-        "Kokoro, Piper, Kitten, Qwen3 and Pocket run fully offline. OpenAI, ElevenLabs, Cartesia, Google, Microsoft, Edge or any HTTP endpoint for cloud voices."
+        "tiny-voca, Kokoro, Piper, Kitten, Qwen3 and Pocket run fully offline. OpenAI, ElevenLabs, Cartesia, Google, Microsoft, Edge or any HTTP endpoint for cloud voices."
     },
     {
       icon: AudioWaveform,

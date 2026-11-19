@@ -1554,10 +1554,9 @@ pub(crate) fn migrate_post_process_to_profiles_v8(cfg: &mut crate::config::AppCo
 impl Default for TtsConfig {
     fn default() -> Self {
         let cartesia_profile = default_cartesia_profile();
-        // Fresh installs start on the engine `TtsEngine::default()` picks for
-        // this OS: tiny-voca on Windows, Kokoro elsewhere. The matching
-        // bundled profile is seeded here (onboarding finds an engine's
-        // profile by engine). Edge-TTS stays the zero-download fallback.
+        // Fresh installs start on `TtsEngine::default()`, which is tiny-voca
+        // on every OS. The matching bundled profile is seeded here (onboarding
+        // finds an engine's profile by engine). Edge-TTS stays the zero-download fallback.
         // Existing configs on disk are unaffected — defaults only apply when
         // no config file exists.
         let active_backend = TtsEngine::default();

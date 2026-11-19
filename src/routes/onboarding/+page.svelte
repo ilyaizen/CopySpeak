@@ -86,13 +86,13 @@
       selectedEngine = status.has_config ? status.engine : recommendedEngineId(status.platform);
     } catch (e) {
       // Without status the page still works: platform stays unknown, so only
-      // the cross-platform cards show and Kokoro is recommended.
+      // the cross-platform cards show and tiny-voca is recommended.
       console.error("Failed to load onboarding status:", e);
       status = {
         has_config: false,
-        engine: "kokoro",
-        engine_name: "Kokoro",
-        voice: "af_heart",
+        engine: "tiny-voca",
+        engine_name: "tiny-voca",
+        voice: "M2",
         keyless: true,
         platform: ""
       };

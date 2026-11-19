@@ -63,6 +63,7 @@
   ];
 
   const localEngines: Provider[] = [
+    { name: "tiny-voca", href: "https://huggingface.co/n4ze3m/tiny-voca" },
     {
       name: "KittenTTS",
       href: "https://github.com/KittenML/KittenTTS",
