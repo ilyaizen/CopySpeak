@@ -21,7 +21,7 @@ const hooks = [
   "export function livePill() { return pill; }",
   "export function playbackRequestIdNow() { return playbackRequestId; }",
   "export function clearPlayback() { playbackForget(); }",
-  "export { alignDetail, startCaptions, stopCaptions, livePillEnv, makeMessageButton, selectionInsideReply, playbackRemember, speechForRead, prepareSpeech };"
+  "export { alignDetail, startRun, stopCaptions, livePillEnv, makeMessageButton, selectionInsideReply, playbackRemember, speechForRead, prepareSpeech };"
 ].join("\n");
 writeFileSync(copy, stripped + "\n" + hooks + "\n");
 let mod;
@@ -52,7 +52,7 @@ const {
   createGlidePill,
   measureWord,
   pollPlan,
-  startCaptions,
+  startRun,
   stopCaptions,
   livePillEnv,
   liveCaptionRun,
@@ -1043,7 +1043,7 @@ function freshWorld() {
     return md;
   };
   world.startRun = (sessionId = world.focus.current) => {
-    startCaptions(world.ctx, () => world.settings, sessionId);
+    startRun(world.ctx, () => world.settings, sessionId, null, null);
     return liveCaptionRun();
   };
   // Fires the newest interval, or the one at `index`. A disposed timer still fires, to test the guard.

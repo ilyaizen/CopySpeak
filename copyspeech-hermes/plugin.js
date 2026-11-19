@@ -1312,11 +1312,6 @@ function startRun(ctx, settingsNow, sessionId, target, requestId) {
   captionRun = run;
 }
 
-// The auto-read entry: paint the newest assistant reply of the session.
-function startCaptions(ctx, settingsNow, sessionId) {
-  startRun(ctx, settingsNow, sessionId, null, null);
-}
-
 function installCaptionStyle() {
   const old = document.getElementById(CAPTION_STYLE_ID);
   if (old !== null) old.remove();
