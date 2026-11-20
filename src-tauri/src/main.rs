@@ -471,10 +471,10 @@ fn main() {
     // Load the adjacent .env or the old Windows installation's fallback.
     secrets::load_dotenv();
 
-    // uv and its tool shims (edge-tts, kokoro-tts, pocket-tts) install into
-    // ~/.local/bin, which uv adds to the *user* PATH. A running process keeps
-    // the PATH it launched with, so without this every local engine would look
-    // missing until the app is restarted.
+    // uv and its tool shims (edge-tts, kokoro-tts, pocket-tts) install into uv's
+    // folders (see uv_candidates). A running process keeps the PATH it launched
+    // with, so this adds those folders at startup. An in-app uv install refreshes
+    // PATH again (see spawn_streamed).
     commands::augment_path_for_local_engines();
 
     tauri::Builder::default()
@@ -1007,7 +1007,6 @@ fn main() {
             commands::rename_history_reading,
             commands::clear_history,
             commands::test_tts_engine,
-            commands::check_command_exists,
             commands::check_elevenlabs_credentials,
             commands::check_cartesia_credentials,
             commands::check_fish_credentials,

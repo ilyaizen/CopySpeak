@@ -60,5 +60,7 @@ add_uv_to_path
 if command -v uv >/dev/null 2>&1; then
     log C_GREEN "  uv installed: $(uv --version)"
 else
-    log C_YELLOW "  uv installed. Restart your terminal so it appears on PATH."
+    log C_RED "  [ERROR] uv install failed: uv was not found after the Astral script."
+    log C_GRAY "  Install uv manually from https://docs.astral.sh/uv/ and retry."
+    exit 1
 fi

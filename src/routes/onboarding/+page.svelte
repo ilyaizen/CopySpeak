@@ -46,9 +46,9 @@
   let isSaving = $state(false);
   // Install state per installer engine id. A missing key means not probed yet.
   let installed = $state<Record<string, boolean>>({});
-  // uv is the prerequisite for every local installer (install-uv.ps1) and is
-  // no longer offered on the Engines page, so onboarding owns the one-time
-  // install. Probed on mount; install streams via the shared installStore.
+  // uv is the prerequisite for every local installer (install-uv.ps1).
+  // The Engines page also shows a uv notice while uv is missing.
+  // Probed on mount; install streams via the shared installStore.
   let uvAvailable = $state<boolean | null>(null);
   // Guards so a settled install run is handled (auto-complete / failure toast)
   // exactly once, even if the effect re-runs.
@@ -109,8 +109,8 @@
 
   async function checkUv() {
     try {
-      const r = await invoke<{ available: boolean }>("check_command_exists", { command: "uv" });
-      uvAvailable = r.available;
+      const r = await invoke<{ installed: boolean }>("engine_status", { engine: "uv" });
+      uvAvailable = r.installed;
     } catch {
       uvAvailable = null;
     }
@@ -156,7 +156,7 @@
     if (!selectedChoice || !engine) return;
     launchFailed = false;
     settledHandled = false;
-    await installStore.start(engine, selectedChoice.installVoices);
+    if (!(await installStore.start(engine, selectedChoice.installVoices))) return;
     try {
       await invoke("install_engine", {
         engine,
@@ -165,6 +165,7 @@
       });
     } catch (e) {
       launchFailed = true;
+      installStore.fail(engine, `[ERROR] install did not start: ${String(e)}`);
       toast.error(
         $_("toast.error.engineInstallStart", {
           values: { engine: selectedChoice.name, error: String(e) }
@@ -174,11 +175,12 @@
   }
 
   async function startUvInstall() {
-    await installStore.start("uv", []);
+    if (!(await installStore.start("uv", []))) return;
     try {
       await invoke("install_engine", { engine: "uv", voice: [], cuda: false });
     } catch (e) {
       console.error("Failed to start uv install:", e);
+      installStore.fail("uv", `[ERROR] install did not start: ${String(e)}`);
       toast.error($_("onboarding.installFailed"));
     }
   }

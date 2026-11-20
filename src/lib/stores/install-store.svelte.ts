@@ -41,10 +41,24 @@ class InstallStore {
     return this._runs[engine]?.running ?? false;
   }
 
-  /** Begin a run: reset state and mark the given voices pending. */
-  async start(engine: string, voices: string[]) {
+  /** Begin a run: reset state and mark the given voices pending. Returns false
+   *  and changes nothing when the engine already has a run in progress. */
+  async start(engine: string, voices: string[]): Promise<boolean> {
+    if (this.isRunning(engine)) return false;
     this._runs[engine] = newRun(voices);
     await this.init();
+    return true;
+  }
+
+  /** Settle a run whose launch threw before any `done` event. Exit code -1
+   *  marks a launch failure; it is not a process exit code. */
+  fail(engine: string, message: string) {
+    const run = this._runs[engine] ?? newRun([]);
+    run.lines.push(message);
+    this.finalize(run, false);
+    run.running = false;
+    run.exitCode = -1;
+    this._runs[engine] = run;
   }
 
   /** Re-queue a single failed voice without disturbing the rest of a run. */

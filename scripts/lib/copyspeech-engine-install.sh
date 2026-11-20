@@ -60,10 +60,13 @@ log() {
 # in that snapshot, so every engine installer would fail until the app is
 # restarted. Re-probing the well-known locations avoids that restart.
 add_uv_to_path() {
+    # Keep in step with uv_candidates() in src-tauri/src/commands/install.rs.
     local candidates=(
         "$HOME/.local/bin"    # official Astral install script
         "$HOME/.cargo/bin"    # cargo install uv
         "/usr/local/bin"      # manual / root installs
+        "/opt/homebrew/bin"   # Homebrew on Apple Silicon and Intel Macs
+        "/usr/bin"            # Linux distro packages
     )
     local dir
     for dir in "${candidates[@]}"; do

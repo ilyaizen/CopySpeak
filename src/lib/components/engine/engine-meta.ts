@@ -130,8 +130,41 @@ export const CLOUD_ENGINES: EngineSetupEntry[] = [
   }
 ];
 
-// Local engines use the install dialog and one-shot synthesis tests.
+// Local engines use the install dialog and one-shot synthesis tests. The first
+// three (kale, tiny-voca, kokoro) are the local cards onboarding shows first.
 export const LOCAL_ENGINES: EngineSetupEntry[] = [
+  {
+    id: "kale",
+    menuLabel: "Kale",
+    kind: "local",
+    installerId: "kale",
+    // Ten voices (US and British), all served by the one 15 MB int8 ONNX model.
+    voiceMode: "shared",
+    downloadSize: "~29 MB incl. G2P data, fetched at install",
+    credential: "none",
+    docsUrl: "https://huggingface.co/KaleComputer/kale-tts-1-nano"
+  },
+  {
+    id: "tiny-voca",
+    menuLabel: "tiny-voca",
+    kind: "local",
+    installerId: "tiny-voca",
+    // Two voices (F2, M2), both served by the one 18 MB ONNX model.
+    voiceMode: "shared",
+    downloadSize: "~45 MB, fetched at install",
+    credential: "none",
+    docsUrl: "https://github.com/n4ze3m/tiny-voca"
+  },
+  {
+    id: "kokoro",
+    menuLabel: "Kokoro",
+    kind: "local",
+    installerId: "kokoro",
+    voiceMode: "shared",
+    downloadSize: "~335 MB shared model",
+    credential: "none",
+    docsUrl: "https://github.com/thewh1teagle/kokoro-onnx"
+  },
   {
     id: "kitten",
     menuLabel: "Kitten",
@@ -163,16 +196,6 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
     docsUrl: "https://github.com/OHF-Voice/piper1-gpl"
   },
   {
-    id: "kokoro",
-    menuLabel: "Kokoro",
-    kind: "local",
-    installerId: "kokoro",
-    voiceMode: "shared",
-    downloadSize: "~335 MB shared model",
-    credential: "none",
-    docsUrl: "https://github.com/thewh1teagle/kokoro-onnx"
-  },
-  {
     id: "pocket",
     menuLabel: "Pocket",
     kind: "local",
@@ -182,36 +205,15 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
     downloadSize: "~100M params, fetched on first use",
     credential: "none",
     docsUrl: "https://github.com/kyutai-labs/pocket-tts"
-  },
-  {
-    id: "tiny-voca",
-    menuLabel: "tiny-voca",
-    kind: "local",
-    installerId: "tiny-voca",
-    // Two voices (F2, M2), both served by the one 18 MB ONNX model.
-    voiceMode: "shared",
-    downloadSize: "~45 MB, fetched at install",
-    credential: "none",
-    docsUrl: "https://github.com/n4ze3m/tiny-voca"
-  },
-  {
-    id: "kale",
-    menuLabel: "Kale",
-    kind: "local",
-    installerId: "kale",
-    // Ten voices (US and British), all served by the one 15 MB int8 ONNX model.
-    voiceMode: "shared",
-    downloadSize: "~29 MB incl. G2P data, fetched at install",
-    credential: "none",
-    docsUrl: "https://huggingface.co/KaleComputer/kale-tts-1-nano"
   }
 ];
 
-// uv is NOT a setup entry: it is a prerequisite for every local installer and
-// is installed from the onboarding page (`install_engine` handles id "uv" via
-// install-uv.ps1; uninstall_engine refuses it as a shared prerequisite).
+// uv is NOT a setup entry: it is a prerequisite for every local installer.
+// The Engines page shows a uv notice above the table while uv is missing.
+// `install_engine` handles id "uv" via install-uv.ps1. uninstall_engine refuses it.
 
-export const ALL_SETUP_ENTRIES: EngineSetupEntry[] = [...CLOUD_ENGINES, ...LOCAL_ENGINES];
+// Engines page order: local first, then cloud.
+export const ALL_SETUP_ENTRIES: EngineSetupEntry[] = [...LOCAL_ENGINES, ...CLOUD_ENGINES];
 
 export function findSetupEntry(id: string): EngineSetupEntry | undefined {
   return ALL_SETUP_ENTRIES.find((e) => e.id === id);

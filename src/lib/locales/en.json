@@ -576,6 +576,11 @@
     "installCuda": "Install NVIDIA GPU runtime",
     "installCudaHint": "Enable this when the profile uses GPU acceleration. Reinstalling changes the engine runtime.",
     "installFailed": "Could not install {engine}. The install log has details.",
+    "uv": {
+      "title": "uv is needed for local engines",
+      "failedStart": "The uv installer did not start. Check the install log.",
+      "failedNotFound": "The uv installer finished, but CopySpeech cannot find uv. Check the install log."
+    },
     "saveBeforeTestFailed": "Save your changes before testing.",
     "installDone": "Install complete",
     "retry": "Retry",

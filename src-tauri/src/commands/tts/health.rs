@@ -18,49 +18,6 @@ pub struct TtsHealthResult {
     pub error_type: Option<String>,
 }
 
-/// Result of checking if a command exists in PATH.
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct CommandExistsResult {
-    pub available: bool,
-}
-
-/// Check if a command exists in the system PATH.
-/// This is used to check if local TTS engines are installed without fully testing them.
-#[tauri::command]
-pub fn check_command_exists(command: String) -> Result<CommandExistsResult, String> {
-    if crate::logging::is_debug_mode() {
-        log::debug!("[IPC] check_command_exists called for: {}", command);
-    }
-
-    // Try to find the command in PATH using `which` on Unix or `where` on Windows.
-    // CREATE_NO_WINDOW prevents a flash of terminal window on Windows.
-    #[cfg(target_os = "windows")]
-    let result = {
-        use std::os::windows::process::CommandExt;
-        const CREATE_NO_WINDOW: u32 = 0x08000000;
-        std::process::Command::new("where")
-            .arg(&command)
-            .creation_flags(CREATE_NO_WINDOW)
-            .output()
-    };
-    #[cfg(not(target_os = "windows"))]
-    let result = std::process::Command::new("which").arg(&command).output();
-
-    match result {
-        Ok(output) => {
-            let available = output.status.success();
-            if crate::logging::is_debug_mode() {
-                log::debug!("[IPC] check_command_exists({}): {}", command, available);
-            }
-            Ok(CommandExistsResult { available })
-        }
-        Err(e) => {
-            log::warn!("[IPC] check_command_exists failed for {}: {}", command, e);
-            Ok(CommandExistsResult { available: false })
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

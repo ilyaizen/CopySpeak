@@ -297,7 +297,8 @@ hand-scrollable instead).
 
 Edge has no wordmark on this band; it is visible in the app UI. uv is a
 prerequisite, not a speech engine. The lists track
-`src/lib/components/engine/engine-meta.ts` otherwise.
+`src/lib/components/engine/engine-meta.ts` for membership otherwise. Order
+differs: this band lists cloud first.
 
 ## Verification (2026-11-01)
 

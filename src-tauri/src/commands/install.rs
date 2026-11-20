@@ -6,7 +6,7 @@
 // still shows its interactive voice menu (no -Voices passed from the app).
 
 use std::io::BufRead;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::mpsc::RecvTimeoutError;
 use std::sync::OnceLock;
@@ -297,7 +297,7 @@ fn supervise(
 ///
 /// Returns as soon as the child is spawned. A supervisor thread then emits
 /// the terminal event (`done: true`) with the exit code, or with `None` when
-/// the run stalled and was killed.
+/// the run stalled and was killed. For `uv`, that thread also refreshes this process's PATH before it emits the event.
 fn spawn_streamed(
     app: tauri::AppHandle,
     engine: String,
@@ -323,6 +323,9 @@ fn spawn_streamed(
                 },
             );
         });
+        if engine == "uv" {
+            augment_path_for_local_engines();
+        }
         let _ = app.emit(
             "install-progress",
             InstallProgress {
@@ -523,31 +526,91 @@ fn manifest_voices(name: &str) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// Prepend uv's standard binary locations to this process's PATH.
-///
-/// Mirrors `Add-UvToPath` in scripts/lib/copyspeech-engine-install.ps1. Called
-/// once at startup so command probing, health checks, and synthesis subprocesses
-/// all see engines installed since the app last launched. Idempotent.
-pub fn augment_path_for_local_engines() {
-    let mut extra: Vec<PathBuf> = Vec::new();
-    if let Some(home) = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME")) {
-        extra.push(PathBuf::from(&home).join(".local").join("bin"));
+/// Where uv can be installed, in the order the app checks. Keep in step with
+/// the install scripts: `scripts/lib/copyspeech-engine-install.sh`,
+/// `scripts/lib/copyspeech-engine-install.ps1`, and `scripts/install-uv.ps1`.
+/// The tests in `install_tests.rs` fail when a script lacks one of these folders.
+#[cfg(target_os = "windows")]
+fn uv_candidates_in(home: Option<&Path>, local_app_data: Option<&Path>) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    if let Some(home) = home {
+        out.push(home.join(".local").join("bin").join("uv.exe"));
     }
-    #[cfg(target_os = "windows")]
-    if let Some(local) = std::env::var_os("LOCALAPPDATA") {
-        extra.push(
-            PathBuf::from(&local)
+    if let Some(local) = local_app_data {
+        out.push(
+            local
                 .join("Microsoft")
                 .join("WinGet")
-                .join("Links"),
+                .join("Links")
+                .join("uv.exe"),
         );
-        extra.push(PathBuf::from(&local).join("Programs").join("uv"));
+        out.push(local.join("Programs").join("uv").join("uv.exe"));
     }
+    out
+}
 
+#[cfg(target_os = "macos")]
+fn uv_candidates_in(home: Option<&Path>, _local_app_data: Option<&Path>) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    if let Some(home) = home {
+        out.push(home.join(".local").join("bin").join("uv"));
+        out.push(home.join(".cargo").join("bin").join("uv"));
+    }
+    out.push(PathBuf::from("/usr/local/bin/uv"));
+    out.push(PathBuf::from("/opt/homebrew/bin/uv"));
+    out
+}
+
+#[cfg(target_os = "linux")]
+fn uv_candidates_in(home: Option<&Path>, _local_app_data: Option<&Path>) -> Vec<PathBuf> {
+    let mut out = Vec::new();
+    if let Some(home) = home {
+        out.push(home.join(".local").join("bin").join("uv"));
+        out.push(home.join(".cargo").join("bin").join("uv"));
+    }
+    out.push(PathBuf::from("/usr/local/bin/uv"));
+    out.push(PathBuf::from("/usr/bin/uv"));
+    out
+}
+
+/// The real home and LOCALAPPDATA, read at call time.
+fn uv_candidates() -> Vec<PathBuf> {
+    let home = std::env::var_os("USERPROFILE")
+        .or_else(|| std::env::var_os("HOME"))
+        .map(PathBuf::from);
+    let local = std::env::var_os("LOCALAPPDATA").map(PathBuf::from);
+    uv_candidates_in(home.as_deref(), local.as_deref())
+}
+
+/// First candidate that is a file. Never runs uv and never reads PATH.
+fn find_uv_in(candidates: &[PathBuf]) -> Option<PathBuf> {
+    candidates.iter().find(|p| p.is_file()).cloned()
+}
+
+/// Where uv is installed right now, or None. Checks the known folders first,
+/// then each PATH folder, so Scoop shims and other installs are found too.
+/// File checks only: never runs uv, `where`, or `which`.
+fn find_uv() -> Option<PathBuf> {
+    find_uv_in(&uv_candidates()).or_else(|| find_uv_on_path(&std::env::var_os("PATH")?))
+}
+
+/// The first `uv` file in a PATH-style list of folders.
+fn find_uv_on_path(path: &std::ffi::OsStr) -> Option<PathBuf> {
+    let name = if cfg!(windows) { "uv.exe" } else { "uv" };
+    std::env::split_paths(path)
+        .map(|dir| dir.join(name))
+        .find(|p| p.is_file())
+}
+
+/// Prepend the folders that hold uv to this process's PATH, when they exist and
+/// are not already on it. Runs at startup and after an in-app uv install (see
+/// `spawn_streamed`), so later probes and synthesis subprocesses see uv.
+pub fn augment_path_for_local_engines() {
     let current = std::env::var_os("PATH").unwrap_or_default();
     let mut paths: Vec<PathBuf> = std::env::split_paths(&current).collect();
     let mut added = false;
-    for dir in extra {
+    for dir in uv_candidates().iter().filter_map(|c| c.parent()) {
+        let dir = dir.to_path_buf();
         if dir.is_dir() && !paths.contains(&dir) {
             log::info!("Adding to PATH for local engines: {}", dir.display());
             paths.insert(0, dir);
@@ -652,7 +715,7 @@ pub fn engine_status(engine: String) -> Result<EngineStatus, String> {
     let name = canonical_engine(&engine).ok_or_else(|| format!("unknown engine: {engine}"))?;
 
     let installed = match name {
-        "uv" => on_path("uv"),
+        "uv" => find_uv().is_some(),
         // uv projects: the installer writes the manifest last, so its presence
         // means the package install and wrapper copy both succeeded.
         "kitten" | "qwen" | "piper" | "pocket" | "tiny-voca" | "kale" => engine_dir(name)
@@ -895,3 +958,7 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "install_tests.rs"]
+mod uv_tests;

@@ -7,6 +7,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import EnginePanel from "./engine-panel.svelte";
   import InstallDialog from "./install-dialog.svelte";
+  import UvNotice from "./uv-notice.svelte";
   import { Button } from "#lib/components/ui/button/index.js";
   import { installStore } from "#lib/stores/install-store.svelte";
   import {
@@ -31,7 +32,7 @@
   } = $props();
 
   let filter = $state<"all" | "cloud" | "local">("all");
-  const filters = ["all", "cloud", "local"] as const;
+  const filters = ["all", "local", "cloud"] as const;
   const visibleEntries = $derived(
     ALL_SETUP_ENTRIES.filter((entry) => filter === "all" || entry.kind === filter)
   );
@@ -133,6 +134,8 @@
       <p class="text-muted-foreground max-w-2xl text-sm">{$_("engines.dashboard.description")}</p>
     </div>
   </header>
+
+  <UvNotice />
 
   <div class="engine-table-wrapper settings-card bg-card rounded-lg border">
     <div class="flex flex-wrap items-center justify-between gap-3 pb-3">

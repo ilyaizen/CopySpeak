@@ -37,6 +37,12 @@ if ($existing -and -not $Force) {
     exit 0
 }
 
+$uvDirs = @(
+    (Join-Path $env:USERPROFILE ".local\bin"),
+    (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links"),
+    (Join-Path $env:LOCALAPPDATA "Programs\uv")
+)
+
 $winget = Get-Command winget -ErrorAction SilentlyContinue
 if ($winget) {
     Write-Host "  Installing uv via winget..." -ForegroundColor Gray
@@ -47,9 +53,15 @@ if ($winget) {
     $code = $LASTEXITCODE
     $ErrorActionPreference = $prevEAP
     if ($code -eq 0 -or $code -eq -1978335189) {
-        Write-Host "  uv installed via winget." -ForegroundColor Green
-        Write-Host "  Restart your terminal so uv is on PATH, then run an engine installer." -ForegroundColor Yellow
-        exit 0
+        $onDisk = $uvDirs | Where-Object { Test-Path (Join-Path $_ "uv.exe") }
+        if ($onDisk) {
+            Write-Host "  uv installed via winget." -ForegroundColor Green
+            Write-Host "  Restart your terminal so uv is on PATH, then run an engine installer." -ForegroundColor Yellow
+            exit 0
+        }
+        Write-Host "  [ERROR] winget reported success, but uv.exe was not found on disk." -ForegroundColor Red
+        Write-Host "  Install uv manually from https://docs.astral.sh/uv/ and retry." -ForegroundColor Gray
+        exit 1
     }
     Write-Host "  winget install failed (code $code); falling back to official script." -ForegroundColor Yellow
 }
@@ -62,7 +74,7 @@ $check = Get-Command uv -ErrorAction SilentlyContinue
 if (-not $check) {
     # The Astral script can fail (network, blocked download, policy). Restart
     # alone does not fix that, so the run must fail and say so.
-    foreach ($dir in @((Join-Path $env:USERPROFILE ".local\bin"), (Join-Path $env:LOCALAPPDATA "Programs\uv"))) {
+    foreach ($dir in $uvDirs) {
         if ((Test-Path (Join-Path $dir "uv.exe")) -and ($env:PATH -notlike "*$dir*")) {
             $env:PATH = "$dir;$env:PATH"
         }

@@ -15,6 +15,7 @@ beforeEach(async () => {
   invokeMock.mockReset();
   invokeMock.mockImplementation(async (command: string) => {
     if (command === "engine_runtime_status") return { installed: false, provider: null };
+    if (command === "engine_status") return { installed: true, voices: [] };
     if (command === "test_tts_engine_config") return { success: true, message: "ok" };
     throw new Error(`Unexpected command: ${command}`);
   });
@@ -37,7 +38,12 @@ describe("engine configuration dashboard", () => {
     expect(view.getAllByRole("row")).toHaveLength(LOCAL_ENGINES.length + 1);
     await fireEvent.click(view.getByRole("button", { name: "Cloud" }));
     expect(view.getAllByRole("row")).toHaveLength(CLOUD_ENGINES.length + 1);
-    expect(invokeMock.mock.calls.every(([cmd]) => cmd === "engine_runtime_status")).toBe(true);
+    expect(
+      invokeMock.mock.calls.every(
+        ([cmd, args]) =>
+          cmd === "engine_runtime_status" || (cmd === "engine_status" && args?.engine === "uv")
+      )
+    ).toBe(true);
   });
 
   it("masks keys, gives every field a unique ID, and uses environment sentinels", async () => {

@@ -120,7 +120,7 @@
     lastAction = "install";
     toasted = false;
     confirmingUninstall = false;
-    await installStore.start(engineId, ids);
+    if (!(await installStore.start(engineId, ids))) return;
     try {
       await invoke("install_engine", {
         engine: engineId,
@@ -129,6 +129,7 @@
       });
     } catch (e) {
       console.error("install_engine failed:", e);
+      installStore.fail(engineId, `[ERROR] install did not start: ${String(e)}`);
       toast.error($_("engines.installFailed", { values: { engine: engineId } }));
     }
   }
@@ -137,11 +138,12 @@
     lastAction = "uninstall";
     toasted = false;
     confirmingUninstall = false;
-    await installStore.start(engineId, []);
+    if (!(await installStore.start(engineId, []))) return;
     try {
       await invoke("uninstall_engine", { engine: engineId });
     } catch (e) {
       console.error("uninstall_engine failed:", e);
+      installStore.fail(engineId, "[ERROR] uninstall did not start: " + String(e));
       toast.error($_("engines.uninstallFailed", { values: { engine: engineId } }));
     }
   }

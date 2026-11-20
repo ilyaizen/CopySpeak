@@ -52,10 +52,10 @@ chosen per profile — they are not set on the Engine page.
 ## Local engines (uv-based installers)
 
 All local engines are managed by [`uv`](https://docs.astral.sh/uv/). The
-**Install** button on each local engine tab opens a terminal window (PowerShell
-on Windows, a shell script on Linux) that runs the matching installer
+**Install** button on each local engine tab opens the install dialog and streams the installer log (PowerShell
+on Windows, a shell script on Linux). The dialog runs the matching installer
 automatically — every installer ships as `.ps1` and `.sh`. If `uv` is missing,
-the Engine page shows an **Install uv** button first.
+the Engines page shows a notice with an **Install uv** button. The notice hides once uv is found.
 
 Engines install into `%LOCALAPPDATA%\CopySpeech\engines\<engine>`. Each installer:
 

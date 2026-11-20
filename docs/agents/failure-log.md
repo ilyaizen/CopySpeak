@@ -107,6 +107,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Serialize local model loads, streams, previews, and one-shot tests; retire idle daemons before starting another process.
 - Bound each installer download with `-TimeoutSec`; PowerShell waits forever by default, and the install dialog waits for `done`.
 - Make `install-uv.ps1` exit 1 when `uv.exe` is missing after the Astral script; exit 0 hid failed uv installs behind a "restart your terminal" message.
+- Probe uv in the known folders, then each PATH folder. A folder list alone misses Scoop and pip installs.
 
 ## Browser companion
 
