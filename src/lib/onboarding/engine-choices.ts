@@ -39,6 +39,27 @@ export const ENGINE_CHOICES: EngineChoice[] = [
     detailKey: "onboarding.engines.tinyvoca.detail"
   },
   {
+    id: "kale",
+    name: "Kale",
+    keyless: true,
+    installer: "kale",
+    installVoices: [
+      "Kenzie",
+      "Simone",
+      "Amy",
+      "Frankie",
+      "Darlene",
+      "Owen",
+      "Toby",
+      "Jack",
+      "Earl",
+      "Magnus"
+    ],
+    // Windows until the .sh twin gets a clean-install pass on macOS/Linux.
+    platforms: ["windows"],
+    detailKey: "onboarding.engines.kale.detail"
+  },
+  {
     id: "kokoro",
     name: "Kokoro",
     keyless: true,

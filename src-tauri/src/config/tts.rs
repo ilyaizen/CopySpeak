@@ -30,6 +30,8 @@ pub enum TtsEngine {
     // engine id, and the installer id. Plain lowercase gave "tinyvoca".
     #[serde(rename = "tiny-voca")]
     TinyVoca,
+    // Lowercase already gives "kale", so no rename is needed.
+    Kale,
 }
 
 impl Default for TtsEngine {
@@ -716,6 +718,13 @@ pub struct PocketEngineOptions {
 #[serde(default)]
 pub struct TinyVocaEngineOptions {}
 
+/// kale has no tuning knobs of its own: voice and speed come from the
+/// profile. It runs on CPU only (ONNX Runtime, int8 graph, about 7.5M
+/// parameters), so there is no device choice either.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct KaleEngineOptions {}
+
 /// Engine-specific, non-secret synthesis knobs carried by a voice profile.
 #[derive(Debug, Clone, PartialEq)]
 pub enum ProfileEngineOptions {
@@ -736,6 +745,7 @@ pub enum ProfileEngineOptions {
     Kokoro(KokoroEngineOptions),
     Pocket(PocketEngineOptions),
     TinyVoca(TinyVocaEngineOptions),
+    Kale(KaleEngineOptions),
     /// Untagged legacy bag captured at load; resolved during migration.
     Legacy(serde_json::Map<String, serde_json::Value>),
 }
@@ -772,6 +782,7 @@ impl ProfileEngineOptions {
                 | (Self::Kokoro(_), TtsEngine::Kokoro)
                 | (Self::Pocket(_), TtsEngine::Pocket)
                 | (Self::TinyVoca(_), TtsEngine::TinyVoca)
+                | (Self::Kale(_), TtsEngine::Kale)
         )
     }
 
@@ -819,6 +830,7 @@ impl ProfileEngineOptions {
             TtsEngine::TinyVoca => {
                 Self::TinyVoca(serde_json::from_value(value).unwrap_or_default())
             }
+            TtsEngine::Kale => Self::Kale(serde_json::from_value(value).unwrap_or_default()),
         }
     }
 
@@ -952,6 +964,7 @@ impl Serialize for ProfileEngineOptions {
             Self::Kokoro(o) => ("kokoro", serde_json::to_value(o)),
             Self::Pocket(o) => ("pocket", serde_json::to_value(o)),
             Self::TinyVoca(o) => ("tiny-voca", serde_json::to_value(o)),
+            Self::Kale(o) => ("kale", serde_json::to_value(o)),
             // Legacy bags serialize back as their raw untagged object.
             Self::Legacy(map) => {
                 return serde_json::Value::Object(map.clone()).serialize(serializer);
@@ -1004,6 +1017,7 @@ impl<'de> Deserialize<'de> for ProfileEngineOptions {
             Some("kokoro") => Ok(Self::from_engine_map(&TtsEngine::Kokoro, map)),
             Some("pocket") => Ok(Self::from_engine_map(&TtsEngine::Pocket, map)),
             Some("tiny-voca") => Ok(Self::from_engine_map(&TtsEngine::TinyVoca, map)),
+            Some("kale") => Ok(Self::from_engine_map(&TtsEngine::Kale, map)),
             _ => Ok(Self::Legacy(map)),
         }
     }
@@ -1643,7 +1657,8 @@ pub fn migrate_tts_config(mut tts: TtsConfig) -> TtsConfig {
             | TtsEngine::Qwen
             | TtsEngine::Piper
             | TtsEngine::Kokoro
-            | TtsEngine::Pocket => String::new(),
+            | TtsEngine::Pocket
+            | TtsEngine::Kale => String::new(),
             TtsEngine::TinyVoca => String::new(),
         };
 
@@ -1829,7 +1844,8 @@ impl TtsConfig {
             | TtsEngine::Qwen
             | TtsEngine::Piper
             | TtsEngine::Kokoro
-            | TtsEngine::Pocket => {}
+            | TtsEngine::Pocket
+            | TtsEngine::Kale => {}
             TtsEngine::TinyVoca => {}
         }
 

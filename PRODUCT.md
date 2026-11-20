@@ -29,7 +29,7 @@ The double-copy trigger. Copy any text twice within 1.5 s and it speaks — no h
 
 ## Capabilities and Constraints
 
-- Engines: local — tiny-voca (default, English text only), Kokoro, Piper, Kitten, Qwen3-TTS, Pocket, generic CLI; cloud — OpenAI, ElevenLabs, Cartesia, Google, Azure, generic HTTP. New engines are judged by TTFA and VRAM footprint first. Chatterbox was dropped 2026-10-20; do not reintroduce it.
+- Engines: local — tiny-voca (default, English text only), Kale (English text only), Kokoro, Piper, Kitten, Qwen3-TTS, Pocket, generic CLI; cloud — OpenAI, ElevenLabs, Cartesia, Google, Azure, generic HTTP. New engines are judged by TTFA and VRAM footprint first. Chatterbox was dropped 2026-10-20; do not reintroduce it.
 - Streaming playback starts after ~150 ms of buffering; Stop aborts in-flight synthesis.
 - Speed 0.25×–4×, pitch 0.5×–2×, volume; output device selection; MP3/OGG/FLAC export; per-app audio ducking on Windows.
 - Local engine daemons exit after idle (default 10 min) to free RAM/VRAM.

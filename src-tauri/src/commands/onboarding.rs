@@ -23,6 +23,7 @@ fn engine_display_name(engine: &TtsEngine) -> String {
         TtsEngine::Kokoro => "Kokoro".into(),
         TtsEngine::Pocket => "Pocket".into(),
         TtsEngine::TinyVoca => "tiny-voca".into(),
+        TtsEngine::Kale => "kale".into(),
         TtsEngine::OpenAI => "OpenAI".into(),
         TtsEngine::ElevenLabs => "ElevenLabs".into(),
         TtsEngine::Cartesia => "Cartesia".into(),
@@ -46,6 +47,7 @@ fn engine_is_keyless(engine: &TtsEngine) -> bool {
             | TtsEngine::Kokoro
             | TtsEngine::Pocket
             | TtsEngine::TinyVoca
+            | TtsEngine::Kale
     )
 }
 

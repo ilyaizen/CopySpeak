@@ -166,6 +166,24 @@ pub(crate) fn first_class_local_cli(engine: &TtsEngine) -> Option<(String, Vec<S
                 "{speed}",
             ],
         ),
+        TtsEngine::Kale => (
+            "uv",
+            vec![
+                "run",
+                "--project",
+                "{engine_dir}/kale",
+                "python",
+                "{engine_dir}/kale/scripts/copyspeech-kale.py",
+                "--text-file",
+                "{input}",
+                "--voice",
+                "{voice}",
+                "--output",
+                "{output}",
+                "--speed",
+                "{speed}",
+            ],
+        ),
         _ => return None,
     };
     Some((cmd.into(), args.into_iter().map(String::from).collect()))
@@ -183,7 +201,8 @@ pub(crate) fn create_backend(active: &TtsEngine, tts_config: &TtsConfig) -> Box<
         | TtsEngine::Piper
         | TtsEngine::Kokoro
         | TtsEngine::Pocket
-        | TtsEngine::TinyVoca => {
+        | TtsEngine::TinyVoca
+        | TtsEngine::Kale => {
             // Command/args are fixed by the installer wrapper contract.
             let (command, args) = first_class_local_cli(active).unwrap();
             Box::new(CliTtsBackend::new(command, args))
@@ -240,7 +259,8 @@ pub(crate) fn create_backend_from_effective(
         | TtsEngine::Piper
         | TtsEngine::Kokoro
         | TtsEngine::Pocket
-        | TtsEngine::TinyVoca => {
+        | TtsEngine::TinyVoca
+        | TtsEngine::Kale => {
             // Voice comes from eff.voice (profile-owned); CLI is fixed.
             let (command, args) = first_class_local_cli(&eff.engine).unwrap();
             let mut backend = CliTtsBackend::new(command, args);
@@ -447,7 +467,8 @@ pub(crate) fn voice_for_backend(active: &TtsEngine, tts_config: &TtsConfig) -> S
         | TtsEngine::Qwen
         | TtsEngine::Piper
         | TtsEngine::Kokoro
-        | TtsEngine::Pocket => String::new(),
+        | TtsEngine::Pocket
+        | TtsEngine::Kale => String::new(),
         TtsEngine::TinyVoca => String::new(),
     }
 }
@@ -463,6 +484,7 @@ pub(crate) fn engine_identifier(active: &TtsEngine) -> String {
         TtsEngine::Kokoro => "kokoro".to_string(),
         TtsEngine::Pocket => "pocket".to_string(),
         TtsEngine::TinyVoca => "tiny-voca".to_string(),
+        TtsEngine::Kale => "kale".to_string(),
         TtsEngine::OpenAI => "openai".to_string(),
         TtsEngine::ElevenLabs => "elevenlabs".to_string(),
         TtsEngine::Cartesia => "cartesia".to_string(),
@@ -577,6 +599,8 @@ pub(crate) fn voice_display_name(
         TtsEngine::Pocket => voice_id.to_lowercase(),
         // tiny-voca ids are F2 and M2; lowercase them like the other bare-name engines.
         TtsEngine::TinyVoca => voice_id.to_lowercase(),
+        // kale voice ids are the public names (Kenzie, Amy, ...).
+        TtsEngine::Kale => voice_id.to_lowercase(),
         TtsEngine::Http | TtsEngine::Google | TtsEngine::Microsoft => {
             slugify_filename_part(voice_id)
         }
@@ -740,6 +764,7 @@ pub(crate) fn engine_str(active: &TtsEngine) -> &'static str {
         TtsEngine::Kokoro => "kokoro",
         TtsEngine::Pocket => "pocket",
         TtsEngine::TinyVoca => "tiny-voca",
+        TtsEngine::Kale => "kale",
     }
 }
 

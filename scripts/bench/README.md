@@ -1,8 +1,8 @@
 # Local-engine bench (Stage 0)
 
-Measures TTFA, RAM, and VRAM for CopySpeech's five local daemon engines
-(Kitten, Qwen, Piper, Kokoro, Pocket) by speaking the daemon protocol v2
-directly — no app code runs, no product code changes.
+Measures TTFA, RAM, and VRAM for CopySpeech's seven local daemon engines
+(Kitten, Qwen, Piper, Kokoro, Pocket, tiny-voca, Kale) by speaking the daemon
+protocol v2 directly — no app code runs, no product code changes.
 
 ## Definitions
 
@@ -38,7 +38,8 @@ Outputs land in `docs_internal/egm/baseline-<timestamp>/` (git-ignored):
   `src-tauri/src/commands/tts/helpers.rs`), with the default-profile shape:
   Kitten sends no `--model`/`--speed` (wrapper defaults: nano-0.8, Rosie),
   Qwen sends `--model Qwen/Qwen3-TTS-12Hz-0.6B-CustomVoice` + `Aiden`,
-  Piper `en_US-amy-medium`, Kokoro `af_heart`, Pocket `alba`.
+  Piper `en_US-amy-medium`, Kokoro `af_heart`, Pocket `alba`, tiny-voca `M2`,
+  Kale `Kenzie`.
 - `--device cuda` mirrors the app's GPU toggle. The `providers:` line from the
   wrapper's stderr is captured per run; a CUDA request whose providers line
   lacks `CUDAExecutionProvider` is flagged `silent_cpu_fallback` in the

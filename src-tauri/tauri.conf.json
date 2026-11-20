@@ -1,6 +1,6 @@
 {
   "productName": "CopySpeech",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "identifier": "com.copyspeech.tts",
   "build": {
     "frontendDist": "../dist",
@@ -36,7 +36,8 @@
       "../scripts/tiny-voca/*.py": "scripts/tiny-voca/",
       "../scripts/kokoro/*.py": "scripts/kokoro/",
       "../scripts/pocket/*.py": "scripts/pocket/",
-      "../scripts/qwen/*.py": "scripts/qwen/"
+      "../scripts/qwen/*.py": "scripts/qwen/",
+      "../scripts/kale/*.py": "scripts/kale/"
     },
     "windows": {
       "certificateThumbprint": null,

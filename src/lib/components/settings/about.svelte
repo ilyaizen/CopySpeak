@@ -75,6 +75,13 @@
       h: 0
     },
     {
+      name: "Kale TTS",
+      url: "https://huggingface.co/KaleComputer/kale-tts-1-nano",
+      mark: "",
+      w: 0,
+      h: 0
+    },
+    {
       name: "Kitten TTS",
       url: "https://github.com/KittenML/KittenTTS",
       mark: "kitten",

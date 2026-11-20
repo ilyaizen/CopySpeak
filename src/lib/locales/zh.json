@@ -357,6 +357,10 @@
       "title": "tiny-voca",
       "description": "免费的本地英文 TTS，4.5M 参数，仅使用 CPU，两种声音。只能朗读英文文本。"
     },
+    "kale": {
+      "title": "Kale TTS",
+      "description": "免费的本地英文 TTS，7.5M 参数，仅使用 CPU，十种美音和英音声音。只能朗读英文文本。"
+    },
     "cartesia": {
       "title": "Cartesia",
       "description": "由 Sonic 3.6 驱动的低延迟自然 TTS。需要 API 密钥和网络连接。",
@@ -722,6 +726,9 @@
     "engines": {
       "tinyvoca": {
         "detail": "在 CPU 上即时生成英文语音。两种声音，约 45 MB，无需密钥。"
+      },
+      "kale": {
+        "detail": "在 CPU 上快速生成英文语音。十种声音，约 29 MB，无需密钥。"
       },
       "kokoro": {
         "detail": "自然语音，完全离线。一次性下载约 335 MB。"

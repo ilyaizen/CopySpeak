@@ -6,7 +6,7 @@
 # local engine leaves at most two traces, so one script covers all of them:
 #
 #   * a uv-managed project dir under $XDG_DATA_HOME/CopySpeech/engines/<name>
-#     (kitten, qwen, piper, kokoro, pocket)
+#     (kitten, qwen, piper, kokoro, pocket, kale)
 #   * a `uv tool` install putting a binary on PATH (edge-tts; the Linux
 #     installers use project installs, so this only matters for engines
 #     installed by hand)
@@ -34,7 +34,7 @@ while (( $# > 0 )); do
         --engine=*) ENGINE="${1#*=}"; shift ;;
         --keep-models) KEEP_MODELS=1; shift ;;
         -h|--help)
-            echo "Usage: ./scripts/uninstall-engine.sh --engine <kitten|qwen|piper|kokoro|pocket|edge> [--keep-models]"
+            echo "Usage: ./scripts/uninstall-engine.sh --engine <kitten|qwen|piper|kokoro|pocket|kale|edge> [--keep-models]"
             exit 0
             ;;
         *) echo "Unknown option: $1" >&2; exit 2 ;;
@@ -49,6 +49,7 @@ case "$ENGINE" in
     piper)  TITLE="Piper TTS"; DIR="piper";  TOOL="" ;;
     kokoro) TITLE="Kokoro TTS"; DIR="kokoro"; TOOL="kokoro-tts" ;;
     pocket) TITLE="Pocket TTS"; DIR="";      TOOL="pocket-tts" ;;
+    kale)   TITLE="Kale TTS";  DIR="kale";   TOOL="" ;;
     edge)   TITLE="Edge-TTS";  DIR="";      TOOL="edge-tts" ;;
     *) echo "Unknown engine: $ENGINE" >&2; exit 2 ;;
 esac

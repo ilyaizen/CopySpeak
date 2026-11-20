@@ -119,7 +119,10 @@
 │   │   └── copyspeech-kitten.py
 │   ├── kokoro
 │   │   └── copyspeech-kokoro.py
-│   ├── lib
+│   ├── kale
+│   │   ├── copyspeech-kale.py
+│   │   └── fetch-weights.py
+│   ├── lib
 │   │   ├── copyspeech-engine-install.ps1
 │   │   └── copyspeech-engine-install.sh
 │   ├── piper
@@ -139,6 +142,8 @@
 │   ├── debug-beep-fuzz.ts
 │   ├── fix-ports.ps1
 │   ├── generate-i18n-types.js
+│   ├── install-kale.ps1
+│   ├── install-kale.sh
 │   ├── install-kittentts.ps1
 │   ├── install-kittentts.sh
 │   ├── install-kokoro.ps1

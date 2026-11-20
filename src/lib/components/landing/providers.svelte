@@ -64,6 +64,7 @@
 
   const localEngines: Provider[] = [
     { name: "tiny-voca", href: "https://huggingface.co/n4ze3m/tiny-voca" },
+    { name: "Kale", href: "https://huggingface.co/KaleComputer/kale-tts-1-nano" },
     {
       name: "KittenTTS",
       href: "https://github.com/KittenML/KittenTTS",

@@ -193,6 +193,17 @@ export const LOCAL_ENGINES: EngineSetupEntry[] = [
     downloadSize: "~45 MB, fetched at install",
     credential: "none",
     docsUrl: "https://github.com/n4ze3m/tiny-voca"
+  },
+  {
+    id: "kale",
+    menuLabel: "Kale",
+    kind: "local",
+    installerId: "kale",
+    // Ten voices (US and British), all served by the one 15 MB int8 ONNX model.
+    voiceMode: "shared",
+    downloadSize: "~29 MB incl. G2P data, fetched at install",
+    credential: "none",
+    docsUrl: "https://huggingface.co/KaleComputer/kale-tts-1-nano"
   }
 ];
 

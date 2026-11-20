@@ -148,7 +148,7 @@ it("renders centered acknowledgment marquees with accessible provider links", as
   expect(rows[1].getAttribute("aria-hidden")).toBe("true");
   expect(rows[3].getAttribute("aria-hidden")).toBe("true");
   expect(rows[1].querySelectorAll('a[tabindex="-1"]')).toHaveLength(9);
-  expect(rows[3].querySelectorAll('a[tabindex="-1"]')).toHaveLength(6);
+  expect(rows[3].querySelectorAll('a[tabindex="-1"]')).toHaveLength(7);
   expect(rows[0].querySelector('[aria-label="Edge-TTS"]')).not.toBeNull();
   const clone = rows[3].querySelector("a");
   if (!(clone instanceof HTMLAnchorElement)) throw new Error("Cloned provider link missing");

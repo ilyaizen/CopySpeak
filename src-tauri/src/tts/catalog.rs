@@ -366,6 +366,31 @@ pub fn list_engines() -> Vec<EngineCatalogEntry> {
             ],
         },
         EngineCatalogEntry {
+            engine: TtsEngine::Kale,
+            label: "Kale TTS".into(),
+            description: "Free local English TTS, 7.5M parameters, CPU only. Ten voices, US and British. English text only.".into(),
+            docs_url: "https://huggingface.co/KaleComputer/kale-tts-1-nano".into(),
+            supports_voice_refresh: false,
+            supports_pitch: false,
+            supports_captions: true,
+            supports_bracket_emotes: false,
+            options: vec![],
+            // Public voice names from the model card; the wrapper resolves
+            // them case-insensitively to the internal ids.
+            voices: vec![
+                voice("Kenzie", "Kenzie", Some("en-US"), Some("Esports hype woman"), Some("female")),
+                voice("Simone", "Simone", Some("en-US"), Some("Deep and confident woman"), Some("female")),
+                voice("Amy", "Amy", Some("en-GB"), Some("British woman, crisp news-style"), Some("female")),
+                voice("Frankie", "Frankie", Some("en-US"), Some("Hard-boiled detective's partner"), Some("female")),
+                voice("Darlene", "Darlene", Some("en-US"), Some("Rough low-voiced old trucker woman"), Some("female")),
+                voice("Owen", "Owen", Some("en-US"), Some("Bright young host"), Some("male")),
+                voice("Toby", "Toby", Some("en-US"), Some("Mischievous prankster"), Some("male")),
+                voice("Jack", "Jack", Some("en-GB"), Some("British man, crisp news-style"), Some("male")),
+                voice("Earl", "Earl", Some("en-US"), Some("African American jazz granddad"), Some("male")),
+                voice("Magnus", "Magnus", Some("en-US"), Some("Deep dramatic trailer narrator"), Some("male")),
+            ],
+        },
+        EngineCatalogEntry {
             engine: TtsEngine::Pocket,
             label: "Pocket".into(),
             description:
@@ -1496,6 +1521,7 @@ mod tests {
             TtsEngine::Kokoro,
             TtsEngine::Pocket,
             TtsEngine::TinyVoca,
+            TtsEngine::Kale,
         ] {
             assert_eq!(
                 entries
@@ -1505,7 +1531,7 @@ mod tests {
                 1
             );
         }
-        assert_eq!(entries.len(), 17);
+        assert_eq!(entries.len(), 18);
     }
 
     #[test]
@@ -1524,7 +1550,7 @@ mod tests {
                 "{id}: first-class local = {first_class}, DAEMON_ENGINES lists it = {listed}"
             );
         }
-        assert_eq!(crate::tts::local_daemon::DAEMON_ENGINES.len(), 6);
+        assert_eq!(crate::tts::local_daemon::DAEMON_ENGINES.len(), 7);
     }
 
     #[test]
@@ -1550,6 +1576,7 @@ mod tests {
                 TtsEngine::Piper,
                 TtsEngine::Kokoro,
                 TtsEngine::TinyVoca,
+                TtsEngine::Kale,
                 TtsEngine::ElevenLabs,
                 TtsEngine::Fish,
                 TtsEngine::Cartesia,

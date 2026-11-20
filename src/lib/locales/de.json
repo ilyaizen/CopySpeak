@@ -357,6 +357,10 @@
       "title": "tiny-voca",
       "description": "Kostenlose lokale englische TTS. 4,5 Mio. Parameter, nur CPU, zwei Stimmen. Liest nur englischen Text."
     },
+    "kale": {
+      "title": "Kale TTS",
+      "description": "Kostenlose lokale englische TTS. 7,5 Mio. Parameter, nur CPU, zehn US- und britische Stimmen. Liest nur englischen Text."
+    },
     "cartesia": {
       "title": "Cartesia",
       "description": "Natürliche TTS mit geringer Latenz auf Basis von Sonic 3.6. Erfordert API-Schlüssel und Internetverbindung.",
@@ -722,6 +726,9 @@
     "engines": {
       "tinyvoca": {
         "detail": "Sofortige englische Stimmen auf der CPU. Zwei Stimmen, etwa 45 MB, kein Schlüssel."
+      },
+      "kale": {
+        "detail": "Schnelle englische Stimmen auf der CPU. Zehn Stimmen, etwa 29 MB, kein Schlüssel."
       },
       "kokoro": {
         "detail": "Natürliche Stimmen, komplett offline. Einmaliger Download von ca. 335 MB."

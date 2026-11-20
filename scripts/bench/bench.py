@@ -65,8 +65,9 @@ ENGINE_SPECS: dict[str, dict] = {
     "kokoro": {"wrapper": "scripts/copyspeech-kokoro.py", "voice": "af_heart", "model": None},
     "pocket": {"wrapper": "scripts/copyspeech-pocket.py", "voice": "alba", "model": None},
     "tiny-voca": {"wrapper": "scripts/copyspeech-tiny-voca.py", "voice": "M2", "model": None},
+    "kale": {"wrapper": "scripts/copyspeech-kale.py", "voice": "Kenzie", "model": None},
 }
-ENGINE_ORDER = ["kitten", "qwen", "piper", "kokoro", "pocket", "tiny-voca"]
+ENGINE_ORDER = ["kitten", "qwen", "piper", "kokoro", "pocket", "tiny-voca", "kale"]
 
 SENTENCE = (
     "The morning train arrived late, so Maya read forty pages of her novel "

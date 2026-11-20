@@ -23,8 +23,8 @@ CopySpeech reads your clipboard aloud. Copy the same text twice within 1.5 secon
 ## Features
 
 - **Double-copy trigger.** No hotkey needed. The tray and the Play page also start playback.
-- **15 built-in engines.** Run them locally or in the cloud. Add any CLI tool or HTTP endpoint. See [docs/engines.md](docs/engines.md).
-  - Local: tiny-voca (default, English text only), Kokoro, Piper, Kitten, Qwen3-TTS, Pocket.
+- **16 built-in engines.** Run them locally or in the cloud. Add any CLI tool or HTTP endpoint. See [docs/engines.md](docs/engines.md).
+  - Local: tiny-voca (default, English text only), Kale (English text only), Kokoro, Piper, Kitten, Qwen3-TTS, Pocket.
   - Cloud: OpenAI, ElevenLabs, Cartesia, Fish Audio, xAI, Mistral, Google Gemini, Microsoft Azure.
 - **One-click local installs.** Kokoro installs from onboarding, with optional CUDA.
 - **Live captions.** Words highlight as they play. Captions need an engine that reports timings.
@@ -37,7 +37,7 @@ CopySpeech reads your clipboard aloud. Copy the same text twice within 1.5 secon
 
 ## Install
 
-Download a build from [Releases](https://github.com/ilyaizen/CopySpeech/releases). The latest version is 0.3.2.
+Download a build from [Releases](https://github.com/ilyaizen/CopySpeech/releases). The latest version is 0.3.3.
 
 | Platform          | Asset                                                                    |
 | ----------------- | ------------------------------------------------------------------------ |

@@ -74,7 +74,8 @@
     "piper",
     "kokoro",
     "pocket",
-    "tiny-voca"
+    "tiny-voca",
+    "kale"
   ];
   const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy", "cyberpunk"];
 
@@ -125,6 +126,13 @@
       voice: "M2",
       voiceLabel: "M2",
       engineOptions: { engine: "tiny-voca" }
+    },
+    {
+      name: "Kale - Kenzie",
+      engine: "kale",
+      voice: "Kenzie",
+      voiceLabel: "Kenzie",
+      engineOptions: { engine: "kale" }
     },
     {
       name: "Qwen3-TTS - Aiden",

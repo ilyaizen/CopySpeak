@@ -73,17 +73,25 @@ const PAGE_TOAST_KEYS = [
   "toast.error.engineInstallStart"
 ];
 
-it("offers four engines in display order, tiny-voca first", () => {
+it("offers five engines in display order, tiny-voca first", () => {
   expect(ENGINE_CHOICES.map((choice) => choice.id)).toEqual([
     "tiny-voca",
+    "kale",
     "kokoro",
     "edge",
     "fish"
   ]);
 });
 
-it("shows tiny-voca on every platform", () => {
-  for (const platform of ["windows", "macos", "linux"]) {
+it("shows tiny-voca on every platform and kale on Windows only", () => {
+  expect(visibleEngineChoices("windows").map((choice) => choice.id)).toEqual([
+    "tiny-voca",
+    "kale",
+    "kokoro",
+    "edge",
+    "fish"
+  ]);
+  for (const platform of ["macos", "linux"]) {
     expect(visibleEngineChoices(platform).map((choice) => choice.id)).toEqual([
       "tiny-voca",
       "kokoro",
@@ -101,10 +109,13 @@ it("recommends tiny-voca on every platform", () => {
 
 it("gives only the local engines an installer, with tiny-voca voices M2 first", () => {
   const installable = ENGINE_CHOICES.filter((choice) => choice.installer !== null);
-  expect(installable.map((choice) => choice.id)).toEqual(["tiny-voca", "kokoro"]);
+  expect(installable.map((choice) => choice.id)).toEqual(["tiny-voca", "kale", "kokoro"]);
   const tinyVoca = ENGINE_CHOICES[0];
   expect(tinyVoca.installer).toBe("tiny-voca");
   expect(tinyVoca.installVoices[0]).toBe("M2");
+  const kale = ENGINE_CHOICES[1];
+  expect(kale.installer).toBe("kale");
+  expect(kale.installVoices[0]).toBe("Kenzie");
 });
 
 it("keeps card copy short and free of dashes", () => {

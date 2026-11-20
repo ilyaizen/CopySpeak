@@ -11,20 +11,21 @@ pitch + effect as one swappable unit.
 
 ## Engine matrix
 
-| Engine             | Type   | API key        | Offline | Live captions   | Installer                              | Setup test               |
-| ------------------ | ------ | -------------- | ------- | --------------- | -------------------------------------- | ------------------------ |
-| Cartesia (Sonic)   | cloud  | yes            | no      | yes             | —                                      | `test_tts_engine_config` |
-| ElevenLabs         | cloud  | yes            | no      | yes             | —                                      | `test_tts_engine_config` |
-| OpenAI             | cloud  | yes            | no      | no              | —                                      | `test_tts_engine_config` |
-| Google Gemini TTS  | cloud  | yes            | no      | no              | —                                      | `test_tts_engine_config` |
-| Microsoft / Azure  | cloud  | yes + endpoint | no      | no              | —                                      | `test_tts_engine_config` |
-| Kitten TTS         | local  | no             | yes     | yes             | `install-kittentts.ps1` / `.sh`        | installer smoke test     |
-| Piper (piper1-gpl) | local  | no             | yes     | yes             | `install-piper.ps1` / `.sh`            | installer smoke test     |
-| Kokoro TTS         | local  | no             | yes     | yes             | `install-kokoro.ps1` / `.sh`           | installer smoke test     |
-| Pocket TTS         | local  | no             | yes     | no              | `install-pocket.ps1` / `.sh`           | installer smoke test     |
-| tiny-voca          | local  | no             | yes     | yes (estimated) | `install-tiny-voca.ps1` (Windows only) | installer smoke test     |
-| Qwen3-TTS          | local  | no             | yes     | yes             | `install-qwen.ps1` / `.sh`             | installer smoke test     |
-| HTTP server        | either | varies         | varies  | no              | — (configure in profile)               | —                        |
+| Engine             | Type   | API key        | Offline | Live captions   | Installer                       | Setup test               |
+| ------------------ | ------ | -------------- | ------- | --------------- | ------------------------------- | ------------------------ |
+| Cartesia (Sonic)   | cloud  | yes            | no      | yes             | —                               | `test_tts_engine_config` |
+| ElevenLabs         | cloud  | yes            | no      | yes             | —                               | `test_tts_engine_config` |
+| OpenAI             | cloud  | yes            | no      | no              | —                               | `test_tts_engine_config` |
+| Google Gemini TTS  | cloud  | yes            | no      | no              | —                               | `test_tts_engine_config` |
+| Microsoft / Azure  | cloud  | yes + endpoint | no      | no              | —                               | `test_tts_engine_config` |
+| Kitten TTS         | local  | no             | yes     | yes             | `install-kittentts.ps1` / `.sh` | installer smoke test     |
+| Piper (piper1-gpl) | local  | no             | yes     | yes             | `install-piper.ps1` / `.sh`     | installer smoke test     |
+| Kokoro TTS         | local  | no             | yes     | yes             | `install-kokoro.ps1` / `.sh`    | installer smoke test     |
+| Pocket TTS         | local  | no             | yes     | no              | `install-pocket.ps1` / `.sh`    | installer smoke test     |
+| tiny-voca          | local  | no             | yes     | yes (estimated) | `install-tiny-voca.ps1` / `.sh` | installer smoke test     |
+| Kale TTS           | local  | no             | yes     | yes (estimated) | `install-kale.ps1` / `.sh`      | installer smoke test     |
+| Qwen3-TTS          | local  | no             | yes     | yes             | `install-qwen.ps1` / `.sh`      | installer smoke test     |
+| HTTP server        | either | varies         | varies  | no              | — (configure in profile)        | —                        |
 
 ## Cloud engines
 
@@ -67,14 +68,15 @@ Engines install into `%LOCALAPPDATA%\CopySpeech\engines\<engine>`. Each installe
 Common flags: `-Force` (reinstall), `-SmokeTest` (synthesize one clip),
 `-Cuda` (GPU acceleration, see below).
 
-| Engine     | Installer               | Size        | Notes                                                                        |
-| ---------- | ----------------------- | ----------- | ---------------------------------------------------------------------------- |
-| Kitten TTS | `install-kittentts.ps1` | 25-80MB     | 8 voices, CPU ONNX. Model downloads on first use.                            |
-| Piper      | `install-piper.ps1`     | ~60MB/voice | Drop `.onnx` + `.onnx.json` into `engines/piper/voices/`.                    |
-| Kokoro TTS | `install-kokoro.ps1`    | ~335MB      | Natural voices, broad accent coverage. Shared model.                         |
-| Pocket TTS | `install-pocket.ps1`    | 100M params | Kyutai Pocket; 14 voices in 6 languages. CPU-first.                          |
-| tiny-voca  | `install-tiny-voca.ps1` | ~45MB       | English text only; 2 voices (F2, M2); CPU-only ONNX. Captions are estimated. |
-| Qwen3-TTS  | `install-qwen.ps1`      | —           | Multilingual; 9 built-in voices; model downloads on first use.               |
+| Engine     | Installer               | Size        | Notes                                                                                                                                                                                          |
+| ---------- | ----------------------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Kitten TTS | `install-kittentts.ps1` | 25-80MB     | 8 voices, CPU ONNX. Model downloads on first use.                                                                                                                                              |
+| Piper      | `install-piper.ps1`     | ~60MB/voice | Drop `.onnx` + `.onnx.json` into `engines/piper/voices/`.                                                                                                                                      |
+| Kokoro TTS | `install-kokoro.ps1`    | ~335MB      | Natural voices, broad accent coverage. Shared model.                                                                                                                                           |
+| Pocket TTS | `install-pocket.ps1`    | 100M params | Kyutai Pocket; 14 voices in 6 languages. CPU-first.                                                                                                                                            |
+| tiny-voca  | `install-tiny-voca.ps1` | ~45MB       | English text only; 2 voices (F2, M2); CPU-only ONNX. Captions are estimated.                                                                                                                   |
+| Kale TTS   | `install-kale.ps1`      | ~29MB       | English text only; 10 voices (US + British); 7.5M params, CPU-only int8 ONNX. Captions are estimated. Voices are synthetic designs (Maya-1 policy): never present output as a human recording. |
+| Qwen3-TTS  | `install-qwen.ps1`      | —           | Multilingual; 9 built-in voices; model downloads on first use.                                                                                                                                 |
 
 (Edge-TTS is uv-managed too but has no installer script — install its CLI
 with `uv tool install edge-tts`.)

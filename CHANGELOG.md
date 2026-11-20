@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Kale TTS engine** (`kale-tts-1-nano` from KaleComputer) – a new local English engine with ten US and British voices. It runs on the CPU only, uses about 29 MB of files, and needs no API key. Word captions are estimated from each sentence's real audio duration. The voices are synthetic designs trained on Maya-1 output (Maya-1 use policy): never present their output as a recording of a human being.
+
+## [0.3.3] - 2026-11-20
+
+### Added
+
 - **CopySpeech plugin for Claude Code** (`copyspeech-claude/`) – reads Claude's replies aloud through the running app, in the Claude desktop app and in the terminal. Install it with `/plugin install copyspeech --marketplace ilyaizen/CopySpeech`.
   - A **Read aloud** button at the bottom right of every reply, with the CopySpeech mark inside it in the desktop app (**▶ Read aloud** in the terminal). While that reply plays, **Pause**/**Resume** and **Stop** take its place. Inline code is read; fenced code blocks are not.
   - Live captions inside the reply: an accent chip with inverted text on the spoken word. The reply being read draws as plain text from start to stop, so its font changes only then. Turn captions off in the options.

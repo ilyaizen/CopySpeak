@@ -56,6 +56,7 @@ fn installer_script_for(engine: &str) -> Result<&'static str, String> {
             "kokoro" | "kokoro-tts" => Ok("install-kokoro.ps1"),
             "pocket" | "pocket-tts" => Ok("install-pocket.ps1"),
             "tiny-voca" => Ok("install-tiny-voca.ps1"),
+            "kale" => Ok("install-kale.ps1"),
             other => Err(format!("unknown engine installer: {other}")),
         }
     }
@@ -69,6 +70,7 @@ fn installer_script_for(engine: &str) -> Result<&'static str, String> {
             "kokoro" | "kokoro-tts" => Ok("install-kokoro.sh"),
             "pocket" | "pocket-tts" => Ok("install-pocket.sh"),
             "tiny-voca" => Ok("install-tiny-voca.sh"),
+            "kale" => Ok("install-kale.sh"),
             other => Err(format!("unknown engine installer: {other}")),
         }
     }
@@ -466,6 +468,7 @@ fn canonical_engine(engine: &str) -> Option<&'static str> {
         "piper" => Some("piper"),
         "kokoro" | "kokoro-tts" => Some("kokoro"),
         "tiny-voca" => Some("tiny-voca"),
+        "kale" => Some("kale"),
         "edge" | "edge-tts" => Some("edge"),
         "pocket" | "pocket-tts" => Some("pocket"),
         _ => None,
@@ -652,7 +655,7 @@ pub fn engine_status(engine: String) -> Result<EngineStatus, String> {
         "uv" => on_path("uv"),
         // uv projects: the installer writes the manifest last, so its presence
         // means the package install and wrapper copy both succeeded.
-        "kitten" | "qwen" | "piper" | "pocket" | "tiny-voca" => engine_dir(name)
+        "kitten" | "qwen" | "piper" | "pocket" | "tiny-voca" | "kale" => engine_dir(name)
             .map(|d| d.join("manifest.json").exists() && d.join("pyproject.toml").exists())
             .unwrap_or(false),
         // Kokoro refuses to synthesize without these two model files, which the
@@ -856,6 +859,7 @@ mod tests {
             ("kokoro", "install-kokoro.ps1"),
             ("pocket", "install-pocket.ps1"),
             ("tiny-voca", "install-tiny-voca.ps1"),
+            ("kale", "install-kale.ps1"),
         ];
 
         for (engine, script) in scripts {

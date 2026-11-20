@@ -335,6 +335,16 @@ mod tests {
     }
 
     #[test]
+    fn kale_engine_id_matches_the_frontend_union() {
+        // Plain lowercase already gives "kale", which is what the frontend
+        // union, preset, and installer id all say.
+        let json = serde_json::to_string(&TtsEngine::Kale).unwrap();
+        assert_eq!(json, "\"kale\"");
+        let parsed: TtsEngine = serde_json::from_str("\"kale\"").unwrap();
+        assert_eq!(parsed, TtsEngine::Kale);
+    }
+
+    #[test]
     fn test_migrate_add_kokoro_profile_v6_adds_and_is_idempotent() {
         // A v5 config (no Kokoro profile) gains one; the active engine is
         // never touched by the migration.

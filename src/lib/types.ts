@@ -62,7 +62,8 @@ export type TtsEngine =
   | "piper"
   | "kokoro"
   | "pocket"
-  | "tiny-voca";
+  | "tiny-voca"
+  | "kale";
 
 export interface OpenAIConfig {
   api_key: string;

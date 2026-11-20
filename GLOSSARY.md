@@ -5,7 +5,7 @@ CopySpeech reads clipboard text aloud. This is the project's single ubiquitous l
 ## Language
 
 **Local engine**:
-A TTS engine that runs on-device, installed as a uv-managed project under the engines directory (Kokoro, Kitten, Piper, Pocket, Qwen, tiny-voca).
+A TTS engine that runs on-device, installed as a uv-managed project under the engines directory (Kokoro, Kitten, Piper, Pocket, Qwen, tiny-voca, Kale).
 _Avoid_: offline engine, on-device provider
 
 **Cloud engine**:

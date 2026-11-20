@@ -36,7 +36,8 @@ const ENGINES: TtsEngine[] = [
   "piper",
   "kokoro",
   "pocket",
-  "tiny-voca"
+  "tiny-voca",
+  "kale"
 ];
 
 const EFFECTS: EffectId[] = ["none", "walkie_talkie", "game_boy", "cyberpunk"];

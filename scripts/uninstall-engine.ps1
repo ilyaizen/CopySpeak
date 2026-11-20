@@ -19,7 +19,7 @@
     prerequisite that other engines (and possibly other apps) depend on.
 
 .PARAMETER Engine
-    kitten | qwen | piper | kokoro | pocket | tiny-voca | edge
+    kitten | qwen | piper | kokoro | pocket | tiny-voca | kale | edge
 
 .PARAMETER KeepModels
     Uninstall the package/binary but leave downloaded model files on disk
@@ -32,7 +32,7 @@
 
 param(
     [Parameter(Mandatory)]
-    [ValidateSet("kitten", "qwen", "piper", "kokoro", "pocket", "tiny-voca", "edge")]
+    [ValidateSet("kitten", "qwen", "piper", "kokoro", "pocket", "tiny-voca", "kale", "edge")]
     [string]$Engine,
     [switch]$KeepModels
 )
@@ -50,6 +50,7 @@ $layout = @{
     kokoro = @{ Dir = "kokoro"; Tool = "kokoro-tts";   Title = "Kokoro TTS" }
     pocket = @{ Dir = $null;    Tool = "pocket-tts";   Title = "Pocket TTS" }
     "tiny-voca" = @{ Dir = "tiny-voca"; Tool = $null;   Title = "tiny-voca" }
+    kale   = @{ Dir = "kale";   Tool = $null;          Title = "Kale TTS" }
     edge   = @{ Dir = $null;    Tool = "edge-tts";     Title = "Edge-TTS" }
 }[$Engine]
 
