@@ -111,7 +111,6 @@ pub fn rewrite_legacy_dir_prefixes(text: &str) -> String {
 mod tests {
     use super::*;
     use std::fs;
-    use std::path::Path;
 
     fn temp_base(tag: &str) -> std::path::PathBuf {
         let dir =
