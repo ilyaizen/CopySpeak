@@ -305,11 +305,17 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 ## Claude Code plugin (copyspeech-claude)
 
 - Run `plugin validate` and `plugin test` with the session's engine (`%LOCALAPPDATA%\Claude-Data\<id>\claude-code\<version>\<hash>\claude.exe`); the PATH `claude` 2.1.319 has no `ContextMenu`.
+- In a fresh worktree, copy `copyspeech-claude/.claude-plugin/types/` from a checkout where Claude Code loaded the plugin before `bun run check`: the engine writes it and git ignores it, so without it `vp check` fails with `Invalid tsconfig`.
 - Declare each helper that takes `$` as a top-level `function`, and never shadow its name with a local; otherwise the validator loses `$` and refuses the module.
 - Keep `import()` out of the module and its tests; a module that holds one does not load.
 - Run Button work through `$.clock.after(0, ...)`, never `await` it in `onPress`: a press has a 10 s budget. Keep `$.ui.scroll` direct; it only works inside the press.
 - Give a Box with `hover: { display: 'flex' }` its own `display: 'none'`; otherwise the tree is refused.
-- Paint the spoken word with Text spans and `backgroundColor`. The desktop shows `<mark>` literally, and backticks change the font. Switch to spans only at reading start and stop.
+- Keep a value that changes per word out of every atom a reply row reads: a `read` while drawing subscribes the row, so each write redraws every reader and its Svg and Buttons flicker. Keep the spoken word in a `StateFamily` member per row (`memberOf`), read only by the row being read.
+- Show captions inside the reply, never in a band above the prompt. Draw the whole reply being read as Text spans from start to stop, with a solid accent chip on the spoken word: Markdown cannot paint a background, and switching one paragraph at a time changes its font mid-reading.
 - Treat a `/speak` fetch give-up (`aborted`, `no complete answer`, fixed 30 s) as a running reading; the `/status` poll ends it.
 - Collect auto-read rows from `AssistantMessage` renders between `turn.start` and `turn.complete`; `turn.complete`'s `answer` holds only the last text block.
 - Change the plugin's own setting with `$.config.set` on the row `$.config.list()` names `<plugin>.<field>`; `$.settings` only reads.
+- Give a Button only string and `Text` children: a `Svg` or `Box` child is refused, and a surface module (`Client`) has no `Svg` either. To put an icon inside a Button, start its label with an em and an en space and paint the `Svg` over that room from an absolute Box (`left={0}`, `top={0}`, `bottom={0}`).
+- Keep an absolute Box inside its row on desktop: the desktop clips it at the row, so a negative `bottom` or `right` hides it behind the row above.
+- Draw `Svg` only on the desktop, vscode and mobile surfaces: the terminal table has no `Svg`, so guard it with `e.surface`. `"Svg" in ui` alone is true on the terminal too.
+- Load the plugin for development from the repo folder: `~/.claude/settings.json` `env` names `CLAUDE_CODE_PLUGIN_DIRS` and `CLAUDE_CODE_PLUGIN_DIR_WATCH=1` (desktop needs the watch switch). It applies to sessions started after the change. Do not also copy it into `dev-mods`: that loads two `copyspeech` plugins.

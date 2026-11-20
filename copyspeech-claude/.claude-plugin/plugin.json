@@ -1,7 +1,7 @@
 {
   "name": "copyspeech",
   "version": "0.1.0",
-  "description": "Reads Claude's replies aloud through CopySpeech, with live word captions, a play button on every reply, and a playback bar.",
+  "description": "Reads Claude's replies aloud through CopySpeech, with live word captions and a play button on every reply.",
   "author": { "name": "Ilya Aizenberg" },
   "license": "MIT",
   "types": "./types/index.d.ts",
@@ -47,12 +47,11 @@
       "max": 20,
       "default": 2
     },
-    "highlight": {
-      "type": "string",
-      "title": "Spoken-word highlight",
-      "description": "How the spoken word is marked inside the reply.",
-      "options": ["chip", "code", "bold", "off"],
-      "default": "chip"
+    "captions": {
+      "type": "boolean",
+      "title": "Show captions",
+      "description": "Marks the spoken word inside the reply while CopySpeech reads.",
+      "default": true
     }
   }
 }

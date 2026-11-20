@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **CopySpeech plugin for Claude Code** (`copyspeech-claude/`) – reads Claude's replies aloud through the running app, in the Claude desktop app and in the terminal. Install it with `/plugin install copyspeech --marketplace ilyaizen/CopySpeech`.
+  - A **Read aloud** button at the bottom right of every reply, with the CopySpeech mark inside it in the desktop app (**▶ Read aloud** in the terminal). While that reply plays, **Pause**/**Resume** and **Stop** take its place. Inline code is read; fenced code blocks are not.
+  - Live captions inside the reply: an accent chip with inverted text on the spoken word. The reply being read draws as plain text from start to stop, so its font changes only then. Turn captions off in the options.
+  - In the desktop app, a **Read aloud with CopySpeech** row in the right-click menu reads only the selected text. Needs Claude Code 2.1.326 or later.
+  - **Stop** and `/copyspeech-stop` stop CopySpeech and cancel every queued and running synthesis. `/copyspeech-autoread` turns automatic reads of new replies on or off.
+  - Options: auto-read (off), skip bullet points and sections (on), and read only the top and bottom paragraphs (on, 2 + 2, 1 to 20 each).
+
+### Fixed
+
+- **Claude Code plugin captions stay on the spoken words** – with skipped sections or a partial reading on, captions matched the whole reply, so a skipped list or a left-out paragraph could lose their place.
+- **`/speak` with `wait: false` answers once the reading is audible** – a long, paginated reading used to hold the response until its last fragment was queued. Clients with a fixed timeout, such as Claude Code plugins (30 s), failed mid-reading. The rest of the reading still runs and can still be stopped. Requests with `wait: true` are unchanged.
+
 ## [0.3.2] - 2026-11-19
 
 ### Changed

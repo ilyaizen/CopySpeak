@@ -1,6 +1,6 @@
 # CopySpeech for Claude Code
 
-Reads Claude's replies aloud through the running CopySpeech app. It shows the spoken word inside the reply, a play button on every reply, and a playback bar above the prompt. It works in the Claude desktop app and in the terminal.
+Reads Claude's replies aloud through the running CopySpeech app. It shows a play button on every reply and marks the spoken word inside the reply. It works in the Claude desktop app and in the terminal.
 
 ## Install
 
@@ -22,22 +22,11 @@ In the desktop app, where `/plugin` does not run: click **+** next to the prompt
 
 ## Play a reply
 
-Hover a reply and click **▶ Read aloud** under it. While CopySpeech reads that reply, the button shows **■ Stop reading**. Code blocks and link targets are not read.
+Hover a reply and click **Read aloud** at its bottom right corner, over the end of the last line. The desktop app draws the CopySpeech mark inside the button, before the label; the terminal labels it **▶ Read aloud**. While CopySpeech reads that reply, **Pause** (or **Resume**) and **Stop** stay at that corner. **Stop** and `/copyspeech-stop` stop CopySpeech as its tray's **Stop reading** does: they also cancel every queued and running synthesis, not only this reply's. Inline `code` is read, without its backticks. Fenced code blocks and link targets are not read.
 
 ## Read a selection
 
 In the desktop app, select text inside a reply, right-click, and choose **Read aloud with CopySpeech**. CopySpeech reads only the selected words. The terminal has no right-click menu. Needs Claude Code 2.1.326 or later.
-
-## Playback bar
-
-While a reading this plugin started plays, a bar sits above the prompt:
-
-- **Pause / Resume** the reading.
-- **−5s** and **+5s** seek.
-- **■ Stop** the reading.
-- **Show spoken word** scrolls the reply that holds the spoken word into view.
-
-`/copyspeech-stop` also stops the reading.
 
 ## Settings
 
@@ -57,7 +46,7 @@ Change the settings in one of three ways:
       "excerptMode": "both",
       "excerptTop": 2,
       "excerptBottom": 2,
-      "highlight": "chip"
+      "captions": true
     }
   }
 }
@@ -70,21 +59,18 @@ The key is the plugin's name as Claude Code loaded it: `copyspeech` or `copyspee
 - **Read only part of the reply** – on by default. Automatic and play-button reads keep the top and bottom paragraphs.
 - **Part to read** – both (default), top, or bottom.
 - **Top paragraphs** and **Bottom paragraphs** – 1 to 20, 2 by default.
-- **Spoken-word highlight** – how the spoken word shows inside the reply:
-  - `chip` (default): a tinted background behind the word. The desktop app paints the accent at 30 % behind the word; the terminal paints a solid accent chip.
-  - `code`: the word becomes inline code. Later words can shift, because code uses another font.
-  - `bold`: the word becomes bold.
-  - `off`: no highlight.
+- **Show captions** – on by default. Puts a chip on the spoken word inside the reply while CopySpeech reads.
 
 Selection reads always read in full.
 
 ## Captions
 
 - Reads CopySpeech's `GET /status` every 120 ms while a reading plays.
-- Matches the caption words to the reply text: half the words of a caption fragment must match. Across an excerpt gap, it needs a run of 3 words to jump.
+- Matches the caption words to the spoken text, which leaves out skipped lines and an excerpt gap: half the words of a caption fragment must match. Across an excerpt gap, it needs a run of 3 words to jump.
+- Puts a chip on the spoken word: the accent color behind it, with inverted text. A background moves no word.
+- Draws the reply being read as plain text from start to stop, since Markdown cannot paint a background behind a word. In the desktop app the reply's font changes once when reading starts and back when it stops, never mid-reading. Headings show in bold, not in heading size. Fenced code blocks and tables keep their Markdown look and get no chip.
 - Holds the last word between words.
 - Stops 2 s after playback goes quiet, or after 60 s with no playback.
-- With `chip`, the reply draws as plain text spans for the whole reading, so the layout changes once at the start and once at the stop. Code blocks and tables keep their normal look.
 
 ## Double playback rule
 
@@ -92,10 +78,11 @@ The repo's Claude Code hook (`scripts/claude-copyspeech-hook.mjs`, see [docs/age
 
 ## Limits
 
-- The transcript does not scroll by itself to follow the spoken word. Use **Show spoken word**.
-- There is no gliding pill between words.
-- Chip corners are square.
-- A reading that CopySpeech runs for other text paints nothing.
+- The desktop app draws the mark over the button: a click on the mark itself can miss the button.
+- Claude Code has no hook for the desktop app's selection bar ("Start in a side chat", "Reply", "Dictate"). **Read aloud with CopySpeech** stays in the right-click menu.
+- Indented code blocks are read: Claude Code replies use indentation for nested lists too.
+- The transcript does not scroll by itself to follow the spoken word.
+- A reading that CopySpeech runs for other text shows no chip.
 
 ## Develop
 

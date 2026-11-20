@@ -1,11 +1,12 @@
-import { atom, read, update } from "claude-code";
+import { atom, memberOf, read, update } from "claude-code";
 import type { EngineInterface, Register } from "claude-code";
 
 import type { Reading } from "../types";
+import { ICON_SVG } from "./icon";
 
 // Port of copyspeech-hermes to Claude Code. CopySpeech's control server does the
-// speaking; this mod draws the play button, the in-reply word highlight, the
-// playback bar, and the Read aloud menu row.
+// speaking; this mod draws the play button, the spoken word inside the reply, and
+// the Read aloud menu row.
 const CONTROL = "http://127.0.0.1:43117";
 const POLL_MS = 120;
 const IDLE_STOP_MS = 2000;
@@ -14,8 +15,18 @@ const ALIGN_WINDOW = 24;
 const RUN_NEEDED = 3;
 const EXCERPT_MIN = 1;
 const EXCERPT_MAX = 20;
+// Room at the start of the desktop button's label for the CopySpeech mark drawn
+// over it: an em space and an en space, which a label never collapses.
+const MARK_ROOM = "  ";
+// The spoken word's chip: the accent behind the word, inverse text over it. A
+// background moves no glyph, so words after the chip never move.
+const CHIP = { backgroundColor: "claude", color: "inverseText" } as const;
 
+// Each row reads `reading`, which changes only at start, pause, resume and stop.
+// The spoken word is a family member per row: only the row being read reads its
+// member, so a word redraws that row alone.
 const reading = atom({ plugin: "copyspeech", key: "reading" } as const, null);
+const spoken = atom({ plugin: "copyspeech", key: "spoken" } as const, null);
 
 type Token = { norm: string; start: number; end: number };
 type RowToken = Token & { row: string };
@@ -32,8 +43,13 @@ type Status = {
   fragment_index?: number;
 };
 
-// Markdown that is not spoken: fenced and inline code, link targets, HTML tags.
-const UNSPOKEN = /```[\s\S]*?(?:```|$)|`[^`\n]*`|\]\([^)\n]*\)|<[^>\n]+>/g;
+// Markdown that is not spoken: fenced code blocks (``` or ~~~), link targets, HTML
+// tags. Inline `code` is spoken; speakable() drops only its backtick characters.
+const UNSPOKEN = /(```|~~~)[\s\S]*?(?:\1|$)|\]\([^)\n]*\)|<[^>\n]+>/g;
+// A line that opens or closes a fenced code block.
+const FENCE_LINE = /^\s*(?:```|~~~)/;
+// Lines a skip-sections read drops: headings, bullet and numbered items, horizontal rules, table rows.
+const SKIPPED = /^\s{0,3}(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|\|| ?([-*_]) ?(?:\1 ?){2,}$)/;
 
 export function wordTokens(text: string): Token[] {
   return [...text.matchAll(/[\p{L}\p{N}]+/gu)].map((m) => ({
@@ -52,21 +68,12 @@ export function speakable(md: string) {
   const tokens = wordTokens(md).filter((t) => !skip.some((r) => t.start >= r.s && t.start < r.e));
   const speech = md
     .replace(UNSPOKEN, " ")
+    .replace(/`+/g, "")
     .replace(/^[ \t]*(?:[-+*]|\d+[.)])[ \t]+/gm, "")
-    .replace(/[#*_>|~]+/g, " ")
+    .replace(/[#*_>|~[]+/g, " ")
     .replace(/[ \t]+/g, " ")
     .trim();
   return { tokens, speech };
-}
-
-// Same rules as copyspeech-hermes dropSkippedMarkup: drop headings, bullet and
-// numbered items, horizontal rules, and table rows. Text under a heading stays.
-export function dropSkippedMarkup(md: string): string {
-  const skipped = /^\s{0,3}(?:#{1,6}\s|[-*+]\s|\d+[.)]\s|\|| ?([-*_]) ?(?:\1 ?){2,}$)/;
-  return md
-    .split("\n")
-    .filter((line) => !skipped.test(line))
-    .join("\n");
 }
 
 export type Excerpt = { mode: string; top: number; bottom: number };
@@ -77,25 +84,79 @@ function clampCount(n: number): number {
     : EXCERPT_MIN;
 }
 
-// Same rules as copyspeech-hermes excerptSpeech: keep the first and last blank-line paragraphs.
-export function excerptSpeech(text: string, { mode, top, bottom }: Excerpt): string {
-  const paras = text
-    .split(/\n\s*\n/)
-    .map((p) => p.trim())
-    .filter((p) => p !== "");
-  if (paras.length < 2) return text;
+// Same rules as copyspeech-hermes excerptSpeech: keep the first and last paragraphs.
+export function pickParagraphs<T>(paras: T[], { mode, top, bottom }: Excerpt): T[] {
+  if (paras.length < 2) return paras;
   const t = clampCount(top);
   const b = clampCount(bottom);
-  if (mode === "top") return paras.slice(0, t).join("\n\n");
-  if (mode === "bottom") return paras.slice(-b).join("\n\n");
-  if (t + b >= paras.length) return text;
-  return paras.slice(0, t).concat(paras.slice(-b)).join("\n\n");
+  if (mode === "top") return paras.slice(0, t);
+  if (mode === "bottom") return paras.slice(-b);
+  if (t + b >= paras.length) return paras;
+  return paras.slice(0, t).concat(paras.slice(-b));
 }
 
-// Speech for a play-button or automatic read. A selection reads in full and skips this.
-export function prepareSpeech(md: string, skip: boolean, excerpt: Excerpt | null): string {
-  const { speech } = speakable(skip ? dropSkippedMarkup(md) : md);
-  return excerpt === null ? speech : excerptSpeech(speech, excerpt);
+// Same length as md: each skipped line becomes spaces, so offsets into md still hold.
+function maskSkipped(md: string): string {
+  return md
+    .split("\n")
+    .map((line) => (SKIPPED.test(line) ? " ".repeat(line.length) : line))
+    .join("\n");
+}
+
+export type Block = { start: number; end: number };
+
+// Paragraphs as [start, end) offsets into md. Blank lines split them, and a skipped
+// line is neither text nor a split, so a list between two sentences joins them.
+function paragraphs(md: string, skip: boolean): Block[] {
+  const out: Block[] = [];
+  let from = -1;
+  let to = -1;
+  let inFence = false;
+  let offset = 0;
+  for (const line of md.split("\n")) {
+    const start = offset;
+    offset += line.length + 1;
+    if (FENCE_LINE.test(line)) inFence = !inFence;
+    if (skip && SKIPPED.test(line)) continue;
+    if (line.trim() === "" && !inFence) {
+      if (from >= 0) out.push({ start: from, end: to });
+      from = -1;
+    } else {
+      if (from < 0) from = start;
+      to = start + line.length;
+    }
+  }
+  if (from >= 0) out.push({ start: from, end: to });
+  return out;
+}
+
+export type Part = { row: string; md: string };
+export type Spoken = { speech: string; tokens: RowToken[] };
+
+// What a play-button or automatic read speaks, and the tokens the captions align to.
+// Tokens hold offsets into their row's markdown, and they are exactly the words of
+// `speech`: a skipped line or an excerpt gap adds no token.
+export function prepareSpeech(parts: Part[], skip: boolean, excerpt: Excerpt | null): Spoken {
+  const paras: { speech: string; tokens: RowToken[] }[] = [];
+  for (const { row, md } of parts) {
+    const masked = skip ? maskSkipped(md) : md;
+    for (const p of paragraphs(md, skip)) {
+      const piece = speakable(masked.slice(p.start, p.end));
+      if (piece.speech === "") continue;
+      const tokens = piece.tokens.map((t) => ({
+        norm: t.norm,
+        start: t.start + p.start,
+        end: t.end + p.start,
+        row
+      }));
+      paras.push({ speech: piece.speech, tokens });
+    }
+  }
+  const kept = excerpt === null ? paras : pickParagraphs(paras, excerpt);
+  return {
+    speech: kept.map((p) => p.speech).join("\n\n"),
+    tokens: kept.flatMap((p) => p.tokens)
+  };
 }
 
 // Caption entries grouped per spoken word. ElevenLabs sends one entry per character.
@@ -167,29 +228,6 @@ export function align(words: CaptionWord[], tokens: Token[], from: number) {
   return { ok: mapped > 0 && mapped * 2 >= words.length, map, cursor };
 }
 
-// The desktop renderer shows HTML tags literally, so the spoken word rides markdown syntax.
-const MARKS = new Map([
-  ["code", ["`", "`"]],
-  ["bold", ["**", "**"]]
-]);
-
-export function markWord(md: string, range: [number, number], style: string): string {
-  const pair = MARKS.get(style);
-  if (pair === undefined) return md;
-  const [s, e] = range;
-  return md.slice(0, s) + pair[0] + md.slice(s, e) + pair[1] + md.slice(e);
-}
-
-// Markdown cannot paint a background and the desktop shows HTML literally, so
-// the chip style draws the block holding the spoken word as Text spans. A
-// background changes no glyph metrics, so words after the chip never move.
-// Desktop: Hermes's ::highlight(copyspeech-word) paints the accent at 30 % over
-// the word and keeps its text color; 8-digit hex carries that alpha in light and
-// dark themes. Terminal: a solid accent chip with inverse text, since it has no alpha.
-const CHIP_DESKTOP = { backgroundColor: "#D777574D" };
-const CHIP_TERMINAL = { backgroundColor: "claude", color: "inverseText" };
-
-export type Block = { start: number; end: number };
 export type Span = { text: string; bold?: true; italic?: true; mono?: true; hit?: true };
 
 // Blank-line separated blocks, never splitting a fenced code block.
@@ -200,7 +238,7 @@ export function blocks(md: string): Block[] {
   let offset = 0;
   for (const line of md.split("\n")) {
     const end = offset + line.length;
-    if (/^\s*```/.test(line)) inFence = !inFence;
+    if (FENCE_LINE.test(line)) inFence = !inFence;
     if (line.trim() === "" && !inFence) {
       if (from >= 0) out.push({ start: from, end: offset - 1 });
       from = -1;
@@ -212,7 +250,7 @@ export function blocks(md: string): Block[] {
 }
 
 // One block's markdown as styled spans; `mark` (offsets into the whole reply) gets `hit`.
-// ponytail: covers headings, list markers, **bold**, *italic*, `code`, [links](url); tables and nested quotes draw raw.
+// ponytail: covers headings, list markers, **bold**, *italic*, `code`, [links](url); tables and fences stay Markdown.
 export function inlineSpans(md: string, block: Block, mark: [number, number] | null): Span[] {
   const chars: Span[] = [];
   const push = (text: string, flags: Omit<Span, "text">) => chars.push({ text, ...flags });
@@ -276,12 +314,11 @@ export function inlineSpans(md: string, block: Block, mark: [number, number] | n
       i += 1;
       continue;
     }
-    const hit = mark !== null && i >= mark[0] && i < mark[1];
     const span: Span = { text: ch };
     if (bold) span.bold = true;
     if (italic) span.italic = true;
     if (mono) span.mono = true;
-    if (hit) span.hit = true;
+    if (mark !== null && i >= mark[0] && i < mark[1]) span.hit = true;
     chars.push(span);
     i += 1;
   }
@@ -304,7 +341,7 @@ export function inlineSpans(md: string, block: Block, mark: [number, number] | n
 
 // Rendered markdown per AssistantMessage row, and the rows first drawn in the
 // current turn (the auto-read target). Module variables restart on reload; the
-// reading atom survives.
+// atoms survive.
 const rows = new Map<string, string>();
 let turnRows: string[] = [];
 let counter = 0;
@@ -314,20 +351,28 @@ type Run = {
   key: string;
   words: CaptionWord[];
   map: number[] | null;
+  // The row whose member holds the spoken word, and the word, as last written.
+  row: string;
+  mark: string;
   startedAt: number;
   lastActive: number;
 };
-let run: Run = {
-  tokens: [],
-  cursor: 0,
-  key: "",
-  words: [],
-  map: null,
-  startedAt: 0,
-  lastActive: 0
-};
+function freshRun(tokens: RowToken[], now: number): Run {
+  return {
+    tokens,
+    cursor: 0,
+    key: "",
+    words: [],
+    map: null,
+    row: "",
+    mark: "",
+    startedAt: now,
+    lastActive: 0
+  };
+}
+let run = freshRun([], 0);
 
-type ControlBody = { request_id: string; text?: string; wait?: boolean; delta_ms?: number };
+type ControlBody = { request_id?: string; text?: string; wait?: boolean };
 
 // Resolves null on success, else why the request failed.
 function post($: EngineInterface, path: string, body: ControlBody): Promise<string | null> {
@@ -341,8 +386,26 @@ function post($: EngineInterface, path: string, body: ControlBody): Promise<stri
     .catch(String);
 }
 
-function rowsOf(r: Reading): string[] {
-  return r.rows ?? [r.row];
+// Tokens of whole rows, for a selection, whose speech is a piece of one row.
+function rowTokens(ids: string[]): RowToken[] {
+  return ids.flatMap((row) => speakable(rows.get(row) ?? "").tokens.map((t) => ({ ...t, row })));
+}
+
+// Moves the spoken word to `row`'s member; null clears it. Writes only a change.
+async function paint($: EngineInterface, row: string, mark: [number, number] | null) {
+  const key = mark === null ? "" : `${mark[0]}:${mark[1]}`;
+  if (row === run.row && key === run.mark) return;
+  if (run.row !== "" && run.row !== row) {
+    await update($, memberOf(spoken, { requestId: run.row }), () => null);
+  }
+  run.row = row;
+  run.mark = key;
+  if (row !== "") await update($, memberOf(spoken, { requestId: row }), () => mark);
+}
+
+async function clear($: EngineInterface) {
+  await paint($, "", null);
+  await update($, reading, () => null);
 }
 
 // `$.http.fetch` gives up after 30 s with no answer. CopySpeech answers a
@@ -351,37 +414,27 @@ function rowsOf(r: Reading): string[] {
 // and the /status poll owns it.
 const STILL_RUNNING = /aborted|no complete answer/i;
 
-// Speaks `speech`; captions paint in `ids`, the AssistantMessage rows it comes from.
-async function start($: EngineInterface, ids: string[], speech: string) {
+// Speaks `text`; the spoken word paints in `ids`, the AssistantMessage rows it comes from.
+async function start($: EngineInterface, ids: string[], text: Spoken) {
   const current = await read($, reading);
   if (current !== null) await post($, "/stop", { request_id: current.id });
-  if (speech.trim() === "" || ids.length === 0) return;
-  const tokens = ids.flatMap((row) =>
-    speakable(rows.get(row) ?? "").tokens.map((t) => ({ ...t, row }))
-  );
+  if (text.speech.trim() === "" || ids.length === 0) return;
   counter += 1;
   const id = `claude.${Date.now()}.${counter}`;
-  const now = await $.clock.now();
-  run = { tokens, cursor: 0, key: "", words: [], map: null, startedAt: now, lastActive: 0 };
-  const first = ids[0] ?? "";
-  await update($, reading, (): Reading => ({
-    id,
-    row: first,
-    rows: ids,
-    paused: false,
-    mark: null
-  }));
-  const failure = await post($, "/speak", { text: speech, request_id: id, wait: false });
+  await paint($, "", null);
+  run = freshRun(text.tokens, await $.clock.now());
+  await update($, reading, (): Reading => ({ id, rows: ids, paused: false }));
+  const failure = await post($, "/speak", { text: text.speech, request_id: id, wait: false });
   if (failure === null || STILL_RUNNING.test(failure)) return;
   $.ui.toast(`CopySpeech /speak failed: ${failure}`);
-  await update($, reading, (r) => (r?.id === id ? null : r));
+  if ((await read($, reading))?.id === id) await clear($);
 }
 
+// A /stop with no request_id is CopySpeech's global stop, as the tray's Stop
+// reading: it also aborts every queued and running synthesis.
 async function stop($: EngineInterface) {
-  const current = await read($, reading);
-  if (current === null) return;
-  await update($, reading, () => null);
-  await post($, "/stop", { request_id: current.id });
+  await clear($);
+  await post($, "/stop", {});
 }
 
 async function poll($: EngineInterface) {
@@ -401,7 +454,7 @@ async function poll($: EngineInterface) {
   if (s.active !== true) {
     const quiet = run.lastActive > 0 && now - run.lastActive > IDLE_STOP_MS;
     const neverStarted = run.lastActive === 0 && now - run.startedAt > NO_MATCH_STOP_MS;
-    if (quiet || neverStarted) await update($, reading, () => null);
+    if (quiet || neverStarted) await clear($);
     return;
   }
   run.lastActive = now;
@@ -417,23 +470,16 @@ async function poll($: EngineInterface) {
       run.cursor = a.cursor;
     }
   }
+  const paused = s.paused === true;
+  if (paused !== current.paused) {
+    await update($, reading, (r) => (r?.id === current.id ? { ...r, paused } : r));
+  }
   const pos = s.position_ms ?? 0;
   const i = run.words.findIndex((w) => pos >= w.start_ms && pos < w.end_ms);
   const at = i >= 0 && run.map !== null ? (run.map[i] ?? -1) : -1;
   const token = at >= 0 ? run.tokens[at] : undefined;
-  const paused = s.paused === true;
-  await update($, reading, (r) => {
-    if (r === null || r.id !== current.id) return r;
-    // Hold the last word between words, as Hermes does.
-    const mark: [number, number] | null = token ? [token.start, token.end] : r.mark;
-    const row = token ? token.row : r.row;
-    const same =
-      r.paused === paused &&
-      r.row === row &&
-      r.mark?.[0] === mark?.[0] &&
-      r.mark?.[1] === mark?.[1];
-    return same ? r : { ...r, paused, row, mark };
-  });
+  // Hold the last word between words, as Hermes does.
+  if (token !== undefined) await paint($, token.row, [token.start, token.end]);
 }
 
 // Flips the "Read new replies aloud" /config row, as if the person changed it
@@ -451,7 +497,7 @@ async function toggleAutoRead($: EngineInterface): Promise<string> {
 }
 
 export const register: Register = (on, options) => {
-  const style = String(options.highlight ?? "chip");
+  const showWord = options.captions !== false;
   const skip = options.skipSections === true;
   const excerpt: Excerpt | null =
     options.excerpt === false
@@ -462,7 +508,11 @@ export const register: Register = (on, options) => {
           bottom: Number(options.excerptBottom ?? 2)
         };
   const forRead = (ids: string[]) =>
-    prepareSpeech(ids.map((row) => rows.get(row) ?? "").join("\n\n"), skip, excerpt);
+    prepareSpeech(
+      ids.map((row) => ({ row, md: rows.get(row) ?? "" })),
+      skip,
+      excerpt
+    );
 
   on("session.start", async ($, e, next) => {
     await $.command.register({
@@ -517,24 +567,29 @@ export const register: Register = (on, options) => {
     if (!rows.has(e.requestId)) turnRows.push(e.requestId);
     rows.set(e.requestId, e.props.text);
     const r = await read($, reading);
-    const isMine = r !== null && rowsOf(r).includes(e.requestId);
-    const mark = isMine && r.row === e.requestId ? r.mark : null;
-    const { Box, Button, Markdown, Text } = $.ui.resolve(e);
-    const chip = e.surface === "desktop" ? CHIP_DESKTOP : CHIP_TERMINAL;
-    let body;
-    if (isMine && style === "chip") {
-      // Prose blocks become Text for the whole reading, so the layout switches once, not per word.
-      const md = e.props.text;
-      body = (
+    const isMine = r !== null && r.rows.includes(e.requestId);
+    // Only a row the reading covers reads its member, so only it redraws per word.
+    const mark = isMine && showWord ? await read($, memberOf(spoken, e)) : null;
+    const ui = $.ui.resolve(e);
+    const { Box, Button, Markdown, Text } = ui;
+    const md = e.props.text;
+    // A reply not being read keeps the engine's own row. The reply being read draws
+    // whole as Text spans from start to stop, so its font changes once at start and
+    // back at stop, never mid-reading; Markdown cannot paint a background behind a
+    // word. A fence or a table keeps its Markdown render, so its words get no chip.
+    const body =
+      !isMine || !showWord ? (
+        await next(e)
+      ) : (
         <Box flexDirection="column" gap={1}>
           {blocks(md).map((b, n) => {
             const raw = md.slice(b.start, b.end);
-            if (/^\s*```/.test(raw) || /^\s*\|/.test(raw))
+            if (FENCE_LINE.test(raw) || /^\s*\|/.test(raw))
               return <Markdown key={`b${n}`} text={raw} />;
             return (
               <Text key={`b${n}`}>
                 {inlineSpans(md, b, mark).map((s) => (
-                  <Text bold={s.bold} italic={s.italic} mono={s.mono} {...(s.hit ? chip : {})}>
+                  <Text bold={s.bold} italic={s.italic} mono={s.mono} {...(s.hit ? CHIP : {})}>
                     {s.text}
                   </Text>
                 ))}
@@ -543,80 +598,72 @@ export const register: Register = (on, options) => {
           })}
         </Box>
       );
-    } else {
-      const marked =
-        mark !== null && style !== "off"
-          ? { ...e, props: { ...e.props, text: markWord(e.props.text, mark, style) } }
-          : e;
-      body = await next(marked);
-    }
-    const key = `row-${e.requestId}`;
-    return (
-      <Box key={key} flexDirection="column">
-        {body}
-        <Box {...(isMine ? {} : { display: "none" as const, hover: { display: "flex" as const } })}>
-          <Button
-            key={`play-${e.requestId}`}
-            label={isMine ? "■ Stop reading" : "▶ Read aloud"}
-            onPress={() =>
-              void $.clock.after(
-                0,
-                () =>
-                  void (isMine ? stop($) : start($, [e.requestId], forRead([e.requestId]))).catch(
-                    () => undefined
-                  )
-              )
-            }
-          />
-        </Box>
-      </Box>
+    const markSvg =
+      e.surface !== "terminal" && "Svg" in ui ? (
+        <ui.Svg source={ICON_SVG} alt="CopySpeech" width={14} height={14} />
+      ) : null;
+    const play = (
+      <Button
+        key={`play-${e.requestId}`}
+        label={markSvg === null ? "▶ Read aloud" : `${MARK_ROOM}Read aloud`}
+        onPress={() =>
+          void $.clock.after(
+            0,
+            () => void start($, [e.requestId], forRead([e.requestId])).catch(() => undefined)
+          )
+        }
+      />
     );
-  });
-
-  on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
-    const r = await read($, reading);
-    if (r === null) return next(e);
-    const { Box, Button, Text } = $.ui.resolve(e);
+    // A Button takes no Svg child, so the mark is an absolute Box painted over the
+    // room at the start of the label: it sits inside the button and moves nothing.
+    const playWithMark =
+      markSvg === null ? (
+        play
+      ) : (
+        <Box>
+          {play}
+          <Box position="absolute" left={0} top={0} bottom={0} alignItems="center" paddingLeft="sm">
+            {markSvg}
+          </Box>
+        </Box>
+      );
+    // The button Box is absolute: it leaves the flow, so the hover reveal moves nothing.
+    // It stays inside the row's own bounds (bottom right): the desktop clips an
+    // absolute Box at its row, so a negative offset hides it behind the row above.
+    // While the reply plays, it shows Pause/Resume and Stop; otherwise Read aloud on hover.
     return (
-      <Box gap={1}>
-        <Text dimColor>CopySpeech</Text>
-        <Button
-          key="pause"
-          label={r.paused ? "▶ Resume" : "⏸ Pause"}
-          onPress={() =>
-            void $.clock.after(
-              0,
-              () => void post($, r.paused ? "/resume" : "/pause", { request_id: r.id })
-            )
-          }
-        />
-        <Button
-          key="back"
-          label="−5s"
-          onPress={() =>
-            void $.clock.after(
-              0,
-              () => void post($, "/seek", { request_id: r.id, delta_ms: -5000 })
-            )
-          }
-        />
-        <Button
-          key="fwd"
-          label="+5s"
-          onPress={() =>
-            void $.clock.after(0, () => void post($, "/seek", { request_id: r.id, delta_ms: 5000 }))
-          }
-        />
-        <Button
-          key="stop"
-          label="■ Stop"
-          onPress={() => void $.clock.after(0, () => void stop($).catch(() => undefined))}
-        />
-        <Button
-          key="show"
-          label="Show spoken word"
-          onPress={() => $.ui.scroll({ to: { requestId: r.row }, block: "center" })}
-        />
+      <Box key={`row-${e.requestId}`} flexDirection="column">
+        {body}
+        {isMine ? (
+          <Box position="absolute" bottom={0} right={0} alignItems="center" gap="xs">
+            <Button
+              key={`pause-${e.requestId}`}
+              label={r.paused ? "Resume" : "Pause"}
+              onPress={() =>
+                void $.clock.after(
+                  0,
+                  () => void post($, r.paused ? "/resume" : "/pause", { request_id: r.id })
+                )
+              }
+            />
+            <Button
+              key={`stop-${e.requestId}`}
+              label="Stop"
+              onPress={() => void $.clock.after(0, () => void stop($).catch(() => undefined))}
+            />
+          </Box>
+        ) : (
+          <Box
+            position="absolute"
+            bottom={0}
+            right={0}
+            alignItems="center"
+            display="none"
+            hover={{ display: "flex" }}
+          >
+            {playWithMark}
+          </Box>
+        )}
       </Box>
     );
   });
@@ -632,7 +679,13 @@ export const register: Register = (on, options) => {
       <Button
         key="read-selection"
         onPress={() =>
-          void $.clock.after(0, () => void start($, [target], selected).catch(() => undefined))
+          void $.clock.after(
+            0,
+            () =>
+              void start($, [target], { speech: selected, tokens: rowTokens([target]) }).catch(
+                () => undefined
+              )
+          )
         }
       >
         Read aloud with CopySpeech <Text dimColor>Speaks the selection</Text>

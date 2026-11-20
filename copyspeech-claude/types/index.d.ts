@@ -1,18 +1,18 @@
-/** The reading this mod started, or null while idle. */
+/** The reading this mod started, or null while idle. Changes only at start, pause, resume and stop. */
 export type Reading = {
   /** CopySpeech request id. */
   id: string;
-  /** AssistantMessage requestId that holds the spoken word: the first of `rows` until a word matches. */
-  row: string;
-  /** Every AssistantMessage requestId the reading covers, in order. Values stored before rows existed lack it. */
-  rows?: string[];
+  /** Every AssistantMessage requestId the reading covers, in order. */
+  rows: string[];
   paused: boolean;
-  /** Spoken word's [start, end) in `row`'s markdown, or null. */
-  mark: [number, number] | null;
 };
 
 declare module "claude-code" {
   interface PluginState {
-    copyspeech: { reading: Reading | null };
+    copyspeech: {
+      reading: Reading | null;
+      /** Per AssistantMessage requestId: the spoken word's [start, end) in that row's markdown, or null. */
+      spoken: StateFamily<[number, number] | null>;
+    };
   }
 }
