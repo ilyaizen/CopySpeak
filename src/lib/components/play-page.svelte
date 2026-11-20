@@ -675,10 +675,20 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="flex min-w-0 flex-1 flex-col gap-4">
-  <div class="grid min-w-0 flex-1 grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_14rem]">
+<div class="flex min-w-0 flex-1 flex-col gap-5 py-1">
+  <div class="grid min-w-0 flex-1 grid-cols-1 items-stretch gap-5 md:grid-cols-[minmax(0,1fr)_15rem]">
     <section aria-labelledby="reader-heading" class="flex min-w-0 flex-col gap-3">
-      <h2 id="reader-heading" class="sr-only">{$_("play.readAloud")}</h2>
+      <div class="flex min-h-8 items-center justify-between gap-3 px-1">
+        <div class="flex items-center gap-2">
+          <span class="bg-primary h-2 w-2 rounded-full shadow-[0_0_10px_color-mix(in_oklch,var(--primary),transparent_45%)]"></span>
+          <h2 id="reader-heading" class="text-foreground text-sm font-semibold">{$_("play.readAloud")}</h2>
+        </div>
+        {#if manualText && !caption}
+          <span class="text-muted-foreground text-xs whitespace-nowrap tabular-nums">
+            {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
+          </span>
+        {/if}
+      </div>
       {#if caption}
         <div
           bind:this={readingView}
@@ -692,7 +702,7 @@
             animated: captionAnimated,
             resetKey: captionText
           }}
-          class="border-input bg-card dark:bg-input/30 relative isolate max-h-[60vh] min-h-48 flex-1 overflow-y-auto rounded-md border p-4 text-base leading-relaxed whitespace-pre-wrap shadow-xs"
+          class="border-border bg-card relative isolate min-h-64 flex-1 overflow-y-auto rounded-xl border p-5 text-[1.05rem] leading-8 whitespace-pre-wrap shadow-[inset_0_1px_0_color-mix(in_oklch,var(--foreground),transparent_94%),0_12px_30px_color-mix(in_oklch,var(--foreground),transparent_96%)]"
         >
           {#each captionWords as word, i (word.offset)}<span
               data-word-offset={word.offset}
@@ -703,12 +713,12 @@
         <label for="reading-text" class="sr-only">{$_("play.textLabel")}</label>
         <Textarea
           id="reading-text"
-          class="bg-card dark:bg-input/30 field-sizing-fixed max-h-[60vh] min-h-48 flex-1 resize-none p-4 text-base leading-relaxed md:text-base"
+          class="border-border bg-card focus-visible:border-primary/60 field-sizing-fixed min-h-64 flex-1 resize-none rounded-xl p-5 text-[1.05rem] leading-8 shadow-[inset_0_1px_0_color-mix(in_oklch,var(--foreground),transparent_94%),0_12px_30px_color-mix(in_oklch,var(--foreground),transparent_96%)] transition-[border-color,box-shadow] focus-visible:shadow-[0_0_0_3px_color-mix(in_oklch,var(--ring),transparent_82%),0_12px_30px_color-mix(in_oklch,var(--foreground),transparent_96%)]"
           placeholder={$_("play.placeholder")}
           bind:value={manualText}
         />
       {/if}
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="border-border bg-card/70 flex min-h-14 flex-wrap items-center justify-between gap-2 rounded-xl border px-2 py-1.5 shadow-sm backdrop-blur-sm">
         <PlaybackControls
           {isPlaying}
           isPaused={playbackStore.isPaused}
@@ -721,25 +731,8 @@
           onSkipForward={() => playbackStore.skipForward()}
         />
         {#if manualText}
-          <!--
-            Char count and hotkey hint hidden for a clearer view.
-            Restore these spans and the Kbd import/modKey to bring them back.
-          <span class="text-muted-foreground ms-auto text-xs whitespace-nowrap tabular-nums">
-            {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
-          </span>
-          <span
-            class="text-muted-foreground inline-flex items-center gap-1 text-xs whitespace-nowrap"
-            title={$_("play.keyboardHint", { values: { keys: `${modKey}+Enter` } })}
-          >
-            <Kbd>{modKey}</Kbd>
-            <Kbd>↵</Kbd>
-            <span class="sr-only">
-              {$_("play.keyboardHint", { values: { keys: `${modKey}+Enter` } })}
-            </span>
-          </span>
-          -->
           <Button
-            variant="default"
+            variant="ghost"
             size="icon-sm"
             aria-label={$_("play.clear")}
             title={$_("play.clear")}
@@ -752,6 +745,9 @@
     </section>
     {#if config}
       <aside aria-label={$_("play.controlsAria")} class="flex min-w-0 flex-col">
+        <div class="mb-3 flex min-h-8 items-center px-1">
+          <h3 class="text-muted-foreground text-xs font-semibold tracking-wider uppercase">{$_("play.controlsAria")}</h3>
+        </div>
         <QuickSettings bind:config />
       </aside>
     {/if}
