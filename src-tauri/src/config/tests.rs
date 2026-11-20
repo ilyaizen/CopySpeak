@@ -300,9 +300,14 @@ mod tests {
     #[test]
     fn test_default_tts_config_uses_the_os_default_profile() {
         let tts = TtsConfig::default();
-        // Every OS starts on tiny-voca.
-        let (engine, profile_id, profile_count) =
-            (TtsEngine::TinyVoca, "profile-tiny-voca-default", 11);
+        // kale is the Windows default; macOS and Linux stay on tiny-voca
+        // until install-kale.sh passes a clean-install check there.
+        let is_windows = cfg!(target_os = "windows");
+        let (engine, profile_id, profile_count) = if is_windows {
+            (TtsEngine::Kale, "profile-kale-default", 11)
+        } else {
+            (TtsEngine::TinyVoca, "profile-tiny-voca-default", 11)
+        };
         assert_eq!(TtsEngine::default(), engine);
         assert_eq!(tts.schema_version, 8);
         assert_eq!(tts.active_backend, engine);
@@ -322,6 +327,20 @@ mod tests {
                 .map(|profile| &profile.engine),
             Some(&engine)
         );
+        if is_windows {
+            let kale = tts
+                .profiles
+                .iter()
+                .find(|profile| profile.id == "profile-kale-default")
+                .expect("Windows default seeds the bundled kale profile");
+            assert_eq!(kale.voice, "Kenzie");
+            // The bundled tiny-voca profile is seeded only when tiny-voca is
+            // the default.
+            assert!(!tts
+                .profiles
+                .iter()
+                .any(|profile| profile.id == "profile-tiny-voca-default"));
+        }
     }
 
     #[test]

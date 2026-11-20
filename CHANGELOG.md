@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Kale is the default engine on Windows** – fresh Windows installs start on Kale (voice Kenzie); macOS and Linux keep tiny-voca until the Kale installer passes a clean-install check there. Existing settings keep their current engine. Onboarding lists Kale first on Windows; tiny-voca stays the first card everywhere else.
+
 ### Added
 
 - **Kale TTS engine** (`kale-tts-1-nano` from KaleComputer) – a new local English engine with ten US and British voices. It runs on the CPU only, uses about 29 MB of files, and needs no API key. Word captions are estimated from each sentence's real audio duration. The voices are synthetic designs trained on Maya-1 output (Maya-1 use policy): never present their output as a recording of a human being.

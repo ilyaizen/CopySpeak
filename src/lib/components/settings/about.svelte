@@ -68,15 +68,15 @@
 
   const localProviders = [
     {
-      name: "tiny-voca",
-      url: "https://github.com/n4ze3m/tiny-voca",
+      name: "Kale TTS",
+      url: "https://huggingface.co/KaleComputer/kale-tts-1-nano",
       mark: "",
       w: 0,
       h: 0
     },
     {
-      name: "Kale TTS",
-      url: "https://huggingface.co/KaleComputer/kale-tts-1-nano",
+      name: "tiny-voca",
+      url: "https://github.com/n4ze3m/tiny-voca",
       mark: "",
       w: 0,
       h: 0

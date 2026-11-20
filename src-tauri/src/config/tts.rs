@@ -36,11 +36,17 @@ pub enum TtsEngine {
 
 impl Default for TtsEngine {
     fn default() -> Self {
-        // Fresh-install default on every OS: tiny-voca is CPU only, starts
-        // fast, and runs without a GPU. Existing configs are never migrated to
-        // a new active engine — the bundled profile migration only ADDS the
-        // profile.
-        TtsEngine::TinyVoca
+        // Fresh-install default: kale on Windows (fastest warm TTFA of the
+        // local engines and CPU only). macOS and Linux stay on tiny-voca until
+        // install-kale.sh passes a clean-install check on both — see
+        // references/clean-install-e2e.md. Existing configs are never migrated
+        // to a new active engine — the bundled profile seeding only ADDS the
+        // profile for the default engine.
+        if cfg!(target_os = "windows") {
+            TtsEngine::Kale
+        } else {
+            TtsEngine::TinyVoca
+        }
     }
 }
 
@@ -1437,6 +1443,33 @@ pub(crate) fn default_tiny_voca_profile() -> VoiceProfile {
     }
 }
 
+/// Stable id for the bundled kale profile (Windows fresh installs).
+pub(crate) const KALE_DEFAULT_PROFILE_ID: &str = "profile-kale-default";
+
+/// The voice Windows fresh installs start on. The installer's first default
+/// (Kenzie) and the catalog's first kale voice.
+pub(crate) const KALE_DEFAULT_VOICE: &str = "Kenzie";
+
+pub(crate) fn default_kale_profile() -> VoiceProfile {
+    let engine = TtsEngine::Kale;
+    let voice = KALE_DEFAULT_VOICE.to_string();
+    let voice_label = catalog_voice_label(&engine, &voice);
+    VoiceProfile {
+        id: KALE_DEFAULT_PROFILE_ID.into(),
+        name: "kale".into(),
+        description: None,
+        engine,
+        voice,
+        voice_label,
+        speed: 1.0,
+        pitch: 1.0,
+        effects: ProfileEffects::default(),
+        post_process: ProfilePostProcess::default(),
+        text_processing: ProfileTextProcessing::default(),
+        engine_options: ProfileEngineOptions::default_for(&TtsEngine::Kale),
+    }
+}
+
 /// v5 -> v6: make Kokoro reachable as a first-class bundled profile (and the
 /// fresh-install default) without changing existing profiles or the active
 /// engine. Idempotent by profile id.
@@ -1568,13 +1601,14 @@ pub(crate) fn migrate_post_process_to_profiles_v8(cfg: &mut crate::config::AppCo
 impl Default for TtsConfig {
     fn default() -> Self {
         let cartesia_profile = default_cartesia_profile();
-        // Fresh installs start on `TtsEngine::default()`, which is tiny-voca
-        // on every OS. The matching bundled profile is seeded here (onboarding
-        // finds an engine's profile by engine). Edge-TTS stays the zero-download fallback.
-        // Existing configs on disk are unaffected — defaults only apply when
-        // no config file exists.
+        // Fresh installs start on `TtsEngine::default()`, which is kale on
+        // Windows and tiny-voca elsewhere. The matching bundled profile is
+        // seeded here (onboarding finds an engine's profile by engine).
+        // Edge-TTS stays the zero-download fallback. Existing configs on disk
+        // are unaffected — defaults only apply when no config file exists.
         let active_backend = TtsEngine::default();
         let active_profile_id = match active_backend {
+            TtsEngine::Kale => KALE_DEFAULT_PROFILE_ID,
             TtsEngine::TinyVoca => TINY_VOCA_DEFAULT_PROFILE_ID,
             _ => KOKORO_DEFAULT_PROFILE_ID,
         };
@@ -1590,6 +1624,9 @@ impl Default for TtsConfig {
             default_google_profile(),
             default_edge_profile(),
         ];
+        if active_backend == TtsEngine::Kale {
+            profiles.push(default_kale_profile());
+        }
         if active_backend == TtsEngine::TinyVoca {
             profiles.push(default_tiny_voca_profile());
         }

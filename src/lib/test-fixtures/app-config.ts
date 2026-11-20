@@ -5,13 +5,14 @@ export function testConfig(): AppConfig {
   return {
     trigger: { listen_enabled: true, double_copy_window_ms: 800, max_text_length: 50000 },
     tts: {
-      active_backend: "tiny-voca",
+      // Mirrors TtsEngine::default on Windows (kale, voice Kenzie).
+      active_backend: "kale",
       active_profile_id: "default",
       profiles: [],
       preset: "tiny-voca",
       command: "tiny-voca",
       args_template: [],
-      voice: "M2",
+      voice: "Kenzie",
       openai: { api_key: "", model: "", voice: "" },
       elevenlabs: {
         api_key: "",

@@ -73,20 +73,20 @@ const PAGE_TOAST_KEYS = [
   "toast.error.engineInstallStart"
 ];
 
-it("offers five engines in display order, tiny-voca first", () => {
+it("offers five engines in display order, kale first", () => {
   expect(ENGINE_CHOICES.map((choice) => choice.id)).toEqual([
-    "tiny-voca",
     "kale",
+    "tiny-voca",
     "kokoro",
     "edge",
     "fish"
   ]);
 });
 
-it("shows tiny-voca on every platform and kale on Windows only", () => {
+it("shows kale on Windows and tiny-voca everywhere, in card order", () => {
   expect(visibleEngineChoices("windows").map((choice) => choice.id)).toEqual([
-    "tiny-voca",
     "kale",
+    "tiny-voca",
     "kokoro",
     "edge",
     "fish"
@@ -101,21 +101,21 @@ it("shows tiny-voca on every platform and kale on Windows only", () => {
   }
 });
 
-it("recommends tiny-voca on every platform", () => {
-  expect(recommendedEngineId("windows")).toBe("tiny-voca");
+it("recommends kale on Windows and tiny-voca elsewhere", () => {
+  expect(recommendedEngineId("windows")).toBe("kale");
   expect(recommendedEngineId("macos")).toBe("tiny-voca");
   expect(recommendedEngineId("linux")).toBe("tiny-voca");
 });
 
-it("gives only the local engines an installer, with tiny-voca voices M2 first", () => {
+it("gives only the local engines an installer, with kale voices Kenzie first", () => {
   const installable = ENGINE_CHOICES.filter((choice) => choice.installer !== null);
-  expect(installable.map((choice) => choice.id)).toEqual(["tiny-voca", "kale", "kokoro"]);
-  const tinyVoca = ENGINE_CHOICES[0];
-  expect(tinyVoca.installer).toBe("tiny-voca");
-  expect(tinyVoca.installVoices[0]).toBe("M2");
-  const kale = ENGINE_CHOICES[1];
+  expect(installable.map((choice) => choice.id)).toEqual(["kale", "tiny-voca", "kokoro"]);
+  const kale = ENGINE_CHOICES[0];
   expect(kale.installer).toBe("kale");
   expect(kale.installVoices[0]).toBe("Kenzie");
+  const tinyVoca = ENGINE_CHOICES[1];
+  expect(tinyVoca.installer).toBe("tiny-voca");
+  expect(tinyVoca.installVoices[0]).toBe("M2");
 });
 
 it("keeps card copy short and free of dashes", () => {

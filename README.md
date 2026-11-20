@@ -24,7 +24,7 @@ CopySpeech reads your clipboard aloud. Copy the same text twice within 1.5 secon
 
 - **Double-copy trigger.** No hotkey needed. The tray and the Play page also start playback.
 - **16 built-in engines.** Run them locally or in the cloud. Add any CLI tool or HTTP endpoint. See [docs/engines.md](docs/engines.md).
-  - Local: tiny-voca (default, English text only), Kale (English text only), Kokoro, Piper, Kitten, Qwen3-TTS, Pocket.
+  - Local: Kale (default on Windows, English text only), tiny-voca (English text only), Kokoro, Piper, Kitten, Qwen3-TTS, Pocket.
   - Cloud: OpenAI, ElevenLabs, Cartesia, Fish Audio, xAI, Mistral, Google Gemini, Microsoft Azure.
 - **One-click local installs.** Kokoro installs from onboarding, with optional CUDA.
 - **Live captions.** Words highlight as they play. Captions need an engine that reports timings.
@@ -46,7 +46,7 @@ Download a build from [Releases](https://github.com/ilyaizen/CopySpeech/releases
 | Linux             | `.AppImage`, `.deb`, or `.rpm`                                           |
 | Browser companion | `CopySpeech-Companion-<version>.zip`                                     |
 
-On first launch, onboarding asks you to pick an engine and a voice. tiny-voca is the default.
+On first launch, onboarding asks you to pick an engine and a voice. Kale is the default on Windows; macOS and Linux start on tiny-voca until the Kale installer passes a clean-install check there.
 
 **Linux:** Wayland blocks global hotkeys. Use double-copy or the tray.
 

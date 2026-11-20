@@ -30,15 +30,6 @@ const KOKORO_VOICES = [
 
 export const ENGINE_CHOICES: EngineChoice[] = [
   {
-    id: "tiny-voca",
-    name: "tiny-voca",
-    keyless: true,
-    installer: "tiny-voca",
-    installVoices: ["M2", "F2"],
-    platforms: null,
-    detailKey: "onboarding.engines.tinyvoca.detail"
-  },
-  {
     id: "kale",
     name: "Kale",
     keyless: true,
@@ -58,6 +49,15 @@ export const ENGINE_CHOICES: EngineChoice[] = [
     // Windows until the .sh twin gets a clean-install pass on macOS/Linux.
     platforms: ["windows"],
     detailKey: "onboarding.engines.kale.detail"
+  },
+  {
+    id: "tiny-voca",
+    name: "tiny-voca",
+    keyless: true,
+    installer: "tiny-voca",
+    installVoices: ["M2", "F2"],
+    platforms: null,
+    detailKey: "onboarding.engines.tinyvoca.detail"
   },
   {
     id: "kokoro",
@@ -88,10 +88,11 @@ export const ENGINE_CHOICES: EngineChoice[] = [
   }
 ];
 
-// Fresh-install default on every OS. Mirrors TtsEngine::default in
-// src-tauri/src/config/tts.rs.
-export function recommendedEngineId(_platform: string): string {
-  return "tiny-voca";
+// Fresh-install default: kale on Windows, tiny-voca elsewhere. Mirrors
+// TtsEngine::default in src-tauri/src/config/tts.rs. On macOS/Linux tiny-voca
+// stays the recommendation until install-kale.sh passes a clean-install check.
+export function recommendedEngineId(platform: string): string {
+  return platform === "windows" ? "kale" : "tiny-voca";
 }
 
 export function visibleEngineChoices(platform: string): EngineChoice[] {
