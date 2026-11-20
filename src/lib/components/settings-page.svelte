@@ -261,17 +261,17 @@
       </div>
     </div>
   {:else if localConfig}
-    <div class="flex min-w-0 flex-col items-stretch gap-4 md:flex-row md:items-start">
+    <div class="mb-5 px-1">
+      <h1 class="text-foreground text-2xl font-semibold tracking-tight">{$_("settings.title")}</h1>
+    </div>
+    <div class="flex min-w-0 flex-col items-stretch gap-5 md:flex-row md:items-start">
       <!-- Left sidebar: each entry scrolls to its section -->
-      <aside class="min-w-0 shrink-0 self-stretch md:w-36">
-        <nav class="sticky top-0">
+      <aside class="min-w-0 shrink-0 self-stretch md:w-40">
+        <nav class="border-border bg-card/70 sticky top-2 rounded-xl border p-1.5 shadow-sm backdrop-blur-sm">
           <div class="flex flex-wrap gap-1 md:flex-col">
             {#each visibleSections as section (section.id)}
               <button
-                class="side-nav-button settings-nav-button focus-visible:ring-ring flex items-center rounded-md px-2 py-1.5 text-start font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none md:w-full {activeSection ===
-                section.id
-                  ? 'text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'}"
+                class="side-nav-button settings-nav-button focus-visible:ring-ring flex items-center rounded-lg px-3 py-2 text-start font-medium whitespace-nowrap transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none md:w-full {activeSection === section.id ? 'bg-primary/10 text-foreground shadow-[inset_0_0_0_1px_color-mix(in_oklch,var(--primary),transparent_82%)]' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'}"
                 aria-controls={section.id}
                 aria-current={activeSection === section.id ? "page" : undefined}
                 onclick={() => scrollToSection(section.id)}

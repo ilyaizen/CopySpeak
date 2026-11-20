@@ -138,14 +138,25 @@ textarea,
   --settings-card-background: oklch(1 0 0 / 0.55);
   --settings-divider: oklch(1 0 0);
   --settings-divider-shadow: oklch(0 0 0 / 0.22);
-  padding: 1rem;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
   background-color: var(--settings-card-background);
+  box-shadow:
+    inset 0 1px 0 oklch(1 0 0 / 0.35),
+    0 8px 24px oklch(0 0 0 / 0.035);
 }
 
 .dark .settings-card {
   --settings-card-background: color-mix(in oklch, var(--card) 55%, transparent);
   --settings-divider: var(--border);
   --settings-divider-shadow: color-mix(in oklch, var(--card), black 35%);
+}
+
+.settings-card > h2 {
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--settings-divider);
+  letter-spacing: -0.01em;
 }
 
 .settings-card .settings-row {
