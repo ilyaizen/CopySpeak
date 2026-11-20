@@ -22,7 +22,7 @@ In the desktop app, where `/plugin` does not run: click **+** next to the prompt
 
 ## Play a reply
 
-Hover a reply and click **Read aloud** at its bottom right corner, over the end of the last line. The desktop app draws the CopySpeech mark inside the button, before the label; the terminal labels it **▶ Read aloud**. While CopySpeech reads that reply, **Pause** (or **Resume**) and **Stop** stay at that corner. **Stop** and `/copyspeech-stop` stop CopySpeech as its tray's **Stop reading** does: they also cancel every queued and running synthesis, not only this reply's. Inline `code` is read, without its backticks. Fenced code blocks and link targets are not read.
+Hover a reply and click the play button at its bottom right corner, over the end of the last line. It reads **Read excerpt** while either **Skip bullet points and sections** or **Read only part of the reply** is on (both are on by default), and **Read aloud** when both are off. The desktop app draws the CopySpeech mark inside the button, before the label; the terminal labels it **▶ Read excerpt**. While CopySpeech reads, a row above the prompt shows **Pause** (or **Resume**) and **Stop** for that reading. **Stop** and `/copyspeech-stop` stop CopySpeech as its tray's **Stop reading** does: they also cancel every queued and running synthesis, not only this reply's. Inline `code` is read, without its backticks. A dot between names in it is read as "dot": `export.ts` is read as export dot ts. Fenced code blocks and link targets are not read.
 
 ## Read a selection
 
@@ -68,7 +68,7 @@ Selection reads always read in full.
 - Reads CopySpeech's `GET /status` every 120 ms while a reading plays.
 - Matches the caption words to the spoken text, which leaves out skipped lines and an excerpt gap: half the words of a caption fragment must match. Across an excerpt gap, it needs a run of 3 words to jump.
 - Puts a chip on the spoken word: the accent color behind it, with inverted text. A background moves no word.
-- Draws the reply being read as plain text from start to stop, since Markdown cannot paint a background behind a word. In the desktop app the reply's font changes once when reading starts and back when it stops, never mid-reading. Headings show in bold, not in heading size. Fenced code blocks and tables keep their Markdown look and get no chip.
+- Draws every reply as plain text while captions are on, reading or not, since Markdown cannot paint a background behind a word. A reply's text never changes when reading starts or stops. Headings show in bold, not in heading size. Fenced code blocks and tables keep their Markdown look and get no chip.
 - Holds the last word between words.
 - Stops 2 s after playback goes quiet, or after 60 s with no playback.
 

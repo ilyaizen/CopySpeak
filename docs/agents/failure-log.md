@@ -310,12 +310,14 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Keep `import()` out of the module and its tests; a module that holds one does not load.
 - Run Button work through `$.clock.after(0, ...)`, never `await` it in `onPress`: a press has a 10 s budget. Keep `$.ui.scroll` direct; it only works inside the press.
 - Give a Box with `hover: { display: 'flex' }` its own `display: 'none'`; otherwise the tree is refused.
-- Keep a value that changes per word out of every atom a reply row reads: a `read` while drawing subscribes the row, so each write redraws every reader and its Svg and Buttons flicker. Keep the spoken word in a `StateFamily` member per row (`memberOf`), read only by the row being read.
-- Show captions inside the reply, never in a band above the prompt. Draw the whole reply being read as Text spans from start to stop, with a solid accent chip on the spoken word: Markdown cannot paint a background, and switching one paragraph at a time changes its font mid-reading.
+- Keep Buttons and Svg out of the row that reads the spoken word: each per-word write redraws that row, so its Svg and Buttons flicker. Put Pause, Resume and Stop in the `AbovePrompt` band, which reads only `reading`. Keep the spoken word in a `StateFamily` member per row (`memberOf`), read only by the row being read.
+- Show captions inside the reply, never in a band above the prompt. Draw every reply as Text spans while captions are on, reading or not, with a solid accent chip on the spoken word: Markdown cannot paint a background, and a renderer change at start or stop changes the reply's font.
 - Treat a `/speak` fetch give-up (`aborted`, `no complete answer`, fixed 30 s) as a running reading; the `/status` poll ends it.
 - Collect auto-read rows from `AssistantMessage` renders between `turn.start` and `turn.complete`; `turn.complete`'s `answer` holds only the last text block.
 - Change the plugin's own setting with `$.config.set` on the row `$.config.list()` names `<plugin>.<field>`; `$.settings` only reads.
 - Give a Button only string and `Text` children: a `Svg` or `Box` child is refused, and a surface module (`Client`) has no `Svg` either. To put an icon inside a Button, start its label with an em and an en space and paint the `Svg` over that room from an absolute Box (`left={0}`, `top={0}`, `bottom={0}`).
 - Keep an absolute Box inside its row on desktop: the desktop clips it at the row, so a negative `bottom` or `right` hides it behind the row above.
 - Draw `Svg` only on the desktop, vscode and mobile surfaces: the terminal table has no `Svg`, so guard it with `e.surface`. `"Svg" in ui` alone is true on the terminal too.
+- Label the play button `Read excerpt` while `skipSections` or `excerpt` trims the reply; `Read aloud` promises the whole reply.
 - Load the plugin for development from the repo folder: `~/.claude/settings.json` `env` names `CLAUDE_CODE_PLUGIN_DIRS` and `CLAUDE_CODE_PLUGIN_DIR_WATCH=1` (desktop needs the watch switch). It applies to sessions started after the change. Do not also copy it into `dev-mods`: that loads two `copyspeech` plugins.
+- Say a dot in inline code as the word "dot" in `speakable()`: engines read "." as a pause, and kale splits sentences on it. Keep the marker one char, so markdown offsets hold.

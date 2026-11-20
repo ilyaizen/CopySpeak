@@ -44,7 +44,7 @@ type Status = {
 };
 
 // Markdown that is not spoken: fenced code blocks (``` or ~~~), link targets, HTML
-// tags. Inline `code` is spoken; speakable() drops only its backtick characters.
+// tags. Inline `code` is spoken; speakable() drops its backticks and reads a dot in it as "dot".
 const UNSPOKEN = /(```|~~~)[\s\S]*?(?:\1|$)|\]\([^)\n]*\)|<[^>\n]+>/g;
 // A line that opens or closes a fenced code block.
 const FENCE_LINE = /^\s*(?:```|~~~)/;
@@ -59,20 +59,43 @@ export function wordTokens(text: string): Token[] {
   }));
 }
 
+// Inline `code` spans, and a dot between two names inside one: `export.ts`, `os.path`.
+const CODE_SPAN = /`[^`\n]+`/g;
+const CODE_DOT = /[A-Za-z_]\w*\.(?=\w)/g;
+// One character standing in for a dot that is said as "dot". It keeps every markdown offset.
+const DOT_MARK = "\u0001";
+
 // Spoken tokens of a reply's markdown (offsets into the markdown) and the text sent to CopySpeech.
+// A TTS engine reads "." as a pause, so a dot in inline code is said as the word "dot".
+// ponytail: pairs backticks left to right; one stray backtick can mark prose as code.
 export function speakable(md: string) {
   const skip = [...md.matchAll(UNSPOKEN)].map((m) => ({
     s: m.index ?? 0,
     e: (m.index ?? 0) + m[0].length
   }));
-  const tokens = wordTokens(md).filter((t) => !skip.some((r) => t.start >= r.s && t.start < r.e));
-  const speech = md
+  const skipped = (at: number) => skip.some((r) => at >= r.s && at < r.e);
+  const dots = [...md.matchAll(CODE_SPAN)]
+    .flatMap((span) =>
+      [...span[0].matchAll(CODE_DOT)].map(
+        (m) => (span.index ?? 0) + (m.index ?? 0) + m[0].length - 1
+      )
+    )
+    .filter((at) => !skipped(at));
+  const tokens = [
+    ...wordTokens(md).filter((t) => !skipped(t.start)),
+    ...dots.map((at) => ({ norm: "dot", start: at, end: at + 1 }))
+  ].sort((a, b) => a.start - b.start);
+  let marked = md;
+  for (const at of dots) marked = marked.slice(0, at) + DOT_MARK + marked.slice(at + 1);
+  const speech = marked
     .replace(UNSPOKEN, " ")
     .replace(/`+/g, "")
     .replace(/^[ \t]*(?:[-+*]|\d+[.)])[ \t]+/gm, "")
     .replace(/[#*_>|~[]+/g, " ")
     .replace(/[ \t]+/g, " ")
-    .trim();
+    .trim()
+    .split(DOT_MARK)
+    .join(" dot ");
   return { tokens, speech };
 }
 
@@ -507,6 +530,8 @@ export const register: Register = (on, options) => {
           top: Number(options.excerptTop ?? 2),
           bottom: Number(options.excerptBottom ?? 2)
         };
+  // The play button names what it reads: an excerpt while a setting trims the reply.
+  const playLabel = skip || excerpt !== null ? "Read excerpt" : "Read aloud";
   const forRead = (ids: string[]) =>
     prepareSpeech(
       ids.map((row) => ({ row, md: rows.get(row) ?? "" })),
@@ -568,36 +593,35 @@ export const register: Register = (on, options) => {
     rows.set(e.requestId, e.props.text);
     const r = await read($, reading);
     const isMine = r !== null && r.rows.includes(e.requestId);
-    // Only a row the reading covers reads its member, so only it redraws per word.
+    // Only the row being read reads its member, so only it redraws per word.
     const mark = isMine && showWord ? await read($, memberOf(spoken, e)) : null;
     const ui = $.ui.resolve(e);
     const { Box, Button, Markdown, Text } = ui;
     const md = e.props.text;
-    // A reply not being read keeps the engine's own row. The reply being read draws
-    // whole as Text spans from start to stop, so its font changes once at start and
-    // back at stop, never mid-reading; Markdown cannot paint a background behind a
-    // word. A fence or a table keeps its Markdown render, so its words get no chip.
-    const body =
-      !isMine || !showWord ? (
-        await next(e)
-      ) : (
-        <Box flexDirection="column" gap={1}>
-          {blocks(md).map((b, n) => {
-            const raw = md.slice(b.start, b.end);
-            if (FENCE_LINE.test(raw) || /^\s*\|/.test(raw))
-              return <Markdown key={`b${n}`} text={raw} />;
-            return (
-              <Text key={`b${n}`}>
-                {inlineSpans(md, b, mark).map((s) => (
-                  <Text bold={s.bold} italic={s.italic} mono={s.mono} {...(s.hit ? CHIP : {})}>
-                    {s.text}
-                  </Text>
-                ))}
-              </Text>
-            );
-          })}
-        </Box>
-      );
+    // While captions are on, every reply draws with the same Text spans, reading or
+    // not, so its text never switches at start or stop. Markdown cannot paint a
+    // background behind a word. A fence or a table keeps its Markdown render, so its
+    // words get no chip. With captions off, the engine's own row draws.
+    const body = !showWord ? (
+      await next(e)
+    ) : (
+      <Box flexDirection="column" gap={1}>
+        {blocks(md).map((b, n) => {
+          const raw = md.slice(b.start, b.end);
+          if (FENCE_LINE.test(raw) || /^\s*\|/.test(raw))
+            return <Markdown key={`b${n}`} text={raw} />;
+          return (
+            <Text key={`b${n}`}>
+              {inlineSpans(md, b, mark).map((s) => (
+                <Text bold={s.bold} italic={s.italic} mono={s.mono} {...(s.hit ? CHIP : {})}>
+                  {s.text}
+                </Text>
+              ))}
+            </Text>
+          );
+        })}
+      </Box>
+    );
     const markSvg =
       e.surface !== "terminal" && "Svg" in ui ? (
         <ui.Svg source={ICON_SVG} alt="CopySpeech" width={14} height={14} />
@@ -605,7 +629,7 @@ export const register: Register = (on, options) => {
     const play = (
       <Button
         key={`play-${e.requestId}`}
-        label={markSvg === null ? "▶ Read aloud" : `${MARK_ROOM}Read aloud`}
+        label={markSvg === null ? `▶ ${playLabel}` : `${MARK_ROOM}${playLabel}`}
         onPress={() =>
           void $.clock.after(
             0,
@@ -627,43 +651,53 @@ export const register: Register = (on, options) => {
           </Box>
         </Box>
       );
-    // The button Box is absolute: it leaves the flow, so the hover reveal moves nothing.
-    // It stays inside the row's own bounds (bottom right): the desktop clips an
-    // absolute Box at its row, so a negative offset hides it behind the row above.
-    // While the reply plays, it shows Pause/Resume and Stop; otherwise Read aloud on hover.
+    // The play button is absolute: it leaves the flow, so the hover reveal moves
+    // nothing. It stays inside the row's own bounds (bottom right): the desktop clips
+    // an absolute Box at its row, so a negative offset hides it behind the row above.
+    // It keeps one shape at every state and hides on the reply being read: that
+    // reply's Pause, Resume and Stop sit in the band above the prompt.
+    const REVEAL = { display: "flex" } as const;
     return (
       <Box key={`row-${e.requestId}`} flexDirection="column">
         {body}
-        {isMine ? (
-          <Box position="absolute" bottom={0} right={0} alignItems="center" gap="xs">
-            <Button
-              key={`pause-${e.requestId}`}
-              label={r.paused ? "Resume" : "Pause"}
-              onPress={() =>
-                void $.clock.after(
-                  0,
-                  () => void post($, r.paused ? "/resume" : "/pause", { request_id: r.id })
-                )
-              }
-            />
-            <Button
-              key={`stop-${e.requestId}`}
-              label="Stop"
-              onPress={() => void $.clock.after(0, () => void stop($).catch(() => undefined))}
-            />
-          </Box>
-        ) : (
-          <Box
-            position="absolute"
-            bottom={0}
-            right={0}
-            alignItems="center"
-            display="none"
-            hover={{ display: "flex" }}
-          >
-            {playWithMark}
-          </Box>
-        )}
+        <Box
+          position="absolute"
+          bottom={0}
+          right={0}
+          alignItems="center"
+          display="none"
+          hover={isMine ? undefined : REVEAL}
+        >
+          {playWithMark}
+        </Box>
+      </Box>
+    );
+  });
+
+  // The band above the prompt holds the reading's Pause, Resume and Stop. It reads
+  // only `reading`, which changes at start, pause, resume and stop, so it never
+  // redraws per caption word: the buttons stay still while the spoken word moves.
+  on("ui.render", { component: "AbovePrompt" }, async ($, e, next) => {
+    const r = await read($, reading);
+    if (r === null) return next(e);
+    const { Box, Button, Text } = $.ui.resolve(e);
+    return (
+      <Box gap="xs" alignItems="center">
+        <Text dimColor>CopySpeech reading</Text>
+        <Button
+          key="pause"
+          label={r.paused ? "Resume" : "Pause"}
+          onPress={() =>
+            void $.clock.after(0, () =>
+              post($, r.paused ? "/resume" : "/pause", { request_id: r.id }).then(() => undefined)
+            )
+          }
+        />
+        <Button
+          key="stop"
+          label="Stop"
+          onPress={() => void $.clock.after(0, () => void stop($).catch(() => undefined))}
+        />
       </Box>
     );
   });
