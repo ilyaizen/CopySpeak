@@ -54,6 +54,18 @@ test("speakable skips fenced code blocks of both fence kinds", async () => {
   expect(speech).toContain("Mid kept.");
 });
 
+test("speakable says a dot in inline code as the word dot, and captions still align", async () => {
+  const md = "Open `export.ts` now. Prose export.ts and `3.14` stay.";
+  const { tokens, speech } = speakable(md);
+  expect(speech).toBe("Open export dot ts now. Prose export.ts and 3.14 stay.");
+  const dot = tokens.find((t) => t.norm === "dot");
+  expect(dot).toBeDefined();
+  if (dot === undefined) return;
+  expect(md.slice(dot.start, dot.end)).toBe(".");
+  expect(tokens.map((t) => t.norm)).toEqual(wordTokens(speech).map((t) => t.norm));
+  expect(align(captionWords(captionFor(speech)), tokens, 0).ok).toBe(true);
+});
+
 // One caption entry per spoken word, 300 ms each, as CopySpeech sends them.
 function captionFor(speech: string) {
   return {

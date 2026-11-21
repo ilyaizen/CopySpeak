@@ -26,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Stop** and `/copyspeech-stop` stop CopySpeech and cancel every queued and running synthesis. `/copyspeech-autoread` turns automatic reads of new replies on or off.
   - Options: auto-read (off), skip bullet points and sections (on), and read only the top and bottom paragraphs (on, 2 + 2, 1 to 20 each).
 
+### Changed
+
+- **Claude Code plugin play button names what it reads** – it says **Read excerpt** while skipped sections or a partial reading is on (both on by default), and **Read aloud** when both are off. The reading itself does not change.
+
 ### Fixed
 
 - **Claude Code plugin captions stay on the spoken words** – with skipped sections or a partial reading on, captions matched the whole reply, so a skipped list or a left-out paragraph could lose their place.
