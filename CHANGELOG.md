@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Kale is the default engine on Windows** – fresh Windows installs start on Kale (voice Kenzie); macOS and Linux keep tiny-voca until the Kale installer passes a clean-install check there. Existing settings keep their current engine. Onboarding lists Kale first on Windows; tiny-voca stays the first card everywhere else.
+- **Claude Code plugin captions move to a pane** – replies keep Claude Code's own Markdown look while CopySpeech reads. A **CopySpeech captions** pane shows the reading's replies as plain text, puts a reverse-video chip on the spoken word, and scrolls to it. The pane opens when a reading starts and closes when it stops.
 
 ### Added
 

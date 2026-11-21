@@ -17,6 +17,21 @@ const BAND = {
     view: {}
   }
 } as const;
+// The captions pane, docked beside the transcript.
+const PANE = {
+  plugin: "copyspeech",
+  surface: "desktop",
+  component: "Pane",
+  requestId: "captions",
+  props: {
+    title: "CopySpeech captions",
+    isFocused: false,
+    bodyColumns: 60,
+    placement: "dock",
+    scroll: { offset: 0, bodyRows: 20 },
+    view: {}
+  }
+} as const;
 
 test("desktop reply draws the CopySpeech mark inside the button, in room the label leaves", async ($) => {
   const ui = await $.ui.mount({
@@ -129,6 +144,11 @@ async function playHello($: Parameters<TestBody>[0], on: Parameters<TestBody>[1]
     }
   }));
   on("command.register", (_, e) => ({ value: { command: e.name } }));
+  const opened: string[] = [];
+  on("ui.open", (_, e) => {
+    opened.push(e.id);
+    return { value: { isPlaced: true } };
+  });
   on("session.start", (_, e) => ({ cwd: e.cwd }));
   // Starts the /status poll.
   await $.session.start({ cwd: ".", surface: "desktop", isInteractive: true });
@@ -144,39 +164,40 @@ async function playHello($: Parameters<TestBody>[0], on: Parameters<TestBody>[1]
   const other = await mount("reply-2");
   const band = await $.ui.mount(BAND);
   await playing.press({ key: "play-reply-1" });
+  const pane = await $.ui.mount(PANE);
   await clock.advance(250);
   await playing.redraw();
   await other.redraw();
   await band.redraw();
-  return { playing, other, band, status, clock };
+  return { playing, other, band, pane, opened, status, clock };
 }
 
-test("every reply draws as Text; the reading puts a chip on the spoken word and no buttons in the reply", async ($, on) => {
-  const { playing, other, band } = await playHello($, on);
-  const word = await playing.find({ type: "Text", text: /^there$/ });
-  expect(word?.props).toEqual({ backgroundColor: "claude", color: "inverseText" });
-  expect(await playing.find({ type: "Markdown" })).toBeUndefined();
-  expect(await other.find({ type: "Markdown" })).toBeUndefined();
-  expect(await other.find({ type: "Text", text: "Hello there." })).toBeDefined();
+test("a reading opens the captions pane and puts a chip on the spoken word there; replies keep the engine's drawing", async ($, on) => {
+  // The test host has no `$.ui.scroll`, so the pane's scroll to the word is not checked here.
+  const { playing, other, band, pane, opened } = await playHello($, on);
+  expect(opened).toContain("captions");
+  const word = await pane.find({ type: "Text", text: /^there$/ });
+  expect(word?.props).toEqual({ backgroundColor: "text", color: "inverseText" });
+  expect(await playing.find({ type: "Text", text: /^there$/ })).toBeUndefined();
   expect(await other.find({ type: "Text", text: /^there$/ })).toBeUndefined();
   expect(await playing.find({ key: "pause-reply-1" })).toBeUndefined();
-  expect(await playing.find({ key: "stop-reply-1" })).toBeUndefined();
-  expect(await other.find({ key: "stop-reply-2" })).toBeUndefined();
   expect(await band.find({ key: "stop" })).toBeDefined();
+  await pane.unmount();
   await other.unmount();
   await band.unmount();
   await playing.unmount();
 });
 
-test("Pause stays in the band while the spoken word moves in the reply", async ($, on) => {
-  const { playing, other, band, status, clock } = await playHello($, on);
+test("Pause stays in the band while the spoken word moves in the pane", async ($, on) => {
+  const { playing, other, band, pane, status, clock } = await playHello($, on);
   status.position_ms = 100;
   await clock.advance(250);
-  await playing.redraw();
-  const word = await playing.find({ type: "Text", text: /^Hello$/ });
-  expect(word?.props).toEqual({ backgroundColor: "claude", color: "inverseText" });
+  await pane.redraw();
+  const word = await pane.find({ type: "Text", text: /^Hello$/ });
+  expect(word?.props).toEqual({ backgroundColor: "text", color: "inverseText" });
   await band.redraw();
   expect(await band.find({ key: "pause" })).toBeDefined();
+  await pane.unmount();
   await other.unmount();
   await band.unmount();
   await playing.unmount();

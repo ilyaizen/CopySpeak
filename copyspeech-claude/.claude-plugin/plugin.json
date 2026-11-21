@@ -50,7 +50,7 @@
     "captions": {
       "type": "boolean",
       "title": "Show captions",
-      "description": "Marks the spoken word inside the reply while CopySpeech reads.",
+      "description": "Shows the reading in a captions pane and marks the spoken word there.",
       "default": true
     }
   }

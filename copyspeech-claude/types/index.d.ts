@@ -11,8 +11,8 @@ declare module "claude-code" {
   interface PluginState {
     copyspeech: {
       reading: Reading | null;
-      /** Per AssistantMessage requestId: the spoken word's [start, end) in that row's markdown, or null. */
-      spoken: StateFamily<[number, number] | null>;
+      /** The spoken word: its AssistantMessage requestId and [start, end) in that row's markdown, or null. */
+      spoken: { row: string; at: [number, number] } | null;
     };
   }
 }

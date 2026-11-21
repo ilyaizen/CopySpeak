@@ -312,7 +312,7 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Run Button work through `$.clock.after(0, ...)`, never `await` it in `onPress`: a press has a 10 s budget. Keep `$.ui.scroll` direct; it only works inside the press.
 - Give a Box with `hover: { display: 'flex' }` its own `display: 'none'`; otherwise the tree is refused.
 - Keep Buttons and Svg out of the row that reads the spoken word: each per-word write redraws that row, so its Svg and Buttons flicker. Put Pause, Resume and Stop in the `AbovePrompt` band, which reads only `reading`. Keep the spoken word in a `StateFamily` member per row (`memberOf`), read only by the row being read.
-- Show captions inside the reply, never in a band above the prompt. Draw every reply as Text spans while captions are on, reading or not, with a solid accent chip on the spoken word: Markdown cannot paint a background, and a renderer change at start or stop changes the reply's font.
+- Show captions in the plugin's own `captions` Pane, never inside the reply: `Markdown` is a leaf with no per-word spans, Text spans lose the host's Markdown look, and a transcript row scrolls only during a press. Only the Pane reads `spoken`; scroll it with `$.ui.scroll({ in: "captions", to: { key } })`, which `plugin test` cannot run ("no implementation for ui.scroll").
 - Treat a `/speak` fetch give-up (`aborted`, `no complete answer`, fixed 30 s) as a running reading; the `/status` poll ends it.
 - Collect auto-read rows from `AssistantMessage` renders between `turn.start` and `turn.complete`; `turn.complete`'s `answer` holds only the last text block.
 - Change the plugin's own setting with `$.config.set` on the row `$.config.list()` names `<plugin>.<field>`; `$.settings` only reads.
@@ -322,3 +322,4 @@ Area gotchas from shipped work, one imperative line each. `AGENTS.md` keeps the 
 - Label the play button `Read excerpt` while `skipSections` or `excerpt` trims the reply; `Read aloud` promises the whole reply.
 - Load the plugin for development from the repo folder: `~/.claude/settings.json` `env` names `CLAUDE_CODE_PLUGIN_DIRS` and `CLAUDE_CODE_PLUGIN_DIR_WATCH=1` (desktop needs the watch switch). It applies to sessions started after the change. Do not also copy it into `dev-mods`: that loads two `copyspeech` plugins.
 - Say a dot in inline code as the word "dot" in `speakable()`: engines read "." as a pause, and kale splits sentences on it. Keep the marker one char, so markdown offsets hold.
+- Use reverse video for the pane chip (`backgroundColor: "text"`, `color: "inverseText"`): the mod SDK has no `mixBlendMode` or element `opacity`, and `Svg` and `Shader` cannot reach the pane.
