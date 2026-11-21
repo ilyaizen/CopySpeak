@@ -13,6 +13,10 @@ declare module "claude-code" {
       reading: Reading | null;
       /** The spoken word: its AssistantMessage requestId and [start, end) in that row's markdown, or null. */
       spoken: { row: string; at: [number, number] } | null;
+      /** The replies the captions pane shows: the latest reading's AssistantMessage requestIds and markdown. */
+      history: { row: string; md: string }[];
+      /** Whether the captions pane's settings are expanded. */
+      settingsOpen: boolean;
     };
   }
 }

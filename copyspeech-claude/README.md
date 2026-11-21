@@ -30,11 +30,12 @@ In the desktop app, select text inside a reply, right-click, and choose **Read a
 
 ## Settings
 
-Change the settings in one of three ways:
+Change the settings in one of four ways:
 
 - **Terminal:** run `claude`, type `/config`, and find the CopySpeech rows. A change applies at once.
 - **Any surface, auto-read only:** type `/copyspeech-autoread`. It turns **Read new replies aloud** on or off and saves it, as `/config` does.
-- **Desktop app:** the Code tab has no settings screen for plugin options. Add a `pluginConfigs` block to `~/.claude/settings.json`:
+- **Desktop app:** type `/copyspeech-settings`. It opens the captions pane, and the settings sit at its bottom behind **Settings ▸**. Each change saves, as `/config` does.
+- **By file:** the Code tab has no settings screen for plugin options. Add a `pluginConfigs` block to `~/.claude/settings.json`:
 
 ```json
 "pluginConfigs": {
@@ -67,7 +68,8 @@ Selection reads always read in full.
 
 - Reads CopySpeech's `GET /status` every 120 ms while a reading plays.
 - Matches the caption words to the spoken text, which leaves out skipped lines and an excerpt gap: half the words of a caption fragment must match. Across an excerpt gap, it needs a run of 3 words to jump.
-- Opens a **CopySpeech captions** pane when a reading starts and closes it when the reading stops. Replies keep Claude Code's own Markdown look.
+- Opens a **CopySpeech companion** pane when a reading starts, or with `/copyspeech-settings`. The pane stays open after a reading. It shows only the latest reading: a new **Read aloud** replaces it. Hover a paragraph to show a small **▶** at its side: it reads only that paragraph. Replies keep Claude Code's own Markdown look.
+- The settings sit at the bottom of the pane, behind **Settings ▸**. Expand them to change a setting. They show only while nothing is read.
 - Shows the reading's replies in the pane as plain text, with a chip on the spoken word in reverse video: the text color behind it, with the background color over it. Headings show in bold, not in heading size. Fenced code blocks and tables show their raw text and get no chip.
 - Scrolls the pane to center the paragraph that holds the spoken word. A paragraph taller than the pane shows its top.
 - The desktop app docks the pane beside the chat. The terminal docks it beside a fullscreen transcript from 110 columns, else shows it above the prompt. A pane that auto-read opens waits for 144 columns.
