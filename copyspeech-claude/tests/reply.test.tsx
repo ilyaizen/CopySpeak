@@ -24,7 +24,7 @@ const PANE = {
   component: "Pane",
   requestId: "captions",
   props: {
-    title: "CopySpeech captions",
+    title: "CopySpeech companion",
     isFocused: false,
     bodyColumns: 60,
     placement: "dock",
@@ -181,6 +181,8 @@ test("a reading opens the captions pane and puts a chip on the spoken word there
   expect(await playing.find({ type: "Text", text: /^there$/ })).toBeUndefined();
   expect(await other.find({ type: "Text", text: /^there$/ })).toBeUndefined();
   expect(await playing.find({ key: "pause-reply-1" })).toBeUndefined();
+  // The settings Buttons show only while nothing is read.
+  expect(await pane.find({ key: "captions" })).toBeUndefined();
   expect(await band.find({ key: "stop" })).toBeDefined();
   await pane.unmount();
   await other.unmount();

@@ -23,11 +23,18 @@ const MARK_ROOM = "  ";
 const CHIP = { backgroundColor: "text", color: "inverseText" } as const;
 // The captions pane: the reading's replies as plain text, with the chip on the spoken word.
 const PANE = "captions";
+const EXCERPT_MODES = ["both", "top", "bottom"];
 
 // Rows and the band read `reading`, which changes only at start, pause, resume and
 // stop. Only the captions pane reads `spoken`, so a word redraws the pane alone.
 const reading = atom({ plugin: "copyspeech", key: "reading" } as const, null);
 const spoken = atom({ plugin: "copyspeech", key: "spoken" } as const, null);
+// The rows the captions pane shows: the latest reading's replies. A new reading replaces them.
+// The key keeps its old name: a pane hook from before a reload still reads it until it is replaced.
+type ShownRow = { row: string; md: string };
+const history = atom({ plugin: "copyspeech", key: "history" } as const, [] as ShownRow[]);
+// Whether the captions pane's settings are expanded.
+const settingsOpen = atom({ plugin: "copyspeech", key: "settingsOpen" } as const, false);
 
 type Token = { norm: string; start: number; end: number };
 type RowToken = Token & { row: string };
@@ -154,7 +161,7 @@ function paragraphs(md: string, skip: boolean): Block[] {
   return out;
 }
 
-export type Part = { row: string; md: string };
+export type Part = { row: string; md: string; from?: number; to?: number };
 export type Spoken = { speech: string; tokens: RowToken[] };
 
 // What a play-button or automatic read speaks, and the tokens the captions align to.
@@ -162,9 +169,10 @@ export type Spoken = { speech: string; tokens: RowToken[] };
 // `speech`: a skipped line or an excerpt gap adds no token.
 export function prepareSpeech(parts: Part[], skip: boolean, excerpt: Excerpt | null): Spoken {
   const paras: { speech: string; tokens: RowToken[] }[] = [];
-  for (const { row, md } of parts) {
+  for (const { row, md, from = 0, to = Infinity } of parts) {
     const masked = skip ? maskSkipped(md) : md;
     for (const p of paragraphs(md, skip)) {
+      if (p.start < from || p.start >= to) continue;
       const piece = speakable(masked.slice(p.start, p.end));
       if (piece.speech === "") continue;
       const tokens = piece.tokens.map((t) => ({
@@ -442,7 +450,11 @@ async function paint($: EngineInterface, row: string, at: [number, number] | nul
 async function clear($: EngineInterface) {
   await paint($, "", null);
   await update($, reading, () => null);
-  await $.ui.close({ id: PANE }).catch(() => undefined);
+}
+
+// Clears the reading a poll read, unless a newer reading has started since.
+async function endIfCurrent($: EngineInterface, id: string) {
+  if ((await read($, reading))?.id === id) await clear($);
 }
 
 // `$.http.fetch` gives up after 30 s with no answer. CopySpeech answers a
@@ -450,6 +462,11 @@ async function clear($: EngineInterface) {
 // reading, that can take longer, so a give-up means the reading still runs
 // and the /status poll owns it.
 const STILL_RUNNING = /aborted|no complete answer/i;
+
+// The replies a reading covers, as the captions pane shows them.
+function shownRows(ids: string[]): ShownRow[] {
+  return ids.filter((row) => rows.has(row)).map((row) => ({ row, md: rows.get(row) ?? "" }));
+}
 
 // Speaks `text`; the captions pane shows `ids`, the AssistantMessage rows it comes from.
 async function start($: EngineInterface, ids: string[], text: Spoken) {
@@ -460,6 +477,7 @@ async function start($: EngineInterface, ids: string[], text: Spoken) {
   const id = `claude.${Date.now()}.${counter}`;
   await paint($, "", null);
   run = freshRun(text.tokens, await $.clock.now());
+  await update($, history, () => shownRows(ids));
   await update($, reading, (): Reading => ({ id, rows: ids, paused: false }));
   const failure = await post($, "/speak", { text: text.speech, request_id: id, wait: false });
   if (failure === null || STILL_RUNNING.test(failure)) return;
@@ -470,7 +488,7 @@ async function start($: EngineInterface, ids: string[], text: Spoken) {
 // Opens the captions pane while captions are on. Called from a press it is asked, so
 // the terminal places it at any width; from auto-read it waits for 144 columns.
 async function openPane($: EngineInterface, captions: boolean) {
-  if (captions) await $.ui.open({ id: PANE, title: "CopySpeech captions" }).catch(() => undefined);
+  if (captions) await $.ui.open({ id: PANE, title: "CopySpeech companion" }).catch(() => undefined);
 }
 
 // A /stop with no request_id is CopySpeech's global stop, as the tray's Stop
@@ -495,9 +513,11 @@ async function poll($: EngineInterface) {
     return;
   }
   if (s.active !== true) {
+    // A bare `{ active: false }` is also the app's answer after a silent stretch, so only
+    // the idle wait ends a reading here.
     const quiet = run.lastActive > 0 && now - run.lastActive > IDLE_STOP_MS;
     const neverStarted = run.lastActive === 0 && now - run.startedAt > NO_MATCH_STOP_MS;
-    if (quiet || neverStarted) await clear($);
+    if (quiet || neverStarted) await endIfCurrent($, current.id);
     return;
   }
   run.lastActive = now;
@@ -525,18 +545,35 @@ async function poll($: EngineInterface) {
   if (token !== undefined) await paint($, token.row, [token.start, token.end]);
 }
 
-// Flips the "Read new replies aloud" /config row, as if the person changed it
-// there. The row's key is `<plugin>.autoRead`, and the plugin's name can carry
-// an `@inline` or marketplace suffix. Resolves the reply text.
-async function toggleAutoRead($: EngineInterface): Promise<string> {
-  const row = (await $.config.list()).find(
-    (r) => r.key.startsWith("copyspeech") && r.key.endsWith(".autoRead")
+// The plugin's own `/config` row for one `userConfig` field. The plugin's name can
+// carry an `@inline` or marketplace suffix, so the key is matched by prefix.
+async function settingRow($: EngineInterface, field: string) {
+  return (await $.config.list()).find(
+    (r) => r.key.startsWith("copyspeech") && r.key.endsWith(`.${field}`)
   );
+}
+
+// Flips the "Read new replies aloud" /config row, as if the person changed it there.
+// Resolves the reply text.
+async function toggleAutoRead($: EngineInterface): Promise<string> {
+  const row = await settingRow($, "autoRead");
   if (row === undefined) return "CopySpeech auto-read setting not found.";
   const enabled = row.value !== true;
   const { deny } = await $.config.set({ key: row.key, value: enabled });
   if (deny !== undefined) return `CopySpeech auto-read unchanged: ${deny}`;
   return enabled ? "CopySpeech auto-read is on." : "CopySpeech auto-read is off.";
+}
+
+// Writes one of the plugin's settings from the captions pane. Resolves a deny's reason.
+async function setSetting(
+  $: EngineInterface,
+  field: string,
+  value: boolean | number | string
+): Promise<string | undefined> {
+  const row = await settingRow($, field);
+  if (row === undefined) return `CopySpeech ${field} setting not found.`;
+  const { deny } = await $.config.set({ key: row.key, value });
+  return deny;
 }
 
 export const register: Register = (on, options) => {
@@ -558,6 +595,17 @@ export const register: Register = (on, options) => {
       skip,
       excerpt
     );
+  // The plugin's settings as the captions pane draws them. A change reloads the plugin,
+  // so these follow the new values.
+  const settingValues = {
+    autoRead: options.autoRead === true,
+    skipSections: skip,
+    excerpt: options.excerpt !== false,
+    excerptMode: String(options.excerptMode ?? "both"),
+    excerptTop: Number(options.excerptTop ?? 2),
+    excerptBottom: Number(options.excerptBottom ?? 2),
+    captions: showWord
+  };
 
   on("session.start", async ($, e, next) => {
     await $.command.register({
@@ -567,6 +615,10 @@ export const register: Register = (on, options) => {
     await $.command.register({
       name: "copyspeech-autoread",
       description: "Turn reading new replies aloud on or off"
+    });
+    await $.command.register({
+      name: "copyspeech-settings",
+      description: "Open the CopySpeech companion pane with its settings"
     });
     const health = await $.http
       .fetch(CONTROL + "/health")
@@ -586,6 +638,11 @@ export const register: Register = (on, options) => {
   on("command.run", { command: "copyspeech-autoread" }, async ($) => ({
     text: await toggleAutoRead($)
   }));
+
+  on("command.run", { command: "copyspeech-settings" }, async ($) => {
+    await $.ui.open({ id: PANE, title: "CopySpeech companion" }).catch(() => undefined);
+    return { text: "CopySpeech settings are in the companion pane." };
+  });
 
   on("turn.start", async ($, e, next) => {
     if (e.agentId === undefined) turnRows = [];
@@ -707,23 +764,102 @@ export const register: Register = (on, options) => {
   on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
     const r = await read($, reading);
     const s = await read($, spoken);
-    const { Box, Text } = $.ui.resolve(e);
-    if (r === null) return <Text dimColor>Nothing is being read.</Text>;
-    return (
+    const list = await read($, history);
+    const open = await read($, settingsOpen);
+    const { Box, Button, Text } = $.ui.resolve(e);
+    // A Button redraws with every spoken word, so the settings show only while nothing is read.
+    const save = (field: string, value: boolean | number | string) => () =>
+      void $.clock.after(0, async () => {
+        const deny = await setSetting($, field, value).catch(() => undefined);
+        if (deny !== undefined) $.ui.toast(`CopySpeech ${field} unchanged: ${deny}`);
+      });
+    const toggle = (field: "autoRead" | "skipSections" | "excerpt" | "captions", label: string) => (
+      <Button
+        key={field}
+        label={`${label}: ${settingValues[field] ? "On" : "Off"}`}
+        onPress={save(field, !settingValues[field])}
+      />
+    );
+    const count = (field: "excerptTop" | "excerptBottom", label: string) => (
+      <Box flexDirection="row" alignItems="center" gap="xs">
+        <Text>{label}</Text>
+        <Button
+          key={`${field}-down`}
+          label="-"
+          onPress={save(field, Math.max(1, settingValues[field] - 1))}
+        />
+        <Text>{String(settingValues[field])}</Text>
+        <Button
+          key={`${field}-up`}
+          label="+"
+          onPress={save(field, Math.min(20, settingValues[field] + 1))}
+        />
+      </Box>
+    );
+    const nextMode =
+      EXCERPT_MODES[(EXCERPT_MODES.indexOf(settingValues.excerptMode) + 1) % EXCERPT_MODES.length] ??
+      "both";
+    // Collapsed at the bottom of the pane until the person expands it.
+    const settingsBody = (
       <Box flexDirection="column" gap={1}>
-        {r.rows.flatMap((row) => {
-          const md = rows.get(row) ?? "";
-          const mark = s !== null && s.row === row ? s.at : null;
-          return blocks(md).map((b, n) => {
-            const raw = md.slice(b.start, b.end);
-            const isRaw = FENCE_LINE.test(raw) || /^\s*\|/.test(raw);
-            return (
-              <Box key={blockKey(row, n)}>
+        <Box flexDirection="column" gap="xs">
+          <Text dimColor>Reading</Text>
+          <Box flexDirection="row" flexWrap="wrap" gap="xs">
+            {toggle("autoRead", "Auto-read")}
+            {toggle("skipSections", "Skip sections")}
+            {toggle("excerpt", "Excerpt")}
+            <Button
+              key="excerptMode"
+              label={`Part: ${settingValues.excerptMode}`}
+              onPress={save("excerptMode", nextMode)}
+            />
+          </Box>
+          <Box flexDirection="row" flexWrap="wrap" gap="xs">
+            {count("excerptTop", "Top")}
+            {count("excerptBottom", "Bottom")}
+          </Box>
+        </Box>
+        <Box flexDirection="column" gap="xs">
+          <Text dimColor>Captions</Text>
+          <Box flexDirection="row" flexWrap="wrap" gap="xs">
+            {toggle("captions", "Show captions")}
+          </Box>
+        </Box>
+      </Box>
+    );
+    const settings = (
+      <Box flexDirection="column" gap={1}>
+        <Button
+          key="settings"
+          label={open ? "Settings ▾" : "Settings ▸"}
+          onPress={() => void $.clock.after(0, () => void update($, settingsOpen, (v) => !v))}
+        />
+        {open ? settingsBody : null}
+      </Box>
+    );
+    // Reads one paragraph of the reply, [from, to), with the captions for that reading.
+    const readParagraph = (row: string, md: string, from: number, to: number) => () =>
+      void $.clock.after(0, () => {
+        rows.set(row, md);
+        void start($, [row], prepareSpeech([{ row, md, from, to }], skip, excerpt)).catch(
+          () => undefined
+        );
+      });
+    // The reply the latest reading covers. A paragraph's ▶ shows on hover at its side.
+    const replies = list.map((entry) => (
+      <Box key={`reply-${entry.row}`} flexDirection="column" gap={2}>
+        {blocks(entry.md).map((b, n) => {
+          const raw = entry.md.slice(b.start, b.end);
+          const isRaw = FENCE_LINE.test(raw) || /^\s*\|/.test(raw);
+          const mark = s !== null && s.row === entry.row ? s.at : null;
+          return (
+            <Box key={blockKey(entry.row, n)}>
+              <Box>
                 {isRaw ? (
                   <Text mono>{raw}</Text>
                 ) : (
                   <Text>
-                    {inlineSpans(md, b, mark).map((sp) => (
+                    {inlineSpans(entry.md, b, mark).map((sp) => (
                       <Text
                         bold={sp.bold}
                         italic={sp.italic}
@@ -736,9 +872,27 @@ export const register: Register = (on, options) => {
                   </Text>
                 )}
               </Box>
-            );
-          });
+              <Box position="absolute" right={0} top={0} display="none" hover={{ display: "flex" }}>
+                <Button
+                  key={`read-${entry.row}-${n}`}
+                  plain={true}
+                  label="▶"
+                  onPress={readParagraph(entry.row, entry.md, b.start, b.end)}
+                />
+              </Box>
+            </Box>
+          );
         })}
+      </Box>
+    ));
+    // Settings show only while nothing is read: their Buttons would redraw with each spoken word.
+    // The reply area takes the free height, so the settings sit at the bottom of the pane.
+    return (
+      <Box flexDirection="column" flexGrow={1} gap={1}>
+        <Box flexDirection="column" flexGrow={1} gap={3}>
+          {replies.length === 0 ? <Text dimColor>Nothing read yet.</Text> : replies}
+        </Box>
+        {r === null ? settings : null}
       </Box>
     );
   });
