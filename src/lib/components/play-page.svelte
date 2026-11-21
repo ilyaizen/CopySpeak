@@ -7,8 +7,6 @@
   import QuickSettings from "#lib/components/quick-settings.svelte";
   import RecentHistory from "#lib/components/recent-history.svelte";
   import { Button } from "#lib/components/ui/button/index.js";
-  // TODO: (261116) Kbd import hidden with the char count and hotkey hint. Restore with them.
-  // import { Kbd } from "#lib/components/ui/kbd/index.js";
   import { X } from "@lucide/svelte";
   import { Textarea } from "#lib/components/ui/textarea/index.js";
   import { playbackStore } from "#lib/stores/playback-store.svelte";
@@ -411,10 +409,6 @@
   // Determine current content from manual text input
   let currentContent = $derived(manualText.trim() || "");
 
-  // modKey hidden with the char count and hotkey hint. Restore with them.
-  // Modifier label for the speak shortcut hint: Cmd on macOS, Ctrl elsewhere.
-  // let modKey = $derived(/mac/i.test(navigator.userAgent) ? "⌘" : "Ctrl");
-
   // Smart play mode: what the Play button will do
   type PlayMode = "play" | "replay" | "disabled";
   let playMode: PlayMode = $derived(
@@ -721,23 +715,9 @@
           onSkipForward={() => playbackStore.skipForward()}
         />
         {#if manualText}
-          <!--
-            Char count and hotkey hint hidden for a clearer view.
-            Restore these spans and the Kbd import/modKey to bring them back.
           <span class="text-muted-foreground ms-auto text-xs whitespace-nowrap tabular-nums">
             {$_("play.characters", { values: { count: manualText.length.toLocaleString() } })}
           </span>
-          <span
-            class="text-muted-foreground inline-flex items-center gap-1 text-xs whitespace-nowrap"
-            title={$_("play.keyboardHint", { values: { keys: `${modKey}+Enter` } })}
-          >
-            <Kbd>{modKey}</Kbd>
-            <Kbd>↵</Kbd>
-            <span class="sr-only">
-              {$_("play.keyboardHint", { values: { keys: `${modKey}+Enter` } })}
-            </span>
-          </span>
-          -->
           <Button
             variant="default"
             size="icon-sm"

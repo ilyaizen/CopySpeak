@@ -535,7 +535,6 @@ export type TranslationKeys =
   | "play.errorDetails"
   | "play.errorOpenEngines"
   | "play.errorDismiss"
-  | "play.keyboardHint"
   | "history.title"
   | "history.loading"
   | "history.empty"
