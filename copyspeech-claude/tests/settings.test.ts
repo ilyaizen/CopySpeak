@@ -26,6 +26,9 @@ const OPTIONS = {
   captions: true
 };
 
+// The boolean settings; the rest are choices or numbers.
+const BOOLEAN_FIELDS = new Set(["autoRead", "skipSections", "excerpt", "captions"]);
+
 const RUN = {
   command: "copyspeech-settings",
   args: "",
@@ -33,42 +36,47 @@ const RUN = {
   presentation: { isFullscreen: false, columns: 80 }
 } as const;
 
-test("the captions pane's settings write the plugin's own rows", { options: OPTIONS }, async ($, on) => {
-  const values = new Map<string, boolean | number | string>(Object.entries(OPTIONS));
-  const writes: [string, unknown][] = [];
-  on("config.list", () => ({
-    value: [...values].map(([field, value]) => ({
-      key: `copyspeech@inline.${field}`,
-      label: field,
-      kind: typeof value === "boolean" ? "boolean" : "choice",
-      value,
-      provider: { plugin: "copyspeech@inline", tier: "user" },
-      isLocked: false
-    }))
-  }));
-  on("config.set", (_, e) => {
-    writes.push([e.key, e.value]);
-    values.set(e.key.slice(e.key.lastIndexOf(".") + 1), e.value);
-    return { value: e.value };
-  });
+test(
+  "the captions pane's settings write the plugin's own rows",
+  { options: OPTIONS },
+  async ($, on) => {
+    const values = new Map<string, boolean | number | string>(Object.entries(OPTIONS));
+    const writes: [string, unknown][] = [];
+    on("config.list", () => ({
+      value: [...values].map(([field, value]) => ({
+        key: `copyspeech@inline.${field}`,
+        label: field,
+        kind: BOOLEAN_FIELDS.has(field) ? "boolean" : "choice",
+        value,
+        provider: { plugin: "copyspeech@inline", tier: "user" },
+        isLocked: false
+      }))
+    }));
+    on("config.set", (_, e) => {
+      writes.push([e.key, e.value]);
+      // SAFETY: this test writes only its OPTIONS values, which are booleans, numbers, or strings.
+      values.set(e.key.slice(e.key.lastIndexOf(".") + 1), e.value as boolean | number | string);
+      return { value: e.value };
+    });
 
-  const clock = mock.clock(on);
-  const pane = await $.ui.mount(PANE);
-  await pane.press({ key: "settings" });
-  await clock.advance(1);
-  await pane.press({ key: "captions" });
-  await clock.advance(1);
-  await pane.press({ key: "excerptTop-up" });
-  await clock.advance(1);
-  await pane.press({ key: "excerptMode" });
-  await clock.advance(1);
-  expect(writes).toEqual([
-    ["copyspeech@inline.captions", false],
-    ["copyspeech@inline.excerptTop", 3],
-    ["copyspeech@inline.excerptMode", "top"]
-  ]);
-  await pane.unmount();
-});
+    const clock = mock.clock(on);
+    const pane = await $.ui.mount(PANE);
+    await pane.press({ key: "settings" });
+    await clock.advance(1);
+    await pane.press({ key: "captions" });
+    await clock.advance(1);
+    await pane.press({ key: "excerptTop-up" });
+    await clock.advance(1);
+    await pane.press({ key: "excerptMode" });
+    await clock.advance(1);
+    expect(writes).toEqual([
+      ["copyspeech@inline.captions", false],
+      ["copyspeech@inline.excerptTop", 3],
+      ["copyspeech@inline.excerptMode", "top"]
+    ]);
+    await pane.unmount();
+  }
+);
 
 test("/copyspeech-settings opens the captions pane", async ($, on) => {
   const opened: string[] = [];

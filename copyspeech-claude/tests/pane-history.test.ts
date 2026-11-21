@@ -58,11 +58,23 @@ test("a new Read aloud replaces the reply the pane shows", async ($, on) => {
   await two.unmount();
 });
 
+// The /status fields the reading reads; the app sends a bare { active: false } when idle.
+type StatusReport = {
+  active: boolean;
+  paused?: boolean;
+  position_ms?: number;
+  fragment_index?: number;
+  captions?: {
+    text: string;
+    words: { text_start: number; text_end: number; start_ms: number; end_ms: number }[];
+  };
+};
+
 test("a bare inactive status waits out the idle wait before the reading ends", async ($, on) => {
   const clock = mock.clock(on);
   on("command.register", (_, e) => ({ value: { command: e.name } }));
   on("session.start", (_, e) => ({ cwd: e.cwd }));
-  let status: Record<string, unknown> = {
+  let status: StatusReport = {
     active: true,
     paused: false,
     position_ms: 350,

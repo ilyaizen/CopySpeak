@@ -32,7 +32,8 @@ const spoken = atom({ plugin: "copyspeech", key: "spoken" } as const, null);
 // The rows the captions pane shows: the latest reading's replies. A new reading replaces them.
 // The key keeps its old name: a pane hook from before a reload still reads it until it is replaced.
 type ShownRow = { row: string; md: string };
-const history = atom({ plugin: "copyspeech", key: "history" } as const, [] as ShownRow[]);
+const noRows: ShownRow[] = [];
+const history = atom({ plugin: "copyspeech", key: "history" } as const, noRows);
 // Whether the captions pane's settings are expanded.
 const settingsOpen = atom({ plugin: "copyspeech", key: "settingsOpen" } as const, false);
 
@@ -797,8 +798,9 @@ export const register: Register = (on, options) => {
       </Box>
     );
     const nextMode =
-      EXCERPT_MODES[(EXCERPT_MODES.indexOf(settingValues.excerptMode) + 1) % EXCERPT_MODES.length] ??
-      "both";
+      EXCERPT_MODES[
+        (EXCERPT_MODES.indexOf(settingValues.excerptMode) + 1) % EXCERPT_MODES.length
+      ] ?? "both";
     // Collapsed at the bottom of the pane until the person expands it.
     const settingsBody = (
       <Box flexDirection="column" gap={1}>
