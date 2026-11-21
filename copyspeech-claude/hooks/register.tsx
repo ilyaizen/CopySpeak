@@ -1,12 +1,12 @@
-import { atom, memberOf, read, update } from "claude-code";
+import { atom, read, update } from "claude-code";
 import type { EngineInterface, Register } from "claude-code";
 
 import type { Reading } from "../types";
 import { ICON_SVG } from "./icon";
 
 // Port of copyspeech-hermes to Claude Code. CopySpeech's control server does the
-// speaking; this mod draws the play button, the spoken word inside the reply, and
-// the Read aloud menu row.
+// speaking; this mod draws the play button, the captions pane, and the Read aloud
+// menu row. The engine draws each reply's own Markdown untouched.
 const CONTROL = "http://127.0.0.1:43117";
 const POLL_MS = 120;
 const IDLE_STOP_MS = 2000;
@@ -18,13 +18,14 @@ const EXCERPT_MAX = 20;
 // Room at the start of the desktop button's label for the CopySpeech mark drawn
 // over it: an em space and an en space, which a label never collapses.
 const MARK_ROOM = "  ";
-// The spoken word's chip: the accent behind the word, inverse text over it. A
-// background moves no glyph, so words after the chip never move.
-const CHIP = { backgroundColor: "claude", color: "inverseText" } as const;
+// The spoken word's chip: reverse video, the text color behind the word and the
+// inverse text over it. A background moves no glyph, so words after the chip never move.
+const CHIP = { backgroundColor: "text", color: "inverseText" } as const;
+// The captions pane: the reading's replies as plain text, with the chip on the spoken word.
+const PANE = "captions";
 
-// Each row reads `reading`, which changes only at start, pause, resume and stop.
-// The spoken word is a family member per row: only the row being read reads its
-// member, so a word redraws that row alone.
+// Rows and the band read `reading`, which changes only at start, pause, resume and
+// stop. Only the captions pane reads `spoken`, so a word redraws the pane alone.
 const reading = atom({ plugin: "copyspeech", key: "reading" } as const, null);
 const spoken = atom({ plugin: "copyspeech", key: "spoken" } as const, null);
 
@@ -273,7 +274,7 @@ export function blocks(md: string): Block[] {
 }
 
 // One block's markdown as styled spans; `mark` (offsets into the whole reply) gets `hit`.
-// ponytail: covers headings, list markers, **bold**, *italic*, `code`, [links](url); tables and fences stay Markdown.
+// ponytail: covers headings, list markers, **bold**, *italic*, `code`, [links](url); tables and fences stay raw text.
 export function inlineSpans(md: string, block: Block, mark: [number, number] | null): Span[] {
   const chars: Span[] = [];
   const push = (text: string, flags: Omit<Span, "text">) => chars.push({ text, ...flags });
@@ -374,9 +375,9 @@ type Run = {
   key: string;
   words: CaptionWord[];
   map: number[] | null;
-  // The row whose member holds the spoken word, and the word, as last written.
-  row: string;
+  // The spoken word and the pane block that holds it, as last written.
   mark: string;
+  block: string;
   startedAt: number;
   lastActive: number;
 };
@@ -387,8 +388,8 @@ function freshRun(tokens: RowToken[], now: number): Run {
     key: "",
     words: [],
     map: null,
-    row: "",
     mark: "",
+    block: "",
     startedAt: now,
     lastActive: 0
   };
@@ -414,21 +415,34 @@ function rowTokens(ids: string[]): RowToken[] {
   return ids.flatMap((row) => speakable(rows.get(row) ?? "").tokens.map((t) => ({ ...t, row })));
 }
 
-// Moves the spoken word to `row`'s member; null clears it. Writes only a change.
-async function paint($: EngineInterface, row: string, mark: [number, number] | null) {
-  const key = mark === null ? "" : `${mark[0]}:${mark[1]}`;
-  if (row === run.row && key === run.mark) return;
-  if (run.row !== "" && run.row !== row) {
-    await update($, memberOf(spoken, { requestId: run.row }), () => null);
-  }
-  run.row = row;
+// The key of block `n` of `row` in the captions pane.
+function blockKey(row: string, n: number): string {
+  return `b-${row}-${n}`;
+}
+
+// Moves the spoken word to `at` in `row`; null clears it. Writes only a change, and
+// scrolls the pane only when the word enters another block.
+// ponytail: scrolls per block, so a block taller than the pane shows its top; split blocks into lines if that bites.
+async function paint($: EngineInterface, row: string, at: [number, number] | null) {
+  const key = at === null ? "" : `${row}:${at[0]}:${at[1]}`;
+  if (key === run.mark) return;
   run.mark = key;
-  if (row !== "") await update($, memberOf(spoken, { requestId: row }), () => mark);
+  await update($, spoken, () => (at === null ? null : { row, at }));
+  if (at === null) return;
+  const n = blocks(rows.get(row) ?? "").findIndex((b) => at[0] >= b.start && at[0] < b.end);
+  const block = n < 0 ? "" : blockKey(row, n);
+  if (block === "" || block === run.block) return;
+  // A pane not drawn yet refuses the scroll; the next word tries again.
+  const moved = await $.ui
+    .scroll({ in: PANE, to: { key: block }, block: "center" })
+    .catch(() => ({ deny: "scroll failed" }));
+  if (moved.deny === undefined) run.block = block;
 }
 
 async function clear($: EngineInterface) {
   await paint($, "", null);
   await update($, reading, () => null);
+  await $.ui.close({ id: PANE }).catch(() => undefined);
 }
 
 // `$.http.fetch` gives up after 30 s with no answer. CopySpeech answers a
@@ -437,7 +451,7 @@ async function clear($: EngineInterface) {
 // and the /status poll owns it.
 const STILL_RUNNING = /aborted|no complete answer/i;
 
-// Speaks `text`; the spoken word paints in `ids`, the AssistantMessage rows it comes from.
+// Speaks `text`; the captions pane shows `ids`, the AssistantMessage rows it comes from.
 async function start($: EngineInterface, ids: string[], text: Spoken) {
   const current = await read($, reading);
   if (current !== null) await post($, "/stop", { request_id: current.id });
@@ -451,6 +465,12 @@ async function start($: EngineInterface, ids: string[], text: Spoken) {
   if (failure === null || STILL_RUNNING.test(failure)) return;
   $.ui.toast(`CopySpeech /speak failed: ${failure}`);
   if ((await read($, reading))?.id === id) await clear($);
+}
+
+// Opens the captions pane while captions are on. Called from a press it is asked, so
+// the terminal places it at any width; from auto-read it waits for 144 columns.
+async function openPane($: EngineInterface, captions: boolean) {
+  if (captions) await $.ui.open({ id: PANE, title: "CopySpeech captions" }).catch(() => undefined);
 }
 
 // A /stop with no request_id is CopySpeech's global stop, as the tray's Stop
@@ -582,7 +602,10 @@ export const register: Register = (on, options) => {
     ) {
       // Every text block the turn drew, joined, as one reading.
       const ids = turnRows;
-      void $.clock.after(0, () => void start($, ids, forRead(ids)).catch(() => undefined));
+      void $.clock.after(0, async () => {
+        await openPane($, showWord);
+        await start($, ids, forRead(ids)).catch(() => undefined);
+      });
     }
     return result;
   });
@@ -593,35 +616,10 @@ export const register: Register = (on, options) => {
     rows.set(e.requestId, e.props.text);
     const r = await read($, reading);
     const isMine = r !== null && r.rows.includes(e.requestId);
-    // Only the row being read reads its member, so only it redraws per word.
-    const mark = isMine && showWord ? await read($, memberOf(spoken, e)) : null;
     const ui = $.ui.resolve(e);
-    const { Box, Button, Markdown, Text } = ui;
-    const md = e.props.text;
-    // While captions are on, every reply draws with the same Text spans, reading or
-    // not, so its text never switches at start or stop. Markdown cannot paint a
-    // background behind a word. A fence or a table keeps its Markdown render, so its
-    // words get no chip. With captions off, the engine's own row draws.
-    const body = !showWord ? (
-      await next(e)
-    ) : (
-      <Box flexDirection="column" gap={1}>
-        {blocks(md).map((b, n) => {
-          const raw = md.slice(b.start, b.end);
-          if (FENCE_LINE.test(raw) || /^\s*\|/.test(raw))
-            return <Markdown key={`b${n}`} text={raw} />;
-          return (
-            <Text key={`b${n}`}>
-              {inlineSpans(md, b, mark).map((s) => (
-                <Text bold={s.bold} italic={s.italic} mono={s.mono} {...(s.hit ? CHIP : {})}>
-                  {s.text}
-                </Text>
-              ))}
-            </Text>
-          );
-        })}
-      </Box>
-    );
+    const { Box, Button } = ui;
+    // The engine draws the reply's own Markdown; the captions pane shows the spoken word.
+    const body = await next(e);
     const markSvg =
       e.surface !== "terminal" && "Svg" in ui ? (
         <ui.Svg source={ICON_SVG} alt="CopySpeech" width={14} height={14} />
@@ -630,12 +628,13 @@ export const register: Register = (on, options) => {
       <Button
         key={`play-${e.requestId}`}
         label={markSvg === null ? `▶ ${playLabel}` : `${MARK_ROOM}${playLabel}`}
-        onPress={() =>
+        onPress={() => {
+          void openPane($, showWord);
           void $.clock.after(
             0,
             () => void start($, [e.requestId], forRead([e.requestId])).catch(() => undefined)
-          )
-        }
+          );
+        }}
       />
     );
     // A Button takes no Svg child, so the mark is an absolute Box painted over the
@@ -702,6 +701,48 @@ export const register: Register = (on, options) => {
     );
   });
 
+  // The captions pane: the reading's replies as plain text, one keyed Box per block,
+  // the chip on the spoken word. It alone reads `spoken`, so a word redraws it alone.
+  // A fence or a table shows its raw text and gets no chip.
+  on("ui.render", { component: "Pane", requestId: PANE }, async ($, e) => {
+    const r = await read($, reading);
+    const s = await read($, spoken);
+    const { Box, Text } = $.ui.resolve(e);
+    if (r === null) return <Text dimColor>Nothing is being read.</Text>;
+    return (
+      <Box flexDirection="column" gap={1}>
+        {r.rows.flatMap((row) => {
+          const md = rows.get(row) ?? "";
+          const mark = s !== null && s.row === row ? s.at : null;
+          return blocks(md).map((b, n) => {
+            const raw = md.slice(b.start, b.end);
+            const isRaw = FENCE_LINE.test(raw) || /^\s*\|/.test(raw);
+            return (
+              <Box key={blockKey(row, n)}>
+                {isRaw ? (
+                  <Text mono>{raw}</Text>
+                ) : (
+                  <Text>
+                    {inlineSpans(md, b, mark).map((sp) => (
+                      <Text
+                        bold={sp.bold}
+                        italic={sp.italic}
+                        mono={sp.mono}
+                        {...(sp.hit ? CHIP : {})}
+                      >
+                        {sp.text}
+                      </Text>
+                    ))}
+                  </Text>
+                )}
+              </Box>
+            );
+          });
+        })}
+      </Box>
+    );
+  });
+
   on("ui.render", { component: "ContextMenu" }, async ($, e, next) => {
     const selected = e.props.selection?.text;
     const row = e.props.row;
@@ -712,15 +753,16 @@ export const register: Register = (on, options) => {
     return (
       <Button
         key="read-selection"
-        onPress={() =>
+        onPress={() => {
+          if (target !== "none") void openPane($, showWord);
           void $.clock.after(
             0,
             () =>
               void start($, [target], { speech: selected, tokens: rowTokens([target]) }).catch(
                 () => undefined
               )
-          )
-        }
+          );
+        }}
       >
         Read aloud with CopySpeech <Text dimColor>Speaks the selection</Text>
       </Button>
